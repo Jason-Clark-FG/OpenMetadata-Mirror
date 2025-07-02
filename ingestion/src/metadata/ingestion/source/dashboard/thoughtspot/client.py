@@ -219,15 +219,23 @@ class ThoughtSpotClient:
         self, object_id: str, object_type: ThoughtSpotObjectType
     ) -> Dict[str, Any]:
         """Get detailed metadata for an object"""
-        payload = {"metadata": [{"identifier": object_id, "type": object_type.value}]}
+        payload = {
+            "metadata": [{"identifier": object_id}],
+            "include_details": True,
+            "record_size": 1,
+        }
 
         response = self._request(
-            "POST", self.endpoints["metadata_details"], json_data=payload
+            "POST", self.endpoints["metadata_search"], json_data=payload
         )
 
         data = response.json()
-        if data and len(data) > 0:
+        if isinstance(data, list) and len(data) > 0:
             return data[0]
+        elif isinstance(data, dict) and data.get("headers"):
+            headers = data["headers"]
+            if headers and len(headers) > 0:
+                return headers[0]
         return {}
 
     def export_tml(

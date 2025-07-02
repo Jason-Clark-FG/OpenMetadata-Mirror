@@ -133,7 +133,9 @@ class ThoughtSpotMetadataObject(BaseModel):
     is_deprecated: Optional[bool] = False
     metadata_header: Optional[Dict[str, Any]] = None
     visualization_headers: Optional[List[Dict[str, Any]]] = None
-    visualizations: Optional[List[Any]] = None  # Will be populated during processing
+    visualizations: Optional[List[Any]] = Field(
+        default=None, exclude=True
+    )  # Will be populated during processing, exclude from API parsing
 
     class Config:
         populate_by_name = True

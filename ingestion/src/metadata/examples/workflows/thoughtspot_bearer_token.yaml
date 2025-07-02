@@ -48,6 +48,14 @@ source:
   sourceConfig:
     config:
       type: DashboardMetadata
+      
+      # Lineage configuration (optional)
+      # If you have database services configured in OpenMetadata,
+      # specify them here to create table to data model lineage
+      # lineageInformation:
+      #   dbServiceNames:
+      #     - snowflake_prod
+      #     - postgres_analytics
 
       # Dashboard filter pattern (applies to Liveboards)
       dashboardFilterPattern:
