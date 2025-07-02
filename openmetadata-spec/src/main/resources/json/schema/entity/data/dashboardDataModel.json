@@ -29,7 +29,9 @@
         "QuickSightDataModel",
         "SigmaDataModel",
         "PowerBIDataFlow",
-        "MicroStrategyDataset"
+        "MicroStrategyDataset",
+        "ThoughtSpotWorksheet",
+        "ThoughtSpotView"
       ],
       "javaEnums": [
         {
@@ -70,6 +72,12 @@
         },
         {
           "name": "MicroStrategyDataset"
+        },
+        {
+          "name": "ThoughtSpotWorksheet"
+        },
+        {
+          "name": "ThoughtSpotView"
         }
       ]
     }

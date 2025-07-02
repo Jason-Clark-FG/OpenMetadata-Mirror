@@ -207,11 +207,23 @@ def log_ansi_encoded_string(
 @singledispatch
 def get_log_name(record: Entity) -> Optional[str]:
     try:
-        if hasattr(record, "name"):
+        if hasattr(record, "fullyQualifiedName") and record.fullyQualifiedName:
+            return f"{type(record).__name__} [{record.fullyQualifiedName.root}]"
+        elif hasattr(record, "name") and record.name:
             return f"{type(record).__name__} [{getattr(record, 'name').root}]"
-        return f"{type(record).__name__} [{record.entity.name.root}]"
+        elif hasattr(record, "entity") and hasattr(record.entity, "name"):
+            return f"{type(record).__name__} [{record.entity.name.root}]"
+        return f"{type(record).__name__}"
     except Exception:
-        return str(record)
+        # Only return the type and FQN or name if possible
+        try:
+            if hasattr(record, "fullyQualifiedName") and record.fullyQualifiedName:
+                return f"{type(record).__name__} [{record.fullyQualifiedName.root}]"
+            elif hasattr(record, "name") and record.name:
+                return f"{type(record).__name__} [{record.name.root}]"
+            return f"{type(record).__name__}"
+        except Exception:
+            return f"{type(record).__name__}"
 
 
 @get_log_name.register

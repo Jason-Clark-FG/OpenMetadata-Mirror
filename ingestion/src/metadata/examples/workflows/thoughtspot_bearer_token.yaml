@@ -1,0 +1,99 @@
+source:
+  type: thoughtspot
+  serviceName: local_thoughtspot
+  serviceConnection:
+    config:
+      type: ThoughtSpot
+      hostPort: https://team1.thoughtspot.cloud
+      authentication:
+        bearerToken: "aGFyc2hhLmNoQGdtYWlsLmNvbTpKSE5vYVhKdk1TUlRTRUV0TWpVMkpEVXdNREF3TUNSMlpXdHBRMW9yUm5rdlJtbHdjeloyWkZKc1FsSlJQVDBrYWxWaWFrb3pNV1UyWlRSSEwySXlWVFp5ZDFOMk9UTnBWMGc1TmxCTFJYTkJWbVp1U1hFMlUyeHJiejA="
+      apiVersion: "v2"
+      includeAnswers: true
+      includeWorksheets: true
+      includeViews: true
+      includeDraftLiveboards: false
+      liveboardFilterPattern:
+        includes:
+          - ".*" # Include all liveboards by default
+        excludes:
+          - ".*[Tt]est.*" # Exclude test liveboards
+          - ".*[Dd]raft.*" # Exclude draft liveboards
+      answerFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*[Bb]ackup.*"
+          - ".*[Aa]rchive.*"
+      worksheetFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*_old$" # Exclude worksheets ending with _old
+          - ".*_deprecated$" # Exclude deprecated worksheets
+      viewFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*_temp.*" # Exclude temporary views
+
+      # Filter patterns for projects/folders
+      # projectFilterPattern:
+      #   includes:
+      #     - "Production"
+      #     - "Analytics"
+      #   excludes:
+      #     - "Development"
+      #     - "Testing"
+
+  sourceConfig:
+    config:
+      type: DashboardMetadata
+
+      # Dashboard filter pattern (applies to Liveboards)
+      dashboardFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*[Dd]raft.*"
+
+      # Chart filter pattern (applies to visualizations)
+      chartFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*[Tt]est.*"
+
+      # Data model filter pattern (applies to Worksheets and Views)
+      dataModelFilterPattern:
+        includes:
+          - ".*"
+        excludes:
+          - ".*_temp.*"
+          - ".*_old.*"
+
+      # Include data models (Worksheets and Views)
+      includeDataModels: true
+
+      # Mark deleted dashboards
+      markDeletedDashboards: true
+
+      # Mark deleted data models
+      markDeletedDataModels: true
+
+      # Include dashboard tags
+      includeTags: true
+
+      # Include dashboard owners
+      includeOwners: true
+
+sink:
+  type: metadata-rest
+  config: {}
+
+workflowConfig:
+  loggerLevel: DEBUG
+  openMetadataServerConfig:
+    hostPort: http://localhost:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImluZ2VzdGlvbi1ib3QiLCJyb2xlcyI6WyJJbmdlc3Rpb25Cb3RSb2xlIl0sImVtYWlsIjoiaW5nZXN0aW9uLWJvdEBnZXRjb2xsYXRlLmlvIiwiaXNCb3QiOnRydWUsInRva2VuVHlwZSI6IkJPVCIsImlhdCI6MTc1MTQyMDYxMiwiZXhwIjpudWxsfQ.0OJdTCsh9vv61mJ1UI1GWknheleLqP7VdQF6yp1CcBuN_FFe4hig-EGhfj5nhKYmSC0fy9n4aualL1KzMLehxVGwnrD3wA8k1MZShJWDkGqAtwAdQXgVh_YW1HVjhP4gei0lPnvTKrhQ7_fitOagvMSNxnEUwCgWeEad49ejoxPOc57UEFUvqztePDbDDzJWk2EoY5FLR1w_l4rJo7OVidRxD3WjayvLkTdYbynBpmlfKq9XN-xST9n3oSh7B3U_DVoMeubSuQabVm6JUyFexKOaXFcweiC6g87ApJ2yurCGvyShmGN7otcpMUH9bsR3hlIEzBKEvga7gd709YiVsA"

@@ -367,7 +367,7 @@ class DashboardServiceSource(TopologyRunnerMixin, Source, ABC):
         db_service_names = self.get_db_service_names()
         if not db_service_names:
             for lineage in (
-                self.yield_dashboard_lineage_details(dashboard_details) or []
+                self.yield_dashboard_lineage_details(dashboard_details, None) or []
             ):
                 yield from self.yield_lineage_request(lineage)
         for db_service_name in db_service_names or []:
