@@ -21,6 +21,7 @@ from metadata.generated.schema.api.data.createDashboardDataModel import (
     CreateDashboardDataModelRequest,
 )
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
+from metadata.generated.schema.entity.data.chart import Chart
 from metadata.generated.schema.entity.data.dashboardDataModel import (
     DashboardDataModel,
     DataModelType,
@@ -379,12 +380,20 @@ class ThoughtSpotSource(DashboardServiceSource):
             and dashboard_details.visualization_headers
         ):
             # For liveboards, check if visualizations reference worksheets
+            processed_worksheets = set()  # Avoid duplicate lineage
             for viz_header in dashboard_details.visualization_headers:
                 if isinstance(viz_header, dict):
                     worksheet_id = viz_header.get("worksheetId")
-                    if worksheet_id:
+                    if worksheet_id and worksheet_id not in processed_worksheets:
+                        # Create lineage from data model to dashboard
                         yield from self._create_data_model_lineage(
                             dashboard_details, worksheet_id, "worksheet"
+                        )
+                        processed_worksheets.add(worksheet_id)
+
+                        # Create lineage from data model to individual charts
+                        yield from self._create_chart_to_datamodel_lineage(
+                            dashboard_details, viz_header, worksheet_id
                         )
 
         # Create lineage from tables to data models if we have db_service_name
@@ -654,18 +663,31 @@ class ThoughtSpotSource(DashboardServiceSource):
     ) -> Iterable[Either[AddLineageRequest]]:
         """Create lineage from data model to dashboard"""
         try:
+            # First, find the data model by ID in our cached models
+            model_info = self._data_models.get(model_id)
+            if not model_info:
+                logger.debug(f"Data model {model_id} not found in cache")
+                return
+
+            model_name = model_info["name"]
             model_fqn = fqn.build(
                 self.metadata,
                 entity_type=DashboardDataModel,
                 service_name=self.context.get().dashboard_service,
-                data_model_name=model_id,
+                data_model_name=model_name,
             )
 
-            if model_fqn:
+            # Get the actual data model entity to get its FQN/ID
+            data_model_entity = self.metadata.get_by_name(
+                entity=DashboardDataModel, fqn=model_fqn
+            )
+
+            if data_model_entity:
+                # Create lineage from data model to dashboard
                 lineage = AddLineageRequest(
                     edge=EntitiesEdge(
                         fromEntity=EntityReference(
-                            id=model_fqn, type="dashboardDataModel"
+                            id=data_model_entity.id.root, type="dashboardDataModel"
                         ),
                         toEntity=EntityReference(id=dashboard.id, type="dashboard"),
                     )
@@ -680,6 +702,107 @@ class ThoughtSpotSource(DashboardServiceSource):
                     stackTrace=traceback.format_exc(),
                 )
             )
+
+    def _create_chart_to_datamodel_lineage(
+        self, dashboard: Any, viz_header: Dict[str, Any], worksheet_id: str
+    ) -> Iterable[Either[AddLineageRequest]]:
+        """Create lineage from data model to individual charts"""
+        try:
+            # Get the worksheet/data model info
+            model_info = self._data_models.get(worksheet_id)
+            if not model_info:
+                logger.debug(
+                    f"Data model {worksheet_id} not found in cache for chart lineage"
+                )
+                return
+
+            # Get the chart name from viz_header
+            chart_name = self._extract_chart_name_from_header(viz_header)
+            if not chart_name or chart_name == "Untitled":
+                return
+
+            # Build FQNs
+            model_name = model_info["name"]
+            data_model_fqn = fqn.build(
+                self.metadata,
+                entity_type=DashboardDataModel,
+                service_name=self.context.get().dashboard_service,
+                data_model_name=model_name,
+            )
+
+            chart_fqn = fqn.build(
+                self.metadata,
+                entity_type=Chart,
+                service_name=self.context.get().dashboard_service,
+                chart_name=chart_name,
+            )
+
+            # Get the actual entities
+            data_model_entity = self.metadata.get_by_name(
+                entity=DashboardDataModel, fqn=data_model_fqn
+            )
+            chart_entity = self.metadata.get_by_name(entity=Chart, fqn=chart_fqn)
+
+            if data_model_entity and chart_entity:
+                # Create lineage from data model to chart
+                lineage = AddLineageRequest(
+                    edge=EntitiesEdge(
+                        fromEntity=EntityReference(
+                            id=data_model_entity.id.root, type="dashboardDataModel"
+                        ),
+                        toEntity=EntityReference(id=chart_entity.id.root, type="chart"),
+                    )
+                )
+                yield Either(right=lineage)
+
+        except Exception as exc:
+            logger.debug(f"Error creating chart to data model lineage: {exc}")
+
+    def _extract_chart_name_from_header(
+        self, viz_header: Dict[str, Any]
+    ) -> Optional[str]:
+        """Extract chart name from visualization header (same logic as in _extract_visualizations_from_headers)"""
+        # Handle nested name structure
+        name_field = viz_header.get("name", "")
+        if isinstance(name_field, dict) and "value" in name_field:
+            if isinstance(name_field["value"], dict) and "text" in name_field["value"]:
+                name_field = name_field["value"]["text"]
+            else:
+                name_field = str(name_field.get("value", ""))
+
+        # Handle nested title structure
+        title_field = viz_header.get("title", "")
+        if isinstance(title_field, dict) and "value" in title_field:
+            if (
+                isinstance(title_field["value"], dict)
+                and "text" in title_field["value"]
+            ):
+                title_field = title_field["value"]["text"]
+            else:
+                title_field = str(title_field.get("value", ""))
+
+        # Try to get the actual name from the 'name' field first
+        actual_name = viz_header.get("name", "")
+        if (
+            isinstance(actual_name, str)
+            and actual_name
+            and actual_name not in ["Chart 0", "Chart 1", "Table 1"]
+        ):
+            return actual_name
+        elif (
+            isinstance(name_field, str)
+            and name_field
+            and name_field not in ["Chart 0", "Chart 1", "Table 1"]
+        ):
+            return name_field
+        elif (
+            isinstance(title_field, str)
+            and title_field
+            and title_field not in ["Chart 0", "Chart 1", "Table 1"]
+        ):
+            return title_field
+
+        return None
 
     def _extract_visualizations_from_headers(
         self, viz_headers: List[Dict[str, Any]]
