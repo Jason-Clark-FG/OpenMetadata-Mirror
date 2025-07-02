@@ -191,6 +191,14 @@ plugins: Dict[str, Set[str]] = {
         VERSIONS["pandas"],
         VERSIONS["numpy"],
     },
+    "googlesheets": {
+        "google-api-python-client>=2.0.0",
+        "google-auth>=2.0.0",
+        "google-auth-oauthlib>=1.0.0",
+        "google-auth-httplib2>=0.2.0",
+        VERSIONS["pandas"],
+        VERSIONS["numpy"],
+    },
     "clickhouse": {
         "clickhouse-driver~=0.2",
         "clickhouse-sqlalchemy~=0.2.0",

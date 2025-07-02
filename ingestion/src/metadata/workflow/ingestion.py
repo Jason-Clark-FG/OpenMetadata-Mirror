@@ -196,6 +196,9 @@ class IngestionWorkflow(BaseWorkflow, ABC):
 
     def import_source_class(self) -> Type[Source]:
         source_type = self.config.source.type.lower()
+        logger.debug(
+            f"Importing source class for type: '{source_type}', service_type: {self.service_type}"
+        )
         try:
             return (
                 import_from_module(

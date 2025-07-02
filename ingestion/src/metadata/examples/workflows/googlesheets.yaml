@@ -1,0 +1,86 @@
+source:
+  type: googlesheets
+  serviceName: local_googlesheets
+  serviceConnection:
+    config:
+      type: GoogleSheets
+      databaseName: default # Optional: Name for the database in OpenMetadata (defaults to "default")
+      credentials:
+        gcpConfig:
+          # Option 1: Service Account JSON Values
+          type: service_account
+          projectId: "<your-gcp-project-id>"
+          privateKeyId: "<private-key-id>"
+          privateKey: "-----BEGIN RSA PRIVATE KEY-----\n<your-private-key>\n-----END RSA PRIVATE KEY-----\n"
+          clientEmail: "<service-account-email>@<project-id>.iam.gserviceaccount.com"
+          clientId: "<client-id>"
+          authUri: "https://accounts.google.com/o/oauth2/auth"
+          tokenUri: "https://oauth2.googleapis.com/token"
+          authProviderX509CertUrl: "https://www.googleapis.com/oauth2/v1/certs"
+          clientX509CertUrl: "https://www.googleapis.com/robot/v1/metadata/x509/<service-account-email>"
+
+          # Option 2: Service Account JSON File Path
+          # type: gcp_credential_path
+          # path: "/path/to/service-account-key.json"
+          # projectId: "<your-gcp-project-id>"
+
+          # Option 3: Application Default Credentials
+          # type: gcp_adc
+          # projectId: "<your-gcp-project-id>"
+
+      # OAuth Scopes for Google Sheets and Drive APIs
+      scopes:
+        - "https://www.googleapis.com/auth/spreadsheets.readonly"
+        - "https://www.googleapis.com/auth/drive.readonly"
+
+      # Include sheets from shared drives
+      includeSharedDrives: true
+
+      # Optional: Filter patterns for sheets and folders
+      # sheetFilterPattern:
+      #   includes:
+      #     - ".*Analytics.*"
+      #     - ".*Reports.*"
+      #   excludes:
+      #     - ".*Test.*"
+      #     - ".*Archive.*"
+
+      # folderFilterPattern:
+      #   includes:
+      #     - "Data Warehouse"
+      #   excludes:
+      #     - "Personal"
+
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      # markDeletedTables: true
+      # includeTables: true
+      # includeViews: true
+
+      # Table filter pattern (sheet names within spreadsheets)
+      # tableFilterPattern:
+      #   includes:
+      #     - "Sheet1"
+      #     - "Data.*"
+      #   excludes:
+      #     - ".*backup.*"
+
+      # Schema filter pattern (spreadsheet names)
+      # schemaFilterPattern:
+      #   includes:
+      #     - ".*Finance.*"
+      #   excludes:
+      #     - ".*Draft.*"
+
+sink:
+  type: metadata-rest
+  config: {}
+
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://localhost:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlzQm90IjpmYWxzZSwiaXNzIjoib3Blbi1tZXRhZGF0YS5vcmciLCJpYXQiOjE2NjM5Mzg0NjIsImVtYWlsIjoiYWRtaW5Ab3Blbm1ldGFkYXRhLm9yZyJ9.tS8um_5DKu7HgzGBzS1VTA5uUjKWOCU0B_j08WXBiEC0mr0zNREkqVfwFDD-d24HlNEbrqioLsBuFRiwIWKc1m_ZlVQbG7P36RUxhuv2vbSp80FKyNM-Tj93FDzq91jsyNmsQhyNv_fNr3TXfzzSPjHt8Go0FMMP66weoKMgW2PbXlhVKwEuXUHyakLLzewm9UMeQaEiRzhiTMU3UkLXcKbYEJJvfNFcLwSl9W8JCO_l0Yj3ud-qt_nQYEZwqW6u5nfdQllN133iikV4fM5QZsMCnm8Rq1mvLR0y9bmJiD7fwM1tmJ791TUWqmKaTnP49U493VanKpUAfzIiOiIbhg"

@@ -110,7 +110,7 @@ class DefaultSourceLoader(SourceLoader):
         from_: str = "ingestion",
     ) -> Type[Any]:
         """Default implementation for loading service specifications."""
-        return import_from_module(
+        module_path = (
             "metadata.{}.source.{}.{}.{}.ServiceSpec".format(  # pylint: disable=C0209
                 from_,
                 service_type.name.lower(),
@@ -118,17 +118,25 @@ class DefaultSourceLoader(SourceLoader):
                 "service_spec",
             )
         )
+        logger.debug(
+            f"DefaultSourceLoader: Attempting to import from module path: {module_path}"
+        )
+        return import_from_module(module_path)
 
 
 def import_source_class(
     service_type: ServiceType, source_type: str, from_: str = "ingestion"
 ) -> Type[Source]:
+    logger.debug(
+        f"import_source_class called with service_type={service_type}, source_type={source_type}, from_={from_}"
+    )
     source_class_type = source_type.split(TYPE_SEPARATOR)[-1]
     if source_class_type in ["usage", "lineage"]:
         field = f"{source_class_type}_source_class"
     else:
         field = "metadata_source_class"
     spec = BaseSpec.get_for_source(service_type, source_type, from_)
+    logger.debug(f"Retrieved spec: {spec}, field: {field}")
     return cast(
         Type[Source],
         import_from_module(spec.model_dump()[field]),

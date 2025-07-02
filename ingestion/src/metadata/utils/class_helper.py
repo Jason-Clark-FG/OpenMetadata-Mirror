@@ -145,8 +145,9 @@ def get_service_type_from_source_type(source_type: str) -> ServiceType:
     """
     Method to get service type from source type
     """
-
-    return _get_service_type_from(_clean(source_type))
+    cleaned = _clean(source_type)
+    result = _get_service_type_from(cleaned)
+    return result
 
 
 def get_reference_type_from_service_type(service_type: ServiceType) -> str:
