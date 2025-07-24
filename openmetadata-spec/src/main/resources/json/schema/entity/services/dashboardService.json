@@ -11,7 +11,7 @@
   ],
   "definitions": {
     "dashboardServiceType": {
-      "description": "Type of Dashboard service - Superset, Looker, Redash, Tableau, Metabase, PowerBi, Mode, or Lightdash",
+      "description": "Type of Dashboard service - Superset, Looker, Redash, Tableau, Metabase, PowerBi, Mode, Lightdash, HubSpot, etc.",
       "type": "string",
       "javaInterfaces": ["org.openmetadata.schema.EnumInterface"],
       "enum": [
@@ -31,7 +31,8 @@
         "MicroStrategy",
         "QlikCloud",
         "Sigma",
-        "ThoughtSpot"
+        "ThoughtSpot",
+        "Hubspot"
       ],
       "javaEnums": [
         {
@@ -84,6 +85,9 @@
         },
         {
           "name": "ThoughtSpot"
+        },
+        {
+          "name": "Hubspot"
         }
       ]
     },
@@ -148,6 +152,9 @@
             },
             {
               "$ref": "./connections/dashboard/thoughtSpotConnection.json"
+            },
+            {
+              "$ref": "./connections/dashboard/hubspotConnection.json"
             }
           ]
         }
