@@ -1,0 +1,37 @@
+source:
+  type: hex
+  serviceName: hex_test_service
+  serviceConnection:
+    config:
+      type: Hex
+      hostPort: https://app.hex.tech
+      token: "${HEX_API_TOKEN}"
+      tokenType: personal
+      includeCategories: true
+  sourceConfig:
+    config:
+      type: DashboardMetadata
+      dashboardFilterPattern:
+        includes:
+          - ".*"
+      chartFilterPattern:
+        includes:
+          - ".*"
+      markDeletedDashboards: false
+      markDeletedDataModels: false
+      overrideMetadata: false
+      includeDataModels: false
+      includeTags: true
+      overrideLineage: false
+
+sink:
+  type: metadata-rest
+  config: {}
+
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://localhost:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT_TOKEN}"
