@@ -53,6 +53,7 @@
         "Couchbase",
         "Greenplum",
         "Doris",
+        "Dremio",
         "UnityCatalog",
         "SAS",
         "Iceberg",
@@ -177,6 +178,9 @@
         },
         {
           "name": "Doris"
+        },
+        {
+          "name": "Dremio"
         },
         {
           "name": "UnityCatalog"
@@ -324,6 +328,9 @@
             },
             {
               "$ref": "./connections/database/dorisConnection.json"
+            },
+            {
+              "$ref": "./connections/database/dremioConnection.json"
             },
             {
               "$ref": "./connections/database/unityCatalogConnection.json"
