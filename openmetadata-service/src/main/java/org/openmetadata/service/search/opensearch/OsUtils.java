@@ -265,24 +265,25 @@ public class OsUtils {
 
   /**
    * Builds and applies search source filters for OpenSearch queries with SQL injection protection.
-   * 
+   *
    * <p><strong>Security Enhancement:</strong> This method was modified to include SQL injection sanitization
    * as part of the security remediation for 42 vulnerable instances across search endpoints.
-   * 
+   *
    * <p>The method now sanitizes the queryFilter parameter before parsing to prevent malicious input
    * from being processed by the vulnerable SearchSourceBuilder.fromXContent() method.
-   * 
+   *
    * @param queryFilter Raw query filter string from HTTP request parameters (potentially malicious)
    * @param searchSourceBuilder OpenSearch search source builder to apply filters to
-   * 
+   *
    * @see SearchUtils#sanitizeQueryParameter(String)
    */
   public static void buildSearchSourceFilter(
       String queryFilter, SearchSourceBuilder searchSourceBuilder) {
     // SECURITY: Sanitize input to prevent SQL injection attacks before parsing JSON
-    // This addresses vulnerability instances where user input was directly parsed without validation
+    // This addresses vulnerability instances where user input was directly parsed without
+    // validation
     String sanitizedFilter = SearchUtils.sanitizeQueryParameter(queryFilter);
-    
+
     if (!nullOrEmpty(sanitizedFilter) && !sanitizedFilter.equals("{}")) {
       try {
         // Parse the sanitized filter string into OpenSearch QueryBuilder
@@ -293,7 +294,7 @@ public class OsUtils {
                 .createParser(
                     osXContentRegistry, LoggingDeprecationHandler.INSTANCE, sanitizedFilter);
         QueryBuilder filter = SearchSourceBuilder.fromXContent(filterParser).query();
-        
+
         // Combine the parsed filter with the existing query using boolean logic
         BoolQueryBuilder newQuery =
             QueryBuilders.boolQuery().must(searchSourceBuilder.query()).filter(filter);

@@ -232,4 +232,59 @@ public class SearchUtilsTest {
     assertTrue(duration < 100, "Sanitization should be fast even for large inputs");
     assertEquals(largeValidInput.toString(), result);
   }
+
+  @Test
+  void testSanitizeUserInput_ListFilterAgentTypeVulnerability() {
+    // Test the specific vulnerability from /v1/apps?agentType=' OR Select 123; --
+    String maliciousAgentType = "' OR Select 123; --";
+    String result = SearchUtils.sanitizeUserInput(maliciousAgentType, 255);
+
+    // Should remove dangerous patterns
+    assertTrue(!result.contains("' OR "));
+    assertTrue(!result.contains("Select")); // Now should work with expanded patterns
+    assertTrue(!result.contains("--"));
+    assertTrue(!result.contains(";")); // Semicolons are also removed
+
+    // Result should be heavily sanitized - only numbers remain
+    assertEquals("123", result.trim()); // Only safe parts remain
+  }
+
+  @Test
+  void testSanitizeUserInput_DifferentLengthLimits() {
+    // Test with short length limit
+    String validShortInput = "validAgentType";
+    String result = SearchUtils.sanitizeUserInput(validShortInput, 20);
+    assertEquals(validShortInput, result);
+
+    // Test length limit enforcement
+    String longInput = "this_is_a_very_long_agent_type_name_that_exceeds_limit";
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          SearchUtils.sanitizeUserInput(longInput, 10);
+        });
+  }
+
+  @Test
+  void testSanitizeUserInput_AllListFilterVulnerabilities() {
+    // Test patterns that could be used in ListFilter parameters
+    String[] vulnerableInputs = {
+      "normalValue' OR '1'='1' --",
+      "directory' UNION SELECT * FROM users --",
+      "fileType'; DROP TABLE test; --",
+      "assignee' AND randomblob(100000) --"
+    };
+
+    for (String input : vulnerableInputs) {
+      String result = SearchUtils.sanitizeUserInput(input, 255);
+
+      // Verify dangerous patterns are removed
+      assertTrue(!result.contains("' OR '"));
+      assertTrue(!result.contains("' AND '"));
+      assertTrue(!result.contains("union select"));
+      assertTrue(!result.contains("drop table"));
+      assertTrue(!result.contains("--"));
+      assertTrue(!result.contains("randomblob("));
+    }
+  }
 }
