@@ -312,8 +312,8 @@ class PiiProcessorTest(TestCase):
             self.assertEqual(expected.column_fqn, updated.column_fqn)
             self.assertEqual(expected.tag_label.tagFQN, updated.tag_label.tagFQN)
             self.assertRegex(
-                updated.value,
+                updated.tag_label.reason,
                 expected_regex=re.compile(
-                    f"Chose {expected.tag_label.name} with a classification score of \d+([.,]?\d{{1,2}})?"
+                    f"Chose {expected.tag_label.tagFQN.root} with a classification score of \d+([.,]?\d{{1,2}})?"
                 ),
             )
