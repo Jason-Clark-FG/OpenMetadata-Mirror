@@ -27,7 +27,7 @@ from metadata.generated.schema.type.tagLabel import (
 )
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.pii.algorithms.tags import PIISensitivityTag
-from metadata.pii.algorithms.utils import get_top_classes, normalize_scores
+from metadata.pii.algorithms.utils import build_reason, get_top_classes
 from metadata.pii.base_processor import AutoClassificationProcessor
 from metadata.pii.constants import PII
 from metadata.utils import fqn
@@ -59,7 +59,7 @@ class PIIProcessor(AutoClassificationProcessor):
         self._tolerance = 0.01
 
     @staticmethod
-    def build_tag_label(tag: PIISensitivityTag) -> TagLabel:
+    def build_tag_label(tag: PIISensitivityTag, reason: str) -> TagLabel:
         tag_fqn = fqn.build(
             metadata=None,
             entity_type=Tag,
@@ -72,6 +72,7 @@ class PIIProcessor(AutoClassificationProcessor):
             source=TagSource.Classification,
             state=State.Suggested,
             labelType=LabelType.Generated,
+            reason=reason,
         )
 
         return tag_label
@@ -96,5 +97,8 @@ class PIIProcessor(AutoClassificationProcessor):
 
         # winner is at most 1 tag
         winner = get_top_classes(scores, 1, self.confidence_threshold)
-        tag_labels = [self.build_tag_label(tag) for tag in winner]
+        tag_labels = [
+            self.build_tag_label(tag, build_reason(tag.value, scores[tag]))
+            for tag in winner
+        ]
         return tag_labels

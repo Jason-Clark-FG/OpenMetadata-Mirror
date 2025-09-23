@@ -13,6 +13,7 @@ Test Processor Class
 """
 
 import datetime
+import re
 from unittest import TestCase
 
 from metadata.generated.schema.api.data.createDatabase import CreateDatabaseRequest
@@ -310,3 +311,9 @@ class PiiProcessorTest(TestCase):
         for expected, updated in zip(EXPECTED_COLUMN_TAGS, updated_record.column_tags):
             self.assertEqual(expected.column_fqn, updated.column_fqn)
             self.assertEqual(expected.tag_label.tagFQN, updated.tag_label.tagFQN)
+            self.assertRegex(
+                updated.value,
+                expected_regex=re.compile(
+                    f"Chose {expected.tag_label.name} with a classification score of \d+([.,]?\d{{1,2}})?"
+                ),
+            )
