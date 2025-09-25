@@ -22,7 +22,8 @@ import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.notifications.template.NotificationTemplateProcessor;
 import org.openmetadata.service.notifications.template.handlebars.HandlebarsNotificationTemplateProcessor;
-import org.openmetadata.service.util.SeedDataPathResolver;
+import org.openmetadata.service.util.resourcepath.ResourcePathResolver;
+import org.openmetadata.service.util.resourcepath.providers.EmailEnvelopeResourcePathProvider;
 import org.openmetadata.service.util.email.EmailUtil;
 
 /**
@@ -42,7 +43,7 @@ public class EmailNotificationMessageDecorator implements NotificationMessageDec
 
   private NotificationTemplate loadEmailEnvelopeFromResources() {
     // Use SPI to determine the path for email envelope
-    String envelopePath = SeedDataPathResolver.resolveEmailEnvelopePath();
+    String envelopePath = ResourcePathResolver.getResourcePath(EmailEnvelopeResourcePathProvider.class);
 
     try {
       // Load the specific envelope file (similar to how EntityRepository loads seed data)
