@@ -37,6 +37,11 @@ public class ElasticQueryBuilderFactory implements QueryBuilderFactory {
   }
 
   @Override
+  public OMQueryBuilder prefixQuery(String field, String prefix) {
+    return new ElasticQueryBuilder().prefixQuery(field, prefix);
+  }
+
+  @Override
   public OMQueryBuilder nestedQuery(String path, OMQueryBuilder query) {
     return new ElasticQueryBuilder().nestedQuery(path, query);
   }

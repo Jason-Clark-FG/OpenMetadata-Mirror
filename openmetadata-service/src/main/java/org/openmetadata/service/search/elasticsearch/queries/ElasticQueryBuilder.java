@@ -170,6 +170,11 @@ public class ElasticQueryBuilder implements OMQueryBuilder {
     return this;
   }
 
+  public ElasticQueryBuilder prefixQuery(String field, String prefix) {
+    this.query = Query.of(q -> q.prefix(p -> p.field(field).value(prefix)));
+    return this;
+  }
+
   public ElasticQueryBuilder nestedQuery(String path, OMQueryBuilder innerQuery) {
     Query inner = ((ElasticQueryBuilder) innerQuery).build();
     this.query = Query.of(q -> q.nested(n -> n.path(path).query(inner)));
@@ -178,7 +183,6 @@ public class ElasticQueryBuilder implements OMQueryBuilder {
 
   private BoolQuery.Builder getOrCreateBoolQueryBuilder() {
     if (query != null && query.isBool()) {
-      // Create a new builder with existing clauses
       BoolQuery existingBool = query.bool();
       BoolQuery.Builder builder = new BoolQuery.Builder();
       builder.must(existingBool.must());
