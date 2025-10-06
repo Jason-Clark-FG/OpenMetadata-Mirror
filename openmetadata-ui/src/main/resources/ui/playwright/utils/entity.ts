@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { expect, Page } from '@playwright/test';
+import DOMPurify from 'dompurify';
 import { isEmpty, lowerCase } from 'lodash';
 import {
   BIG_ENTITY_DELETE_TIMEOUT,
@@ -1894,7 +1895,14 @@ export const getTextFromHtmlString = (description?: string): string => {
     return '';
   }
 
-  return description.replace(/<[^>]*>/g, '').trim();
+  // Sanitize the HTML string to prevent XSS or injection vulnerabilities
+  const sanitized = DOMPurify.sanitize(description);
+
+  // Use DOMParser to parse the sanitized HTML and extract text content
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(sanitized, 'text/html');
+
+  return doc.body.textContent?.trim() ?? '';
 };
 
 export const getFirstRowColumnLink = (page: Page) => {
