@@ -1,0 +1,140 @@
+{
+  "glossaries": {
+    "results": [
+      {
+        "id": "glossary-1",
+        "name": "Business Glossary",
+        "displayName": "Business Glossary",
+        "description": "Main business glossary for the organization"
+      }
+    ]
+  },
+  "glossary_terms": {
+    "results": [
+      {
+        "id": "term-1",
+        "name": "Customer",
+        "displayName": "Customer",
+        "description": "An individual or organization that purchases goods or services"
+      },
+      {
+        "id": "term-2",
+        "name": "Revenue",
+        "displayName": "Revenue",
+        "description": "Total income generated from business operations"
+      }
+    ]
+  },
+  "attributes": {
+    "results": [
+      {
+        "id": "attr-1",
+        "type": {
+          "name": "Synonym"
+        },
+        "value": "Client"
+      },
+      {
+        "id": "attr-2",
+        "type": {
+          "name": "DataType"
+        },
+        "value": "String"
+      },
+      {
+        "id": "attr-3",
+        "type": {
+          "name": "BusinessOwner"
+        },
+        "value": "John Doe"
+      }
+    ]
+  },
+  "tags": [
+    "PII",
+    "Sensitive",
+    "Financial"
+  ],
+  "communities": {
+    "results": [
+      {
+        "id": "community-1",
+        "name": "Finance",
+        "displayName": "Finance",
+        "description": "Finance domain"
+      }
+    ]
+  },
+  "domains": {
+    "results": [
+      {
+        "id": "domain-1",
+        "name": "Accounting",
+        "displayName": "Accounting",
+        "description": "Accounting sub-domain"
+      }
+    ]
+  },
+  "users": {
+    "results": [
+      {
+        "id": "user-1",
+        "userName": "john.doe",
+        "emailAddress": "john.doe@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
+      },
+      {
+        "id": "user-2",
+        "userName": "jane.smith",
+        "emailAddress": "jane.smith@example.com",
+        "firstName": "Jane",
+        "lastName": "Smith"
+      }
+    ]
+  },
+  "responsibilities": {
+    "results": [
+      {
+        "id": "resp-1",
+        "resource": {
+          "id": "term-1"
+        },
+        "user": {
+          "id": "user-1"
+        },
+        "role": {
+          "name": "Data Steward"
+        }
+      },
+      {
+        "id": "resp-2",
+        "resource": {
+          "id": "glossary-1"
+        },
+        "user": {
+          "id": "user-2"
+        },
+        "role": {
+          "name": "Owner"
+        }
+      }
+    ]
+  },
+  "relations": {
+    "results": [
+      {
+        "id": "rel-1",
+        "source": {
+          "id": "term-1"
+        },
+        "target": {
+          "id": "term-2"
+        },
+        "type": {
+          "name": "is related to"
+        }
+      }
+    ]
+  }
+}
