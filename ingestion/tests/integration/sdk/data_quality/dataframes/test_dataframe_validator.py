@@ -199,7 +199,7 @@ class TestFullUseCase:
             "metadata.sdk.data_quality.dataframes.open_metadata.get_client",
             return_value=Mock(ometa=metadata),
         ) as mock_client:
-            result.publish_to_openmetadata(
+            result.publish(
                 table_fqn,
             )
 
