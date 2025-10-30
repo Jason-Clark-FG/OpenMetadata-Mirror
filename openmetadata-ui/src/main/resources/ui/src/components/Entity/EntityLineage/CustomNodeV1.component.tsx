@@ -224,7 +224,11 @@ const MeatballMenu = () => {
 };
 const CustomNodeV1 = (props: NodeProps) => {
   const { data, type, isConnectable } = props;
-  const { t } = useTranslation();
+  const [isColumnsListExpanded, setIsColumnsListExpanded] = useState(false);
+
+  const toggleColumnsList = useCallback(() => {
+    setIsColumnsListExpanded((prev) => !prev);
+  }, []);
 
   const {
     isEditMode,
@@ -294,13 +298,25 @@ const CustomNodeV1 = (props: NodeProps) => {
 
     return (
       <>
-        <LineageNodeLabelV1 node={node} />
+        <LineageNodeLabelV1
+          isColumnsListExpanded={isColumnsListExpanded}
+          node={node}
+          toggleColumnsList={toggleColumnsList}
+        />
         {isSelected && isEditMode && !isRootNode && (
           <LineageNodeRemoveButton onRemove={() => removeNodeHandler(props)} />
         )}
       </>
     );
-  }, [node.id, isNewNode, label, isSelected, isEditMode, isRootNode]);
+  }, [
+    node.id,
+    isNewNode,
+    label,
+    isSelected,
+    isEditMode,
+    isRootNode,
+    isColumnsListExpanded,
+  ]);
 
   const expandCollapseProps = useMemo<ExpandCollapseHandlesProps>(
     () => ({
@@ -357,7 +373,11 @@ const CustomNodeV1 = (props: NodeProps) => {
       />
       <div className="lineage-node-content">
         <div className="label-container bg-white">{nodeLabel}</div>
-        <NodeChildren isConnectable={isConnectable} node={node} />
+        <NodeChildren
+          isColumnsListExpanded={isColumnsListExpanded}
+          isConnectable={isConnectable}
+          node={node}
+        />
       </div>
       <MeatballMenu />
     </div>
