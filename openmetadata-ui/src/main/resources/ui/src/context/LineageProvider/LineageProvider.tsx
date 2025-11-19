@@ -1888,7 +1888,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         {children}
         <EntityLineageSidebar newAddedNode={newAddedNode} show={isEditMode} />
 
-        {isDrawerOpen &&
+        {false &&
+          isDrawerOpen &&
           !isEditMode &&
           (selectedEdge ? (
             <EdgeInfoDrawer
