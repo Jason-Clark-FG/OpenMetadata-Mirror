@@ -768,6 +768,22 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     [nodes, edges]
   );
 
+  const onColumnMouseOver = useCallback(
+    (column: string) => {
+      const { columnEdge } = getClassifiedEdge(edges);
+      const { connectedColumnEdges } = getAllTracedColumnEdge(
+        column,
+        columnEdge
+      );
+      setTracedColumns(connectedColumnEdges);
+    },
+    [edges]
+  );
+
+  const onColumnMouseOut = useCallback(() => {
+    setTracedColumns([]);
+  }, []);
+
   const removeEdgeHandler = async (
     edge: Edge,
     confirmDelete: boolean
@@ -1056,6 +1072,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setIsDrawerOpen(false);
     setTracedNodes([]);
     setTracedColumns([]);
+    setSelectedColumn('');
     setActiveNode(undefined);
     setSelectedNode({} as SourceType);
   }, []);
@@ -1727,6 +1744,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       onNodeDrop,
       onNodeCollapse,
       onColumnClick,
+      onColumnMouseOver,
+      onColumnMouseOut,
       onNodesChange,
       onEdgesChange,
       onZoomUpdate,
@@ -1783,6 +1802,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     onNodeDrop,
     onNodeCollapse,
     onColumnClick,
+    onColumnMouseOver,
+    onColumnMouseOut,
     selectedQuickFilters,
     setSelectedQuickFilters,
     onNodesChange,
