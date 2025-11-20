@@ -11,239 +11,189 @@
 """
 Test fixtures for auto-classification tests.
 """
-import uuid
-from typing import Any, List, Sequence
+from typing import Any, Sequence
 from unittest.mock import Mock
 
 import pytest
 
-from OpenMetadata.ingestion.build.lib.metadata.generated.schema.type.predefinedRecognizer import PredefinedRecognizer
 from metadata.generated.schema.entity.classification.classification import (
-    AutoClassificationConfig,
     Classification,
     ConflictResolution,
 )
 from metadata.generated.schema.entity.classification.tag import Tag
-from metadata.generated.schema.type import basic, recognizer, predefinedRecognizer
-from metadata.generated.schema.type.entityReference import EntityReference
-from metadata.generated.schema.type.patternRecognizer import PatternRecognizer
 from metadata.generated.schema.type.piiEntity import PIIEntity
-from metadata.generated.schema.type.recognizers.patterns import Pattern
-from metadata.generated.schema.type.recognizers.regexFlags import RegexFlags
-from metadata.pii.models import ClassificationRunConfig, ScoredTag
+from metadata.generated.schema.type.predefinedRecognizer import Name as PredefinedName
+from metadata.generated.schema.type.recognizer import Target
+from metadata.pii.models import ScoredTag
+from tests.factories.metadata.generated.schema.entity.classification.classification import (
+    ClassificationFactory,
+)
+from tests.factories.metadata.generated.schema.entity.classification.tag import (
+    TagFactory,
+)
+from tests.factories.metadata.generated.schema.type.recognizer import (
+    PatternFactory,
+    PatternRecognizerFactory,
+    PredefinedRecognizerFactory,
+    RecognizerFactory,
+)
+from tests.factories.metadata.pii.models import ScoredTagFactory
 
 
 @pytest.fixture
 def pii_classification() -> Classification:
     """PII classification with auto-classification enabled."""
-    return Classification(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="PII"),
-        fullyQualifiedName="PII",
-        description=basic.Markdown(root="Personal Identifiable Information"),
+    return ClassificationFactory.create(
+        fqn="PII",
         mutuallyExclusive=True,
-        autoClassificationConfig=AutoClassificationConfig(
-            enabled=True,
-            conflictResolution=ConflictResolution.highest_confidence,
-            minimumConfidence=0.7,
-            requireExplicitMatch=True,
-        ),
+        autoClassificationConfig__enabled=True,
+        autoClassificationConfig__minimumConfidence=0.7,
+        autoClassificationConfig__conflictResolution=ConflictResolution.highest_confidence,
+        autoClassificationConfig__requireExplicitMatch=True,
+        description="Personal Identifiable Information",
     )
 
 
 @pytest.fixture
 def general_classification() -> Classification:
     """General classification with auto-classification enabled."""
-    return Classification(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="General"),
-        fullyQualifiedName="General",
-        description=basic.Markdown(root="General data classifications"),
+    return ClassificationFactory.create(
+        fqn="General",
         mutuallyExclusive=False,
-        autoClassificationConfig=AutoClassificationConfig(
-            enabled=True,
-            conflictResolution=ConflictResolution.highest_confidence,
-            minimumConfidence=0.6,
-            requireExplicitMatch=True,
-        ),
+        autoClassificationConfig__enabled=True,
+        autoClassificationConfig__minimumConfidence=0.6,
+        autoClassificationConfig__conflictResolution=ConflictResolution.highest_confidence,
+        autoClassificationConfig__requireExplicitMatch=True,
+        description="General data classifications",
     )
 
 
 @pytest.fixture
 def disabled_classification() -> Classification:
     """Classification with auto-classification disabled."""
-    return Classification(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="Disabled"),
-        fullyQualifiedName="Disabled",
-        description=basic.Markdown(root="Disabled classification"),
+    return ClassificationFactory.create(
+        fqn="Disabled",
         mutuallyExclusive=False,
-        autoClassificationConfig=AutoClassificationConfig(
-            enabled=False,
-            conflictResolution=ConflictResolution.highest_confidence,
-            minimumConfidence=0.6,
-            requireExplicitMatch=True,
-        ),
+        autoClassificationConfig__enabled=False,
+        autoClassificationConfig__minimumConfidence=0.6,
+        autoClassificationConfig__conflictResolution=ConflictResolution.highest_confidence,
+        autoClassificationConfig__requireExplicitMatch=True,
+        description="Disabled classification",
     )
 
 
 @pytest.fixture
 def email_tag_pii(pii_classification: Classification) -> Tag:
     """Email tag in PII classification."""
-    return Tag(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="Email"),
-        fullyQualifiedName="PII.Email",
-        description=basic.Markdown(root="Email address"),
-        classification=EntityReference(
-            id=pii_classification.id,
-            type="classification",
-            name=pii_classification.name.root,
-            description=pii_classification.description.root,
-            fullyQualifiedName=getattr(pii_classification.fullyQualifiedName, "root"),
-        ),
+    email_pattern = PatternFactory.create(
+        name="email-pattern",
+        regex=r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    )
+
+    email_pattern_recognizer = PatternRecognizerFactory.create(
+        patterns=[email_pattern],
+        context=[],
+        supportedEntity=PIIEntity.EMAIL_ADDRESS,
+        supportedLanguage="en",
+    )
+
+    email_recognizer = RecognizerFactory.create(
+        name="email-pattern",
+        recognizerConfig=email_pattern_recognizer,
+        target=Target.content,
+    )
+
+    return TagFactory.create(
+        tag_name="Email",
+        tag_classification=pii_classification,
         autoClassificationEnabled=True,
         autoClassificationPriority=80,
-        recognizers=[
-            recognizer.Recognizer(
-                name="email-pattern",
-                recognizerConfig=recognizer.RecognizerConfig(
-                    root=PatternRecognizer(
-                        type='pattern',
-                        patterns=[
-                            Pattern(
-                                name="email-pattern",
-                                regex=r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
-                            )
-                        ],
-                        regexFlags=RegexFlags(),
-                        context=[],
-                        supportedEntity=PIIEntity.EMAIL_ADDRESS,
-                        supportedLanguage="en",
-                    )
-                ),
-                target=recognizer.Target.content,
-            )
-        ],
+        recognizers=[email_recognizer],
+        description="Email address",
     )
 
 
 @pytest.fixture
 def phone_tag_pii(pii_classification: Classification) -> Tag:
     """Phone tag in PII classification."""
-    return Tag(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="Phone"),
-        fullyQualifiedName="PII.Phone",
-        description=basic.Markdown(root="Phone number"),
-        classification=EntityReference(
-            id=pii_classification.id,
-            type="classification",
-            name=pii_classification.name.root,
-            description=pii_classification.description.root,
-            fullyQualifiedName=getattr(pii_classification.fullyQualifiedName, "root"),
-        ),
+    phone_pattern_1 = PatternFactory.create(
+        name="phone-pattern",
+        regex=r"\d{3}-\d{3}-\d{4}",
+    )
+    phone_pattern_2 = PatternFactory.create(
+        name="phone-pattern",
+        regex=r"\(\d{3}\)\s*\d{3}-\d{4}",
+    )
+
+    phone_pattern_recognizer = PatternRecognizerFactory.create(
+        patterns=[phone_pattern_1, phone_pattern_2],
+        context=[],
+        supportedEntity=PIIEntity.PHONE_NUMBER,
+        supportedLanguage="en",
+    )
+
+    phone_recognizer = RecognizerFactory.create(
+        name="phone-pattern",
+        recognizerConfig=phone_pattern_recognizer,
+        target=Target.content,
+    )
+
+    return TagFactory.create(
+        tag_name="Phone",
+        tag_classification=pii_classification,
         autoClassificationEnabled=True,
-        autoClassificationPriority=80,
-        recognizers=[
-            recognizer.Recognizer(
-                name="phone-pattern",
-                recognizerConfig=recognizer.RecognizerConfig(
-                    root=PatternRecognizer(
-                        type='pattern',
-                        patterns=[
-                            Pattern(
-                                name="phone-pattern",
-                                regex=r"\d{3}-\d{3}-\d{4}",
-                            ),
-                            Pattern(
-                                name="phone-pattern",
-                                regex=r"\(\d{3}\)\s*\d{3}-\d{4}",
-                            ),
-                        ],
-                        regexFlags=RegexFlags(),
-                        context=[],
-                        supportedEntity=PIIEntity.PHONE_NUMBER,
-                        supportedLanguage="en",
-                    )
-                ),
-                target=recognizer.Target.content,
-            )
-        ],
+        autoClassificationPriority=75,
+        recognizers=[phone_recognizer],
+        description="Phone number",
     )
 
 
 @pytest.fixture
 def credit_card_tag_general(general_classification: Classification) -> Tag:
     """Credit Card tag in General classification."""
-    return Tag(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="Credit Card"),
-        fullyQualifiedName="General.CreditCard",
-        description=basic.Markdown(root="Credit Card field"),
-        classification=EntityReference(
-            id=general_classification.id,
-            type="classification",
-            name=general_classification.name.root,
-            description=general_classification.description.root,
-            fullyQualifiedName=getattr(general_classification.fullyQualifiedName, "root"),
-        ),
+    credit_card_predefined_recognizer = PredefinedRecognizerFactory.create(
+        name=PredefinedName.CreditCardRecognizer,
+    )
+
+    credit_card_recognizer = RecognizerFactory.create(
+        name="credit-card",
+        recognizerConfig=credit_card_predefined_recognizer,
+        target=Target.content,
+    )
+
+    return TagFactory.create(
+        tag_name="CreditCard",
+        tag_classification=general_classification,
         autoClassificationEnabled=True,
         autoClassificationPriority=90,
-        recognizers=[
-            recognizer.Recognizer(
-                name="credit-card",
-                recognizerConfig=recognizer.RecognizerConfig(
-                    root=predefinedRecognizer.PredefinedRecognizer(
-                        type='predefined',
-                        name=predefinedRecognizer.Name.CreditCardRecognizer,
-                    )
-                ),
-                target=recognizer.Target.content,
-            )
-        ],
+        recognizers=[credit_card_recognizer],
+        description="Credit Card field",
     )
 
 
 @pytest.fixture
 def disabled_tag(pii_classification: Classification) -> Tag:
     """Tag with auto-classification disabled."""
-    return Tag(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="DisabledTag"),
-        fullyQualifiedName="PII.DisabledTag",
-        description=basic.Markdown(root="Disabled tag"),
-        classification=EntityReference(
-            id=pii_classification.id,
-            type="classification",
-            name=pii_classification.name.root,
-            description=pii_classification.description.root,
-            fullyQualifiedName=getattr(pii_classification.fullyQualifiedName, "root"),
-        ),
+    return TagFactory.create(
+        tag_name="DisabledTag",
+        tag_classification=pii_classification,
         autoClassificationEnabled=False,
         autoClassificationPriority=50,
         recognizers=[],
+        description="Disabled tag",
     )
 
 
 @pytest.fixture
 def tag_without_recognizers(pii_classification: Classification) -> Tag:
     """Tag without recognizers configured."""
-    return Tag(
-        id=basic.Uuid(root=uuid.uuid4()),
-        name=basic.EntityName(root="NoRecognizers"),
-        fullyQualifiedName="PII.NoRecognizers",
-        description=basic.Markdown(root="Tag without recognizers"),
-        classification=EntityReference(
-            id=pii_classification.id,
-            type="classification",
-            name=pii_classification.name.root,
-            description=pii_classification.description.root,
-            fullyQualifiedName=getattr(pii_classification.fullyQualifiedName, "root"),
-        ),
+    return TagFactory.create(
+        tag_name="NoRecognizers",
+        tag_classification=pii_classification,
         autoClassificationEnabled=True,
         autoClassificationPriority=50,
         recognizers=None,
+        description="Tag without recognizers",
     )
 
 
@@ -296,39 +246,11 @@ def mock_metadata_client(mocker) -> Mock:
 
 
 @pytest.fixture
-def pii_run_config(pii_classification: Classification) -> ClassificationRunConfig:
-    """ClassificationRunConfig for PII."""
-    return ClassificationRunConfig(
-        classification=pii_classification,
-        enabled=True,
-        min_confidence=0.7,
-        conflict_resolution=ConflictResolution.highest_confidence,
-        require_explicit_match=True,
-    )
-
-
-@pytest.fixture
-def general_run_config(
-    general_classification: Classification,
-) -> ClassificationRunConfig:
-    """ClassificationRunConfig for General."""
-    return ClassificationRunConfig(
-        classification=general_classification,
-        enabled=True,
-        min_confidence=0.6,
-        conflict_resolution=ConflictResolution.highest_confidence,
-        require_explicit_match=True,
-    )
-
-
-@pytest.fixture
 def scored_email_tag(email_tag_pii: Tag) -> ScoredTag:
     """ScoredTag for email with high confidence."""
-    return ScoredTag(
+    return ScoredTagFactory.create(
         tag=email_tag_pii,
         score=0.85,
-        classification_name="PII",
-        priority=80,
         reason="Detected by Email recognizer: content match (score: 0.85)",
     )
 
@@ -336,11 +258,9 @@ def scored_email_tag(email_tag_pii: Tag) -> ScoredTag:
 @pytest.fixture
 def scored_phone_tag(phone_tag_pii: Tag) -> ScoredTag:
     """ScoredTag for phone with medium confidence."""
-    return ScoredTag(
+    return ScoredTagFactory.create(
         tag=phone_tag_pii,
         score=0.75,
-        classification_name="PII",
-        priority=75,
         reason="Detected by Phone recognizer: content match (score: 0.75)",
     )
 
@@ -348,10 +268,8 @@ def scored_phone_tag(phone_tag_pii: Tag) -> ScoredTag:
 @pytest.fixture
 def scored_password_tag(credit_card_tag_general: Tag) -> ScoredTag:
     """ScoredTag for password with high priority."""
-    return ScoredTag(
+    return ScoredTagFactory.create(
         tag=credit_card_tag_general,
         score=0.90,
-        classification_name="General",
-        priority=90,
         reason="Detected by Password recognizer: column name match (score: 0.90)",
     )

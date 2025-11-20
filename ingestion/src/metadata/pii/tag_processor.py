@@ -1,4 +1,4 @@
-from typing import Any, Callable, Generator, Iterable, List, Optional, Sequence
+from typing import Any, Generator, List, Optional, Sequence
 
 from presidio_analyzer.nlp_engine import NlpEngine
 
@@ -14,14 +14,15 @@ from metadata.generated.schema.type.tagLabel import (
     TagSource,
 )
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
-from metadata.pii.algorithms.classifiers import TagClassifier
 from metadata.pii.algorithms.presidio_utils import load_nlp_engine
-from metadata.pii.algorithms.utils import get_top_classes, normalize_scores
+from metadata.pii.algorithms.tag_scoring import TagScorer
 from metadata.pii.base_processor import AutoClassificationProcessor
+from metadata.pii.classification_manager import (
+    ClassificationManager,
+    ClassificationManagerInterface,
+)
 from metadata.pii.conflict_resolver import ConflictResolver
-from metadata.pii.constants import PII
 from metadata.pii.models import ScoredTag
-from metadata.pii.run_manager import ClassificationRunManager
 from metadata.pii.tag_analyzer import TagAnalyzer
 from metadata.utils.logger import profiler_logger
 
@@ -68,6 +69,7 @@ class TagProcessor(AutoClassificationProcessor):
         config: OpenMetadataWorkflowConfig,
         metadata: OpenMetadata,
         nlp_engine: Optional[NlpEngine] = None,
+        classification_manager: Optional[ClassificationManagerInterface] = None,
         classification_filter: Optional[List[str]] = None,
         max_tags_per_column: int = 10,
         tolerance: float = 0.7,
@@ -80,7 +82,10 @@ class TagProcessor(AutoClassificationProcessor):
         self.max_tags_per_column = max_tags_per_column
 
         # Initialize new components
-        self.run_manager = ClassificationRunManager(metadata)
+        if classification_manager is None:
+            classification_manager = ClassificationManager(metadata)
+        self.run_manager = classification_manager
+
         self.conflict_resolver = ConflictResolver()
 
         # Get enabled classifications and their configs
@@ -98,13 +103,15 @@ class TagProcessor(AutoClassificationProcessor):
             f"classifications and {len(self.candidate_tags)} candidate tags"
         )
 
-    def build_tag_label(self, scored_tag: ScoredTag) -> TagLabel:
+    @staticmethod
+    def build_tag_label(scored_tag: ScoredTag) -> TagLabel:
         """Build a TagLabel from a ScoredTag."""
         tag_label = TagLabel(
             tagFQN=scored_tag.tag.fullyQualifiedName,
             source=TagSource.Classification,
             state=State.Suggested,
             labelType=LabelType.Generated,
+            reason=scored_tag.reason,
         )
 
         return tag_label
@@ -143,13 +150,13 @@ class TagProcessor(AutoClassificationProcessor):
         )
 
         # Create analyzers for remaining candidate tags
-        tag_analyzers = [
+        tag_analyzers = (
             TagAnalyzer(tag=tag, column=column, nlp_engine=self._nlp_engine)
             for tag in tags_to_analyze
-        ]
+        )
 
         # Score all tags
-        classifier = TagClassifier(tag_analyzers=tag_analyzers)
+        classifier = TagScorer(tag_analyzers=tag_analyzers)
         scored_tags = classifier.predict_scores(
             sample_data=sample_data,
             column_name=column.fullyQualifiedName,
@@ -164,12 +171,12 @@ class TagProcessor(AutoClassificationProcessor):
 
         logger.debug(
             f"Scored {len(scored_tags)} tags for column {column.name.root}, "
-            f"top score: {max(scored_tags.values()):.3f}"
+            f"top score: {max(t.score for t in scored_tags):.3f}"
         )
 
         # Apply conflict resolution
         resolved_tags = self.conflict_resolver.resolve_conflicts(
-            scored_tags=list(scored_tags.items()),
+            scored_tags=scored_tags,
             enabled_classifications=self.enabled_classifications,
         )
 

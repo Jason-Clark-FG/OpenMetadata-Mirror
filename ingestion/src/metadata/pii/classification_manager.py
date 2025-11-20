@@ -12,21 +12,29 @@
 Classification run manager for auto-classification workflows.
 """
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Protocol
 
 from metadata.generated.schema.entity.classification.classification import (
     Classification,
-    ConflictResolution,
 )
 from metadata.generated.schema.entity.classification.tag import Tag
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
-from metadata.pii.models import ClassificationRunConfig
 from metadata.utils.logger import profiler_logger
 
 logger = profiler_logger()
 
 
-class ClassificationRunManager:
+class ClassificationManagerInterface(Protocol):
+    def get_enabled_classifications(
+        self, filter_names: Optional[List[str]] = None
+    ) -> List[Classification]:
+        ...
+
+    def get_enabled_tags(self, classifications: List[Classification]) -> List[Tag]:
+        ...
+
+
+class ClassificationManager:
     """
     Manages which classifications and tags participate in auto-classification.
     Respects classification-level and tag-level configuration.
@@ -34,12 +42,12 @@ class ClassificationRunManager:
 
     def __init__(self, metadata: OpenMetadata):
         self.metadata = metadata
-        self._classification_cache: Dict[str, List[ClassificationRunConfig]] = defaultdict(list)
+        self._classification_cache: Dict[str, List[Classification]] = defaultdict(list)
         self._tags_cache: Dict[str, List[Tag]] = {}
 
     def get_enabled_classifications(
         self, filter_names: Optional[List[str]] = None
-    ) -> List[ClassificationRunConfig]:
+    ) -> List[Classification]:
         """
         Fetch classifications that have auto-classification enabled.
 
@@ -91,26 +99,14 @@ class ClassificationRunManager:
                 )
                 continue
 
-            config = ClassificationRunConfig(
-                classification=classification,
-                enabled=True,
-                min_confidence=auto_config.minimumConfidence or 0.6,
-                conflict_resolution=auto_config.conflictResolution
-                or ConflictResolution.highest_confidence,
-                require_explicit_match=auto_config.requireExplicitMatch
-                if auto_config.requireExplicitMatch is not None
-                else True,
-            )
-            cached_classifications.append(config)
+            cached_classifications.append(classification)
 
         logger.info(
-            f"Found {len(cached_classifications)} enabled classifications: {[c.classification.name.root for c in cached_classifications]}"
+            f"Found {len(cached_classifications)} enabled classifications: {[c.name.root for c in cached_classifications]}"
         )
         return cached_classifications
 
-    def get_enabled_tags(
-        self, classifications: List[ClassificationRunConfig]
-    ) -> List[Tag]:
+    def get_enabled_tags(self, classifications: List[Classification]) -> List[Tag]:
         """
         Get all tags with recognizers from enabled classifications.
 
@@ -124,7 +120,7 @@ class ClassificationRunManager:
         Returns:
             List of tags ready for auto-classification
         """
-        classification_names = [c.classification.name.root for c in classifications]
+        classification_names = [c.name.root for c in classifications]
 
         cache_key = ",".join(sorted(classification_names))
         if cache_key in self._tags_cache:

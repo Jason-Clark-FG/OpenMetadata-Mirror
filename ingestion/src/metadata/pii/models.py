@@ -16,10 +16,6 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from metadata.generated.schema.entity.classification.classification import (
-    Classification,
-    ConflictResolution,
-)
 from metadata.generated.schema.entity.classification.tag import Tag
 
 
@@ -41,36 +37,20 @@ class ScoredTag:
     Attributes:
         tag: The tag that was scored
         score: Confidence score (0.0-1.0)
-        classification_name: Name of the classification this tag belongs to
-        priority: Priority for conflict resolution (0-100, higher = higher priority)
         reason: Explanation of why this tag was matched
     """
 
     tag: Tag
     score: float
-    classification_name: str
-    priority: int
     reason: str
 
     def __hash__(self) -> int:
         return hash(self.tag.fullyQualifiedName)
 
+    @property
+    def classification_name(self) -> str:
+        return self.tag.classification.name if self.tag.classification else "Unknown"
 
-@dataclass(frozen=True)
-class ClassificationRunConfig:
-    """
-    Configuration for a classification during auto-classification run.
-
-    Attributes:
-        classification: The classification entity
-        enabled: Whether auto-classification is enabled
-        min_confidence: Minimum confidence threshold (0.0-1.0)
-        conflict_resolution: Strategy for resolving conflicts
-        require_explicit_match: Only apply tags when recognizers explicitly match
-    """
-
-    classification: Classification
-    enabled: bool
-    min_confidence: float
-    conflict_resolution: ConflictResolution
-    require_explicit_match: bool
+    @property
+    def priority(self) -> int:
+        return self.tag.autoClassificationPriority or 50

@@ -12,14 +12,12 @@
 Integration tests for TagProcessor with multi-classification support.
 Tests scenarios from AUTO_CLASSIFICATION_REFACTOR_SOLUTION.md
 """
-import uuid
 from typing import Any, Sequence
 from unittest.mock import Mock, patch
 
 import pytest
 
 from metadata.generated.schema.entity.classification.classification import (
-    AutoClassificationConfig,
     Classification,
     ConflictResolution,
 )
@@ -30,21 +28,28 @@ from metadata.generated.schema.metadataIngestion.workflow import (
     SourceConfig,
 )
 from metadata.generated.schema.type import basic
-from metadata.generated.schema.type.entityReference import EntityReference
-from metadata.generated.schema.type.patternRecognizer import PatternRecognizer
 from metadata.generated.schema.type.piiEntity import PIIEntity
-from metadata.generated.schema.type.predefinedRecognizer import PredefinedRecognizer, Name
-from metadata.generated.schema.type.recognizer import Recognizer, RecognizerConfig, Target
-from metadata.generated.schema.type.recognizers.patterns import Pattern
-from metadata.generated.schema.type.recognizers.regexFlags import RegexFlags
+from metadata.generated.schema.type.predefinedRecognizer import Name
+from metadata.generated.schema.type.recognizer import Target
 from metadata.generated.schema.type.tagLabel import LabelType, State, TagSource
 from metadata.pii.tag_processor import TagProcessor
+from tests.factories.metadata.generated.schema.entity.classification.classification import (
+    ClassificationFactory,
+)
+from tests.factories.metadata.generated.schema.entity.classification.tag import (
+    TagFactory,
+)
+from tests.factories.metadata.generated.schema.type.recognizer import (
+    PatternFactory,
+    PatternRecognizerFactory,
+    PredefinedRecognizerFactory,
+    RecognizerFactory,
+)
 
 
 class TestTagProcessorMultiClassification:
     """
     Integration tests for multi-classification scenarios.
-    Based on examples from AUTO_CLASSIFICATION_REFACTOR_SOLUTION.md
     """
 
     @pytest.fixture
@@ -65,18 +70,14 @@ class TestTagProcessorMultiClassification:
         - Uses highest_confidence resolution
         - Minimum confidence: 0.7
         """
-        return Classification(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="PII"),
-            fullyQualifiedName="PII",
-            description=basic.Markdown(root="Personal Identifiable Information"),
+        return ClassificationFactory.create(
+            fqn="PII",
             mutuallyExclusive=True,
-            autoClassificationConfig=AutoClassificationConfig(
-                enabled=True,
-                conflictResolution=ConflictResolution.highest_confidence,
-                minimumConfidence=0.7,
-                requireExplicitMatch=True,
-            ),
+            autoClassificationConfig__enabled=True,
+            autoClassificationConfig__conflictResolution=ConflictResolution.highest_confidence,
+            autoClassificationConfig__minimumConfidence=0.7,
+            autoClassificationConfig__requireExplicitMatch=True,
+            description="Personal Identifiable Information",
         )
 
     @pytest.fixture
@@ -86,18 +87,14 @@ class TestTagProcessorMultiClassification:
         - Multiple tags can be assigned
         - Minimum confidence: 0.6
         """
-        return Classification(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="General"),
-            fullyQualifiedName="General",
-            description=basic.Markdown(root="General data classifications"),
+        return ClassificationFactory.create(
+            fqn="General",
             mutuallyExclusive=False,
-            autoClassificationConfig=AutoClassificationConfig(
-                enabled=True,
-                conflictResolution=ConflictResolution.highest_confidence,
-                minimumConfidence=0.6,
-                requireExplicitMatch=True,
-            ),
+            autoClassificationConfig__enabled=True,
+            autoClassificationConfig__conflictResolution=ConflictResolution.highest_confidence,
+            autoClassificationConfig__minimumConfidence=0.6,
+            autoClassificationConfig__requireExplicitMatch=True,
+            description="General data classifications",
         )
 
     @pytest.fixture
@@ -107,155 +104,97 @@ class TestTagProcessorMultiClassification:
         - Uses highest_priority resolution
         - Minimum confidence: 0.5
         """
-        return Classification(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="TechDetail"),
-            fullyQualifiedName="TechDetail",
-            description=basic.Markdown(root="Technical details"),
+        return ClassificationFactory.create(
+            fqn="TechDetail",
             mutuallyExclusive=False,
-            autoClassificationConfig=AutoClassificationConfig(
-                enabled=True,
-                conflictResolution=ConflictResolution.highest_priority,
-                minimumConfidence=0.5,
-                requireExplicitMatch=True,
-            ),
+            autoClassificationConfig__enabled=True,
+            autoClassificationConfig__conflictResolution=ConflictResolution.highest_priority,
+            autoClassificationConfig__minimumConfidence=0.5,
+            autoClassificationConfig__requireExplicitMatch=True,
+            description="Technical details",
         )
 
     @pytest.fixture
     def pii_sensitive_tag(self, pii_classification_mutually_exclusive: Classification):
         """PII.Sensitive tag - high priority."""
-        return Tag(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="Sensitive"),
-            fullyQualifiedName="PII.Sensitive",
-            description=basic.Markdown(root="Sensitive data"),
-            classification=EntityReference(
-                id=pii_classification_mutually_exclusive.id.root,
-                type="classification",
-                name=pii_classification_mutually_exclusive.name.root,
-                description=pii_classification_mutually_exclusive.description.root,
-                fullyQualifiedName=getattr(pii_classification_mutually_exclusive.fullyQualifiedName, "root"),
-            ),
+        email_recognizer = PredefinedRecognizerFactory.create(name=Name.EmailRecognizer)
+        recognizer = RecognizerFactory.create(
+            name="email_recognizer",
+            recognizerConfig=email_recognizer,
+        )
+        return TagFactory.create(
+            fqn="PII.Sensitive",
+            tag_classification=pii_classification_mutually_exclusive,
             autoClassificationEnabled=True,
             autoClassificationPriority=90,
-            recognizers=[
-                Recognizer(
-                    id=basic.Uuid(root=uuid.uuid4()),
-                    name="email_recognizer",
-                    recognizerConfig=RecognizerConfig(
-                        root=PredefinedRecognizer(
-                            type="predefined",
-                            name=Name.EmailRecognizer
-                        )
-                    ),
-                )
-            ],
+            recognizers=[recognizer],
+            description="Sensitive data",
         )
 
     @pytest.fixture
     def general_email_tag(self, general_classification_non_exclusive: Classification):
         """General.Email tag."""
-        return Tag(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="Email"),
-            fullyQualifiedName="General.Email",
-            description=basic.Markdown(root="General email classifications"),
-            classification=EntityReference(
-                id=general_classification_non_exclusive.id.root,
-                type="classification",
-                name=general_classification_non_exclusive.name.root,
-                description=general_classification_non_exclusive.description.root,
-                fullyQualifiedName=getattr(general_classification_non_exclusive.fullyQualifiedName, "root"),
-            ),
+        email_recognizer = PredefinedRecognizerFactory.create(name=Name.EmailRecognizer)
+        recognizer = RecognizerFactory.create(
+            name="email_recognizer",
+            recognizerConfig=email_recognizer,
+        )
+        return TagFactory.create(
+            fqn="General.Email",
+            tag_classification=general_classification_non_exclusive,
             autoClassificationEnabled=True,
             autoClassificationPriority=95,
-            recognizers=[
-                Recognizer(
-                    id=basic.Uuid(root=uuid.uuid4()),
-                    name="email_recognizer",
-                    recognizerConfig=RecognizerConfig(
-                        root=PredefinedRecognizer(
-                            type="predefined",
-                            name=Name.EmailRecognizer
-                        )
-                    ),
-                )
-            ],
+            recognizers=[recognizer],
+            description="General email classifications",
         )
 
     @pytest.fixture
-    def general_password_tag(self, general_classification_non_exclusive: Classification):
+    def general_password_tag(
+        self, general_classification_non_exclusive: Classification
+    ):
         """General.Password tag."""
-        return Tag(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="Password"),
-            fullyQualifiedName="General.Password",
-            description=basic.Markdown(root="General password classifications"),
-            classification=EntityReference(
-                id=general_classification_non_exclusive.id.root,
-                type="classification",
-                name=general_classification_non_exclusive.name.root,
-                description=general_classification_non_exclusive.description.root,
-                fullyQualifiedName=getattr(general_classification_non_exclusive.fullyQualifiedName, "root"),
-            ),
+        pwd_pattern = PatternFactory.create(name="pwd-pattern", regex="^password$")
+        password_pattern_recognizer = PatternRecognizerFactory.create(
+            patterns=[pwd_pattern],
+            context=[],
+            supportedEntity=PIIEntity.PERSON,
+            supportedLanguage="en",
+        )
+        recognizer = RecognizerFactory.create(
+            name="password_recognizer",
+            recognizerConfig=password_pattern_recognizer,
+            target=Target.column_name,
+        )
+        return TagFactory.create(
+            fqn="General.Password",
+            tag_classification=general_classification_non_exclusive,
             autoClassificationEnabled=True,
             autoClassificationPriority=95,
-            recognizers=[
-                Recognizer(
-                    id=basic.Uuid(root=uuid.uuid4()),
-                    name="password_recognizer",
-                    recognizerConfig=RecognizerConfig(
-                        root=PatternRecognizer(
-                            type="pattern",
-                            patterns=[
-                                Pattern(name="pwd-pattern", regex="^password$")
-                            ],
-                            regexFlags=RegexFlags(),
-                            context=[],
-                            supportedEntity=PIIEntity.PERSON,
-                            supportedLanguage="en",
-                        )
-                    ),
-                    target=Target.column_name,
-                )
-            ],
+            recognizers=[recognizer],
+            description="General password classifications",
         )
 
     @pytest.fixture
     def techdetail_secret_tag(self, techdetail_classification: Classification):
         """TechDetail.Secret tag - highest priority."""
-        return Tag(
-            id=basic.Uuid(root=uuid.uuid4()),
-            name=basic.EntityName(root="Secret"),
-            fullyQualifiedName="TechDetail.Secret",
-            description=basic.Markdown(root="Secret data"),
-            classification=EntityReference(
-                id=techdetail_classification.id.root,
-                type="classification",
-                name=techdetail_classification.name.root,
-                description=techdetail_classification.description.root,
-                fullyQualifiedName=getattr(techdetail_classification.fullyQualifiedName, "root"),
-            ),
+        secret_pattern = PatternFactory.create(name="secret-pattern", regex="^secret$")
+        secret_pattern_recognizer = PatternRecognizerFactory.create(
+            patterns=[secret_pattern],
+            context=[],
+            supportedEntity=PIIEntity.PERSON,
+            supportedLanguage="en",
+        )
+        recognizer = RecognizerFactory.create(
+            name="secret_recognizer",
+            recognizerConfig=secret_pattern_recognizer,
+        )
+        return TagFactory.create(
+            fqn="TechDetail.Secret",
+            tag_classification=techdetail_classification,
             autoClassificationEnabled=True,
             autoClassificationPriority=95,
-            recognizers=[
-                Recognizer(
-                    id=basic.Uuid(root=uuid.uuid4()),
-                    name="secret_recognizer",
-                    recognizerConfig=RecognizerConfig(
-                        root=PatternRecognizer(
-                            type="pattern",
-                            patterns=[
-                                Pattern(name="secret-pattern", regex="^secret$")
-                            ],
-                            regexFlags=RegexFlags(),
-                            context=[],
-                            supportedEntity=PIIEntity.PERSON,
-                            supportedLanguage="en",
-                        )
-                    ),
-                )
-            ],
+            recognizers=[recognizer],
+            description="Secret data",
         )
 
     @pytest.fixture
@@ -277,11 +216,7 @@ class TestTagProcessorMultiClassification:
         - Contains sensitive data (PII.Sensitive)
         - Could contain secrets (TechDetail.Secret)
         """
-        return [
-            "user:12dfwef23t1",
-            "foo:124dff4y6h44",
-            "foobar:9798sfdgs"
-        ]
+        return ["user:12dfwef23t1", "foo:124dff4y6h44", "foobar:9798sfdgs"]
 
     def test_pii_general_multi_classification(
         self,
@@ -340,7 +275,9 @@ class TestTagProcessorMultiClassification:
             mock_analyzer_class.side_effect = mock_analyzers
 
             # Mock TagClassifier to return high scores for all tags
-            with patch("metadata.pii.tag_processor.TagClassifier") as mock_classifier_class:
+            with patch(
+                "metadata.pii.tag_processor.TagClassifier"
+            ) as mock_classifier_class:
                 mock_classifier = mocker.Mock()
 
                 # Simulate scores: all tags score above threshold
@@ -386,18 +323,26 @@ class TestTagProcessorMultiClassification:
                 )
 
                 # Verify results
-                assert len(tag_labels) == 3, f"Should return 3 tags (1 PII + 2 General), got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
+                assert (
+                    len(tag_labels) == 3
+                ), f"Should return 3 tags (1 PII + 2 General), got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
 
                 tag_fqns = [label.tagFQN for label in tag_labels]
 
                 # Should have exactly 1 PII tag (mutually exclusive)
                 pii_tags = [fqn.root for fqn in tag_fqns if fqn.root.startswith("PII")]
-                assert len(pii_tags) == 1, f"Should have exactly 1 PII tag, got {pii_tags}"
+                assert (
+                    len(pii_tags) == 1
+                ), f"Should have exactly 1 PII tag, got {pii_tags}"
                 assert "PII.Sensitive" in pii_tags
 
                 # Should have 2 General tags (non-mutually exclusive)
-                general_tags = [fqn.root for fqn in tag_fqns if fqn.root.startswith("General")]
-                assert len(general_tags) == 2, f"Should have 2 General tags, got {general_tags}"
+                general_tags = [
+                    fqn.root for fqn in tag_fqns if fqn.root.startswith("General")
+                ]
+                assert (
+                    len(general_tags) == 2
+                ), f"Should have 2 General tags, got {general_tags}"
                 assert "General.Email" in general_tags
                 assert "General.Password" in general_tags
 
@@ -469,7 +414,9 @@ class TestTagProcessorMultiClassification:
             mock_analyzer_class.side_effect = mock_analyzers
 
             # Mock TagClassifier
-            with patch("metadata.pii.tag_processor.TagClassifier") as mock_classifier_class:
+            with patch(
+                "metadata.pii.tag_processor.TagClassifier"
+            ) as mock_classifier_class:
                 mock_classifier = mocker.Mock()
 
                 mock_scores = {
@@ -514,7 +461,9 @@ class TestTagProcessorMultiClassification:
                 )
 
                 # Verify results
-                assert len(tag_labels) == 3, f"Should return 3 tags (1 from each classification), got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
+                assert (
+                    len(tag_labels) == 3
+                ), f"Should return 3 tags (1 from each classification), got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
 
                 tag_fqns = [label.tagFQN.root for label in tag_labels]
 
@@ -565,7 +514,9 @@ class TestTagProcessorMultiClassification:
             mock_analyzer.tag = pii_sensitive_tag
             mock_analyzer_class.side_effect = [mock_analyzer]
 
-            with patch("metadata.pii.tag_processor.TagClassifier") as mock_classifier_class:
+            with patch(
+                "metadata.pii.tag_processor.TagClassifier"
+            ) as mock_classifier_class:
                 mock_classifier = mocker.Mock()
 
                 # Only PII tag will score (General is filtered out)
@@ -597,7 +548,9 @@ class TestTagProcessorMultiClassification:
                 )
 
                 # Should only have PII tag
-                assert len(tag_labels) == 1, f"Should only return PII tag, got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
+                assert (
+                    len(tag_labels) == 1
+                ), f"Should only return PII tag, got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
                 assert tag_labels[0].tagFQN.root == "PII.Sensitive"
 
     def test_max_tags_per_column_limit(
@@ -616,32 +569,20 @@ class TestTagProcessorMultiClassification:
         # Create 5 General tags
         general_tags = []
         for i in range(5):
-            tag = Tag(
-                id=basic.Uuid(root=uuid.uuid4()),
-                name=basic.EntityName(root=f"Tag_{i}"),
-                fullyQualifiedName=f"General.Tag_{i}",
-                description=basic.Markdown(root=f"Tag {i}'s description"),
-                classification=EntityReference(
-                    id=general_classification_non_exclusive.id,
-                    type="classification",
-                    name=general_classification_non_exclusive.name.root,
-                    description=general_classification_non_exclusive.description.root,
-                    fullyQualifiedName=getattr(general_classification_non_exclusive.fullyQualifiedName, "root"),
-                ),
+            email_recognizer = PredefinedRecognizerFactory.create(
+                name=Name.EmailRecognizer
+            )
+            recognizer = RecognizerFactory.create(
+                name="email_recognizer",
+                recognizerConfig=email_recognizer,
+            )
+            tag = TagFactory.create(
+                fqn=f"General.Tag_{i}",
+                tag_classification=general_classification_non_exclusive,
                 autoClassificationEnabled=True,
-                autoClassificationPriority=80-i,
-                recognizers=[
-                    Recognizer(
-                        id=basic.Uuid(root=uuid.uuid4()),
-                        name="email_recognizer",
-                        recognizerConfig=RecognizerConfig(
-                            root=PredefinedRecognizer(
-                                type="predefined",
-                                name=Name.EmailRecognizer
-                            )
-                        ),
-                    )
-                ],
+                autoClassificationPriority=80 - i,
+                recognizers=[recognizer],
+                description=f"Tag {i}'s description",
             )
             general_tags.append(tag)
 
@@ -668,7 +609,9 @@ class TestTagProcessorMultiClassification:
 
             mock_analyzer_class.side_effect = mock_analyzers
 
-            with patch("metadata.pii.tag_processor.TagClassifier") as mock_classifier_class:
+            with patch(
+                "metadata.pii.tag_processor.TagClassifier"
+            ) as mock_classifier_class:
                 mock_classifier = mocker.Mock()
 
                 # All 5 tags score above threshold
@@ -679,7 +622,8 @@ class TestTagProcessorMultiClassification:
                         classification_name="General",
                         priority=80 - i,
                         reason=f"Tag{i} detected",
-                    ): 0.70 + i * 0.02
+                    ): 0.70
+                    + i * 0.02
                     for i, tag in enumerate(general_tags)
                 }
 
@@ -701,7 +645,9 @@ class TestTagProcessorMultiClassification:
                 )
 
                 # Should only return top 3 tags by score
-                assert len(tag_labels) == 3, f"Should limit to 3 tags, got {len(tag_labels)}"
+                assert (
+                    len(tag_labels) == 3
+                ), f"Should limit to 3 tags, got {len(tag_labels)}"
 
                 # Should be the highest scoring tags (Tag4, Tag3, Tag2)
                 tag_fqns = [label.tagFQN.root for label in tag_labels]
@@ -759,4 +705,6 @@ class TestTagProcessorMultiClassification:
         )
 
         # Should return empty list (tag already applied)
-        assert len(tag_labels) == 0, f"Should not re-suggest existing tags, got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"
+        assert (
+            len(tag_labels) == 0
+        ), f"Should not re-suggest existing tags, got {len(tag_labels)}: {[l.tagFQN for l in tag_labels]}"

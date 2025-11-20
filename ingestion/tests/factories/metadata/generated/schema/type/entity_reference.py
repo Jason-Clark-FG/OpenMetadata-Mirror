@@ -1,27 +1,30 @@
-import uuid
-from uuid import UUID
-
 import factory.fuzzy
 from pydantic import BaseModel
 
-from metadata.generated.schema.type.basic import Markdown
-from metadata.generated.schema.type.customProperties.complexTypes import EntityReference
+from metadata.generated.schema.type.basic import (
+    EntityName,
+    FullyQualifiedEntityName,
+    Markdown,
+    Uuid,
+)
+from metadata.generated.schema.type.entityReference import EntityReference
+from tests.factories.metadata.generated.schema.type.basic import UuidFactory
 from tests.utils.factoryboy.root_model import RootSubFactory
 
 
 class Entity(BaseModel):
-    id: UUID
+    id: Uuid
     type: str
-    name: str
-    fullyQualifiedName: str
+    name: EntityName
+    fullyQualifiedName: FullyQualifiedEntityName
     description: Markdown
 
 
 class EntityFactory(factory.Factory):
-    id = factory.LazyFunction(uuid.uuid4)
+    id = RootSubFactory(UuidFactory)
     type = "entity"
-    name = "entity"
-    fullyQualifiedName = "entity"
+    name = factory.LazyAttribute(lambda o: o.fullyQualifiedName)
+    fullyQualifiedName = factory.fuzzy.FuzzyText()
     description = RootSubFactory(Markdown)
 
     class Meta:
@@ -29,11 +32,13 @@ class EntityFactory(factory.Factory):
 
 
 class EntityReferenceFactory(factory.Factory):
-    id = factory.LazyAttribute(lambda x: x.entity.id)
-    type = factory.LazyAttribute(lambda x: x.entity.type)
-    name = factory.LazyAttribute(lambda x: x.entity.name)
-    fullyQualifiedName = factory.LazyAttribute(lambda x: x.entity.fullyQualifiedName)
-    description = factory.LazyAttribute(lambda x: x.entity.description)
+    id = factory.LazyAttribute(lambda x: x.entity.id.root)
+    type = factory.LazyAttribute(lambda x: type(x.entity).__name__.lower())
+    name = factory.LazyAttribute(lambda x: x.entity.name.root)
+    fullyQualifiedName = factory.LazyAttribute(
+        lambda x: x.entity.fullyQualifiedName.root
+    )
+    description = factory.LazyAttribute(lambda x: x.entity.description.root)
 
     class Meta:
         model = EntityReference

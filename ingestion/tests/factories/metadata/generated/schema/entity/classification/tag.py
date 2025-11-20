@@ -1,11 +1,14 @@
 import factory.fuzzy
 
 from metadata.generated.schema.entity.classification.tag import Tag
-from metadata.generated.schema.type.basic import EntityName, FullyQualifiedEntityName
+from metadata.generated.schema.type.basic import EntityName
 from tests.factories.metadata.generated.schema.entity.classification.classification import (
     ClassificationFactory,
 )
-from tests.factories.metadata.generated.schema.type.basic import UuidFactory
+from tests.factories.metadata.generated.schema.type.basic import (
+    MarkdownFactory,
+    UuidFactory,
+)
 from tests.factories.metadata.generated.schema.type.entity_reference import (
     EntityReferenceFactory,
 )
@@ -14,13 +17,16 @@ from tests.utils.factoryboy.root_model import RootSubFactory
 
 class TagFactory(factory.Factory):
     id = RootSubFactory(UuidFactory)
-    name = factory.LazyAttribute(lambda o: EntityName(root=o.fqn))
+    name = factory.LazyAttribute(lambda o: EntityName(root=o.tag_name))
     fullyQualifiedName = factory.LazyAttribute(
-        lambda o: FullyQualifiedEntityName(root=o.fqn)
+        lambda o: f"{o.tag_classification.fullyQualifiedName.root}.{o.tag_name}"
     )
     classification = factory.LazyAttribute(
         lambda o: EntityReferenceFactory(entity=o.tag_classification)
+        if o.tag_classification
+        else None
     )
+    description = RootSubFactory(MarkdownFactory)
     recognizers = factory.LazyFunction(list)
     autoClassificationEnabled = True
     autoClassificationPriority = 80

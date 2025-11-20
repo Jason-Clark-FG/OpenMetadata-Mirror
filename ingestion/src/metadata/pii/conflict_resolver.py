@@ -12,12 +12,13 @@
 Conflict resolution for auto-classification tags.
 """
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from metadata.generated.schema.entity.classification.classification import (
+    Classification,
     ConflictResolution,
 )
-from metadata.pii.models import ClassificationRunConfig, ScoredTag
+from metadata.pii.models import ScoredTag
 from metadata.utils.logger import profiler_logger
 
 logger = profiler_logger()
@@ -31,8 +32,8 @@ class ConflictResolver:
 
     def resolve_conflicts(
         self,
-        scored_tags: List[Tuple[ScoredTag, float]],
-        enabled_classifications: List[ClassificationRunConfig],
+        scored_tags: List[ScoredTag],
+        enabled_classifications: List[Classification],
     ) -> List[ScoredTag]:
         """
         Apply conflict resolution per classification.
@@ -42,7 +43,7 @@ class ConflictResolver:
 
         Args:
             scored_tags: List of (ScoredTag, score) tuples
-            enabled_classifications: List of enabled classification configs
+            enabled_classifications: List of enabled classification
 
         Returns:
             List of resolved ScoredTag objects
@@ -51,18 +52,14 @@ class ConflictResolver:
             return []
 
         by_classification: Dict[str, List[ScoredTag]] = defaultdict(list)
-        for scored_tag, _ in scored_tags:
+        for scored_tag in scored_tags:
             by_classification[scored_tag.classification_name].append(scored_tag)
-
-        config_map = {
-            config.classification.name.root: config
-            for config in enabled_classifications
-        }
 
         resolved = []
 
-        for config in enabled_classifications:
-            classification_name = config.classification.name.root
+        for classification in enabled_classifications:
+            config = classification.autoClassificationConfig
+            classification_name = classification.name.root
             tags_in_classification = by_classification.get(classification_name, [])
 
             if not tags_in_classification:
@@ -71,12 +68,12 @@ class ConflictResolver:
             tags_above_threshold = [
                 tag
                 for tag in tags_in_classification
-                if tag.score >= config.min_confidence
+                if tag.score >= config.minimumConfidence
             ]
 
             if not tags_above_threshold:
                 logger.debug(
-                    f"No tags in classification {classification_name} met minimum confidence {config.min_confidence}"
+                    f"No tags in classification {classification_name} met minimum confidence {config.minimumConfidence}"
                 )
                 continue
 
@@ -84,9 +81,9 @@ class ConflictResolver:
                 f"Classification {classification_name}: {len(tags_above_threshold)} tags above threshold"
             )
 
-            if config.classification.mutuallyExclusive:
+            if classification.mutuallyExclusive:
                 winner = self._select_winner(
-                    tags_above_threshold, strategy=config.conflict_resolution
+                    tags_above_threshold, strategy=config.conflictResolution
                 )
                 logger.info(
                     f"Classification {classification_name} (mutually exclusive): "

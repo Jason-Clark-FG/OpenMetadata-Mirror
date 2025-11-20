@@ -11,6 +11,8 @@
 """
 Unit tests for ClassificationRunManager.
 """
+from unittest.mock import Mock, create_autospec
+
 import pytest
 
 from metadata.generated.schema.entity.classification.classification import (
@@ -18,68 +20,77 @@ from metadata.generated.schema.entity.classification.classification import (
     ConflictResolution,
 )
 from metadata.generated.schema.entity.classification.tag import Tag
-from metadata.pii.run_manager import ClassificationRunManager
+from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.pii.classification_manager import ClassificationManager
 
 
 class TestClassificationRunManager:
     """Tests for ClassificationRunManager."""
 
+    @pytest.fixture
+    def metadata(self) -> Mock:
+        mock = create_autospec(OpenMetadata, instance=True, spec_set=True)
+
+        return mock
+
     def test_get_enabled_classifications(
         self,
-        mocker,
-        pii_classification,
-        general_classification,
-        disabled_classification,
+        metadata,
+        pii_classification: Classification,
+        general_classification: Classification,
+        disabled_classification: Classification,
     ):
         """Test fetching enabled classifications."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [
+        metadata.list_all_entities.return_value = [
             pii_classification,
             general_classification,
             disabled_classification,
         ]
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
         enabled = manager.get_enabled_classifications()
 
         # Should return only enabled classifications (PII and General)
         assert len(enabled) == 2
-        classification_names = [c.classification.name.root for c in enabled]
+        classification_names = [c.name.root for c in enabled]
         assert "PII" in classification_names
         assert "General" in classification_names
         assert "Disabled" not in classification_names
 
         # Verify configs are populated correctly
-        pii_config = next(c for c in enabled if c.classification.name.root == "PII")
-        assert pii_config.min_confidence == 0.7
-        assert pii_config.conflict_resolution == ConflictResolution.highest_confidence
+        pii_config = next(
+            c.autoClassificationConfig for c in enabled if c.name.root == "PII"
+        )
+        assert pii_config.minimumConfidence == 0.7
+        assert pii_config.conflictResolution == ConflictResolution.highest_confidence
         assert pii_config.enabled is True
 
     def test_get_enabled_classifications_with_filter(
-        self, mocker, pii_classification, general_classification
+        self,
+        metadata,
+        pii_classification: Classification,
+        general_classification: Classification,
     ):
         """Test fetching enabled classifications with name filter."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [
+        metadata.list_all_entities.return_value = [
             pii_classification,
             general_classification,
         ]
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
         enabled = manager.get_enabled_classifications(filter_names=["PII"])
 
         # Should return only PII
         assert len(enabled) == 1
-        assert enabled[0].classification.name.root == "PII"
+        assert enabled[0].name.root == "PII"
 
     def test_get_enabled_classifications_caching(
-        self, mocker, pii_classification
+        self, metadata, pii_classification: Classification
     ):
         """Test that classifications are cached."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [pii_classification]
+        metadata.list_all_entities.return_value = [pii_classification]
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
 
         # First call
         enabled1 = manager.get_enabled_classifications()
@@ -87,29 +98,28 @@ class TestClassificationRunManager:
         enabled2 = manager.get_enabled_classifications()
 
         # Should only call API once
-        assert mock_metadata.list_all_entities.call_count == 1
+        assert metadata.list_all_entities.call_count == 1
         assert enabled1 == enabled2
 
     def test_get_enabled_tags(
         self,
-        mocker,
-        pii_run_config,
-        email_tag_pii,
-        phone_tag_pii,
-        disabled_tag,
-        tag_without_recognizers,
+        metadata,
+        pii_classification: Classification,
+        email_tag_pii: Tag,
+        phone_tag_pii: Tag,
+        disabled_tag: Tag,
+        tag_without_recognizers: Tag,
     ):
         """Test fetching enabled tags with recognizers."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [
+        metadata.list_all_entities.return_value = [
             email_tag_pii,
             phone_tag_pii,
             disabled_tag,
             tag_without_recognizers,
         ]
 
-        manager = ClassificationRunManager(mock_metadata)
-        tags = manager.get_enabled_tags(classifications=[pii_run_config])
+        manager = ClassificationManager(metadata)
+        tags = manager.get_enabled_tags(classifications=[pii_classification])
 
         # Should return only enabled tags with recognizers
         assert len(tags) == 2
@@ -121,14 +131,13 @@ class TestClassificationRunManager:
 
     def test_get_enabled_tags_multiple_classifications(
         self,
-        mocker,
-        pii_run_config,
-        general_run_config,
-        email_tag_pii,
-        credit_card_tag_general,
+        metadata,
+        pii_classification: Classification,
+        general_classification: Classification,
+        email_tag_pii: Tag,
+        credit_card_tag_general: Tag,
     ):
         """Test fetching tags from multiple classifications."""
-        mock_metadata = mocker.Mock()
 
         def list_entities_side_effect(entity, fields, params):
             if params.get("parent") == "PII":
@@ -137,11 +146,11 @@ class TestClassificationRunManager:
                 return [credit_card_tag_general]
             return []
 
-        mock_metadata.list_all_entities.side_effect = list_entities_side_effect
+        metadata.list_all_entities.side_effect = list_entities_side_effect
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
         tags = manager.get_enabled_tags(
-            classifications=[pii_run_config, general_run_config]
+            classifications=[pii_classification, general_classification]
         )
 
         # Should return tags from both classifications
@@ -150,58 +159,60 @@ class TestClassificationRunManager:
         assert "PII.Email" in tag_fqns
         assert "General.CreditCard" in tag_fqns
 
-    def test_get_enabled_tags_caching(self, mocker, pii_run_config, email_tag_pii):
+    def test_get_enabled_tags_caching(
+        self, metadata, pii_classification: Classification, email_tag_pii: Tag
+    ):
         """Test that tags are cached."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [email_tag_pii]
+        metadata.list_all_entities.return_value = [email_tag_pii]
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
 
         # First call
-        tags1 = manager.get_enabled_tags(classifications=[pii_run_config])
+        tags1 = manager.get_enabled_tags(classifications=[pii_classification])
         # Second call
-        tags2 = manager.get_enabled_tags(classifications=[pii_run_config])
+        tags2 = manager.get_enabled_tags(classifications=[pii_classification])
 
         # Should only call API once
-        assert mock_metadata.list_all_entities.call_count == 1
+        assert metadata.list_all_entities.call_count == 1
         assert tags1 == tags2
 
-    def test_clear_cache(self, mocker, pii_classification, email_tag_pii):
+    def test_clear_cache(
+        self, metadata, pii_classification: Classification, email_tag_pii: Tag
+    ):
         """Test clearing the cache."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.return_value = [pii_classification]
+        metadata.list_all_entities.return_value = [pii_classification]
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
 
         # First call
         manager.get_enabled_classifications()
-        assert mock_metadata.list_all_entities.call_count == 1
+        assert metadata.list_all_entities.call_count == 1
 
         # Clear cache
         manager.clear_cache()
 
         # Second call should hit API again
         manager.get_enabled_classifications()
-        assert mock_metadata.list_all_entities.call_count == 2
+        assert metadata.list_all_entities.call_count == 2
 
-    def test_get_enabled_classifications_api_error(self, mocker):
+    def test_get_enabled_classifications_api_error(self, metadata):
         """Test handling of API errors."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.side_effect = Exception("API Error")
+        metadata.list_all_entities.side_effect = Exception("API Error")
 
-        manager = ClassificationRunManager(mock_metadata)
+        manager = ClassificationManager(metadata)
         enabled = manager.get_enabled_classifications()
 
         # Should return empty list on error
         assert enabled == []
 
-    def test_get_enabled_tags_api_error(self, mocker, pii_run_config):
+    def test_get_enabled_tags_api_error(
+        self, metadata, pii_classification: Classification
+    ):
         """Test handling of API errors when fetching tags."""
-        mock_metadata = mocker.Mock()
-        mock_metadata.list_all_entities.side_effect = Exception("API Error")
+        metadata.list_all_entities.side_effect = Exception("API Error")
 
-        manager = ClassificationRunManager(mock_metadata)
-        tags = manager.get_enabled_tags(classifications=[pii_run_config])
+        manager = ClassificationManager(metadata)
+        tags = manager.get_enabled_tags(classifications=[pii_classification])
 
         # Should return empty list on error
         assert tags == []
