@@ -118,6 +118,7 @@ import {
   getAllDownstreamEdges,
   getAllTracedColumnEdge,
   getClassifiedEdge,
+  getColumnSourceTargetHandles,
   getConnectedNodesEdges,
   getEdgeDataFromEdge,
   getELKLayoutedElements,
@@ -1088,7 +1089,10 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setSelectedNode({} as SourceType);
     setIsDrawerOpen(true);
     setTracedNodes([]);
-    setTracedColumns([]);
+    const { sourceHandle, targetHandle } = getColumnSourceTargetHandles(edge);
+    if (sourceHandle && targetHandle) {
+      setTracedColumns([sourceHandle, targetHandle]);
+    }
   }, []);
 
   const onLineageEditClick = useCallback(() => {
@@ -1916,8 +1920,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         {children}
         <EntityLineageSidebar newAddedNode={newAddedNode} show={isEditMode} />
 
-        {false &&
-          isDrawerOpen &&
+        {isDrawerOpen &&
           !isEditMode &&
           (selectedEdge ? (
             <EdgeInfoDrawer
