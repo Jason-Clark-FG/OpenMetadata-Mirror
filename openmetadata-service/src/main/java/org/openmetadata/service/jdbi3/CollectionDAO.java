@@ -8573,6 +8573,9 @@ public interface CollectionDAO {
     @Override
     default String getNameHashColumn() {
       return "nameHash";
+    }
+  }
+
   class ExecutionTrendRow {
     private String dateKey;
     private String status;
