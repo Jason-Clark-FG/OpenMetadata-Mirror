@@ -5634,6 +5634,7 @@ public class TableResourceTest extends EntityResourceTest<Table, CreateTable> {
     assertEquals("Sensitive", piiTag.getName());
     assertEquals("PII.Sensitive", piiTag.getTagFQN());
     assertEquals("Classified with score 1.0", piiTag.getReason());
+    assertNotNull(piiTag.getAppliedAt());
 
     // Now add personal tag manually
     Column columnWithBothTags = column.withTags(List.of(sensitiveTagLabel, personalTagLabel));
@@ -5642,7 +5643,9 @@ public class TableResourceTest extends EntityResourceTest<Table, CreateTable> {
 
     table = patchedTable.withColumns(List.of(columnWithBothTags));
 
-    patchedTable = patchEntity(table.getId(), originalTable, table, ADMIN_AUTH_HEADERS);
+    patchEntity(table.getId(), originalTable, table, ADMIN_AUTH_HEADERS);
+
+    patchedTable = getEntity(table.getId(), ADMIN_AUTH_HEADERS);
 
     assertNotNull(patchedTable.getColumns());
     assertEquals(1, patchedTable.getColumns().size());
@@ -5656,12 +5659,14 @@ public class TableResourceTest extends EntityResourceTest<Table, CreateTable> {
     assertEquals("Sensitive", piiTag.getName());
     assertEquals("PII.Sensitive", piiTag.getTagFQN());
     assertEquals("Classified with score 1.0", piiTag.getReason());
+    assertNotNull(piiTag.getAppliedAt());
 
     TagLabel personalTag = tags.getLast();
     assertNotNull(personalTag);
     assertEquals("Personal", personalTag.getName());
     assertEquals("PersonalData.Personal", personalTag.getTagFQN());
     assertNull(personalTag.getReason());
+    assertNotNull(personalTag.getAppliedAt());
   }
 
   @Test
