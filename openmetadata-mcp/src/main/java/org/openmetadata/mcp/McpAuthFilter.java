@@ -13,11 +13,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.ApplicationContext;
 import org.openmetadata.service.security.ImpersonationContext;
 import org.openmetadata.service.security.JwtFilter;
 
+/**
+ * Authentication filter for MCP endpoints.
+ *
+ * <p>This filter validates JWT tokens for all MCP requests to ensure only authenticated users can
+ * access MCP features. It uses the same JWT validation as the rest of OpenMetadata.
+ */
+@Slf4j
 public class McpAuthFilter implements Filter {
   private final JwtFilter jwtFilter;
 
@@ -34,7 +42,8 @@ public class McpAuthFilter implements Filter {
     if (ApplicationContext.getInstance().getAppIfExists("McpApplication") == null) {
       sendError(
           httpServletResponse,
-          "McpApplication is not installed please install it to use MCP features.");
+          "McpApplication is not installed please install it to use MCP features.",
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE);
       return;
     }
 
@@ -66,12 +75,13 @@ public class McpAuthFilter implements Filter {
     }
   }
 
-  private void sendError(HttpServletResponse response, String errorMessage) throws IOException {
+  private void sendError(HttpServletResponse response, String errorMessage, int statusCode)
+      throws IOException {
     Map<String, Object> error = new HashMap<>();
     error.put("error", errorMessage);
     String errorJson = JsonUtils.pojoToJson(error);
     response.setContentType("application/json");
-    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    response.setStatus(statusCode);
     response.getWriter().write(errorJson);
   }
 }
