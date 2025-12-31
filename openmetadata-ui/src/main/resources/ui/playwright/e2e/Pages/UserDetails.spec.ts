@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { expect, Page, test as base } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import { Domain } from '../../support/domain/Domain';
 import { TeamClass } from '../../support/team/TeamClass';
 import { AdminClass } from '../../support/user/AdminClass';
