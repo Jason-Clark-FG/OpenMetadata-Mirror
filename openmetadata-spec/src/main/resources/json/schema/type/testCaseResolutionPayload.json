@@ -1,0 +1,28 @@
+{
+  "$id": "https://open-metadata.org/schema/type/testCaseResolutionPayload.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TestCaseResolutionPayload",
+  "description": "Payload for Test Case Resolution tasks.",
+  "javaType": "org.openmetadata.schema.type.TestCaseResolutionPayload",
+  "type": "object",
+  "properties": {
+    "testCaseResult": {
+      "description": "Reference to the failed test case result.",
+      "$ref": "entityReference.json"
+    },
+    "failureReason": {
+      "description": "Reason for the test failure.",
+      "type": "string"
+    },
+    "resolution": {
+      "description": "How the failure was resolved.",
+      "type": "string"
+    },
+    "rootCause": {
+      "description": "Root cause analysis.",
+      "type": "string"
+    }
+  },
+  "required": ["testCaseResult"],
+  "additionalProperties": false
+}

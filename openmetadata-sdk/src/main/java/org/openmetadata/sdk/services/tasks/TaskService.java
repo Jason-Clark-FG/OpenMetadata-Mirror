@@ -51,7 +51,8 @@ public class TaskService extends EntityServiceBase<Task> {
     return list(params);
   }
 
-  public ListResponse<Task> listByStatus(TaskEntityStatus status, int limit) throws OpenMetadataException {
+  public ListResponse<Task> listByStatus(TaskEntityStatus status, int limit)
+      throws OpenMetadataException {
     ListParams params = new ListParams().addFilter("status", status.value()).setLimit(limit);
     return list(params);
   }
@@ -66,7 +67,8 @@ public class TaskService extends EntityServiceBase<Task> {
     return list(params);
   }
 
-  public ListResponse<Task> listWithFilters(Map<String, String> filters) throws OpenMetadataException {
+  public ListResponse<Task> listWithFilters(Map<String, String> filters)
+      throws OpenMetadataException {
     RequestOptions options = RequestOptions.builder().queryParams(filters).build();
     String responseStr = httpClient.executeForString(HttpMethod.GET, basePath, null, options);
     return deserializeListResponse(responseStr);

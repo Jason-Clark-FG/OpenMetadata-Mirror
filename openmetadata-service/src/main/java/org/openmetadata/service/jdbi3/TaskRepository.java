@@ -24,7 +24,6 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.EntityReference;
-import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskPriority;
@@ -32,11 +31,13 @@ import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.util.FullyQualifiedName;
+import org.openmetadata.service.tasks.TaskWorkflowHandler;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
+@Repository
 public class TaskRepository extends EntityRepository<Task> {
 
   public static final String COLLECTION_PATH = "/v1/tasks";
@@ -107,9 +108,71 @@ public class TaskRepository extends EntityRepository<Task> {
     validateAssignees(task.getAssignees());
     validateTaskReviewers(task.getReviewers());
 
-    if (task.getDomain() != null && task.getDomain().getId() != null) {
-      task.setDomain(Entity.getEntityReferenceById(DOMAIN, task.getDomain().getId(), Include.ALL));
+    // Task domain MUST be inherited from the target entity (about field)
+    // This ensures tasks follow domain-based data isolation policies
+    inheritDomainFromTargetEntity(task);
+  }
+
+  /**
+   * Inherit domain from the target entity that this task is about.
+   * Tasks must belong to the same domain as their target entity for proper data isolation.
+   */
+  private void inheritDomainFromTargetEntity(Task task) {
+    EntityReference about = task.getAbout();
+    if (about == null || about.getId() == null) {
+      // No target entity, task has no domain
+      task.setDomain(null);
+      return;
     }
+
+    try {
+      // Get the target entity to extract its domain
+      EntityRepository<?> targetRepo = Entity.getEntityRepository(about.getType());
+      Object targetEntity = targetRepo.get(null, about.getId(), targetRepo.getFields("domain"));
+
+      // Extract domain from target entity using reflection or common interface
+      EntityReference targetDomain = extractDomainFromEntity(targetEntity);
+      task.setDomain(targetDomain);
+
+      if (targetDomain != null) {
+        LOG.debug(
+            "Task {} inheriting domain {} from target entity {}",
+            task.getTaskId(),
+            targetDomain.getFullyQualifiedName(),
+            about.getFullyQualifiedName());
+      }
+    } catch (Exception e) {
+      LOG.warn(
+          "Could not resolve domain for task {} from target entity {}: {}",
+          task.getTaskId(),
+          about.getId(),
+          e.getMessage());
+      task.setDomain(null);
+    }
+  }
+
+  /**
+   * Extract domain reference from an entity object.
+   */
+  private EntityReference extractDomainFromEntity(Object entity) {
+    if (entity == null) {
+      return null;
+    }
+
+    try {
+      // Use reflection to get domain field - most entities have getDomain()
+      java.lang.reflect.Method getDomainMethod = entity.getClass().getMethod("getDomain");
+      Object domain = getDomainMethod.invoke(entity);
+      if (domain instanceof EntityReference) {
+        return (EntityReference) domain;
+      }
+    } catch (NoSuchMethodException e) {
+      // Entity doesn't have domain field, which is fine
+      LOG.debug("Entity {} does not have domain field", entity.getClass().getSimpleName());
+    } catch (Exception e) {
+      LOG.warn("Error extracting domain from entity: {}", e.getMessage());
+    }
+    return null;
   }
 
   @Override
@@ -269,6 +332,40 @@ public class TaskRepository extends EntityRepository<Task> {
     }
   }
 
+  /**
+   * Resolve a task with workflow integration.
+   *
+   * <p>This method handles both workflow-managed tasks (Flowable) and standalone tasks.
+   * For workflow-managed tasks, it coordinates with WorkflowHandler for multi-approval.
+   *
+   * @param task The task to resolve
+   * @param approved Whether the task is approved (true) or rejected (false)
+   * @param newValue Optional new value to apply (for update tasks)
+   * @param user The user resolving the task
+   * @return The updated task, or null if still waiting for more approvals
+   */
+  public Task resolveTaskWithWorkflow(Task task, boolean approved, String newValue, String user) {
+    return TaskWorkflowHandler.getInstance().resolveTask(task, approved, newValue, user);
+  }
+
+  /**
+   * Reopen a previously resolved task.
+   */
+  public Task reopenTask(Task task, String user) {
+    return TaskWorkflowHandler.getInstance().reopenTask(task, user);
+  }
+
+  /**
+   * Close a task without applying any entity changes.
+   */
+  public Task closeTask(Task task, String user, String comment) {
+    return TaskWorkflowHandler.getInstance().closeTask(task, user, comment);
+  }
+
+  /**
+   * Internal method to update task resolution status.
+   * Called by TaskWorkflowHandler after workflow processing.
+   */
   public Task resolveTask(Task task, TaskResolution resolution, String updatedBy) {
     if (resolution == null) {
       throw new IllegalArgumentException("Resolution cannot be null");
@@ -317,6 +414,72 @@ public class TaskRepository extends EntityRepository<Task> {
   @Override
   protected void postUpdate(Task original, Task updated) {
     super.postUpdate(original, updated);
+  }
+
+  /**
+   * Update domain for all open tasks related to a target entity using bulk operations.
+   * Called when an entity's domain changes to keep tasks in sync.
+   *
+   * @param entityId The ID of the entity whose domain changed
+   * @param entityType The type of the entity
+   * @param newDomain The new domain reference (can be null if domain removed)
+   */
+  public void syncTaskDomainsForEntity(
+      UUID entityId, String entityType, EntityReference newDomain) {
+    LOG.info(
+        "Syncing task domains for entity {} ({}) to domain {}",
+        entityId,
+        entityType,
+        newDomain != null ? newDomain.getFullyQualifiedName() : "null");
+
+    // Find all tasks for this entity
+    List<CollectionDAO.EntityRelationshipRecord> taskRecords =
+        daoCollection
+            .relationshipDAO()
+            .findTo(entityId, entityType, Relationship.MENTIONED_IN.ordinal(), Entity.TASK);
+
+    if (taskRecords.isEmpty()) {
+      LOG.debug("No tasks found for entity {} ({})", entityId, entityType);
+      return;
+    }
+
+    // Filter to only open/in-progress/pending tasks
+    List<UUID> openTaskIds = new java.util.ArrayList<>();
+    for (CollectionDAO.EntityRelationshipRecord record : taskRecords) {
+      try {
+        Task task = get(null, record.getId(), getFields("status"));
+        if (task.getStatus() == TaskEntityStatus.Open
+            || task.getStatus() == TaskEntityStatus.InProgress
+            || task.getStatus() == TaskEntityStatus.Pending) {
+          openTaskIds.add(record.getId());
+        }
+      } catch (Exception e) {
+        LOG.warn("Could not check task status for {}: {}", record.getId(), e.getMessage());
+      }
+    }
+
+    if (openTaskIds.isEmpty()) {
+      LOG.debug("No open tasks found for entity {} ({})", entityId, entityType);
+      return;
+    }
+
+    List<String> taskIdStrings = openTaskIds.stream().map(UUID::toString).toList();
+
+    // Bulk delete existing domain relationships for these tasks
+    daoCollection.taskDAO().bulkRemoveDomainRelationships(taskIdStrings);
+
+    // Bulk insert new domain relationships if newDomain is set
+    if (newDomain != null) {
+      daoCollection
+          .relationshipDAO()
+          .bulkInsertToRelationship(
+              newDomain.getId(), openTaskIds, DOMAIN, Entity.TASK, Relationship.HAS.ordinal());
+    }
+
+    LOG.info(
+        "Bulk updated {} task domains to {}",
+        openTaskIds.size(),
+        newDomain != null ? newDomain.getFullyQualifiedName() : "null");
   }
 
   public class TaskUpdater extends EntityUpdater {

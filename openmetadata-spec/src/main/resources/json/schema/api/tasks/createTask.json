@@ -59,11 +59,18 @@
     "payload": {
       "description": "Task-specific payload based on task type.",
       "oneOf": [
-        {"$ref": "../../entity/tasks/task.json#/definitions/suggestionPayload"},
-        {"$ref": "../../entity/tasks/task.json#/definitions/dataAccessRequestPayload"},
-        {"$ref": "../../entity/tasks/task.json#/definitions/glossaryApprovalPayload"},
-        {"$ref": "../../entity/tasks/task.json#/definitions/testCaseResolutionPayload"},
-        {"$ref": "../../entity/tasks/task.json#/definitions/genericPayload"}
+        {"$ref": "../../type/suggestionPayload.json"},
+        {"$ref": "../../type/dataAccessRequestPayload.json"},
+        {"$ref": "../../type/glossaryApprovalPayload.json"},
+        {"$ref": "../../type/testCaseResolutionPayload.json"},
+        {"$ref": "../../type/descriptionUpdatePayload.json"},
+        {"$ref": "../../type/tagUpdatePayload.json"},
+        {"$ref": "../../type/ownershipUpdatePayload.json"},
+        {"$ref": "../../type/tierUpdatePayload.json"},
+        {"$ref": "../../type/domainUpdatePayload.json"},
+        {"$ref": "../../type/incidentResolutionPayload.json"},
+        {"$ref": "../../type/reviewPayload.json"},
+        {"$ref": "../../type/genericTaskPayload.json"}
       ]
     },
     "dueDate": {

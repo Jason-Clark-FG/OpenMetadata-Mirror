@@ -26,9 +26,10 @@ import org.openmetadata.service.governance.workflows.elements.nodes.automatedTas
 import org.openmetadata.service.governance.workflows.elements.nodes.endEvent.EndEvent;
 import org.openmetadata.service.governance.workflows.elements.nodes.gateway.ParallelGateway;
 import org.openmetadata.service.governance.workflows.elements.nodes.startEvent.StartEvent;
-import org.openmetadata.service.governance.workflows.elements.nodes.userTask.UserApprovalTask;
+import org.openmetadata.service.governance.workflows.elements.nodes.userTask.UserApprovalTaskV2;
 
 public class NodeFactory {
+
   public static NodeInterface createNode(
       WorkflowNodeDefinitionInterface nodeDefinition, WorkflowConfiguration config) {
     return switch (NodeSubType.fromValue(nodeDefinition.getSubType())) {
@@ -42,7 +43,7 @@ public class NodeFactory {
           (SetEntityCertificationTaskDefinition) nodeDefinition, config);
       case SET_GLOSSARY_TERM_STATUS_TASK -> new SetGlossaryTermStatusTask(
           (SetGlossaryTermStatusTaskDefinition) nodeDefinition, config);
-      case USER_APPROVAL_TASK -> new UserApprovalTask(
+      case USER_APPROVAL_TASK -> new UserApprovalTaskV2(
           (UserApprovalTaskDefinition) nodeDefinition, config);
       case CREATE_AND_RUN_INGESTION_PIPELINE_TASK -> new CreateAndRunIngestionPipelineTask(
           (CreateAndRunIngestionPipelineTaskDefinition) nodeDefinition, config);

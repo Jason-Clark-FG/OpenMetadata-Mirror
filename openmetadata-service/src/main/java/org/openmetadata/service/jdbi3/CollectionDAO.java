@@ -2890,7 +2890,8 @@ public interface CollectionDAO {
         value = "INSERT INTO task_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
-        value = "INSERT INTO task_entity (id, json, fqnHash) VALUES (:id, :json :: jsonb, :fqnHash)",
+        value =
+            "INSERT INTO task_entity (id, json, fqnHash) VALUES (:id, :json :: jsonb, :fqnHash)",
         connectionType = POSTGRES)
     void insertTask(
         @Bind("id") String id, @Bind("json") String json, @BindFQN("fqnHash") String fqn);
@@ -2931,6 +2932,11 @@ public interface CollectionDAO {
 
     @SqlUpdate("UPDATE new_task_sequence SET id = 0")
     void resetSequence();
+
+    @SqlUpdate(
+        "DELETE FROM entity_relationship WHERE fromEntity = 'domain' AND toEntity = 'task' "
+            + "AND relation = 10 AND toId IN (<taskIds>)")
+    void bulkRemoveDomainRelationships(@BindList("taskIds") List<String> taskIds);
   }
 
   interface FieldRelationshipDAO {
