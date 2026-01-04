@@ -76,6 +76,7 @@ from metadata.ingestion.ometa.mixins.server_mixin import OMetaServerMixin
 from metadata.ingestion.ometa.mixins.service_mixin import OMetaServiceMixin
 from metadata.ingestion.ometa.mixins.suggestions_mixin import OMetaSuggestionsMixin
 from metadata.ingestion.ometa.mixins.table_mixin import OMetaTableMixin
+from metadata.ingestion.ometa.mixins.task_mixin import OMetaTaskMixin
 from metadata.ingestion.ometa.mixins.tag_glossary_mixin import OMetaTagGlossaryMixin
 from metadata.ingestion.ometa.mixins.tests_mixin import OMetaTestsMixin
 from metadata.ingestion.ometa.mixins.topic_mixin import OMetaTopicMixin
@@ -154,6 +155,7 @@ class OpenMetadata(
     OMetaSearchIndexMixin,
     OMetaCustomPropertyMixin,
     OMetaSuggestionsMixin,
+    OMetaTaskMixin,
     OMetaDomainMixin,
     OMetaProfileMixin,
     OMetaTagGlossaryMixin,

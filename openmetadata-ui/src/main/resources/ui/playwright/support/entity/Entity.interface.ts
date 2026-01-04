@@ -40,6 +40,7 @@ export enum EntityTypeEndpoint {
   DriveService = 'services/driveServices',
   StoreProcedure = 'storedProcedures',
   Table = 'tables',
+  Task = 'tasks',
   Teams = 'teams',
   TestSuites = 'dataQuality/testSuites',
   Topic = 'topics',

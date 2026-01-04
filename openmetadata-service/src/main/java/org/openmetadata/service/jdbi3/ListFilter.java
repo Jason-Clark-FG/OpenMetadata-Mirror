@@ -65,6 +65,9 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getEntityLinkCondition());
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
+    conditions.add(getTaskStatusCondition(tableName));
+    conditions.add(getTaskTypeCondition(tableName));
+    conditions.add(getTaskPriorityCondition(tableName));
     String condition = addCondition(conditions);
     return condition.isEmpty() ? "WHERE TRUE" : "WHERE " + condition;
   }
@@ -618,5 +621,38 @@ public class ListFilter extends Filter<ListFilter> {
     name = escapeApostrophe(name);
     // "_" is a wildcard and looks for any single character. Add "\\" in front of it to escape it
     return name.replaceAll("_", "\\\\_");
+  }
+
+  private String getTaskStatusCondition(String tableName) {
+    String taskStatus = queryParams.get("taskStatus");
+    if (taskStatus == null) {
+      return "";
+    }
+    String safeStatus = escapeApostrophe(taskStatus);
+    return tableName == null
+        ? String.format("status = '%s'", safeStatus)
+        : String.format("%s.status = '%s'", tableName, safeStatus);
+  }
+
+  private String getTaskTypeCondition(String tableName) {
+    String taskType = queryParams.get("taskType");
+    if (taskType == null) {
+      return "";
+    }
+    String safeType = escapeApostrophe(taskType);
+    return tableName == null
+        ? String.format("type = '%s'", safeType)
+        : String.format("%s.type = '%s'", tableName, safeType);
+  }
+
+  private String getTaskPriorityCondition(String tableName) {
+    String taskPriority = queryParams.get("taskPriority");
+    if (taskPriority == null) {
+      return "";
+    }
+    String safePriority = escapeApostrophe(taskPriority);
+    return tableName == null
+        ? String.format("priority = '%s'", safePriority)
+        : String.format("%s.priority = '%s'", tableName, safePriority);
   }
 }

@@ -134,6 +134,7 @@ import org.openmetadata.schema.entity.services.SecurityService;
 import org.openmetadata.schema.entity.services.StorageService;
 import org.openmetadata.schema.entity.services.connections.TestConnectionDefinition;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
+import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.Persona;
 import org.openmetadata.schema.entity.teams.Role;
 import org.openmetadata.schema.entity.teams.Team;
@@ -364,6 +365,9 @@ public interface CollectionDAO {
 
   @CreateSqlObject
   FeedDAO feedDAO();
+
+  @CreateSqlObject
+  TaskDAO taskDAO();
 
   @CreateSqlObject
   StoredProcedureDAO storedProcedureDAO();
@@ -2864,6 +2868,69 @@ public interface CollectionDAO {
             rs.getString("count"));
       }
     }
+  }
+
+  interface TaskDAO extends EntityDAO<Task> {
+    @Override
+    default String getTableName() {
+      return "task_entity";
+    }
+
+    @Override
+    default Class<Task> getEntityClass() {
+      return Task.class;
+    }
+
+    @Override
+    default String getNameHashColumn() {
+      return "fqnHash";
+    }
+
+    @ConnectionAwareSqlUpdate(
+        value = "INSERT INTO task_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value = "INSERT INTO task_entity (id, json, fqnHash) VALUES (:id, :json :: jsonb, :fqnHash)",
+        connectionType = POSTGRES)
+    void insertTask(
+        @Bind("id") String id, @Bind("json") String json, @BindFQN("fqnHash") String fqn);
+
+    @Override
+    default void insert(org.openmetadata.schema.EntityInterface entity, String fqn) {
+      Task task = (Task) entity;
+      insertTask(task.getId().toString(), JsonUtils.pojoToJson(task), task.getFullyQualifiedName());
+    }
+
+    @ConnectionAwareSqlUpdate(
+        value = "UPDATE task_entity SET json = :json WHERE id = :id",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value = "UPDATE task_entity SET json = (:json :: jsonb) WHERE id = :id",
+        connectionType = POSTGRES)
+    void updateTask(@Bind("id") String id, @Bind("json") String json);
+
+    @Override
+    default void update(UUID id, String fqn, String json) {
+      updateTask(id.toString(), json);
+    }
+
+    @SqlUpdate("UPDATE new_task_sequence SET id = LAST_INSERT_ID(id + 1)")
+    int incrementSequenceMysql();
+
+    @SqlQuery("SELECT LAST_INSERT_ID()")
+    long getLastInsertIdMysql();
+
+    @SqlQuery("UPDATE new_task_sequence SET id = id + 1 RETURNING id")
+    long getNextTaskIdPostgres();
+
+    @SqlUpdate("DELETE FROM entity_relationship WHERE fromEntity = 'task' OR toEntity = 'task'")
+    void deleteTaskRelationships();
+
+    @SqlUpdate("DELETE FROM task_entity")
+    void deleteAll();
+
+    @SqlUpdate("UPDATE new_task_sequence SET id = 0")
+    void resetSequence();
   }
 
   interface FieldRelationshipDAO {
