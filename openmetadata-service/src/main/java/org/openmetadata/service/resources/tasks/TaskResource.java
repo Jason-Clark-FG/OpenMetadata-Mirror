@@ -13,6 +13,9 @@
 
 package org.openmetadata.service.resources.tasks;
 
+import static org.openmetadata.service.jdbi3.RoleRepository.DOMAIN_ONLY_ACCESS_ROLE;
+import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
+
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,12 +45,16 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
@@ -56,12 +63,15 @@ import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.resources.Collection;
 import org.openmetadata.service.resources.EntityResource;
+import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
+import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
@@ -73,7 +83,7 @@ import org.openmetadata.service.util.EntityUtil.Fields;
 public class TaskResource extends EntityResource<Task, TaskRepository> {
 
   public static final String COLLECTION_PATH = "v1/tasks/";
-  static final String FIELDS = "assignees,reviewers,watchers,about,domain,comments";
+  static final String FIELDS = "assignees,reviewers,watchers,about,domain,comments,createdBy";
 
   public TaskResource(Authorizer authorizer, Limits limits) {
     super(Entity.TASK, authorizer, limits);
@@ -143,6 +153,137 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     if (priority != null) {
       filter.addQueryParam("taskPriority", priority.value());
     }
+    if (assignee != null) {
+      filter.addQueryParam("assignee", assignee);
+    }
+    if (createdBy != null) {
+      filter.addQueryParam("createdBy", createdBy);
+    }
+    if (aboutEntity != null) {
+      filter.addQueryParam("aboutEntity", aboutEntity);
+    }
+
+    return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
+  }
+
+  @GET
+  @Path("/assigned")
+  @Operation(
+      operationId = "listMyAssignedTasks",
+      summary = "List tasks assigned to the current user",
+      description =
+          "Get tasks assigned to the current user or their teams. "
+              + "Includes tasks where the user is a direct assignee or a member of an assigned team.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of assigned tasks",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TaskList.class)))
+      })
+  public ResultList<Task> listMyAssignedTasks(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Fields to include in response", schema = @Schema(type = "string"))
+          @QueryParam("fields")
+          String fieldsParam,
+      @Parameter(description = "Filter by task status") @QueryParam("status")
+          TaskEntityStatus status,
+      @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
+          @DefaultValue("10")
+          @QueryParam("limit")
+          @Min(0)
+          @Max(1000000)
+          int limitParam,
+      @Parameter(description = "Returns list of tasks before this cursor") @QueryParam("before")
+          String before,
+      @Parameter(description = "Returns list of tasks after this cursor") @QueryParam("after")
+          String after,
+      @Parameter(description = "Include deleted tasks")
+          @QueryParam("include")
+          @DefaultValue("non-deleted")
+          Include include) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "teams", Include.NON_DELETED);
+
+    List<String> assigneeIds = new ArrayList<>();
+    assigneeIds.add(user.getId().toString());
+    if (user.getTeams() != null) {
+      for (EntityReference team : user.getTeams()) {
+        assigneeIds.add(team.getId().toString());
+      }
+    }
+
+    ListFilter filter = new ListFilter(include);
+    if (status != null) {
+      filter.addQueryParam("taskStatus", status.value());
+    }
+
+    List<Task> allTasksList = new ArrayList<>();
+    for (String assigneeId : assigneeIds) {
+      ListFilter assigneeFilter = new ListFilter(include);
+      if (status != null) {
+        assigneeFilter.addQueryParam("taskStatus", status.value());
+      }
+      assigneeFilter.addQueryParam("assignee", assigneeId);
+      ResultList<Task> tasks =
+          listInternal(
+              uriInfo, securityContext, fieldsParam, assigneeFilter, limitParam, before, after);
+      if (tasks.getData() != null) {
+        allTasksList.addAll(tasks.getData());
+      }
+    }
+
+    return new ResultList<>(allTasksList);
+  }
+
+  @GET
+  @Path("/created")
+  @Operation(
+      operationId = "listMyCreatedTasks",
+      summary = "List tasks created by the current user",
+      description = "Get tasks created by the current user.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of created tasks",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TaskList.class)))
+      })
+  public ResultList<Task> listMyCreatedTasks(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Fields to include in response", schema = @Schema(type = "string"))
+          @QueryParam("fields")
+          String fieldsParam,
+      @Parameter(description = "Filter by task status") @QueryParam("status")
+          TaskEntityStatus status,
+      @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
+          @DefaultValue("10")
+          @QueryParam("limit")
+          @Min(0)
+          @Max(1000000)
+          int limitParam,
+      @Parameter(description = "Returns list of tasks before this cursor") @QueryParam("before")
+          String before,
+      @Parameter(description = "Returns list of tasks after this cursor") @QueryParam("after")
+          String after,
+      @Parameter(description = "Include deleted tasks")
+          @QueryParam("include")
+          @DefaultValue("non-deleted")
+          Include include) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
+
+    ListFilter filter = new ListFilter(include);
+    if (status != null) {
+      filter.addQueryParam("taskStatus", status.value());
+    }
+    filter.addQueryParam("createdById", user.getId().toString());
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
   }
@@ -273,13 +414,17 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
                 @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = Task.class))),
-        @ApiResponse(responseCode = "400", description = "Bad request")
+        @ApiResponse(responseCode = "400", description = "Bad request"),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Domain-only user cannot create task on entity outside their domain")
       })
   public Response create(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
       @Valid CreateTask create) {
     Task task = getTask(create, securityContext.getUserPrincipal().getName());
+    enforceDomainOnlyPolicyForTask(securityContext, task);
     return create(uriInfo, securityContext, task);
   }
 
@@ -296,14 +441,74 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
                 @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = Task.class))),
-        @ApiResponse(responseCode = "400", description = "Bad request")
+        @ApiResponse(responseCode = "400", description = "Bad request"),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Domain-only user cannot create task on entity outside their domain")
       })
   public Response createOrUpdate(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
       @Valid CreateTask create) {
     Task task = getTask(create, securityContext.getUserPrincipal().getName());
+    enforceDomainOnlyPolicyForTask(securityContext, task);
     return createOrUpdate(uriInfo, securityContext, task);
+  }
+
+  /**
+   * Enforce domain-only policy: Users with DOMAIN_ONLY_ACCESS_ROLE can only create tasks on entities
+   * within their domains.
+   */
+  private void enforceDomainOnlyPolicyForTask(SecurityContext securityContext, Task task) {
+    SubjectContext subjectContext = getSubjectContext(securityContext);
+
+    if (subjectContext.isAdmin() || !subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE)) {
+      return;
+    }
+
+    EntityReference about = task.getAbout();
+    if (about == null) {
+      return;
+    }
+
+    try {
+      EntityReference targetDomain = getEntityDomain(about);
+      if (targetDomain == null) {
+        return;
+      }
+
+      List<EntityReference> userDomains = subjectContext.getUserDomains();
+      boolean hasMatchingDomain =
+          userDomains.stream().anyMatch(d -> d.getId().equals(targetDomain.getId()));
+
+      if (!hasMatchingDomain) {
+        throw new AuthorizationException(
+            String.format(
+                "User with domain-only access cannot create task on entity '%s' in domain '%s'",
+                about.getFullyQualifiedName(), targetDomain.getFullyQualifiedName()));
+      }
+    } catch (AuthorizationException e) {
+      throw e;
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not check domain policy for task on entity {}: {}", about.getId(), e.getMessage());
+    }
+  }
+
+  private EntityReference getEntityDomain(EntityReference entityRef) {
+    try {
+      EntityRepository<?> repo = Entity.getEntityRepository(entityRef.getType());
+      Object entity = repo.get(null, entityRef.getId(), repo.getFields("domain"));
+
+      java.lang.reflect.Method getDomainMethod = entity.getClass().getMethod("getDomain");
+      Object domain = getDomainMethod.invoke(entity);
+      if (domain instanceof EntityReference) {
+        return (EntityReference) domain;
+      }
+    } catch (Exception e) {
+      LOG.debug("Could not get domain for entity {}: {}", entityRef.getId(), e.getMessage());
+    }
+    return null;
   }
 
   @PATCH
@@ -348,7 +553,8 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
                 @Content(
                     mediaType = "application/json",
                     schema = @Schema(implementation = Task.class))),
-        @ApiResponse(responseCode = "404", description = "Task not found")
+        @ApiResponse(responseCode = "404", description = "Task not found"),
+        @ApiResponse(responseCode = "403", description = "User not authorized to resolve task")
       })
   public Response resolveTask(
       @Context UriInfo uriInfo,
@@ -358,6 +564,8 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     String userName = securityContext.getUserPrincipal().getName();
     Fields fields = getFields(FIELDS);
     Task task = repository.get(uriInfo, id, fields);
+
+    repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
 
     TaskResolution resolution =
         new TaskResolution()
@@ -370,6 +578,40 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
 
     Task resolvedTask = repository.resolveTask(task, resolution, userName);
     return Response.ok(resolvedTask).build();
+  }
+
+  @POST
+  @Path("/{id}/close")
+  @Operation(
+      operationId = "closeTask",
+      summary = "Close a task without resolution",
+      description =
+          "Close a task without applying any changes. Only the creator or assignee can close.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The closed task",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Task.class))),
+        @ApiResponse(responseCode = "404", description = "Task not found"),
+        @ApiResponse(responseCode = "403", description = "User not authorized to close task")
+      })
+  public Response closeTask(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id") UUID id,
+      @Parameter(description = "Comment for closing the task") @QueryParam("comment")
+          String comment) {
+    String userName = securityContext.getUserPrincipal().getName();
+    Fields fields = getFields(FIELDS);
+    Task task = repository.get(uriInfo, id, fields);
+
+    repository.checkPermissionsForResolveTask(authorizer, task, true, securityContext);
+
+    Task closedTask = repository.closeTask(task, userName, comment);
+    return Response.ok(closedTask).build();
   }
 
   @DELETE
@@ -426,19 +668,21 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
 
     if (create.getAssignees() != null) {
-      task.setAssignees(
-          create.getAssignees().stream()
-              .map(fqn -> Entity.getEntityReferenceByName(Entity.USER, fqn, Include.NON_DELETED))
-              .toList());
+      task.setAssignees(create.getAssignees().stream().map(this::resolveUserOrTeam).toList());
     }
 
     if (create.getReviewers() != null) {
-      task.setReviewers(
-          create.getReviewers().stream()
-              .map(fqn -> Entity.getEntityReferenceByName(Entity.USER, fqn, Include.NON_DELETED))
-              .toList());
+      task.setReviewers(create.getReviewers().stream().map(this::resolveUserOrTeam).toList());
     }
 
     return task;
+  }
+
+  private EntityReference resolveUserOrTeam(String fqn) {
+    try {
+      return Entity.getEntityReferenceByName(Entity.USER, fqn, Include.NON_DELETED);
+    } catch (Exception e) {
+      return Entity.getEntityReferenceByName(Entity.TEAM, fqn, Include.NON_DELETED);
+    }
   }
 }

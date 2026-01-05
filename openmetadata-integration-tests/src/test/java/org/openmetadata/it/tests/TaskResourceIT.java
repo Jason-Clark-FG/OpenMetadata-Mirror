@@ -15,10 +15,12 @@ package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.openmetadata.it.bootstrap.SharedEntities;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.tasks.CreateTask;
@@ -30,6 +32,7 @@ import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.sdk.exceptions.ForbiddenException;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
 
@@ -297,5 +300,264 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
 
     assertEquals(createdTask.getId(), fetchedTask.getId());
     assertEquals(createdTask.getTaskId(), fetchedTask.getTaskId());
+  }
+
+  // ==================== Permission Tests ====================
+
+  @Test
+  void testAssigneeCanResolveTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("assignee-resolve"))
+            .withDescription("Task assigned to user1")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+    assertEquals(TaskEntityStatus.Open, task.getStatus());
+
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Approved by assignee");
+
+    Task resolvedTask =
+        SdkClients.user1Client().tasks().resolve(task.getId().toString(), resolveRequest);
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+  }
+
+  @Test
+  void testTeamMemberCanResolveTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("team-resolve"))
+            .withDescription("Task assigned to team")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.TEAM1.getFullyQualifiedName()));
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Approved by team member");
+
+    Task resolvedTask =
+        SdkClients.user1Client().tasks().resolve(task.getId().toString(), resolveRequest);
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+  }
+
+  @Test
+  void testCreatorCanCloseTask(TestNamespace ns) {
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("creator-close"))
+            .withDescription("Task to be closed by creator")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    Task task = SdkClients.user1Client().tasks().create(request);
+    assertEquals(TaskEntityStatus.Open, task.getStatus());
+
+    Task closedTask = SdkClients.user1Client().tasks().close(task.getId().toString());
+
+    assertEquals(TaskEntityStatus.Cancelled, closedTask.getStatus());
+  }
+
+  @Test
+  void testNonAssigneeCannotResolveTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("non-assignee-resolve"))
+            .withDescription("Task assigned to user1 only")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Attempting to approve without permission");
+
+    assertThrows(
+        ForbiddenException.class,
+        () -> SdkClients.user2Client().tasks().resolve(task.getId().toString(), resolveRequest));
+  }
+
+  @Test
+  void testNonAssigneeCannotCloseTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("non-assignee-close"))
+            .withDescription("Task assigned to user1, created by admin")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    assertThrows(
+        ForbiddenException.class,
+        () -> SdkClients.user2Client().tasks().close(task.getId().toString()));
+  }
+
+  @Test
+  void testAssignedEndpointReturnsUserTasks(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request1 =
+        new CreateTask()
+            .withName(ns.prefix("assigned-test-1"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    CreateTask request2 =
+        new CreateTask()
+            .withName(ns.prefix("assigned-test-2"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER2.getFullyQualifiedName()));
+
+    Task task1 = SdkClients.adminClient().tasks().create(request1);
+    SdkClients.adminClient().tasks().create(request2);
+
+    ListResponse<Task> user1Tasks = SdkClients.user1Client().tasks().listAssigned();
+
+    assertNotNull(user1Tasks);
+    assertTrue(
+        user1Tasks.getData().stream().anyMatch(t -> t.getId().equals(task1.getId())),
+        "User1's assigned tasks should include task1");
+  }
+
+  @Test
+  void testCreatedEndpointReturnsUserTasks(TestNamespace ns) {
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("created-test"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    Task createdTask = SdkClients.user1Client().tasks().create(request);
+
+    ListResponse<Task> user1CreatedTasks = SdkClients.user1Client().tasks().listCreated();
+
+    assertNotNull(user1CreatedTasks);
+    assertTrue(
+        user1CreatedTasks.getData().stream().anyMatch(t -> t.getId().equals(createdTask.getId())),
+        "User1's created tasks should include the task they created");
+  }
+
+  @Test
+  void testCloseEndpointWithComment(TestNamespace ns) {
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("close-with-comment"))
+            .withDescription("Task to close with comment")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    Task closedTask =
+        SdkClients.adminClient().tasks().close(task.getId().toString(), "Closing this task");
+
+    assertEquals(TaskEntityStatus.Cancelled, closedTask.getStatus());
+  }
+
+  @Test
+  void testDefaultAssigneeFromEntityOwners(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("default-assignee"))
+            .withDescription("Task with about entity that has owners")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(shared.GLOSSARY1.getFullyQualifiedName())
+            .withAboutType("glossary");
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    assertNotNull(task.getAssignees(), "Task should have assignees from entity owners");
+    assertFalse(task.getAssignees().isEmpty(), "Assignees should not be empty");
+  }
+
+  @Test
+  void testAssigneeCanCloseTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("assignee-close"))
+            .withDescription("Task that assignee can close")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    Task closedTask = SdkClients.user1Client().tasks().close(task.getId().toString());
+
+    assertEquals(TaskEntityStatus.Cancelled, closedTask.getStatus());
+  }
+
+  @Test
+  void testAdminCanResolveAnyTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("admin-resolve"))
+            .withDescription("Task assigned to user1, admin should resolve")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.user1Client().tasks().create(request);
+
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Admin approving task");
+
+    Task resolvedTask =
+        SdkClients.adminClient().tasks().resolve(task.getId().toString(), resolveRequest);
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+  }
+
+  @Test
+  void testAdminCanCloseAnyTask(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("admin-close"))
+            .withDescription("Task assigned to user1, admin should close")
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task task = SdkClients.user1Client().tasks().create(request);
+
+    Task closedTask = SdkClients.adminClient().tasks().close(task.getId().toString());
+
+    assertEquals(TaskEntityStatus.Cancelled, closedTask.getStatus());
   }
 }

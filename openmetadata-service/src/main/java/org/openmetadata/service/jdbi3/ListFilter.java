@@ -58,6 +58,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getFileTypeCondition(tableName));
     conditions.add(getAssignee());
     conditions.add(getCreatedByCondition());
+    conditions.add(getAboutEntityCondition());
     conditions.add(getEventSubscriptionAlertType());
     conditions.add(getNotificationTemplateCondition());
     conditions.add(getApiCollectionCondition(tableName));
@@ -91,18 +92,66 @@ public class ListFilter extends Filter<ListFilter> {
     return new ResourceContext<>(entityType);
   }
 
+  /**
+   * Filter tasks by assignee. Uses entity_relationship table to find tasks
+   * where the specified user or team is assigned via ASSIGNED_TO relationship.
+   */
   private String getAssignee() {
-    String assignee = queryParams.get("assignee");
-    return assignee == null ? "" : String.format("assignee = '%s'", assignee);
+    String assigneeId = queryParams.get("assignee");
+    if (assigneeId == null) {
+      return "";
+    }
+    queryParams.put("assigneeIdParam", assigneeId);
+    return String.format(
+        "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
+            + "WHERE entity_relationship.fromEntity IN ('user', 'team') "
+            + "AND entity_relationship.fromId = :assigneeIdParam "
+            + "AND entity_relationship.relation = %d))",
+        Relationship.ASSIGNED_TO.ordinal());
   }
 
+  /**
+   * Filter tasks by the entity they are about. Uses entity_relationship table
+   * to find tasks that are MENTIONED_IN a specific entity.
+   */
+  private String getAboutEntityCondition() {
+    String aboutEntityId = queryParams.get("aboutEntity");
+    if (aboutEntityId == null) {
+      return "";
+    }
+    queryParams.put("aboutEntityIdParam", aboutEntityId);
+    return String.format(
+        "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
+            + "WHERE entity_relationship.fromId = :aboutEntityIdParam "
+            + "AND entity_relationship.relation = %d))",
+        Relationship.MENTIONED_IN.ordinal());
+  }
+
+  /**
+   * Filter tasks by creator. Supports two modes:
+   * - createdById: Uses CREATED relationship for exact ID match
+   * - createdBy: Matches createdBy.name in JSON (legacy support)
+   */
   private String getCreatedByCondition() {
+    String createdById = queryParams.get("createdById");
+    if (createdById != null) {
+      queryParams.put("createdByIdParam", createdById);
+      return String.format(
+          "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
+              + "WHERE entity_relationship.fromEntity = 'user' "
+              + "AND entity_relationship.fromId = :createdByIdParam "
+              + "AND entity_relationship.relation = %d))",
+          Relationship.CREATED.ordinal());
+    }
+
+    String createdBy = queryParams.get("createdBy");
+    if (createdBy == null) {
+      return "";
+    }
     if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-      String createdBy = queryParams.get("createdBy");
-      return createdBy == null ? "" : "json->>'$.createdBy' = :createdBy";
+      return "JSON_UNQUOTE(JSON_EXTRACT(json, '$.createdBy.name')) = :createdBy";
     } else {
-      String createdBy = queryParams.get("createdBy");
-      return createdBy == null ? "" : "json->>'createdBy' = :createdBy";
+      return "json->'createdBy'->>'name' = :createdBy";
     }
   }
 

@@ -15,22 +15,33 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.TEAM;
 import static org.openmetadata.service.Entity.USER;
+import static org.openmetadata.service.jdbi3.UserRepository.TEAMS_FIELD;
 
+import jakarta.ws.rs.core.SecurityContext;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.TaskEntityStatus;
+import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.CatalogExceptionMessage;
+import org.openmetadata.service.security.AuthorizationException;
+import org.openmetadata.service.security.Authorizer;
+import org.openmetadata.service.security.policyevaluator.OperationContext;
+import org.openmetadata.service.security.policyevaluator.ResourceContext;
 import org.openmetadata.service.tasks.TaskWorkflowHandler;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -48,6 +59,7 @@ public class TaskRepository extends EntityRepository<Task> {
   public static final String FIELD_COMMENTS = "comments";
   public static final String FIELD_RESOLUTION = "resolution";
   public static final String FIELD_DOMAIN = "domain";
+  public static final String FIELD_CREATED_BY = "createdBy";
 
   public TaskRepository() {
     super(COLLECTION_PATH, Entity.TASK, Task.class, Entity.getCollectionDAO().taskDAO(), "", "");
@@ -60,6 +72,7 @@ public class TaskRepository extends EntityRepository<Task> {
     this.allowedFields.add(FIELD_COMMENTS);
     this.allowedFields.add(FIELD_RESOLUTION);
     this.allowedFields.add(FIELD_DOMAIN);
+    this.allowedFields.add(FIELD_CREATED_BY);
   }
 
   @Override
@@ -71,6 +84,8 @@ public class TaskRepository extends EntityRepository<Task> {
     task.setAbout(fields.contains(FIELD_ABOUT) ? getAboutEntity(task) : task.getAbout());
     task.setDomain(fields.contains(FIELD_DOMAIN) ? getDomain(task) : task.getDomain());
     task.setComments(fields.contains(FIELD_COMMENTS) ? getComments(task) : task.getComments());
+    task.setCreatedBy(
+        fields.contains(FIELD_CREATED_BY) ? getTaskCreatedBy(task) : task.getCreatedBy());
   }
 
   @Override
@@ -81,6 +96,7 @@ public class TaskRepository extends EntityRepository<Task> {
     task.setAbout(fields.contains(FIELD_ABOUT) ? task.getAbout() : null);
     task.setDomain(fields.contains(FIELD_DOMAIN) ? task.getDomain() : null);
     task.setComments(fields.contains(FIELD_COMMENTS) ? task.getComments() : null);
+    task.setCreatedBy(fields.contains(FIELD_CREATED_BY) ? task.getCreatedBy() : null);
   }
 
   @Override
@@ -105,12 +121,45 @@ public class TaskRepository extends EntityRepository<Task> {
       task.setPriority(TaskPriority.Medium);
     }
 
+    setDefaultAssigneesFromEntityOwners(task);
     validateAssignees(task.getAssignees());
     validateTaskReviewers(task.getReviewers());
 
     // Task domain MUST be inherited from the target entity (about field)
     // This ensures tasks follow domain-based data isolation policies
     inheritDomainFromTargetEntity(task);
+  }
+
+  /**
+   * If no assignees are specified and the target entity has owners, set the entity owners as default
+   * assignees. This ensures tasks about owned entities are automatically routed to the right people.
+   */
+  private void setDefaultAssigneesFromEntityOwners(Task task) {
+    if (!nullOrEmpty(task.getAssignees())) {
+      return;
+    }
+
+    EntityReference about = task.getAbout();
+    if (about == null || about.getId() == null) {
+      return;
+    }
+
+    try {
+      List<EntityReference> owners = Entity.getOwners(about);
+      if (!nullOrEmpty(owners)) {
+        task.setAssignees(owners);
+        LOG.debug(
+            "Task {} defaulting assignees to entity owners: {}",
+            task.getTaskId(),
+            owners.stream().map(EntityReference::getName).toList());
+      }
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not resolve owners for task {} from target entity {}: {}",
+          task.getTaskId(),
+          about.getId(),
+          e.getMessage());
+    }
   }
 
   /**
@@ -277,6 +326,12 @@ public class TaskRepository extends EntityRepository<Task> {
     return findFromRecordsByRelationship(task.getId(), Entity.TASK, Relationship.FOLLOWS);
   }
 
+  private EntityReference getTaskCreatedBy(Task task) {
+    List<EntityReference> refs =
+        findFromRecordsByRelationship(task.getId(), Entity.TASK, Relationship.CREATED);
+    return nullOrEmpty(refs) ? null : refs.get(0);
+  }
+
   private EntityReference getAboutEntity(Task task) {
     List<EntityReference> refs =
         findFromRecordsByRelationship(task.getId(), Entity.TASK, Relationship.MENTIONED_IN);
@@ -363,6 +418,106 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   /**
+   * Check if user has permission to resolve or close a task.
+   * Follows the same pattern as FeedRepository.checkPermissionsForResolveTask.
+   *
+   * Authorization rules:
+   * - Admin can always resolve/close
+   * - Assignee can resolve (with permission check on underlying entity) or close
+   * - Creator can close (not resolve, unless also assignee)
+   * - Owner of target entity can resolve/close
+   * - Team member of assigned team can resolve/close
+   * - Team member of target entity owner team can resolve/close
+   */
+  public void checkPermissionsForResolveTask(
+      Authorizer authorizer, Task task, boolean closeTask, SecurityContext securityContext) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(USER, userName, TEAMS_FIELD, NON_DELETED);
+
+    if (Boolean.TRUE.equals(user.getIsAdmin())) {
+      return;
+    }
+
+    EntityReference about = task.getAbout();
+    List<EntityReference> assignees = task.getAssignees();
+
+    // Allow if user is owner of the target entity
+    List<EntityReference> owners = about != null ? Entity.getOwners(about) : null;
+    if (!nullOrEmpty(owners)
+        && owners.stream().anyMatch(owner -> owner.getName().equals(userName))) {
+      return;
+    }
+
+    // Allow creator to close (not resolve)
+    if (closeTask
+        && task.getCreatedBy() != null
+        && task.getCreatedBy().getName().equals(userName)) {
+      return;
+    }
+
+    // Allow if user is a direct assignee
+    if (!nullOrEmpty(assignees)
+        && assignees.stream().anyMatch(assignee -> assignee.getName().equals(userName))) {
+      if (about != null) {
+        validateUnderlyingEntityPermission(authorizer, securityContext, task);
+      }
+      return;
+    }
+
+    // Allow if user belongs to an assigned team or owner team
+    List<EntityReference> teams = user.getTeams();
+    if (!nullOrEmpty(teams)) {
+      List<String> teamNames = teams.stream().map(EntityReference::getName).toList();
+
+      // Check if user's team is an assignee
+      if (!nullOrEmpty(assignees)
+          && assignees.stream().anyMatch(assignee -> teamNames.contains(assignee.getName()))) {
+        return;
+      }
+
+      // Check if user's team is owner of target entity
+      if (!nullOrEmpty(owners)
+          && owners.stream().anyMatch(owner -> teamNames.contains(owner.getName()))) {
+        return;
+      }
+    }
+
+    throw new AuthorizationException(
+        CatalogExceptionMessage.taskOperationNotAllowed(
+            userName, closeTask ? "closeTask" : "resolveTask"));
+  }
+
+  private void validateUnderlyingEntityPermission(
+      Authorizer authorizer, SecurityContext securityContext, Task task) {
+    EntityReference about = task.getAbout();
+    if (about == null) {
+      return;
+    }
+
+    ResourceContext<?> resourceContext =
+        new ResourceContext<>(about.getType(), about.getId(), null);
+
+    MetadataOperation operation = getOperationForTaskType(task.getType());
+    if (operation != null) {
+      OperationContext operationContext = new OperationContext(about.getType(), operation);
+      authorizer.authorize(securityContext, operationContext, resourceContext);
+    }
+  }
+
+  private MetadataOperation getOperationForTaskType(TaskEntityType taskType) {
+    if (taskType == null) {
+      return null;
+    }
+    return switch (taskType) {
+      case DescriptionUpdate -> MetadataOperation.EDIT_DESCRIPTION;
+      case TagUpdate -> MetadataOperation.EDIT_TAGS;
+      case GlossaryApproval -> MetadataOperation.EDIT_ALL;
+      case OwnershipUpdate -> MetadataOperation.EDIT_OWNERS;
+      default -> null;
+    };
+  }
+
+  /**
    * Internal method to update task resolution status.
    * Called by TaskWorkflowHandler after workflow processing.
    */
@@ -394,7 +549,7 @@ public class TaskRepository extends EntityRepository<Task> {
   public List<EntityReference> findFromRecordsByRelationship(
       UUID toId, String toEntity, Relationship relationship) {
     return EntityUtil.getEntityReferences(
-        daoCollection.relationshipDAO().findFrom(toId, toEntity, relationship.ordinal(), null));
+        daoCollection.relationshipDAO().findFrom(toId, toEntity, relationship.ordinal()));
   }
 
   @Override

@@ -73,4 +73,47 @@ public class TaskService extends EntityServiceBase<Task> {
     String responseStr = httpClient.executeForString(HttpMethod.GET, basePath, null, options);
     return deserializeListResponse(responseStr);
   }
+
+  public Task close(String id, String comment) throws OpenMetadataException {
+    String path = basePath + "/" + id + "/close";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (comment != null && !comment.isEmpty()) {
+      optionsBuilder.queryParam("comment", comment);
+    }
+    return httpClient.execute(HttpMethod.POST, path, null, Task.class, optionsBuilder.build());
+  }
+
+  public Task close(String id) throws OpenMetadataException {
+    return close(id, null);
+  }
+
+  public ListResponse<Task> listAssigned() throws OpenMetadataException {
+    return listAssigned(null);
+  }
+
+  public ListResponse<Task> listAssigned(TaskEntityStatus status) throws OpenMetadataException {
+    String path = basePath + "/assigned";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (status != null) {
+      optionsBuilder.queryParam("status", status.value());
+    }
+    String responseStr =
+        httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
+    return deserializeListResponse(responseStr);
+  }
+
+  public ListResponse<Task> listCreated() throws OpenMetadataException {
+    return listCreated(null);
+  }
+
+  public ListResponse<Task> listCreated(TaskEntityStatus status) throws OpenMetadataException {
+    String path = basePath + "/created";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (status != null) {
+      optionsBuilder.queryParam("status", status.value());
+    }
+    String responseStr =
+        httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
+    return deserializeListResponse(responseStr);
+  }
 }
