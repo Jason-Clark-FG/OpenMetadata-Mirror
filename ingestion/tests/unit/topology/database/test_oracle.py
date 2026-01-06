@@ -44,6 +44,11 @@ from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.database.oracle.metadata import OracleSource
 from metadata.ingestion.source.database.oracle.models import OracleStoredObject
+from metadata.ingestion.source.database.oracle.queries import (
+    ORACLE_GET_STORED_PACKAGES,
+    ORACLE_GET_STORED_PROCEDURES,
+    TEST_ORACLE_GET_STORED_PACKAGES,
+)
 
 mock_oracle_config = {
     "source": {
@@ -268,3 +273,16 @@ class OracleUnitTest(TestCase):
             mock_dialect.all_view_definitions[("test_view_with_ddl", "test_schema")]
             == expected_view_ddl_definition
         )
+
+    def test_stored_procedure_queries_have_order_by(self):
+        """
+        Test that stored procedure queries have ORDER BY clause to ensure
+        lines are returned in correct order from the database.
+
+        This is critical because the process_result method concatenates text
+        as rows are received without reordering. Without ORDER BY, Oracle can
+        return rows in any physical order, causing scrambled code.
+        """
+        assert "ORDER BY OWNER, NAME, LINE" in ORACLE_GET_STORED_PROCEDURES
+        assert "ORDER BY OWNER, NAME, LINE" in ORACLE_GET_STORED_PACKAGES
+        assert "ORDER BY OWNER, NAME, LINE" in TEST_ORACLE_GET_STORED_PACKAGES
