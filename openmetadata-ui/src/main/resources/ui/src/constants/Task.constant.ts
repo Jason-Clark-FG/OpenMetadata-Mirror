@@ -11,6 +11,8 @@
  *  limitations under the License.
  */
 
+import { TaskEntityType } from '../rest/tasksAPI';
+
 export const TASK_TYPES = {
   RequestTag: 'message.request-tags-message',
   RequestDescription: 'message.request-description-message',
@@ -20,4 +22,21 @@ export const TASK_TYPES = {
     'message.request-test-case-failure-resolution-message',
   RequestApproval: 'message.request-approval-message',
   Generic: 'message.request-tags-message',
+};
+
+export const TASK_ENTITY_TYPES: Record<TaskEntityType, string> = {
+  [TaskEntityType.GlossaryApproval]: 'message.request-approval-message',
+  [TaskEntityType.DataAccessRequest]: 'message.data-access-request-message',
+  [TaskEntityType.DescriptionUpdate]: 'message.update-description-message',
+  [TaskEntityType.TagUpdate]: 'message.update-tag-message',
+  [TaskEntityType.OwnershipUpdate]: 'message.ownership-update-message',
+  [TaskEntityType.TierUpdate]: 'message.tier-update-message',
+  [TaskEntityType.DomainUpdate]: 'message.domain-update-message',
+  [TaskEntityType.Suggestion]: 'message.suggestion-message',
+  [TaskEntityType.TestCaseResolution]:
+    'message.request-test-case-failure-resolution-message',
+  [TaskEntityType.IncidentResolution]: 'message.incident-resolution-message',
+  [TaskEntityType.PipelineReview]: 'message.pipeline-review-message',
+  [TaskEntityType.DataQualityReview]: 'message.data-quality-review-message',
+  [TaskEntityType.CustomTask]: 'message.custom-task-message',
 };

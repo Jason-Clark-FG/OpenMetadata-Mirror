@@ -38,7 +38,9 @@ import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
+import org.openmetadata.service.security.AuthRequest;
 import org.openmetadata.service.security.AuthorizationException;
+import org.openmetadata.service.security.AuthorizationLogic;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContext;
@@ -125,9 +127,26 @@ public class TaskRepository extends EntityRepository<Task> {
     validateAssignees(task.getAssignees());
     validateTaskReviewers(task.getReviewers());
 
+    // Compute aboutFqnHash for efficient querying by target entity FQN
+    computeAboutFqnHash(task);
+
     // Task domain MUST be inherited from the target entity (about field)
     // This ensures tasks follow domain-based data isolation policies
     inheritDomainFromTargetEntity(task);
+  }
+
+  /**
+   * Compute and store the hash of the target entity's FQN for efficient querying.
+   * The hash preserves hierarchical structure for prefix queries (e.g., all tasks for tables in a schema).
+   */
+  private void computeAboutFqnHash(Task task) {
+    EntityReference about = task.getAbout();
+    if (about == null || about.getFullyQualifiedName() == null) {
+      task.setAboutFqnHash(null);
+      return;
+    }
+    String fqnHash = FullyQualifiedName.buildHash(about.getFullyQualifiedName());
+    task.setAboutFqnHash(fqnHash);
   }
 
   /**
@@ -343,7 +362,98 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   private List<org.openmetadata.schema.type.TaskComment> getComments(Task task) {
-    return List.of();
+    // Comments are stored in the task JSON blob - already loaded with the entity
+    return listOrEmpty(task.getComments());
+  }
+
+  /**
+   * Add a comment to a task.
+   * Anyone who can view the task can add comments.
+   */
+  public Task addComment(Task task, org.openmetadata.schema.type.TaskComment comment) {
+    List<org.openmetadata.schema.type.TaskComment> comments =
+        new java.util.ArrayList<>(listOrEmpty(task.getComments()));
+    comments.add(comment);
+    task.setComments(comments);
+    task.setCommentCount(comments.size());
+    task.setUpdatedAt(System.currentTimeMillis());
+    storeEntity(task, true);
+    return task;
+  }
+
+  /**
+   * Edit a comment on a task.
+   * Only the comment author can edit their own comment.
+   */
+  public Task editComment(Task task, UUID commentId, String newMessage, String userName) {
+    List<org.openmetadata.schema.type.TaskComment> comments =
+        new java.util.ArrayList<>(listOrEmpty(task.getComments()));
+
+    boolean found = false;
+    for (int i = 0; i < comments.size(); i++) {
+      org.openmetadata.schema.type.TaskComment comment = comments.get(i);
+      if (comment.getId().equals(commentId)) {
+        // Check permission - only author can edit
+        if (!isCommentAuthor(comment, userName)) {
+          throw new AuthorizationException(
+              String.format("User %s is not authorized to edit this comment", userName));
+        }
+        // Update the comment
+        comment.setMessage(newMessage);
+        comments.set(i, comment);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      throw new IllegalArgumentException("Comment not found: " + commentId);
+    }
+
+    task.setComments(comments);
+    task.setUpdatedAt(System.currentTimeMillis());
+    storeEntity(task, true);
+    return task;
+  }
+
+  /**
+   * Delete a comment from a task.
+   * The comment author or an admin can delete a comment.
+   */
+  public Task deleteComment(Task task, UUID commentId, String userName, boolean isAdmin) {
+    List<org.openmetadata.schema.type.TaskComment> comments =
+        new java.util.ArrayList<>(listOrEmpty(task.getComments()));
+
+    boolean found = false;
+    for (int i = 0; i < comments.size(); i++) {
+      org.openmetadata.schema.type.TaskComment comment = comments.get(i);
+      if (comment.getId().equals(commentId)) {
+        // Check permission - author or admin can delete
+        if (!isAdmin && !isCommentAuthor(comment, userName)) {
+          throw new AuthorizationException(
+              String.format("User %s is not authorized to delete this comment", userName));
+        }
+        comments.remove(i);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      throw new IllegalArgumentException("Comment not found: " + commentId);
+    }
+
+    task.setComments(comments);
+    task.setCommentCount(comments.size());
+    task.setUpdatedAt(System.currentTimeMillis());
+    storeEntity(task, true);
+    return task;
+  }
+
+  private boolean isCommentAuthor(
+      org.openmetadata.schema.type.TaskComment comment, String userName) {
+    EntityReference author = comment.getAuthor();
+    return author != null && author.getName() != null && author.getName().equals(userName);
   }
 
   private String generateTaskId() {
@@ -498,7 +608,18 @@ public class TaskRepository extends EntityRepository<Task> {
         new ResourceContext<>(about.getType(), about.getId(), null);
 
     MetadataOperation operation = getOperationForTaskType(task.getType());
-    if (operation != null) {
+    if (operation != null && operation != MetadataOperation.EDIT_ALL) {
+      // Allow either the specific operation OR EDIT_ALL (which encompasses all edit permissions)
+      OperationContext specificOpContext = new OperationContext(about.getType(), operation);
+      OperationContext editAllOpContext =
+          new OperationContext(about.getType(), MetadataOperation.EDIT_ALL);
+      authorizer.authorizeRequests(
+          securityContext,
+          List.of(
+              new AuthRequest(specificOpContext, resourceContext),
+              new AuthRequest(editAllOpContext, resourceContext)),
+          AuthorizationLogic.ANY);
+    } else if (operation == MetadataOperation.EDIT_ALL) {
       OperationContext operationContext = new OperationContext(about.getType(), operation);
       authorizer.authorize(securityContext, operationContext, resourceContext);
     }

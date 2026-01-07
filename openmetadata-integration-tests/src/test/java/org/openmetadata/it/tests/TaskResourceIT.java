@@ -16,21 +16,30 @@ package org.openmetadata.it.tests;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.openmetadata.it.bootstrap.SharedEntities;
+import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
+import org.openmetadata.it.factories.DatabaseServiceTestFactory;
+import org.openmetadata.it.factories.TableTestFactory;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.ResolveTask;
+import org.openmetadata.schema.api.tasks.TaskCount;
+import org.openmetadata.schema.entity.data.DatabaseSchema;
+import org.openmetadata.schema.entity.data.Table;
+import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
+import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.sdk.exceptions.ForbiddenException;
 import org.openmetadata.sdk.models.ListParams;
@@ -559,5 +568,305 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Task closedTask = SdkClients.adminClient().tasks().close(task.getId().toString());
 
     assertEquals(TaskEntityStatus.Cancelled, closedTask.getStatus());
+  }
+
+  // ==================== Count API Tests ====================
+
+  @Test
+  void testGetCountReturnsCorrectTotals(TestNamespace ns) {
+    TaskCount initialCount = SdkClients.adminClient().tasks().getCount();
+    int initialTotal = initialCount.getTotal();
+    int initialOpen = initialCount.getOpen();
+
+    CreateTask request1 =
+        new CreateTask()
+            .withName(ns.prefix("count-test-1"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    CreateTask request2 =
+        new CreateTask()
+            .withName(ns.prefix("count-test-2"))
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.DescriptionUpdate);
+
+    createEntity(request1);
+    createEntity(request2);
+
+    TaskCount afterCount = SdkClients.adminClient().tasks().getCount();
+
+    assertEquals(initialTotal + 2, afterCount.getTotal(), "Total count should increase by 2");
+    assertEquals(initialOpen + 2, afterCount.getOpen(), "Open count should increase by 2");
+  }
+
+  @Test
+  void testGetCountByAboutEntity(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    TaskCount initialCount =
+        SdkClients.adminClient().tasks().getCountByAboutEntity(table.getFullyQualifiedName());
+    assertEquals(0, initialCount.getTotal(), "Initially there should be no tasks about the table");
+
+    CreateTask request1 =
+        new CreateTask()
+            .withName(ns.prefix("about-entity-task-1"))
+            .withDescription("Task about table")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
+
+    CreateTask request2 =
+        new CreateTask()
+            .withName(ns.prefix("about-entity-task-2"))
+            .withDescription("Another task about table")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.OwnershipUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
+
+    Task task1 = createEntity(request1);
+    Task task2 = createEntity(request2);
+
+    assertNotNull(task1.getAbout(), "Task should have about reference set");
+    assertEquals(
+        table.getFullyQualifiedName(),
+        task1.getAbout().getFullyQualifiedName(),
+        "About FQN should match table FQN");
+
+    TaskCount countByAbout =
+        SdkClients.adminClient().tasks().getCountByAboutEntity(table.getFullyQualifiedName());
+
+    assertEquals(2, countByAbout.getTotal(), "Should have 2 tasks about the table");
+    assertEquals(2, countByAbout.getOpen(), "Both tasks should be open");
+    assertEquals(0, countByAbout.getCompleted(), "No tasks should be completed yet");
+  }
+
+  @Test
+  void testGetCountByAboutEntityWithResolvedTasks(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    CreateTask request1 =
+        new CreateTask()
+            .withName(ns.prefix("resolved-count-1"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
+
+    CreateTask request2 =
+        new CreateTask()
+            .withName(ns.prefix("resolved-count-2"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
+
+    Task task1 = createEntity(request1);
+    Task task2 = createEntity(request2);
+
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Approved for count test");
+
+    SdkClients.adminClient().tasks().resolve(task1.getId().toString(), resolveRequest);
+
+    TaskCount countByAbout =
+        SdkClients.adminClient().tasks().getCountByAboutEntity(table.getFullyQualifiedName());
+
+    assertEquals(2, countByAbout.getTotal(), "Should have 2 tasks about the table");
+    assertEquals(1, countByAbout.getOpen(), "One task should still be open");
+  }
+
+  @Test
+  void testTaskAboutFqnHashIsStoredCorrectly(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("fqn-hash-test"))
+            .withDescription("Test aboutFqnHash storage")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
+
+    Task created = createEntity(request);
+
+    assertNotNull(created.getAbout(), "Created task should have about reference");
+    assertEquals(
+        table.getFullyQualifiedName(),
+        created.getAbout().getFullyQualifiedName(),
+        "About FQN should match");
+
+    Task fetched = SdkClients.adminClient().tasks().get(created.getId().toString(), "about");
+    assertNotNull(fetched.getAbout(), "Fetched task should have about reference");
+    assertEquals(
+        table.getFullyQualifiedName(),
+        fetched.getAbout().getFullyQualifiedName(),
+        "Fetched about FQN should match");
+
+    ListParams params = new ListParams();
+    params.addFilter("aboutEntity", table.getFullyQualifiedName());
+    ListResponse<Task> filtered = SdkClients.adminClient().tasks().list(params);
+
+    assertNotNull(filtered.getData(), "Filter results should not be null");
+    assertTrue(
+        filtered.getData().stream().anyMatch(t -> t.getId().equals(created.getId())),
+        "Filtered tasks should include the task about the table");
+  }
+
+  @Test
+  void testGetCountByCreatedBy(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("createdby-count"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    SdkClients.user1Client().tasks().create(request);
+
+    TaskCount count =
+        SdkClients.adminClient().tasks().getCount(null, shared.USER1.getFullyQualifiedName(), null);
+
+    assertTrue(count.getTotal() >= 1, "Should have at least 1 task created by user1");
+  }
+
+  @Test
+  void testGetCountByAssignee(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("assignee-count"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER2.getFullyQualifiedName()));
+
+    SdkClients.adminClient().tasks().create(request);
+
+    TaskCount count =
+        SdkClients.adminClient().tasks().getCount(shared.USER2.getFullyQualifiedName(), null, null);
+
+    assertTrue(count.getTotal() >= 1, "Should have at least 1 task assigned to user2");
+  }
+
+  // ==================== Entity Change Application Tests ====================
+
+  @Test
+  void testResolveTagUpdateTaskAppliesTags(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    // Verify table has no tags initially
+    Table initialTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "tags");
+    assertTrue(
+        initialTable.getTags() == null || initialTable.getTags().isEmpty(),
+        "Table should have no tags initially");
+
+    // Create a TagUpdate task with tags to add
+    List<TagLabel> tagsToAdd =
+        List.of(
+            new TagLabel()
+                .withTagFQN("PersonalData.Personal")
+                .withSource(TagLabel.TagSource.CLASSIFICATION)
+                .withName("Personal"));
+
+    Map<String, Object> payload =
+        Map.of("tagsToAdd", tagsToAdd, "operation", "Add", "currentTags", List.of());
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("tag-update-apply"))
+            .withDescription("Add PersonalData.Personal tag to table")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.TagUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table")
+            .withPayload(payload);
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+    assertEquals(TaskEntityStatus.Open, task.getStatus());
+
+    // Resolve the task with approval
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved)
+            .withComment("Approved - apply tags");
+
+    Task resolvedTask =
+        SdkClients.adminClient().tasks().resolve(task.getId().toString(), resolveRequest);
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+
+    // Verify tags were applied to the table
+    Table updatedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "tags");
+
+    assertNotNull(updatedTable.getTags(), "Table should have tags after task resolution");
+    assertTrue(
+        updatedTable.getTags().stream()
+            .anyMatch(tag -> "PersonalData.Personal".equals(tag.getTagFQN())),
+        "Table should have PersonalData.Personal tag");
+  }
+
+  @Test
+  void testRejectingTaskDoesNotApplyChanges(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    // Create a TagUpdate task
+    List<TagLabel> tagsToAdd =
+        List.of(
+            new TagLabel()
+                .withTagFQN("PersonalData.Personal")
+                .withSource(TagLabel.TagSource.CLASSIFICATION)
+                .withName("Personal"));
+
+    Map<String, Object> payload =
+        Map.of("tagsToAdd", tagsToAdd, "operation", "Add", "currentTags", List.of());
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("tag-update-reject"))
+            .withDescription("Tag update to be rejected")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.TagUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table")
+            .withPayload(payload);
+
+    Task task = SdkClients.adminClient().tasks().create(request);
+
+    // Reject the task
+    ResolveTask resolveRequest =
+        new ResolveTask()
+            .withResolutionType(TaskResolutionType.Rejected)
+            .withComment("Rejected - do not apply");
+
+    Task resolvedTask =
+        SdkClients.adminClient().tasks().resolve(task.getId().toString(), resolveRequest);
+
+    assertEquals(TaskEntityStatus.Rejected, resolvedTask.getStatus());
+
+    // Verify tags were NOT applied
+    Table updatedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "tags");
+
+    assertTrue(
+        updatedTable.getTags() == null || updatedTable.getTags().isEmpty(),
+        "Table should have no tags after task rejection");
   }
 }

@@ -16,6 +16,7 @@ package org.openmetadata.sdk.fluent;
 import java.util.Map;
 import java.util.UUID;
 import org.openmetadata.schema.api.tasks.CreateTask;
+import org.openmetadata.schema.api.tasks.CreateTaskComment;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.EntityHistory;
@@ -124,5 +125,27 @@ public final class Tasks {
 
   public static ListResponse<Task> listWithFilters(Map<String, String> filters) {
     return getClient().tasks().listWithFilters(filters);
+  }
+
+  // ==================== Comment Methods ====================
+
+  public static Task addComment(String taskId, CreateTaskComment comment) {
+    return getClient().tasks().addComment(taskId, comment);
+  }
+
+  public static Task addComment(String taskId, String message) {
+    return getClient().tasks().addComment(taskId, message);
+  }
+
+  public static Task editComment(String taskId, UUID commentId, CreateTaskComment comment) {
+    return getClient().tasks().editComment(taskId, commentId, comment);
+  }
+
+  public static Task editComment(String taskId, UUID commentId, String message) {
+    return getClient().tasks().editComment(taskId, commentId, message);
+  }
+
+  public static Task deleteComment(String taskId, UUID commentId) {
+    return getClient().tasks().deleteComment(taskId, commentId);
   }
 }

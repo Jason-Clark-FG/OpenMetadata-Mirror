@@ -50,17 +50,20 @@ import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.tasks.CreateTask;
+import org.openmetadata.schema.api.tasks.CreateTaskComment;
 import org.openmetadata.schema.api.tasks.ResolveTask;
+import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TaskCategory;
+import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
-import org.openmetadata.schema.type.TaskResolution;
+import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityRepository;
@@ -164,6 +167,66 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
+  }
+
+  @GET
+  @Path("/count")
+  @Operation(
+      operationId = "getTaskCount",
+      summary = "Get task counts by status",
+      description = "Get counts of tasks grouped by status with optional filters.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Task counts",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TaskCount.class)))
+      })
+  public Response getTaskCount(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Filter by assignee ID") @QueryParam("assignee") String assignee,
+      @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
+      @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
+          String aboutEntity) {
+    ListFilter openFilter = new ListFilter(Include.NON_DELETED);
+    openFilter.addQueryParam("taskStatus", TaskEntityStatus.Open.value());
+
+    ListFilter completedFilter = new ListFilter(Include.NON_DELETED);
+    completedFilter.addQueryParam("taskStatus", TaskEntityStatus.Completed.value());
+
+    ListFilter allFilter = new ListFilter(Include.NON_DELETED);
+
+    if (assignee != null) {
+      openFilter.addQueryParam("assignee", assignee);
+      completedFilter.addQueryParam("assignee", assignee);
+      allFilter.addQueryParam("assignee", assignee);
+    }
+    if (createdBy != null) {
+      openFilter.addQueryParam("createdBy", createdBy);
+      completedFilter.addQueryParam("createdBy", createdBy);
+      allFilter.addQueryParam("createdBy", createdBy);
+    }
+    if (aboutEntity != null) {
+      openFilter.addQueryParam("aboutEntity", aboutEntity);
+      completedFilter.addQueryParam("aboutEntity", aboutEntity);
+      allFilter.addQueryParam("aboutEntity", aboutEntity);
+    }
+
+    int openCount = repository.getDao().listCount(openFilter);
+    int completedCount = repository.getDao().listCount(completedFilter);
+    int totalCount = repository.getDao().listCount(allFilter);
+
+    TaskCount response =
+        new TaskCount()
+            .withOpen(openCount)
+            .withCompleted(completedCount)
+            .withInProgress(0)
+            .withTotal(totalCount);
+
+    return Response.ok(response).build();
   }
 
   @GET
@@ -567,16 +630,13 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
 
     repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
 
-    TaskResolution resolution =
-        new TaskResolution()
-            .withType(resolveTask.getResolutionType())
-            .withComment(resolveTask.getComment())
-            .withNewValue(resolveTask.getNewValue())
-            .withResolvedAt(System.currentTimeMillis())
-            .withResolvedBy(
-                Entity.getEntityReferenceByName(Entity.USER, userName, Include.NON_DELETED));
+    // Use TaskWorkflowHandler to resolve the task and apply entity changes
+    boolean approved =
+        resolveTask.getResolutionType() == TaskResolutionType.Approved
+            || resolveTask.getResolutionType() == TaskResolutionType.AutoApproved;
+    String newValue = resolveTask.getNewValue();
 
-    Task resolvedTask = repository.resolveTask(task, resolution, userName);
+    Task resolvedTask = repository.resolveTaskWithWorkflow(task, approved, newValue, userName);
     return Response.ok(resolvedTask).build();
   }
 
@@ -634,6 +694,116 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id")
           UUID id) {
     return delete(uriInfo, securityContext, id, false, hardDelete);
+  }
+
+  // ========================= Comment Endpoints =========================
+
+  @POST
+  @Path("/{id}/comments")
+  @Operation(
+      operationId = "addTaskComment",
+      summary = "Add a comment to a task",
+      description = "Add a comment to a task. Anyone who can view the task can add comments.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task with the new comment",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Task.class))),
+        @ApiResponse(responseCode = "404", description = "Task not found")
+      })
+  public Response addComment(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id") UUID id,
+      @Valid CreateTaskComment createComment) {
+    String userName = securityContext.getUserPrincipal().getName();
+    Fields fields = getFields(FIELDS);
+    Task task = repository.get(uriInfo, id, fields);
+
+    TaskComment comment =
+        new TaskComment()
+            .withId(UUID.randomUUID())
+            .withMessage(createComment.getMessage())
+            .withAuthor(Entity.getEntityReferenceByName(Entity.USER, userName, Include.NON_DELETED))
+            .withCreatedAt(System.currentTimeMillis());
+
+    Task updatedTask = repository.addComment(task, comment);
+    return Response.ok(updatedTask).build();
+  }
+
+  @PATCH
+  @Path("/{id}/comments/{commentId}")
+  @Operation(
+      operationId = "editTaskComment",
+      summary = "Edit a task comment",
+      description = "Edit a comment on a task. Only the comment author can edit their own comment.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task with the updated comment",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Task.class))),
+        @ApiResponse(responseCode = "404", description = "Task or comment not found"),
+        @ApiResponse(responseCode = "403", description = "User not authorized to edit this comment")
+      })
+  public Response editComment(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id") UUID id,
+      @Parameter(description = "Comment Id", schema = @Schema(type = "UUID"))
+          @PathParam("commentId")
+          UUID commentId,
+      @Valid CreateTaskComment updateComment) {
+    String userName = securityContext.getUserPrincipal().getName();
+    Fields fields = getFields(FIELDS);
+    Task task = repository.get(uriInfo, id, fields);
+
+    Task updatedTask =
+        repository.editComment(task, commentId, updateComment.getMessage(), userName);
+    return Response.ok(updatedTask).build();
+  }
+
+  @DELETE
+  @Path("/{id}/comments/{commentId}")
+  @Operation(
+      operationId = "deleteTaskComment",
+      summary = "Delete a task comment",
+      description =
+          "Delete a comment from a task. The comment author or an admin can delete a comment.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task with the comment removed",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Task.class))),
+        @ApiResponse(responseCode = "404", description = "Task or comment not found"),
+        @ApiResponse(
+            responseCode = "403",
+            description = "User not authorized to delete this comment")
+      })
+  public Response deleteComment(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id") UUID id,
+      @Parameter(description = "Comment Id", schema = @Schema(type = "UUID"))
+          @PathParam("commentId")
+          UUID commentId) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
+    boolean isAdmin = Boolean.TRUE.equals(user.getIsAdmin());
+
+    Fields fields = getFields(FIELDS);
+    Task task = repository.get(uriInfo, id, fields);
+
+    Task updatedTask = repository.deleteComment(task, commentId, userName, isAdmin);
+    return Response.ok(updatedTask).build();
   }
 
   private Task getTask(CreateTask create, String user) {

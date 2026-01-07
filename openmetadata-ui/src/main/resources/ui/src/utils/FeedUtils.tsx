@@ -98,6 +98,54 @@ export const getEntityField = (entityLink: string) => {
   return match?.[3];
 };
 
+/**
+ * Helper to check if about field is an EntityReference object (Task entity)
+ * vs a string entity link (Thread entity).
+ * Task entities have about as EntityReference: { id, type, fullyQualifiedName }
+ * Thread entities have about as string: <#E::table::fqn>
+ */
+export const isEntityReferenceAbout = (
+  about: string | { type?: string; fullyQualifiedName?: string } | undefined
+): about is { type?: string; fullyQualifiedName?: string } => {
+  return typeof about === 'object' && about !== null;
+};
+
+/**
+ * Get entity type from about field, handling both Thread (string) and Task (EntityReference).
+ * @param about - Either a string entity link or an EntityReference object
+ * @returns The entity type
+ */
+export const getEntityTypeFromAbout = (
+  about: string | { type?: string; fullyQualifiedName?: string } | undefined
+): string | undefined => {
+  if (!about) {
+    return undefined;
+  }
+  if (isEntityReferenceAbout(about)) {
+    return about.type;
+  }
+
+  return EntityLink.getEntityType(about);
+};
+
+/**
+ * Get entity FQN from about field, handling both Thread (string) and Task (EntityReference).
+ * @param about - Either a string entity link or an EntityReference object
+ * @returns The entity fully qualified name
+ */
+export const getEntityFQNFromAbout = (
+  about: string | { type?: string; fullyQualifiedName?: string } | undefined
+): string | undefined => {
+  if (!about) {
+    return undefined;
+  }
+  if (isEntityReferenceAbout(about)) {
+    return about.fullyQualifiedName;
+  }
+
+  return EntityLink.getEntityFqn(about);
+};
+
 export const getFeedListWithRelativeDays = (feedList: Thread[]) => {
   const updatedFeedList = feedList.map((feed) => ({
     ...feed,

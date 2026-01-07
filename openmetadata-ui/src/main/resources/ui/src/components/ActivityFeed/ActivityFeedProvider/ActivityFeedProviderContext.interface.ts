@@ -18,31 +18,37 @@ import {
   Post,
   ReactionType,
   Thread,
-  ThreadTaskStatus,
   ThreadType,
 } from '../../../generated/entity/feed/thread';
 import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResolutionStatus';
 import { Paging } from '../../../generated/type/paging';
+import { Task, TaskEntityStatus } from '../../../rest/tasksAPI';
 
 export interface ActivityFeedProviderContextType {
   loading: boolean;
   isPostsLoading?: boolean;
   isTestCaseResolutionLoading?: boolean;
+  // For regular feeds (conversations, announcements)
   entityThread: Thread[];
   selectedThread: Thread | undefined;
+  // For tasks - using Task type directly
+  tasks: Task[];
+  selectedTask: Task | undefined;
   isDrawerOpen: boolean;
   focusReplyEditor: boolean;
   entityPaging: Paging;
   setActiveThread: (thread?: Thread) => void;
+  setActiveTask: (task?: Task) => void;
   updateEntityThread: (thread: Thread) => void;
+  updateTask: (task: Task) => void;
   userId: string;
   deleteFeed: (
     threadId: string,
     postId: string,
     isThread: boolean
   ) => Promise<void>;
-  postFeed: (value: string, id: string) => Promise<void>;
-  fetchUpdatedThread: (id: string) => Promise<void>;
+  postFeed: (value: string, id: string, isTask?: boolean) => Promise<void>;
+  fetchUpdatedThread: (id: string, isTask?: boolean) => Promise<void>;
   updateFeed: (
     threadId: string,
     postId: string,
@@ -56,10 +62,11 @@ export interface ActivityFeedProviderContextType {
     type?: ThreadType,
     entityType?: EntityType,
     fqn?: string,
-    taskStatus?: ThreadTaskStatus,
+    taskStatus?: TaskEntityStatus,
     limit?: number
   ) => Promise<void>;
   showDrawer: (thread: Thread) => void;
+  showTaskDrawer: (task: Task) => void;
   hideDrawer: () => void;
   updateEditorFocus: (isFocused: boolean) => void;
   updateReactions: (

@@ -14,10 +14,8 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
-import {
-  ThreadTaskStatus,
-  ThreadType,
-} from '../../../generated/entity/feed/thread';
+import { ThreadType } from '../../../generated/entity/feed/thread';
+import { TaskEntityStatus } from '../../../rest/tasksAPI';
 import { useActivityFeedProvider } from './ActivityFeedProvider';
 
 export const DummyChildrenComponent = () => {
@@ -39,7 +37,7 @@ export const DummyChildrenComponent = () => {
       ThreadType.Task,
       EntityType.USER,
       'admin',
-      ThreadTaskStatus.Open
+      TaskEntityStatus.Open
     );
   }, []);
 
@@ -70,7 +68,7 @@ export const DummyChildrenTaskCloseComponent = () => {
       ThreadType.Task,
       EntityType.USER,
       'admin',
-      ThreadTaskStatus.Closed
+      TaskEntityStatus.Completed
     );
   }, []);
 
@@ -88,7 +86,7 @@ export const DummyChildrenEntityComponent = () => {
       ThreadType.Conversation,
       EntityType.TABLE,
       'admin',
-      ThreadTaskStatus.Open
+      TaskEntityStatus.Open
     );
   }, []);
 

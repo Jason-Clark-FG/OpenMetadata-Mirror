@@ -18,6 +18,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -25,10 +26,12 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
@@ -254,8 +257,38 @@ public class TaskWorkflowHandler {
 
   private void applyTagUpdate(
       Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    // Tag updates require more complex handling
-    LOG.debug("[TaskWorkflowHandler] TagUpdate handling - TBD");
+    Object payload = task.getPayload();
+    if (payload == null) return;
+
+    try {
+      // Convert payload to TagUpdatePayload
+      org.openmetadata.schema.type.TagUpdatePayload tagPayload =
+          JsonUtils.convertValue(payload, org.openmetadata.schema.type.TagUpdatePayload.class);
+
+      // Determine target FQN
+      String targetFqn = entity.getFullyQualifiedName();
+      String fieldPath = tagPayload.getFieldPath();
+      if (fieldPath != null && !fieldPath.isEmpty()) {
+        // fieldPath like "columns.column_name" -> entity_fqn.column_name
+        targetFqn = entity.getFullyQualifiedName() + "." + fieldPath.replace("columns.", "");
+      }
+
+      // Apply tags based on operation
+      List<TagLabel> tagsToAdd = tagPayload.getTagsToAdd();
+      List<TagLabel> tagsToRemove = tagPayload.getTagsToRemove();
+
+      if (tagsToRemove != null && !tagsToRemove.isEmpty()) {
+        repository.applyTagsDelete(tagsToRemove, targetFqn);
+        LOG.info("[TaskWorkflowHandler] Removed {} tags from '{}'", tagsToRemove.size(), targetFqn);
+      }
+
+      if (tagsToAdd != null && !tagsToAdd.isEmpty()) {
+        repository.applyTags(tagsToAdd, targetFqn);
+        LOG.info("[TaskWorkflowHandler] Added {} tags to '{}'", tagsToAdd.size(), targetFqn);
+      }
+    } catch (Exception e) {
+      LOG.error("[TaskWorkflowHandler] Failed to apply TagUpdate", e);
+    }
   }
 
   private void applyOwnershipUpdate(

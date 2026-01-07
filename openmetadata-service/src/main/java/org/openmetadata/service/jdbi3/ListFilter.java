@@ -95,42 +95,60 @@ public class ListFilter extends Filter<ListFilter> {
   /**
    * Filter tasks by assignee. Uses entity_relationship table to find tasks
    * where the specified user or team is assigned via ASSIGNED_TO relationship.
+   * Accepts either a UUID (assigneeId) or FQN (assignee).
    */
   private String getAssignee() {
-    String assigneeId = queryParams.get("assignee");
-    if (assigneeId == null) {
+    String assigneeId = queryParams.get("assigneeId");
+    if (assigneeId != null) {
+      queryParams.put("assigneeIdParam", assigneeId);
+      return String.format(
+          "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
+              + "WHERE entity_relationship.fromEntity IN ('user', 'team') "
+              + "AND entity_relationship.fromId = :assigneeIdParam "
+              + "AND entity_relationship.relation = %d))",
+          Relationship.ASSIGNED_TO.ordinal());
+    }
+
+    String assigneeFqn = queryParams.get("assignee");
+    if (assigneeFqn == null) {
       return "";
     }
-    queryParams.put("assigneeIdParam", assigneeId);
+    String assigneeFqnHash = FullyQualifiedName.buildHash(assigneeFqn);
+    queryParams.put("assigneeFqnHashParam", assigneeFqnHash);
     return String.format(
-        "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
-            + "WHERE entity_relationship.fromEntity IN ('user', 'team') "
-            + "AND entity_relationship.fromId = :assigneeIdParam "
-            + "AND entity_relationship.relation = %d))",
-        Relationship.ASSIGNED_TO.ordinal());
+        "(id IN (SELECT er.toId FROM entity_relationship er "
+            + "INNER JOIN user_entity u ON er.fromId = u.id "
+            + "WHERE er.fromEntity = 'user' "
+            + "AND u.nameHash = :assigneeFqnHashParam "
+            + "AND er.relation = %d) "
+            + "OR id IN (SELECT er.toId FROM entity_relationship er "
+            + "INNER JOIN team_entity t ON er.fromId = t.id "
+            + "WHERE er.fromEntity = 'team' "
+            + "AND t.nameHash = :assigneeFqnHashParam "
+            + "AND er.relation = %d))",
+        Relationship.ASSIGNED_TO.ordinal(), Relationship.ASSIGNED_TO.ordinal());
   }
 
   /**
-   * Filter tasks by the entity they are about. Uses entity_relationship table
-   * to find tasks that are MENTIONED_IN a specific entity.
+   * Filter tasks by the entity they are about.
+   * Uses prefix matching to include tasks about sub-entities (e.g., columns when viewing a table).
+   * The FQN is converted to a hash to avoid key length limitations.
    */
   private String getAboutEntityCondition() {
-    String aboutEntityId = queryParams.get("aboutEntity");
-    if (aboutEntityId == null) {
+    String aboutEntityFqn = queryParams.get("aboutEntity");
+    if (aboutEntityFqn == null) {
       return "";
     }
-    queryParams.put("aboutEntityIdParam", aboutEntityId);
-    return String.format(
-        "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
-            + "WHERE entity_relationship.fromId = :aboutEntityIdParam "
-            + "AND entity_relationship.relation = %d))",
-        Relationship.MENTIONED_IN.ordinal());
+    String fqnHash = FullyQualifiedName.buildHash(aboutEntityFqn);
+    queryParams.put("aboutFqnHashParam", fqnHash);
+    queryParams.put("aboutFqnHashPrefixParam", fqnHash + ".%");
+    return "(aboutFqnHash = :aboutFqnHashParam OR aboutFqnHash LIKE :aboutFqnHashPrefixParam)";
   }
 
   /**
    * Filter tasks by creator. Supports two modes:
-   * - createdById: Uses CREATED relationship for exact ID match
-   * - createdBy: Matches createdBy.name in JSON (legacy support)
+   * - createdById: Uses CREATED relationship for exact UUID match
+   * - createdBy: Uses CREATED relationship with FQN lookup
    */
   private String getCreatedByCondition() {
     String createdById = queryParams.get("createdById");
@@ -148,11 +166,15 @@ public class ListFilter extends Filter<ListFilter> {
     if (createdBy == null) {
       return "";
     }
-    if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-      return "JSON_UNQUOTE(JSON_EXTRACT(json, '$.createdBy.name')) = :createdBy";
-    } else {
-      return "json->'createdBy'->>'name' = :createdBy";
-    }
+    String createdByFqnHash = FullyQualifiedName.buildHash(createdBy);
+    queryParams.put("createdByFqnHashParam", createdByFqnHash);
+    return String.format(
+        "(id IN (SELECT er.toId FROM entity_relationship er "
+            + "INNER JOIN user_entity u ON er.fromId = u.id "
+            + "WHERE er.fromEntity = 'user' "
+            + "AND u.nameHash = :createdByFqnHashParam "
+            + "AND er.relation = %d))",
+        Relationship.CREATED.ordinal());
   }
 
   private String getWorkflowDefinitionIdCondition() {

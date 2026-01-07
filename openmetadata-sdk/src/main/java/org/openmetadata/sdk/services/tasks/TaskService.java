@@ -14,8 +14,11 @@
 package org.openmetadata.sdk.services.tasks;
 
 import java.util.Map;
+import java.util.UUID;
 import org.openmetadata.schema.api.tasks.CreateTask;
+import org.openmetadata.schema.api.tasks.CreateTaskComment;
 import org.openmetadata.schema.api.tasks.ResolveTask;
+import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.sdk.exceptions.OpenMetadataException;
@@ -115,5 +118,114 @@ public class TaskService extends EntityServiceBase<Task> {
     String responseStr =
         httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
     return deserializeListResponse(responseStr);
+  }
+
+  // ==================== Comment Methods ====================
+
+  /**
+   * Add a comment to a task.
+   *
+   * @param taskId The task ID (UUID)
+   * @param comment The comment to add
+   * @return The updated task with the new comment
+   */
+  public Task addComment(String taskId, CreateTaskComment comment) throws OpenMetadataException {
+    String path = basePath + "/" + taskId + "/comments";
+    return httpClient.execute(HttpMethod.POST, path, comment, Task.class);
+  }
+
+  /**
+   * Add a comment to a task using just a message string.
+   *
+   * @param taskId The task ID (UUID)
+   * @param message The comment message
+   * @return The updated task with the new comment
+   */
+  public Task addComment(String taskId, String message) throws OpenMetadataException {
+    return addComment(taskId, new CreateTaskComment().withMessage(message));
+  }
+
+  /**
+   * Edit a comment on a task. Only the comment author can edit their own comment.
+   *
+   * @param taskId The task ID (UUID)
+   * @param commentId The comment ID (UUID)
+   * @param comment The updated comment
+   * @return The updated task with the edited comment
+   */
+  public Task editComment(String taskId, UUID commentId, CreateTaskComment comment)
+      throws OpenMetadataException {
+    String path = basePath + "/" + taskId + "/comments/" + commentId;
+    return httpClient.execute(HttpMethod.PATCH, path, comment, Task.class);
+  }
+
+  /**
+   * Edit a comment on a task using just a message string.
+   *
+   * @param taskId The task ID (UUID)
+   * @param commentId The comment ID (UUID)
+   * @param message The updated comment message
+   * @return The updated task with the edited comment
+   */
+  public Task editComment(String taskId, UUID commentId, String message)
+      throws OpenMetadataException {
+    return editComment(taskId, commentId, new CreateTaskComment().withMessage(message));
+  }
+
+  /**
+   * Delete a comment from a task. The comment author or an admin can delete a comment.
+   *
+   * @param taskId The task ID (UUID)
+   * @param commentId The comment ID (UUID)
+   * @return The updated task with the comment removed
+   */
+  public Task deleteComment(String taskId, UUID commentId) throws OpenMetadataException {
+    String path = basePath + "/" + taskId + "/comments/" + commentId;
+    return httpClient.execute(HttpMethod.DELETE, path, null, Task.class);
+  }
+
+  // ==================== Count Methods ====================
+
+  /**
+   * Get task counts grouped by status.
+   *
+   * @return Task counts for open, in-progress, completed, and total
+   */
+  public TaskCount getCount() throws OpenMetadataException {
+    return getCount(null, null, null);
+  }
+
+  /**
+   * Get task counts grouped by status with optional filters.
+   *
+   * @param assignee Filter by assignee ID
+   * @param createdBy Filter by creator FQN
+   * @param aboutEntity Filter by the FQN of the entity the task is about
+   * @return Task counts for open, in-progress, completed, and total
+   */
+  public TaskCount getCount(String assignee, String createdBy, String aboutEntity)
+      throws OpenMetadataException {
+    String path = basePath + "/count";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (assignee != null) {
+      optionsBuilder.queryParam("assignee", assignee);
+    }
+    if (createdBy != null) {
+      optionsBuilder.queryParam("createdBy", createdBy);
+    }
+    if (aboutEntity != null) {
+      optionsBuilder.queryParam("aboutEntity", aboutEntity);
+    }
+    return httpClient.execute(HttpMethod.GET, path, null, TaskCount.class, optionsBuilder.build());
+  }
+
+  /**
+   * Get task counts for tasks about a specific entity.
+   *
+   * @param aboutEntityFqn The FQN of the entity to count tasks for
+   * @return Task counts for open, in-progress, completed, and total
+   */
+  public TaskCount getCountByAboutEntity(String aboutEntityFqn) throws OpenMetadataException {
+    return getCount(null, null, aboutEntityFqn);
   }
 }

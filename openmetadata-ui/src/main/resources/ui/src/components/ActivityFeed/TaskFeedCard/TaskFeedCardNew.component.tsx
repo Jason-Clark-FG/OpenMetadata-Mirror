@@ -34,10 +34,12 @@ import {
   getRelativeTime,
 } from '../../../utils/date-time/DateTimeUtils';
 import EntityLink from '../../../utils/EntityLink';
-import { getEntityFQN, getEntityType } from '../../../utils/FeedUtils';
+import {
+  getEntityFQNFromAbout,
+  getEntityTypeFromAbout,
+} from '../../../utils/FeedUtils';
 
 import { AxiosError } from 'axios';
-import { TaskOperation } from '../../../constants/Feeds.constants';
 import { TASK_TYPES } from '../../../constants/Task.constant';
 import { TaskType } from '../../../generated/api/feed/createThread';
 import { ResolveTask } from '../../../generated/api/feed/resolveTask';
@@ -46,7 +48,11 @@ import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useUserProfile } from '../../../hooks/user-profile/useUserProfile';
 import DescriptionTaskNew from '../../../pages/TasksPage/shared/DescriptionTaskNew';
 import TagsTask from '../../../pages/TasksPage/shared/TagsTask';
-import { updateTask } from '../../../rest/feedsAPI';
+import {
+  closeTask as closeTaskAPI,
+  resolveTask as resolveTaskAPI,
+  TaskResolutionType,
+} from '../../../rest/tasksAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getErrorText } from '../../../utils/StringsUtils';
 import {
@@ -97,19 +103,27 @@ const TaskFeedCard = ({
 
   const { entityType, entityFQN } = useMemo(
     () => ({
-      entityType: getEntityType(feed.about) ?? '',
-      entityFQN: getEntityFQN(feed.about) ?? '',
+      // Use getEntityTypeFromAbout/getEntityFQNFromAbout to handle both:
+      // - Thread about: string entity link like "<#E::table::fqn>"
+      // - Task about: EntityReference object like { type, fullyQualifiedName }
+      entityType: getEntityTypeFromAbout(feed.about) ?? '',
+      entityFQN: getEntityFQNFromAbout(feed.about) ?? '',
     }),
     [feed.about]
   );
 
   const isEntityDetailsAvailable = useMemo(
-    () => !isUndefined(entityFQN) && !isUndefined(entityType),
+    () => Boolean(entityFQN) && Boolean(entityType),
     [entityFQN, entityType]
   );
 
   const taskColumnName = useMemo(() => {
-    const columnName = EntityLink.getTableColumnName(feed.about) ?? '';
+    // EntityLink.getTableColumnName expects a string entity link
+    // For EntityReference about (Task), there's no column info in the about field
+    const columnName =
+      typeof feed.about === 'string'
+        ? EntityLink.getTableColumnName(feed.about) ?? ''
+        : '';
 
     if (columnName) {
       return (
@@ -161,19 +175,23 @@ const TaskFeedCard = ({
     taskDetails?.type === TaskType.RequestTestCaseFailureResolution;
   const isTaskGlossaryApproval = taskDetails?.type === TaskType.RequestApproval;
 
-  const updateTaskData = (data: TaskDetails | ResolveTask) => {
-    if (!taskDetails?.id) {
+  const updateTaskData = async (data: TaskDetails | ResolveTask) => {
+    if (!feed?.id) {
       return;
     }
-    updateTask(TaskOperation.RESOLVE, taskDetails?.id + '', data)
-      .then(() => {
-        showSuccessToast(t('server.task-resolved-successfully'));
-        onAfterClose?.();
-        onUpdateEntityDetails?.();
-      })
-      .catch((err: AxiosError) =>
-        showErrorToast(getErrorText(err, t('server.unexpected-error')))
+    try {
+      await resolveTaskAPI(feed.id, {
+        resolutionType: TaskResolutionType.Completed,
+        newValue: (data as ResolveTask).newValue,
+      });
+      showSuccessToast(t('server.task-resolved-successfully'));
+      onAfterClose?.();
+      onUpdateEntityDetails?.();
+    } catch (err) {
+      showErrorToast(
+        getErrorText(err as AxiosError, t('server.unexpected-error'))
       );
+    }
   };
   const onTaskResolve = () => {
     if (!isTaskGlossaryApproval && isEmpty(taskDetails?.suggestion)) {
@@ -201,7 +219,7 @@ const TaskFeedCard = ({
       updateTaskData(data as TaskDetails);
     }
   };
-  const onTaskReject = () => {
+  const onTaskReject = async () => {
     const updatedComment = 'Rejected';
     if (isTaskGlossaryApproval) {
       const data = { newValue: 'Rejected' };
@@ -209,15 +227,19 @@ const TaskFeedCard = ({
 
       return;
     }
-    updateTask(TaskOperation.REJECT, taskDetails?.id + '', {
-      comment: updatedComment,
-    } as unknown as TaskDetails)
-      .then(() => {
-        showSuccessToast(t('server.task-closed-successfully'));
-        onAfterClose?.();
-        onUpdateEntityDetails?.();
-      })
-      .catch((err: AxiosError) => showErrorToast(err));
+
+    if (!feed?.id) {
+      return;
+    }
+
+    try {
+      await closeTaskAPI(feed.id, updatedComment);
+      showSuccessToast(t('server.task-closed-successfully'));
+      onAfterClose?.();
+      onUpdateEntityDetails?.();
+    } catch (err) {
+      showErrorToast(err as AxiosError);
+    }
   };
   const isCreator = isEqual(feed.createdBy, currentUser?.name);
   const checkIfUserPartOfTeam = useCallback(

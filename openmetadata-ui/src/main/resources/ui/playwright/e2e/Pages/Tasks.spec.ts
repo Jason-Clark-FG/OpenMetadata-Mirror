@@ -13,10 +13,10 @@
 import { expect, test } from '@playwright/test';
 import { TaskClass } from '../../support/entity/TaskClass';
 import { UserClass } from '../../support/user/UserClass';
-import { performAdminLogin } from '../../utils/admin';
 import { getApiContext, redirectToHomePage } from '../../utils/common';
 
-test.use({ storageState: 'playwright/.auth/admin.json' });
+const adminFile = 'playwright/.auth/admin.json';
+test.use({ storageState: adminFile });
 
 test.describe('Task Entity API Tests', () => {
   const user1 = new UserClass();
@@ -26,17 +26,29 @@ test.describe('Task Entity API Tests', () => {
   let task3: TaskClass;
 
   test.beforeAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+    const context = await browser.newContext({ storageState: adminFile });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.waitForURL('**/my-data');
+    const { apiContext, afterAction } = await getApiContext(page);
     await user1.create(apiContext);
     await user2.create(apiContext);
     await afterAction();
+    await page.close();
+    await context.close();
   });
 
   test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+    const context = await browser.newContext({ storageState: adminFile });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.waitForURL('**/my-data');
+    const { apiContext, afterAction } = await getApiContext(page);
     await user1.delete(apiContext);
     await user2.delete(apiContext);
     await afterAction();
+    await page.close();
+    await context.close();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -307,7 +319,11 @@ test.describe('Task Entity API Tests', () => {
   });
 
   test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+    const context = await browser.newContext({ storageState: adminFile });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.waitForURL('**/my-data');
+    const { apiContext, afterAction } = await getApiContext(page);
 
     if (task1?.responseData?.id) {
       await task1.delete(apiContext);
@@ -320,5 +336,7 @@ test.describe('Task Entity API Tests', () => {
     }
 
     await afterAction();
+    await page.close();
+    await context.close();
   });
 });

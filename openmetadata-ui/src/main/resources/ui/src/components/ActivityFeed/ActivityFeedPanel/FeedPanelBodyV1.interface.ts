@@ -26,7 +26,7 @@ export interface FeedPanelBodyPropV1 {
     showThreadIcon?: boolean;
     showRepliesContainer?: boolean;
   };
-  hidePopover: boolean;
+  hidePopover?: boolean;
   showActivityFeedEditor?: boolean;
   onAfterClose?: () => void;
   onUpdateEntityDetails?: () => void;

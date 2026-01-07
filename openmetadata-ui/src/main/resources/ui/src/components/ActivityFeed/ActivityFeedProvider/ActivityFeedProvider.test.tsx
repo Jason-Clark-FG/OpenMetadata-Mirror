@@ -10,7 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { mockUserData } from '../../../mocks/MyDataPage.mock';
 import {
   deletePostById,
@@ -18,6 +24,7 @@ import {
   getAllFeeds,
   postFeedById,
 } from '../../../rest/feedsAPI';
+import { listTasks, TaskEntityStatus } from '../../../rest/tasksAPI';
 import ActivityFeedProvider from './ActivityFeedProvider';
 import {
   DummyChildrenComponent,
@@ -39,11 +46,22 @@ jest.mock('../ActivityFeedDrawer/ActivityFeedDrawer', () =>
 jest.mock('../../../rest/feedsAPI', () => ({
   deletePostById: jest.fn(),
   deleteThread: jest.fn(),
-  getAllFeeds: jest.fn(),
+  getAllFeeds: jest.fn().mockResolvedValue({ data: [], paging: {} }),
   getFeedById: jest.fn(),
   postFeedById: jest.fn(),
   updatePost: jest.fn(),
   updateThread: jest.fn(),
+}));
+
+jest.mock('../../../rest/tasksAPI', () => ({
+  listTasks: jest.fn().mockResolvedValue({ data: [], paging: {} }),
+  addTaskComment: jest.fn(),
+  getTaskById: jest.fn(),
+  tasksToThreads: jest.fn().mockReturnValue([]),
+  TaskEntityStatus: {
+    Open: 'Open',
+    Completed: 'Completed',
+  },
 }));
 
 jest.mock('../../../utils/EntityUtils', () => ({
@@ -78,7 +96,7 @@ describe('ActivityFeedProvider', () => {
     expect(screen.getByTestId('loading')).toBeInTheDocument();
   });
 
-  it('should call getFeedData with open task for user', async () => {
+  it('should call listTasks with open status for user task feed', async () => {
     await act(async () => {
       render(
         <ActivityFeedProvider>
@@ -87,18 +105,18 @@ describe('ActivityFeedProvider', () => {
       );
     });
 
-    expect(getAllFeeds).toHaveBeenCalledWith(
-      undefined,
-      undefined,
-      'Task',
-      'OWNER_OR_FOLLOWS',
-      'Open',
-      undefined,
-      undefined
-    );
+    // When entityType is USER, userId is from the 'user' prop (undefined in this test)
+    expect(listTasks).toHaveBeenCalledWith({
+      status: TaskEntityStatus.Open,
+      assignee: undefined,
+      aboutEntity: undefined,
+      after: undefined,
+      limit: undefined,
+      fields: 'assignees,createdBy,about,comments',
+    });
   });
 
-  it('should call getFeedData with closed task and afterThread for user', async () => {
+  it('should call listTasks with completed status and after cursor for user', async () => {
     await act(async () => {
       render(
         <ActivityFeedProvider>
@@ -107,15 +125,15 @@ describe('ActivityFeedProvider', () => {
       );
     });
 
-    expect(getAllFeeds).toHaveBeenCalledWith(
-      undefined,
-      'after-234',
-      'Task',
-      'OWNER_OR_FOLLOWS',
-      'Closed',
-      undefined,
-      undefined
-    );
+    // When entityType is USER, userId is from the 'user' prop (undefined in this test)
+    expect(listTasks).toHaveBeenCalledWith({
+      status: TaskEntityStatus.Completed,
+      assignee: undefined,
+      aboutEntity: undefined,
+      after: 'after-234',
+      limit: undefined,
+      fields: 'assignees,createdBy,about,comments',
+    });
   });
 
   it('should call getFeedData for table entity', async () => {
@@ -139,12 +157,14 @@ describe('ActivityFeedProvider', () => {
   });
 
   it('should call postFeed with button click', async () => {
-    await act(async () => {
-      render(
-        <ActivityFeedProvider>
-          <DummyChildrenComponent />
-        </ActivityFeedProvider>
-      );
+    render(
+      <ActivityFeedProvider>
+        <DummyChildrenComponent />
+      </ActivityFeedProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('post-feed'));
@@ -156,12 +176,14 @@ describe('ActivityFeedProvider', () => {
   });
 
   it('should call deleteThread with button click when isThread is true', async () => {
-    await act(async () => {
-      render(
-        <ActivityFeedProvider>
-          <DummyChildrenComponent />
-        </ActivityFeedProvider>
-      );
+    render(
+      <ActivityFeedProvider>
+        <DummyChildrenComponent />
+      </ActivityFeedProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('delete-feed'));
@@ -171,12 +193,14 @@ describe('ActivityFeedProvider', () => {
   });
 
   it('should call deletePostId with button click when isThread is false', async () => {
-    await act(async () => {
-      render(
-        <ActivityFeedProvider>
-          <DummyChildrenDeletePostComponent />
-        </ActivityFeedProvider>
-      );
+    render(
+      <ActivityFeedProvider>
+        <DummyChildrenDeletePostComponent />
+      </ActivityFeedProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-feed')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('delete-feed'));

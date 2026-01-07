@@ -5,5 +5,16 @@
   "description": "Generic payload for custom tasks allowing arbitrary key-value pairs.",
   "javaType": "org.openmetadata.schema.type.GenericTaskPayload",
   "type": "object",
+  "properties": {
+    "data": {
+      "description": "Generic data content for the task.",
+      "type": "string"
+    },
+    "metadata": {
+      "description": "Additional metadata as key-value pairs.",
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
   "additionalProperties": true
 }

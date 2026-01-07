@@ -39,7 +39,6 @@ import Loader from '../components/common/Loader/Loader';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import { imageTypes } from '../constants/constants';
 import { BASE_COLORS } from '../constants/DataInsight.constants';
-import { FEED_COUNT_INITIAL_DATA } from '../constants/entity.constants';
 import { VALIDATE_ESCAPE_START_END_REGEX } from '../constants/regex.constants';
 import { EntityType, FqnPart } from '../enums/entity.enum';
 import { EntityReference, User } from '../generated/entity/teams/user';
@@ -49,6 +48,7 @@ import { useApplicationStore } from '../hooks/useApplicationStore';
 import { FeedCounts } from '../interface/feed.interface';
 import { SearchSourceAlias } from '../interface/search.interface';
 import { getFeedCount } from '../rest/feedsAPI';
+import { getTaskCounts } from '../rest/tasksAPI';
 import brandClassBase from './BrandData/BrandClassBase';
 import { getEntityFeedLink } from './EntityUtils';
 import Fqn from './Fqn';
@@ -498,42 +498,35 @@ export const getFeedCounts = async (
   feedCountCallback: (countValue: FeedCounts) => void
 ) => {
   try {
-    const res = await getFeedCount(getEntityFeedLink(entityType, entityFQN));
-    if (res) {
-      const {
-        conversationCount,
-        openTaskCount,
-        closedTaskCount,
-        totalTasksCount,
-        totalCount,
-        mentionCount,
-      } = res.reduce((acc, item) => {
-        const conversationCount =
-          acc.conversationCount + (item.conversationCount || 0);
-        const totalTasksCount =
-          acc.totalTasksCount + (item.totalTaskCount || 0);
+    // Fetch conversation counts from feed API and task counts from new tasks API in parallel
+    const [feedRes, taskCounts] = await Promise.all([
+      getFeedCount(getEntityFeedLink(entityType, entityFQN)),
+      getTaskCounts({ aboutEntity: entityFQN }),
+    ]);
 
-        return {
-          conversationCount,
-          totalTasksCount,
-          openTaskCount: acc.openTaskCount + (item.openTaskCount || 0),
-          closedTaskCount: acc.closedTaskCount + (item.closedTaskCount || 0),
-          totalCount: conversationCount + totalTasksCount,
-          mentionCount: acc.mentionCount + (item.mentionCount || 0),
-        };
-      }, FEED_COUNT_INITIAL_DATA);
+    // Extract conversation and mention counts from feed API
+    const { conversationCount, mentionCount } = (feedRes ?? []).reduce(
+      (acc, item) => ({
+        conversationCount:
+          acc.conversationCount + (item.conversationCount || 0),
+        mentionCount: acc.mentionCount + (item.mentionCount || 0),
+      }),
+      { conversationCount: 0, mentionCount: 0 }
+    );
 
-      feedCountCallback({
-        conversationCount,
-        totalTasksCount,
-        openTaskCount,
-        closedTaskCount,
-        totalCount,
-        mentionCount,
-      });
-    } else {
-      throw t('server.entity-feed-fetch-error');
-    }
+    // Use task counts from new tasks API
+    const openTaskCount = taskCounts.open ?? 0;
+    const closedTaskCount = taskCounts.completed ?? 0;
+    const totalTasksCount = taskCounts.total ?? 0;
+
+    feedCountCallback({
+      conversationCount,
+      totalTasksCount,
+      openTaskCount,
+      closedTaskCount,
+      totalCount: conversationCount + totalTasksCount,
+      mentionCount,
+    });
   } catch (err) {
     showErrorToast(err as AxiosError, t('server.entity-feed-fetch-error'));
   }

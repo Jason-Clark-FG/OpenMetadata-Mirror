@@ -253,6 +253,10 @@
       "description": "Reference to the entity this task is about.",
       "$ref": "../../type/entityReference.json"
     },
+    "aboutFqnHash": {
+      "description": "Hash of the target entity's fully qualified name for efficient querying. Computed from about.fullyQualifiedName using FullyQualifiedName.buildHash().",
+      "type": "string"
+    },
     "domain": {
       "description": "Domain this task belongs to for visibility scoping.",
       "$ref": "../../type/entityReference.json"
