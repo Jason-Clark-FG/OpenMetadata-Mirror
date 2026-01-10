@@ -22,7 +22,7 @@ import {
 } from '../../../generated/entity/feed/thread';
 import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResolutionStatus';
 import { Paging } from '../../../generated/type/paging';
-import { Task, TaskEntityStatus } from '../../../rest/tasksAPI';
+import { Task, TaskStatusGroup } from '../../../rest/tasksAPI';
 
 export interface ActivityFeedProviderContextType {
   loading: boolean;
@@ -62,7 +62,7 @@ export interface ActivityFeedProviderContextType {
     type?: ThreadType,
     entityType?: EntityType,
     fqn?: string,
-    taskStatus?: TaskEntityStatus,
+    taskStatusGroup?: TaskStatusGroup,
     limit?: number
   ) => Promise<void>;
   showDrawer: (thread: Thread) => void;

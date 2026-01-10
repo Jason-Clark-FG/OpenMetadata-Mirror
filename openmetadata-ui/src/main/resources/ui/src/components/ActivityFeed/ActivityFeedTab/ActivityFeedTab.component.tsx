@@ -44,7 +44,7 @@ import { useElementInView } from '../../../hooks/useElementInView';
 import { useFqn } from '../../../hooks/useFqn';
 import { FeedCounts } from '../../../interface/feed.interface';
 import { getFeedCount } from '../../../rest/feedsAPI';
-import { getTaskCounts, Task, TaskEntityStatus } from '../../../rest/tasksAPI';
+import { getTaskCounts, Task, TaskStatusGroup } from '../../../rest/tasksAPI';
 import { getCountBadge, getFeedCounts } from '../../../utils/CommonUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import { getEntityUserLink } from '../../../utils/EntityUtils';
@@ -96,9 +96,7 @@ export const ActivityFeedTab = ({
   });
   const { subTab: activeTab = subTab } =
     useRequiredParams<{ tab: EntityTabs; subTab: ActivityFeedTabs }>();
-  const [taskFilter, setTaskFilter] = useState<TaskEntityStatus>(
-    TaskEntityStatus.Open
-  );
+  const [taskFilter, setTaskFilter] = useState<TaskStatusGroup>('open');
   const [isFullWidth, setIsFullWidth] = useState<boolean>(false);
   const [countData, setCountData] = useState<{
     loading: boolean;
@@ -333,7 +331,7 @@ export const ActivityFeedTab = ({
     [loading]
   );
 
-  const handleUpdateTaskFilter = (filter: TaskEntityStatus) => {
+  const handleUpdateTaskFilter = (filter: TaskStatusGroup) => {
     setTaskFilter(filter);
     getFeedData(feedFilter, undefined, threadType, entityType, fqn, filter);
   };
@@ -345,16 +343,16 @@ export const ActivityFeedTab = ({
   const taskFilterOptions = useMemo(
     () => [
       {
-        key: TaskEntityStatus.Open,
+        key: 'open',
         label: (
           <div
             className={classNames(
               'flex items-center justify-between px-4 py-2 gap-2',
-              { active: taskFilter === TaskEntityStatus.Open }
+              { active: taskFilter === 'open' }
             )}
             data-testid="open-tasks">
             <div className="flex items-center space-x-2">
-              {taskFilter === TaskEntityStatus.Open ? (
+              {taskFilter === 'open' ? (
                 <TaskOpenIcon
                   className="m-r-xs"
                   {...ICON_DIMENSION_USER_PAGE}
@@ -364,14 +362,14 @@ export const ActivityFeedTab = ({
               )}
               <span
                 className={classNames('task-tab-filter-item', {
-                  selected: taskFilter === TaskEntityStatus.Open,
+                  selected: taskFilter === 'open',
                 })}>
                 {t('label.open')}
               </span>
             </div>
             <span
               className={classNames('task-count-container d-flex flex-center', {
-                active: taskFilter === TaskEntityStatus.Open,
+                active: taskFilter === 'open',
               })}>
               <span className="task-count-text">
                 {countData?.data?.openTaskCount}
@@ -380,21 +378,21 @@ export const ActivityFeedTab = ({
           </div>
         ),
         onClick: () => {
-          handleUpdateTaskFilter(TaskEntityStatus.Open);
+          handleUpdateTaskFilter('open');
           setActiveTask();
         },
       },
       {
-        key: TaskEntityStatus.Completed,
+        key: 'closed',
         label: (
           <div
             className={classNames(
               'flex items-center justify-between px-4 py-2 gap-2',
-              { active: taskFilter === TaskEntityStatus.Completed }
+              { active: taskFilter === 'closed' }
             )}
             data-testid="closed-tasks">
             <div className="flex items-center space-x-2">
-              {taskFilter === TaskEntityStatus.Completed ? (
+              {taskFilter === 'closed' ? (
                 <TaskCloseIconBlue
                   className="m-r-xs"
                   {...ICON_DIMENSION_USER_PAGE}
@@ -407,14 +405,14 @@ export const ActivityFeedTab = ({
               )}
               <span
                 className={classNames('task-tab-filter-item', {
-                  selected: taskFilter === TaskEntityStatus.Completed,
+                  selected: taskFilter === 'closed',
                 })}>
                 {t('label.closed')}
               </span>
             </div>
             <span
               className={classNames('task-count-container d-flex flex-center', {
-                active: taskFilter === TaskEntityStatus.Completed,
+                active: taskFilter === 'closed',
               })}>
               <span className="task-count-text">
                 {countData?.data?.closedTaskCount}
@@ -423,7 +421,7 @@ export const ActivityFeedTab = ({
           </div>
         ),
         onClick: () => {
-          handleUpdateTaskFilter(TaskEntityStatus.Completed);
+          handleUpdateTaskFilter('closed');
           setActiveTask();
         },
       },
@@ -466,7 +464,7 @@ export const ActivityFeedTab = ({
   };
 
   const getRightPanelContent = () => {
-    if (isTaskActiveTab && selectedTask) {
+    if ((isTaskActiveTab || isMentionTabSelected) && selectedTask) {
       return (
         <div id="task-panel">
           {entityType === EntityType.TABLE ? (
@@ -617,7 +615,7 @@ export const ActivityFeedTab = ({
               disabled={isMentionTabSelected}
               menu={{
                 items: taskFilterOptions,
-                selectedKeys: [...taskFilter],
+                selectedKeys: [taskFilter],
               }}
               overlayClassName="task-tab-custom-dropdown"
               trigger={['click']}>
@@ -626,14 +624,27 @@ export const ActivityFeedTab = ({
                   'cursor-pointer': !isMentionTabSelected,
                   disabled: isMentionTabSelected,
                 })}
-                data-testid="user-profile-page-task-filter-icon"
-                icon={<FilterIcon height={16} />}
-              />
+                data-testid="user-profile-page-task-filter-icon">
+                <Space align="center" size={4}>
+                  <FilterIcon height={16} style={{ verticalAlign: 'middle' }} />
+                  <span
+                    className="text-xs font-medium"
+                    style={{ lineHeight: 1 }}>
+                    {taskFilter === 'open'
+                      ? `${t('label.open')} (${
+                          countData?.data?.openTaskCount ?? 0
+                        })`
+                      : `${t('label.closed')} (${
+                          countData?.data?.closedTaskCount ?? 0
+                        })`}
+                  </span>
+                </Space>
+              </Button>
             </Dropdown>
             {TaskToggle()}
           </div>
         )}
-        {isTaskActiveTab ? (
+        {isTaskActiveTab || isMentionTabSelected ? (
           <TaskListV1
             activeFeedId={selectedTask?.id}
             emptyPlaceholderText={placeholderText}
@@ -663,15 +674,18 @@ export const ActivityFeedTab = ({
           />
         )}
         {!isFirstLoad && loader}
-        {!isEmpty(isTaskActiveTab ? tasks : entityThread) && !loading && (
-          <div
-            className="w-full"
-            data-testid="observer-element"
-            id="observer-element"
-            ref={elementRef as RefObject<HTMLDivElement>}
-            style={{ height: '2px' }}
-          />
-        )}
+        {!isEmpty(
+          isTaskActiveTab || isMentionTabSelected ? tasks : entityThread
+        ) &&
+          !loading && (
+            <div
+              className="w-full"
+              data-testid="observer-element"
+              id="observer-element"
+              ref={elementRef as RefObject<HTMLDivElement>}
+              style={{ height: '2px' }}
+            />
+          )}
       </div>
 
       <div

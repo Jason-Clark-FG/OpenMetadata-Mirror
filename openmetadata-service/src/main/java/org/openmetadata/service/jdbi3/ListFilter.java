@@ -59,6 +59,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getAssignee());
     conditions.add(getCreatedByCondition());
     conditions.add(getAboutEntityCondition());
+    conditions.add(getMentionedUserCondition());
     conditions.add(getEventSubscriptionAlertType());
     conditions.add(getNotificationTemplateCondition());
     conditions.add(getApiCollectionCondition(tableName));
@@ -143,6 +144,25 @@ public class ListFilter extends Filter<ListFilter> {
     queryParams.put("aboutFqnHashParam", fqnHash);
     queryParams.put("aboutFqnHashPrefixParam", fqnHash + ".%");
     return "(aboutFqnHash = :aboutFqnHashParam OR aboutFqnHash LIKE :aboutFqnHashPrefixParam)";
+  }
+
+  /**
+   * Filter tasks/entities by mentioned user.
+   * Uses field_relationship table to find entities where the user was mentioned
+   * via MENTIONED_IN relationship.
+   */
+  private String getMentionedUserCondition() {
+    String mentionedUser = queryParams.get("mentionedUser");
+    if (mentionedUser == null) {
+      return "";
+    }
+    queryParams.put("mentionedUserParam", mentionedUser);
+    return String.format(
+        "(id IN (SELECT fr.toId FROM field_relationship fr "
+            + "WHERE fr.fromFQN = :mentionedUserParam "
+            + "AND fr.toType = 'task' "
+            + "AND fr.relation = %d))",
+        Relationship.MENTIONED_IN.ordinal());
   }
 
   /**
@@ -695,6 +715,17 @@ public class ListFilter extends Filter<ListFilter> {
   }
 
   private String getTaskStatusCondition(String tableName) {
+    String statusGroup = queryParams.get("taskStatusGroup");
+    if (statusGroup != null) {
+      String column = tableName == null ? "status" : tableName + ".status";
+      if ("open".equalsIgnoreCase(statusGroup)) {
+        return String.format("%s = 'Open'", column);
+      } else if ("closed".equalsIgnoreCase(statusGroup)) {
+        return String.format(
+            "%s IN ('Approved', 'Rejected', 'Completed', 'Cancelled', 'Failed')", column);
+      }
+    }
+
     String taskStatus = queryParams.get("taskStatus");
     if (taskStatus == null) {
       return "";

@@ -30,6 +30,7 @@ import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
+import org.openmetadata.schema.type.SuggestionPayload;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
@@ -38,6 +39,8 @@ import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
+import org.openmetadata.service.resources.feeds.MessageParser;
+import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.security.AuthRequest;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.AuthorizationLogic;
@@ -62,6 +65,7 @@ public class TaskRepository extends EntityRepository<Task> {
   public static final String FIELD_RESOLUTION = "resolution";
   public static final String FIELD_DOMAIN = "domain";
   public static final String FIELD_CREATED_BY = "createdBy";
+  public static final String FIELD_PAYLOAD = "payload";
 
   public TaskRepository() {
     super(COLLECTION_PATH, Entity.TASK, Task.class, Entity.getCollectionDAO().taskDAO(), "", "");
@@ -75,6 +79,7 @@ public class TaskRepository extends EntityRepository<Task> {
     this.allowedFields.add(FIELD_RESOLUTION);
     this.allowedFields.add(FIELD_DOMAIN);
     this.allowedFields.add(FIELD_CREATED_BY);
+    this.allowedFields.add(FIELD_PAYLOAD);
   }
 
   @Override
@@ -378,7 +383,38 @@ public class TaskRepository extends EntityRepository<Task> {
     task.setCommentCount(comments.size());
     task.setUpdatedAt(System.currentTimeMillis());
     storeEntity(task, true);
+
+    // Store mentions from the comment message
+    storeMentions(task, comment.getMessage());
+
     return task;
+  }
+
+  /**
+   * Store mention relationships for users/teams mentioned in task comments.
+   * This enables querying tasks where a user was mentioned.
+   */
+  private void storeMentions(Task task, String message) {
+    if (message == null || message.isEmpty()) {
+      return;
+    }
+
+    List<EntityLink> mentions = MessageParser.getEntityLinks(message);
+    mentions.stream()
+        .distinct()
+        .forEach(
+            mention ->
+                daoCollection
+                    .fieldRelationshipDAO()
+                    .insert(
+                        mention.getFullyQualifiedFieldValue(),
+                        task.getId().toString(),
+                        mention.getFullyQualifiedFieldValue(),
+                        task.getId().toString(),
+                        mention.getFullyQualifiedFieldType(),
+                        Entity.TASK,
+                        Relationship.MENTIONED_IN.ordinal(),
+                        null));
   }
 
   /**
@@ -582,6 +618,10 @@ public class TaskRepository extends EntityRepository<Task> {
       // Check if user's team is an assignee
       if (!nullOrEmpty(assignees)
           && assignees.stream().anyMatch(assignee -> teamNames.contains(assignee.getName()))) {
+        // For resolution (not just closing), team members also need entity permission
+        if (!closeTask && about != null) {
+          validateUnderlyingEntityPermission(authorizer, securityContext, task);
+        }
         return;
       }
 
@@ -607,7 +647,7 @@ public class TaskRepository extends EntityRepository<Task> {
     ResourceContext<?> resourceContext =
         new ResourceContext<>(about.getType(), about.getId(), null);
 
-    MetadataOperation operation = getOperationForTaskType(task.getType());
+    MetadataOperation operation = getOperationForTask(task);
     if (operation != null && operation != MetadataOperation.EDIT_ALL) {
       // Allow either the specific operation OR EDIT_ALL (which encompasses all edit permissions)
       OperationContext specificOpContext = new OperationContext(about.getType(), operation);
@@ -625,16 +665,57 @@ public class TaskRepository extends EntityRepository<Task> {
     }
   }
 
-  private MetadataOperation getOperationForTaskType(TaskEntityType taskType) {
+  private MetadataOperation getOperationForTask(Task task) {
+    TaskEntityType taskType = task.getType();
     if (taskType == null) {
       return null;
     }
+
+    // For Suggestion tasks, determine operation from payload's suggestionType
+    if (taskType == TaskEntityType.Suggestion) {
+      return getOperationForSuggestion(task);
+    }
+
     return switch (taskType) {
       case DescriptionUpdate -> MetadataOperation.EDIT_DESCRIPTION;
       case TagUpdate -> MetadataOperation.EDIT_TAGS;
       case GlossaryApproval -> MetadataOperation.EDIT_ALL;
       case OwnershipUpdate -> MetadataOperation.EDIT_OWNERS;
+      case TierUpdate -> MetadataOperation.EDIT_TIER;
+      case DomainUpdate -> MetadataOperation.EDIT_ALL;
       default -> null;
+    };
+  }
+
+  private MetadataOperation getOperationForSuggestion(Task task) {
+    Object payload = task.getPayload();
+    if (payload == null) {
+      return MetadataOperation.EDIT_ALL;
+    }
+
+    SuggestionPayload suggestionPayload;
+    if (payload instanceof SuggestionPayload sp) {
+      suggestionPayload = sp;
+    } else {
+      try {
+        suggestionPayload = JsonUtils.convertValue(payload, SuggestionPayload.class);
+      } catch (Exception e) {
+        return MetadataOperation.EDIT_ALL;
+      }
+    }
+
+    SuggestionPayload.SuggestionType suggestionType = suggestionPayload.getSuggestionType();
+    if (suggestionType == null) {
+      return MetadataOperation.EDIT_ALL;
+    }
+
+    return switch (suggestionType) {
+      case DESCRIPTION -> MetadataOperation.EDIT_DESCRIPTION;
+      case TAG -> MetadataOperation.EDIT_TAGS;
+      case OWNER -> MetadataOperation.EDIT_OWNERS;
+      case TIER -> MetadataOperation.EDIT_TIER;
+      case DOMAIN -> MetadataOperation.EDIT_ALL;
+      case CUSTOM_PROPERTY -> MetadataOperation.EDIT_CUSTOM_FIELDS;
     };
   }
 

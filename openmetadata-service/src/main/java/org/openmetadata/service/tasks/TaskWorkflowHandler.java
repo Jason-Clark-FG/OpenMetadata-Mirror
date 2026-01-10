@@ -16,6 +16,7 @@ package org.openmetadata.service.tasks;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
 import java.util.List;
@@ -151,9 +152,28 @@ public class TaskWorkflowHandler {
     UUID taskId = task.getId();
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
 
+    LOG.info(
+        "[TaskWorkflowHandler] applyTaskResolution: taskId='{}', approved={}, newValue='{}', aboutPresent={}",
+        taskId,
+        approved,
+        newValue != null
+            ? (newValue.length() > 50 ? newValue.substring(0, 50) + "..." : newValue)
+            : "null",
+        task.getAbout() != null);
+
+    // Add audit comment if assignee provided/modified the value
+    if (approved && newValue != null && !newValue.isEmpty()) {
+      addResolutionComment(task, taskRepository, newValue, user);
+    }
+
     // Apply entity changes based on task type
     if (approved && task.getAbout() != null) {
       applyEntityChanges(task, newValue, user);
+    } else {
+      LOG.info(
+          "[TaskWorkflowHandler] Skipping entity changes: approved={}, aboutPresent={}",
+          approved,
+          task.getAbout() != null);
     }
 
     // Build resolution
@@ -183,13 +203,84 @@ public class TaskWorkflowHandler {
   }
 
   /**
+   * Add a comment to the task recording what value was applied by whom.
+   * This creates an audit trail for task resolution.
+   */
+  private void addResolutionComment(
+      Task task, TaskRepository taskRepository, String newValue, String user) {
+    try {
+      // Check if the newValue differs from the original suggestion
+      Object payload = task.getPayload();
+      String originalSuggestion = null;
+      if (payload != null) {
+        JsonNode payloadNode = JsonUtils.valueToTree(payload);
+        originalSuggestion = payloadNode.path("suggestedValue").asText(null);
+      }
+
+      // Only add comment if user provided a new value (not just accepting suggestion)
+      boolean userProvidedValue =
+          originalSuggestion == null
+              || originalSuggestion.isEmpty()
+              || !originalSuggestion.equals(newValue);
+
+      if (userProvidedValue) {
+        String commentMessage = buildResolutionCommentMessage(task.getType(), newValue);
+
+        EntityReference authorRef =
+            Entity.getEntityReferenceByName(Entity.USER, user, Include.NON_DELETED);
+
+        org.openmetadata.schema.type.TaskComment comment =
+            new org.openmetadata.schema.type.TaskComment()
+                .withId(UUID.randomUUID())
+                .withMessage(commentMessage)
+                .withAuthor(authorRef)
+                .withCreatedAt(System.currentTimeMillis());
+
+        taskRepository.addComment(task, comment);
+        LOG.info(
+            "[TaskWorkflowHandler] Added resolution comment to task '{}' by user '{}'",
+            task.getId(),
+            user);
+      }
+    } catch (Exception e) {
+      LOG.warn(
+          "[TaskWorkflowHandler] Failed to add resolution comment to task '{}': {}",
+          task.getId(),
+          e.getMessage());
+    }
+  }
+
+  /**
+   * Build a comment message based on task type and the applied value.
+   */
+  private String buildResolutionCommentMessage(TaskEntityType taskType, String newValue) {
+    String truncatedValue = newValue.length() > 200 ? newValue.substring(0, 200) + "..." : newValue;
+
+    return switch (taskType) {
+      case DescriptionUpdate -> String.format("Resolved with description: %s", truncatedValue);
+      case TagUpdate -> String.format("Resolved with tags: %s", truncatedValue);
+      default -> String.format("Resolved with value: %s", truncatedValue);
+    };
+  }
+
+  /**
    * Apply changes to the entity based on task type and payload.
    */
   private void applyEntityChanges(Task task, String newValue, String user) {
     TaskEntityType taskType = task.getType();
     EntityReference aboutRef = task.getAbout();
 
+    LOG.info(
+        "[TaskWorkflowHandler] applyEntityChanges called: taskId='{}', taskType={}, newValue='{}', aboutRef={}",
+        task.getId(),
+        taskType,
+        newValue != null
+            ? (newValue.length() > 50 ? newValue.substring(0, 50) + "..." : newValue)
+            : "null",
+        aboutRef != null ? aboutRef.getFullyQualifiedName() : "null");
+
     if (aboutRef == null) {
+      LOG.warn("[TaskWorkflowHandler] aboutRef is null, skipping entity changes");
       return;
     }
 
@@ -199,8 +290,8 @@ public class TaskWorkflowHandler {
 
       switch (taskType) {
         case GlossaryApproval -> applyGlossaryApproval(entity, repository, user);
-        case DescriptionUpdate -> applyDescriptionUpdate(task, entity, repository, user);
-        case TagUpdate -> applyTagUpdate(task, entity, repository, user);
+        case DescriptionUpdate -> applyDescriptionUpdate(task, entity, repository, user, newValue);
+        case TagUpdate -> applyTagUpdate(task, entity, repository, user, newValue);
         case OwnershipUpdate -> applyOwnershipUpdate(task, entity, repository, user);
         case TierUpdate -> applyTierUpdate(task, entity, repository, user);
         case DomainUpdate -> applyDomainUpdate(task, entity, repository, user);
@@ -226,56 +317,100 @@ public class TaskWorkflowHandler {
   }
 
   private void applyDescriptionUpdate(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      String newValue) {
     Object payload = task.getPayload();
-    if (payload == null) return;
+
+    LOG.info(
+        "[TaskWorkflowHandler] applyDescriptionUpdate: taskId='{}', entity='{}'",
+        task.getId(),
+        entity.getName());
 
     try {
-      // Extract new description from payload
-      JsonNode payloadNode = org.openmetadata.schema.utils.JsonUtils.valueToTree(payload);
-      String newDescription = payloadNode.path("newDescription").asText(null);
-      String fieldPath = payloadNode.path("fieldPath").asText(null);
+      // Extract description and field path from payload/newValue
+      String newDescription = newValue;
+      String fieldPath = null;
 
-      if (newDescription != null) {
-        // For simple entity description
-        if (fieldPath == null || fieldPath.equals("description")) {
-          org.openmetadata.service.util.EntityFieldUtils.setEntityField(
-              entity,
-              entity.getEntityReference().getType(),
-              user,
-              "description",
-              newDescription,
-              true);
+      if (payload != null) {
+        JsonNode payloadNode = JsonUtils.valueToTree(payload);
+        fieldPath = payloadNode.path("fieldPath").asText(null);
+        if (fieldPath == null || fieldPath.isEmpty()) {
+          fieldPath = payloadNode.path("field").asText(null);
         }
+        if (newDescription == null || newDescription.isEmpty()) {
+          newDescription = payloadNode.path("suggestedValue").asText(null);
+        }
+      }
+
+      if (newDescription == null || newDescription.isEmpty()) {
+        LOG.warn("[TaskWorkflowHandler] No description value to apply for task '{}'", task.getId());
+        return;
+      }
+
+      LOG.info(
+          "[TaskWorkflowHandler] Applying description update: fieldPath='{}', description='{}'",
+          fieldPath,
+          newDescription.length() > 50 ? newDescription.substring(0, 50) + "..." : newDescription);
+
+      // Use FieldPathUtils for clean field update
+      boolean success =
+          org.openmetadata.service.util.FieldPathUtils.updateFieldDescription(
+              entity, repository, user, fieldPath, newDescription);
+
+      if (success) {
         LOG.info(
-            "[TaskWorkflowHandler] Applied DescriptionUpdate for entity '{}'", entity.getName());
+            "[TaskWorkflowHandler] Successfully applied description update for task '{}'",
+            task.getId());
+      } else {
+        LOG.warn(
+            "[TaskWorkflowHandler] Failed to apply description update for task '{}'", task.getId());
       }
     } catch (Exception e) {
-      LOG.error("[TaskWorkflowHandler] Failed to apply DescriptionUpdate", e);
+      LOG.error("[TaskWorkflowHandler] Failed to apply DescriptionUpdate: {}", e.getMessage(), e);
     }
   }
 
   private void applyTagUpdate(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      String newValue) {
     Object payload = task.getPayload();
-    if (payload == null) return;
 
     try {
-      // Convert payload to TagUpdatePayload
-      org.openmetadata.schema.type.TagUpdatePayload tagPayload =
-          JsonUtils.convertValue(payload, org.openmetadata.schema.type.TagUpdatePayload.class);
-
-      // Determine target FQN
       String targetFqn = entity.getFullyQualifiedName();
-      String fieldPath = tagPayload.getFieldPath();
-      if (fieldPath != null && !fieldPath.isEmpty()) {
-        // fieldPath like "columns.column_name" -> entity_fqn.column_name
-        targetFqn = entity.getFullyQualifiedName() + "." + fieldPath.replace("columns.", "");
+      List<TagLabel> tagsToAdd = null;
+      List<TagLabel> tagsToRemove = null;
+
+      // Try to get tags from payload first (new format with tagsToAdd/tagsToRemove)
+      if (payload != null) {
+        org.openmetadata.schema.type.TagUpdatePayload tagPayload =
+            JsonUtils.convertValue(payload, org.openmetadata.schema.type.TagUpdatePayload.class);
+
+        String fieldPath = tagPayload.getFieldPath();
+        if (fieldPath != null && !fieldPath.isEmpty()) {
+          targetFqn = entity.getFullyQualifiedName() + "." + fieldPath.replace("columns.", "");
+        }
+
+        tagsToAdd = tagPayload.getTagsToAdd();
+        tagsToRemove = tagPayload.getTagsToRemove();
       }
 
-      // Apply tags based on operation
-      List<TagLabel> tagsToAdd = tagPayload.getTagsToAdd();
-      List<TagLabel> tagsToRemove = tagPayload.getTagsToRemove();
+      // If newValue is provided (from resolution), parse it as the final tags to apply
+      // This is used when user edits the suggestion before accepting
+      if (newValue != null && !newValue.isEmpty()) {
+        List<TagLabel> newTags =
+            JsonUtils.readValue(newValue, new TypeReference<List<TagLabel>>() {});
+        if (newTags != null && !newTags.isEmpty()) {
+          tagsToAdd = newTags;
+          // When using newValue, we're replacing, so don't process tagsToRemove separately
+          tagsToRemove = null;
+        }
+      }
 
       if (tagsToRemove != null && !tagsToRemove.isEmpty()) {
         repository.applyTagsDelete(tagsToRemove, targetFqn);
@@ -293,17 +428,102 @@ public class TaskWorkflowHandler {
 
   private void applyOwnershipUpdate(
       Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    LOG.debug("[TaskWorkflowHandler] OwnershipUpdate handling - TBD");
+    Object payload = task.getPayload();
+    if (payload == null) {
+      LOG.warn("[TaskWorkflowHandler] No payload for OwnershipUpdate task '{}'", task.getId());
+      return;
+    }
+
+    try {
+      org.openmetadata.schema.type.OwnershipUpdatePayload ownerPayload =
+          JsonUtils.convertValue(
+              payload, org.openmetadata.schema.type.OwnershipUpdatePayload.class);
+
+      List<EntityReference> newOwners = ownerPayload.getNewOwners();
+      if (newOwners == null || newOwners.isEmpty()) {
+        LOG.warn("[TaskWorkflowHandler] No new owners specified in OwnershipUpdate payload");
+        return;
+      }
+
+      String originalJson = JsonUtils.pojoToJson(entity);
+      entity.setOwners(newOwners);
+      String updatedJson = JsonUtils.pojoToJson(entity);
+
+      jakarta.json.JsonPatch patch = JsonUtils.getJsonPatch(originalJson, updatedJson);
+      if (patch != null && !patch.toJsonArray().isEmpty()) {
+        repository.patch(null, entity.getId(), user, patch, null, null);
+        LOG.info(
+            "[TaskWorkflowHandler] Applied OwnershipUpdate for entity '{}': {} owners",
+            entity.getName(),
+            newOwners.size());
+      }
+    } catch (Exception e) {
+      LOG.error("[TaskWorkflowHandler] Failed to apply OwnershipUpdate: {}", e.getMessage(), e);
+    }
   }
 
   private void applyTierUpdate(
       Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    LOG.debug("[TaskWorkflowHandler] TierUpdate handling - TBD");
+    Object payload = task.getPayload();
+    if (payload == null) {
+      LOG.warn("[TaskWorkflowHandler] No payload for TierUpdate task '{}'", task.getId());
+      return;
+    }
+
+    try {
+      org.openmetadata.schema.type.TierUpdatePayload tierPayload =
+          JsonUtils.convertValue(payload, org.openmetadata.schema.type.TierUpdatePayload.class);
+
+      TagLabel newTier = tierPayload.getNewTier();
+      if (newTier == null) {
+        LOG.warn("[TaskWorkflowHandler] No new tier specified in TierUpdate payload");
+        return;
+      }
+
+      String targetFqn = entity.getFullyQualifiedName();
+      repository.applyTags(List.of(newTier), targetFqn);
+      LOG.info(
+          "[TaskWorkflowHandler] Applied TierUpdate for entity '{}': tier={}",
+          entity.getName(),
+          newTier.getTagFQN());
+    } catch (Exception e) {
+      LOG.error("[TaskWorkflowHandler] Failed to apply TierUpdate: {}", e.getMessage(), e);
+    }
   }
 
   private void applyDomainUpdate(
       Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    LOG.debug("[TaskWorkflowHandler] DomainUpdate handling - TBD");
+    Object payload = task.getPayload();
+    if (payload == null) {
+      LOG.warn("[TaskWorkflowHandler] No payload for DomainUpdate task '{}'", task.getId());
+      return;
+    }
+
+    try {
+      org.openmetadata.schema.type.DomainUpdatePayload domainPayload =
+          JsonUtils.convertValue(payload, org.openmetadata.schema.type.DomainUpdatePayload.class);
+
+      EntityReference newDomain = domainPayload.getNewDomain();
+      if (newDomain == null) {
+        LOG.warn("[TaskWorkflowHandler] No new domain specified in DomainUpdate payload");
+        return;
+      }
+
+      String originalJson = JsonUtils.pojoToJson(entity);
+      entity.setDomains(List.of(newDomain));
+      String updatedJson = JsonUtils.pojoToJson(entity);
+
+      jakarta.json.JsonPatch patch = JsonUtils.getJsonPatch(originalJson, updatedJson);
+      if (patch != null && !patch.toJsonArray().isEmpty()) {
+        repository.patch(null, entity.getId(), user, patch, null, null);
+        LOG.info(
+            "[TaskWorkflowHandler] Applied DomainUpdate for entity '{}': domain={}",
+            entity.getName(),
+            newDomain.getFullyQualifiedName());
+      }
+    } catch (Exception e) {
+      LOG.error("[TaskWorkflowHandler] Failed to apply DomainUpdate: {}", e.getMessage(), e);
+    }
   }
 
   private void applySuggestion(

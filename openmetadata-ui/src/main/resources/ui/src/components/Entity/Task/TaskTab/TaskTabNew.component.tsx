@@ -163,37 +163,58 @@ export const TaskTabNew = ({
     isPostsLoading,
   } = useActivityFeedProvider();
 
-  const payload = task.payload as
-    | {
-        suggestedValue?: string;
-        currentValue?: string;
-        field?: string;
-      }
-    | undefined;
+  // Access payload without strict type assertion to allow dynamic property access
+  const payload = task.payload;
 
   const isTaskDescription = isDescriptionTaskType(task.type);
 
   const isTaskTags = isTagsTaskType(task.type);
+
+  // Compute suggestedValue from new payload format (tagsToAdd, currentTags) or use old format
+  const computedSuggestedValue = useMemo(() => {
+    if (!isTaskTags) {
+      return payload?.suggestedValue as string | undefined;
+    }
+    // For tags: support new format (tagsToAdd, currentTags, tagsToRemove)
+    // Check if new format properties exist (same logic as TagsTaskFromTask)
+    if (payload?.tagsToAdd || payload?.tagsToRemove || payload?.currentTags) {
+      const tagsToAdd = (payload.tagsToAdd as TagLabel[]) ?? [];
+      const tagsToRemove = (payload.tagsToRemove as TagLabel[]) ?? [];
+      const currentTags = (payload.currentTags as TagLabel[]) ?? [];
+
+      const removeFQNs = new Set(tagsToRemove.map((t) => t.tagFQN));
+      // Suggested = current - removed + added
+      const result = currentTags.filter((t) => !removeFQNs.has(t.tagFQN));
+      const suggestedTags = [...result, ...tagsToAdd];
+
+      return suggestedTags.length > 0
+        ? JSON.stringify(suggestedTags)
+        : undefined;
+    }
+
+    // Fallback to old format
+    return payload?.suggestedValue as string | undefined;
+  }, [payload, isTaskTags]);
 
   const showAddSuggestionButton = useMemo(() => {
     const taskType = task.type;
     const parsedSuggestion = [TaskEntityType.DescriptionUpdate].includes(
       taskType
     )
-      ? payload?.suggestedValue
-      : JSON.parse(payload?.suggestedValue || '[]');
+      ? computedSuggestedValue
+      : JSON.parse(computedSuggestedValue || '[]');
 
     return (
       [TaskEntityType.TagUpdate, TaskEntityType.DescriptionUpdate].includes(
         taskType
       ) && isEmpty(parsedSuggestion)
     );
-  }, [task.type, payload]);
+  }, [task.type, computedSuggestedValue]);
 
   const noSuggestionTaskMenuOptions = useMemo(() => {
     let label;
 
-    if (payload?.suggestedValue) {
+    if (computedSuggestedValue) {
       label = t('label.add-suggestion');
     } else if (isTaskTags) {
       label = t('label.add-entity', {
@@ -213,7 +234,7 @@ export const TaskTabNew = ({
       },
       ...TASK_ACTION_COMMON_ITEM,
     ];
-  }, [isTaskTags, payload?.suggestedValue]);
+  }, [isTaskTags, computedSuggestedValue]);
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
 
@@ -269,9 +290,13 @@ export const TaskTabNew = ({
   }, [task.assignees, usersList]);
 
   const taskColumnName = useMemo(() => {
-    const columnName = payload?.field
+    // Support both old format (field) and new format (fieldPath)
+    const fieldValue = (payload?.field ?? payload?.fieldPath) as
+      | string
+      | undefined;
+    const columnName = fieldValue
       ? EntityLink.getTableColumnName(
-          `<#E::${task.about?.type}::${task.about?.fullyQualifiedName}::${payload.field}>`
+          `<#E::${task.about?.type}::${task.about?.fullyQualifiedName}::${fieldValue}>`
         ) ?? ''
       : '';
 
@@ -284,7 +309,7 @@ export const TaskTabNew = ({
     }
 
     return null;
-  }, [task.about, payload?.field]);
+  }, [task.about, payload]);
 
   const isOwner = owners?.some((owner) => isEqual(owner.id, currentUser?.id));
   const isCreator = isEqual(task.createdBy?.name, currentUser?.name);
@@ -353,7 +378,7 @@ export const TaskTabNew = ({
     }
     try {
       await resolveTaskAPI(task.id, {
-        resolutionType: TaskResolutionType.Completed,
+        resolutionType: TaskResolutionType.Approved,
         newValue: data.newValue,
       });
       showSuccessToast(t('server.task-resolved-successfully'));
@@ -367,13 +392,13 @@ export const TaskTabNew = ({
   };
 
   const onGlossaryTaskResolve = (status = 'approved') => {
-    const newValue = isTaskGlossaryApproval ? status : payload?.suggestedValue;
+    const newValue = isTaskGlossaryApproval ? status : computedSuggestedValue;
     const data = { newValue: newValue };
     updateTaskData(data);
   };
 
   const onTaskResolve = () => {
-    if (!isTaskGlossaryApproval && isEmpty(payload?.suggestedValue)) {
+    if (!isTaskGlossaryApproval && isEmpty(computedSuggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -387,14 +412,14 @@ export const TaskTabNew = ({
 
     if (isTaskTags) {
       const tagsData = {
-        newValue: payload?.suggestedValue || '[]',
+        newValue: computedSuggestedValue || '[]',
       };
 
       updateTaskData(tagsData);
     } else {
       const newValue = isTaskGlossaryApproval
         ? 'approved'
-        : payload?.suggestedValue;
+        : computedSuggestedValue;
       const data = { newValue: newValue };
       updateTaskData(data);
     }

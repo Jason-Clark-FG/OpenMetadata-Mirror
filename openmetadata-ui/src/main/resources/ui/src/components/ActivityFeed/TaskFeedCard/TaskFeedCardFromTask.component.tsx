@@ -26,6 +26,7 @@ import EntityPopOverCard from '../../../components/common/PopOverCard/EntityPopO
 import UserPopOverCard from '../../../components/common/PopOverCard/UserPopOverCard';
 import { TASK_ENTITY_TYPES } from '../../../constants/Task.constant';
 import { EntityType } from '../../../enums/entity.enum';
+import { TagLabel } from '../../../generated/type/tagLabel';
 import { useAuth } from '../../../hooks/authHooks';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useUserProfile } from '../../../hooks/user-profile/useUserProfile';
@@ -84,6 +85,31 @@ const TaskFeedCardFromTask = ({
   const payload = task.payload;
   const isTaskTags = isTagsTaskType(task.type);
   const isTaskDescription = isDescriptionTaskType(task.type);
+
+  // Compute suggestedValue from new payload format (tagsToAdd, currentTags) or use old format
+  const computedSuggestedValue = useMemo(() => {
+    if (!isTaskTags) {
+      return payload?.suggestedValue as string | undefined;
+    }
+    // For tags: support new format (tagsToAdd, currentTags, tagsToRemove)
+    if (payload?.tagsToAdd || payload?.tagsToRemove || payload?.currentTags) {
+      const tagsToAdd = (payload.tagsToAdd as TagLabel[]) ?? [];
+      const tagsToRemove = (payload.tagsToRemove as TagLabel[]) ?? [];
+      const currentTags = (payload.currentTags as TagLabel[]) ?? [];
+
+      const removeFQNs = new Set(tagsToRemove.map((t: TagLabel) => t.tagFQN));
+      const result = currentTags.filter(
+        (t: TagLabel) => !removeFQNs.has(t.tagFQN)
+      );
+      const suggestedTags = [...result, ...tagsToAdd];
+
+      return suggestedTags.length > 0
+        ? JSON.stringify(suggestedTags)
+        : undefined;
+    }
+
+    return payload?.suggestedValue as string | undefined;
+  }, [payload, isTaskTags]);
   const [, , user] = useUserProfile({
     permission: true,
     name: task.createdBy?.name ?? '',
@@ -168,7 +194,7 @@ const TaskFeedCardFromTask = ({
     }
     try {
       await resolveTaskAPI(task.id, {
-        resolutionType: TaskResolutionType.Completed,
+        resolutionType: TaskResolutionType.Approved,
         newValue,
       });
       showSuccessToast(t('server.task-resolved-successfully'));
@@ -182,7 +208,7 @@ const TaskFeedCardFromTask = ({
   };
 
   const onTaskResolve = () => {
-    if (!isTaskGlossaryApproval && isEmpty(payload?.suggestedValue)) {
+    if (!isTaskGlossaryApproval && isEmpty(computedSuggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -195,11 +221,11 @@ const TaskFeedCardFromTask = ({
     }
 
     if (isTaskTags) {
-      updateTaskData(payload?.suggestedValue || '[]');
+      updateTaskData(computedSuggestedValue || '[]');
     } else {
       const newValue = isTaskGlossaryApproval
         ? 'approved'
-        : payload?.suggestedValue ?? '';
+        : computedSuggestedValue ?? '';
       updateTaskData(newValue);
     }
   };

@@ -54,10 +54,21 @@ public class SuggestionHandler {
     }
 
     Object payload = suggestionTask.getPayload();
-    if (!(payload instanceof SuggestionPayload suggestionPayload)) {
-      throw new IllegalArgumentException(
-          "Task does not have a SuggestionPayload: "
-              + (payload != null ? payload.getClass() : "null"));
+    SuggestionPayload suggestionPayload;
+
+    if (payload instanceof SuggestionPayload sp) {
+      suggestionPayload = sp;
+    } else if (payload != null) {
+      // Convert from LinkedHashMap or other generic type to SuggestionPayload
+      try {
+        suggestionPayload = JsonUtils.convertValue(payload, SuggestionPayload.class);
+        suggestionTask.setPayload(suggestionPayload);
+      } catch (Exception e) {
+        throw new IllegalArgumentException(
+            "Task payload cannot be converted to SuggestionPayload: " + e.getMessage());
+      }
+    } else {
+      throw new IllegalArgumentException("Task does not have a payload");
     }
 
     EntityReference about = suggestionTask.getAbout();

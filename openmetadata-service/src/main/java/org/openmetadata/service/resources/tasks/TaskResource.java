@@ -49,15 +49,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.api.tasks.BulkTaskOperation;
 import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.CreateTaskComment;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.type.BulkTaskOperationParams;
+import org.openmetadata.schema.type.BulkTaskOperationResult;
+import org.openmetadata.schema.type.BulkTaskOperationResultItem;
+import org.openmetadata.schema.type.BulkTaskOperationType;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.SuggestionPayload;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
@@ -75,6 +81,7 @@ import org.openmetadata.service.resources.EntityResource;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
+import org.openmetadata.service.tasks.SuggestionHandler;
 import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
@@ -86,7 +93,8 @@ import org.openmetadata.service.util.EntityUtil.Fields;
 public class TaskResource extends EntityResource<Task, TaskRepository> {
 
   public static final String COLLECTION_PATH = "v1/tasks/";
-  static final String FIELDS = "assignees,reviewers,watchers,about,domain,comments,createdBy";
+  static final String FIELDS =
+      "assignees,reviewers,watchers,about,domain,comments,createdBy,payload";
 
   public TaskResource(Authorizer authorizer, Limits limits) {
     super(Entity.TASK, authorizer, limits);
@@ -119,6 +127,11 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           String fieldsParam,
       @Parameter(description = "Filter by task status") @QueryParam("status")
           TaskEntityStatus status,
+      @Parameter(
+              description =
+                  "Filter by status group: 'open' for Open tasks, 'closed' for Approved/Rejected/Completed/Cancelled/Failed tasks")
+          @QueryParam("statusGroup")
+          String statusGroup,
       @Parameter(description = "Filter by task category") @QueryParam("category")
           TaskCategory category,
       @Parameter(description = "Filter by task type") @QueryParam("type") TaskEntityType type,
@@ -129,6 +142,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
           String aboutEntity,
+      @Parameter(description = "Filter by user FQN who was mentioned in task comments")
+          @QueryParam("mentionedUser")
+          String mentionedUser,
       @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
           @DefaultValue("10")
           @QueryParam("limit")
@@ -144,7 +160,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           @DefaultValue("non-deleted")
           Include include) {
     ListFilter filter = new ListFilter(include);
-    if (status != null) {
+    if (statusGroup != null) {
+      filter.addQueryParam("taskStatusGroup", statusGroup);
+    } else if (status != null) {
       filter.addQueryParam("taskStatus", status.value());
     }
     if (category != null) {
@@ -164,6 +182,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
     if (aboutEntity != null) {
       filter.addQueryParam("aboutEntity", aboutEntity);
+    }
+    if (mentionedUser != null) {
+      filter.addQueryParam("mentionedUser", mentionedUser);
     }
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
@@ -191,33 +212,30 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
           String aboutEntity) {
+    // Open tasks filter
     ListFilter openFilter = new ListFilter(Include.NON_DELETED);
     openFilter.addQueryParam("taskStatus", TaskEntityStatus.Open.value());
 
-    ListFilter completedFilter = new ListFilter(Include.NON_DELETED);
-    completedFilter.addQueryParam("taskStatus", TaskEntityStatus.Completed.value());
-
+    // Closed tasks = all non-open statuses (Approved, Rejected, Completed, Cancelled, Failed)
+    // We count total and subtract open to get closed count
     ListFilter allFilter = new ListFilter(Include.NON_DELETED);
 
     if (assignee != null) {
       openFilter.addQueryParam("assignee", assignee);
-      completedFilter.addQueryParam("assignee", assignee);
       allFilter.addQueryParam("assignee", assignee);
     }
     if (createdBy != null) {
       openFilter.addQueryParam("createdBy", createdBy);
-      completedFilter.addQueryParam("createdBy", createdBy);
       allFilter.addQueryParam("createdBy", createdBy);
     }
     if (aboutEntity != null) {
       openFilter.addQueryParam("aboutEntity", aboutEntity);
-      completedFilter.addQueryParam("aboutEntity", aboutEntity);
       allFilter.addQueryParam("aboutEntity", aboutEntity);
     }
 
     int openCount = repository.getDao().listCount(openFilter);
-    int completedCount = repository.getDao().listCount(completedFilter);
     int totalCount = repository.getDao().listCount(allFilter);
+    int completedCount = totalCount - openCount;
 
     TaskCount response =
         new TaskCount()
@@ -290,7 +308,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       if (status != null) {
         assigneeFilter.addQueryParam("taskStatus", status.value());
       }
-      assigneeFilter.addQueryParam("assignee", assigneeId);
+      assigneeFilter.addQueryParam("assigneeId", assigneeId);
       ResultList<Task> tasks =
           listInternal(
               uriInfo, securityContext, fieldsParam, assigneeFilter, limitParam, before, after);
@@ -694,6 +712,200 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id")
           UUID id) {
     return delete(uriInfo, securityContext, id, false, hardDelete);
+  }
+
+  // ========================= Suggestion Endpoints =========================
+
+  @PUT
+  @Path("/{id}/suggestion/apply")
+  @Operation(
+      operationId = "applySuggestion",
+      summary = "Apply a suggestion task",
+      description =
+          "Apply a suggestion task to its target entity. "
+              + "This approves the suggestion and applies the suggested change to the entity. "
+              + "Only works for tasks with type=Suggestion and SuggestionPayload.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The applied suggestion task",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Task.class))),
+        @ApiResponse(responseCode = "400", description = "Task is not a suggestion task"),
+        @ApiResponse(responseCode = "404", description = "Task not found"),
+        @ApiResponse(responseCode = "403", description = "User not authorized to apply suggestion")
+      })
+  public Response applySuggestion(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Task Id", schema = @Schema(type = "UUID")) @PathParam("id") UUID id,
+      @Parameter(description = "Comment for the approval") @QueryParam("comment") String comment) {
+    String userName = securityContext.getUserPrincipal().getName();
+    Fields fields = getFields(FIELDS);
+    Task task = repository.get(uriInfo, id, fields);
+
+    if (task.getType() != TaskEntityType.Suggestion) {
+      throw new IllegalArgumentException("Task is not a suggestion task. Type: " + task.getType());
+    }
+
+    // Convert payload to SuggestionPayload if it's a generic map (from JSON deserialization)
+    Object payload = task.getPayload();
+    if (payload != null && !(payload instanceof SuggestionPayload)) {
+      try {
+        SuggestionPayload suggestionPayload =
+            org.openmetadata.schema.utils.JsonUtils.convertValue(payload, SuggestionPayload.class);
+        task.setPayload(suggestionPayload);
+      } catch (Exception e) {
+        throw new IllegalArgumentException(
+            "Task payload cannot be converted to SuggestionPayload: " + e.getMessage());
+      }
+    }
+
+    if (task.getPayload() == null) {
+      throw new IllegalArgumentException("Task does not have a payload");
+    }
+
+    repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
+
+    SuggestionHandler suggestionHandler = new SuggestionHandler();
+    suggestionHandler.approveSuggestion(task, userName, comment);
+
+    repository.storeEntity(task, true);
+    return Response.ok(task).build();
+  }
+
+  // ========================= Bulk Operations Endpoint =========================
+
+  @POST
+  @Path("/bulk")
+  @Operation(
+      operationId = "bulkTaskOperation",
+      summary = "Perform bulk operations on tasks",
+      description =
+          "Perform bulk operations on multiple tasks. Supported operations: "
+              + "Approve, Reject, Assign, UpdatePriority, Cancel. "
+              + "For suggestion tasks, Approve will also apply the suggestion to the target entity.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Bulk operation results",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = BulkTaskOperationResult.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid operation or parameters")
+      })
+  public Response bulkOperation(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Valid BulkTaskOperation bulkOperation) {
+    String userName = securityContext.getUserPrincipal().getName();
+
+    List<BulkTaskOperationResultItem> results = new ArrayList<>();
+    int successful = 0;
+    int failed = 0;
+
+    for (String taskIdStr : bulkOperation.getTaskIds()) {
+      BulkTaskOperationResultItem result = new BulkTaskOperationResultItem();
+      result.setTaskId(taskIdStr);
+
+      try {
+        UUID taskId;
+        try {
+          taskId = UUID.fromString(taskIdStr);
+        } catch (IllegalArgumentException e) {
+          Task task =
+              repository.getByName(
+                  uriInfo, taskIdStr, getFields(FIELDS), Include.NON_DELETED, false);
+          taskId = task.getId();
+        }
+
+        Fields fields = getFields(FIELDS);
+        Task task = repository.get(uriInfo, taskId, fields);
+
+        processBulkOperation(uriInfo, task, bulkOperation, userName, securityContext);
+
+        result.setStatus(BulkTaskOperationResultItem.Status.SUCCESS);
+        successful++;
+      } catch (Exception e) {
+        result.setStatus(BulkTaskOperationResultItem.Status.FAILED);
+        result.setError(e.getMessage());
+        failed++;
+        LOG.warn("Bulk operation failed for task {}: {}", taskIdStr, e.getMessage());
+      }
+
+      results.add(result);
+    }
+
+    BulkTaskOperationResult response = new BulkTaskOperationResult();
+    response.setTotalRequested(bulkOperation.getTaskIds().size());
+    response.setSuccessful(successful);
+    response.setFailed(failed);
+    response.setResults(results);
+
+    return Response.ok(response).build();
+  }
+
+  private void processBulkOperation(
+      UriInfo uriInfo,
+      Task task,
+      BulkTaskOperation bulkOperation,
+      String userName,
+      SecurityContext securityContext) {
+    BulkTaskOperationType operation = bulkOperation.getOperation();
+    BulkTaskOperationParams params = bulkOperation.getParams();
+    String comment = params != null ? params.getComment() : null;
+
+    switch (operation) {
+      case Approve -> {
+        repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
+        if (task.getType() == TaskEntityType.Suggestion
+            && task.getPayload() instanceof SuggestionPayload) {
+          SuggestionHandler suggestionHandler = new SuggestionHandler();
+          suggestionHandler.approveSuggestion(task, userName, comment);
+          repository.storeEntity(task, true);
+        } else {
+          repository.resolveTaskWithWorkflow(task, true, null, userName);
+        }
+      }
+      case Reject -> {
+        repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
+        if (task.getType() == TaskEntityType.Suggestion
+            && task.getPayload() instanceof SuggestionPayload) {
+          SuggestionHandler suggestionHandler = new SuggestionHandler();
+          suggestionHandler.rejectSuggestion(task, userName, comment);
+          repository.storeEntity(task, true);
+        } else {
+          repository.resolveTaskWithWorkflow(task, false, null, userName);
+        }
+      }
+      case Assign -> {
+        if (params == null || params.getAssignees() == null || params.getAssignees().isEmpty()) {
+          throw new IllegalArgumentException("Assignees required for Assign operation");
+        }
+        List<EntityReference> newAssignees =
+            params.getAssignees().stream().map(this::resolveUserOrTeam).toList();
+        task.setAssignees(newAssignees);
+        task.setUpdatedBy(userName);
+        task.setUpdatedAt(System.currentTimeMillis());
+        repository.createOrUpdate(uriInfo, task, userName);
+      }
+      case UpdatePriority -> {
+        if (params == null || params.getPriority() == null) {
+          throw new IllegalArgumentException("Priority required for UpdatePriority operation");
+        }
+        task.setPriority(params.getPriority());
+        task.setUpdatedBy(userName);
+        task.setUpdatedAt(System.currentTimeMillis());
+        repository.createOrUpdate(uriInfo, task, userName);
+      }
+      case Cancel -> {
+        repository.checkPermissionsForResolveTask(authorizer, task, true, securityContext);
+        repository.closeTask(task, userName, comment);
+      }
+    }
   }
 
   // ========================= Comment Endpoints =========================

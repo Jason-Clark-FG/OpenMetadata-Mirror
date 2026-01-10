@@ -53,8 +53,8 @@ import {
   getTaskById,
   listTasks,
   Task,
-  TaskEntityStatus,
   TaskEntityType,
+  TaskStatusGroup,
 } from '../../../rest/tasksAPI';
 import { getEntityFeedLink } from '../../../utils/EntityUtils';
 import { getUpdatedThread } from '../../../utils/FeedUtils';
@@ -158,7 +158,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       try {
         if (isTask) {
           const res = await getTaskById(id, {
-            fields: 'assignees,createdBy,about,comments',
+            fields: 'assignees,createdBy,about,comments,payload',
           });
           const task = res.data;
           setSelectedTask(task);
@@ -184,7 +184,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       type?: ThreadType,
       entityType?: EntityType,
       fqn?: string,
-      taskStatus?: TaskEntityStatus,
+      taskStatusGroup?: TaskStatusGroup,
       limit?: number
     ) => {
       try {
@@ -201,17 +201,37 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         // Use tasksAPI for Task type, feedsAPI for everything else
         if (type === ThreadType.Task) {
           const { data: taskData, paging } = await listTasks({
-            status: taskStatus,
+            statusGroup: taskStatusGroup,
             assignee: userId,
             aboutEntity:
               entityType !== EntityType.USER && fqn ? fqn : undefined,
             after,
             limit,
-            fields: 'assignees,createdBy,about,comments',
+            fields: 'assignees,createdBy,about,comments,payload',
           });
 
-          setTasks((prev) => (after ? [...prev, ...taskData] : taskData));
+          // Sort tasks by createdAt descending (newest first)
+          const sortedTasks = orderBy(taskData, ['createdAt'], ['desc']);
+
+          setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
           setEntityPaging(paging);
+        } else if (feedFilterType === FeedFilter.MENTIONS) {
+          // For mentions, fetch tasks where user was mentioned in comments
+          const userFqn = currentUser?.fullyQualifiedName ?? currentUser?.name;
+          const { data: taskData, paging: taskPaging } = await listTasks({
+            mentionedUser: userFqn,
+            aboutEntity:
+              entityType !== EntityType.USER && fqn ? fqn : undefined,
+            after,
+            limit,
+            fields: 'assignees,createdBy,about,comments,payload',
+          });
+
+          // Sort tasks by createdAt descending (newest first)
+          const sortedTasks = orderBy(taskData, ['createdAt'], ['desc']);
+
+          setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
+          setEntityPaging(taskPaging);
         } else {
           const { data, paging } = await getAllFeeds(
             entityType !== EntityType.USER && fqn

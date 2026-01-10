@@ -20,6 +20,7 @@ import {
   getRelativeTime,
 } from '../../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { getFrontEndFormat } from '../../../utils/FeedUtils';
 import ProfilePicture from '../../common/ProfilePicture/ProfilePicture';
 import RichTextEditorPreviewNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 
@@ -72,7 +73,7 @@ const TaskCommentCard: FC<TaskCommentCardProps> = ({
           <div className="m-t-xs">
             <RichTextEditorPreviewNew
               enableSeeMoreVariant={false}
-              markdown={comment.message}
+              markdown={getFrontEndFormat(comment.message)}
             />
           </div>
         </div>

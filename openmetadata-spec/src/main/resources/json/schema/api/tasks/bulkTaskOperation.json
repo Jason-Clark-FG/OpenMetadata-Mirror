@@ -25,41 +25,25 @@
         {"name": "Cancel"}
       ]
     },
-    "bulkOperationResult": {
-      "javaType": "org.openmetadata.schema.type.BulkTaskOperationResult",
-      "description": "Result of a bulk operation.",
+    "bulkOperationParams": {
+      "javaType": "org.openmetadata.schema.type.BulkTaskOperationParams",
+      "description": "Parameters for bulk operations.",
       "type": "object",
       "properties": {
-        "totalRequested": {
-          "description": "Total number of tasks in the request.",
-          "type": "integer"
+        "comment": {
+          "description": "Comment for approval/rejection.",
+          "type": "string"
         },
-        "successful": {
-          "description": "Number of successfully processed tasks.",
-          "type": "integer"
-        },
-        "failed": {
-          "description": "Number of failed tasks.",
-          "type": "integer"
-        },
-        "results": {
-          "description": "Individual results for each task.",
+        "assignees": {
+          "description": "FQNs of assignees (for Assign operation).",
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "taskId": {
-                "type": "string"
-              },
-              "status": {
-                "type": "string",
-                "enum": ["success", "failed"]
-              },
-              "error": {
-                "type": "string"
-              }
-            }
+            "type": "string"
           }
+        },
+        "priority": {
+          "description": "New priority (for UpdatePriority operation).",
+          "$ref": "../../entity/tasks/task.json#/definitions/taskPriority"
         }
       }
     }
@@ -79,24 +63,7 @@
     },
     "params": {
       "description": "Parameters for the operation.",
-      "type": "object",
-      "properties": {
-        "comment": {
-          "description": "Comment for approval/rejection.",
-          "type": "string"
-        },
-        "assignees": {
-          "description": "FQNs of assignees (for Assign operation).",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "priority": {
-          "description": "New priority (for UpdatePriority operation).",
-          "$ref": "../../entity/tasks/task.json#/definitions/taskPriority"
-        }
-      }
+      "$ref": "#/definitions/bulkOperationParams"
     }
   },
   "required": ["taskIds", "operation"],

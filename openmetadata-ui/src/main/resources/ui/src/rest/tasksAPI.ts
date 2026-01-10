@@ -99,6 +99,11 @@ export interface TaskPayload {
   suggestedValue?: string;
   currentValue?: string;
   field?: string;
+  fieldPath?: string;
+  currentTags?: TagLabel[];
+  tagsToAdd?: TagLabel[];
+  tagsToRemove?: TagLabel[];
+  operation?: string;
 }
 
 // Task entity interface - matches backend Task entity
@@ -155,11 +160,7 @@ export interface CreateTask {
   domain?: string;
   assignees?: string[]; // FQNs of users or teams
   reviewers?: string[]; // FQNs of users or teams
-  payload?: {
-    suggestedValue?: string;
-    currentValue?: string;
-    field?: string;
-  };
+  payload?: TaskPayload;
   dueDate?: number;
   externalReference?: {
     system: string;
@@ -178,9 +179,12 @@ export interface ResolveTask {
 
 const BASE_URL = '/tasks';
 
+export type TaskStatusGroup = 'open' | 'closed';
+
 export interface ListTasksParams {
   fields?: string;
   status?: TaskEntityStatus;
+  statusGroup?: TaskStatusGroup;
   category?: TaskCategory;
   type?: TaskEntityType;
   domain?: string;
@@ -188,6 +192,7 @@ export interface ListTasksParams {
   assignee?: string;
   createdBy?: string;
   aboutEntity?: string;
+  mentionedUser?: string;
   limit?: number;
   before?: string;
   after?: string;
@@ -401,7 +406,7 @@ export const deleteTaskComment = async (
   taskId: string,
   commentId: string
 ): Promise<Task> => {
-  const response = await APIClient.delete<AxiosResponse<Task>>(
+  const response = await APIClient.delete<Task>(
     `${BASE_URL}/${taskId}/comments/${commentId}`
   );
 
