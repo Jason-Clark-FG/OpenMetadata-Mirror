@@ -40,6 +40,7 @@ import {
 import { EntityType, FqnPart, TabSpecificField } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { OwnerType } from '../enums/user.enum';
+import { ActivityEventType } from '../generated/entity/activity/activityEvent';
 import {
   CardStyle,
   EntityTestResultSummaryObject,
@@ -868,5 +869,102 @@ export const getFeedHeaderTextFromCardStyle = (
     case CardStyle.Default:
     default:
       return t('label.posted-on-lowercase');
+  }
+};
+
+export const getActivityEventHeaderText = (
+  eventType?: ActivityEventType,
+  fieldName?: string,
+  _entityType?: EntityType
+): ReactNode => {
+  if (!eventType) {
+    return t('label.posted-on-lowercase');
+  }
+
+  switch (eventType) {
+    case ActivityEventType.EntityCreated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.created-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.EntityDeleted:
+    case ActivityEventType.EntitySoftDeleted:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.deleted-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.EntityRestored:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.restored-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.DescriptionUpdated:
+    case ActivityEventType.ColumnDescriptionUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-description-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.TagsUpdated:
+    case ActivityEventType.ColumnTagsUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-tags-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.OwnerUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-owner-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.DomainUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-domain-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.TierUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-tier-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.CustomPropertyUpdated:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-custom-property-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.TestCaseStatusChanged:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.test-case-status-changed-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.PipelineStatusChanged:
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.pipeline-status-changed-for-lowercase')}
+        </Typography.Text>
+      );
+    case ActivityEventType.EntityUpdated:
+    default:
+      if (fieldName) {
+        return (
+          <Typography.Text className="font-bold">
+            {t('label.updated-field-for-lowercase', { field: fieldName })}
+          </Typography.Text>
+        );
+      }
+
+      return (
+        <Typography.Text className="font-bold">
+          {t('label.updated-lowercase')}
+        </Typography.Text>
+      );
   }
 };

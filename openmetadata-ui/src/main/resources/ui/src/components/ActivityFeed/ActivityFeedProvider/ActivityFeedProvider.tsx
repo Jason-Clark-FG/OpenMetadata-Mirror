@@ -28,6 +28,7 @@ import { POST_FEED_PAGE_COUNT } from '../../../constants/Feeds.constants';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
 import { ReactionOperation } from '../../../enums/reactions.enum';
+import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import {
   Post,
   Thread,
@@ -40,9 +41,14 @@ import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import {
   deletePostById,
   deleteThread,
+  getActivityEvents,
   getAllFeeds,
+  getEntityActivity,
   getFeedById,
+  getMyActivityFeed,
   getPostsFeedById,
+  getUserActivity,
+  ListActivityParams,
   postFeedById,
   updatePost,
   updateThread,
@@ -75,6 +81,9 @@ export const ActivityFeedContext = createContext(
 
 const ActivityFeedProvider = ({ children, user }: Props) => {
   const { t } = useTranslation();
+  // For activity events (entity changes)
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
   // For regular feeds (conversations, announcements)
   const [entityThread, setEntityThread] = useState<Thread[]>([]);
   const [selectedThread, setSelectedThread] = useState<Thread>();
@@ -509,6 +518,71 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     [setTestCaseResolutionStatus]
   );
 
+  // Activity Events fetch methods
+  const fetchActivityEventsHandler = useCallback(
+    async (params?: ListActivityParams) => {
+      setIsActivityLoading(true);
+      try {
+        const { data } = await getActivityEvents(params);
+        setActivityEvents(data);
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    },
+    []
+  );
+
+  const fetchMyActivityFeedHandler = useCallback(
+    async (params?: { days?: number; limit?: number }) => {
+      setIsActivityLoading(true);
+      try {
+        const { data } = await getMyActivityFeed(params);
+        setActivityEvents(data);
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    },
+    []
+  );
+
+  const fetchEntityActivityHandler = useCallback(
+    async (
+      entityType: string,
+      entityId: string,
+      params?: { days?: number; limit?: number }
+    ) => {
+      setIsActivityLoading(true);
+      try {
+        const { data } = await getEntityActivity(entityType, entityId, params);
+        setActivityEvents(data);
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    },
+    []
+  );
+
+  const fetchUserActivityHandler = useCallback(
+    async (userId: string, params?: { days?: number; limit?: number }) => {
+      setIsActivityLoading(true);
+      try {
+        const { data } = await getUserActivity(userId, params);
+        setActivityEvents(data);
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      } finally {
+        setIsActivityLoading(false);
+      }
+    },
+    []
+  );
+
   const activityFeedContextValues = useMemo(() => {
     return {
       entityThread,
@@ -517,6 +591,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       selectedTask,
       isDrawerOpen,
       loading,
+      isActivityLoading,
       isPostsLoading,
       isTestCaseResolutionLoading,
       focusReplyEditor,
@@ -539,6 +614,11 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       testCaseResolutionStatus,
       fetchUpdatedThread,
       updateTestCaseIncidentStatus,
+      activityEvents,
+      fetchActivityEvents: fetchActivityEventsHandler,
+      fetchMyActivityFeed: fetchMyActivityFeedHandler,
+      fetchEntityActivity: fetchEntityActivityHandler,
+      fetchUserActivity: fetchUserActivityHandler,
     };
   }, [
     entityThread,
@@ -547,6 +627,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     selectedTask,
     isDrawerOpen,
     loading,
+    isActivityLoading,
     isPostsLoading,
     isTestCaseResolutionLoading,
     focusReplyEditor,
@@ -570,6 +651,11 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     testCaseResolutionStatus,
     fetchUpdatedThread,
     updateTestCaseIncidentStatus,
+    activityEvents,
+    fetchActivityEventsHandler,
+    fetchMyActivityFeedHandler,
+    fetchEntityActivityHandler,
+    fetchUserActivityHandler,
   ]);
 
   return (

@@ -11,10 +11,12 @@
  *  limitations under the License.
  */
 
+import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import { Thread } from '../../../generated/entity/feed/thread';
 
 export interface FeedPanelBodyPropV1 {
-  feed: Thread;
+  feed?: Thread;
+  activity?: ActivityEvent;
   className?: string;
   FeedContainerClassName?: string;
   showThread?: boolean;

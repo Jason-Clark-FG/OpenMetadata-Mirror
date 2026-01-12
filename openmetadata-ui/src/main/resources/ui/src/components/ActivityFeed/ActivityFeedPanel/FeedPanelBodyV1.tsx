@@ -29,19 +29,27 @@ const FeedPanelBodyV1: FC<FeedPanelBodyPropV1> = ({
 }) => {
   const mainFeed = useMemo(
     () =>
-      ({
-        message: feed.message,
-        postTs: feed.threadTs,
-        from: feed.createdBy,
-        id: feed.id,
-        reactions: feed.reactions,
-      } as Post),
+      feed
+        ? ({
+            message: feed.message,
+            postTs: feed.threadTs,
+            from: feed.createdBy,
+            id: feed.id,
+            reactions: feed.reactions,
+          } as Post)
+        : undefined,
     [feed]
   );
 
   const handleFeedClick = useCallback(() => {
-    onFeedClick?.(feed);
+    if (feed) {
+      onFeedClick?.(feed);
+    }
   }, [onFeedClick, feed]);
+
+  if (!feed) {
+    return null;
+  }
 
   const renderFeedContent = () => {
     return (

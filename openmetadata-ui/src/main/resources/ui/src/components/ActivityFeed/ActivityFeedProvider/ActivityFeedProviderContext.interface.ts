@@ -14,6 +14,7 @@ import { Operation } from 'fast-json-patch';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
 import { ReactionOperation } from '../../../enums/reactions.enum';
+import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import {
   Post,
   ReactionType,
@@ -22,12 +23,16 @@ import {
 } from '../../../generated/entity/feed/thread';
 import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResolutionStatus';
 import { Paging } from '../../../generated/type/paging';
+import { ListActivityParams } from '../../../rest/feedsAPI';
 import { Task, TaskStatusGroup } from '../../../rest/tasksAPI';
 
 export interface ActivityFeedProviderContextType {
   loading: boolean;
+  isActivityLoading?: boolean;
   isPostsLoading?: boolean;
   isTestCaseResolutionLoading?: boolean;
+  // For activity events (entity changes)
+  activityEvents: ActivityEvent[];
   // For regular feeds (conversations, announcements)
   entityThread: Thread[];
   selectedThread: Thread | undefined;
@@ -78,4 +83,19 @@ export interface ActivityFeedProviderContextType {
   ) => Promise<void>;
   testCaseResolutionStatus: TestCaseResolutionStatus[];
   updateTestCaseIncidentStatus: (status: TestCaseResolutionStatus[]) => void;
+  // Activity events methods
+  fetchActivityEvents: (params?: ListActivityParams) => Promise<void>;
+  fetchMyActivityFeed: (params?: {
+    days?: number;
+    limit?: number;
+  }) => Promise<void>;
+  fetchEntityActivity: (
+    entityType: string,
+    entityId: string,
+    params?: { days?: number; limit?: number }
+  ) => Promise<void>;
+  fetchUserActivity: (
+    userId: string,
+    params?: { days?: number; limit?: number }
+  ) => Promise<void>;
 }
