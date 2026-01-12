@@ -117,6 +117,11 @@ export const ActivityFeedTab = ({
     tasks,
     selectedTask,
     setActiveTask,
+    activityEvents,
+    isActivityLoading,
+    fetchEntityActivity,
+    fetchUserActivity,
+    userId,
   } = useActivityFeedProvider();
 
   const isUserEntity = useMemo(
@@ -287,6 +292,21 @@ export const ActivityFeedTab = ({
       );
     }
   }, [feedFilter, threadType, fqn]);
+
+  useEffect(() => {
+    if (fqn && entityType && !isUserEntity) {
+      fetchEntityActivity(entityType, fqn, { days: 30, limit: 50 });
+    } else if (isUserEntity && userId) {
+      fetchUserActivity(userId, { days: 30, limit: 50 });
+    }
+  }, [
+    fqn,
+    entityType,
+    isUserEntity,
+    userId,
+    fetchEntityActivity,
+    fetchUserActivity,
+  ]);
 
   useEffect(() => {
     if (feedCount) {
@@ -660,13 +680,14 @@ export const ActivityFeedTab = ({
           <ActivityFeedListV1New
             hidePopover
             activeFeedId={selectedThread?.id}
+            activityList={activityEvents}
             componentsVisibility={componentsVisibility}
             emptyPlaceholderText={placeholderText}
             feedList={entityThread}
             handlePanelResize={handlePanelResize}
             isForFeedTab={false}
             isFullWidth={isFullWidth}
-            isLoading={isFirstLoad && loading}
+            isLoading={(isFirstLoad && loading) || (isActivityLoading ?? false)}
             selectedThread={selectedThread}
             showThread={false}
             onAfterClose={handleAfterTaskClose}
