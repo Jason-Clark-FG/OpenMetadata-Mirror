@@ -51,6 +51,7 @@ public class DataRetention extends AbstractNativeApplication {
 
   private final EntityTimeSeriesDAO testCaseResultsDAO;
   private final EntityTimeSeriesDAO profileDataDAO;
+  private final CollectionDAO.AuditLogDAO auditLogDAO;
 
   private final ActivityStreamRepository activityStreamRepository;
   private final ActivityStreamPartitionManager activityStreamPartitionManager;
@@ -62,6 +63,7 @@ public class DataRetention extends AbstractNativeApplication {
     this.feedDAO = Entity.getCollectionDAO().feedDAO();
     this.testCaseResultsDAO = collectionDAO.testCaseResultTimeSeriesDao();
     this.profileDataDAO = collectionDAO.profilerDataTimeSeriesDao();
+    this.auditLogDAO = collectionDAO.auditLogDAO();
     this.activityStreamRepository = new ActivityStreamRepository();
     this.activityStreamPartitionManager = new ActivityStreamPartitionManager();
   }
@@ -127,6 +129,7 @@ public class DataRetention extends AbstractNativeApplication {
     entityStats.withAdditionalProperty("broken_mlmodel_entities", new StepStats());
     entityStats.withAdditionalProperty("broken_search_entities", new StepStats());
     entityStats.withAdditionalProperty("orphaned_tag_usages", new StepStats());
+    entityStats.withAdditionalProperty("audit_logs", new StepStats());
 
     retentionStats.setEntityStats(entityStats);
   }
@@ -172,6 +175,11 @@ public class DataRetention extends AbstractNativeApplication {
         "Starting cleanup for profile data with retention period: {} days.",
         profileDataRetentionPeriod);
     cleanProfileData(profileDataRetentionPeriod);
+
+    int auditLogRetentionPeriod = config.getAuditLogRetentionPeriod();
+    LOG.info(
+        "Starting cleanup for audit logs with retention period: {} days.", auditLogRetentionPeriod);
+    cleanAuditLogs(auditLogRetentionPeriod);
   }
 
   @Transaction
@@ -332,6 +340,17 @@ public class DataRetention extends AbstractNativeApplication {
         "profile_data", () -> profileDataDAO.deleteRecordsBeforeCutOff(cutoffMillis, BATCH_SIZE));
 
     LOG.info("Profile data cleanup complete.");
+  }
+
+  @Transaction
+  private void cleanAuditLogs(int retentionPeriod) {
+    LOG.info("Initiating audit logs cleanup: Retention = {} days.", retentionPeriod);
+    long cutoffMillis = getRetentionCutoffMillis(retentionPeriod);
+
+    executeWithStatsTracking(
+        "audit_logs", () -> auditLogDAO.deleteInBatches(cutoffMillis, BATCH_SIZE));
+
+    LOG.info("Audit logs cleanup complete.");
   }
 
   private void executeWithStatsTracking(String entity, Supplier<Integer> deleteFunction) {

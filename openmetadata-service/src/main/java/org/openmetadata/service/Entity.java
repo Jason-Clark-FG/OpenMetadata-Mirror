@@ -55,6 +55,7 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
 import org.openmetadata.service.events.lifecycle.handlers.DomainSyncHandler;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
@@ -105,6 +106,7 @@ public final class Entity {
   @Getter @Setter private static SystemRepository systemRepository;
   @Getter @Setter private static ChangeEventRepository changeEventRepository;
   @Getter @Setter private static SearchRepository searchRepository;
+  @Getter @Setter private static AuditLogRepository auditLogRepository;
   @Getter @Setter private static SuggestionRepository suggestionRepository;
   @Getter @Setter private static TypeRepository typeRepository;
   // List of all the entities
@@ -220,6 +222,12 @@ public final class Entity {
   public static final String PAGE = "page";
 
   //
+  // Column entity types (for custom properties)
+  //
+  public static final String TABLE_COLUMN = "tableColumn";
+  public static final String DASHBOARD_DATA_MODEL_COLUMN = "dashboardDataModelColumn";
+
+  //
   // Policy entity
   //
   public static final String POLICY = "policy";
@@ -273,6 +281,7 @@ public final class Entity {
       "aggregatedCostAnalysisReportData";
   public static final String WORKFLOW_INSTANCE = "workflowInstance";
   public static final String WORKFLOW_INSTANCE_STATE = "workflowInstanceState";
+  public static final String AUDIT_LOG = "auditLog";
 
   //
   // Reserved names in OpenMetadata
