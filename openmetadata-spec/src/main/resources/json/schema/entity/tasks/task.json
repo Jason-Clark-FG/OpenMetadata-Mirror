@@ -257,9 +257,9 @@
       "description": "Hash of the target entity's fully qualified name for efficient querying. Computed from about.fullyQualifiedName using FullyQualifiedName.buildHash().",
       "type": "string"
     },
-    "domain": {
-      "description": "Domain this task belongs to for visibility scoping.",
-      "$ref": "../../type/entityReference.json"
+    "domains": {
+      "description": "Domains this task belongs to, inherited from the target entity for visibility scoping.",
+      "$ref": "../../type/entityReferenceList.json"
     },
     "createdBy": {
       "description": "User who created this task.",

@@ -94,7 +94,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
 
   public static final String COLLECTION_PATH = "v1/tasks/";
   static final String FIELDS =
-      "assignees,reviewers,watchers,about,domain,comments,createdBy,payload";
+      "assignees,reviewers,watchers,about,domains,comments,createdBy,payload";
 
   public TaskResource(Authorizer authorizer, Limits limits) {
     super(Entity.TASK, authorizer, limits);
@@ -576,18 +576,22 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private EntityReference getEntityDomain(EntityReference entityRef) {
     try {
       EntityRepository<?> repo = Entity.getEntityRepository(entityRef.getType());
-      Object entity = repo.get(null, entityRef.getId(), repo.getFields("domain"));
+      Object entity = repo.get(null, entityRef.getId(), repo.getFields("domains"));
 
-      java.lang.reflect.Method getDomainMethod = entity.getClass().getMethod("getDomain");
-      Object domain = getDomainMethod.invoke(entity);
-      if (domain instanceof EntityReference) {
-        return (EntityReference) domain;
+      java.lang.reflect.Method getDomainsMethod = entity.getClass().getMethod("getDomains");
+      Object domains = getDomainsMethod.invoke(entity);
+      if (domains instanceof List<?> domainList && !domainList.isEmpty()) {
+        Object first = domainList.get(0);
+        if (first instanceof EntityReference) {
+          return (EntityReference) first;
+        }
       }
     } catch (Exception e) {
-      LOG.debug("Could not get domain for entity {}: {}", entityRef.getId(), e.getMessage());
+      LOG.debug("Could not get domains for entity {}: {}", entityRef.getId(), e.getMessage());
     }
     return null;
   }
@@ -831,9 +835,10 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
         successful++;
       } catch (Exception e) {
         result.setStatus(BulkTaskOperationResultItem.Status.FAILED);
-        result.setError(e.getMessage());
+        String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+        result.setError(errorMsg);
         failed++;
-        LOG.warn("Bulk operation failed for task {}: {}", taskIdStr, e.getMessage());
+        LOG.warn("Bulk operation failed for task {}: {}", taskIdStr, errorMsg, e);
       }
 
       results.add(result);
@@ -1044,10 +1049,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
               create.getAboutType(), create.getAbout(), Include.NON_DELETED));
     }
 
-    if (create.getDomain() != null) {
-      task.setDomain(
-          Entity.getEntityReferenceByName(Entity.DOMAIN, create.getDomain(), Include.NON_DELETED));
-    }
+    // Note: domains are inherited from the target entity (about) automatically in
+    // TaskRepository.prepare()
+    // No need to set domains manually here
 
     if (create.getAssignees() != null) {
       task.setAssignees(create.getAssignees().stream().map(this::resolveUserOrTeam).toList());

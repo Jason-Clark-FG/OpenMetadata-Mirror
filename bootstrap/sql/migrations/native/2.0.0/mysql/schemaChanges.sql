@@ -35,3 +35,54 @@ CREATE TABLE IF NOT EXISTS new_task_sequence (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO new_task_sequence (id) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM new_task_sequence);
+
+-- =====================================================
+-- ACTIVITY STREAM TABLE (Partitioned by time)
+-- Lightweight, ephemeral activity notifications
+-- NOT for audit/compliance - use entity version history
+-- Partitions are managed dynamically by ActivityStreamPartitionManager
+-- =====================================================
+CREATE TABLE IF NOT EXISTS activity_stream (
+    id varchar(36) NOT NULL,
+    eventType varchar(64) NOT NULL,
+    entityType varchar(64) NOT NULL,
+    entityId varchar(36) NOT NULL,
+    entityFqnHash varchar(768) CHARACTER SET ascii COLLATE ascii_bin,
+    about varchar(2048),
+    aboutFqnHash varchar(768) CHARACTER SET ascii COLLATE ascii_bin,
+    actorId varchar(36) NOT NULL,
+    actorName varchar(256),
+    timestamp bigint NOT NULL,
+    summary varchar(500),
+    fieldName varchar(256),
+    oldValue text,
+    newValue text,
+    domains json,
+    json json NOT NULL,
+    PRIMARY KEY (id, timestamp),
+    KEY idx_activity_timestamp (timestamp),
+    KEY idx_activity_entity (entityType, entityId, timestamp),
+    KEY idx_activity_actor (actorId, timestamp),
+    KEY idx_activity_event_type (eventType, timestamp),
+    KEY idx_activity_entity_fqn (entityFqnHash, timestamp),
+    KEY idx_activity_about (aboutFqnHash, timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+PARTITION BY RANGE (timestamp) (
+    -- Catch-all partition - ActivityStreamPartitionManager will reorganize this
+    -- by splitting it into monthly partitions as needed
+    PARTITION p_max VALUES LESS THAN MAXVALUE
+);
+
+-- Activity stream configuration per domain
+CREATE TABLE IF NOT EXISTS activity_stream_config (
+    id varchar(36) NOT NULL,
+    json json NOT NULL,
+    scope varchar(32) GENERATED ALWAYS AS (json_unquote(json_extract(`json`,_utf8mb4'$.scope'))) STORED NOT NULL,
+    domainId varchar(36) GENERATED ALWAYS AS (json_unquote(json_extract(`json`,_utf8mb4'$.scopeReference.id'))) STORED,
+    enabled tinyint(1) GENERATED ALWAYS AS (json_extract(`json`,_utf8mb4'$.enabled')) STORED,
+    retentionDays int GENERATED ALWAYS AS (json_extract(`json`,_utf8mb4'$.retentionDays')) STORED,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_domain_config (domainId),
+    KEY idx_scope (scope),
+    KEY idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

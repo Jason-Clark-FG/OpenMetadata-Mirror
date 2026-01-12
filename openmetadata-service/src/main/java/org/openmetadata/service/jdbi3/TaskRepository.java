@@ -17,11 +17,13 @@ import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.Entity.DOMAIN;
+import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.TEAM;
 import static org.openmetadata.service.Entity.USER;
 import static org.openmetadata.service.jdbi3.UserRepository.TEAMS_FIELD;
 
 import jakarta.ws.rs.core.SecurityContext;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +65,6 @@ public class TaskRepository extends EntityRepository<Task> {
   public static final String FIELD_ABOUT = "about";
   public static final String FIELD_COMMENTS = "comments";
   public static final String FIELD_RESOLUTION = "resolution";
-  public static final String FIELD_DOMAIN = "domain";
   public static final String FIELD_CREATED_BY = "createdBy";
   public static final String FIELD_PAYLOAD = "payload";
 
@@ -77,7 +78,7 @@ public class TaskRepository extends EntityRepository<Task> {
     this.allowedFields.add(FIELD_ABOUT);
     this.allowedFields.add(FIELD_COMMENTS);
     this.allowedFields.add(FIELD_RESOLUTION);
-    this.allowedFields.add(FIELD_DOMAIN);
+    this.allowedFields.add(FIELD_DOMAINS);
     this.allowedFields.add(FIELD_CREATED_BY);
     this.allowedFields.add(FIELD_PAYLOAD);
   }
@@ -89,7 +90,7 @@ public class TaskRepository extends EntityRepository<Task> {
         fields.contains(FIELD_REVIEWERS) ? getTaskReviewers(task) : task.getReviewers());
     task.setWatchers(fields.contains(FIELD_WATCHERS) ? getWatchers(task) : task.getWatchers());
     task.setAbout(fields.contains(FIELD_ABOUT) ? getAboutEntity(task) : task.getAbout());
-    task.setDomain(fields.contains(FIELD_DOMAIN) ? getDomain(task) : task.getDomain());
+    task.setDomains(fields.contains(FIELD_DOMAINS) ? getDomains(task) : task.getDomains());
     task.setComments(fields.contains(FIELD_COMMENTS) ? getComments(task) : task.getComments());
     task.setCreatedBy(
         fields.contains(FIELD_CREATED_BY) ? getTaskCreatedBy(task) : task.getCreatedBy());
@@ -101,7 +102,7 @@ public class TaskRepository extends EntityRepository<Task> {
     task.setReviewers(fields.contains(FIELD_REVIEWERS) ? task.getReviewers() : null);
     task.setWatchers(fields.contains(FIELD_WATCHERS) ? task.getWatchers() : null);
     task.setAbout(fields.contains(FIELD_ABOUT) ? task.getAbout() : null);
-    task.setDomain(fields.contains(FIELD_DOMAIN) ? task.getDomain() : null);
+    task.setDomains(fields.contains(FIELD_DOMAINS) ? task.getDomains() : null);
     task.setComments(fields.contains(FIELD_COMMENTS) ? task.getComments() : null);
     task.setCreatedBy(fields.contains(FIELD_CREATED_BY) ? task.getCreatedBy() : null);
   }
@@ -135,9 +136,9 @@ public class TaskRepository extends EntityRepository<Task> {
     // Compute aboutFqnHash for efficient querying by target entity FQN
     computeAboutFqnHash(task);
 
-    // Task domain MUST be inherited from the target entity (about field)
+    // Task domains MUST be inherited from the target entity (about field)
     // This ensures tasks follow domain-based data isolation policies
-    inheritDomainFromTargetEntity(task);
+    inheritDomainsFromTargetEntity(task);
   }
 
   /**
@@ -187,77 +188,79 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   /**
-   * Inherit domain from the target entity that this task is about.
-   * Tasks must belong to the same domain as their target entity for proper data isolation.
+   * Inherit domains from the target entity that this task is about.
+   * Tasks must belong to the same domains as their target entity for proper data isolation.
    */
-  private void inheritDomainFromTargetEntity(Task task) {
+  private void inheritDomainsFromTargetEntity(Task task) {
     EntityReference about = task.getAbout();
     if (about == null || about.getId() == null) {
-      // No target entity, task has no domain
-      task.setDomain(null);
+      // No target entity, task has no domains
+      task.setDomains(null);
       return;
     }
 
     try {
-      // Get the target entity to extract its domain
+      // Get the target entity to extract its domains
       EntityRepository<?> targetRepo = Entity.getEntityRepository(about.getType());
-      Object targetEntity = targetRepo.get(null, about.getId(), targetRepo.getFields("domain"));
+      Object targetEntity =
+          targetRepo.get(null, about.getId(), targetRepo.getFields(FIELD_DOMAINS));
 
-      // Extract domain from target entity using reflection or common interface
-      EntityReference targetDomain = extractDomainFromEntity(targetEntity);
-      task.setDomain(targetDomain);
+      // Extract domains from target entity using reflection
+      List<EntityReference> targetDomains = extractDomainsFromEntity(targetEntity);
+      task.setDomains(targetDomains);
 
-      if (targetDomain != null) {
+      if (!nullOrEmpty(targetDomains)) {
         LOG.debug(
-            "Task {} inheriting domain {} from target entity {}",
+            "Task {} inheriting domains {} from target entity {}",
             task.getTaskId(),
-            targetDomain.getFullyQualifiedName(),
+            targetDomains.stream().map(EntityReference::getFullyQualifiedName).toList(),
             about.getFullyQualifiedName());
       }
     } catch (Exception e) {
       LOG.warn(
-          "Could not resolve domain for task {} from target entity {}: {}",
+          "Could not resolve domains for task {} from target entity {}: {}",
           task.getTaskId(),
           about.getId(),
           e.getMessage());
-      task.setDomain(null);
+      task.setDomains(null);
     }
   }
 
   /**
-   * Extract domain reference from an entity object.
+   * Extract domains list from an entity object.
    */
-  private EntityReference extractDomainFromEntity(Object entity) {
+  @SuppressWarnings("unchecked")
+  private List<EntityReference> extractDomainsFromEntity(Object entity) {
     if (entity == null) {
       return null;
     }
 
     try {
-      // Use reflection to get domain field - most entities have getDomain()
-      java.lang.reflect.Method getDomainMethod = entity.getClass().getMethod("getDomain");
-      Object domain = getDomainMethod.invoke(entity);
-      if (domain instanceof EntityReference) {
-        return (EntityReference) domain;
+      // Use reflection to get domains field - most entities have getDomains()
+      java.lang.reflect.Method getDomainsMethod = entity.getClass().getMethod("getDomains");
+      Object domains = getDomainsMethod.invoke(entity);
+      if (domains instanceof List) {
+        return (List<EntityReference>) domains;
       }
     } catch (NoSuchMethodException e) {
-      // Entity doesn't have domain field, which is fine
-      LOG.debug("Entity {} does not have domain field", entity.getClass().getSimpleName());
+      // Entity doesn't have domains field, which is fine
+      LOG.debug("Entity {} does not have domains field", entity.getClass().getSimpleName());
     } catch (Exception e) {
-      LOG.warn("Error extracting domain from entity: {}", e.getMessage());
+      LOG.warn("Error extracting domains from entity: {}", e.getMessage());
     }
     return null;
   }
 
   @Override
   public void storeEntity(Task task, boolean update) {
-    EntityReference domain = task.getDomain();
+    List<EntityReference> domains = task.getDomains();
     EntityReference about = task.getAbout();
     EntityReference createdBy = task.getCreatedBy();
     List<EntityReference> assignees = task.getAssignees();
     List<EntityReference> reviewers = task.getReviewers();
     List<EntityReference> watchers = task.getWatchers();
 
-    task.withDomain(null)
+    task.withDomains(null)
         .withAbout(null)
         .withCreatedBy(null)
         .withAssignees(null)
@@ -275,7 +278,7 @@ public class TaskRepository extends EntityRepository<Task> {
               task.getId().toString(), JsonUtils.pojoToJson(task), task.getFullyQualifiedName());
     }
 
-    task.withDomain(domain)
+    task.withDomains(domains)
         .withAbout(about)
         .withCreatedBy(createdBy)
         .withAssignees(assignees)
@@ -285,9 +288,11 @@ public class TaskRepository extends EntityRepository<Task> {
 
   @Override
   public void storeRelationships(Task task) {
-    if (task.getDomain() != null) {
-      addRelationship(
-          task.getDomain().getId(), task.getId(), DOMAIN, Entity.TASK, Relationship.HAS);
+    // Store domain relationships (task can belong to multiple domains)
+    if (!nullOrEmpty(task.getDomains())) {
+      for (EntityReference domain : task.getDomains()) {
+        addRelationship(domain.getId(), task.getId(), DOMAIN, Entity.TASK, Relationship.HAS);
+      }
     }
 
     storeAssignees(task);
@@ -362,8 +367,9 @@ public class TaskRepository extends EntityRepository<Task> {
     return nullOrEmpty(refs) ? null : refs.get(0);
   }
 
-  private EntityReference getDomain(Task task) {
-    return getFromEntityRef(task.getId(), Relationship.HAS, DOMAIN, false);
+  @Override
+  protected List<EntityReference> getDomains(Task task) {
+    return findFrom(task.getId(), Entity.TASK, Relationship.HAS, DOMAIN);
   }
 
   private List<org.openmetadata.schema.type.TaskComment> getComments(Task task) {
@@ -774,20 +780,22 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   /**
-   * Update domain for all open tasks related to a target entity using bulk operations.
-   * Called when an entity's domain changes to keep tasks in sync.
+   * Update domains for all open tasks related to a target entity using bulk operations.
+   * Called when an entity's domains change to keep tasks in sync.
    *
-   * @param entityId The ID of the entity whose domain changed
+   * @param entityId The ID of the entity whose domains changed
    * @param entityType The type of the entity
-   * @param newDomain The new domain reference (can be null if domain removed)
+   * @param newDomains The new domains list (can be null/empty if domains removed)
    */
   public void syncTaskDomainsForEntity(
-      UUID entityId, String entityType, EntityReference newDomain) {
+      UUID entityId, String entityType, List<EntityReference> newDomains) {
     LOG.info(
-        "Syncing task domains for entity {} ({}) to domain {}",
+        "Syncing task domains for entity {} ({}) to domains {}",
         entityId,
         entityType,
-        newDomain != null ? newDomain.getFullyQualifiedName() : "null");
+        nullOrEmpty(newDomains)
+            ? "null"
+            : newDomains.stream().map(EntityReference::getFullyQualifiedName).toList());
 
     // Find all tasks for this entity
     List<CollectionDAO.EntityRelationshipRecord> taskRecords =
@@ -801,7 +809,7 @@ public class TaskRepository extends EntityRepository<Task> {
     }
 
     // Filter to only open/in-progress/pending tasks
-    List<UUID> openTaskIds = new java.util.ArrayList<>();
+    List<UUID> openTaskIds = new ArrayList<>();
     for (CollectionDAO.EntityRelationshipRecord record : taskRecords) {
       try {
         Task task = get(null, record.getId(), getFields("status"));
@@ -825,18 +833,22 @@ public class TaskRepository extends EntityRepository<Task> {
     // Bulk delete existing domain relationships for these tasks
     daoCollection.taskDAO().bulkRemoveDomainRelationships(taskIdStrings);
 
-    // Bulk insert new domain relationships if newDomain is set
-    if (newDomain != null) {
-      daoCollection
-          .relationshipDAO()
-          .bulkInsertToRelationship(
-              newDomain.getId(), openTaskIds, DOMAIN, Entity.TASK, Relationship.HAS.ordinal());
+    // Bulk insert new domain relationships for each domain
+    if (!nullOrEmpty(newDomains)) {
+      for (EntityReference domain : newDomains) {
+        daoCollection
+            .relationshipDAO()
+            .bulkInsertToRelationship(
+                domain.getId(), openTaskIds, DOMAIN, Entity.TASK, Relationship.HAS.ordinal());
+      }
     }
 
     LOG.info(
         "Bulk updated {} task domains to {}",
         openTaskIds.size(),
-        newDomain != null ? newDomain.getFullyQualifiedName() : "null");
+        nullOrEmpty(newDomains)
+            ? "null"
+            : newDomains.stream().map(EntityReference::getFullyQualifiedName).toList());
   }
 
   public class TaskUpdater extends EntityUpdater {
@@ -858,14 +870,14 @@ public class TaskRepository extends EntityRepository<Task> {
     }
 
     private void updateAssignees() {
-      List<EntityReference> origAssignees = listOrEmpty(original.getAssignees());
-      List<EntityReference> updatedAssignees = listOrEmpty(updated.getAssignees());
+      List<EntityReference> origAssignees = new ArrayList<>(listOrEmpty(original.getAssignees()));
+      List<EntityReference> updatedAssignees = new ArrayList<>(listOrEmpty(updated.getAssignees()));
 
       origAssignees.sort(EntityUtil.compareEntityReference);
       updatedAssignees.sort(EntityUtil.compareEntityReference);
 
-      List<EntityReference> added = new java.util.ArrayList<>(updatedAssignees);
-      List<EntityReference> removed = new java.util.ArrayList<>(origAssignees);
+      List<EntityReference> added = new ArrayList<>(updatedAssignees);
+      List<EntityReference> removed = new ArrayList<>(origAssignees);
       added.removeAll(origAssignees);
       removed.removeAll(updatedAssignees);
 

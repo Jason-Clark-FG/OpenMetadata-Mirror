@@ -619,6 +619,45 @@ public class TaskResourceTest extends OpenMetadataApplicationTest {
 
   @Test
   @Order(16)
+  void test_bulkAssign() throws HttpResponseException {
+    Task task =
+        createTask(
+            new CreateTask()
+                .withAbout(TABLE.getFullyQualifiedName())
+                .withAboutType(Entity.TABLE)
+                .withType(TaskEntityType.DescriptionUpdate)
+                .withCategory(TaskCategory.MetadataUpdate)
+                .withPriority(TaskPriority.Medium)
+                .withAssignees(List.of(USER.getFullyQualifiedName()))
+                .withPayload(
+                    new org.openmetadata.schema.type.DescriptionUpdatePayload()
+                        .withFieldPath("description")
+                        .withNewDescription("Bulk assign test")),
+            ADMIN_AUTH_HEADERS);
+
+    BulkTaskOperation bulkOp =
+        new BulkTaskOperation()
+            .withTaskIds(List.of(task.getId().toString()))
+            .withOperation(BulkTaskOperationType.Assign)
+            .withParams(
+                new BulkTaskOperationParams()
+                    .withAssignees(List.of(USER2.getFullyQualifiedName())));
+
+    BulkTaskOperationResult result = bulkOperation(bulkOp, ADMIN_AUTH_HEADERS);
+    assertEquals(1, result.getTotalRequested());
+    assertEquals(1, result.getSuccessful());
+    assertEquals(0, result.getFailed());
+
+    // Verify the task was reassigned
+    Task updated = getTaskWithFields(task.getId(), "assignees", ADMIN_AUTH_HEADERS);
+    assertNotNull(updated.getAssignees());
+    assertTrue(
+        updated.getAssignees().stream()
+            .anyMatch(a -> a.getFullyQualifiedName().equals(USER2.getFullyQualifiedName())));
+  }
+
+  @Test
+  @Order(17)
   void test_getTaskById() throws HttpResponseException {
     CreateTask createTask =
         new CreateTask()
@@ -681,6 +720,12 @@ public class TaskResourceTest extends OpenMetadataApplicationTest {
 
   private Task getTask(UUID id, Map<String, String> authHeaders) throws HttpResponseException {
     WebTarget target = getResource("tasks/" + id);
+    return TestUtils.get(target, Task.class, authHeaders);
+  }
+
+  private Task getTaskWithFields(UUID id, String fields, Map<String, String> authHeaders)
+      throws HttpResponseException {
+    WebTarget target = getResource("tasks/" + id).queryParam("fields", fields);
     return TestUtils.get(target, Task.class, authHeaders);
   }
 

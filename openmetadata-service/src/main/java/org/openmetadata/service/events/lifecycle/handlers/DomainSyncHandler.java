@@ -13,6 +13,8 @@
 
 package org.openmetadata.service.events.lifecycle.handlers;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -27,14 +29,13 @@ import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 
 /**
- * Handler that syncs domains for dependent entities when their target entity's domain changes.
- * Ensures tasks, threads, announcements, etc. remain in the same domain as the entity
+ * Handler that syncs domains for dependent entities when their target entity's domains change.
+ * Ensures tasks, threads, announcements, etc. remain in the same domains as the entity
  * they're associated with, maintaining domain-based data isolation policies.
  */
 @Slf4j
 public class DomainSyncHandler implements EntityLifecycleEventHandler {
 
-  private static final String DOMAIN_FIELD = "domain";
   private static final String DOMAINS_FIELD = "domains";
 
   private static final Set<String> SKIP_ENTITY_TYPES =
@@ -47,10 +48,10 @@ public class DomainSyncHandler implements EntityLifecycleEventHandler {
       return;
     }
 
-    EntityReference newDomain = findDomainChange(changeDescription);
-    boolean domainRemoved = hasDomainRemoved(changeDescription);
+    List<EntityReference> newDomains = findDomainsChange(changeDescription);
+    boolean domainsRemoved = hasDomainsRemoved(changeDescription);
 
-    if (newDomain == null && !domainRemoved) {
+    if (newDomains == null && !domainsRemoved) {
       return;
     }
 
@@ -62,60 +63,67 @@ public class DomainSyncHandler implements EntityLifecycleEventHandler {
     }
 
     UUID entityId = entity.getId();
-    EntityReference effectiveDomain = domainRemoved ? null : newDomain;
+    List<EntityReference> effectiveDomains = domainsRemoved ? Collections.emptyList() : newDomains;
 
     LOG.debug(
-        "Domain change detected for {} {}, syncing related entities to domain {}",
+        "Domains change detected for {} {}, syncing related entities to domains {}",
         entityType,
         entityId,
-        effectiveDomain != null ? effectiveDomain.getFullyQualifiedName() : "null");
+        effectiveDomains != null && !effectiveDomains.isEmpty()
+            ? effectiveDomains.stream().map(EntityReference::getFullyQualifiedName).toList()
+            : "null");
 
-    syncTaskDomains(entityId, entityType, effectiveDomain);
+    syncTaskDomains(entityId, entityType, effectiveDomains);
     // Future: Add sync for threads, announcements, etc.
-    // syncThreadDomains(entityId, entityType, effectiveDomain);
-    // syncAnnouncementDomains(entityId, entityType, effectiveDomain);
+    // syncThreadDomains(entityId, entityType, effectiveDomains);
+    // syncAnnouncementDomains(entityId, entityType, effectiveDomains);
   }
 
-  private void syncTaskDomains(UUID entityId, String entityType, EntityReference newDomain) {
+  private void syncTaskDomains(UUID entityId, String entityType, List<EntityReference> newDomains) {
     try {
       TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
-      taskRepository.syncTaskDomainsForEntity(entityId, entityType, newDomain);
+      taskRepository.syncTaskDomainsForEntity(entityId, entityType, newDomains);
     } catch (Exception e) {
       LOG.error(
           "Failed to sync task domains for entity {} {}: {}", entityType, entityId, e.getMessage());
     }
   }
 
-  private EntityReference findDomainChange(ChangeDescription changeDescription) {
-    // Check fieldsAdded for new domain
-    EntityReference domain = findDomainInChanges(changeDescription.getFieldsAdded());
-    if (domain != null) {
-      return domain;
+  @SuppressWarnings("unchecked")
+  private List<EntityReference> findDomainsChange(ChangeDescription changeDescription) {
+    // Check fieldsAdded for new domains
+    List<EntityReference> domains = findDomainsInChanges(changeDescription.getFieldsAdded());
+    if (domains != null) {
+      return domains;
     }
 
-    // Check fieldsUpdated for domain change
-    domain = findDomainInChanges(changeDescription.getFieldsUpdated());
-    if (domain != null) {
-      return domain;
+    // Check fieldsUpdated for domains change
+    domains = findDomainsInChanges(changeDescription.getFieldsUpdated());
+    if (domains != null) {
+      return domains;
     }
 
     return null;
   }
 
-  private EntityReference findDomainInChanges(List<FieldChange> changes) {
+  @SuppressWarnings("unchecked")
+  private List<EntityReference> findDomainsInChanges(List<FieldChange> changes) {
     if (changes == null) {
       return null;
     }
 
     for (FieldChange change : changes) {
-      if (DOMAIN_FIELD.equals(change.getName()) || DOMAINS_FIELD.equals(change.getName())) {
+      if (DOMAINS_FIELD.equals(change.getName())) {
         Object newValue = change.getNewValue();
-        if (newValue instanceof EntityReference ref) {
-          return ref;
-        } else if (newValue instanceof List<?> list && !list.isEmpty()) {
-          Object first = list.get(0);
-          if (first instanceof EntityReference ref) {
-            return ref;
+        if (newValue instanceof List<?> list) {
+          List<EntityReference> result = new ArrayList<>();
+          for (Object item : list) {
+            if (item instanceof EntityReference ref) {
+              result.add(ref);
+            }
+          }
+          if (!result.isEmpty()) {
+            return result;
           }
         }
       }
@@ -123,14 +131,14 @@ public class DomainSyncHandler implements EntityLifecycleEventHandler {
     return null;
   }
 
-  private boolean hasDomainRemoved(ChangeDescription changeDescription) {
+  private boolean hasDomainsRemoved(ChangeDescription changeDescription) {
     List<FieldChange> deletedFields = changeDescription.getFieldsDeleted();
     if (deletedFields == null) {
       return false;
     }
 
     for (FieldChange change : deletedFields) {
-      if (DOMAIN_FIELD.equals(change.getName()) || DOMAINS_FIELD.equals(change.getName())) {
+      if (DOMAINS_FIELD.equals(change.getName())) {
         return true;
       }
     }

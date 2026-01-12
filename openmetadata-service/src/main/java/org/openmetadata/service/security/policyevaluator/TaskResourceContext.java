@@ -62,9 +62,6 @@ public class TaskResourceContext implements ResourceContextInterface {
 
   @Override
   public List<EntityReference> getDomains() {
-    if (task.getDomain() != null) {
-      return List.of(task.getDomain());
-    }
-    return List.of();
+    return task.getDomains() != null ? task.getDomains() : List.of();
   }
 }
