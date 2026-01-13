@@ -42,6 +42,7 @@ import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 import UserPopOverCard from '../../common/PopOverCard/UserPopOverCard';
 import ProfilePicture from '../../common/ProfilePicture/ProfilePicture';
 import FeedCardBodyNew from '../ActivityFeedCard/FeedCardBody/FeedCardBodyNew';
+import ActivityEventFooter from '../ActivityFeedCardV2/FeedCardFooter/ActivityEventFooter';
 import FeedCardFooterNew from '../ActivityFeedCardV2/FeedCardFooter/FeedCardFooterNew';
 import ActivityFeedEditorNew from '../ActivityFeedEditor/ActivityFeedEditorNew';
 import { useActivityFeedProvider } from '../ActivityFeedProvider/ActivityFeedProvider';
@@ -60,6 +61,7 @@ interface ActivityFeedCardNewProps {
   isOpenInDrawer?: boolean;
   isFeedWidget?: boolean;
   isFullSizeWidget?: boolean;
+  onActivityClick?: (activity: ActivityEvent) => void;
 }
 
 const ActivityFeedCardNew = ({
@@ -74,6 +76,7 @@ const ActivityFeedCardNew = ({
   isOpenInDrawer = false,
   isFeedWidget = false,
   isFullSizeWidget = false,
+  onActivityClick,
 }: ActivityFeedCardNewProps) => {
   const isActivityEvent = !isUndefined(activity);
 
@@ -95,8 +98,13 @@ const ActivityFeedCardNew = ({
 
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
-  const { selectedThread, postFeed, updateFeed, isPostsLoading } =
-    useActivityFeedProvider();
+  const {
+    selectedThread,
+    postFeed,
+    updateFeed,
+    isPostsLoading,
+    postActivityComment,
+  } = useActivityFeedProvider();
   const [showFeedEditor, setShowFeedEditor] = useState<boolean>(false);
   const [isEditPost, setIsEditPost] = useState<boolean>(false);
   const [, , user] = useUserProfile({
@@ -109,10 +117,16 @@ const ActivityFeedCardNew = ({
   }, [feedId]);
 
   const onSave = (message: string) => {
-    postFeed(message, selectedThread?.id ?? '').catch(() => {
-      // ignore since error is displayed in toast in the parent promise.
-      // Added block for sonar code smell
-    });
+    if (isActivityEvent && activity) {
+      postActivityComment(message, activity).catch(() => {
+        // ignore since error is displayed in toast in the parent promise.
+      });
+    } else {
+      postFeed(message, selectedThread?.id ?? '').catch(() => {
+        // ignore since error is displayed in toast in the parent promise.
+        // Added block for sonar code smell
+      });
+    }
     setShowFeedEditor(false);
   };
 
@@ -369,6 +383,15 @@ const ActivityFeedCardNew = ({
                     />
                   </div>
                 )}
+                {isFullSizeWidget && isActivityEvent && activity && (
+                  <div className="m-b-md">
+                    <ActivityEventFooter
+                      activity={activity}
+                      isForFeedTab={isForFeedTab}
+                      onActivityClick={onActivityClick}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </Space>
@@ -474,9 +497,17 @@ const ActivityFeedCardNew = ({
               post={post}
             />
           )}
+
+          {isActivityEvent && activity && (
+            <ActivityEventFooter
+              activity={activity}
+              isForFeedTab={isForFeedTab}
+              onActivityClick={onActivityClick}
+            />
+          )}
         </Space>
       </Space>
-      {(showThread || isOpenInDrawer) && !isActivityEvent && (
+      {(showThread || isOpenInDrawer) && (
         <div className="activity-feed-comments-container d-flex flex-col">
           {(showActivityFeedEditor || isOpenInDrawer) && (
             <Typography.Text className="activity-feed-comments-title m-b-md">
@@ -518,7 +549,7 @@ const ActivityFeedCardNew = ({
             </div>
           )}
 
-          {posts}
+          {!isActivityEvent && posts}
         </div>
       )}
     </Card>

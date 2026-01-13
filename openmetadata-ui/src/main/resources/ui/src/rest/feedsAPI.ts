@@ -220,7 +220,7 @@ export const getActivityEvents = async (params?: ListActivityParams) => {
   return response.data;
 };
 
-export const getEntityActivity = async (
+export const getEntityActivityById = async (
   entityType: string,
   entityId: string,
   params?: { days?: number; limit?: number }
@@ -229,6 +229,19 @@ export const getEntityActivity = async (
     data: ActivityEvent[];
     paging: Paging;
   }>(`${ACTIVITY_BASE_URL}/entity/${entityType}/${entityId}`, { params });
+
+  return response.data;
+};
+
+export const getEntityActivityByFqn = async (
+  entityType: string,
+  fqn: string,
+  params?: { days?: number; limit?: number }
+) => {
+  const response = await APIClient.get<{
+    data: ActivityEvent[];
+    paging: Paging;
+  }>(`${ACTIVITY_BASE_URL}/entity/${entityType}/name/${fqn}`, { params });
 
   return response.data;
 };

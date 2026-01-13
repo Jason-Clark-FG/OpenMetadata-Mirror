@@ -47,10 +47,9 @@ import { usePersistentStorage } from '../hooks/currentUserStore/useCurrentUserSt
 import { useApplicationStore } from '../hooks/useApplicationStore';
 import { FeedCounts } from '../interface/feed.interface';
 import { SearchSourceAlias } from '../interface/search.interface';
-import { getFeedCount } from '../rest/feedsAPI';
+import { getEntityActivityByFqn } from '../rest/feedsAPI';
 import { getTaskCounts } from '../rest/tasksAPI';
 import brandClassBase from './BrandData/BrandClassBase';
-import { getEntityFeedLink } from './EntityUtils';
 import Fqn from './Fqn';
 import i18n, { t } from './i18next/LocalUtil';
 import serviceUtilClassBase from './ServiceUtilClassBase';
@@ -498,21 +497,15 @@ export const getFeedCounts = async (
   feedCountCallback: (countValue: FeedCounts) => void
 ) => {
   try {
-    // Fetch conversation counts from feed API and task counts from new tasks API in parallel
-    const [feedRes, taskCounts] = await Promise.all([
-      getFeedCount(getEntityFeedLink(entityType, entityFQN)),
+    // Fetch activity events, task counts in parallel
+    // Activity events from new activity API replaces conversation count
+    const [activityRes, taskCounts] = await Promise.all([
+      getEntityActivityByFqn(entityType, entityFQN, { days: 30, limit: 100 }),
       getTaskCounts({ aboutEntity: entityFQN }),
     ]);
 
-    // Extract conversation and mention counts from feed API
-    const { conversationCount, mentionCount } = (feedRes ?? []).reduce(
-      (acc, item) => ({
-        conversationCount:
-          acc.conversationCount + (item.conversationCount || 0),
-        mentionCount: acc.mentionCount + (item.mentionCount || 0),
-      }),
-      { conversationCount: 0, mentionCount: 0 }
-    );
+    // Use activity events count
+    const activityCount = activityRes?.data?.length ?? 0;
 
     // Use task counts from new tasks API
     const openTaskCount = taskCounts.open ?? 0;
@@ -520,12 +513,12 @@ export const getFeedCounts = async (
     const totalTasksCount = taskCounts.total ?? 0;
 
     feedCountCallback({
-      conversationCount,
+      conversationCount: activityCount,
       totalTasksCount,
       openTaskCount,
       closedTaskCount,
-      totalCount: conversationCount + totalTasksCount,
-      mentionCount,
+      totalCount: activityCount + totalTasksCount,
+      mentionCount: 0,
     });
   } catch (err) {
     showErrorToast(err as AxiosError, t('server.entity-feed-fetch-error'));

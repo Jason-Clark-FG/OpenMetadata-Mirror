@@ -22,6 +22,7 @@ export interface FeedPanelBodyPropV1 {
   showThread?: boolean;
   isOpenInDrawer?: boolean;
   onFeedClick?: (feed: Thread) => void;
+  onActivityClick?: (activity: ActivityEvent) => void;
   isActive?: boolean;
   isForFeedTab?: boolean;
   componentsVisibility?: {

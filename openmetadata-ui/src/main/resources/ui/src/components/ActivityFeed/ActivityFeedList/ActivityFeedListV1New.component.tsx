@@ -29,6 +29,7 @@ interface ActivityFeedListV1Props {
   isLoading: boolean;
   showThread?: boolean;
   onFeedClick?: (feed: Thread) => void;
+  onActivityClick?: (activity: ActivityEvent) => void;
   activeFeedId?: string;
   hidePopover: boolean;
   isForFeedTab?: boolean;
@@ -56,6 +57,7 @@ const ActivityFeedListV1New = ({
     showRepliesContainer: true,
   },
   onFeedClick,
+  onActivityClick,
   activeFeedId,
   hidePopover = false,
   isForFeedTab = false,
@@ -113,6 +115,7 @@ const ActivityFeedListV1New = ({
           isFullWidth={isFullWidth}
           key={activity.id}
           showThread={false}
+          onActivityClick={onActivityClick}
           onAfterClose={onAfterClose}
           onUpdateEntityDetails={onUpdateEntityDetails}
         />
@@ -147,6 +150,7 @@ const ActivityFeedListV1New = ({
     showThread,
     isFullWidth,
     isFullSizeWidget,
+    onActivityClick,
   ]);
   if (isLoading) {
     return <Loader />;

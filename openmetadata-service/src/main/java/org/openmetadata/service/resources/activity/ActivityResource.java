@@ -147,9 +147,9 @@ public class ActivityResource {
   @GET
   @Path("/entity/{entityType}/{entityId}")
   @Operation(
-      operationId = "getEntityActivity",
-      summary = "Get activity for a specific entity",
-      description = "Get recent activity events for a specific entity.",
+      operationId = "getEntityActivityById",
+      summary = "Get activity for a specific entity by ID",
+      description = "Get recent activity events for a specific entity using its UUID.",
       responses = {
         @ApiResponse(
             responseCode = "200",
@@ -159,11 +159,12 @@ public class ActivityResource {
                     mediaType = "application/json",
                     schema = @Schema(implementation = ActivityEventList.class)))
       })
-  public ResultList<ActivityEvent> getEntityActivity(
+  public ResultList<ActivityEvent> getEntityActivityById(
       @Context SecurityContext securityContext,
       @Parameter(description = "Entity type", required = true) @PathParam("entityType")
           String entityType,
-      @Parameter(description = "Entity ID", required = true) @PathParam("entityId") UUID entityId,
+      @Parameter(description = "Entity ID (UUID)", required = true) @PathParam("entityId")
+          UUID entityId,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("30")
           @Min(1)
@@ -178,6 +179,53 @@ public class ActivityResource {
           int limit) {
 
     long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
+    List<ActivityEvent> events =
+        activityStreamRepository.listByEntity(entityType, entityId, afterTimestamp, limit);
+
+    return new ResultList<>(events, null, null, events.size());
+  }
+
+  @GET
+  @Path("/entity/{entityType}/name/{fqn}")
+  @Operation(
+      operationId = "getEntityActivityByFqn",
+      summary = "Get activity for a specific entity by fully qualified name",
+      description = "Get recent activity events for a specific entity using its FQN.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of activity events for the entity",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ActivityEventList.class)))
+      })
+  public ResultList<ActivityEvent> getEntityActivityByFqn(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Entity type", required = true) @PathParam("entityType")
+          String entityType,
+      @Parameter(description = "Entity fully qualified name", required = true) @PathParam("fqn")
+          String fqn,
+      @Parameter(description = "Number of days to look back")
+          @DefaultValue("30")
+          @Min(1)
+          @Max(90)
+          @QueryParam("days")
+          int days,
+      @Parameter(description = "Maximum number of events to return")
+          @DefaultValue("50")
+          @Min(1)
+          @Max(200)
+          @QueryParam("limit")
+          int limit) {
+
+    long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
+
+    // Resolve FQN to entity ID
+    org.openmetadata.schema.EntityInterface entity =
+        Entity.getEntityByName(entityType, fqn, "", null);
+    UUID entityId = entity.getId();
+
     List<ActivityEvent> events =
         activityStreamRepository.listByEntity(entityType, entityId, afterTimestamp, limit);
 

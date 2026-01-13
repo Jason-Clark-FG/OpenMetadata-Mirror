@@ -26,6 +26,7 @@ const FeedPanelBodyV1: FC<FeedPanelBodyPropV1> = ({
   activity,
   showThread,
   onFeedClick,
+  onActivityClick,
   isActive,
   showActivityFeedEditor = false,
   onAfterClose,
@@ -60,22 +61,31 @@ const FeedPanelBodyV1: FC<FeedPanelBodyPropV1> = ({
     }
   }, [onFeedClick, feed]);
 
+  const handleActivityClick = useCallback(() => {
+    if (activity) {
+      onActivityClick?.(activity);
+    }
+  }, [onActivityClick, activity]);
+
   if (isActivityEvent) {
     return (
       <Button
         block
         className={classNames('activity-feed-card-container')}
         data-testid="message-container"
-        type="text">
+        type="text"
+        onClick={handleActivityClick}>
         <ActivityFeedCardNew
           activity={activity}
           isActive={isActive}
           isFeedWidget={isFeedWidget}
           isForFeedTab={isForFeedTab}
           isFullSizeWidget={isFullSizeWidget}
+          isOpenInDrawer={isOpenInDrawer}
           isPost={false}
-          showActivityFeedEditor={false}
-          showThread={false}
+          showActivityFeedEditor={showActivityFeedEditor}
+          showThread={showThread}
+          onActivityClick={onActivityClick}
         />
       </Button>
     );

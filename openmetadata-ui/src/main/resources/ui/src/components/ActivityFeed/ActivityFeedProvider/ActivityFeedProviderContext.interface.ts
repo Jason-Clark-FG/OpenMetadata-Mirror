@@ -17,12 +17,12 @@ import { ReactionOperation } from '../../../enums/reactions.enum';
 import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import {
   Post,
-  ReactionType,
   Thread,
   ThreadType,
 } from '../../../generated/entity/feed/thread';
 import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResolutionStatus';
 import { Paging } from '../../../generated/type/paging';
+import { ReactionType } from '../../../generated/type/reaction';
 import { ListActivityParams } from '../../../rest/feedsAPI';
 import { Task, TaskStatusGroup } from '../../../rest/tasksAPI';
 
@@ -33,6 +33,7 @@ export interface ActivityFeedProviderContextType {
   isTestCaseResolutionLoading?: boolean;
   // For activity events (entity changes)
   activityEvents: ActivityEvent[];
+  selectedActivity: ActivityEvent | undefined;
   // For regular feeds (conversations, announcements)
   entityThread: Thread[];
   selectedThread: Thread | undefined;
@@ -44,6 +45,7 @@ export interface ActivityFeedProviderContextType {
   entityPaging: Paging;
   setActiveThread: (thread?: Thread) => void;
   setActiveTask: (task?: Task) => void;
+  setActiveActivity: (activity?: ActivityEvent) => void;
   updateEntityThread: (thread: Thread) => void;
   updateTask: (task: Task) => void;
   userId: string;
@@ -72,7 +74,12 @@ export interface ActivityFeedProviderContextType {
   ) => Promise<void>;
   showDrawer: (thread: Thread) => void;
   showTaskDrawer: (task: Task) => void;
+  showActivityDrawer: (activity: ActivityEvent) => void;
   hideDrawer: () => void;
+  postActivityComment: (
+    message: string,
+    activity: ActivityEvent
+  ) => Promise<void>;
   updateEditorFocus: (isFocused: boolean) => void;
   updateReactions: (
     post: Post,
@@ -91,11 +98,16 @@ export interface ActivityFeedProviderContextType {
   }) => Promise<void>;
   fetchEntityActivity: (
     entityType: string,
-    entityId: string,
+    fqn: string,
     params?: { days?: number; limit?: number }
   ) => Promise<void>;
   fetchUserActivity: (
     userId: string,
     params?: { days?: number; limit?: number }
+  ) => Promise<void>;
+  updateActivityReaction: (
+    activityId: string,
+    reactionType: ReactionType,
+    reactionOperation: ReactionOperation
   ) => Promise<void>;
 }

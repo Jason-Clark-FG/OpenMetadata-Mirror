@@ -37,6 +37,7 @@ import { observerOptions } from '../../../constants/Mydata.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
+import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import { Thread, ThreadType } from '../../../generated/entity/feed/thread';
 import { useAuth } from '../../../hooks/authHooks';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
@@ -122,6 +123,8 @@ export const ActivityFeedTab = ({
     fetchEntityActivity,
     fetchUserActivity,
     userId,
+    selectedActivity,
+    setActiveActivity,
   } = useActivityFeedProvider();
 
   const isUserEntity = useMemo(
@@ -316,6 +319,22 @@ export const ActivityFeedTab = ({
     }
   }, [feedCount]);
 
+  useEffect(() => {
+    if (activityEvents && activityEvents.length > 0) {
+      setCountData((prev) => {
+        const activityCount = activityEvents.length;
+        const newData = {
+          ...prev.data,
+          conversationCount: activityCount,
+          totalCount: activityCount + (prev.data.totalTasksCount ?? 0),
+        };
+        onUpdateFeedCount?.(newData);
+
+        return { ...prev, data: newData };
+      });
+    }
+  }, [activityEvents, onUpdateFeedCount]);
+
   const handleFeedClick = useCallback(
     (feed: Thread) => {
       if (!feed && (isTaskActiveTab || isMentionTabSelected)) {
@@ -338,6 +357,16 @@ export const ActivityFeedTab = ({
       }
     },
     [setActiveTask, isTaskActiveTab, selectedTask]
+  );
+
+  const handleActivityClick = useCallback(
+    (activity: ActivityEvent) => {
+      if (selectedActivity?.id !== activity?.id) {
+        setActiveActivity(activity);
+        setActiveThread(undefined);
+      }
+    },
+    [setActiveActivity, setActiveThread, selectedActivity]
   );
 
   useEffect(() => {
@@ -536,6 +565,28 @@ export const ActivityFeedTab = ({
       );
     }
 
+    if (selectedActivity) {
+      return (
+        <div id="activity-panel">
+          <FeedPanelBodyV1New
+            isOpenInDrawer
+            showActivityFeedEditor
+            showThread
+            activity={selectedActivity}
+            componentsVisibility={{
+              showThreadIcon: true,
+              showRepliesContainer: true,
+            }}
+            handlePanelResize={handlePanelResize}
+            hidePopover={false}
+            isFullWidth={isFullWidth}
+            onAfterClose={handleAfterTaskClose}
+            onUpdateEntityDetails={onUpdateEntityDetails}
+          />
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -581,7 +632,7 @@ export const ActivityFeedTab = ({
                   <span>
                     {!isUserEntity &&
                       getCountBadge(
-                        countData?.data?.conversationCount,
+                        activityEvents?.length ?? 0,
                         '',
                         activeTab === ActivityFeedTabs.ALL
                       )}
@@ -690,6 +741,7 @@ export const ActivityFeedTab = ({
             isLoading={(isFirstLoad && loading) || (isActivityLoading ?? false)}
             selectedThread={selectedThread}
             showThread={false}
+            onActivityClick={handleActivityClick}
             onAfterClose={handleAfterTaskClose}
             onFeedClick={handleFeedClick}
           />
@@ -716,7 +768,7 @@ export const ActivityFeedTab = ({
             layoutType === ActivityFeedLayoutType.THREE_PANEL,
         })}>
         {loader}
-        {(selectedThread || selectedTask) && !loading
+        {(selectedThread || selectedTask || selectedActivity) && !loading
           ? getRightPanelContent()
           : !loading && (
               <div className="p-x-md no-data-placeholder-container-right-panel d-flex justify-center items-center h-full">

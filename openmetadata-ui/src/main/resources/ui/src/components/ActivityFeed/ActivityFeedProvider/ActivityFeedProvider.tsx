@@ -28,6 +28,7 @@ import { POST_FEED_PAGE_COUNT } from '../../../constants/Feeds.constants';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
 import { ReactionOperation } from '../../../enums/reactions.enum';
+import { CreateThread } from '../../../generated/api/feed/createThread';
 import { ActivityEvent } from '../../../generated/entity/activity/activityEvent';
 import {
   Post,
@@ -39,17 +40,20 @@ import { Paging } from '../../../generated/type/paging';
 import { Reaction, ReactionType } from '../../../generated/type/reaction';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import {
+  addActivityReaction,
   deletePostById,
   deleteThread,
   getActivityEvents,
   getAllFeeds,
-  getEntityActivity,
+  getEntityActivityByFqn,
   getFeedById,
   getMyActivityFeed,
   getPostsFeedById,
   getUserActivity,
   ListActivityParams,
   postFeedById,
+  postThread,
+  removeActivityReaction,
   updatePost,
   updateThread,
 } from '../../../rest/feedsAPI';
@@ -83,6 +87,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
   const { t } = useTranslation();
   // For activity events (entity changes)
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityEvent>();
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   // For regular feeds (conversations, announcements)
   const [entityThread, setEntityThread] = useState<Thread[]>([]);
@@ -490,6 +495,43 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     });
   };
 
+  const updateActivityReaction = useCallback(
+    async (
+      activityId: string,
+      reactionType: ReactionType,
+      reactionOperation: ReactionOperation
+    ) => {
+      try {
+        let updatedActivity: ActivityEvent;
+        if (reactionOperation === ReactionOperation.ADD) {
+          updatedActivity = await addActivityReaction(activityId, reactionType);
+        } else {
+          await removeActivityReaction(activityId, reactionType);
+          const currentActivity = activityEvents.find(
+            (a) => a.id === activityId
+          );
+          updatedActivity = {
+            ...currentActivity,
+            reactions: (currentActivity?.reactions ?? []).filter(
+              (r) =>
+                !(
+                  r.reactionType === reactionType &&
+                  r.user?.id === currentUser?.id
+                )
+            ),
+          } as ActivityEvent;
+        }
+
+        setActivityEvents((prev) =>
+          prev.map((a) => (a.id === activityId ? updatedActivity : a))
+        );
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      }
+    },
+    [activityEvents, currentUser?.id]
+  );
+
   const updateEditorFocus = (isFocused: boolean) => {
     setFocusReplyEditor(isFocused);
   };
@@ -504,11 +546,45 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     setIsDrawerOpen(true);
     setActiveTask(task);
     setSelectedThread(undefined);
+    setSelectedActivity(undefined);
   }, []);
+
+  const setActiveActivity = useCallback((activity?: ActivityEvent) => {
+    setSelectedActivity(activity);
+  }, []);
+
+  const showActivityDrawer = useCallback((activity: ActivityEvent) => {
+    setIsDrawerOpen(true);
+    setSelectedActivity(activity);
+    setSelectedThread(undefined);
+    setSelectedTask(undefined);
+  }, []);
+
+  const postActivityComment = useCallback(
+    async (message: string, activity: ActivityEvent) => {
+      try {
+        const threadData: CreateThread = {
+          from: currentUser?.name ?? '',
+          message,
+          about: activity.about ?? '',
+          type: ThreadType.Conversation,
+        };
+
+        const createdThread = await postThread(threadData);
+        setEntityThread((prev) => [createdThread, ...prev]);
+        setSelectedThread(createdThread);
+        setSelectedActivity(undefined);
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      }
+    },
+    [currentUser?.name]
+  );
 
   const hideDrawer = useCallback(() => {
     setFocusReplyEditor(false);
     setIsDrawerOpen(false);
+    setSelectedActivity(undefined);
   }, []);
 
   const updateTestCaseIncidentStatus = useCallback(
@@ -552,12 +628,12 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
   const fetchEntityActivityHandler = useCallback(
     async (
       entityType: string,
-      entityId: string,
+      fqn: string,
       params?: { days?: number; limit?: number }
     ) => {
       setIsActivityLoading(true);
       try {
-        const { data } = await getEntityActivity(entityType, entityId, params);
+        const { data } = await getEntityActivityByFqn(entityType, fqn, params);
         setActivityEvents(data);
       } catch (err) {
         showErrorToast(err as AxiosError);
@@ -603,10 +679,12 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       getFeedData,
       showDrawer,
       showTaskDrawer,
+      showActivityDrawer,
       hideDrawer,
       updateEditorFocus,
       setActiveThread,
       setActiveTask,
+      setActiveActivity,
       updateEntityThread,
       updateTask,
       entityPaging,
@@ -615,10 +693,13 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       fetchUpdatedThread,
       updateTestCaseIncidentStatus,
       activityEvents,
+      selectedActivity,
       fetchActivityEvents: fetchActivityEventsHandler,
       fetchMyActivityFeed: fetchMyActivityFeedHandler,
       fetchEntityActivity: fetchEntityActivityHandler,
       fetchUserActivity: fetchUserActivityHandler,
+      updateActivityReaction,
+      postActivityComment,
     };
   }, [
     entityThread,
@@ -639,10 +720,12 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     getFeedData,
     showDrawer,
     showTaskDrawer,
+    showActivityDrawer,
     hideDrawer,
     updateEditorFocus,
     setActiveThread,
     setActiveTask,
+    setActiveActivity,
     updateEntityThread,
     updateTask,
     entityPaging,
@@ -652,10 +735,13 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     fetchUpdatedThread,
     updateTestCaseIncidentStatus,
     activityEvents,
+    selectedActivity,
     fetchActivityEventsHandler,
     fetchMyActivityFeedHandler,
     fetchEntityActivityHandler,
     fetchUserActivityHandler,
+    updateActivityReaction,
+    postActivityComment,
   ]);
 
   return (

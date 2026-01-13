@@ -17,6 +17,8 @@ import { FC, useMemo } from 'react';
 import { EntityType } from '../../../enums/entity.enum';
 import { ThreadType } from '../../../generated/entity/feed/thread';
 import { TaskTabNew } from '../../Entity/Task/TaskTab/TaskTabNew.component';
+import ActivityPanelBody from '../ActivityFeedPanel/ActivityPanelBody';
+import ActivityPanelHeader from '../ActivityFeedPanel/ActivityPanelHeader';
 import FeedPanelBodyV1 from '../ActivityFeedPanel/FeedPanelBodyV1';
 import FeedPanelHeader from '../ActivityFeedPanel/FeedPanelHeader';
 import TaskPanelHeader from '../ActivityFeedPanel/TaskPanelHeader';
@@ -32,7 +34,7 @@ const ActivityFeedDrawer: FC<ActivityFeedDrawerProps> = ({
   open,
   className,
 }) => {
-  const { hideDrawer, selectedThread, selectedTask } =
+  const { hideDrawer, selectedThread, selectedTask, selectedActivity } =
     useActivityFeedProvider();
 
   const entityType = useMemo(() => {
@@ -43,7 +45,7 @@ const ActivityFeedDrawer: FC<ActivityFeedDrawerProps> = ({
     return EntityType.TABLE;
   }, [selectedTask]);
 
-  if (!selectedThread && !selectedTask) {
+  if (!selectedThread && !selectedTask && !selectedActivity) {
     return null;
   }
 
@@ -70,6 +72,30 @@ const ActivityFeedDrawer: FC<ActivityFeedDrawerProps> = ({
               entityType={entityType}
               task={selectedTask}
             />
+          </Col>
+        </Row>
+      </Drawer>
+    );
+  }
+
+  if (selectedActivity) {
+    return (
+      <Drawer
+        className={classNames('activity-feed-drawer', className)}
+        closable={false}
+        open={open}
+        title={
+          <ActivityPanelHeader
+            activity={selectedActivity}
+            className="p-x-md"
+            onCancel={hideDrawer}
+          />
+        }
+        width={576}
+        onClose={hideDrawer}>
+        <Row gutter={[0, 16]} id="feed-panel">
+          <Col span={24}>
+            <ActivityPanelBody activity={selectedActivity} />
           </Col>
         </Row>
       </Drawer>

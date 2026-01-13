@@ -904,51 +904,103 @@ export const getActivityEventHeaderText = (
     case ActivityEventType.DescriptionUpdated:
     case ActivityEventType.ColumnDescriptionUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-description-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-field-action-entity-header"
+          renderElement={
+            <Typography.Text
+              className="font-bold"
+              style={{ fontSize: '14px' }}
+            />
+          }
+          values={{
+            field: t('label.description'),
+            action: t('label.updated-lowercase'),
+          }}
+        />
       );
     case ActivityEventType.TagsUpdated:
     case ActivityEventType.ColumnTagsUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-tags-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-field-action-entity-header"
+          renderElement={
+            <Typography.Text
+              className="font-bold"
+              style={{ fontSize: '14px' }}
+            />
+          }
+          values={{
+            field: t('label.tag-plural'),
+            action: t('label.added-lowercase'),
+          }}
+        />
       );
     case ActivityEventType.OwnerUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-owner-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-field-action-entity-header"
+          renderElement={
+            <Typography.Text
+              className="font-bold"
+              style={{ fontSize: '14px' }}
+            />
+          }
+          values={{
+            field: t('label.owner'),
+            action: t('label.updated-lowercase'),
+          }}
+        />
       );
     case ActivityEventType.DomainUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-domain-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-field-action-entity-header"
+          renderElement={
+            <Typography.Text
+              className="font-bold"
+              style={{ fontSize: '14px' }}
+            />
+          }
+          values={{
+            field: t('label.domain'),
+            action: t('label.updated-lowercase'),
+          }}
+        />
       );
     case ActivityEventType.TierUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-tier-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-field-action-entity-header"
+          renderElement={
+            <Typography.Text
+              className="font-bold"
+              style={{ fontSize: '14px' }}
+            />
+          }
+          values={{
+            field: t('label.tier'),
+            action: t('label.updated-lowercase'),
+          }}
+        />
       );
     case ActivityEventType.CustomPropertyUpdated:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.updated-custom-property-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-custom-property-header"
+          renderElement={<Typography.Text className="font-bold" />}
+        />
       );
     case ActivityEventType.TestCaseStatusChanged:
       return (
-        <Typography.Text className="font-bold">
-          {t('label.test-case-status-changed-for-lowercase')}
-        </Typography.Text>
+        <Transi18next
+          i18nKey="message.feed-test-case-header"
+          renderElement={<Typography.Text className="font-bold" />}
+        />
       );
     case ActivityEventType.PipelineStatusChanged:
       return (
         <Typography.Text className="font-bold">
-          {t('label.pipeline-status-changed-for-lowercase')}
+          {t('label.pipeline-status-changed')}
         </Typography.Text>
       );
     case ActivityEventType.EntityUpdated:
