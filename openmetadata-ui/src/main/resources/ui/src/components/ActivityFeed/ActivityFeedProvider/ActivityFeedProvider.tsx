@@ -88,6 +88,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
   // For activity events (entity changes)
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityEvent>();
+  const [activityThread, setActivityThread] = useState<Thread | undefined>();
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   // For regular feeds (conversations, announcements)
   const [entityThread, setEntityThread] = useState<Thread[]>([]);
@@ -352,6 +353,10 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setEntityThread((prev) =>
           prev.filter((thread) => thread.id !== data.id)
         );
+        // Clear activityThread if it's the deleted thread
+        if (activityThread?.id === data.id) {
+          setActivityThread(undefined);
+        }
       } else {
         const deleteResponse = await deletePostById(threadId, postId);
         if (deleteResponse) {
@@ -370,10 +375,14 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
             })
           );
           setActiveThread(data);
+          // Also update activityThread if it matches
+          if (activityThread?.id === threadId) {
+            setActivityThread(data);
+          }
         }
       }
     },
-    []
+    [activityThread]
   );
 
   const updateThreadHandler = useCallback(
@@ -428,11 +437,15 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
           })
         );
         setSelectedThread(activeThreadData.data);
+        // Also update activityThread if it matches
+        if (activityThread?.id === threadId) {
+          setActivityThread(activeThreadData.data);
+        }
       } catch (err) {
         showErrorToast(err as AxiosError);
       }
     },
-    []
+    [activityThread]
   );
 
   const updateFeed = useCallback(
@@ -549,8 +562,24 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     setSelectedActivity(undefined);
   }, []);
 
-  const setActiveActivity = useCallback((activity?: ActivityEvent) => {
+  const setActiveActivity = useCallback(async (activity?: ActivityEvent) => {
     setSelectedActivity(activity);
+    setActivityThread(undefined);
+
+    if (activity?.about) {
+      try {
+        const response = await getAllFeeds(
+          activity.about,
+          undefined,
+          ThreadType.Conversation
+        );
+        if (response.data.length > 0) {
+          setActivityThread(response.data[0]);
+        }
+      } catch {
+        // No thread found for this activity, which is fine
+      }
+    }
   }, []);
 
   const showActivityDrawer = useCallback((activity: ActivityEvent) => {
@@ -563,22 +592,31 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
   const postActivityComment = useCallback(
     async (message: string, activity: ActivityEvent) => {
       try {
-        const threadData: CreateThread = {
-          from: currentUser?.name ?? '',
-          message,
-          about: activity.about ?? '',
-          type: ThreadType.Conversation,
-        };
+        if (activityThread) {
+          // Add to existing thread
+          const updatedThread = await postFeedById(activityThread.id, {
+            from: currentUser?.name ?? '',
+            message,
+          } as Post);
+          setActivityThread(updatedThread);
+        } else {
+          // Create new thread
+          const threadData: CreateThread = {
+            from: currentUser?.name ?? '',
+            message,
+            about: activity.about ?? '',
+            type: ThreadType.Conversation,
+          };
 
-        const createdThread = await postThread(threadData);
-        setEntityThread((prev) => [createdThread, ...prev]);
-        setSelectedThread(createdThread);
-        setSelectedActivity(undefined);
+          const createdThread = await postThread(threadData);
+          setEntityThread((prev) => [createdThread, ...prev]);
+          setActivityThread(createdThread);
+        }
       } catch (err) {
         showErrorToast(err as AxiosError);
       }
     },
-    [currentUser?.name]
+    [currentUser?.name, activityThread]
   );
 
   const hideDrawer = useCallback(() => {
@@ -694,6 +732,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       updateTestCaseIncidentStatus,
       activityEvents,
       selectedActivity,
+      activityThread,
       fetchActivityEvents: fetchActivityEventsHandler,
       fetchMyActivityFeed: fetchMyActivityFeedHandler,
       fetchEntityActivity: fetchEntityActivityHandler,
@@ -736,6 +775,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     updateTestCaseIncidentStatus,
     activityEvents,
     selectedActivity,
+    activityThread,
     fetchActivityEventsHandler,
     fetchMyActivityFeedHandler,
     fetchEntityActivityHandler,

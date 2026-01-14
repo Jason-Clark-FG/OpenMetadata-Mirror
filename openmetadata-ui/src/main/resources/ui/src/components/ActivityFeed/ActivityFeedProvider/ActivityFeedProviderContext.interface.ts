@@ -34,6 +34,7 @@ export interface ActivityFeedProviderContextType {
   // For activity events (entity changes)
   activityEvents: ActivityEvent[];
   selectedActivity: ActivityEvent | undefined;
+  activityThread: Thread | undefined;
   // For regular feeds (conversations, announcements)
   entityThread: Thread[];
   selectedThread: Thread | undefined;

@@ -104,6 +104,7 @@ const ActivityFeedCardNew = ({
     updateFeed,
     isPostsLoading,
     postActivityComment,
+    activityThread,
   } = useActivityFeedProvider();
   const [showFeedEditor, setShowFeedEditor] = useState<boolean>(false);
   const [isEditPost, setIsEditPost] = useState<boolean>(false);
@@ -244,7 +245,14 @@ const ActivityFeedCardNew = ({
   };
 
   const posts = useMemo(() => {
-    if (!showThread || isActivityEvent || !feed) {
+    if (!showThread) {
+      return null;
+    }
+
+    // For activity events, use activityThread; for regular feeds, use feed
+    const threadToDisplay = isActivityEvent ? activityThread : feed;
+
+    if (!threadToDisplay) {
       return null;
     }
 
@@ -258,14 +266,18 @@ const ActivityFeedCardNew = ({
       );
     }
 
-    const orderedPosts = orderBy(feed.posts, ['postTs'], ['desc']);
+    const orderedPosts = orderBy(threadToDisplay.posts, ['postTs'], ['desc']);
+
+    if (orderedPosts.length === 0) {
+      return null;
+    }
 
     return (
       <Col className="p-l-0 p-r-0" data-testid="feed-replies">
         {orderedPosts.map((reply, index, arr) => (
           <CommentCard
             closeFeedEditor={closeFeedEditor}
-            feed={feed}
+            feed={threadToDisplay}
             isLastReply={index === arr.length - 1}
             key={reply.id}
             post={reply}
@@ -273,7 +285,14 @@ const ActivityFeedCardNew = ({
         ))}
       </Col>
     );
-  }, [feed, showThread, closeFeedEditor, isPostsLoading, isActivityEvent]);
+  }, [
+    feed,
+    showThread,
+    closeFeedEditor,
+    isPostsLoading,
+    isActivityEvent,
+    activityThread,
+  ]);
 
   const feedMessage = useMemo(() => {
     if (isActivityEvent) {
@@ -549,7 +568,7 @@ const ActivityFeedCardNew = ({
             </div>
           )}
 
-          {!isActivityEvent && posts}
+          {posts}
         </div>
       )}
     </Card>
