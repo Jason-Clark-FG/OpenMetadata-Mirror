@@ -2949,6 +2949,24 @@ public interface CollectionDAO {
         "DELETE FROM entity_relationship WHERE fromEntity = 'domain' AND toEntity = 'task' "
             + "AND relation = 10 AND toId IN (<taskIds>)")
     void bulkRemoveDomainRelationships(@BindList("taskIds") List<String> taskIds);
+
+    /**
+     * Fetch a task by testCaseResolutionStatusId stored in the payload.
+     * Used for incident management to link TestCaseResolutionStatus workflow with Task entity.
+     */
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT json FROM task_entity "
+                + "WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.payload.testCaseResolutionStatusId')) = :stateId "
+                + "AND (JSON_EXTRACT(json, '$.deleted') = false OR JSON_EXTRACT(json, '$.deleted') IS NULL)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT json FROM task_entity "
+                + "WHERE json->'payload'->>'testCaseResolutionStatusId' = :stateId "
+                + "AND ((json->>'deleted')::boolean = false OR json->>'deleted' IS NULL)",
+        connectionType = POSTGRES)
+    String fetchTaskByTestCaseResolutionStatusId(@Bind("stateId") String stateId);
   }
 
   interface FieldRelationshipDAO {
