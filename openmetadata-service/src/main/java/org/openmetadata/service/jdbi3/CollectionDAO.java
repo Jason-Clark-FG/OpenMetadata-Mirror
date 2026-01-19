@@ -10690,7 +10690,6 @@ public interface CollectionDAO {
     int deleteInBatches(@Bind("cutoffTs") long cutoffTs, @Bind("limit") int limit);
   }
 
-
   // OAuth 2.0 DAOs for MCP Server
   interface OAuthClientDAO {
     @SqlQuery(
