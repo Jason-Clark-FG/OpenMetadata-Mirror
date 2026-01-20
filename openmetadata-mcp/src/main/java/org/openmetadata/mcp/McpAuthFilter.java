@@ -23,7 +23,7 @@ import org.openmetadata.service.security.JwtFilter;
  * Authentication filter for MCP endpoints.
  *
  * <p>This filter validates JWT tokens for all MCP requests to ensure only authenticated users can
- * access MCP features. It uses the same JWT validation as the rest of OpenMetadata.
+ * access MCP features. Supports OAuth endpoints and user impersonation.
  */
 @Slf4j
 public class McpAuthFilter implements Filter {
@@ -61,6 +61,15 @@ public class McpAuthFilter implements Filter {
     if (isOAuthEndpoint(requestPath)) {
       LOG.debug("Allowing OAuth endpoint without authentication: {}", requestPath);
       filterChain.doFilter(servletRequest, servletResponse);
+      return;
+    }
+
+    // Check if MCP application is installed
+    if (ApplicationContext.getInstance().getAppIfExists("McpApplication") == null) {
+      sendError(
+          httpServletResponse,
+          "McpApplication is not installed. Please install it to use MCP features.",
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE);
       return;
     }
 
