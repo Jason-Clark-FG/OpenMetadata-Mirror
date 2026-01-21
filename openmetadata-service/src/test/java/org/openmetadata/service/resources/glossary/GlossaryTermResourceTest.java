@@ -118,6 +118,7 @@ import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskDetails;
 import org.openmetadata.schema.type.TaskStatus;
 import org.openmetadata.schema.type.TaskType;
+import org.openmetadata.schema.type.TermRelation;
 import org.openmetadata.schema.type.ThreadType;
 import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.schema.type.api.BulkResponse;
@@ -1238,7 +1239,7 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
       assertReference(request.getParent(), entity.getParent());
     }
 
-    assertEntityReferenceNames(request.getRelatedTerms(), entity.getRelatedTerms());
+    assertTermRelationNames(request.getRelatedTerms(), entity.getRelatedTerms());
     assertEntityReferences(request.getReviewers(), entity.getReviewers());
 
     // Entity specific validation
@@ -3006,10 +3007,12 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
     assertNotNull(result.getRelatedTerms(), "RelatedTerms field should not be null");
     assertEquals(1, result.getRelatedTerms().size(), "Should have 1 related term");
     assertEquals(
-        "RelatedTerm", result.getRelatedTerms().get(0).getName(), "Related term name should match");
+        "RelatedTerm",
+        result.getRelatedTerms().get(0).getTerm().getName(),
+        "Related term name should match");
     assertEquals(
         "Associated Business Term",
-        result.getRelatedTerms().get(0).getDisplayName(),
+        result.getRelatedTerms().get(0).getTerm().getDisplayName(),
         "Related term displayName should match");
 
     // Validate reviewers field (term may inherit from glossary, so check USER1 is present)
@@ -4444,7 +4447,11 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
         .withTags(List.of(PII_SENSITIVE_TAG_LABEL))
         .withReviewers(List.of(USER1_REF))
         .withOwners(List.of(USER1_REF))
-        .withRelatedTerms(List.of(relatedTerm.getEntityReference()))
+        .withRelatedTerms(
+            List.of(
+                new TermRelation()
+                    .withTerm(relatedTerm.getEntityReference())
+                    .withRelationType("relatedTo")))
         .withReferences(List.of(reference1, reference2))
         .withStyle(new Style().withColor("#FF5733").withIconURL("https://example.com/icon.png"));
     parentTerm = patchEntity(parentTerm.getId(), parentJson, parentTerm, ADMIN_AUTH_HEADERS);
@@ -4458,7 +4465,11 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
         .withTags(List.of(PERSONAL_DATA_TAG_LABEL))
         .withReviewers(List.of(USER2_REF))
         .withOwners(List.of(TEAM11_REF))
-        .withRelatedTerms(List.of(relatedTerm.getEntityReference()));
+        .withRelatedTerms(
+            List.of(
+                new TermRelation()
+                    .withTerm(relatedTerm.getEntityReference())
+                    .withRelationType("relatedTo")));
     childTerm = patchEntity(childTerm.getId(), childJson, childTerm, ADMIN_AUTH_HEADERS);
 
     String exportedCsv = exportCsv(parentTerm.getFullyQualifiedName());
@@ -4486,8 +4497,8 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
     assertEquals(childTerm.getParent().getId(), childAfterImport.getParent().getId());
     assertEquals(childTerm.getRelatedTerms().size(), childAfterImport.getRelatedTerms().size());
     assertEquals(
-        childTerm.getRelatedTerms().getFirst().getId(),
-        childAfterImport.getRelatedTerms().getFirst().getId());
+        childTerm.getRelatedTerms().getFirst().getTerm().getId(),
+        childAfterImport.getRelatedTerms().getFirst().getTerm().getId());
 
     deleteEntity(relatedTerm.getId(), true, true, ADMIN_AUTH_HEADERS);
     deleteEntity(childTerm.getId(), true, true, ADMIN_AUTH_HEADERS);
@@ -4908,5 +4919,16 @@ public class GlossaryTermResourceTest extends EntityResourceTest<GlossaryTerm, C
     GlossaryTerm renamedTerm = getEntity(term.getId(), authHeaders(USER1.getName()));
     assertEquals(EntityStatus.APPROVED, renamedTerm.getEntityStatus());
     assertEquals("renamedTerm", renamedTerm.getName());
+  }
+
+  private void assertTermRelationNames(List<String> expected, List<TermRelation> actual) {
+    if (expected != null) {
+      actual = listOrEmpty(actual);
+      assertEquals(expected.size(), actual.size());
+      for (String expectedName : expected) {
+        boolean found = actual.stream().anyMatch(tr -> tr.getTerm().getName().equals(expectedName));
+        assertTrue(found, "Expected term relation with name: " + expectedName);
+      }
+    }
   }
 }

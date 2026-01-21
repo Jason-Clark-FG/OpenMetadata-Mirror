@@ -107,6 +107,39 @@ public class RdfResource {
   }
 
   @GET
+  @Path("/debug/glossary-relations")
+  @Operation(
+      operationId = "debugGlossaryRelations",
+      summary = "Debug glossary term relations in RDF",
+      description =
+          "Diagnostic endpoint to inspect what predicates are stored between glossary terms in the RDF store",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Debug information about glossary term relations",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON)),
+        @ApiResponse(responseCode = "503", description = "RDF service not enabled")
+      })
+  public Response debugGlossaryRelations(@Context SecurityContext securityContext) {
+    try {
+      if (!rdfRepository.isEnabled()) {
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity("{\"error\": \"RDF service not enabled\"}")
+            .build();
+      }
+
+      String result = rdfRepository.debugGlossaryTermRelations();
+      return Response.ok(result, MediaType.APPLICATION_JSON).build();
+
+    } catch (IOException e) {
+      LOG.error("Error debugging glossary relations", e);
+      return Response.serverError()
+          .entity("{\"error\": \"" + e.getMessage() + "\"}")
+          .build();
+    }
+  }
+
+  @GET
   @Path("/entity/{entityType}/{id}")
   @Operation(
       operationId = "getEntityAsRdf",
@@ -442,6 +475,61 @@ public class RdfResource {
   }
 
   @GET
+  @Path("/glossary/graph")
+  @Operation(
+      operationId = "getGlossaryTermGraph",
+      summary = "Get glossary term relationship graph",
+      description =
+          "Get all glossary terms and their relationships as a graph. "
+              + "Supports filtering by glossary and pagination for large datasets.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Graph data with nodes and edges",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON)),
+        @ApiResponse(responseCode = "503", description = "RDF service not enabled")
+      })
+  public Response getGlossaryTermGraph(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Filter by glossary ID (UUID)") @QueryParam("glossaryId")
+          UUID glossaryId,
+      @Parameter(description = "Filter by relation types (comma-separated)")
+          @QueryParam("relationTypes")
+          String relationTypes,
+      @Parameter(
+              description = "Maximum number of terms to return",
+              schema = @Schema(defaultValue = "500"))
+          @QueryParam("limit")
+          @DefaultValue("500")
+          int limit,
+      @Parameter(description = "Offset for pagination", schema = @Schema(defaultValue = "0"))
+          @QueryParam("offset")
+          @DefaultValue("0")
+          int offset,
+      @Parameter(description = "Include isolated terms (terms without relations)")
+          @QueryParam("includeIsolated")
+          @DefaultValue("true")
+          boolean includeIsolated) {
+
+    try {
+      if (!rdfRepository.isEnabled()) {
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity("{\"error\": \"RDF service not enabled\"}")
+            .build();
+      }
+
+      String graphData =
+          rdfRepository.getGlossaryTermGraph(
+              glossaryId, relationTypes, limit, offset, includeIsolated);
+      return Response.ok(graphData, MediaType.APPLICATION_JSON).build();
+
+    } catch (Exception e) {
+      LOG.error("Error getting glossary term graph", e);
+      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+    }
+  }
+
+  @GET
   @Path("/search/semantic")
   @Operation(
       operationId = "semanticSearch",
@@ -522,6 +610,77 @@ public class RdfResource {
           .entity("Search failed: " + e.getMessage())
           .build();
     }
+  }
+
+  @GET
+  @Path("/glossary/{id}/export")
+  @Operation(
+      operationId = "exportGlossaryAsOntology",
+      summary = "Export glossary as ontology",
+      description =
+          "Export a glossary with all its terms and relationships as an ontology "
+              + "in RDF format (Turtle, RDF/XML, N-Triples, or JSON-LD). "
+              + "Includes SKOS vocabulary for semantic interoperability.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Glossary exported as ontology",
+            content = {
+              @Content(mediaType = TURTLE),
+              @Content(mediaType = RDF_XML),
+              @Content(mediaType = N_TRIPLES),
+              @Content(mediaType = JSON_LD)
+            }),
+        @ApiResponse(responseCode = "404", description = "Glossary not found"),
+        @ApiResponse(responseCode = "503", description = "RDF service not enabled")
+      })
+  @Produces({TURTLE, RDF_XML, N_TRIPLES, JSON_LD})
+  public Response exportGlossaryAsOntology(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Glossary ID", required = true) @PathParam("id") UUID id,
+      @Parameter(description = "RDF format (turtle, rdfxml, ntriples, jsonld)")
+          @QueryParam("format")
+          @DefaultValue("turtle")
+          String format,
+      @Parameter(description = "Include term relations")
+          @QueryParam("includeRelations")
+          @DefaultValue("true")
+          boolean includeRelations) {
+
+    try {
+      if (!rdfRepository.isEnabled()) {
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity("{\"error\": \"RDF service not enabled\"}")
+            .build();
+      }
+
+      String result = rdfRepository.exportGlossaryAsOntology(id, format, includeRelations);
+      String mediaType =
+          switch (format.toLowerCase()) {
+            case "rdfxml", "xml" -> RDF_XML;
+            case "ntriples", "nt" -> N_TRIPLES;
+            case "jsonld", "json-ld" -> JSON_LD;
+            default -> TURTLE;
+          };
+
+      String filename = "glossary-" + id + "." + getFileExtension(format);
+      return Response.ok(result, mediaType)
+          .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+          .build();
+
+    } catch (Exception e) {
+      LOG.error("Error exporting glossary as ontology", e);
+      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+    }
+  }
+
+  private String getFileExtension(String format) {
+    return switch (format.toLowerCase()) {
+      case "rdfxml", "xml" -> "rdf";
+      case "ntriples", "nt" -> "nt";
+      case "jsonld", "json-ld" -> "jsonld";
+      default -> "ttl";
+    };
   }
 
   @GET

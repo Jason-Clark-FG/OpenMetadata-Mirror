@@ -20,6 +20,26 @@ import { SearchSettings } from '../generated/configuration/searchSettings';
 import { UIThemePreference } from '../generated/configuration/uiThemePreference';
 import { Settings, SettingType } from '../generated/settings/settings';
 
+export type RelationCategory = 'hierarchical' | 'associative' | 'equivalence';
+
+export interface GlossaryTermRelationType {
+  name: string;
+  displayName: string;
+  description?: string;
+  inverseRelation?: string;
+  rdfPredicate?: string;
+  isSymmetric?: boolean;
+  isTransitive?: boolean;
+  isCrossGlossaryAllowed?: boolean;
+  category: RelationCategory;
+  isSystemDefined?: boolean;
+  color?: string;
+}
+
+export interface GlossaryTermRelationSettings {
+  relationTypes: GlossaryTermRelationType[];
+}
+
 export const getSettingsConfigFromConfigType = async (
   configType: SettingType
 ): Promise<AxiosResponse<Settings>> => {
@@ -85,6 +105,26 @@ export const getSystemConfig = async () => {
     basePath: string;
     rdfEnabled: boolean;
   }>(`system/config/rdf`);
+
+  return response.data;
+};
+
+export const getGlossaryTermRelationSettings =
+  async (): Promise<GlossaryTermRelationSettings> => {
+    const response = await axiosClient.get<Settings>(
+      `/system/settings/glossaryTermRelationSettings`
+    );
+
+    return response.data.config_value as GlossaryTermRelationSettings;
+  };
+
+export const updateGlossaryTermRelationSettings = async (
+  settings: GlossaryTermRelationSettings
+): Promise<Settings> => {
+  const response = await axiosClient.put<Settings>(`/system/settings`, {
+    config_type: 'glossaryTermRelationSettings',
+    config_value: settings,
+  });
 
   return response.data;
 };

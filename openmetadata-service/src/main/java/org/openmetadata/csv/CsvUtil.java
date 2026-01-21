@@ -250,6 +250,18 @@ public final class CsvUtil {
     return csvRecord;
   }
 
+  public static List<String> addTermRelations(
+      List<String> csvRecord, List<org.openmetadata.schema.type.TermRelation> termRelations) {
+    csvRecord.add(
+        nullOrEmpty(termRelations)
+            ? null
+            : termRelations.stream()
+                .map(tr -> tr.getTerm().getFullyQualifiedName())
+                .sorted()
+                .collect(Collectors.joining(FIELD_SEPARATOR)));
+    return csvRecord;
+  }
+
   public static List<String> addEntityReference(List<String> csvRecord, EntityReference ref) {
     csvRecord.add(nullOrEmpty(ref) ? null : ref.getFullyQualifiedName());
     return csvRecord;

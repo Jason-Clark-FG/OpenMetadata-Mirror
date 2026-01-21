@@ -19,12 +19,12 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.csv.CsvUtil.FIELD_SEPARATOR;
 import static org.openmetadata.csv.CsvUtil.addEntityReference;
-import static org.openmetadata.csv.CsvUtil.addEntityReferences;
 import static org.openmetadata.csv.CsvUtil.addExtension;
 import static org.openmetadata.csv.CsvUtil.addField;
 import static org.openmetadata.csv.CsvUtil.addOwners;
 import static org.openmetadata.csv.CsvUtil.addReviewers;
 import static org.openmetadata.csv.CsvUtil.addTagLabels;
+import static org.openmetadata.csv.CsvUtil.addTermRelations;
 import static org.openmetadata.service.Entity.GLOSSARY;
 import static org.openmetadata.service.Entity.GLOSSARY_TERM;
 import static org.openmetadata.service.search.SearchClient.GLOSSARY_TERM_SEARCH_INDEX;
@@ -62,6 +62,7 @@ import org.openmetadata.schema.type.ProviderType;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TagLabel.TagSource;
+import org.openmetadata.schema.type.TermRelation;
 import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.schema.type.csv.CsvDocumentation;
 import org.openmetadata.schema.type.csv.CsvFile;
@@ -254,7 +255,7 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
           .withDisplayName(csvRecord.get(2))
           .withDescription(csvRecord.get(3))
           .withSynonyms(CsvUtil.fieldToStrings(csvRecord.get(4)))
-          .withRelatedTerms(getEntityReferences(printer, csvRecord, 5, GLOSSARY_TERM))
+          .withRelatedTerms(getTermRelationsFromCsv(printer, csvRecord, 5))
           .withReferences(getTermReferences(printer, csvRecord))
           .withTags(
               getTagLabels(
@@ -311,6 +312,20 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
       return list;
     }
 
+    private List<TermRelation> getTermRelationsFromCsv(
+        CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) throws IOException {
+      List<EntityReference> entityRefs =
+          getEntityReferences(printer, csvRecord, fieldNumber, GLOSSARY_TERM);
+      if (entityRefs == null) {
+        return null;
+      }
+      List<TermRelation> termRelations = new ArrayList<>();
+      for (EntityReference ref : entityRefs) {
+        termRelations.add(new TermRelation().withTerm(ref).withRelationType("relatedTo"));
+      }
+      return termRelations;
+    }
+
     private EntityStatus getTermStatus(CSVPrinter printer, CSVRecord csvRecord) throws IOException {
       if (!processRecord) {
         return null;
@@ -360,7 +375,7 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
       addField(recordList, entity.getDisplayName());
       addField(recordList, entity.getDescription());
       CsvUtil.addFieldList(recordList, entity.getSynonyms());
-      addEntityReferences(recordList, entity.getRelatedTerms());
+      addTermRelations(recordList, entity.getRelatedTerms());
       addField(recordList, termReferencesToRecord(entity.getReferences()));
       addTagLabels(recordList, entity.getTags());
       addReviewers(recordList, entity.getReviewers());

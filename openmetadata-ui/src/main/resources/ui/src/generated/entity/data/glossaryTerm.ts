@@ -110,9 +110,9 @@ export interface GlossaryTerm {
      */
     references?: TermReference[];
     /**
-     * Other glossary terms that are related to this glossary term.
+     * Other glossary terms that are related to this glossary term with typed semantic relations.
      */
-    relatedTerms?: EntityReference[];
+    relatedTerms?: TermRelation[];
     /**
      * User names of the reviewers for this glossary.
      */
@@ -235,6 +235,8 @@ export interface FieldChange {
  *
  * Parent glossary term that this term is child of. When `null` this term is the root term
  * of the glossary.
+ *
+ * Reference to the related glossary term.
  */
 export interface EntityReference {
     /**
@@ -315,6 +317,22 @@ export interface TermReference {
      * Name that identifies the source of an external glossary term. Example `HealthCare.gov`.
      */
     name?: string;
+}
+
+/**
+ * This schema defines the TermRelation type used for establishing typed semantic
+ * relationships between glossary terms.
+ */
+export interface TermRelation {
+    /**
+     * Type of the relation (e.g., 'broader', 'narrower', 'synonym', 'related'). Defaults to
+     * 'related' for backward compatibility.
+     */
+    relationType?: string;
+    /**
+     * Reference to the related glossary term.
+     */
+    term: EntityReference;
 }
 
 /**

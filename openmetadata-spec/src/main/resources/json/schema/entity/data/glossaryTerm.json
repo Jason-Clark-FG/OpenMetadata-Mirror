@@ -68,8 +68,12 @@
       "$ref": "../../type/entityReferenceList.json"
     },
     "relatedTerms": {
-      "description": "Other glossary terms that are related to this glossary term.",
-      "$ref": "../../type/entityReferenceList.json"
+      "description": "Other glossary terms that are related to this glossary term with typed semantic relations.",
+      "type": "array",
+      "items": {
+        "$ref": "../../type/termRelation.json"
+      },
+      "default": []
     },
     "references": {
       "description": "Link to a reference from an external glossary.",

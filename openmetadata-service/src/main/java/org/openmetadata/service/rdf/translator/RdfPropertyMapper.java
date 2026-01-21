@@ -92,6 +92,9 @@ public class RdfPropertyMapper {
     }
   }
 
+  // Fields that are handled separately with typed predicates (not via JSON-LD context)
+  private static final Set<String> TYPED_RELATION_FIELDS = Set.of("relatedTerms");
+
   private void processContextMappings(
       Map<String, Object> contextMap, JsonNode entityJson, Resource entityResource, Model model) {
     // Iterate through all fields in the entity JSON
@@ -106,6 +109,12 @@ public class RdfPropertyMapper {
           || fieldName.equals("href")
           || fieldName.equals("id")
           || fieldName.equals("type")) {
+        continue;
+      }
+
+      // Skip fields that are handled separately with typed predicates
+      // (e.g., relatedTerms which use typed relations like broader, synonym, etc.)
+      if (TYPED_RELATION_FIELDS.contains(fieldName)) {
         continue;
       }
 

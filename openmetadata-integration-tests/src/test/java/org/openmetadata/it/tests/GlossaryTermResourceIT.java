@@ -22,6 +22,7 @@ import org.openmetadata.schema.api.data.TermReference;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.TermRelation;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -1746,7 +1747,9 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
             .withDescription("Second term");
     GlossaryTerm term2 = createEntity(request2);
 
-    term2.setRelatedTerms(List.of(term1.getEntityReference()));
+    term2.setRelatedTerms(
+        List.of(
+            new TermRelation().withTerm(term1.getEntityReference()).withRelationType("relatedTo")));
     GlossaryTerm updated = patchEntity(term2.getId().toString(), term2);
     assertNotNull(updated.getRelatedTerms());
     assertTrue(updated.getRelatedTerms().size() >= 1);
