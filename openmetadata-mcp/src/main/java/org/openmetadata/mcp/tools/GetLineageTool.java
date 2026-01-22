@@ -5,7 +5,6 @@ import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import java.io.IOException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import org.openmetadata.mcp.server.auth.annotations.RequireScope;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.jdbi3.LineageRepository;
@@ -16,7 +15,6 @@ import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContext;
 
 @Slf4j
-@RequireScope({"metadata:read"})
 public class GetLineageTool implements McpTool {
 
   // Defaults matching ai-platform GetLineageTool.kt for consistency
