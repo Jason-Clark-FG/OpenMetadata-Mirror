@@ -97,6 +97,19 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   @Override
+  public void setFieldsInBulk(Fields fields, java.util.List<Task> entities) {
+    if (entities == null || entities.isEmpty()) {
+      return;
+    }
+    fetchAndSetFields(entities, fields);
+    setInheritedFields(entities, fields);
+    for (Task entity : entities) {
+      setFields(entity, fields);
+      clearFieldsInternal(entity, fields);
+    }
+  }
+
+  @Override
   public void clearFields(Task task, Fields fields) {
     task.setAssignees(fields.contains(FIELD_ASSIGNEES) ? task.getAssignees() : null);
     task.setReviewers(fields.contains(FIELD_REVIEWERS) ? task.getReviewers() : null);

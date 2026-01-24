@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.tests.CreateTestCaseResolutionStatus;
@@ -52,6 +53,7 @@ import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.util.WebsocketNotificationHandler;
 import org.openmetadata.service.util.incidentSeverityClassifier.IncidentSeverityClassifierInterface;
 
+@Slf4j
 public class TestCaseResolutionStatusRepository
     extends EntityTimeSeriesRepository<TestCaseResolutionStatus> {
   public static final String COLLECTION_PATH = "/v1/dataQuality/testCases/testCaseIncidentStatus";
@@ -193,16 +195,15 @@ public class TestCaseResolutionStatusRepository
     setResolutionMetrics(lastIncident, recordEntity);
     inferIncidentSeverity(recordEntity);
 
-    System.out.println(
-        "[DEBUG-REPO] storeInternal switch: status="
-            + recordEntity.getTestCaseResolutionStatusType()
-            + ", stateId="
-            + recordEntity.getStateId());
+    LOG.debug(
+        "storeInternal switch: status={}, stateId={}",
+        recordEntity.getTestCaseResolutionStatusType(),
+        recordEntity.getStateId());
     switch (recordEntity.getTestCaseResolutionStatusType()) {
       case New -> {
         // If there is already an existing New incident we'll return it
         if (Boolean.TRUE.equals(unresolvedIncident(lastIncident))) {
-          System.out.println("[DEBUG-REPO] Skipping - already have unresolved incident");
+          LOG.debug("Skipping - already have unresolved incident");
           return;
         }
       }
@@ -243,14 +244,14 @@ public class TestCaseResolutionStatusRepository
   }
 
   private void openOrAssignTask(TestCaseResolutionStatus incidentStatus) {
-    System.out.println(
-        "[DEBUG-REPO] openOrAssignTask called with status: "
-            + incidentStatus.getTestCaseResolutionStatusType());
+    LOG.debug(
+        "openOrAssignTask called with status: {}",
+        incidentStatus.getTestCaseResolutionStatusType());
     switch (incidentStatus.getTestCaseResolutionStatusType()) {
       case Ack -> {
         // If the incident has been acknowledged, the task will be assigned to the user
         // who acknowledged it
-        System.out.println("[DEBUG-REPO] Creating task for Ack status");
+        LOG.debug("Creating task for Ack status");
         createTask(incidentStatus, Collections.singletonList(incidentStatus.getUpdatedBy()));
       }
       case Assigned -> {
@@ -363,11 +364,10 @@ public class TestCaseResolutionStatusRepository
   private void createTask(
       TestCaseResolutionStatus incidentStatus, List<EntityReference> assignees) {
 
-    System.out.println(
-        "[DEBUG-REPO] createTask called with stateId: "
-            + incidentStatus.getStateId()
-            + ", assignees: "
-            + assignees);
+    LOG.debug(
+        "createTask called with stateId: {}, assignees: {}",
+        incidentStatus.getStateId(),
+        assignees);
 
     // Fetch the TestCase to get its reference and domains
     TestCase testCase =
@@ -411,10 +411,9 @@ public class TestCaseResolutionStatusRepository
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
     try {
       task = taskRepository.createInternal(task);
-      System.out.println("[DEBUG-REPO] Task created successfully: id=" + task.getId());
+      LOG.debug("Task created successfully: id={}", task.getId());
     } catch (Exception e) {
-      System.out.println("[DEBUG-REPO] Error creating task: " + e.getMessage());
-      e.printStackTrace();
+      LOG.error("Error creating task: {}", e.getMessage(), e);
       throw e;
     }
 
