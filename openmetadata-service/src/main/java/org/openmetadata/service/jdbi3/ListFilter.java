@@ -67,9 +67,10 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getEntityLinkCondition());
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
-    conditions.add(getTaskStatusCondition(tableName));
+conditions.add(getTaskStatusCondition(tableName));
     conditions.add(getTaskTypeCondition(tableName));
     conditions.add(getTaskPriorityCondition(tableName));
+    conditions.add(getEntityStatusCondition());
     String condition = addCondition(conditions);
     return condition.isEmpty() ? "WHERE TRUE" : "WHERE " + condition;
   }
@@ -94,10 +95,21 @@ public class ListFilter extends Filter<ListFilter> {
   }
 
   /**
-   * Filter tasks by assignee. Uses entity_relationship table to find tasks
-   * where the specified user or team is assigned via ASSIGNED_TO relationship.
-   * Accepts either a UUID (assigneeId) or FQN (assignee).
+   * Get the parent entity ResourceContext when filtering by entityId and entityType.
+   * This is used for authorization checks on the parent entity (e.g., checking VIEW_QUERIES
+   * permission on a table when listing queries for that table).
+   *
+   * @return ResourceContext for the parent entity, or null if entityId/entityType not specified
    */
+  public ResourceContext<?> getParentResourceContext() {
+    String entityId = queryParams.get("entityId");
+    String parentEntityType = queryParams.get("entityType");
+    if (!nullOrEmpty(entityId) && !nullOrEmpty(parentEntityType)) {
+      return new ResourceContext<>(parentEntityType, java.util.UUID.fromString(entityId), null);
+    }
+    return null;
+  }
+
   private String getAssignee() {
     String assigneeId = queryParams.get("assigneeId");
     if (assigneeId != null) {
@@ -207,6 +219,19 @@ public class ListFilter extends Filter<ListFilter> {
   private String getEntityLinkCondition() {
     String entityLinkStr = queryParams.get("entityLink");
     return entityLinkStr == null ? "" : "entityLink = :entityLink";
+  }
+
+  private String getEntityStatusCondition() {
+    String entityStatus = queryParams.get("entityStatus");
+    if (entityStatus == null || entityStatus.trim().isEmpty()) {
+      return "";
+    }
+
+    if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+      return "json->>'$.entityStatus' = :entityStatus";
+    } else {
+      return "json->>'entityStatus' = :entityStatus";
+    }
   }
 
   private String getAgentTypeCondition() {

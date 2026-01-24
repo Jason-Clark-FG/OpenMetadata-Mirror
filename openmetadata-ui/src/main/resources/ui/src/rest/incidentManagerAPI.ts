@@ -47,8 +47,8 @@ export interface IncidentTaskListParams
 }
 
 export type TestCaseIncidentStatusParams = ListParams & {
-  startTs: number;
-  endTs: number;
+  startTs?: number;
+  endTs?: number;
   latest?: boolean;
   testCaseResolutionStatusType?: string;
   assignee?: string;
