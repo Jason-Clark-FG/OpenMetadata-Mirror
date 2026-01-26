@@ -127,18 +127,14 @@ test.describe('Task Resolution - ApiEndpoint Schema Fields', () => {
       // Create DescriptionUpdate task for requestSchema field
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'apiEndpoint',
-            id: apiEndpoint.entityResponseData?.id,
-            fullyQualifiedName:
-              apiEndpoint.entityResponseData?.fullyQualifiedName,
-          },
+          about: apiEndpoint.entityResponseData?.fullyQualifiedName,
+          aboutType: 'apiEndpoint',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `requestSchema::${fieldPath}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `requestSchema::${fieldPath}::description`,
+            newDescription: newDescription,
           },
         },
       });
@@ -215,18 +211,14 @@ test.describe('Task Resolution - ApiEndpoint Schema Fields', () => {
       // Create DescriptionUpdate task for responseSchema field
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'apiEndpoint',
-            id: apiEndpoint.entityResponseData?.id,
-            fullyQualifiedName:
-              apiEndpoint.entityResponseData?.fullyQualifiedName,
-          },
+          about: apiEndpoint.entityResponseData?.fullyQualifiedName,
+          aboutType: 'apiEndpoint',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `responseSchema::${fieldPath}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `responseSchema::${fieldPath}::description`,
+            newDescription: newDescription,
           },
         },
       });
@@ -318,18 +310,14 @@ test.describe('Task Resolution - DashboardDataModel Columns', () => {
       // Create DescriptionUpdate task for column
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'dashboardDataModel',
-            id: dashboardDataModel.entityResponseData?.id,
-            fullyQualifiedName:
-              dashboardDataModel.entityResponseData?.fullyQualifiedName,
-          },
+          about: dashboardDataModel.entityResponseData?.fullyQualifiedName,
+          aboutType: 'dashboardDataModel',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `columns::${columnName}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `columns::${columnName}::description`,
+            newDescription: newDescription,
           },
         },
       });
@@ -432,17 +420,14 @@ test.describe('Task Resolution - MlModel Features', () => {
       // Create DescriptionUpdate task for mlFeature
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'mlmodel',
-            id: mlModel.entityResponseData?.id,
-            fullyQualifiedName: mlModel.entityResponseData?.fullyQualifiedName,
-          },
+          about: mlModel.entityResponseData?.fullyQualifiedName,
+          aboutType: 'mlmodel',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `mlFeatures::${featureName}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `mlFeatures::${featureName}::description`,
+            newDescription: newDescription,
           },
         },
       });
@@ -575,18 +560,14 @@ test.describe('Task Resolution - SearchIndex Fields', () => {
       // Create DescriptionUpdate task for field
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'searchIndex',
-            id: searchIndex.entityResponseData?.id,
-            fullyQualifiedName:
-              searchIndex.entityResponseData?.fullyQualifiedName,
-          },
+          about: searchIndex.entityResponseData?.fullyQualifiedName,
+          aboutType: 'searchIndex',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `fields::${fieldPath}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `fields::${fieldPath}::description`,
+            newDescription: newDescription,
           },
         },
       });
@@ -684,18 +665,14 @@ test.describe('Task Resolution - SearchIndex Fields', () => {
       // Create DescriptionUpdate task for nested field
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'searchIndex',
-            id: searchIndex.entityResponseData?.id,
-            fullyQualifiedName:
-              searchIndex.entityResponseData?.fullyQualifiedName,
-          },
+          about: searchIndex.entityResponseData?.fullyQualifiedName,
+          aboutType: 'searchIndex',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `fields::${nestedFieldPath}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: `fields::${nestedFieldPath}::description`,
+            newDescription: newDescription,
           },
         },
       });

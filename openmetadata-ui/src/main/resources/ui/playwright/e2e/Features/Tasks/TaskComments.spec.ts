@@ -54,13 +54,12 @@ test.describe('Task Comments - Add Comment', () => {
       // Create a task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
-          type: 'RequestDescription',
-          assignees: [{ id: assigneeUser.responseData.id, type: 'user' }],
+          name: `Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          assignees: [assigneeUser.responseData.name],
         },
       });
       const task = await taskResponse.json();
@@ -239,13 +238,12 @@ test.describe('Task Comments - @Mention', () => {
 
       await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
-          type: 'RequestDescription',
-          assignees: [{ id: assigneeUser.responseData.id, type: 'user' }],
+          name: `Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          assignees: [assigneeUser.responseData.name],
         },
       });
     } finally {
@@ -618,13 +616,18 @@ test.describe('Task Comments - API Validation', () => {
 
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
+          name: `API Validation Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          priority: 'Medium',
+          assignees: [adminUser.responseData.name],
+          payload: {
+            suggestedValue: 'Test description for API validation',
+            currentValue: '',
+            field: 'description',
           },
-          type: 'RequestDescription',
-          assignees: [{ id: adminUser.responseData.id, type: 'user' }],
         },
       });
       const task = await taskResponse.json();

@@ -242,7 +242,7 @@ export const TaskTabNew = ({
   const isTaskGlossaryApproval = task.type === TaskEntityType.GlossaryApproval;
 
   const isTaskRecognizerFeedbackApproval =
-    taskDetails?.type === TaskType.RecognizerFeedbackApproval;
+    task?.type === ('RecognizerFeedbackApproval' as TaskEntityType);
 
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);

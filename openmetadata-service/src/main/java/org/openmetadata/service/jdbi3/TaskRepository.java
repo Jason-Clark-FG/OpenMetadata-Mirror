@@ -52,6 +52,7 @@ import org.openmetadata.service.security.policyevaluator.ResourceContext;
 import org.openmetadata.service.tasks.TaskWorkflowHandler;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
@@ -84,7 +85,7 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   @Override
-  public void setFields(Task task, Fields fields) {
+  public void setFields(Task task, Fields fields, RelationIncludes relationIncludes) {
     task.setAssignees(fields.contains(FIELD_ASSIGNEES) ? getAssignees(task) : task.getAssignees());
     task.setReviewers(
         fields.contains(FIELD_REVIEWERS) ? getTaskReviewers(task) : task.getReviewers());
@@ -103,8 +104,9 @@ public class TaskRepository extends EntityRepository<Task> {
     }
     fetchAndSetFields(entities, fields);
     setInheritedFields(entities, fields);
+    RelationIncludes defaultIncludes = RelationIncludes.fromInclude(NON_DELETED);
     for (Task entity : entities) {
-      setFields(entity, fields);
+      setFields(entity, fields, defaultIncludes);
       clearFieldsInternal(entity, fields);
     }
   }

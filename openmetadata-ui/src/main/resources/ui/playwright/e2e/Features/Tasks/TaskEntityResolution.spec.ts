@@ -83,14 +83,11 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
       // Create OwnershipUpdate task via API
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'OwnershipUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: currentOwner.responseData.id, type: 'user' }],
+          assignees: [currentOwner.responseData.name],
           payload: {
             currentOwners: [
               { id: currentOwner.responseData.id, type: 'user' },
@@ -153,14 +150,11 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
       // Create OwnershipUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'OwnershipUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: currentOwner.responseData.id, type: 'user' }],
+          assignees: [currentOwner.responseData.name],
           payload: {
             currentOwners: [
               { id: currentOwner.responseData.id, type: 'user' },
@@ -243,14 +237,11 @@ test.describe('Task Resolution - TierUpdate', () => {
       // Create TierUpdate task via API
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'TierUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newTier: {
               tagFQN: 'Tier.Tier1',
@@ -299,14 +290,11 @@ test.describe('Task Resolution - TierUpdate', () => {
       // Create TierUpdate task for Tier2
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'TierUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newTier: {
               tagFQN: 'Tier.Tier2',
@@ -397,14 +385,11 @@ test.describe('Task Resolution - DomainUpdate', () => {
       // Create DomainUpdate task via API
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'DomainUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newDomain: {
               id: domain.responseData.id,
@@ -497,17 +482,14 @@ test.describe('Task Resolution - DescriptionUpdate at Entity Level', () => {
       // Create DescriptionUpdate task via API
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: 'description',
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: 'description',
+            newDescription: newDescription,
           },
         },
       });
@@ -601,17 +583,14 @@ test.describe('Task Resolution - Column Level Description', () => {
       // Create DescriptionUpdate task for column
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `columns::${columnName}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newColumnDescription,
+            fieldPath: `columns::${columnName}::description`,
+            newDescription: newColumnDescription,
           },
         },
       });

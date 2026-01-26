@@ -88,17 +88,14 @@ test.describe('Task Creation and Resolution - Pipeline Entity', () => {
       // Create DescriptionUpdate task for entity level
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'pipeline',
-            id: pipeline.entityResponseData?.id,
-            fullyQualifiedName: pipeline.entityResponseData?.fullyQualifiedName,
-          },
+          about: pipeline.entityResponseData?.fullyQualifiedName,
+          aboutType: 'pipeline',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: 'description',
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: 'description',
+            newDescription: newDescription,
           },
         },
       });
@@ -154,17 +151,14 @@ test.describe('Task Creation and Resolution - Pipeline Entity', () => {
       // Format: tasks::taskName::description
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'pipeline',
-            id: pipeline.entityResponseData?.id,
-            fullyQualifiedName: pipeline.entityResponseData?.fullyQualifiedName,
-          },
+          about: pipeline.entityResponseData?.fullyQualifiedName,
+          aboutType: 'pipeline',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `tasks::${pipelineTaskName}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newTaskDescription,
+            fieldPath: `tasks::${pipelineTaskName}::description`,
+            newDescription: newTaskDescription,
           },
         },
       });
@@ -211,14 +205,11 @@ test.describe('Task Creation and Resolution - Pipeline Entity', () => {
       // Create OwnershipUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'pipeline',
-            id: pipeline.entityResponseData?.id,
-            fullyQualifiedName: pipeline.entityResponseData?.fullyQualifiedName,
-          },
+          about: pipeline.entityResponseData?.fullyQualifiedName,
+          aboutType: 'pipeline',
           type: 'OwnershipUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             currentOwners: [{ id: ownerUser.responseData.id, type: 'user' }],
             newOwners: [{ id: newOwner.responseData.id, type: 'user' }],
@@ -263,14 +254,11 @@ test.describe('Task Creation and Resolution - Pipeline Entity', () => {
       // Create TierUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'pipeline',
-            id: pipeline.entityResponseData?.id,
-            fullyQualifiedName: pipeline.entityResponseData?.fullyQualifiedName,
-          },
+          about: pipeline.entityResponseData?.fullyQualifiedName,
+          aboutType: 'pipeline',
           type: 'TierUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newTier: {
               tagFQN: 'Tier.Tier3',
@@ -318,14 +306,11 @@ test.describe('Task Creation and Resolution - Pipeline Entity', () => {
       // Create DomainUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'pipeline',
-            id: pipeline.entityResponseData?.id,
-            fullyQualifiedName: pipeline.entityResponseData?.fullyQualifiedName,
-          },
+          about: pipeline.entityResponseData?.fullyQualifiedName,
+          aboutType: 'pipeline',
           type: 'DomainUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newDomain: {
               id: domain.responseData.id,

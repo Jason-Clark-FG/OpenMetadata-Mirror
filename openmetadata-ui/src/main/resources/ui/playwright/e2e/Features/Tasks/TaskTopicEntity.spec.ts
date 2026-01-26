@@ -88,17 +88,14 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       // Create DescriptionUpdate task for entity level
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'topic',
-            id: topic.entityResponseData?.id,
-            fullyQualifiedName: topic.entityResponseData?.fullyQualifiedName,
-          },
+          about: topic.entityResponseData?.fullyQualifiedName,
+          aboutType: 'topic',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: 'description',
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newDescription,
+            fieldPath: 'description',
+            newDescription: newDescription,
           },
         },
       });
@@ -180,17 +177,14 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       // Format: messageSchema::fieldName::description
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'topic',
-            id: topic.entityResponseData?.id,
-            fullyQualifiedName: topic.entityResponseData?.fullyQualifiedName,
-          },
+          about: topic.entityResponseData?.fullyQualifiedName,
+          aboutType: 'topic',
           type: 'DescriptionUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
-          fieldPath: `messageSchema::${fieldPath}::description`,
+          assignees: [ownerUser.responseData.name],
           payload: {
-            suggestedValue: newFieldDescription,
+            fieldPath: `messageSchema::${fieldPath}::description`,
+            newDescription: newFieldDescription,
           },
         },
       });
@@ -262,14 +256,11 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       // Create OwnershipUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'topic',
-            id: topic.entityResponseData?.id,
-            fullyQualifiedName: topic.entityResponseData?.fullyQualifiedName,
-          },
+          about: topic.entityResponseData?.fullyQualifiedName,
+          aboutType: 'topic',
           type: 'OwnershipUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             currentOwners: [{ id: ownerUser.responseData.id, type: 'user' }],
             newOwners: [{ id: newOwner.responseData.id, type: 'user' }],
@@ -314,14 +305,11 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       // Create TierUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'topic',
-            id: topic.entityResponseData?.id,
-            fullyQualifiedName: topic.entityResponseData?.fullyQualifiedName,
-          },
+          about: topic.entityResponseData?.fullyQualifiedName,
+          aboutType: 'topic',
           type: 'TierUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newTier: {
               tagFQN: 'Tier.Tier2',
@@ -369,14 +357,11 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       // Create DomainUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'topic',
-            id: topic.entityResponseData?.id,
-            fullyQualifiedName: topic.entityResponseData?.fullyQualifiedName,
-          },
+          about: topic.entityResponseData?.fullyQualifiedName,
+          aboutType: 'topic',
           type: 'DomainUpdate',
           category: 'MetadataUpdate',
-          assignees: [{ id: ownerUser.responseData.id, type: 'user' }],
+          assignees: [ownerUser.responseData.name],
           payload: {
             newDomain: {
               id: domain.responseData.id,

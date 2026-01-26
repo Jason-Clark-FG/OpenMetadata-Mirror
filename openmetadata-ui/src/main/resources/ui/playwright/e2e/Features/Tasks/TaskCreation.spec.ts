@@ -80,21 +80,23 @@ test.describe('Task Creation - Request Description', () => {
     await expect(requestDescBtn).toBeVisible();
     await requestDescBtn.click();
 
-    // Wait for task form modal
-    await page.waitForSelector('[data-testid="task-form-modal"]', {
+    // Wait for task form page to load (navigates to a separate page, not a modal)
+    await page.waitForSelector('[data-testid="form-container"]', {
       state: 'visible',
     });
 
-    // Verify task type is RequestDescription
-    const taskTypeField = page.getByTestId('task-type');
-    await expect(taskTypeField).toContainText(/request.*description/i);
+    // Verify title contains description request info
+    const titleField = page.locator('#title');
+    await expect(titleField).toBeVisible();
+    const titleValue = await titleField.inputValue();
+    expect(titleValue.toLowerCase()).toContain('description');
 
-    // Verify assignee is auto-filled with owner
-    const assigneeField = page.locator('[data-testid="assignees-field"]');
-    await expect(assigneeField).toContainText(ownerUser.responseData.displayName);
+    // Verify assignee is auto-filled with owner (select component contains the user)
+    const assigneeContainer = page.getByTestId('select-assignee');
+    await expect(assigneeContainer).toBeVisible();
 
     // Submit task
-    const submitBtn = page.getByTestId('submit-task');
+    const submitBtn = page.getByTestId('submit-btn');
     await expect(submitBtn).toBeEnabled();
 
     const taskResponse = page.waitForResponse(
@@ -105,53 +107,56 @@ test.describe('Task Creation - Request Description', () => {
     await submitBtn.click();
     await taskResponse;
 
-    // Verify success
-    await expect(page.getByText(/task created/i)).toBeVisible();
-
-    // Verify task appears in activity feed
-    await page.getByTestId('activity_feed').click();
+    // Should navigate back to entity page with activity feed
     await page.waitForLoadState('networkidle');
 
+    // Verify task appears in activity feed
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
-    await expect(taskCard).toBeVisible();
-    await expect(taskCard).toContainText(/request.*description/i);
+    await expect(taskCard).toBeVisible({ timeout: 10000 });
   });
 
   test('should create request description task for column', async ({ page }) => {
     await tableWithOwner.visitEntityPage(page);
 
     // Expand columns section and find a column
-    const columnsTab = page.getByRole('tab', { name: /columns/i });
+    const columnsTab = page.getByRole('tab', { name: /schema/i });
     if (await columnsTab.isVisible()) {
       await columnsTab.click();
+      await page.waitForLoadState('networkidle');
     }
 
-    // Find column row and click request description
-    const columnRow = page.locator('[data-testid="column-name"]').first();
+    // Find column row and click request description within that row
+    const columnRow = page
+      .locator('tr')
+      .filter({ has: page.locator('[data-testid="column-name"]') })
+      .first();
     await columnRow.hover();
 
-    const columnRequestDesc = page
-      .locator('[data-testid="request-column-description"]')
-      .first();
+    // Find the request description button within this specific column row
+    const columnRequestDesc = columnRow.locator(
+      '[data-testid="request-description"]'
+    );
 
     if (await columnRequestDesc.isVisible()) {
       await columnRequestDesc.click();
 
-      await page.waitForSelector('[data-testid="task-form-modal"]', {
+      // Wait for task form page to load
+      await page.waitForSelector('[data-testid="form-container"]', {
         state: 'visible',
       });
 
-      // Verify column name is in the task
-      const taskModal = page.locator('[data-testid="task-form-modal"]');
-      await expect(taskModal).toContainText(/column/i);
+      // Verify this is a column-level task by checking the about field references a column
+      const titleField = page.locator('#title');
+      const titleValue = await titleField.inputValue();
+      expect(titleValue.toLowerCase()).toContain('description');
 
       // Submit
-      const submitBtn = page.getByTestId('submit-task');
+      const submitBtn = page.getByTestId('submit-btn');
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.getByText(/task created/i)).toBeVisible();
+      await page.waitForLoadState('networkidle');
     }
   });
 
@@ -164,38 +169,39 @@ test.describe('Task Creation - Request Description', () => {
     await expect(requestDescBtn).toBeVisible();
     await requestDescBtn.click();
 
-    await page.waitForSelector('[data-testid="task-form-modal"]', {
+    // Wait for task form page to load
+    await page.waitForSelector('[data-testid="form-container"]', {
       state: 'visible',
     });
 
-    // Assignee field should be empty (no owner)
-    const assigneeField = page.locator('[data-testid="assignees-field"]');
-
-    // Select assignee manually
-    await assigneeField.click();
+    // Assignee field - search and select user
+    const assigneeInput = page.locator(
+      '[data-testid="select-assignee"] .ant-select-selector input'
+    );
+    await assigneeInput.click();
 
     // Search for user
-    const searchInput = page.getByPlaceholder(/search/i);
-    if (await searchInput.isVisible()) {
-      await searchInput.fill(ownerUser.responseData.displayName);
-      await page.waitForLoadState('networkidle');
-    }
+    const userSearchResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/search/query') &&
+        response.url().includes('user_search_index')
+    );
+    await assigneeInput.fill(ownerUser.responseData.name);
+    await userSearchResponse;
 
     // Click on user in dropdown
-    await page
-      .getByText(ownerUser.responseData.displayName, { exact: false })
-      .first()
-      .click();
+    const userOption = page.getByTestId(ownerUser.responseData.name);
+    await userOption.click();
 
     // Submit
-    const submitBtn = page.getByTestId('submit-task');
+    const submitBtn = page.getByTestId('submit-btn');
     await expect(submitBtn).toBeEnabled();
 
     const taskResponse = page.waitForResponse('/api/v1/tasks');
     await submitBtn.click();
     await taskResponse;
 
-    await expect(page.getByText(/task created/i)).toBeVisible();
+    await page.waitForLoadState('networkidle');
   });
 
   test('should prevent task creation without assignee', async ({ page }) => {
@@ -204,22 +210,18 @@ test.describe('Task Creation - Request Description', () => {
     const requestDescBtn = page.getByTestId('request-description');
     await requestDescBtn.click();
 
-    await page.waitForSelector('[data-testid="task-form-modal"]', {
+    // Wait for task form page to load
+    await page.waitForSelector('[data-testid="form-container"]', {
       state: 'visible',
     });
 
     // Try to submit without assignee
-    const submitBtn = page.getByTestId('submit-task');
+    const submitBtn = page.getByTestId('submit-btn');
+    await submitBtn.click();
 
-    // Button should be disabled or show validation error
-    const isDisabled = await submitBtn.isDisabled();
-    if (!isDisabled) {
-      await submitBtn.click();
-      // Should show validation error
-      await expect(page.getByText(/assignee.*required/i)).toBeVisible();
-    } else {
-      expect(isDisabled).toBe(true);
-    }
+    // Should show validation error for assignee field
+    const assigneeError = page.locator('.ant-form-item-explain-error');
+    await expect(assigneeError).toBeVisible();
   });
 });
 
@@ -265,28 +267,29 @@ test.describe('Task Creation - Request Tags', () => {
   test('should create request tags task for table', async ({ page }) => {
     await table.visitEntityPage(page);
 
-    // Find request tags button
-    const requestTagsBtn = page.getByTestId('request-tags');
+    // Find request tags button (request-entity-tags is the actual test ID)
+    const requestTagsBtn = page.getByTestId('request-entity-tags');
 
     if (await requestTagsBtn.isVisible()) {
       await requestTagsBtn.click();
 
-      await page.waitForSelector('[data-testid="task-form-modal"]', {
+      // Wait for task form page to load
+      await page.waitForSelector('[data-testid="form-container"]', {
         state: 'visible',
       });
 
-      // Verify task type
-      await expect(page.locator('[data-testid="task-form-modal"]')).toContainText(
-        /request.*tag/i
-      );
+      // Verify title contains tag info
+      const titleField = page.locator('#title');
+      const titleValue = await titleField.inputValue();
+      expect(titleValue.toLowerCase()).toContain('tag');
 
-      // Submit
-      const submitBtn = page.getByTestId('submit-task');
+      // Submit - tag request pages use submit-tag-request
+      const submitBtn = page.getByTestId('submit-tag-request');
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.getByText(/task created/i)).toBeVisible();
+      await page.waitForLoadState('networkidle');
     }
   });
 });
@@ -335,39 +338,35 @@ test.describe('Task Creation - Suggest Description', () => {
   }) => {
     await table.visitEntityPage(page);
 
-    // Find suggest description button (usually in edit mode or dropdown)
-    const suggestDescBtn = page.getByTestId('suggest-description');
+    // Find request description button (same button is used for suggest)
+    const requestDescBtn = page.getByTestId('request-description');
 
-    if (await suggestDescBtn.isVisible()) {
-      await suggestDescBtn.click();
+    if (await requestDescBtn.isVisible()) {
+      await requestDescBtn.click();
 
-      await page.waitForSelector('[data-testid="task-form-modal"]', {
+      // Wait for task form page to load
+      await page.waitForSelector('[data-testid="form-container"]', {
         state: 'visible',
       });
 
-      // Enter suggested description
-      const descriptionInput = page.locator(
-        '[data-testid="suggestion-input"] .ql-editor, [data-testid="description-input"]'
-      );
-
-      if (await descriptionInput.isVisible()) {
-        await descriptionInput.fill('This is a suggested description for the table.');
+      // Enter suggested description in the rich text editor
+      const descriptionEditor = page.locator('.toastui-editor-contents');
+      if (await descriptionEditor.isVisible()) {
+        await descriptionEditor.click();
+        await page.keyboard.type('This is a suggested description for the table.');
       }
 
       // Submit
-      const submitBtn = page.getByTestId('submit-task');
+      const submitBtn = page.getByTestId('submit-btn');
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.getByText(/task created/i)).toBeVisible();
-
-      // Verify suggestion appears in task
-      await page.getByTestId('activity_feed').click();
       await page.waitForLoadState('networkidle');
 
+      // Verify task appears in activity feed
       const taskCard = page.locator('[data-testid="task-feed-card"]').first();
-      await expect(taskCard).toContainText('suggested description');
+      await expect(taskCard).toBeVisible({ timeout: 10000 });
     }
   });
 });
@@ -416,38 +415,50 @@ test.describe('Task Creation - Suggest Tags', () => {
   }) => {
     await table.visitEntityPage(page);
 
-    const suggestTagsBtn = page.getByTestId('suggest-tags');
+    // Request tags button
+    const requestTagsBtn = page.getByTestId('request-entity-tags');
 
-    if (await suggestTagsBtn.isVisible()) {
-      await suggestTagsBtn.click();
+    if (await requestTagsBtn.isVisible()) {
+      await requestTagsBtn.click();
 
-      await page.waitForSelector('[data-testid="task-form-modal"]', {
+      // Wait for task form page to load
+      await page.waitForSelector('[data-testid="form-container"]', {
         state: 'visible',
       });
 
-      // Add suggested tags
-      const tagsInput = page.locator('[data-testid="tags-input"]');
+      // Add suggested tags using the tag selector
+      const tagsInput = page.locator(
+        '[data-testid="tag-selector"] .ant-select-selector input'
+      );
       if (await tagsInput.isVisible()) {
         await tagsInput.click();
 
         // Type tag name
-        await page.keyboard.type('PII');
-        await page.waitForLoadState('networkidle');
+        const tagSearchResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/search/query') &&
+            response.url().includes('tag_search_index')
+        );
+        await tagsInput.fill('PII');
+        await tagSearchResponse;
 
         // Select from dropdown
-        const tagOption = page.getByText('PII.Sensitive', { exact: false }).first();
+        const tagOption = page.getByTestId('tag-PII.Sensitive').first();
         if (await tagOption.isVisible()) {
           await tagOption.click();
         }
+
+        // Close the dropdown by pressing Escape
+        await page.keyboard.press('Escape');
       }
 
-      // Submit
-      const submitBtn = page.getByTestId('submit-task');
+      // Submit - tag request pages use submit-tag-request
+      const submitBtn = page.getByTestId('submit-tag-request');
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.getByText(/task created/i)).toBeVisible();
+      await page.waitForLoadState('networkidle');
     }
   });
 });

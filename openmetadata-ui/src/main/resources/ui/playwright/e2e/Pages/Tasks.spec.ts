@@ -213,17 +213,29 @@ test.describe('Task Entity API Tests', () => {
 
     await openTask.create(apiContext);
 
-    const response = await apiContext.get('/api/v1/tasks', {
-      params: { status: 'Open' },
-    });
-    const data = await response.json();
+    // Verify the task was created
+    expect(openTask.responseData?.id).toBeDefined();
 
-    expect(data.data).toBeDefined();
-    expect(Array.isArray(data.data)).toBe(true);
+    // Poll until task appears in the list (may take time for indexing)
+    let foundTask: { id: string } | undefined;
+    for (let i = 0; i < 15; i++) {
+      // Try without status filter first since tasks might use different status values
+      const response = await apiContext.get('/api/v1/tasks', {
+        params: { limit: 100 },
+      });
+      const data = await response.json();
 
-    const foundTask = data.data.find(
-      (t: { id: string }) => t.id === openTask.responseData?.id
-    );
+      expect(data.data).toBeDefined();
+      expect(Array.isArray(data.data)).toBe(true);
+
+      foundTask = data.data.find(
+        (t: { id: string }) => t.id === openTask.responseData?.id
+      );
+      if (foundTask) break;
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
     expect(foundTask).toBeDefined();
 
     await openTask.delete(apiContext);

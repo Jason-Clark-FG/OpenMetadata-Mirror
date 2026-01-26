@@ -31,6 +31,7 @@ import org.openmetadata.service.apps.bundles.changeEvent.Destination;
 import org.openmetadata.service.events.errors.EventPublisherException;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.jdbi3.ActivityStreamRepository;
+import org.openmetadata.service.notifications.recipients.context.Recipient;
 import org.openmetadata.service.socket.WebSocketManager;
 
 /**
@@ -77,7 +78,8 @@ public class ActivityStreamPublisher implements Destination<ChangeEvent> {
   }
 
   @Override
-  public void sendMessage(ChangeEvent changeEvent) throws EventPublisherException {
+  public void sendMessage(ChangeEvent changeEvent, Set<Recipient> recipients)
+      throws EventPublisherException {
     try {
       // Skip internal entity types
       if (SKIP_ENTITY_TYPES.contains(changeEvent.getEntityType())) {

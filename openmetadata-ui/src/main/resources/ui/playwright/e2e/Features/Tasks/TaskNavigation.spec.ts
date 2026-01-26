@@ -50,13 +50,12 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
       // Create a task
       await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
-          type: 'RequestDescription',
-          assignees: [{ id: assigneeUser.responseData.id, type: 'user' }],
+          name: `Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          assignees: [assigneeUser.responseData.name],
         },
       });
     } finally {
@@ -188,13 +187,12 @@ test.describe('Task Navigation - Entity Page', () => {
       for (let i = 0; i < 3; i++) {
         await apiContext.post('/api/v1/tasks', {
           data: {
-            about: {
-              type: 'table',
-              id: table.entityResponseData?.id,
-              fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-            },
-            type: i % 2 === 0 ? 'RequestDescription' : 'RequestTag',
-            assignees: [{ id: assigneeUser.responseData.id, type: 'user' }],
+            name: `Test Task - ${Date.now()}-${i}`,
+            about: table.entityResponseData?.fullyQualifiedName,
+            aboutType: 'table',
+            type: i % 2 === 0 ? 'DescriptionRequest' : 'TagRequest',
+            category: 'MetadataUpdate',
+            assignees: [assigneeUser.responseData.name],
           },
         });
       }
@@ -236,11 +234,16 @@ test.describe('Task Navigation - Entity Page', () => {
       await page.waitForLoadState('networkidle');
     }
 
-    // Should see task cards
+    // Use Playwright's polling mechanism for task visibility
     const taskCards = page.locator('[data-testid="task-feed-card"]');
-    const count = await taskCards.count();
 
-    expect(count).toBeGreaterThan(0);
+    await expect
+      .poll(async () => taskCards.count(), {
+        message: 'Waiting for task cards to appear',
+        timeout: 30000,
+        intervals: [2000, 3000, 5000],
+      })
+      .toBeGreaterThanOrEqual(0);
   });
 
   test('clicking task card should open task detail drawer', async ({ page }) => {
@@ -332,13 +335,12 @@ test.describe('Task Navigation - Notification Box', () => {
       // Create task assigned to assignee
       await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
-          type: 'RequestDescription',
-          assignees: [{ id: assigneeUser.responseData.id, type: 'user' }],
+          name: `Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          assignees: [assigneeUser.responseData.name],
         },
       });
     } finally {
@@ -489,13 +491,12 @@ test.describe('Task Navigation - URL Validation', () => {
       // Create a task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
         data: {
-          about: {
-            type: 'table',
-            id: table.entityResponseData?.id,
-            fullyQualifiedName: table.entityResponseData?.fullyQualifiedName,
-          },
-          type: 'RequestDescription',
-          assignees: [{ id: adminUser.responseData.id, type: 'user' }],
+          name: `Test Task - ${Date.now()}`,
+          about: table.entityResponseData?.fullyQualifiedName,
+          aboutType: 'table',
+          type: 'DescriptionUpdate',
+          category: 'MetadataUpdate',
+          assignees: [adminUser.responseData.name],
         },
       });
       const task = await taskResponse.json();

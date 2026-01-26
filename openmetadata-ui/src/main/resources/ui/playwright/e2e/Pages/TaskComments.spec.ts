@@ -14,6 +14,7 @@ import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { TableClass } from '../../support/entity/TableClass';
 import { UserClass } from '../../support/user/UserClass';
 import { getApiContext, redirectToHomePage } from '../../utils/common';
+import { performUserLogin } from '../../utils/user';
 
 const adminFile = 'playwright/.auth/admin.json';
 test.use({ storageState: adminFile });
@@ -376,6 +377,8 @@ test.describe('Task Comments - Permission Tests', () => {
       adminUser.responseData?.name ?? ''
     );
 
+    let user1ApiContext;
+    let user1AfterAction;
     try {
       const { commentId } = await addCommentViaAPI(
         adminApiContext,
@@ -383,9 +386,10 @@ test.describe('Task Comments - Permission Tests', () => {
         'Comment by admin'
       );
 
-      // Try to edit with user1's context - should fail
-      await regularUser1.login(adminPage);
-      const { apiContext: user1ApiContext } = await getApiContext(adminPage);
+      // Authenticate user1 via browser-based login
+      const user1Auth = await performUserLogin(browser, regularUser1);
+      user1ApiContext = user1Auth.apiContext;
+      user1AfterAction = user1Auth.afterAction;
 
       const editResponse = await user1ApiContext.patch(
         `/api/v1/tasks/${task.id}/comments/${commentId}`,
@@ -398,6 +402,7 @@ test.describe('Task Comments - Permission Tests', () => {
     } finally {
       await deleteTaskViaAPI(adminApiContext, task.id);
       await afterAction();
+      if (user1AfterAction) await user1AfterAction();
       await adminPage.close();
       await adminContext.close();
     }
@@ -420,6 +425,8 @@ test.describe('Task Comments - Permission Tests', () => {
       adminUser.responseData?.name ?? ''
     );
 
+    let user1ApiContext;
+    let user1AfterAction;
     try {
       const { commentId } = await addCommentViaAPI(
         adminApiContext,
@@ -427,9 +434,10 @@ test.describe('Task Comments - Permission Tests', () => {
         'Comment by admin'
       );
 
-      // Try to delete with user1's context - should fail
-      await regularUser1.login(adminPage);
-      const { apiContext: user1ApiContext } = await getApiContext(adminPage);
+      // Authenticate user1 via browser-based login
+      const user1Auth = await performUserLogin(browser, regularUser1);
+      user1ApiContext = user1Auth.apiContext;
+      user1AfterAction = user1Auth.afterAction;
 
       const deleteResponse = await user1ApiContext.delete(
         `/api/v1/tasks/${task.id}/comments/${commentId}`
@@ -439,6 +447,7 @@ test.describe('Task Comments - Permission Tests', () => {
     } finally {
       await deleteTaskViaAPI(adminApiContext, task.id);
       await afterAction();
+      if (user1AfterAction) await user1AfterAction();
       await adminPage.close();
       await adminContext.close();
     }
@@ -513,8 +522,12 @@ test.describe('Task Comments - UI Tests', () => {
         .click();
       await taskFeeds;
 
-      const taskCard = page.locator('.feed-card-v2').first();
-      await expect(taskCard).toBeVisible();
+      // Wait for task cards to load
+      await page.waitForTimeout(1000);
+
+      // Look for the task card - could be task-feed-card or feed-card-v2
+      const taskCard = page.locator('[data-testid="task-feed-card"], .task-feed-card-v1-new').first();
+      await expect(taskCard).toBeVisible({ timeout: 10000 });
     } finally {
       await deleteTaskViaAPI(apiContext, task.id);
       await afterAction();

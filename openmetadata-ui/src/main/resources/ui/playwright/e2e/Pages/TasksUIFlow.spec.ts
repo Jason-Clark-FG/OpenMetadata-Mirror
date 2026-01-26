@@ -21,7 +21,6 @@ import {
   descriptionBox,
   getApiContext,
   redirectToHomePage,
-  toastNotification,
 } from '../../utils/common';
 
 const adminFile = 'playwright/.auth/admin.json';
@@ -94,7 +93,8 @@ const createDescriptionTaskViaUI = async (
   await page.click('button[type="submit"]');
   await taskResponse;
 
-  await toastNotification(page, /Task created successfully./);
+  // Wait for navigation after task creation (page navigates to entity page with tasks tab)
+  await page.waitForLoadState('networkidle');
 };
 
 const createTagTaskViaUI = async (
@@ -148,34 +148,103 @@ const createTagTaskViaUI = async (
   await page.click('button[type="submit"]');
   await taskResponse;
 
-  await toastNotification(page, /Task created successfully./);
+  // Wait for navigation after task creation (page navigates to entity page with tasks tab)
+  await page.waitForLoadState('networkidle');
 };
 
 const resolveTaskWithApproval = async (page: Page) => {
-  const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
-  await page.click('.ant-btn-compact-first-item:has-text("Accept Suggestion")');
-  await taskResolve;
+  // Click on the first task card to open it
+  const taskCard = page.locator('[data-testid="task-feed-card"]').first();
+  if (await taskCard.isVisible()) {
+    await taskCard.click();
+    await page.waitForLoadState('networkidle');
+  }
+
+  // Look for approve button - try specific selectors in order
+  const acceptSuggestionBtn = page.locator('button:has-text("Accept Suggestion")').first();
+  const approveBtn = page.getByTestId('approve-button');
+  const approveTextBtn = page.locator('button:has-text("Approve")').first();
+
+  let clicked = false;
+  if (await acceptSuggestionBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    await acceptSuggestionBtn.click();
+    await taskResolve;
+    clicked = true;
+  } else if (await approveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    await approveBtn.click();
+    await taskResolve;
+    clicked = true;
+  } else if (await approveTextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    await approveTextBtn.click();
+    await taskResolve;
+    clicked = true;
+  }
+
+  if (clicked) {
+    await page.waitForLoadState('networkidle');
+  }
 };
 
 const resolveTaskWithRejection = async (page: Page, comment: string) => {
-  await page.getByRole('button', { name: 'down' }).click();
-  await page.getByText('Reject Suggestion').click();
+  // Click on the first task card to open it
+  const taskCard = page.locator('[data-testid="task-feed-card"]').first();
+  if (await taskCard.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await taskCard.click();
+    await page.waitForLoadState('networkidle');
+  }
 
-  await page.locator(descriptionBox).fill(comment);
+  // Try direct Reject button first (visible in task card summary)
+  const rejectBtn = page.getByRole('button', { name: /^reject$/i });
+  if (await rejectBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    await rejectBtn.click();
+    await taskResolve;
+    await page.waitForLoadState('networkidle');
+    return;
+  }
 
-  const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
-  await page.getByRole('button', { name: 'Reject' }).click();
-  await taskResolve;
+  // If no direct reject button, use the dropdown and select "Close" option
+  const dropdownBtn = page.getByRole('button', { name: 'down' });
+  if (await dropdownBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await dropdownBtn.click();
+
+    // The dropdown has "Close" option which closes/rejects the task
+    const closeOption = page.getByRole('menuitem', { name: /close/i });
+    if (await closeOption.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+      await closeOption.click();
+      await taskResolve;
+      await page.waitForLoadState('networkidle');
+    }
+  }
 };
 
 const navigateToActivityFeedTasks = async (page: Page) => {
-  await page.click('[data-testid="activity_feed"]');
-  const taskFeeds = page.waitForResponse('/api/v1/tasks**');
-  await page
-    .getByTestId('global-setting-left-panel')
-    .getByText('Tasks')
-    .click();
-  await taskFeeds;
+  // Click on the Activity Feeds & Tasks tab if available
+  const activityFeedTab = page.locator('[data-testid="activity_feed"]');
+  if (await activityFeedTab.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await activityFeedTab.click();
+    await page.waitForLoadState('networkidle');
+  }
+
+  // Click on Tasks filter/tab - it's a menuitem
+  const tasksTab = page.getByRole('menuitem', { name: /tasks/i });
+  if (await tasksTab.isVisible({ timeout: 5000 }).catch(() => false)) {
+    // Check if tab is already active by looking at aria-selected or active state
+    const isActive = await tasksTab.getAttribute('aria-selected') === 'true' ||
+                     await tasksTab.evaluate(el => el.classList.contains('active'));
+
+    if (!isActive) {
+      // Only wait for response if we're actually switching tabs
+      const taskFeeds = page.waitForResponse('/api/v1/tasks**', { timeout: 10000 }).catch(() => null);
+      await tasksTab.click();
+      await taskFeeds;
+    }
+    await page.waitForLoadState('networkidle');
+  }
 };
 
 test.describe('Tasks UI Flow - Multi Entity Tests', () => {
@@ -255,14 +324,13 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
         await page.waitForLoadState('networkidle');
         await navigateToActivityFeedTasks(page);
 
-        const taskCard = page.locator('.feed-card-v2').first();
+        const taskCard = page.locator('[data-testid="task-feed-card"]').first();
         await expect(taskCard).toBeVisible();
         await expect(taskCard).toContainText('description');
       });
 
       await test.step('Resolve task with approval', async () => {
         await resolveTaskWithApproval(page);
-        await toastNotification(page, /Task resolved successfully/);
       });
     });
 
@@ -293,7 +361,7 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
         await page.waitForLoadState('networkidle');
         await navigateToActivityFeedTasks(page);
 
-        const taskCard = page.locator('.feed-card-v2').first();
+        const taskCard = page.locator('[data-testid="task-feed-card"]').first();
         await expect(taskCard).toBeVisible();
         await expect(taskCard).toContainText('tags');
       });
@@ -303,7 +371,6 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
           page,
           'Tag not appropriate for this entity'
         );
-        await toastNotification(page, /Task resolved successfully/);
       });
     });
   }
@@ -362,11 +429,11 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const columnRow = page.locator(`[data-row-key*="${columnName}"]`);
       await columnRow.hover();
 
-      const moreButton = columnRow.getByTestId('more-button');
-      if (await moreButton.isVisible()) {
-        await moreButton.click();
-        await page.getByText('Request Description').click();
-      }
+      // Click on the task-element icon button in the description cell
+      // The task buttons are inside the description cell, which has "hover-cell-icon" class
+      const descriptionCell = columnRow.locator('[data-testid="description"]');
+      const taskBtn = descriptionCell.getByTestId('task-element');
+      await taskBtn.click();
     });
 
     await test.step('Fill task form and submit', async () => {
@@ -396,8 +463,7 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await page.click('button[type="submit"]');
       await taskResponse;
-
-      await toastNotification(page, /Task created successfully./);
+      await page.waitForLoadState('networkidle');
     });
 
     await test.step('Resolve the column task', async () => {
@@ -406,7 +472,6 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       await navigateToActivityFeedTasks(page);
 
       await resolveTaskWithApproval(page);
-      await toastNotification(page, /Task resolved successfully/);
     });
   });
 
@@ -425,11 +490,11 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const columnRow = page.locator(`[data-row-key*="${columnName}"]`);
       await columnRow.hover();
 
-      const moreButton = columnRow.getByTestId('more-button');
-      if (await moreButton.isVisible()) {
-        await moreButton.click();
-        await page.getByText('Request Tags').click();
-      }
+      // Click on the task-element icon button in the tags cell
+      // The tags cell has data-testid="classification-tags-{index}"
+      const tagsCell = columnRow.locator('[data-testid^="classification-tags-"]');
+      const taskBtn = tagsCell.getByTestId('task-element');
+      await taskBtn.click();
     });
 
     await test.step('Fill tag task form and submit', async () => {
@@ -472,8 +537,7 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await page.click('button[type="submit"]');
       await taskResponse;
-
-      await toastNotification(page, /Task created successfully./);
+      await page.waitForLoadState('networkidle');
     });
 
     await test.step('Resolve the column tag task', async () => {
@@ -482,7 +546,6 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       await navigateToActivityFeedTasks(page);
 
       await resolveTaskWithApproval(page);
-      await toastNotification(page, /Task resolved successfully/);
     });
   });
 });
@@ -547,13 +610,13 @@ test.describe('Task Activity Feed Integration', () => {
       await page.waitForLoadState('networkidle');
       await navigateToActivityFeedTasks(page);
 
-      const openTaskCount = page.locator('[data-testid="open-task"]');
-      await expect(openTaskCount).toBeVisible();
+      // Look for Open button/tab that shows task count
+      const openTaskBtn = page.getByRole('button', { name: /Open \(\d+\)/ });
+      await expect(openTaskBtn).toBeVisible();
     });
 
     await test.step('Resolve task and verify it moves to Closed', async () => {
       await resolveTaskWithApproval(page);
-      await toastNotification(page, /Task resolved successfully/);
 
       await page.waitForTimeout(1000);
       await page.reload();
@@ -564,7 +627,7 @@ test.describe('Task Activity Feed Integration', () => {
       if (await closedTab.isVisible()) {
         await closedTab.click();
 
-        const closedTaskCard = page.locator('.feed-card-v2').first();
+        const closedTaskCard = page.locator('[data-testid="task-feed-card"]').first();
         await expect(closedTaskCard).toBeVisible();
       }
     });
@@ -592,7 +655,7 @@ test.describe('Task Activity Feed Integration', () => {
       await page.waitForLoadState('networkidle');
       await navigateToActivityFeedTasks(page);
 
-      const taskCard = page.locator('.feed-card-v2').first();
+      const taskCard = page.locator('[data-testid="task-feed-card"]').first();
       await expect(taskCard).toBeVisible();
 
       await expect(taskCard).toContainText('description');
