@@ -4,7 +4,9 @@ OAuth 2.0 authentication server for Model Context Protocol (MCP) integration wit
 
 ## Overview
 
-This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE for MCP clients, supporting both Google SSO and Basic Auth authentication methods. The implementation provides secure, standards-compliant access to OpenMetadata's metadata management capabilities through MCP tools.
+This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE for MCP clients, enabling **user authentication** via OpenMetadata's existing SSO providers (Google, Okta, Azure AD, Auth0, AWS Cognito, Custom OIDC, LDAP, SAML) or Basic Auth. The implementation provides secure, standards-compliant access to OpenMetadata's metadata management capabilities through MCP tools.
+
+**Important**: This is **user SSO authentication** for MCP clients, not connector-based OAuth for data sources. Users authenticate with their OpenMetadata credentials (SSO or username/password), and MCP tools execute with that user's permissions.
 
 ## Features
 
@@ -16,9 +18,10 @@ This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE fo
 - **Session Fixation Prevention** - Session regeneration after successful authentication
 
 ### Authentication Methods
-- **Google SSO** - OAuth 2.0 integration with Google Identity Platform via pac4j
+- **SSO Integration** - OAuth 2.0 integration with Google, Okta, Azure AD, Auth0, AWS Cognito, Custom OIDC, LDAP, and SAML providers via pac4j
 - **Basic Auth** - Username/password authentication with OpenMetadata credentials
 - **User Impersonation** - Support for impersonated user contexts in MCP tools
+- **Auto-Detection** - Automatically selects SSO or Basic Auth based on OpenMetadata configuration
 
 ### Security Features
 - **PKCE Validation** - SHA-256 code challenge/verifier validation
@@ -26,6 +29,13 @@ This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE fo
 - **Rate Limiting** - Token endpoint protection (100 requests/hour per client)
 - **Thread-Safe Concurrent Processing** - ThreadLocal storage for request isolation
 - **Comprehensive Audit Logging** - All OAuth operations logged to oauth_audit_log table
+
+### Database-Driven Configuration
+- **Runtime Configuration** - Update MCP settings without server restart via REST API
+- **Cluster Synchronization** - Database polling (10-second interval) ensures all cluster instances have consistent configuration
+- **Configuration Change Listeners** - Dynamic CORS origin updates when configuration changes
+- **Persistent Storage** - Configuration changes persist across server restarts (database-first, YAML fallback)
+- **HTTP Timeout Configuration** - Configurable connection and read timeouts for SSO provider metadata fetching
 
 ### MCP Integration
 - **Claude Desktop Support** - First-class integration with Claude Desktop MCP client
@@ -55,6 +65,14 @@ This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE fo
 - OAuth endpoint exemptions (no auth required for .well-known endpoints)
 - CORS preflight support
 - User impersonation context management
+
+**SecurityConfigurationManager**
+- Singleton manager for runtime security configuration (authentication, authorization, MCP settings)
+- Database-first configuration loading with YAML fallback
+- Configuration change listener pattern for reactive updates
+- Cluster-aware polling mechanism (10-second interval) to detect changes across instances
+- Rollback mechanism for failed configuration updates
+- Thread-safe synchronized getters for consistent configuration reads
 
 **OAuth Repositories**
 - OAuthClientRepository - Client management and validation
@@ -110,13 +128,20 @@ Five core OAuth tables with audit logging:
        │<─────────────────────────────────────────────────────────────────│
        │                                                                  │
        │  5. User authenticates via:                                     │
-       │     ┌─────────────────────────────┐                             │
-       │     │  Option A: Google SSO       │                             │
-       │     │  - Redirect to Google OAuth │                             │
-       │     │  - User grants consent      │                             │
-       │     │  - Google callback with     │                             │
-       │     │    ID token (pac4j)         │                             │
-       │     └─────────────────────────────┘                             │
+       │     ┌──────────────────────────────────────┐                    │
+       │     │  Option A: SSO Provider              │                    │
+       │     │  - Redirect to SSO provider:         │                    │
+       │     │    • Google OAuth                    │                    │
+       │     │    • Okta                            │                    │
+       │     │    • Azure AD                        │                    │
+       │     │    • Auth0                           │                    │
+       │     │    • AWS Cognito                     │                    │
+       │     │    • Custom OIDC                     │                    │
+       │     │    • LDAP                            │                    │
+       │     │    • SAML                            │                    │
+       │     │  - User grants consent               │                    │
+       │     │  - SSO callback with ID token (pac4j)│                    │
+       │     └──────────────────────────────────────┘                    │
        │                  OR                                              │
        │     ┌─────────────────────────────┐                             │
        │     │  Option B: Basic Auth       │                             │
@@ -210,6 +235,40 @@ Five core OAuth tables with audit logging:
 
 ## Configuration
 
+### MCP Configuration (Database-Driven)
+
+MCP-specific settings are managed via REST API with database persistence:
+
+```bash
+# Get current MCP configuration
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8585/api/v1/system/mcp/config
+
+# Update MCP configuration (no restart required)
+curl -X PUT -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "baseUrl": "https://metadata.example.com",
+    "allowedOrigins": ["https://app.example.com"],
+    "connectTimeout": 30000,
+    "readTimeout": 60000,
+    "enabled": true
+  }' \
+  http://localhost:8585/api/v1/system/mcp/config
+```
+
+**Configuration Properties:**
+- `baseUrl` - OAuth issuer URL (used for metadata endpoints)
+- `allowedOrigins` - CORS whitelist for OAuth endpoints (use specific origins, not `*`)
+- `connectTimeout` - HTTP connection timeout for SSO provider metadata (milliseconds)
+- `readTimeout` - HTTP read timeout for SSO provider metadata (milliseconds)
+- `enabled` - Enable/disable MCP server
+
+**Key Features:**
+- Changes take effect immediately across all cluster instances (10-second polling interval)
+- Configuration persists across server restarts (database-first, YAML fallback)
+- CORS origins update dynamically without restart via listener pattern
+
 ### OAuth Server Configuration
 
 The OAuth server is configured in `openmetadata.yaml`:
@@ -217,7 +276,7 @@ The OAuth server is configured in `openmetadata.yaml`:
 - **JWT Configuration** - RSA key pair for token signing, JWKS endpoint URL
 - **Token Expiry** - Access token (1 hour) and refresh token (7 days) lifetimes
 - **Rate Limiting** - Token endpoint rate limits (100 requests/hour per client)
-- **SSO Provider** - Google OAuth client ID and secret for SSO integration
+- **SSO Provider** - Google, Okta, Azure AD, etc. OAuth client ID and secret for SSO integration
 - **Callback URLs** - Allowed redirect URIs for OAuth clients
 
 ### Client Registration
@@ -243,6 +302,55 @@ All MCP tools authenticate using the Bearer token from the OAuth flow:
 
 The McpAuthFilter extracts and validates the JWT on every request, setting up the security context for downstream MCP tool execution.
 
+## Recent Improvements
+
+### Security and Reliability Fixes
+
+**Thread Safety and Concurrency**
+- Fixed race conditions in configuration reads with synchronized getters
+- Implemented ThreadLocal cleanup in outer finally block to prevent memory leaks
+- Added rollback mechanism for failed configuration updates
+
+**HTTP Client Configuration**
+- Replaced JVM-wide system properties with pac4j-specific HTTP timeouts
+- Configurable connection and read timeouts for SSO provider metadata fetching
+- Prevents timeout changes from affecting other HTTP clients
+
+**Session Security**
+- Added null check after session regeneration to handle invalidate/recreate fallback
+- Synchronized pac4j client callback URL modification to prevent race conditions
+- Improved CSRF protection with proper session handling
+
+**Configuration Management**
+- Database-first loading ensures configuration persists across restarts
+- Cluster polling (10-second interval) for consistent configuration across instances
+- Configuration change listeners for dynamic CORS updates without restart
+- URL validation for MCP configuration API (prevents invalid protocols, partial wildcards)
+
+**Input Validation**
+- Validates baseUrl protocol (HTTP/HTTPS only)
+- Rejects partial wildcard origins (e.g., `https://*.example.com`)
+- Accepts exact wildcard (`*`) for development environments
+
+### Unit Tests
+
+**SecurityConfigurationManagerTest** (9 tests)
+- Singleton pattern verification
+- Listener registration and removal
+- Thread-safe configuration access (10 threads × 100 iterations)
+- Synchronized getters preventing race conditions (50 concurrent threads)
+- Rollback mechanism validation
+- Configuration getter behavior
+
+**MCPConfigurationIntegrationTest** (9 tests, on hold)
+- Database-first loading verification
+- Configuration update via API
+- Configuration persistence across cache reload
+- Configuration change detection with polling
+- Input validation (invalid protocols, wildcard origins)
+- Listener notification on configuration reload
+- Multiple sequential updates
+
 ## Testing
 
 ### OAuth Flow Testing
@@ -267,7 +375,7 @@ The McpAuthFilter extracts and validates the JWT on every request, setting up th
 
 ### SSO Integration Testing
 
-Tests Google OAuth integration using pac4j with mock Google Identity Provider.
+Tests SSO provider integration using pac4j with mock identity providers (Google, Okta, Azure AD, etc.). The UserSSOOAuthProvider auto-detects the configured SSO provider from OpenMetadata's authentication configuration.
 
 ## Deployment
 
@@ -275,10 +383,8 @@ Tests Google OAuth integration using pac4j with mock Google Identity Provider.
 
 Schema migrations in `bootstrap/sql/migrations/native/1.12.0/`:
 
-- **mysql/schemaChanges.sql** - OAuth tables creation for MySQL
-- **postgres/schemaChanges.sql** - OAuth tables creation for PostgreSQL
-- **mysql/postDataMigrationSQLScript.sql** - Snowflake backward compatibility migration
-- **postgres/postDataMigrationSQLScript.sql** - Snowflake backward compatibility migration
+- **mysql/schemaChanges.sql** - OAuth tables creation (oauth_clients, oauth_authorization_codes, oauth_access_tokens, oauth_refresh_tokens, mcp_pending_auth_requests, oauth_audit_log)
+- **postgres/schemaChanges.sql** - OAuth tables creation (PostgreSQL equivalent)
 
 ### Server Initialization
 
@@ -293,10 +399,19 @@ OAuth components initialized in `McpApplication`:
 
 ### Environment Variables
 
-- **GOOGLE_CLIENT_ID** - Google OAuth client ID for SSO
-- **GOOGLE_CLIENT_SECRET** - Google OAuth client secret
+**SSO Provider Configuration** (varies by provider):
+- **OIDC_CLIENT_ID** - OAuth client ID for SSO provider (Google, Okta, Azure, etc.)
+- **OIDC_CLIENT_SECRET** - OAuth client secret for SSO provider
+- **OIDC_TYPE** - SSO provider type (google, okta, azure, auth0, aws-cognito, custom-oidc)
+- **OIDC_DISCOVERY_URI** - OIDC discovery endpoint URL
+
+**JWT Token Configuration**:
 - **JWT_ISSUER** - JWT issuer claim for token validation
 - **JWT_KEY_ID** - RSA key pair ID for token signing
+
+**MCP Configuration** (optional, can be set via API):
+- **MCP_BASE_URL** - OAuth issuer base URL
+- **MCP_ALLOWED_ORIGINS** - Comma-separated CORS origins
 
 ## Security Considerations
 
