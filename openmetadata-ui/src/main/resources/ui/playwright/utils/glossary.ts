@@ -1185,24 +1185,100 @@ export const addReferences = async (
 
 export const addRelatedTerms = async (
   page: Page,
-  relatedTerms: GlossaryTerm[]
+  relatedTerms: GlossaryTerm[],
+  relationType?: string
 ) => {
-  await page.getByTestId('related-term-add-button').click();
+  // Click the add or edit button to enter editing mode
+  // After first relation is added, the button changes from 'related-term-add-button' to 'edit-button'
+  const addButton = page.getByTestId('related-term-add-button');
+  const editButton = page
+    .getByTestId('related-term-container')
+    .getByTestId('edit-button');
+
+  if (await addButton.isVisible()) {
+    await addButton.click();
+  } else {
+    await editButton.click();
+  }
+
+  // Wait for the editing form to appear - look for the relation type label
+  await page.waitForSelector('text=Relation Type', { timeout: 10000 });
+
+  // The TagSelectForm tree might auto-open and cover the relation type selector
+  // Close any open tree dropdowns first
+  const openTreeDropdowns = page.locator('.async-tree-select-list-dropdown');
+  if (await openTreeDropdowns.isVisible()) {
+    // Click the tree dropdown's close button or outside to close it
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+
+  // Select relation type if provided (not the default 'relatedTo')
+  if (relationType) {
+    const relationTypeSelect = page.getByTestId('relation-type-select');
+    await relationTypeSelect.waitFor({ state: 'visible' });
+
+    // Click on the selector to open dropdown - use force to handle any overlays
+    await relationTypeSelect.locator('.ant-select-selector').click({ force: true });
+
+    // Wait for dropdown and click the option
+    const dropdown = page.locator('.ant-select-dropdown').last();
+    await dropdown.waitFor({ state: 'visible' });
+    await dropdown
+      .locator('.ant-select-item-option-content')
+      .filter({ hasText: relationType })
+      .first()
+      .click();
+
+    // Wait for dropdown to close
+    await dropdown.waitFor({ state: 'hidden' });
+  }
+
   for (const term of relatedTerms) {
     const entityName = get(term, 'responseData.name');
+    const entityDisplayName = get(term, 'responseData.displayName');
     const entityFqn = get(term, 'responseData.fullyQualifiedName');
-    await page.locator('#tagsForm_tags').fill(entityName);
-    await page.getByTestId(`tag-${entityFqn}`).click();
+
+    // Find the search input within the tag selector
+    const searchInput = page
+      .getByTestId('tag-selector')
+      .locator('.ant-select-selection-search-input');
+
+    // Wait for search response before clicking on the option
+    const searchTerms = page.waitForResponse((response) =>
+      response.url().includes('/api/v1/search/query') &&
+      response.url().includes('index=glossary_term')
+    );
+    await searchInput.fill(entityDisplayName);
+    await searchTerms;
+
+    // Wait for tree to render and loading to complete
+    const dropdown = page.locator('.async-tree-select-list-dropdown');
+    await dropdown.waitFor({ state: 'visible' });
+    await page.waitForTimeout(1000);
+
+    // Click on the tree node checkbox - the tree node title contains the display name
+    const treeNode = dropdown
+      .locator('.ant-select-tree-treenode')
+      .filter({ hasText: entityDisplayName })
+      .first();
+    await treeNode.locator('.ant-select-tree-checkbox').click();
   }
 
   const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');
   await page.getByTestId('saveAssociatedTag').click();
   await saveRes;
 
+  // Wait for the form to close and page to update
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(500);
+
   for (const term of relatedTerms) {
     const entityName = get(term, 'responseData.displayName');
 
-    await expect(page.getByTestId(entityName)).toBeVisible();
+    // Verify the term appears in the related terms container
+    const relatedContainer = page.getByTestId('related-term-container');
+    await expect(relatedContainer.getByText(entityName)).toBeVisible();
   }
 };
 

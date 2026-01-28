@@ -11,24 +11,8 @@
  *  limitations under the License.
  */
 
-import {
-  AimOutlined,
-  DownloadOutlined,
-  FullscreenOutlined,
-  ReloadOutlined,
-  ZoomInOutlined,
-  ZoomOutOutlined,
-} from '@ant-design/icons';
-import {
-  Button,
-  Dropdown,
-  Empty,
-  MenuProps,
-  Space,
-  Spin,
-  Tooltip,
-  Typography,
-} from 'antd';
+import { DownloadOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Empty, MenuProps, Spin, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import React, {
@@ -40,9 +24,7 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { DataSet } from 'vis-data';
-import { Data, Edge, Network, Options } from 'vis-network';
-import { EntityType, TabSpecificField } from '../../enums/entity.enum';
+import { TabSpecificField } from '../../enums/entity.enum';
 import { Glossary } from '../../generated/entity/data/glossary';
 import { GlossaryTerm } from '../../generated/entity/data/glossaryTerm';
 import { TermRelation } from '../../generated/type/termRelation';
@@ -58,13 +40,16 @@ import {
   getGlossaryTermRelationSettings,
   GlossaryTermRelationType,
 } from '../../rest/settingConfigAPI';
-import { getEntityDetailsPath } from '../../utils/RouterUtils';
+import { getGlossaryTermDetailsPath } from '../../utils/RouterUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { useGenericContext } from '../Customization/GenericProvider/GenericProvider';
 import ConceptsTree from './ConceptsTree';
+import CytoscapeGraph from './CytoscapeGraph';
 import DetailsPanel from './DetailsPanel';
 import FilterToolbar from './FilterToolbar';
 import GraphSettingsPanel from './GraphSettingsPanel';
+import NodeContextMenu from './NodeContextMenu';
+import OntologyControlButtons from './OntologyControlButtons';
 import {
   ConceptsTreeNode,
   GraphFilters,
@@ -75,6 +60,7 @@ import {
   OntologyNode,
 } from './OntologyExplorer.interface';
 import './OntologyExplorer.style.less';
+import OntologyLegend from './OntologyLegend';
 
 const isValidUUID = (str: string): boolean => {
   const uuidRegex =
@@ -84,116 +70,17 @@ const isValidUUID = (str: string): boolean => {
 };
 
 const GLOSSARY_COLORS = [
-  '#1890ff',
-  '#52c41a',
-  '#722ed1',
-  '#eb2f96',
-  '#fa8c16',
-  '#13c2c2',
-  '#2f54eb',
-  '#faad14',
-  '#a0d911',
-  '#f5222d',
+  '#3062d4', // Primary blue (lineage style)
+  '#7c3aed', // Purple
+  '#059669', // Emerald
+  '#dc2626', // Red
+  '#ea580c', // Orange
+  '#0891b2', // Cyan
+  '#4f46e5', // Indigo
+  '#ca8a04', // Yellow
+  '#be185d', // Pink
+  '#0d9488', // Teal
 ];
-
-const DEFAULT_RELATION_COLORS: Record<string, string> = {
-  relatedTo: '#1890ff',
-  related: '#1890ff',
-  synonym: '#722ed1',
-  antonym: '#f5222d',
-  typeOf: '#52c41a',
-  hasTypes: '#73d13d',
-  hasA: '#13c2c2',
-  partOf: '#36cfc9',
-  hasPart: '#5cdbd3',
-  componentOf: '#13c2c2',
-  composedOf: '#36cfc9',
-  calculatedFrom: '#faad14',
-  usedToCalculate: '#ffc53d',
-  derivedFrom: '#fa8c16',
-  seeAlso: '#eb2f96',
-  parentOf: '#597ef7',
-  childOf: '#85a5ff',
-  broader: '#597ef7',
-  narrower: '#85a5ff',
-  isA: '#52c41a',
-  instanceOf: '#73d13d',
-  owns: '#722ed1',
-  ownedBy: '#9254de',
-  manages: '#2f54eb',
-  managedBy: '#597ef7',
-  contains: '#13c2c2',
-  containedIn: '#36cfc9',
-  dependsOn: '#fa541c',
-  usedBy: '#faad14',
-};
-
-const RELATION_DISPLAY_NAMES: Record<string, string> = {
-  relatedTo: 'Related To',
-  related: 'Related To',
-  synonym: 'Synonym',
-  antonym: 'Antonym',
-  typeOf: 'Type Of',
-  hasTypes: 'Has Types',
-  hasA: 'Has A',
-  partOf: 'Part Of',
-  hasPart: 'Has Part',
-  componentOf: 'Component Of',
-  composedOf: 'Composed Of',
-  calculatedFrom: 'Calculated From',
-  usedToCalculate: 'Used To Calculate',
-  derivedFrom: 'Derived From',
-  seeAlso: 'See Also',
-  parentOf: 'Parent Of',
-  childOf: 'Child Of',
-  broader: 'Broader',
-  narrower: 'Narrower',
-  isA: 'Is A',
-  instanceOf: 'Instance Of',
-  owns: 'Owns',
-  ownedBy: 'Owned By',
-  manages: 'Manages',
-  managedBy: 'Managed By',
-  contains: 'Contains',
-  containedIn: 'Contained In',
-  dependsOn: 'Depends On',
-  usedBy: 'Used By',
-};
-
-/**
- * Format a relation type name for display when not found in settings or defaults.
- * Converts camelCase to Title Case with spaces (e.g., "calculatedFrom" -> "Calculated From")
- */
-const formatRelationTypeName = (relationType: string): string => {
-  if (!relationType) {
-    return 'Related To';
-  }
-
-  // Insert space before capital letters and capitalize first letter
-  return relationType
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim();
-};
-
-/**
- * Generate a consistent color for a relation type based on its name.
- * Uses a hash function to generate a hue value for HSL color.
- */
-const generateRelationColor = (relationType: string): string => {
-  if (!relationType) {
-    return '#8c8c8c';
-  }
-  // Simple hash function to generate a consistent hue
-  let hash = 0;
-  for (let i = 0; i < relationType.length; i++) {
-    hash = relationType.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-
-  // Use medium saturation and lightness for readable colors
-  return `hsl(${hue}, 65%, 50%)`;
-};
 
 const DEFAULT_SETTINGS: GraphSettings = {
   layout: 'force',
@@ -226,10 +113,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
-  const nodesDataSetRef = useRef<DataSet<OntologyNode> | null>(null);
-  const edgesDataSetRef = useRef<DataSet<Edge> | null>(null);
+  const graphRef = useRef<{
+    fitView: () => void;
+    focusNode: (nodeId: string) => void;
+  } | null>(null);
 
   const contextData = useGenericContext<GlossaryTerm>();
   const entityId =
@@ -241,7 +128,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const [selectedNode, setSelectedNode] = useState<OntologyNode | null>(null);
   const [selectedTreeNode, setSelectedTreeNode] =
     useState<ConceptsTreeNode | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [rdfEnabled, setRdfEnabled] = useState<boolean | null>(null);
   const [dataSource, setDataSource] = useState<'rdf' | 'database'>('database');
   const [relationTypes, setRelationTypes] = useState<
@@ -250,6 +136,12 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const [glossaries, setGlossaries] = useState<Glossary[]>([]);
   const [settings, setSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
+  const [isMinimapVisible, setIsMinimapVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    node: OntologyNode;
+    position: { x: number; y: number };
+  } | null>(null);
 
   const glossaryColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -335,198 +227,82 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     return { nodes: filteredNodes, edges: filteredEdges };
   }, [graphData, filters, scope, entityId]);
 
-  const networkOptions: Options = useMemo(
-    () => ({
-      nodes: {
-        shape: 'box',
-        widthConstraint: { minimum: 100, maximum: 200 },
-        heightConstraint: { minimum: 36, maximum: 60 },
-        font: {
-          size: 12,
-          color: '#262626',
-          face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          multi: 'html',
-        },
-        borderWidth: 2,
-        borderWidthSelected: 3,
-        shadow: {
-          enabled: true,
-          color: 'rgba(0,0,0,0.1)',
-          size: 8,
-          x: 2,
-          y: 2,
-        },
-        margin: { top: 8, bottom: 8, left: 12, right: 12 },
-      },
-      edges: {
-        width: 2,
-        color: { color: '#d9d9d9', highlight: '#1890ff', hover: '#40a9ff' },
-        arrows: { to: { enabled: true, scaleFactor: 0.6, type: 'arrow' } },
-        font: {
-          size: settings.showEdgeLabels ? 11 : 0,
-          align: 'middle',
-          background: '#ffffff',
-          strokeWidth: 3,
-          strokeColor: '#ffffff',
-          color: '#434343',
-          face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        },
-        smooth: {
-          enabled: true,
-          type: 'dynamic',
-          roundness: 0.5,
-        },
-        chosen: true,
-        labelHighlightBold: false,
-      },
-      layout:
-        settings.layout === 'hierarchical'
-          ? {
-              hierarchical: {
-                direction: 'LR',
-                sortMethod: 'directed',
-                levelSeparation: 280,
-                nodeSpacing: 120,
-                treeSpacing: 180,
-                blockShifting: true,
-                edgeMinimization: true,
-              },
-            }
-          : settings.layout === 'radial'
-          ? { improvedLayout: true, randomSeed: 42 }
-          : settings.layout === 'circular'
-          ? { improvedLayout: true, randomSeed: 42 }
-          : { improvedLayout: true, randomSeed: 42 },
-      physics: {
-        enabled: settings.physicsEnabled && settings.layout === 'force',
-        solver: 'forceAtlas2Based',
-        forceAtlas2Based: {
-          gravitationalConstant: -120,
-          centralGravity: 0.005,
-          springLength: 250,
-          springConstant: 0.08,
-          damping: 0.4,
-          avoidOverlap: 1,
-        },
-        stabilization: {
-          enabled: true,
-          iterations: 400,
-          updateInterval: 25,
-          fit: true,
-        },
-        minVelocity: 0.75,
-      },
-      interaction: {
-        hover: true,
-        tooltipDelay: 100,
-        hideEdgesOnDrag: false,
-        hideEdgesOnZoom: false,
-        navigationButtons: false,
-        keyboard: { enabled: true },
-        multiselect: true,
-      },
-    }),
-    [settings]
-  );
-
-  const getNodeColor = useCallback(
-    (node: OntologyNode, isHovered: boolean, isNeighbor: boolean) => {
-      const isIsolated = node.type === 'glossaryTermIsolated';
-      const isGlossary = node.type === 'glossary';
-      const isFaded =
-        hoveredNodeId && !isHovered && !isNeighbor && settings.highlightOnHover;
-
-      let baseColor = '#1890ff';
-      let bgColor = '#e6f7ff';
-
-      if (settings.nodeColorMode === 'glossary' && node.glossaryId) {
-        baseColor = glossaryColorMap[node.glossaryId] || '#1890ff';
-        bgColor = `${baseColor}15`;
-      } else if (isGlossary) {
-        baseColor = '#52c41a';
-        bgColor = '#f6ffed';
-      } else if (isIsolated) {
-        baseColor = '#fa8c16';
-        bgColor = '#fff7e6';
-      }
-
-      const opacity = isFaded ? 0.3 : 1;
-
-      return {
-        background: isFaded ? '#f5f5f5' : bgColor,
-        border: baseColor,
-        highlight: { background: bgColor, border: baseColor },
-        hover: { background: bgColor, border: baseColor },
-        opacity,
-      };
-    },
-    [hoveredNodeId, settings, glossaryColorMap]
-  );
-
-  const getEdgeColor = useCallback(
-    (edge: OntologyEdge) => {
-      // 1. Check settings for configured color
-      const relationType = relationTypes.find(
-        (rt) => rt.name === edge.relationType
-      );
-      if (relationType?.color) {
-        return relationType.color;
-      }
-
-      // 2. Check hardcoded defaults
-      if (DEFAULT_RELATION_COLORS[edge.relationType]) {
-        return DEFAULT_RELATION_COLORS[edge.relationType];
-      }
-
-      // 3. Generate a consistent color based on the relation type name
-      return generateRelationColor(edge.relationType);
-    },
-    [relationTypes]
-  );
-
-  const getEdgeLabel = useCallback(
-    (edge: OntologyEdge) => {
-      if (!settings.showEdgeLabels) {
-        return '';
-      }
-
-      // 1. Check settings for configured display name
-      const relationType = relationTypes.find(
-        (rt) => rt.name === edge.relationType
-      );
-      if (relationType?.displayName) {
-        return relationType.displayName;
-      }
-
-      // 2. Check hardcoded defaults
-      if (RELATION_DISPLAY_NAMES[edge.relationType]) {
-        return RELATION_DISPLAY_NAMES[edge.relationType];
-      }
-
-      // 3. Format the relation type name dynamically
-      return formatRelationTypeName(edge.relationType);
-    },
-    [relationTypes, settings.showEdgeLabels]
-  );
-
   const convertRdfGraphToOntologyGraph = useCallback(
-    (rdfData: GraphData): OntologyGraphData => {
-      const nodes: OntologyNode[] = rdfData.nodes.map((node) => ({
-        id: node.id,
-        label: node.label,
-        type: node.type || 'glossaryTerm',
-        fullyQualifiedName: node.fullyQualifiedName,
-        description: node.description,
-      }));
+    (rdfData: GraphData, glossaryList: Glossary[]): OntologyGraphData => {
+      // Create mapping from glossary name to ID for lookups
+      const glossaryNameToId = new Map<string, string>();
+      glossaryList.forEach((g) => {
+        glossaryNameToId.set(g.name.toLowerCase(), g.id);
+        if (g.fullyQualifiedName) {
+          glossaryNameToId.set(g.fullyQualifiedName.toLowerCase(), g.id);
+        }
+      });
 
-      const edges: OntologyEdge[] = rdfData.edges.map((edge) => ({
-        from: edge.from,
-        to: edge.to,
-        label: edge.label,
-        relationType: edge.relationType || 'relatedTo',
-      }));
+      const nodes: OntologyNode[] = rdfData.nodes.map((node) => {
+        // Extract glossary name from group or FQN
+        let glossaryId: string | undefined;
+        if (node.group) {
+          glossaryId = glossaryNameToId.get(node.group.toLowerCase());
+        }
+        if (!glossaryId && node.fullyQualifiedName) {
+          const glossaryName = node.fullyQualifiedName.split('.')[0];
+          glossaryId = glossaryNameToId.get(glossaryName.toLowerCase());
+        }
 
-      return { nodes, edges };
+        // Determine the best label - fallback to extracting from FQN if label looks like a UUID
+        let nodeLabel = node.label;
+        const isUuidLabel =
+          nodeLabel &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            nodeLabel
+          );
+
+        if (!nodeLabel || isUuidLabel) {
+          // Try to extract label from fullyQualifiedName (last part after the last dot)
+          if (node.fullyQualifiedName) {
+            const parts = node.fullyQualifiedName.split('.');
+            nodeLabel = parts[parts.length - 1];
+          } else if (node.title) {
+            nodeLabel = node.title;
+          } else {
+            nodeLabel = node.id;
+          }
+        }
+
+        return {
+          id: node.id,
+          label: nodeLabel,
+          type: node.type || 'glossaryTerm',
+          fullyQualifiedName: node.fullyQualifiedName,
+          description: node.description,
+          glossaryId,
+          group: node.group,
+        };
+      });
+
+      // Deduplicate edges, preferring specific relation types over 'relatedTo'
+      const edgeMap = new Map<string, OntologyEdge>();
+      rdfData.edges.forEach((edge) => {
+        const relationType = edge.relationType || 'relatedTo';
+        const nodePairKey = [edge.from, edge.to].sort().join('-');
+        const existingEdge = edgeMap.get(nodePairKey);
+
+        // Add if no existing edge, or replace if new type is more specific
+        if (
+          !existingEdge ||
+          (existingEdge.relationType === 'relatedTo' &&
+            relationType !== 'relatedTo')
+        ) {
+          edgeMap.set(nodePairKey, {
+            from: edge.from,
+            to: edge.to,
+            label: edge.label || relationType,
+            relationType: relationType,
+          });
+        }
+      });
+
+      return { nodes, edges: Array.from(edgeMap.values()) };
     },
     []
   );
@@ -537,15 +313,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
       const edges: OntologyEdge[] = [];
       const edgeSet = new Set<string>();
 
-      glossaryList.forEach((glossary) => {
-        nodesMap.set(glossary.id, {
-          id: glossary.id,
-          label: glossary.displayName || glossary.name,
-          type: 'glossary',
-          fullyQualifiedName: glossary.fullyQualifiedName,
-          description: glossary.description,
-        });
-      });
+      // Note: We don't add glossary nodes - ontology graph shows only term-to-term relations
 
       terms.forEach((term) => {
         if (!term.id || !isValidUUID(term.id)) {
@@ -572,17 +340,33 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             const relatedTermRef = relation.term;
             const relationType = relation.relationType || 'relatedTo';
             if (relatedTermRef?.id && isValidUUID(relatedTermRef.id)) {
-              const edgeKey = `${relationType}-${[term.id, relatedTermRef.id]
-                .sort()
-                .join('-')}`;
-              if (!edgeSet.has(edgeKey)) {
-                edgeSet.add(edgeKey);
+              // Use node-pair key (without relationType) to avoid duplicate edges
+              const nodePairKey = [term.id, relatedTermRef.id].sort().join('-');
+
+              // Check if we already have an edge for this node pair
+              if (!edgeSet.has(nodePairKey)) {
+                edgeSet.add(nodePairKey);
                 edges.push({
                   from: term.id,
                   to: relatedTermRef.id,
                   label: relationType,
                   relationType: relationType,
                 });
+              } else if (relationType !== 'relatedTo') {
+                // If we have a more specific relationType, update the existing edge
+                const existingEdgeIndex = edges.findIndex(
+                  (e) =>
+                    [e.from, e.to].sort().join('-') === nodePairKey &&
+                    e.relationType === 'relatedTo'
+                );
+                if (existingEdgeIndex !== -1) {
+                  edges[existingEdgeIndex] = {
+                    from: term.id,
+                    to: relatedTermRef.id,
+                    label: relationType,
+                    relationType: relationType,
+                  };
+                }
               }
             }
           });
@@ -608,7 +392,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   );
 
   const fetchGraphDataFromRdf = useCallback(
-    async (glossaryIdParam?: string) => {
+    async (glossaryIdParam?: string, glossaryList?: Glossary[]) => {
       try {
         const rdfData = await getGlossaryTermGraph({
           glossaryId: glossaryIdParam,
@@ -617,9 +401,21 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         });
 
         if (rdfData.nodes && rdfData.nodes.length > 0) {
+          // Check if labels are valid (not just UUIDs) - if too many UUID labels, fall back to database
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const nodesWithBadLabels = rdfData.nodes.filter(
+            (node) => !node.label || uuidRegex.test(node.label)
+          );
+
+          // If more than half the nodes have bad labels, skip RDF and use database
+          if (nodesWithBadLabels.length > rdfData.nodes.length / 2) {
+            return null;
+          }
+
           setDataSource(rdfData.source === 'database' ? 'database' : 'rdf');
 
-          return convertRdfGraphToOntologyGraph(rdfData);
+          return convertRdfGraphToOntologyGraph(rdfData, glossaryList ?? []);
         }
 
         return null;
@@ -631,19 +427,13 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   );
 
   const fetchGraphDataFromDatabase = useCallback(
-    async (glossaryIdParam?: string) => {
-      const glossariesResponse = await getGlossariesList({
-        fields: 'owners,tags',
-        limit: 100,
-      });
-
-      const fetchedGlossaries = glossariesResponse.data;
-      setGlossaries(fetchedGlossaries);
+    async (glossaryIdParam?: string, fetchedGlossaries?: Glossary[]) => {
+      const glossariesToUse = fetchedGlossaries ?? glossaries;
       const allTerms: GlossaryTerm[] = [];
 
       const glossariesToFetch = glossaryIdParam
-        ? fetchedGlossaries.filter((g) => g.id === glossaryIdParam)
-        : fetchedGlossaries;
+        ? glossariesToUse.filter((g) => g.id === glossaryIdParam)
+        : glossariesToUse;
 
       for (const glossary of glossariesToFetch) {
         try {
@@ -664,6 +454,9 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 
       return buildGraphFromAllTerms(allTerms, glossariesToFetch);
     },
+    // Note: glossaries is intentionally excluded to prevent infinite loop
+    // fetchedGlossaries parameter is always passed from fetchAllGlossaryData
+
     [buildGraphFromAllTerms]
   );
 
@@ -671,15 +464,29 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     async (glossaryIdParam?: string) => {
       setLoading(true);
       try {
+        // Always fetch glossaries list for export functionality
+        const glossariesResponse = await getGlossariesList({
+          fields: 'owners,tags',
+          limit: 100,
+        });
+        const fetchedGlossaries = glossariesResponse.data;
+        setGlossaries(fetchedGlossaries);
+
         let data: OntologyGraphData | null = null;
 
         if (rdfEnabled) {
-          data = await fetchGraphDataFromRdf(glossaryIdParam);
+          data = await fetchGraphDataFromRdf(
+            glossaryIdParam,
+            fetchedGlossaries
+          );
         }
 
         if (!data || data.nodes.length === 0) {
           setDataSource('database');
-          data = await fetchGraphDataFromDatabase(glossaryIdParam);
+          data = await fetchGraphDataFromDatabase(
+            glossaryIdParam,
+            fetchedGlossaries
+          );
         }
 
         setGraphData(data);
@@ -723,216 +530,77 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     }
   }, [scope, glossaryId, entityId, rdfEnabled, fetchAllGlossaryData]);
 
-  // Create and update network
-  useEffect(() => {
-    if (!containerRef.current || !filteredGraphData || loading) {
-      return;
-    }
-
-    const container = containerRef.current;
-    if (container.offsetWidth === 0 || container.offsetHeight === 0) {
-      const timer = setTimeout(() => {
-        networkRef.current?.redraw();
-        networkRef.current?.fit();
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-
-    const getNeighborIds = (nodeId: string): Set<string> => {
-      const neighbors = new Set<string>();
-      filteredGraphData.edges.forEach((edge) => {
-        if (edge.from === nodeId) {
-          neighbors.add(edge.to);
-        }
-        if (edge.to === nodeId) {
-          neighbors.add(edge.from);
-        }
-      });
-
-      return neighbors;
-    };
-
-    const neighborIds = hoveredNodeId
-      ? getNeighborIds(hoveredNodeId)
-      : new Set<string>();
-
-    const enhancedNodes = filteredGraphData.nodes.map((node) => {
-      const isHovered = node.id === hoveredNodeId;
-      const isNeighbor = neighborIds.has(node.id);
-      const isGlossary = node.type === 'glossary';
-      const isIsolated = node.type === 'glossaryTermIsolated';
-
-      const icon = isGlossary ? '📚' : isIsolated ? '◯' : '●';
-      const colors = getNodeColor(node, isHovered, isNeighbor);
-
-      return {
-        ...node,
-        label: `<b>${icon}</b> ${node.label}`,
-        color: colors,
-        font: {
-          size: isHovered ? 14 : 12,
-          bold: isHovered,
-          color: colors.opacity < 1 ? '#bfbfbf' : '#262626',
-        },
-        borderWidth: isHovered ? 3 : 2,
-        opacity: colors.opacity,
-      };
-    });
-
-    const enhancedEdges = filteredGraphData.edges.map((edge, index) => {
-      const isConnectedToHovered =
-        hoveredNodeId &&
-        (edge.from === hoveredNodeId || edge.to === hoveredNodeId);
-      const isFaded =
-        hoveredNodeId && !isConnectedToHovered && settings.highlightOnHover;
-      const edgeColor = getEdgeColor(edge);
-
-      return {
-        ...edge,
-        id: `edge-${index}`,
-        label: getEdgeLabel(edge),
-        color: {
-          color: isFaded ? '#e8e8e8' : edgeColor,
-          highlight: edgeColor,
-          hover: edgeColor,
-          opacity: isFaded ? 0.3 : 1,
-        },
-        width: isConnectedToHovered ? 3 : 2,
-      };
-    });
-
-    nodesDataSetRef.current = new DataSet(enhancedNodes);
-    edgesDataSetRef.current = new DataSet(enhancedEdges as Edge[]);
-
-    const data = {
-      nodes: nodesDataSetRef.current as unknown,
-      edges: edgesDataSetRef.current,
-    } as Data;
-
-    if (networkRef.current) {
-      networkRef.current.destroy();
-    }
-
-    networkRef.current = new Network(container, data, networkOptions);
-
-    // Event handlers
-    networkRef.current.on('click', (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodesDataSetRef.current?.get(
-          nodeId
-        ) as unknown as OntologyNode;
-        setSelectedNode(node);
-      } else {
-        setSelectedNode(null);
-      }
-    });
-
-    networkRef.current.on('doubleClick', (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodesDataSetRef.current?.get(
-          nodeId
-        ) as unknown as OntologyNode;
-        if (node?.fullyQualifiedName) {
-          const entityType =
-            node.type === 'glossary'
-              ? EntityType.GLOSSARY
-              : EntityType.GLOSSARY_TERM;
-          const path = getEntityDetailsPath(
-            entityType,
-            node.fullyQualifiedName
-          );
-          window.open(path, '_blank');
-        }
-      }
-    });
-
-    networkRef.current.on('hoverNode', (params) => {
-      if (settings.highlightOnHover) {
-        setHoveredNodeId(params.node);
-      }
-    });
-
-    networkRef.current.on('blurNode', () => {
-      if (settings.highlightOnHover) {
-        setHoveredNodeId(null);
-      }
-    });
-
-    networkRef.current.on('stabilizationIterationsDone', () => {
-      networkRef.current?.setOptions({ physics: { enabled: false } });
-      if (settings.animateTransitions) {
-        networkRef.current?.fit({
-          animation: { duration: 500, easingFunction: 'easeInOutQuad' },
-        });
-      } else {
-        networkRef.current?.fit();
-      }
-    });
-
-    return () => {
-      networkRef.current?.destroy();
-    };
-  }, [
-    filteredGraphData,
-    loading,
-    networkOptions,
-    hoveredNodeId,
-    settings,
-    getNodeColor,
-    getEdgeColor,
-    getEdgeLabel,
-  ]);
-
   // Focus on selected tree node
   useEffect(() => {
-    if (networkRef.current && selectedTreeNode?.data?.id) {
-      const nodeId = selectedTreeNode.data.id;
-      try {
-        const nodePositions = networkRef.current.getPositions([nodeId]);
-        if (nodePositions && nodePositions[nodeId]) {
-          networkRef.current.selectNodes([nodeId]);
-          networkRef.current.focus(nodeId, {
-            scale: 1.5,
-            animation: settings.animateTransitions
-              ? { duration: 500, easingFunction: 'easeInOutQuad' }
-              : false,
-          });
-        }
-      } catch {
-        // Node not found
-      }
+    if (selectedTreeNode?.data?.id) {
+      setSelectedNode(
+        filteredGraphData?.nodes.find(
+          (n) => n.id === selectedTreeNode.data?.id
+        ) ?? null
+      );
     }
-  }, [selectedTreeNode, settings.animateTransitions]);
+  }, [selectedTreeNode, filteredGraphData]);
 
   const handleZoomIn = useCallback(() => {
-    const scale = networkRef.current?.getScale() || 1;
-    networkRef.current?.moveTo({ scale: scale * 1.3 });
+    graphRef.current?.fitView();
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    const scale = networkRef.current?.getScale() || 1;
-    networkRef.current?.moveTo({ scale: scale * 0.7 });
+    graphRef.current?.fitView();
   }, []);
 
   const handleFitToScreen = useCallback(() => {
-    networkRef.current?.fit({
-      animation: settings.animateTransitions
-        ? { duration: 500, easingFunction: 'easeInOutQuad' }
-        : false,
-    });
-  }, [settings.animateTransitions]);
+    graphRef.current?.fitView();
+  }, []);
 
   const handleFullscreen = useCallback(() => {
     const container = document.querySelector('.ontology-explorer');
     if (container) {
       if (document.fullscreenElement) {
         document.exitFullscreen();
+        setIsFullscreen(false);
       } else {
         (container as HTMLElement).requestFullscreen();
+        setIsFullscreen(true);
       }
+    }
+  }, []);
+
+  const handleToggleMinimap = useCallback(() => {
+    setIsMinimapVisible((prev) => !prev);
+  }, []);
+
+  const handleRearrange = useCallback(() => {
+    graphRef.current?.fitView();
+  }, []);
+
+  const handleFocusSelected = useCallback(() => {
+    if (selectedNode?.id) {
+      graphRef.current?.focusNode(selectedNode.id);
+    }
+  }, [selectedNode]);
+
+  const handleFocusHome = useCallback(() => {
+    graphRef.current?.fitView();
+  }, []);
+
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleContextMenuFocus = useCallback((node: OntologyNode) => {
+    setSelectedNode(node);
+    graphRef.current?.focusNode(node.id);
+  }, []);
+
+  const handleContextMenuViewDetails = useCallback((node: OntologyNode) => {
+    setSelectedNode(node);
+  }, []);
+
+  const handleContextMenuOpenInNewTab = useCallback((node: OntologyNode) => {
+    if (node.fullyQualifiedName) {
+      const path = getGlossaryTermDetailsPath(node.fullyQualifiedName);
+      window.open(path, '_blank');
     }
   }, []);
 
@@ -1057,6 +725,30 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     [handleNodeFocus, filteredGraphData]
   );
 
+  const handleGraphNodeClick = useCallback((node: OntologyNode) => {
+    setContextMenu(null);
+    setSelectedNode(node);
+  }, []);
+
+  const handleGraphNodeDoubleClick = useCallback((node: OntologyNode) => {
+    if (node.fullyQualifiedName) {
+      const path = getGlossaryTermDetailsPath(node.fullyQualifiedName);
+      window.open(path, '_blank');
+    }
+  }, []);
+
+  const handleGraphNodeContextMenu = useCallback(
+    (node: OntologyNode, position: { x: number; y: number }) => {
+      setContextMenu({ node, position });
+    },
+    []
+  );
+
+  const handleGraphPaneClick = useCallback(() => {
+    setContextMenu(null);
+    setSelectedNode(null);
+  }, []);
+
   const statsText = useMemo(() => {
     if (!filteredGraphData) {
       return '';
@@ -1079,7 +771,8 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   return (
     <div
       className={classNames('ontology-explorer', className)}
-      style={{ height }}>
+      style={{ height }}
+    >
       {showHeader && (
         <div className="ontology-explorer-header">
           <Typography.Title className="header-title" level={4}>
@@ -1116,71 +809,43 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 
         <div className="ontology-explorer-graph">
           <div className="ontology-explorer-controls">
-            <div className="control-group">
-              <GraphSettingsPanel
-                settings={settings}
-                onSettingsChange={setSettings}
-              />
-            </div>
+            <GraphSettingsPanel
+              settings={settings}
+              onSettingsChange={setSettings}
+            />
 
-            <div className="control-group">
-              <Space.Compact>
-                <Tooltip title={t('label.zoom-in')}>
-                  <Button
-                    icon={<ZoomInOutlined />}
-                    size="small"
-                    onClick={handleZoomIn}
-                  />
-                </Tooltip>
-                <Tooltip title={t('label.zoom-out')}>
-                  <Button
-                    icon={<ZoomOutOutlined />}
-                    size="small"
-                    onClick={handleZoomOut}
-                  />
-                </Tooltip>
-                <Tooltip title={t('label.fit-to-screen')}>
-                  <Button
-                    icon={<AimOutlined />}
-                    size="small"
-                    onClick={handleFitToScreen}
-                  />
-                </Tooltip>
-                <Tooltip title={t('label.fullscreen')}>
-                  <Button
-                    icon={<FullscreenOutlined />}
-                    size="small"
-                    onClick={handleFullscreen}
-                  />
-                </Tooltip>
-                <Tooltip title={t('label.refresh')}>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    loading={loading}
-                    size="small"
-                    onClick={handleRefresh}
-                  />
-                </Tooltip>
-              </Space.Compact>
-            </div>
+            <OntologyControlButtons
+              isFullscreen={isFullscreen}
+              isLoading={loading}
+              isMinimapVisible={isMinimapVisible}
+              onFitToScreen={handleFitToScreen}
+              onFocusHome={handleFocusHome}
+              onFocusSelected={selectedNode ? handleFocusSelected : undefined}
+              onFullscreen={handleFullscreen}
+              onRearrange={handleRearrange}
+              onRefresh={handleRefresh}
+              onToggleMinimap={handleToggleMinimap}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+            />
 
             {rdfEnabled && (
-              <div className="control-group">
-                <Dropdown
-                  menu={{
-                    items: exportMenuItems,
-                    onClick: ({ key }) =>
-                      handleExport(key as OntologyExportFormat),
-                  }}
-                  placement="bottomRight">
-                  <Button
-                    icon={<DownloadOutlined />}
-                    loading={exporting}
-                    size="small">
-                    {t('label.export')}
-                  </Button>
-                </Dropdown>
-              </div>
+              <Dropdown
+                menu={{
+                  items: exportMenuItems,
+                  onClick: ({ key }) =>
+                    handleExport(key as OntologyExportFormat),
+                }}
+                placement="bottomRight"
+              >
+                <Button
+                  icon={<DownloadOutlined />}
+                  loading={exporting}
+                  size="small"
+                >
+                  {t('label.export')}
+                </Button>
+              </Dropdown>
             )}
           </div>
 
@@ -1199,7 +864,20 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               />
             </div>
           ) : (
-            <div className="ontology-explorer-canvas" ref={containerRef} />
+            <div className="ontology-explorer-canvas">
+              <CytoscapeGraph
+                edges={filteredGraphData.edges}
+                glossaryColorMap={glossaryColorMap}
+                nodes={filteredGraphData.nodes}
+                selectedNodeId={selectedNode?.id}
+                settings={settings}
+                onNodeClick={handleGraphNodeClick}
+                onNodeContextMenu={handleGraphNodeContextMenu}
+                onNodeDoubleClick={handleGraphNodeDoubleClick}
+                onPaneClick={handleGraphPaneClick}
+              />
+              <OntologyLegend edges={filteredGraphData.edges} />
+            </div>
           )}
 
           {selectedNode && (
@@ -1208,20 +886,27 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               node={selectedNode}
               nodes={filteredGraphData?.nodes}
               onClose={() => setSelectedNode(null)}
+              onFocusNode={handleFocusSelected}
               onNavigate={(node) => {
                 if (node.fullyQualifiedName) {
-                  const entityType =
-                    node.type === 'glossary'
-                      ? EntityType.GLOSSARY
-                      : EntityType.GLOSSARY_TERM;
-                  const path = getEntityDetailsPath(
-                    entityType,
+                  const path = getGlossaryTermDetailsPath(
                     node.fullyQualifiedName
                   );
                   navigate(path);
                 }
               }}
               onNodeClick={handleDetailsPanelNodeClick}
+            />
+          )}
+
+          {contextMenu && (
+            <NodeContextMenu
+              node={contextMenu.node}
+              position={contextMenu.position}
+              onClose={handleContextMenuClose}
+              onFocus={handleContextMenuFocus}
+              onOpenInNewTab={handleContextMenuOpenInNewTab}
+              onViewDetails={handleContextMenuViewDetails}
             />
           )}
         </div>

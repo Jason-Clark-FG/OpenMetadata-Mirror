@@ -12,14 +12,17 @@
  */
 
 import {
+  AimOutlined,
   ApartmentOutlined,
   CloseOutlined,
   ExportOutlined,
   InfoCircleOutlined,
   LinkOutlined,
   PlusOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import {
+  Breadcrumb,
   Button,
   Empty,
   List,
@@ -31,8 +34,7 @@ import {
 } from 'antd';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EntityType } from '../../enums/entity.enum';
-import { getEntityDetailsPath } from '../../utils/RouterUtils';
+import { getGlossaryTermDetailsPath } from '../../utils/RouterUtils';
 import RichTextEditorPreviewer from '../common/RichTextEditor/RichTextEditorPreviewer';
 import {
   DetailsPanelProps,
@@ -44,6 +46,7 @@ interface EnhancedDetailsPanelProps extends DetailsPanelProps {
   edges?: OntologyEdge[];
   nodes?: OntologyNode[];
   onNodeClick?: (nodeId: string) => void;
+  onFocusNode?: () => void;
 }
 
 const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
@@ -53,6 +56,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   onClose,
   onAddRelation,
   onNodeClick,
+  onFocusNode,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('summary');
@@ -61,10 +65,8 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
     if (!node?.fullyQualifiedName) {
       return '';
     }
-    const entityType =
-      node.type === 'glossary' ? EntityType.GLOSSARY : EntityType.GLOSSARY_TERM;
 
-    return getEntityDetailsPath(entityType, node.fullyQualifiedName);
+    return getGlossaryTermDetailsPath(node.fullyQualifiedName);
   }, [node]);
 
   const handleNavigateToEntity = useCallback(() => {
@@ -100,6 +102,37 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
     [onNodeClick]
   );
 
+  const getReadableType = useCallback(
+    (type: string) => {
+      const typeMap: Record<string, string> = {
+        glossary: t('label.glossary'),
+        glossaryTerm: t('label.glossary-term'),
+        glossaryTermIsolated: t('label.glossary-term'),
+      };
+
+      return typeMap[type] ?? type;
+    },
+    [t]
+  );
+
+  const breadcrumbItems = useMemo(() => {
+    if (!node?.fullyQualifiedName) {
+      return [];
+    }
+
+    const parts = node.fullyQualifiedName.split('.');
+
+    return parts.map((part, index) => ({
+      key: index.toString(),
+      title:
+        index === parts.length - 1 ? (
+          <Typography.Text strong>{part}</Typography.Text>
+        ) : (
+          <Typography.Text type="secondary">{part}</Typography.Text>
+        ),
+    }));
+  }, [node?.fullyQualifiedName]);
+
   if (!node) {
     return null;
   }
@@ -112,7 +145,8 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
           <div className="section-value">
             <Typography.Text
               copyable={{ text: node.fullyQualifiedName }}
-              ellipsis={{ tooltip: node.fullyQualifiedName }}>
+              ellipsis={{ tooltip: node.fullyQualifiedName }}
+            >
               {node.fullyQualifiedName}
             </Typography.Text>
           </div>
@@ -140,7 +174,9 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
       <div className="detail-section">
         <div className="section-label">{t('label.type')}</div>
         <div className="section-value">
-          <Tag>{node.type}</Tag>
+          <Tag color={node.type === 'glossary' ? 'purple' : 'cyan'}>
+            {getReadableType(node.type)}
+          </Tag>
         </div>
       </div>
     </div>
@@ -161,11 +197,14 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                 className="relation-item cursor-pointer"
                 onClick={() =>
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }>
+                }
+              >
                 <Space>
                   <Tag color="green">{rel.relationType}</Tag>
                   <Typography.Text>
-                    {rel.relatedNode?.label || rel.to}
+                    {rel.relatedNode?.originalLabel ??
+                      rel.relatedNode?.label ??
+                      rel.to}
                   </Typography.Text>
                 </Space>
               </List.Item>
@@ -188,11 +227,14 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                 className="relation-item cursor-pointer"
                 onClick={() =>
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }>
+                }
+              >
                 <Space>
                   <Tag color="blue">{rel.relationType}</Tag>
                   <Typography.Text>
-                    {rel.relatedNode?.label || rel.from}
+                    {rel.relatedNode?.originalLabel ??
+                      rel.relatedNode?.label ??
+                      rel.from}
                   </Typography.Text>
                 </Space>
               </List.Item>
@@ -241,15 +283,43 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
       <div className="details-header">
         <div className="details-title">
           <ApartmentOutlined className="m-r-xs" />
-          <span>{node.label}</span>
+          <Tooltip title={node.originalLabel ?? node.label}>
+            <Typography.Text ellipsis className="title-text">
+              {node.originalLabel ?? node.label}
+            </Typography.Text>
+          </Tooltip>
+          <span className="type-badge">
+            {node.type === 'glossary' ? '📚' : '📝'}
+          </span>
         </div>
-        <Button
-          icon={<CloseOutlined />}
-          size="small"
-          type="text"
-          onClick={onClose}
-        />
+        <Space size={4}>
+          {onFocusNode && (
+            <Tooltip title={t('label.focus-selected')}>
+              <Button
+                icon={<AimOutlined />}
+                size="small"
+                type="text"
+                onClick={onFocusNode}
+              />
+            </Tooltip>
+          )}
+          <Button
+            icon={<CloseOutlined />}
+            size="small"
+            type="text"
+            onClick={onClose}
+          />
+        </Space>
       </div>
+
+      {breadcrumbItems.length > 1 && (
+        <div className="details-breadcrumb">
+          <Breadcrumb
+            items={breadcrumbItems}
+            separator={<RightOutlined style={{ fontSize: 10 }} />}
+          />
+        </div>
+      )}
 
       <Tabs
         activeKey={activeTab}
@@ -265,7 +335,8 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
             <Button
               icon={<ExportOutlined />}
               type="default"
-              onClick={handleNavigateToEntity}>
+              onClick={handleNavigateToEntity}
+            >
               {t('label.view')}
             </Button>
           </Tooltip>
@@ -274,7 +345,8 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
           <Button
             icon={<PlusOutlined />}
             type="primary"
-            onClick={() => onAddRelation(node)}>
+            onClick={() => onAddRelation(node)}
+          >
             {t('label.add-entity', { entity: t('label.relation') })}
           </Button>
         )}

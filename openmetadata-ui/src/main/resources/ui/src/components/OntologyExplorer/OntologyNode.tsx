@@ -1,0 +1,162 @@
+/*
+ *  Copyright 2024 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+import { BookOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Tooltip, Typography } from 'antd';
+import classNames from 'classnames';
+import React, { memo, useCallback } from 'react';
+import { Handle, NodeProps, Position } from 'reactflow';
+import { OntologyNode as OntologyNodeType } from './OntologyExplorer.interface';
+
+export interface OntologyNodeData {
+  node: OntologyNodeType;
+  isSelected: boolean;
+  isHighlighted: boolean;
+  isConnected: boolean;
+  glossaryColor: string;
+  onClick: (nodeId: string) => void;
+  onDoubleClick: (nodeId: string) => void;
+}
+
+const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
+  const {
+    node,
+    isSelected,
+    isHighlighted,
+    isConnected,
+    glossaryColor,
+    onClick,
+    onDoubleClick,
+  } = data;
+
+  const isGlossary = node.type === 'glossary';
+  const displayLabel = node.originalLabel ?? node.label;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onClick(node.id);
+    },
+    [node.id, onClick]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDoubleClick(node.id);
+    },
+    [node.id, onDoubleClick]
+  );
+
+  const nodeClassName = classNames('ontology-flow-node', {
+    'ontology-flow-node--selected': isSelected,
+    'ontology-flow-node--highlighted': isHighlighted && !isSelected,
+    'ontology-flow-node--connected':
+      isConnected && !isSelected && !isHighlighted,
+    'ontology-flow-node--glossary': isGlossary,
+    'ontology-flow-node--term': !isGlossary,
+    'ontology-flow-node--isolated': node.type === 'glossaryTermIsolated',
+  });
+
+  return (
+    <div
+      className={nodeClassName}
+      style={{
+        borderColor: isSelected || isHighlighted ? glossaryColor : undefined,
+        boxShadow: isSelected
+          ? `0 0 0 2px ${glossaryColor}40`
+          : isHighlighted
+          ? `0 0 0 1px ${glossaryColor}30`
+          : undefined,
+      }}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+    >
+      {/* Center handle - enables true straight line edges like professional ontology tools */}
+      <Handle
+        className="ontology-flow-handle"
+        id="center"
+        isConnectable={false}
+        position={Position.Top}
+        style={{
+          opacity: 0,
+          pointerEvents: 'none',
+          left: '50%',
+          top: '50%',
+        }}
+        type="source"
+      />
+      <Handle
+        className="ontology-flow-handle"
+        id="center"
+        isConnectable={false}
+        position={Position.Top}
+        style={{
+          opacity: 0,
+          pointerEvents: 'none',
+          left: '50%',
+          top: '50%',
+        }}
+        type="target"
+      />
+
+      <div className="ontology-flow-node__content">
+        <div
+          className="ontology-flow-node__icon"
+          style={{ backgroundColor: `${glossaryColor}15` }}
+        >
+          {isGlossary ? (
+            <BookOutlined style={{ color: glossaryColor }} />
+          ) : (
+            <FileTextOutlined style={{ color: glossaryColor }} />
+          )}
+        </div>
+
+        <div className="ontology-flow-node__info">
+          <Tooltip title={displayLabel}>
+            <Typography.Text
+              ellipsis
+              className="ontology-flow-node__label"
+              strong={isGlossary}
+            >
+              {displayLabel}
+            </Typography.Text>
+          </Tooltip>
+
+          {node.group && !isGlossary && (
+            <Tooltip title={node.group}>
+              <Typography.Text
+                ellipsis
+                className="ontology-flow-node__group"
+                type="secondary"
+              >
+                {node.group}
+              </Typography.Text>
+            </Tooltip>
+          )}
+        </div>
+
+        {isGlossary && (
+          <div
+            className="ontology-flow-node__badge"
+            style={{ backgroundColor: glossaryColor }}
+          >
+            G
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default memo(OntologyNode);

@@ -250,13 +250,29 @@ public final class CsvUtil {
     return csvRecord;
   }
 
+  /**
+   * Add term relations to CSV record with relation type prefix.
+   * Format: "relationType:termFQN" for non-default relations, or just "termFQN" for "relatedTo".
+   * Example: "synonym:Glossary.Term1;broader:Glossary.Term2;Glossary.Term3"
+   */
   public static List<String> addTermRelations(
       List<String> csvRecord, List<org.openmetadata.schema.type.TermRelation> termRelations) {
     csvRecord.add(
         nullOrEmpty(termRelations)
             ? null
             : termRelations.stream()
-                .map(tr -> tr.getTerm().getFullyQualifiedName())
+                .map(
+                    tr -> {
+                      String relationType = tr.getRelationType();
+                      String fqn = tr.getTerm().getFullyQualifiedName();
+                      // Include relation type prefix for non-default relations
+                      if (relationType != null
+                          && !relationType.isEmpty()
+                          && !relationType.equals("relatedTo")) {
+                        return relationType + ENTITY_TYPE_SEPARATOR + fqn;
+                      }
+                      return fqn;
+                    })
                 .sorted()
                 .collect(Collectors.joining(FIELD_SEPARATOR)));
     return csvRecord;

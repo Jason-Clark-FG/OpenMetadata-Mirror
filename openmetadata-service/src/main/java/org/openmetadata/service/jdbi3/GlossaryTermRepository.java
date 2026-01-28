@@ -75,11 +75,14 @@ import org.openmetadata.schema.api.data.MoveGlossaryTermRequest;
 import org.openmetadata.schema.api.data.TermReference;
 import org.openmetadata.schema.api.feed.CloseTask;
 import org.openmetadata.schema.api.feed.ResolveTask;
+import org.openmetadata.schema.configuration.GlossaryTermRelationSettings;
+import org.openmetadata.schema.configuration.GlossaryTermRelationType;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.search.SearchRequest;
+import org.openmetadata.schema.settings.SettingsType;
 import org.openmetadata.schema.type.ApiStatus;
 import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.ChangeEvent;
@@ -101,6 +104,7 @@ import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.BadRequestException;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
@@ -111,6 +115,7 @@ import org.openmetadata.service.rdf.RdfUpdater;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.glossary.GlossaryTermResource;
+import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
@@ -214,6 +219,21 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     }
 
     return glossaryTermAssetCounts;
+  }
+
+  public Map<String, Integer> getRelationTypeUsageCounts() {
+    Map<String, Integer> usageCounts = new HashMap<>();
+    List<EntityRelationshipRecord> records =
+        daoCollection
+            .relationshipDAO()
+            .findAllByEntityTypes(entityType, entityType, Relationship.RELATED_TO.ordinal());
+
+    for (EntityRelationshipRecord record : records) {
+      String relationType = extractRelationType(record.getJson());
+      usageCounts.merge(relationType, 1, Integer::sum);
+    }
+
+    return usageCounts;
   }
 
   @Override
@@ -453,6 +473,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     for (TermRelation termRelation : listOrEmpty(entity.getRelatedTerms())) {
       String relationType =
           termRelation.getRelationType() != null ? termRelation.getRelationType() : "relatedTo";
+      validateRelationType(relationType);
       String json = String.format("{\"relationType\":\"%s\"}", relationType);
       addRelationship(
           entity.getId(),
@@ -475,6 +496,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     termRelation.setTerm(termRef);
     String relationType =
         termRelation.getRelationType() != null ? termRelation.getRelationType() : "relatedTo";
+    validateRelationType(relationType);
     String json = String.format("{\"relationType\":\"%s\"}", relationType);
     addRelationship(
         id, termRef.getId(), GLOSSARY_TERM, GLOSSARY_TERM, Relationship.RELATED_TO, json, true);
@@ -488,6 +510,39 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     String actualRelationType = relationType != null ? relationType : "relatedTo";
     RdfUpdater.removeGlossaryTermRelation(id, toTermId, actualRelationType);
     return get(null, id, getFields("relatedTerms"), Include.NON_DELETED, false);
+  }
+
+  private static final List<String> DEFAULT_RELATION_TYPES =
+      List.of("relatedTo", "synonym", "broader", "narrower", "antonym", "partOf", "hasPart");
+
+  public void validateRelationType(String relationType) {
+    if (relationType == null || relationType.isEmpty()) {
+      return;
+    }
+    List<String> validTypes = getValidRelationTypes();
+    boolean isValid = validTypes.contains(relationType);
+    if (!isValid) {
+      throw new BadRequestException(
+          String.format(
+              "Invalid relation type '%s'. Valid types are: %s",
+              relationType, String.join(", ", validTypes)));
+    }
+  }
+
+  private List<String> getValidRelationTypes() {
+    try {
+      GlossaryTermRelationSettings settings =
+          SettingsCache.getSetting(
+              SettingsType.GLOSSARY_TERM_RELATION_SETTINGS, GlossaryTermRelationSettings.class);
+      if (settings != null && settings.getRelationTypes() != null) {
+        return settings.getRelationTypes().stream()
+            .map(GlossaryTermRelationType::getName)
+            .collect(Collectors.toList());
+      }
+    } catch (Exception e) {
+      // Settings not available, use defaults
+    }
+    return DEFAULT_RELATION_TYPES;
   }
 
   public Map<String, Object> getTermRelationGraph(UUID id, int depth, List<String> relationTypes) {

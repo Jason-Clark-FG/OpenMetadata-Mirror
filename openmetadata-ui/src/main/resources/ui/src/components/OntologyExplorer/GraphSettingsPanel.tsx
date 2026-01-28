@@ -164,9 +164,10 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
       content={content}
       placement="bottomRight"
       title={t('label.graph-settings')}
-      trigger="click">
+      trigger="click"
+    >
       <Button icon={<SettingOutlined />} size="small">
-        {t('label.settings')}
+        {t('label.setting-plural')}
       </Button>
     </Popover>
   );

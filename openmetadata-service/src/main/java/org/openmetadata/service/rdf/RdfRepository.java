@@ -1100,7 +1100,8 @@ public class RdfRepository {
           }
           // Also check if this is an RDF predicate local name that maps to a configured type
           if (configuredType.getRdfPredicate() != null) {
-            String predicateLocalName = extractLocalName(configuredType.getRdfPredicate().toString());
+            String predicateLocalName =
+                extractLocalName(configuredType.getRdfPredicate().toString());
             if (predicateLocalName != null && predicateLocalName.equalsIgnoreCase(relationType)) {
               return configuredType.getDisplayName();
             }
@@ -1842,7 +1843,9 @@ public class RdfRepository {
   }
 
   private Property getGlossaryTermRelationPredicate(String relationType, Model model) {
-    LOG.info("getGlossaryTermRelationPredicate: Looking up predicate for relationType='{}'", relationType);
+    LOG.info(
+        "getGlossaryTermRelationPredicate: Looking up predicate for relationType='{}'",
+        relationType);
     if (relationType == null) {
       LOG.info("getGlossaryTermRelationPredicate: relationType is null, defaulting to 'relatedTo'");
       relationType = "relatedTo";
@@ -1856,31 +1859,43 @@ public class RdfRepository {
               org.openmetadata.schema.configuration.GlossaryTermRelationSettings.class);
 
       if (settings != null && settings.getRelationTypes() != null) {
-        LOG.info("getGlossaryTermRelationPredicate: Found {} relation types in settings", settings.getRelationTypes().size());
+        LOG.info(
+            "getGlossaryTermRelationPredicate: Found {} relation types in settings",
+            settings.getRelationTypes().size());
         for (var configuredType : settings.getRelationTypes()) {
           if (configuredType.getName().equalsIgnoreCase(relationType)) {
             java.net.URI rdfPredicateUri = configuredType.getRdfPredicate();
-            LOG.info("getGlossaryTermRelationPredicate: Matched '{}' to configured type '{}' with rdfPredicate='{}'",
-                relationType, configuredType.getName(), rdfPredicateUri);
+            LOG.info(
+                "getGlossaryTermRelationPredicate: Matched '{}' to configured type '{}' with rdfPredicate='{}'",
+                relationType,
+                configuredType.getName(),
+                rdfPredicateUri);
             if (rdfPredicateUri != null) {
               Property prop = createPropertyFromUri(rdfPredicateUri.toString(), model);
-              LOG.info("getGlossaryTermRelationPredicate: Created property with URI='{}'", prop.getURI());
+              LOG.info(
+                  "getGlossaryTermRelationPredicate: Created property with URI='{}'",
+                  prop.getURI());
               return prop;
             }
             break;
           }
         }
-        LOG.info("getGlossaryTermRelationPredicate: No match found for '{}' in configured types", relationType);
+        LOG.info(
+            "getGlossaryTermRelationPredicate: No match found for '{}' in configured types",
+            relationType);
       } else {
         LOG.info("getGlossaryTermRelationPredicate: Settings or relationTypes is null");
       }
     } catch (Exception e) {
-      LOG.info("getGlossaryTermRelationPredicate: Could not load settings, error: {}", e.getMessage());
+      LOG.info(
+          "getGlossaryTermRelationPredicate: Could not load settings, error: {}", e.getMessage());
     }
 
     // Fall back to default: use OpenMetadata ontology namespace with the relation type name
-    Property defaultProp = model.createProperty("https://open-metadata.org/ontology/", relationType);
-    LOG.info("getGlossaryTermRelationPredicate: Using default predicate URI='{}'", defaultProp.getURI());
+    Property defaultProp =
+        model.createProperty("https://open-metadata.org/ontology/", relationType);
+    LOG.info(
+        "getGlossaryTermRelationPredicate: Using default predicate URI='{}'", defaultProp.getURI());
     return defaultProp;
   }
 
@@ -2167,7 +2182,8 @@ public class RdfRepository {
       // Parse predicate counts
       com.fasterxml.jackson.databind.node.ArrayNode predicates =
           JsonUtils.getObjectMapper().createArrayNode();
-      com.fasterxml.jackson.databind.JsonNode predResultsJson = JsonUtils.readTree(predicateResults);
+      com.fasterxml.jackson.databind.JsonNode predResultsJson =
+          JsonUtils.readTree(predicateResults);
       if (predResultsJson.has("results") && predResultsJson.get("results").has("bindings")) {
         for (com.fasterxml.jackson.databind.JsonNode binding :
             predResultsJson.get("results").get("bindings")) {
@@ -2177,8 +2193,7 @@ public class RdfRepository {
               "predicate",
               binding.has("predicate") ? binding.get("predicate").get("value").asText() : "null");
           predInfo.put(
-              "count",
-              binding.has("count") ? binding.get("count").get("value").asInt() : 0);
+              "count", binding.has("count") ? binding.get("count").get("value").asInt() : 0);
           predicates.add(predInfo);
         }
       }
@@ -2195,13 +2210,17 @@ public class RdfRepository {
               JsonUtils.getObjectMapper().createObjectNode();
           triple.put(
               "term1",
-              binding.has("term1") ? extractEntityIdFromUri(binding.get("term1").get("value").asText()) : "null");
+              binding.has("term1")
+                  ? extractEntityIdFromUri(binding.get("term1").get("value").asText())
+                  : "null");
           triple.put(
               "predicate",
               binding.has("predicate") ? binding.get("predicate").get("value").asText() : "null");
           triple.put(
               "term2",
-              binding.has("term2") ? extractEntityIdFromUri(binding.get("term2").get("value").asText()) : "null");
+              binding.has("term2")
+                  ? extractEntityIdFromUri(binding.get("term2").get("value").asText())
+                  : "null");
           samples.add(triple);
         }
       }

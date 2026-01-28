@@ -495,3 +495,11 @@ export const updateGlossaryTermRelationSettings = async (settings: unknown) => {
 
   return response.data;
 };
+
+export const getRelationTypeUsageCounts = async (): Promise<
+  Record<string, number>
+> => {
+  const response = await APIClient.get('/glossaryTerms/relationTypes/usage');
+
+  return response.data;
+};

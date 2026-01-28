@@ -40,6 +40,7 @@ import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.const
 import { useAuth } from '../../hooks/authHooks';
 import {
   getGlossaryTermRelationSettings,
+  getRelationTypeUsageCounts,
   updateGlossaryTermRelationSettings,
 } from '../../rest/glossaryAPI';
 import { getSettingPageEntityBreadCrumb } from '../../utils/GlobalSettingsUtils';
@@ -83,6 +84,7 @@ function GlossaryTermRelationSettingsPage() {
   const [settings, setSettings] = useState<GlossaryTermRelationSettings | null>(
     null
   );
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingRelation, setEditingRelation] =
     useState<GlossaryTermRelationType | null>(null);
@@ -100,8 +102,12 @@ function GlossaryTermRelationSettingsPage() {
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getGlossaryTermRelationSettings();
-      setSettings(data as GlossaryTermRelationSettings);
+      const [settingsData, usageData] = await Promise.all([
+        getGlossaryTermRelationSettings(),
+        getRelationTypeUsageCounts(),
+      ]);
+      setSettings(settingsData as GlossaryTermRelationSettings);
+      setUsageCounts(usageData);
     } catch (error) {
       showErrorToast(
         error as AxiosError,
@@ -234,10 +240,15 @@ function GlossaryTermRelationSettingsPage() {
         key: 'name',
         render: (name: string, record) => (
           <div className="d-flex items-center gap-2">
-            <Typography.Text strong>{name}</Typography.Text>
+            <Typography.Text strong data-testid={`relation-name-${name}`}>
+              {name}
+            </Typography.Text>
             {record.isSystemDefined && (
               <Tooltip title={t('label.system-defined')}>
-                <LockOutlined className="text-grey-muted" />
+                <LockOutlined
+                  className="text-grey-muted"
+                  data-testid={`system-defined-${name}`}
+                />
               </Tooltip>
             )}
           </div>
@@ -318,32 +329,75 @@ function GlossaryTermRelationSettingsPage() {
           ),
       },
       {
+        title: t('label.usage'),
+        key: 'usage',
+        render: (_, record) => {
+          const count = usageCounts[record.name] || 0;
+
+          return (
+            <Tooltip
+              title={
+                count > 0
+                  ? t('message.relation-type-in-use-count', { count })
+                  : t('message.relation-type-not-in-use')
+              }
+            >
+              <Tag
+                color={count > 0 ? 'blue' : 'default'}
+                data-testid={`usage-count-${record.name}`}
+              >
+                {count}
+              </Tag>
+            </Tooltip>
+          );
+        },
+      },
+      {
         title: t('label.action-plural'),
         key: 'actions',
-        render: (_, record) => (
-          <div className="d-flex gap-2">
-            <Button
-              disabled={record.isSystemDefined}
-              size="small"
-              type="link"
-              onClick={() => handleEdit(record)}>
-              {t('label.edit')}
-            </Button>
-            {!record.isSystemDefined && (
+        render: (_, record) => {
+          const count = usageCounts[record.name] || 0;
+          const isInUse = count > 0;
+
+          return (
+            <div className="d-flex gap-2">
               <Button
-                danger
-                disabled={saving}
+                data-testid={`edit-${record.name}-btn`}
+                disabled={record.isSystemDefined}
                 size="small"
                 type="link"
-                onClick={() => handleDelete(record.name)}>
-                {t('label.delete')}
+                onClick={() => handleEdit(record)}
+              >
+                {t('label.edit')}
               </Button>
-            )}
-          </div>
-        ),
+              {!record.isSystemDefined && (
+                <Tooltip
+                  title={
+                    isInUse
+                      ? t('message.cannot-delete-relation-type-in-use', {
+                          count,
+                        })
+                      : undefined
+                  }
+                >
+                  <Button
+                    danger
+                    data-testid={`delete-${record.name}-btn`}
+                    disabled={saving || isInUse}
+                    size="small"
+                    type="link"
+                    onClick={() => handleDelete(record.name)}
+                  >
+                    {t('label.delete')}
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
+          );
+        },
       },
     ],
-    [t, handleEdit, handleDelete, saving]
+    [t, handleEdit, handleDelete, saving, usageCounts]
   );
 
   useEffect(() => {
@@ -355,7 +409,8 @@ function GlossaryTermRelationSettingsPage() {
       <Row
         align="middle"
         className="p-lg bg-white border-radius-sm"
-        gutter={[0, 16]}>
+        gutter={[0, 16]}
+      >
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
@@ -373,7 +428,11 @@ function GlossaryTermRelationSettingsPage() {
             </Col>
             <Col>
               {isAdminUser && (
-                <Button type="primary" onClick={handleAddNew}>
+                <Button
+                  data-testid="add-relation-type-btn"
+                  type="primary"
+                  onClick={handleAddNew}
+                >
                   {t('label.add-entity', {
                     entity: t('label.relation-type'),
                   })}
@@ -389,6 +448,7 @@ function GlossaryTermRelationSettingsPage() {
             ) : (
               <Table
                 columns={columns}
+                data-testid="relation-types-table"
                 dataSource={settings?.relationTypes || []}
                 pagination={false}
                 rowKey="name"
@@ -401,15 +461,22 @@ function GlossaryTermRelationSettingsPage() {
 
       <Modal
         destroyOnClose
+        data-testid="relation-type-modal"
         footer={[
-          <Button key="cancel" onClick={handleModalCancel}>
+          <Button
+            data-testid="cancel-btn"
+            key="cancel"
+            onClick={handleModalCancel}
+          >
             {t('label.cancel')}
           </Button>,
           <Button
+            data-testid="save-btn"
             key="submit"
             loading={saving}
             type="primary"
-            onClick={handleModalOk}>
+            onClick={handleModalOk}
+          >
             {editingRelation ? t('label.update') : t('label.add')}
           </Button>,
         ]}
@@ -420,8 +487,9 @@ function GlossaryTermRelationSettingsPage() {
             : t('label.add-entity', { entity: t('label.relation-type') })
         }
         width={600}
-        onCancel={handleModalCancel}>
-        <Form form={form} layout="vertical">
+        onCancel={handleModalCancel}
+      >
+        <Form data-testid="relation-type-form" form={form} layout="vertical">
           <Form.Item
             label={t('label.name')}
             name="name"
@@ -434,8 +502,10 @@ function GlossaryTermRelationSettingsPage() {
                 pattern: /^[a-zA-Z][a-zA-Z0-9]*$/,
                 message: t('message.must-start-with-letter-alphanumeric'),
               },
-            ]}>
+            ]}
+          >
             <Input
+              data-testid="name-input"
               disabled={Boolean(editingRelation)}
               placeholder={t('label.enter-entity', { entity: t('label.name') })}
             />
@@ -451,8 +521,10 @@ function GlossaryTermRelationSettingsPage() {
                   field: t('label.display-name'),
                 }),
               },
-            ]}>
+            ]}
+          >
             <Input
+              data-testid="display-name-input"
               placeholder={t('label.enter-entity', {
                 entity: t('label.display-name'),
               })}
@@ -461,6 +533,7 @@ function GlossaryTermRelationSettingsPage() {
 
           <Form.Item label={t('label.description')} name="description">
             <Input.TextArea
+              data-testid="description-input"
               placeholder={t('label.enter-entity', {
                 entity: t('label.description'),
               })}
@@ -471,15 +544,18 @@ function GlossaryTermRelationSettingsPage() {
           <Form.Item
             label={t('label.category')}
             name="category"
-            rules={[{ required: true }]}>
-            <Select options={CATEGORY_OPTIONS} />
+            rules={[{ required: true }]}
+          >
+            <Select data-testid="category-select" options={CATEGORY_OPTIONS} />
           </Form.Item>
 
           <Form.Item
             label={t('label.inverse-relation')}
             name="inverseRelation"
-            tooltip={t('message.inverse-relation-tooltip')}>
+            tooltip={t('message.inverse-relation-tooltip')}
+          >
             <Input
+              data-testid="inverse-relation-input"
               placeholder={t('label.enter-entity', {
                 entity: t('label.inverse-relation'),
               })}
@@ -489,21 +565,28 @@ function GlossaryTermRelationSettingsPage() {
           <Form.Item
             label={t('label.rdf-predicate')}
             name="rdfPredicate"
-            tooltip={t('message.rdf-predicate-tooltip')}>
-            <Input placeholder="skos:broader" />
+            tooltip={t('message.rdf-predicate-tooltip')}
+          >
+            <Input
+              data-testid="rdf-predicate-input"
+              placeholder="skos:broader"
+            />
           </Form.Item>
 
           <Form.Item
             label={t('label.color')}
             name="color"
-            tooltip={t('message.relation-color-tooltip')}>
+            tooltip={t('message.relation-color-tooltip')}
+          >
             <Input
+              data-testid="color-input"
               placeholder="#1890ff"
               style={{ width: 150 }}
               suffix={
                 <Form.Item noStyle shouldUpdate>
                   {({ getFieldValue }) => (
                     <div
+                      data-testid="color-preview"
                       style={{
                         width: 16,
                         height: 16,
@@ -523,24 +606,27 @@ function GlossaryTermRelationSettingsPage() {
               <Form.Item
                 label={t('label.symmetric')}
                 name="isSymmetric"
-                valuePropName="checked">
-                <Switch />
+                valuePropName="checked"
+              >
+                <Switch data-testid="symmetric-switch" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item
                 label={t('label.transitive')}
                 name="isTransitive"
-                valuePropName="checked">
-                <Switch />
+                valuePropName="checked"
+              >
+                <Switch data-testid="transitive-switch" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item
                 label={t('label.cross-glossary')}
                 name="isCrossGlossaryAllowed"
-                valuePropName="checked">
-                <Switch />
+                valuePropName="checked"
+              >
+                <Switch data-testid="cross-glossary-switch" />
               </Form.Item>
             </Col>
           </Row>

@@ -27,6 +27,7 @@ export interface OntologyExplorerProps {
 export interface OntologyNode {
   id: string;
   label: string;
+  originalLabel?: string;
   type: string;
   fullyQualifiedName?: string;
   description?: string;

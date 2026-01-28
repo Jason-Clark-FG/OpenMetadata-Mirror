@@ -133,9 +133,7 @@ public class RdfResource {
 
     } catch (IOException e) {
       LOG.error("Error debugging glossary relations", e);
-      return Response.serverError()
-          .entity("{\"error\": \"" + e.getMessage() + "\"}")
-          .build();
+      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
     }
   }
 
