@@ -201,6 +201,18 @@ public class WebsocketNotificationHandler {
     }
   }
 
+  public static void sendCsvExportProgressNotification(
+      String jobId, SecurityContext securityContext, int progress, int total, String message) {
+    CSVExportMessage exportMessage =
+        new CSVExportMessage(jobId, "IN_PROGRESS", null, null, progress, total, message);
+    String jsonMessage = JsonUtils.pojoToJson(exportMessage);
+    UUID userId = getUserIdFromSecurityContext(securityContext);
+    if (userId != null) {
+      WebSocketManager.getInstance()
+          .sendToOne(userId, WebSocketManager.CSV_EXPORT_CHANNEL, jsonMessage);
+    }
+  }
+
   private static UUID getUserIdFromSecurityContext(SecurityContext securityContext) {
     try {
       String username = securityContext.getUserPrincipal().getName();
@@ -219,6 +231,18 @@ public class WebsocketNotificationHandler {
       String jobId, SecurityContext securityContext) {
     CSVImportMessage message = new CSVImportMessage(jobId, "STARTED", null, null);
     String jsonMessage = JsonUtils.pojoToJson(message);
+    UUID userId = getUserIdFromSecurityContext(securityContext);
+    if (userId != null) {
+      WebSocketManager.getInstance()
+          .sendToOne(userId, WebSocketManager.CSV_IMPORT_CHANNEL, jsonMessage);
+    }
+  }
+
+  public static void sendCsvImportProgressNotification(
+      String jobId, SecurityContext securityContext, int progress, int total, String message) {
+    CSVImportMessage importMessage =
+        new CSVImportMessage(jobId, "IN_PROGRESS", null, null, progress, total, message);
+    String jsonMessage = JsonUtils.pojoToJson(importMessage);
     UUID userId = getUserIdFromSecurityContext(securityContext);
     if (userId != null) {
       WebSocketManager.getInstance()

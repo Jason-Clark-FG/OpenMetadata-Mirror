@@ -42,6 +42,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.jetbrains.annotations.NotNull;
+import org.openmetadata.csv.CsvExportProgressCallback;
+import org.openmetadata.csv.CsvImportProgressCallback;
+import org.openmetadata.csv.EntityCsv;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
 import org.openmetadata.schema.api.feed.CloseTask;
@@ -686,6 +689,14 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
           .withTestCaseResult(testCaseResult);
     }
     storeMany(testCasesToStore);
+  }
+
+  @Override
+  protected void clearEntitySpecificRelationshipsForMany(List<TestCase> entities) {
+    if (entities.isEmpty()) return;
+    List<UUID> ids = entities.stream().map(TestCase::getId).toList();
+    deleteToMany(ids, Entity.TEST_CASE, Relationship.CONTAINS, Entity.TEST_SUITE);
+    deleteToMany(ids, Entity.TEST_CASE, Relationship.CONTAINS, Entity.TEST_DEFINITION);
   }
 
   @Override

@@ -38,6 +38,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.csv.CsvExportProgressCallback;
+import org.openmetadata.csv.CsvImportProgressCallback;
 import org.openmetadata.schema.BulkAssetsRequestInterface;
 import org.openmetadata.schema.CreateEntity;
 import org.openmetadata.schema.EntityInterface;
@@ -668,9 +670,17 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     executorService.submit(
         () -> {
           try {
+            CsvExportProgressCallback progressCallback =
+                (exported, total, message) ->
+                    WebsocketNotificationHandler.sendCsvExportProgressNotification(
+                        jobId, securityContext, exported, total, message);
+
             String csvData =
                 repository.exportToCsv(
-                    name, securityContext.getUserPrincipal().getName(), recursive);
+                    name,
+                    securityContext.getUserPrincipal().getName(),
+                    recursive,
+                    progressCallback);
             WebsocketNotificationHandler.sendCsvExportCompleteNotification(
                 jobId, securityContext, csvData);
           } catch (Exception e) {
@@ -793,6 +803,17 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       String csv,
       boolean dryRun,
       boolean recursive) {
+    return importCsvInternalAsync(uriInfo, securityContext, name, csv, dryRun, recursive, null);
+  }
+
+  public Response importCsvInternalAsync(
+      UriInfo uriInfo,
+      SecurityContext securityContext,
+      String name,
+      String csv,
+      boolean dryRun,
+      boolean recursive,
+      String versioningEntityType) {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.EDIT_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
@@ -805,8 +826,22 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         () -> {
           try {
             WebsocketNotificationHandler.sendCsvImportStartedNotification(jobId, securityContext);
+
+            CsvImportProgressCallback progressCallback =
+                (rowsProcessed, totalRows, batchNumber, message) ->
+                    WebsocketNotificationHandler.sendCsvImportProgressNotification(
+                        jobId, securityContext, rowsProcessed, totalRows, message);
+
             CsvImportResult result =
-                importCsvInternal(uriInfo, securityContext, name, csv, dryRun, recursive);
+                importCsvInternal(
+                    uriInfo,
+                    securityContext,
+                    name,
+                    csv,
+                    dryRun,
+                    recursive,
+                    versioningEntityType,
+                    progressCallback);
             WebsocketNotificationHandler.sendCsvImportCompleteNotification(
                 jobId, securityContext, result);
           } catch (Exception e) {
@@ -835,12 +870,52 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       boolean dryRun,
       boolean recursive)
       throws IOException {
+    return importCsvInternal(uriInfo, securityContext, name, csv, dryRun, recursive, null);
+  }
+
+  protected CsvImportResult importCsvInternal(
+      UriInfo uriInfo,
+      SecurityContext securityContext,
+      String name,
+      String csv,
+      boolean dryRun,
+      boolean recursive,
+      String versioningEntityType)
+      throws IOException {
+    return importCsvInternal(
+        uriInfo, securityContext, name, csv, dryRun, recursive, versioningEntityType, null);
+  }
+
+  protected CsvImportResult importCsvInternal(
+      UriInfo uriInfo,
+      SecurityContext securityContext,
+      String name,
+      String csv,
+      boolean dryRun,
+      boolean recursive,
+      String versioningEntityType,
+      CsvImportProgressCallback progressCallback)
+      throws IOException {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.EDIT_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     CsvImportResult result =
-        repository.importFromCsv(
-            name, csv, dryRun, securityContext.getUserPrincipal().getName(), recursive);
+        nullOrEmpty(versioningEntityType)
+            ? repository.importFromCsv(
+                name,
+                csv,
+                dryRun,
+                securityContext.getUserPrincipal().getName(),
+                recursive,
+                progressCallback)
+            : repository.importFromCsv(
+                name,
+                csv,
+                dryRun,
+                securityContext.getUserPrincipal().getName(),
+                recursive,
+                versioningEntityType,
+                progressCallback);
 
     // Create version history for bulk import (same logic as async import)
     if (result.getStatus() != ApiStatus.ABORTED

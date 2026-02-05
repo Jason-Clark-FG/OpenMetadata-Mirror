@@ -21,8 +21,12 @@ import static org.openmetadata.service.fernet.Fernet.encryptWebhookSecretKey;
 import static org.openmetadata.service.util.EntityUtil.objectMatch;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.events.CreateEventSubscription;
 import org.openmetadata.schema.entity.events.Argument;
@@ -153,6 +157,13 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
     }
   }
 
+  private void ensureDestinationIds(EventSubscription entity) {
+    // Ensure all destinations have unique IDs assigned before storage
+    Optional.ofNullable(entity.getDestinations()).orElse(Collections.emptyList()).stream()
+        .filter(destination -> nullOrEmpty(destination.getId()))
+        .forEach(destination -> destination.withId(UUID.randomUUID()));
+  }
+
   public EventSubscriptionOffset syncEventSubscriptionOffset(String eventSubscriptionName) {
     EventSubscription eventSubscription = getByName(null, eventSubscriptionName, getFields("*"));
     long latestOffset = daoCollection.changeEventDAO().getLatestOffset();
@@ -179,6 +190,21 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
   @Override
   public void storeEntity(EventSubscription entity, boolean update) {
     store(entity, update);
+  }
+
+  @Override
+  public void storeEntities(List<EventSubscription> entities) {
+    for (EventSubscription entity : entities) {
+      ensureDestinationIds(entity);
+    }
+    storeMany(entities);
+  }
+
+  @Override
+  protected void clearEntitySpecificRelationshipsForMany(List<EventSubscription> entities) {
+    if (entities.isEmpty()) return;
+    List<UUID> ids = entities.stream().map(EventSubscription::getId).toList();
+    deleteFromMany(ids, Entity.EVENT_SUBSCRIPTION, Relationship.USES, Entity.NOTIFICATION_TEMPLATE);
   }
 
   @Override

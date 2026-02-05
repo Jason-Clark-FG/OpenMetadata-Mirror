@@ -24,6 +24,7 @@ import static org.openmetadata.service.Entity.DIRECTORY;
 import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.FILE;
 
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +34,12 @@ import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
+import org.openmetadata.csv.CsvExportProgressCallback;
 import org.openmetadata.csv.EntityCsv;
 import org.openmetadata.schema.entity.data.Directory;
 import org.openmetadata.schema.entity.data.File;
 import org.openmetadata.schema.entity.services.DriveService;
+import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.FileType;
 import org.openmetadata.schema.type.Include;
@@ -116,6 +119,12 @@ public class FileRepository extends EntityRepository<File> {
   }
 
   @Override
+  public void storeEntities(List<File> files) {
+    List<File> filesToStore = new ArrayList<>();
+    storeMany(filesToStore);
+  }
+
+  @Override
   public void storeRelationships(File file) {
     // Add relationship from service to file
     addRelationship(
@@ -178,8 +187,15 @@ public class FileRepository extends EntityRepository<File> {
 
   @Override
   public String exportToCsv(String name, String user, boolean recursive) throws IOException {
+    return exportToCsv(name, user, recursive, null);
+  }
+
+  @Override
+  public String exportToCsv(
+      String name, String user, boolean recursive, CsvExportProgressCallback callback)
+      throws IOException {
     File file = getByName(null, name, EntityUtil.Fields.EMPTY_FIELDS);
-    return new FileCsv(file, user).exportCsv(listOf(file));
+    return new FileCsv(file, user).exportCsv(listOf(file), callback);
   }
 
   @Override
