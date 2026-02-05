@@ -22,6 +22,7 @@ import org.openmetadata.schema.entity.data.Database;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -42,6 +43,7 @@ public class DatabaseSchemaResourceIT extends BaseEntityIT<DatabaseSchema, Creat
     supportsImportExport = true;
     supportsLifeCycle = true;
     supportsListHistoryByTimestamp = true;
+    supportsBulkAPI = true;
   }
 
   // Store last created schema for import/export tests
@@ -1498,5 +1500,26 @@ public class DatabaseSchemaResourceIT extends BaseEntityIT<DatabaseSchema, Creat
                             == org.openmetadata.schema.type.TagLabel.TagSource.GLOSSARY),
         "Table should have the approved glossary term as a tag. Found tags: "
             + updatedTable.getTags());
+  }
+
+  // ===================================================================
+  // BULK API SUPPORT
+  // ===================================================================
+
+  @Override
+  protected BulkOperationResult executeBulkCreate(List<CreateDatabaseSchema> createRequests) {
+    return SdkClients.adminClient().databaseSchemas().bulkCreateOrUpdate(createRequests);
+  }
+
+  @Override
+  protected BulkOperationResult executeBulkCreateAsync(List<CreateDatabaseSchema> createRequests) {
+    return SdkClients.adminClient().databaseSchemas().bulkCreateOrUpdateAsync(createRequests);
+  }
+
+  @Override
+  protected CreateDatabaseSchema createInvalidRequestForBulk(TestNamespace ns) {
+    CreateDatabaseSchema request = new CreateDatabaseSchema();
+    request.setName(ns.prefix("invalid_schema"));
+    return request;
   }
 }

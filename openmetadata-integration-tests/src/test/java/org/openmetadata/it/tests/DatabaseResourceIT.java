@@ -34,6 +34,7 @@ import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.service.util.FullyQualifiedName;
@@ -71,6 +72,7 @@ public class DatabaseResourceIT extends BaseEntityIT<Database, CreateDatabase> {
     supportsImportExport = true;
     supportsLifeCycle = true;
     supportsListHistoryByTimestamp = true;
+    supportsBulkAPI = true;
   }
 
   // Store last created database for import/export tests
@@ -1362,5 +1364,26 @@ public class DatabaseResourceIT extends BaseEntityIT<Database, CreateDatabase> {
       lastCreatedDatabase = createEntity(request);
     }
     return lastCreatedDatabase.getFullyQualifiedName();
+  }
+
+  // ===================================================================
+  // BULK API SUPPORT
+  // ===================================================================
+
+  @Override
+  protected BulkOperationResult executeBulkCreate(List<CreateDatabase> createRequests) {
+    return SdkClients.adminClient().databases().bulkCreateOrUpdate(createRequests);
+  }
+
+  @Override
+  protected BulkOperationResult executeBulkCreateAsync(List<CreateDatabase> createRequests) {
+    return SdkClients.adminClient().databases().bulkCreateOrUpdateAsync(createRequests);
+  }
+
+  @Override
+  protected CreateDatabase createInvalidRequestForBulk(TestNamespace ns) {
+    CreateDatabase request = new CreateDatabase();
+    request.setName(ns.prefix("invalid_database"));
+    return request;
   }
 }
