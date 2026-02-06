@@ -25,7 +25,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +40,6 @@ import {
   NodeProps,
   ReactFlowInstance,
   useKeyPress,
-  useUpdateNodeInternals,
 } from 'reactflow';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
@@ -89,6 +87,7 @@ import {
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useFqn } from '../../hooks/useFqn';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import { useMapBasedNodesEdges } from '../../hooks/useMapBasedNodesEdges';
@@ -184,12 +183,9 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setActiveNode,
     selectedNode,
     setSelectedNode,
+    isColumnLevelLineage,
     reset,
   } = useLineageStore();
-
-  // Added this ref to compare the previous active layer with the current active layer.
-  // We need to redraw the lineage if the column level lineage is added or removed.
-  const prevActiveLayerRef = useRef<LineageLayer[]>([]);
 
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [showAddEdgeModal, setShowAddEdgeModal] = useState<boolean>(false);
@@ -252,6 +248,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
     return new Set(columns);
   }, [columnsInCurrentPages]);
+
+  const debouncedColumnsSet = useDebounce(allColumnsInCurrentPagesSet, 150);
 
   // Add state for entityFqn that can be updated independently of URL params
   const [entityFqn, setEntityFqn] = useState<string>(decodedFqn);
@@ -334,7 +332,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         allNodes,
         lineageData.edges ?? [],
         entityFqn,
-        activeLayer.includes(LineageLayer.ColumnLevelLineage),
+        isColumnLevelLineage,
         isFirstTime ? true : undefined
       );
 
@@ -344,7 +342,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         entityFqn,
         incomingMap,
         outgoingMap,
-        activeLayer.includes(LineageLayer.ColumnLevelLineage),
+        isColumnLevelLineage,
         isFirstTime ? true : undefined,
         isEditMode || expandAllColumns,
         columnsHavingLineage
@@ -402,6 +400,64 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     ]
   );
 
+  const createColumnEdges = useCallback(
+    (visibleColumnsSet: Set<string>) => {
+      const columnEdgeMap = new Map<string, Edge>();
+
+      for (const edge of entityLineage?.edges ?? []) {
+        if (isUndefined(edge.columns) || !edge.columns.length) {
+          continue;
+        }
+
+        const sourceId = edge.fromEntity.id;
+        const targetId = edge.toEntity.id;
+
+        for (const e of edge.columns) {
+          const toColumn = e.toColumn ?? '';
+          if (!toColumn || !e.fromColumns?.length) {
+            continue;
+          }
+
+          for (const fromColumn of e.fromColumns) {
+            const isSourceVisible = visibleColumnsSet.has(fromColumn);
+            const isTargetVisible = visibleColumnsSet.has(toColumn);
+
+            if (!isSourceVisible && !isTargetVisible) {
+              continue;
+            }
+
+            const encodedFrom = encodeLineageHandles(fromColumn);
+            const encodedTo = encodeLineageHandles(toColumn);
+            const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
+
+            if (!columnEdgeMap.has(edgeId)) {
+              columnEdgeMap.set(edgeId, {
+                id: edgeId,
+                source: sourceId,
+                target: targetId,
+                targetHandle: encodedTo,
+                sourceHandle: encodedFrom,
+                style: { strokeWidth: '2px' },
+                type: 'buttonedge',
+                markerEnd: { type: MarkerType.ArrowClosed },
+                data: {
+                  edge,
+                  isColumnLineage: true,
+                  targetHandle: encodedTo,
+                  sourceHandle: encodedFrom,
+                  dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      return columnEdgeMap;
+    },
+    [entityLineage]
+  );
+
   const applyColumnLayerToggle = useCallback(
     async (turningOn: boolean) => {
       if (!reactFlowInstance?.viewportInitialized || !entityLineage) {
@@ -410,79 +466,76 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
       if (turningOn) {
         const newColumnsHavingLineage = new Set<string>();
-        const columnEdgeIds = new Set<string>();
-        const columnEdges: Edge[] = [];
 
-        (entityLineage.edges ?? []).forEach((edge) => {
-          if (isUndefined(edge.columns)) {
-            return;
+        for (const edge of entityLineage.edges ?? []) {
+          if (!edge.columns?.length) {
+            continue;
+          }
+          for (const e of edge.columns) {
+            if (e.toColumn && e.fromColumns?.length) {
+              newColumnsHavingLineage.add(e.toColumn);
+              e.fromColumns.forEach((col) => newColumnsHavingLineage.add(col));
+            }
+          }
+        }
+
+        const columnEdgeMap = createColumnEdges(debouncedColumnsSet);
+
+        const nodesToUpdate: Node[] = [];
+        for (const node of nodes) {
+          if (!node.data?.node?.columns?.length) {
+            nodesToUpdate.push(node);
+
+            continue;
           }
 
-          const sourceId = edge.fromEntity.id;
-          const targetId = edge.toEntity.id;
-
-          edge.columns?.forEach((e) => {
-            const toColumn = e.toColumn ?? '';
-            if (toColumn && e.fromColumns?.length) {
-              e.fromColumns.forEach((fromColumn) => {
-                newColumnsHavingLineage.add(fromColumn);
-                newColumnsHavingLineage.add(toColumn);
-
-                const encodedFrom = encodeLineageHandles(fromColumn);
-                const encodedTo = encodeLineageHandles(toColumn);
-                const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
-
-                if (!columnEdgeIds.has(edgeId)) {
-                  columnEdgeIds.add(edgeId);
-                  columnEdges.push({
-                    id: edgeId,
-                    source: sourceId,
-                    target: targetId,
-                    targetHandle: encodedTo,
-                    sourceHandle: encodedFrom,
-                    style: { strokeWidth: '2px' },
-                    type: 'buttonedge',
-                    markerEnd: { type: MarkerType.ArrowClosed },
-                    data: {
-                      edge,
-                      isColumnLineage: true,
-                      targetHandle: encodedTo,
-                      sourceHandle: encodedFrom,
-                      dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
-                    },
-                  });
-                }
-              });
-            }
-          });
-        });
-
-        const updatedNodes = nodes.map((node) => {
           const { childrenHeight } = getEntityChildrenAndLabel(
             node.data.node as SourceType,
             isEditMode || expandAllColumns,
             newColumnsHavingLineage
           );
 
-          return {
+          nodesToUpdate.push({
             ...node,
             height: childrenHeight + 220,
-          };
-        });
+          });
+        }
 
-        const mergedEdges = [...edges, ...columnEdges];
+        const currentEdgesMap = new Map(edges.map((e) => [e.id, e]));
+        for (const [id, edge] of columnEdgeMap) {
+          currentEdgesMap.set(id, edge);
+        }
+
+        setColumnsHavingLineage(newColumnsHavingLineage);
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // eslint-disable-next-line no-console
+        console.log('[applyColumnLayerToggle] Starting ELK layout...');
+        const startTime = Date.now();
 
         const positioned = await positionNodesUsingElk(
-          updatedNodes,
-          mergedEdges,
+          nodesToUpdate,
+          Array.from(currentEdgesMap.values()),
           true,
           isEditMode || expandAllColumns,
           newColumnsHavingLineage
         );
 
+        // eslint-disable-next-line no-console
+        console.log('[applyColumnLayerToggle] ELK layout complete:', {
+          duration: `${Date.now() - startTime}ms`,
+          positionedNodes: positioned.nodes.length,
+          positionedEdges: positioned.edges.length,
+        });
+
         setNodes(positioned.nodes);
         setEdges(positioned.edges);
-        setColumnsHavingLineage(newColumnsHavingLineage);
+
+        // eslint-disable-next-line no-console
+        console.log(
+          '[applyColumnLayerToggle] Column lineage enabled successfully'
+        );
       } else {
         const updatedNodes = nodes.map((node) => ({
           ...node,
@@ -513,8 +566,31 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       edges,
       isEditMode,
       expandAllColumns,
+      debouncedColumnsSet,
+      createColumnEdges,
     ]
   );
+
+  useEffect(() => {
+    if (!isColumnLevelLineage || !entityLineage) {
+      return;
+    }
+
+    const columnEdgeMap = createColumnEdges(debouncedColumnsSet);
+
+    setEdges((prevEdges) => {
+      const tableEdges = prevEdges.filter(
+        (edge) => !edge.data?.isColumnLineage
+      );
+
+      return [...tableEdges, ...Array.from(columnEdgeMap.values())];
+    });
+  }, [
+    debouncedColumnsSet,
+    createColumnEdges,
+    isColumnLevelLineage,
+    entityLineage,
+  ]);
 
   const updateLineageData = useCallback(
     (
@@ -1251,8 +1327,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   );
 
   const onPaneClick = useCallback(() => {
-    setTracedNodes([]);
-    setTracedColumns([]);
+    setTracedNodes(new Set());
+    setTracedColumns(new Set());
     setSelectedColumn('');
     setActiveNode(undefined);
     setSelectedNode(undefined);
@@ -1694,52 +1770,45 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     [nodes, edges, entityLineage]
   );
 
-  const repositionLayout = useCallback(
-    async (activateNode = false) => {
-      if (nodes.length === 0 || !reactFlowInstance) {
-        return;
+  const repositionLayout = useCallback(async () => {
+    if (nodes.length === 0 || !reactFlowInstance) {
+      return;
+    }
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } =
+      await getELKLayoutedElements(
+        nodes,
+        edges,
+        isColumnLevelLineage,
+        isEditMode || expandAllColumns,
+        columnsHavingLineage
+      );
+
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+
+    const rootNode = layoutedNodes.find((n) => n.data.isRootNode);
+    if (!rootNode) {
+      if (reactFlowInstance) {
+        onLoad(reactFlowInstance); // Call fitview in case of pipeline
       }
 
-      const isColView = activeLayer.includes(LineageLayer.ColumnLevelLineage);
-      const { nodes: layoutedNodes, edges: layoutedEdges } =
-        await getELKLayoutedElements(
-          nodes,
-          edges,
-          isColView,
-          isEditMode || expandAllColumns,
-          columnsHavingLineage
-        );
+      return;
+    }
 
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
-
-      const rootNode = layoutedNodes.find((n) => n.data.isRootNode);
-      if (!rootNode) {
-        if (activateNode && reactFlowInstance) {
-          onLoad(reactFlowInstance); // Call fitview in case of pipeline
-        }
-
-        return;
-      }
-
-      // Center the root node in the view
-      centerNodePosition(rootNode, reactFlowInstance, zoomValue);
-      if (activateNode) {
-        onNodeClick(rootNode);
-      }
-    },
-    [
-      zoomValue,
-      reactFlowInstance,
-      activeLayer,
-      nodes,
-      edges,
-      onNodeClick,
-      columnsHavingLineage,
-      expandAllColumns,
-      isEditMode,
-    ]
-  );
+    // Center the root node in the view
+    centerNodePosition(rootNode, reactFlowInstance, zoomValue);
+  }, [
+    zoomValue,
+    reactFlowInstance,
+    isColumnLevelLineage,
+    nodes,
+    edges,
+    onNodeClick,
+    columnsHavingLineage,
+    expandAllColumns,
+    isEditMode,
+  ]);
 
   const redraw = useCallback(async () => {
     if (entityLineage) {
@@ -1854,21 +1923,15 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   }, [isEditMode, deletePressed, backspacePressed, activeNode, selectedEdge]);
 
   useEffect(() => {
-    const prevActiveLayer = prevActiveLayerRef.current;
+    if (isColumnLevelLineage) {
+      applyColumnLayerToggle(true);
 
-    const prevHadColumn = prevActiveLayer.includes(
-      LineageLayer.ColumnLevelLineage
-    );
-    const currHasColumn = activeLayer.includes(LineageLayer.ColumnLevelLineage);
-
-    if (prevHadColumn === currHasColumn) {
-      repositionLayout();
-    } else {
-      applyColumnLayerToggle(currHasColumn);
+      // Delay repositioning layout to allow for column layer toggle animation
+      setTimeout(() => {
+        repositionLayout();
+      }, 100);
     }
-
-    prevActiveLayerRef.current = activeLayer;
-  }, [activeLayer, expandAllColumns]);
+  }, [isColumnLevelLineage]);
 
   useEffect(() => {
     if (reactFlowInstance?.viewportInitialized) {
@@ -1926,7 +1989,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       redraw,
       queryFilter,
       dqHighlightedEdges,
-      useUpdateNodeInternals,
       columnsInCurrentPages,
       setColumnsInCurrentPages,
       allColumnsInCurrentPagesSet,
@@ -1970,7 +2032,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     redraw,
     onPlatformViewChange,
     dqHighlightedEdges,
-    useUpdateNodeInternals,
     columnsInCurrentPages,
     setColumnsInCurrentPages,
     allColumnsInCurrentPagesSet,

@@ -41,8 +41,6 @@ interface LineageNodeLabelProps {
   node: SourceType;
   isChildrenListExpanded?: boolean;
   toggleColumnsList?: () => void;
-  toggleOnlyShowColumnsWithLineageFilterActive?: () => void;
-  isOnlyShowColumnsWithLineageFilterActive?: boolean;
 }
 
 interface LineageNodeLabelPropsExtended
@@ -205,10 +203,13 @@ const EntityFooter = React.memo(
     isChildrenListExpanded,
     node,
     toggleColumnsList,
-    toggleOnlyShowColumnsWithLineageFilterActive,
-    isOnlyShowColumnsWithLineageFilterActive,
   }: LineageNodeLabelPropsExtended) => {
     const { t } = useTranslation();
+    const {
+      isEditMode,
+      showColumnsWithLineageOnly,
+      toggleShowColumnsWithLineageOnly,
+    } = useLineageStore();
     const { childrenHeading, childrenCount } = useMemo(() => {
       const { children, childrenHeading } = getEntityChildrenAndLabel(node);
 
@@ -217,7 +218,6 @@ const EntityFooter = React.memo(
         childrenCount: children.length,
       };
     }, [node.id]);
-    const { isEditMode } = useLineageStore();
 
     const handleClickColumnInfoDropdown = useCallback(
       (e: React.MouseEvent) => {
@@ -247,9 +247,9 @@ const EntityFooter = React.memo(
     const handleOnlyShowColumnsWithLineage = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        toggleOnlyShowColumnsWithLineageFilterActive?.();
+        toggleShowColumnsWithLineageOnly?.();
       },
-      [toggleOnlyShowColumnsWithLineageFilterActive]
+      []
     );
 
     const entityType = useMemo(() => {
@@ -285,7 +285,7 @@ const EntityFooter = React.memo(
             <IconButton
               className={classNames(
                 'only-show-columns-with-lineage-filter-button',
-                isOnlyShowColumnsWithLineageFilterActive && 'active'
+                showColumnsWithLineageOnly && 'active'
               )}
               data-testid="lineage-filter-button"
               disabled={isEditMode}
@@ -303,22 +303,14 @@ const LineageNodeLabelV1 = ({
   node,
   isChildrenListExpanded,
   toggleColumnsList,
-  toggleOnlyShowColumnsWithLineageFilterActive,
-  isOnlyShowColumnsWithLineageFilterActive,
 }: LineageNodeLabelProps) => {
   return (
     <div className="custom-node-label-container m-0">
       <EntityLabel node={node} />
       <EntityFooter
         isChildrenListExpanded={isChildrenListExpanded}
-        isOnlyShowColumnsWithLineageFilterActive={
-          isOnlyShowColumnsWithLineageFilterActive
-        }
         node={node}
         toggleColumnsList={toggleColumnsList}
-        toggleOnlyShowColumnsWithLineageFilterActive={
-          toggleOnlyShowColumnsWithLineageFilterActive
-        }
       />
     </div>
   );

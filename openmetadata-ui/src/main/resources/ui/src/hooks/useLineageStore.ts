@@ -34,6 +34,9 @@ interface LineageState {
   activeNode?: Node;
   selectedEdge?: Edge;
   selectedNode?: SourceType;
+  isColumnLevelLineage: boolean;
+  isDQEnabled: boolean;
+  showColumnsWithLineageOnly: boolean;
 
   // Actions
   setIsEditMode: (isEditMode: boolean) => void;
@@ -54,6 +57,7 @@ interface LineageState {
   setActiveNode: (activeNode?: Node) => void;
   setSelectedNode: (selectedNode?: SourceType) => void;
   setSelectedEdge: (selectedEdge?: Edge) => void;
+  toggleShowColumnsWithLineageOnly: () => void;
   reset: () => void;
 }
 
@@ -75,6 +79,9 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   activeLayer: [],
   platformView: LineagePlatformView.None,
   isPlatformLineage: false,
+  isColumnLevelLineage: false,
+  isDQEnabled: false,
+  showColumnsWithLineageOnly: false,
 
   // Actions
   setLineageConfig: (lineageConfig: LineageConfig) => set({ lineageConfig }),
@@ -146,16 +153,34 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       set({ platformView: LineagePlatformView.None });
     }
 
-    set({ activeLayer });
+    const isColumnLevelLineage = activeLayer.includes(
+      LineageLayer.ColumnLevelLineage
+    );
+
+    set({
+      activeLayer,
+      isColumnLevelLineage,
+      showColumnsWithLineageOnly: isColumnLevelLineage,
+      isDQEnabled: activeLayer.includes(LineageLayer.DataObservability),
+    });
   },
 
   updateActiveLayer: (layer: LineageLayer | LineageLayer[]) => {
     const { activeLayer } = get();
+
+    const consolidatedLayer = uniq([
+      ...activeLayer,
+      ...(Array.isArray(layer) ? layer : [layer]),
+    ]);
+    const isColumnLevelLineage = consolidatedLayer.includes(
+      LineageLayer.ColumnLevelLineage
+    );
+
     set({
-      activeLayer: uniq([
-        ...activeLayer,
-        ...(Array.isArray(layer) ? layer : [layer]),
-      ]),
+      activeLayer: consolidatedLayer,
+      isColumnLevelLineage: isColumnLevelLineage,
+      showColumnsWithLineageOnly: isColumnLevelLineage,
+      isDQEnabled: consolidatedLayer.includes(LineageLayer.DataObservability),
     });
   },
 
@@ -168,6 +193,11 @@ export const useLineageStore = create<LineageState>((set, get) => ({
 
   setSelectedNode: (selectedNode?: SourceType) => set({ selectedNode }),
   setSelectedEdge: (selectedEdge?: Edge) => set({ selectedEdge }),
+
+  toggleShowColumnsWithLineageOnly: () => {
+    const { showColumnsWithLineageOnly } = get();
+    set({ showColumnsWithLineageOnly: !showColumnsWithLineageOnly });
+  },
 
   reset: () =>
     set({
@@ -184,5 +214,8 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       activeNode: undefined,
       selectedNode: undefined,
       selectedEdge: undefined,
+      showColumnsWithLineageOnly: false,
+      isColumnLevelLineage: false,
+      isDQEnabled: false,
     }),
 }));
