@@ -1299,6 +1299,7 @@ public class PipelineResourceIT extends BaseEntityIT<Pipeline, CreatePipeline> {
     assertEquals(StatusType.Successful, updatedPipeline.getPipelineStatus().getExecutionStatus());
     assertEquals(pipelineStatus.getTimestamp(), updatedPipeline.getPipelineStatus().getTimestamp());
   }
+
   // ===================================================================
   // BULK API SUPPORT
   // ===================================================================

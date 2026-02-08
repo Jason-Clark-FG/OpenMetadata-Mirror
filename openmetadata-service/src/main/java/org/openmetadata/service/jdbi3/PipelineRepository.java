@@ -388,7 +388,7 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
 
     Set<String> validatedTasks = new HashSet<>();
     for (PipelineStatus pipelineStatus : pipelineStatuses) {
-      for (Status taskStatus : pipelineStatus.getTaskStatus()) {
+      for (Status taskStatus : listOrEmpty(pipelineStatus.getTaskStatus())) {
         if (validatedTasks.add(taskStatus.getName())) {
           validateTask(pipeline, taskStatus.getName());
         }
@@ -416,7 +416,11 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
     pipeline.setChangeDescription(change);
     pipeline.setIncrementalChangeDescription(change);
 
-    searchRepository.updateEntityIndex(pipeline);
+    try {
+      searchRepository.updateEntityIndex(pipeline);
+    } catch (Exception e) {
+      LOG.error("Failed to update pipeline entity index in Elasticsearch", e);
+    }
 
     return new RestUtil.PutResponse<>(
         Response.Status.OK,
