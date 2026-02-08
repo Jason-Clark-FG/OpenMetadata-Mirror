@@ -108,3 +108,25 @@
     }
   }
 }
+
+html[data-theme='dark'] {
+  .ant-tabs.tabs-new {
+    .ant-tabs-nav-list {
+      .ant-tabs-tab {
+        &.ant-tabs-tab-active {
+          [data-testid='count'] > span {
+            background-color: #1570ef !important;
+            border-color: #1570ef !important;
+            color: #fff !important;
+          }
+        }
+
+        [data-testid='count'] > span {
+          background-color: #30363d;
+          border-color: #30363d;
+          color: #c9d1d9;
+        }
+      }
+    }
+  }
+}
