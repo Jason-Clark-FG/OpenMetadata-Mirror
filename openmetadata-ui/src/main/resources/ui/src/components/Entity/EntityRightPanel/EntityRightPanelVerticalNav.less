@@ -33,6 +33,7 @@
   align-items: center;
   border: 1px solid @grey-15;
   border-radius: 8px;
+  overflow: hidden;
 
   .ant-menu-vertical .ant-menu-item:not(:last-child) {
     margin-bottom: 0px;
@@ -44,6 +45,7 @@
     display: flex;
     flex-direction: column;
     gap: 20px; // Gap between menu items
+    padding-top: 4px;
 
     .ant-menu-item {
       display: flex;
@@ -51,7 +53,7 @@
       align-items: center;
       justify-content: center;
       border: none;
-      padding: 0;
+      padding: 8px 0;
       height: auto !important; // Override default height
       line-height: normal !important;
       margin: 0 !important;
@@ -73,7 +75,7 @@
       }
 
       &.ant-menu-item-selected {
-        background: transparent;
+        background: @primary-25 !important;
         color: @primary-7;
         border-left: none;
         border-radius: 0;
@@ -81,15 +83,14 @@
           display: none;
         }
 
-        // Add the blue bar indicator
+        // Blue bar indicator on the left
         position: relative;
         &::before {
           content: '';
           position: absolute;
           left: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          height: 32px;
+          top: 0;
+          bottom: 0;
           width: 4px;
           background-color: @primary-6;
           border-radius: 0 4px 4px 0;
@@ -138,6 +139,26 @@
         white-space: normal;
         margin: 0 auto;
         color: @grey-600;
+      }
+    }
+  }
+}
+
+html[data-theme='dark'] {
+  .entity-right-panel-vertical-nav {
+    .vertical-nav-menu {
+      .ant-menu-item {
+        &.ant-menu-item-selected {
+          background: rgba(21, 112, 239, 0.15) !important;
+        }
+
+        .ant-menu-item-icon {
+          color: #8b949e;
+        }
+
+        .ant-menu-title-content {
+          color: #c9d1d9;
+        }
       }
     }
   }

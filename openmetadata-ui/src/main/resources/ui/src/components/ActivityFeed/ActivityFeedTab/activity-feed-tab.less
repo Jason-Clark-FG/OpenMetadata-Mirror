@@ -657,51 +657,101 @@ html[data-theme='dark'] {
   }
 
   .activity-feed-tab {
+    background-color: transparent !important;
     border: none !important;
 
     .center-container {
-      border: none !important;
+      background-color: #161b22 !important;
+      border: 1px solid #30363d !important;
     }
 
     .right-container {
-      border: none !important;
+      background-color: #161b22 !important;
+      border: 1px solid #30363d !important;
     }
 
     .left-container {
       border-right: 1px solid #21262d !important;
     }
 
+    .center-container.three-panel-layout {
+      border: none !important;
+      border-radius: 0 !important;
+    }
+
     .three-panel-layout.right-container {
+      border: none !important;
+      border-radius: 0 !important;
       border-left: 1px solid #21262d !important;
     }
 
     .activity-feed-card-new {
+      background: #21262d !important;
       border: 0.5px solid #30363d !important;
+
+      .ant-card-body {
+        background-color: transparent !important;
+      }
     }
 
     .activity-feed-card-new.active-card.is-active {
       background: rgba(21, 112, 239, 0.15) !important;
-      border: 1px solid rgba(21, 112, 239, 0.4) !important;
+      border: 0.5px solid #30363d !important;
+      border-left: 4px solid #1570ef !important;
+
+      .ant-card-body {
+        background-color: transparent !important;
+      }
+    }
+
+    .hide-thread,
+    .show-thread {
+      background: #161b22 !important;
+      border-color: #30363d !important;
     }
 
     .activity-feed-card-message {
-      border: none !important;
+      background-color: #161b22 !important;
+      border: 0.5px solid #30363d !important;
+      border-radius: 8px;
+
+      .ant-card-body {
+        background-color: transparent !important;
+      }
+    }
+
+    .activity-feed-card-new-right-panel {
+      background-color: #161b22 !important;
+    }
+
+    .activity-feed-card-message-right-panel {
+      background: rgba(21, 112, 239, 0.05) !important;
     }
 
     .activity-feed-reply-card .ant-card-body {
       border-bottom: 1px solid #21262d !important;
+      background: #21262d !important;
+    }
+
+    .activity-feed-reply-card .activity-feed-reply-card-message,
+    .activity-feed-reply-card .activity-feed-reply-card-message .ant-card-body {
+      background: #21262d !important;
     }
 
     .right-container .activity-feed-comments-container {
+      background: #21262d !important;
       border: 0.5px solid #30363d !important;
     }
 
     .right-container .activity-feed-reply-button {
       border: 1px solid #30363d !important;
+      color: #8b949e !important;
     }
 
     .right-container .comments-input-field {
+      background-color: #21262d !important;
       border: 1px solid #30363d !important;
+      color: #e6edf3 !important;
     }
 
     .ant-card-bordered {
@@ -714,18 +764,54 @@ html[data-theme='dark'] {
   }
 
   .activity-feed-editor-container-new {
+    background-color: #21262d !important;
     border: 0.5px solid #30363d !important;
 
     .ql-container {
+      background-color: #21262d !important;
       border: none !important;
     }
 
     .ql-toolbar {
+      background-color: #21262d !important;
       border-bottom: 1px solid #30363d !important;
     }
   }
 
   .no-description-suggestion-card {
+    background: #21262d !important;
     border: 0.5px solid #30363d !important;
+  }
+
+  .feed-filter-icon {
+    &.ant-btn.ant-btn-default {
+      svg path {
+        fill: #c9d1d9;
+      }
+    }
+  }
+
+  .task-tab-custom-dropdown {
+    .ant-dropdown-menu {
+      background-color: #21262d;
+      border: 1px solid #30363d;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .ant-dropdown-menu-item {
+      color: #c9d1d9;
+
+      &:hover {
+        background-color: #30363d;
+      }
+    }
+
+    .task-tab-filter-item {
+      color: #c9d1d9;
+
+      &.selected {
+        color: #58a6ff;
+      }
+    }
   }
 }

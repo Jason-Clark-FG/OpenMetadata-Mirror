@@ -72,3 +72,82 @@
 .custom-domain-edit-select .ant-select-selection-search-input::placeholder {
   padding-left: @size-xs;
 }
+
+html[data-theme='dark'] {
+  .domain-selectable-tree-new,
+  .ant-tree.domain-selectable-tree {
+    .ant-tree-switcher {
+      background: transparent !important;
+
+      .ant-tree-switcher-icon {
+        background: transparent !important;
+        color: #8b949e;
+      }
+    }
+
+    .ant-tree-checkbox {
+      .ant-tree-checkbox-inner {
+        background-color: transparent !important;
+        border-color: #484f58 !important;
+      }
+
+      &.ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+        background-color: #1570ef !important;
+        border-color: #1570ef !important;
+      }
+    }
+
+    .ant-tree-indent-unit,
+    .ant-tree-indent {
+      background: transparent;
+    }
+
+    .ant-tree-treenode {
+      .ant-tree-node-content-wrapper {
+        &.ant-tree-node-selected {
+          background-color: rgba(21, 112, 239, 0.15);
+          color: #58a6ff;
+        }
+
+        &:hover {
+          background-color: #30363d;
+        }
+      }
+    }
+  }
+
+  .domain-custom-dropdown-class {
+    .ant-tree-switcher {
+      background: transparent !important;
+
+      .ant-tree-switcher-icon {
+        background: transparent !important;
+        color: #8b949e;
+      }
+    }
+
+    .ant-tree-checkbox {
+      .ant-tree-checkbox-inner {
+        background-color: transparent !important;
+        border-color: #484f58 !important;
+      }
+
+      &.ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+        background-color: #1570ef !important;
+        border-color: #1570ef !important;
+      }
+    }
+
+    .ant-tree-indent-unit,
+    .ant-tree-indent {
+      background: transparent;
+    }
+  }
+
+  .custom-domain-edit-select {
+    .ant-select-selector {
+      background-color: #161b22 !important;
+      border: 1px solid #30363d !important;
+    }
+  }
+}

@@ -2527,107 +2527,10 @@ html[data-theme='dark'] {
   --om-diff-removed-bg: transparent;
 
   // ==========================================================================
-  // 93. ACTIVITY FEED TAB
+  // 93. ACTIVITY FEED TAB — borders & backgrounds moved to activity-feed-tab.less
   // ==========================================================================
-  .activity-feed-tab {
-    --om-border-default: @dark-border-subtle;
-    --om-border-light: @dark-border-subtle;
-    --om-border-strong: @dark-border-primary;
-
-    background-color: @dark-bg-secondary;
-    border-color: @dark-border-subtle;
-
-    .center-container {
-      background-color: @dark-bg-secondary;
-      border-color: @dark-border-subtle;
-    }
-
-    .right-container {
-      background-color: @dark-bg-secondary;
-      border-color: @dark-border-subtle;
-    }
-
-    .left-container {
-      border-right-color: @dark-border-subtle !important;
-    }
-
-    .three-panel-layout.right-container {
-      border-left-color: @dark-border-subtle;
-    }
-
-    .activity-feed-card-new {
-      background: @dark-bg-tertiary;
-      border-color: @dark-border-subtle;
-    }
-
-    .activity-feed-card-new.active-card.is-active {
-      background: fade(@dark-primary-color, 18%);
-      border-color: fade(@dark-primary-color, 40%);
-    }
-
-    .activity-feed-card-message {
-      background-color: @dark-bg-tertiary;
-      border-color: @dark-border-subtle;
-    }
-
-    .activity-feed-card-new-right-panel {
-      background-color: @dark-bg-secondary;
-      border-color: @dark-border-subtle;
-    }
-
-    .activity-feed-card-message-right-panel {
-      background: fade(@dark-primary-color, 5%);
-    }
-
-    .activity-feed-reply-card .ant-card-body {
-      border-bottom-color: @dark-border-subtle;
-      background: @dark-bg-tertiary;
-    }
-
-    .activity-feed-reply-card .activity-feed-reply-card-message,
-    .activity-feed-reply-card .activity-feed-reply-card-message .ant-card-body {
-      background: @dark-bg-tertiary;
-    }
-
-    .right-container .activity-feed-comments-container {
-      background: @dark-bg-tertiary;
-      border-color: @dark-border-subtle;
-    }
-
-    .right-container .activity-feed-reply-button {
-      border-color: @dark-border-primary;
-      color: @dark-text-secondary;
-    }
-
-    .right-container .comments-input-field {
-      background-color: @dark-bg-tertiary;
-      border-color: @dark-border-subtle;
-      color: @dark-text-primary;
-    }
-
-    .ant-card-bordered {
-      border-color: @dark-border-subtle;
-    }
-  }
-
   .feed-explore-heading {
     background-color: @dark-bg-tertiary;
-  }
-
-  .activity-feed-editor-container-new {
-    background-color: @dark-bg-tertiary;
-    border: 0.5px solid @dark-border-subtle;
-
-    .ql-container,
-    .ql-toolbar {
-      background-color: @dark-bg-tertiary;
-      border: 1px solid @dark-border-subtle;
-    }
-  }
-
-  .no-description-suggestion-card {
-    background: @dark-bg-tertiary;
-    border: 0.5px solid @dark-border-subtle;
   }
 
   .active-card {
@@ -2640,8 +2543,9 @@ html[data-theme='dark'] {
     border: 0.5px solid @dark-border-subtle;
 
     &.active {
-      background: fade(@dark-primary-color, 18%);
-      border: 1px solid fade(@dark-primary-color, 50%);
+      background: rgba(21, 112, 239, 0.15) !important;
+      border: 1px solid rgba(21, 112, 239, 0.4) !important;
+      border-left: 4px solid @dark-primary-color !important;
     }
 
     .task-body {

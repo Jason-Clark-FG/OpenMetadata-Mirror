@@ -89,6 +89,123 @@
   }
 }
 
+html[data-theme='dark'] {
+  .task-action-button {
+    button {
+      background-color: #21262d !important;
+      border: 1px solid #30363d !important;
+      color: #c9d1d9 !important;
+
+      span {
+        color: #c9d1d9;
+      }
+
+      svg {
+        color: #c9d1d9;
+      }
+
+      &:first-child {
+        border-right: none !important;
+      }
+
+      &:last-child {
+        border-left: none !important;
+      }
+    }
+
+    &:hover button {
+      background-color: #30363d !important;
+      border-color: #58a6ff !important;
+      color: #58a6ff !important;
+
+      span {
+        color: #58a6ff;
+      }
+
+      svg {
+        color: #58a6ff;
+      }
+
+      &:first-child {
+        border-right: none !important;
+      }
+
+      &:last-child {
+        border-left: none !important;
+      }
+    }
+  }
+
+  .task-action-dropdown {
+    ul {
+      background-color: #21262d;
+      border: 1px solid #30363d;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+      li {
+        color: #c9d1d9;
+
+        &:hover {
+          background: rgba(21, 112, 239, 0.15);
+          color: #58a6ff !important;
+        }
+
+        &.ant-dropdown-menu-item-selected {
+          background: rgba(21, 112, 239, 0.15);
+          color: #58a6ff !important;
+        }
+      }
+    }
+
+    .anticon svg {
+      color: #c9d1d9;
+    }
+  }
+
+  .action-required-card {
+    background: linear-gradient(
+      270deg,
+      rgba(21, 112, 239, 0.15) 0.56%,
+      rgba(21, 112, 239, 0.1) 16.47%,
+      rgba(33, 38, 45, 0.8) 99.98%
+    );
+    border-color: #30363d;
+  }
+
+  .diff-view-container-card {
+    background: #21262d !important;
+    border-color: #30363d !important;
+
+    .ant-tag {
+      background-color: #30363d;
+      border-color: #484f58;
+      color: #c9d1d9;
+    }
+  }
+
+  .diff-view-container-card-right-panel {
+    background: #21262d !important;
+    border-color: #30363d !important;
+
+    .ant-tag {
+      background-color: #30363d;
+      border-color: #484f58;
+      color: #c9d1d9;
+    }
+  }
+
+  .tags-details-contianer {
+    background: #21262d !important;
+    border-color: #30363d !important;
+
+    .ant-tag {
+      background-color: #30363d;
+      border-color: #484f58;
+      color: #c9d1d9;
+    }
+  }
+}
+
 .task-details-id {
   font-size: 14px;
   font-style: normal;

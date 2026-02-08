@@ -40,6 +40,14 @@
     }
   }
 
+  .ant-radio-inner {
+    border-color: #9ca3af;
+  }
+
+  .ant-radio-checked .ant-radio-inner {
+    border-color: @primary-color;
+  }
+
   .default-persona-container {
     min-width: 0;
   }
@@ -91,6 +99,26 @@ html[data-theme='dark'] .profile-dropdown {
 
   .ant-radio-wrapper {
     color: #c9d1d9;
+  }
+
+  .ant-radio-inner {
+    background-color: transparent;
+    border-color: #8b949e;
+  }
+
+  .ant-radio-checked .ant-radio-inner {
+    border-color: #1570ef;
+    background-color: #1570ef;
+
+    &::after {
+      background-color: #fff;
+    }
+  }
+
+  .default-persona-tag {
+    background: rgba(21, 112, 239, 0.15);
+    border-color: rgba(21, 112, 239, 0.3);
+    color: #58a6ff;
   }
 }
 

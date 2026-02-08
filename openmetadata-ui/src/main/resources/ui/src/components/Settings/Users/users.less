@@ -464,3 +464,93 @@
     color: @primary-color;
   }
 }
+
+html[data-theme='dark'] {
+  .profile-edit-popover-card {
+    .ant-popover-inner-content {
+      box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.5);
+    }
+
+    .ant-select:not(.ant-select-customize-input) {
+      .ant-select-selector {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+
+        .ant-select-selection-item {
+          background: #30363d !important;
+          border-color: #484f58 !important;
+        }
+      }
+    }
+
+    .ant-divider {
+      border-color: #30363d;
+    }
+  }
+
+  .user-profile-edit-popover-card {
+    background-color: #21262d;
+    color: #c9d1d9;
+  }
+
+  .user-profile-edit-popover-card-title {
+    color: #c9d1d9 !important;
+  }
+
+  .teams-custom-dropdown-class,
+  .domain-custom-dropdown-class {
+    .ant-select-tree {
+      background-color: transparent;
+      color: #c9d1d9;
+
+      .ant-select-tree-node-content-wrapper {
+        &:hover {
+          background-color: #30363d;
+        }
+      }
+
+      .ant-select-tree-checkbox {
+        .ant-select-tree-checkbox-inner {
+          background-color: transparent !important;
+          border-color: #484f58 !important;
+        }
+
+        &.ant-select-tree-checkbox-checked .ant-select-tree-checkbox-inner {
+          background-color: #1570ef !important;
+          border-color: #1570ef !important;
+        }
+      }
+
+      .ant-select-tree-switcher {
+        background: transparent !important;
+        color: #8b949e;
+
+        .ant-tree-switcher-icon,
+        .ant-select-tree-switcher-icon {
+          background: transparent !important;
+          color: #8b949e;
+        }
+      }
+
+      .ant-select-tree-indent-unit,
+      .ant-select-tree-indent {
+        background: transparent;
+      }
+    }
+  }
+
+  .chip-text {
+    background-color: #30363d;
+    color: #c9d1d9;
+  }
+
+  .selected-chip-tag-remove {
+    svg {
+      color: #8b949e;
+    }
+
+    &:hover svg {
+      color: #c9d1d9;
+    }
+  }
+}
