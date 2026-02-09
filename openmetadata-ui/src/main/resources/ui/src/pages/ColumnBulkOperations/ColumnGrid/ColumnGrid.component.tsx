@@ -124,6 +124,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const openDrawerRef = useRef<() => void>(() => {});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollToRowIdRef = useRef<string | null>(null);
+  const expandedRowsRef = useRef<Set<string>>(new Set());
+  const expandedStructRowsRef = useRef<Set<string>>(new Set());
   const handleGroupSelectRef = useRef<
     (groupId: string, checked: boolean) => void
   >(() => {});
@@ -1185,9 +1187,9 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
       if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
         const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
-        const preservedExpandedRows = new Set(columnGridListing.expandedRows);
+        const preservedExpandedRows = new Set(expandedRowsRef.current);
         const preservedExpandedStructRows = new Set(
-          columnGridListing.expandedStructRows
+          expandedStructRowsRef.current
         );
 
         try {
@@ -1226,8 +1228,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       }
     },
     [
-      columnGridListing.expandedRows,
-      columnGridListing.expandedStructRows,
       columnGridListing.refetch,
       columnGridListing.setExpandedRows,
       columnGridListing.setExpandedStructRows,
@@ -1248,6 +1248,11 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       );
     };
   }, [socket, handleBulkAssetsNotification]);
+
+  useEffect(() => {
+    expandedRowsRef.current = columnGridListing.expandedRows;
+    expandedStructRowsRef.current = columnGridListing.expandedStructRows;
+  }, [columnGridListing.expandedRows, columnGridListing.expandedStructRows]);
 
   useEffect(() => {
     const rowId = scrollToRowIdRef.current;

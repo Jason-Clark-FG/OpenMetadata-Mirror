@@ -444,28 +444,38 @@ export const useColumnGridListingData = (
       pageToRestore > 1 ? skipGridUpdate : undefined
     );
 
-    if (pageToRestore > 1) {
+    // After bulk update, total may have decreased - clamp to valid page range
+    const newTotalPages = Math.max(
+      1,
+      Math.ceil(totalUniqueColumnsRef.current / urlState.pageSize)
+    );
+    const effectivePage = Math.min(pageToRestore, newTotalPages);
+    if (effectivePage !== pageToRestore) {
+      setCurrentPage(effectivePage);
+    }
+
+    if (effectivePage > 1) {
       // Try cached cursor to load target page in 2 API calls instead of N
       // Cursor may be invalid after bulk update (search index refresh) - fall back to chain if it fails
-      const cachedCursor = savedCursors.get(pageToRestore - 1);
+      const cachedCursor = savedCursors.get(effectivePage - 1);
       let cachedCursorWorked = false;
       if (cachedCursor) {
         try {
-          cursorsByPageRef.current.set(pageToRestore - 1, cachedCursor);
+          cursorsByPageRef.current.set(effectivePage - 1, cachedCursor);
           await loadData(
-            pageToRestore,
+            effectivePage,
             urlState.searchQuery,
             columnGridFilters,
             urlState.pageSize
           );
           cachedCursorWorked = true;
         } catch {
-          cursorsByPageRef.current.delete(pageToRestore - 1);
+          cursorsByPageRef.current.delete(effectivePage - 1);
         }
       }
       // Fallback: chain load pages 2..N-1 (skip grid update), then load target page
       if (!cachedCursorWorked) {
-        for (let page = 2; page < pageToRestore; page++) {
+        for (let page = 2; page < effectivePage; page++) {
           await loadData(
             page,
             urlState.searchQuery,
@@ -475,11 +485,18 @@ export const useColumnGridListingData = (
           );
         }
         await loadData(
-          pageToRestore,
+          effectivePage,
           urlState.searchQuery,
           columnGridFilters,
           urlState.pageSize
         );
+      }
+    } else if (pageToRestore > 1) {
+      // effectivePage is 1, but we loaded page 1 with skipGridUpdate - show it now
+      const page1Items = itemsByPageRef.current.get(1);
+
+      if (page1Items) {
+        setGridItems(page1Items);
       }
     }
   }, [

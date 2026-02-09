@@ -44,11 +44,13 @@
     }
 
     // Scrollable table area wrapper - this is where vertical scrolling happens
+    // Note: Do not add scroll-behavior: smooth here - it causes animated scroll when restoring
+    // position after bulk update (scrollTop assignment). Use scrollIntoView({ behavior: 'smooth' })
+    // only where smooth scroll is explicitly desired (e.g. collapse-scroll-into-view).
     .table-scroll-container {
       flex: 1;
       overflow-y: auto;
       min-height: 0;
-      scroll-behavior: smooth;
 
       // Table inside scroll container
       .MuiTable-root {
@@ -509,6 +511,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      transition: transform 0.2s ease;
     }
 
     .expand-icon-chevron.expand-icon-expanded {
