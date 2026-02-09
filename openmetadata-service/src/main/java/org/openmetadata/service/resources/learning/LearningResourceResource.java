@@ -128,17 +128,22 @@ public class LearningResourceResource
       @Parameter(description = "Returns list of learning resources after this cursor")
           @QueryParam("after")
           String after,
-      @Parameter(
-              description = "Include all, deleted, or non-deleted entities",
-              schema = @Schema(implementation = Include.class))
-          @QueryParam("include")
-          @DefaultValue("non-deleted")
-          Include include,
         @Parameter(
-                description = "Filter resources to specific page identifiers (supports multiple values)",
-                schema = @Schema(type = "array"))
-            @QueryParam("pageId")
-            List<String> pageIds,
+                description = "Include all, deleted, or non-deleted entities",
+                schema = @Schema(implementation = Include.class))
+            @QueryParam("include")
+            @DefaultValue("non-deleted")
+            Include include,
+        @Parameter(
+                description = "Search query for text search across name, displayName, and description",
+                schema = @Schema(type = "string"))
+            @QueryParam("q")
+            String query,
+          @Parameter(
+                  description = "Filter resources to specific page identifiers (supports multiple values)",
+                  schema = @Schema(type = "array"))
+              @QueryParam("pageId")
+              List<String> pageIds,
         @Parameter(
                 description = "Filter by component identifier within a page",
                 schema = @Schema(type = "string"))
@@ -166,6 +171,9 @@ public class LearningResourceResource
             List<String> statuses) {
     LearningResourceRepository.LearningResourceFilter filter =
         new LearningResourceRepository.LearningResourceFilter(include);
+    if (query != null && !query.isEmpty()) {
+      filter.addQueryParam("q", query);
+    }
     if (pageIds != null && !pageIds.isEmpty()) {
       filter.addQueryParam("pageIds", pageIds);
     }

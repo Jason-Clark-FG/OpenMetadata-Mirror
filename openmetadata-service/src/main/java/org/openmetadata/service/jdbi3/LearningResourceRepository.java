@@ -288,18 +288,6 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
       return tableName == null ? "json" : tableName + ".json";
     }
 
-    private String pageCondition(String tableName) {
-      String column = jsonColumn(tableName);
-      if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-        return String.format(
-            "JSON_SEARCH(%s, 'one', :pageId, NULL, '$.contexts[*].pageId') IS NOT NULL", column);
-      }
-      return String.format(
-          "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
-              + " WHERE ctx->>'pageId' = :pageId)",
-          column);
-    }
-
     private String componentCondition(String tableName) {
       String column = jsonColumn(tableName);
       if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
@@ -310,18 +298,6 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
       return String.format(
           "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
               + " WHERE ctx->>'componentId' = :componentId)",
-          column);
-    }
-
-    private String categoryCondition(String tableName) {
-      String column = jsonColumn(tableName);
-      if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-        return String.format(
-            "JSON_SEARCH(%s, 'one', :category, NULL, '$.categories') IS NOT NULL", column);
-      }
-      return String.format(
-          "EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE(%s->'categories', '[]'::jsonb)) cat"
-              + " WHERE cat = :category)",
           column);
     }
 
