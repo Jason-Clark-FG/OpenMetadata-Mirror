@@ -12,7 +12,7 @@
  */
 import test from '@playwright/test';
 import { CUSTOM_PROPERTIES_ENTITIES } from '../../constant/customProperty';
-import { redirectToHomePage, uuid } from '../../utils/common';
+import { redirectToHomePage } from '../../utils/common';
 import {
   addCustomPropertiesForEntity,
   deleteCreatedProperty,
@@ -31,7 +31,7 @@ test.describe('Custom properties with custom property config', () => {
 
   test.describe('Add update and delete Enum custom properties', () => {
     Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-      const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+      const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
       test(`Add Enum custom property for ${entity.name}`, async ({ page }) => {
         test.slow(true);
@@ -71,7 +71,7 @@ test.describe('Custom properties with custom property config', () => {
 
   test.describe('Add update and delete Table custom properties', () => {
     Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-      const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+      const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
       test(`Add Table custom property for ${entity.name}`, async ({ page }) => {
         test.slow(true);
@@ -115,7 +115,7 @@ test.describe('Custom properties with custom property config', () => {
     'Add update and delete Entity Reference custom properties',
     () => {
       Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-        const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+        const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
         test(`Add Entity Reference custom property for ${entity.name}`, async ({
           page,
@@ -160,7 +160,7 @@ test.describe('Custom properties with custom property config', () => {
     'Add update and delete Entity Reference List custom properties',
     () => {
       Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-        const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+        const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
         test(`Add Entity Reference list custom property for ${entity.name}`, async ({
           page,
@@ -207,7 +207,7 @@ test.describe('Custom properties with custom property config', () => {
 
   test.describe('Add update and delete Date custom properties', () => {
     Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-      const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+      const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
       test(`Add Date custom property for ${entity.name}`, async ({ page }) => {
         test.slow(true);
@@ -235,7 +235,7 @@ test.describe('Custom properties with custom property config', () => {
 
   test.describe('Add update and delete Time custom properties', () => {
     Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-      const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+      const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
       test(`Add Time custom property for ${entity.name}`, async ({ page }) => {
         test.slow(true);
@@ -275,7 +275,7 @@ test.describe('Custom properties with custom property config', () => {
 
   test.describe('Add update and delete DateTime custom properties', () => {
     Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-      const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+      const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
       test(`Add DateTime custom property for ${entity.name}`, async ({
         page,

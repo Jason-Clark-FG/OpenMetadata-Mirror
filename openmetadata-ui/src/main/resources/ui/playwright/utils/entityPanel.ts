@@ -12,6 +12,7 @@
  */
 import { expect, Page } from '@playwright/test';
 import { redirectToExplorePage } from './common';
+
 import { waitForAllLoadersToDisappear } from './entity';
 
 export const openEntitySummaryPanel = async (
@@ -28,10 +29,7 @@ export const openEntitySummaryPanel = async (
   expect(searchResponse.status()).toBe(200);
 
   await page.getByTestId('searchBox').press('Enter');
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
-  await page.waitForLoadState('networkidle');
+  await waitForAllLoadersToDisappear(page);
 
   const entityCard = page
     .locator('[data-testid="table-data-card"]')

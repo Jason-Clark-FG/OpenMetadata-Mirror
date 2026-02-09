@@ -12,7 +12,7 @@
  */
 import test from '@playwright/test';
 import { CUSTOM_PROPERTIES_ENTITIES } from '../../constant/customProperty';
-import { redirectToHomePage, uuid } from '../../utils/common';
+import { redirectToHomePage } from '../../utils/common';
 import {
   addCustomPropertiesForEntity,
   deleteCreatedProperty,
@@ -44,7 +44,9 @@ test.describe('Custom properties without custom property config', () => {
   propertiesList.forEach((property) => {
     test.describe(`Add update and delete ${property} custom properties`, () => {
       Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-        const propertyName = `pwcustomproperty${entity.name}test${uuid()}`;
+        // Using Date.now() to generate property names in a way that new property will always be
+        // added after existing properties to avoid conflicts due to parallel test executions
+        const propertyName = `pwcp${Date.now()}test${entity.name}`;
 
         test(`Add ${property} custom property for ${entity.name}`, async ({
           page,

@@ -31,7 +31,11 @@ export interface CustomPropertyDetails {
     id: string;
   };
   customPropertyConfig?: {
-    config: string | string[] | { values: string[]; multiSelect: boolean };
+    config:
+      | string
+      | string[]
+      | { values: string[]; multiSelect: boolean }
+      | { columns: string[] };
   };
 }
 
@@ -276,7 +280,7 @@ export const setupCustomPropertyAdvancedSearchTest = async (
   testData.cpMetadataType = await cpMetadataType.json();
 
   const cpCreationData = getCustomPropertyCreationData(testData.types);
-  let metadataTypesData;
+  testData.createdCPData = Object.values(cpCreationData);
 
   // The API calls need to be sequential as the server replaces some types with others
   // due to simultaneous requests causing conflicts.
@@ -284,7 +288,7 @@ export const setupCustomPropertyAdvancedSearchTest = async (
     const typeData = cpCreationData[type.name as keyof typeof cpCreationData];
 
     if (!isUndefined(typeData)) {
-      metadataTypesData = await apiContext.put(
+      await apiContext.put(
         `/api/v1/metadata/types/${testData.cpMetadataType.id}`,
         {
           data: typeData,
@@ -292,9 +296,8 @@ export const setupCustomPropertyAdvancedSearchTest = async (
       );
     }
   }
-  const metadataTypesJson = await metadataTypesData?.json();
-  testData.createdCPData = metadataTypesJson?.customProperties || [];
 
+  // Get the custom property to values mapping to add to the dashboard entity
   const cpValuesData = getCustomPropertyValues(
     testData.createdCPData,
     topic1,
