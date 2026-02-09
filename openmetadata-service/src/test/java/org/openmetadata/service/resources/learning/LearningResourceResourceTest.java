@@ -32,9 +32,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   private static final String FIELDS = "categories,contexts,difficulty,estimatedDuration,owners";
 
   private WebTarget listTarget(int limit) {
-    return getResource(LEARNING_RESOURCES)
-        .queryParam("limit", limit)
-        .queryParam("fields", FIELDS);
+    return getResource(LEARNING_RESOURCES).queryParam("limit", limit).queryParam("fields", FIELDS);
   }
 
   @Test
@@ -83,8 +81,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
 
   @Test
   void testFilterByMultipleTypes() throws Exception {
-    WebTarget target =
-        listTarget(1000).queryParam("type", "Article").queryParam("type", "Video");
+    WebTarget target = listTarget(1000).queryParam("type", "Article").queryParam("type", "Video");
     ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
@@ -101,8 +98,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
-          "Active".equals(r.getStatus().value()),
-          "Expected status=Active, got " + r.getStatus());
+          "Active".equals(r.getStatus().value()), "Expected status=Active, got " + r.getStatus());
     }
   }
 
@@ -113,8 +109,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
-          "Draft".equals(r.getStatus().value()),
-          "Expected status=Draft, got " + r.getStatus());
+          "Draft".equals(r.getStatus().value()), "Expected status=Draft, got " + r.getStatus());
     }
   }
 
@@ -200,9 +195,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testCombinedFiltersTypeAndCategory() throws Exception {
     WebTarget target =
-        listTarget(1000)
-            .queryParam("type", "Article")
-            .queryParam("category", "DataGovernance");
+        listTarget(1000).queryParam("type", "Article").queryParam("category", "DataGovernance");
     ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
     assertNotNull(result);
   }
