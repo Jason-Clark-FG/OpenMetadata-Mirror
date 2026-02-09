@@ -172,6 +172,43 @@ test.describe.serial('Persona operations', () => {
     );
   });
 
+  test('Breadcrumb navigation should work correctly', async ({ page }) => {
+    await navigateToPersonaWithPagination(page, PERSONA_DETAILS.name, true);
+
+    // Check default hash, wait for URL to stabilize
+    await expect(page).toHaveURL(/.*#customize-ui/);
+
+    // Click on Governance category
+    await page.getByTestId('governance').click();
+
+    // Check URL hash
+    await expect(page).toHaveURL(/.*#customize-ui.governance/);
+
+    // Click Persona Name (2nd item)
+    await page
+      .getByRole('link', {
+        name: PERSONA_DETAILS.displayName,
+        exact: true,
+      })
+      .click();
+
+    // Verify redirect
+    await expect(page).toHaveURL(/.* customize-ui/);
+    await expect(page).not.toHaveURL(/.*.governance/);
+
+    // Test from Users tab
+    await page.getByRole('tab', { name: 'Users' }).click();
+    await expect(page).toHaveURL(/.*#users/);
+
+    await page
+      .getByRole('link', {
+        name: PERSONA_DETAILS.displayName,
+        exact: true,
+      })
+      .click();
+    await expect(page).toHaveURL(/.*#customize-ui/);
+  });
+
   test('Persona update description flow should work properly', async ({
     page,
   }) => {
