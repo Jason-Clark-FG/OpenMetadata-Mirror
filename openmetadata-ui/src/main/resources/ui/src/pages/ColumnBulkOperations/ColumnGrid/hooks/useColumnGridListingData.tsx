@@ -168,7 +168,8 @@ export const useColumnGridListingData = (
       page: number,
       searchQuery: string,
       filters: ColumnGridFilters,
-      pageSize: number
+      pageSize: number,
+      options?: { skipGridItemsUpdate?: boolean }
     ) => {
       setLoading(true);
       try {
@@ -195,9 +196,9 @@ export const useColumnGridListingData = (
           cursorsByPageRef.current.set(page, response.cursor);
         }
 
-        // Set grid items - when client-side filters are active, this will trigger accumulation
-        // When not using client-side filters, this is the current page's items
-        setGridItems(response.columns);
+        if (!options?.skipGridItemsUpdate) {
+          setGridItems(response.columns);
+        }
 
         // Backend behavior:
         // - Page 1 (no cursor): Returns overall totals (e.g., totalUniqueColumns: 489)
@@ -416,7 +417,8 @@ export const useColumnGridListingData = (
     totalOccurrencesRef.current = 0;
   }, []);
 
-  const refetch = useCallback((): Promise<void> => {
+  const refetch = useCallback(async (): Promise<void> => {
+    const pageToRestore = urlState.currentPage;
     // Clear ALL caches to ensure fresh data is fetched from the server
     // This is especially important after bulk updates when the search index
     // has been refreshed with new data
@@ -425,12 +427,24 @@ export const useColumnGridListingData = (
     totalUniqueColumnsRef.current = 0;
     totalOccurrencesRef.current = 0;
 
-    return loadData(
-      urlState.currentPage,
+    const skipPage1GridUpdate = pageToRestore > 1;
+
+    await loadData(
+      1, // API is cursor-based; page 2+ cursor comes from page 1 response
       urlState.searchQuery,
       columnGridFilters,
-      urlState.pageSize
+      urlState.pageSize,
+      skipPage1GridUpdate ? { skipGridItemsUpdate: true } : undefined
     );
+
+    if (pageToRestore > 1) {
+      await loadData(
+        pageToRestore,
+        urlState.searchQuery,
+        columnGridFilters,
+        urlState.pageSize
+      );
+    }
   }, [
     urlState.currentPage,
     urlState.searchQuery,

@@ -48,6 +48,7 @@
       flex: 1;
       overflow-y: auto;
       min-height: 0;
+      scroll-behavior: smooth;
 
       // Table inside scroll container
       .MuiTable-root {
@@ -495,10 +496,23 @@
     min-width: @size-mlg;
     color: @grey-400;
     font-size: 10px;
+    transition: color 0.2s ease, background-color 0.2s ease;
 
     &:hover {
       color: @grey-700;
       background: @grey-36;
+    }
+  }
+
+  .column-grid-expand-icon {
+    .expand-icon-chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .expand-icon-chevron.expand-icon-expanded {
+      transform: rotate(90deg);
     }
   }
 

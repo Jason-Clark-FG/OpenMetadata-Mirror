@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { RightOutlined } from '@ant-design/icons';
 import {
   Box,
   Button as MUIButton,
@@ -122,6 +122,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const pendingHighlightRowIdsRef = useRef<Set<string>>(new Set());
   const closeDrawerRef = useRef<() => void>(() => {});
   const openDrawerRef = useRef<() => void>(() => {});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollToRowIdRef = useRef<string | null>(null);
   const handleGroupSelectRef = useRef<
     (groupId: string, checked: boolean) => void
   >(() => {});
@@ -446,7 +448,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           };
           rows.push(row);
 
-          // Add STRUCT children if expanded
           if (isStructExpanded && hasStructChildren && group?.children) {
             rows.push(
               ...createStructChildRows(
@@ -776,22 +777,36 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       if (entity.isGroup && entity.occurrenceCount > 1) {
         const expandButton = (
           <Button
-            className="expand-button"
-            icon={entity.isExpanded ? <DownOutlined /> : <RightOutlined />}
+            className="expand-button column-grid-expand-icon"
+            icon={
+              <span
+                className={`expand-icon-chevron ${
+                  entity.isExpanded ? 'expand-icon-expanded' : ''
+                }`}>
+                <RightOutlined />
+              </span>
+            }
             size="small"
             type="text"
             onClick={(e) => {
               e.stopPropagation();
-              columnGridListing.setExpandedRows((prev: Set<string>) => {
-                const newSet = new Set(prev);
-                if (newSet.has(entity.id)) {
+              const isExpanded = columnGridListing.expandedRows.has(entity.id);
+              if (isExpanded) {
+                scrollToRowIdRef.current = entity.id;
+                columnGridListing.setExpandedRows((prev: Set<string>) => {
+                  const newSet = new Set(prev);
                   newSet.delete(entity.id);
-                } else {
-                  newSet.add(entity.id);
-                }
 
-                return newSet;
-              });
+                  return newSet;
+                });
+              } else {
+                columnGridListing.setExpandedRows((prev: Set<string>) => {
+                  const newSet = new Set(prev);
+                  newSet.add(entity.id);
+
+                  return newSet;
+                });
+              }
             }}
           />
         );
@@ -828,24 +843,42 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             sx={{ paddingLeft: `${nestingPadding}px` }}>
             {hasChildren && (
               <Button
-                className="expand-button"
-                icon={entity.isExpanded ? <DownOutlined /> : <RightOutlined />}
+                className="expand-button column-grid-expand-icon"
+                icon={
+                  <span
+                    className={`expand-icon-chevron ${
+                      entity.isExpanded ? 'expand-icon-expanded' : ''
+                    }`}>
+                    <RightOutlined />
+                  </span>
+                }
                 size="small"
                 type="text"
                 onClick={(e) => {
                   e.stopPropagation();
-                  columnGridListing.setExpandedStructRows(
-                    (prev: Set<string>) => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(entity.id)) {
-                        newSet.delete(entity.id);
-                      } else {
-                        newSet.add(entity.id);
-                      }
-
-                      return newSet;
-                    }
+                  const isExpanded = columnGridListing.expandedStructRows.has(
+                    entity.id
                   );
+                  if (isExpanded) {
+                    scrollToRowIdRef.current = entity.id;
+                    columnGridListing.setExpandedStructRows(
+                      (prev: Set<string>) => {
+                        const newSet = new Set(prev);
+                        newSet.delete(entity.id);
+
+                        return newSet;
+                      }
+                    );
+                  } else {
+                    columnGridListing.setExpandedStructRows(
+                      (prev: Set<string>) => {
+                        const newSet = new Set(prev);
+                        newSet.add(entity.id);
+
+                        return newSet;
+                      }
+                    );
+                  }
                 }}
               />
             )}
@@ -869,24 +902,42 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           <span className={`column-name-inner ${indent}`}>
             {hasStructChildren && (
               <Button
-                className="expand-button"
-                icon={entity.isExpanded ? <DownOutlined /> : <RightOutlined />}
+                className="expand-button column-grid-expand-icon"
+                icon={
+                  <span
+                    className={`expand-icon-chevron ${
+                      entity.isExpanded ? 'expand-icon-expanded' : ''
+                    }`}>
+                    <RightOutlined />
+                  </span>
+                }
                 size="small"
                 type="text"
                 onClick={(e) => {
                   e.stopPropagation();
-                  columnGridListing.setExpandedStructRows(
-                    (prev: Set<string>) => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(entity.id)) {
-                        newSet.delete(entity.id);
-                      } else {
-                        newSet.add(entity.id);
-                      }
-
-                      return newSet;
-                    }
+                  const isExpanded = columnGridListing.expandedStructRows.has(
+                    entity.id
                   );
+                  if (isExpanded) {
+                    scrollToRowIdRef.current = entity.id;
+                    columnGridListing.setExpandedStructRows(
+                      (prev: Set<string>) => {
+                        const newSet = new Set(prev);
+                        newSet.delete(entity.id);
+
+                        return newSet;
+                      }
+                    );
+                  } else {
+                    columnGridListing.setExpandedStructRows(
+                      (prev: Set<string>) => {
+                        const newSet = new Set(prev);
+                        newSet.add(entity.id);
+
+                        return newSet;
+                      }
+                    );
+                  }
                 }}
               />
             )}
@@ -897,7 +948,12 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         </Box>
       );
     },
-    [columnGridListing.setExpandedRows, columnGridListing.setExpandedStructRows]
+    [
+      columnGridListing.expandedRows,
+      columnGridListing.expandedStructRows,
+      columnGridListing.setExpandedRows,
+      columnGridListing.setExpandedStructRows,
+    ]
   );
 
   // Update renderers with final functions
@@ -1128,8 +1184,12 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       };
 
       if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
-        columnGridListing.setGridItems([]);
-        columnGridListing.setExpandedRows(new Set());
+        const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
+        const preservedExpandedRows = new Set(columnGridListing.expandedRows);
+        const preservedExpandedStructRows = new Set(
+          columnGridListing.expandedStructRows
+        );
+
         try {
           await columnGridListing.refetch();
           setPendingRefetchRowIds(new Set());
@@ -1144,6 +1204,17 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
               })
             );
           }
+
+          columnGridListing.setExpandedRows(preservedExpandedRows);
+          columnGridListing.setExpandedStructRows(preservedExpandedStructRows);
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = scrollTop;
+              }
+            });
+          });
         } catch {
           showErrorToast(t('server.entity-updating-error'));
           clearJobState();
@@ -1155,9 +1226,11 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       }
     },
     [
+      columnGridListing.expandedRows,
+      columnGridListing.expandedStructRows,
       columnGridListing.refetch,
       columnGridListing.setExpandedRows,
-      columnGridListing.setGridItems,
+      columnGridListing.setExpandedStructRows,
       t,
     ]
   );
@@ -1175,6 +1248,20 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       );
     };
   }, [socket, handleBulkAssetsNotification]);
+
+  useEffect(() => {
+    const rowId = scrollToRowIdRef.current;
+    if (!rowId || !scrollContainerRef.current) {
+      return;
+    }
+    scrollToRowIdRef.current = null;
+    requestAnimationFrame(() => {
+      const row = scrollContainerRef.current?.querySelector(
+        `[data-row-id="${rowId}"]`
+      );
+      row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, [columnGridListing.expandedRows, columnGridListing.expandedStructRows]);
 
   // Clear highlighted rows after 1s and collapse their expanded state
   useEffect(() => {
@@ -1813,7 +1900,9 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
     return (
       <>
-        <Box className="table-scroll-container">{dataTable}</Box>
+        <Box className="table-scroll-container" ref={scrollContainerRef}>
+          {dataTable}
+        </Box>
         {columnGridListing.totalEntities > 0 && (
           <Box
             data-testid="pagination"
