@@ -99,11 +99,12 @@ export type ListLearningResourcesParams = ListParams & {
 const BASE_URL = '/learning/resources';
 
 export const getLearningResourcesList = async (
-  params?: ListLearningResourcesParams
+  params?: ListLearningResourcesParams,
+  config?: { signal?: AbortSignal }
 ) => {
   const response = await APIClient.get<PagingResponse<LearningResource[]>>(
     BASE_URL,
-    { params }
+    { params, signal: config?.signal }
   );
 
   return response.data;

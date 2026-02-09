@@ -112,6 +112,7 @@ export const LearningResourcesPage: React.FC = () => {
 
     return () => observer.disconnect();
   }, [view]);
+
   const { search } = useSearch({
     searchPlaceholder: t('label.search-entity', {
       entity: t('label.resource'),

@@ -12,7 +12,7 @@
  */
 
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getLearningResourcesList,
@@ -32,6 +32,10 @@ interface UseLearningResourcesReturn {
   refetch: () => Promise<void>;
 }
 
+const isAbortError = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.name === 'CanceledError' || error.name === 'AbortError');
+
 export const useLearningResources = ({
   searchText,
   filterState,
@@ -39,34 +43,51 @@ export const useLearningResources = ({
   const { t } = useTranslation();
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchResources = useCallback(async () => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setIsLoading(true);
     try {
       const apiParams: Parameters<typeof getLearningResourcesList>[0] = {
         limit: 1000,
         fields: 'categories,contexts,difficulty,estimatedDuration,owners',
         q: searchText || undefined,
-        category: filterState.category?.length ? filterState.category : undefined,
+        category: filterState.category?.length
+          ? filterState.category
+          : undefined,
         pageId: filterState.context?.length ? filterState.context : undefined,
         type: filterState.type?.length ? filterState.type : undefined,
         status: filterState.status?.length ? filterState.status : undefined,
       };
 
-      const response = await getLearningResourcesList(apiParams);
+      const response = await getLearningResourcesList(apiParams, {
+        signal: controller.signal,
+      });
+
       setResources(response.data ?? []);
     } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        t('server.learning-resources-fetch-error'),
-      );
+      if (!isAbortError(error)) {
+        showErrorToast(
+          error as AxiosError,
+          t('server.learning-resources-fetch-error')
+        );
+      }
     } finally {
-      setIsLoading(false);
+      if (abortControllerRef.current === controller) {
+        setIsLoading(false);
+      }
     }
   }, [t, searchText, filterState]);
 
   useEffect(() => {
     fetchResources();
+
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [fetchResources]);
 
   return {
