@@ -12,293 +12,35 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import { DOMAIN_TAGS } from '../../../constant/config';
+import {
+  CREATE_TEST_CASE_POLICY,
+  DELETE_FAILED_ROWS_POLICY,
+  DELETE_TEST_CASE_POLICY,
+  EDIT_TESTS_ON_TEST_CASE_POLICY,
+  EDIT_TEST_CASE_POLICY,
+  FAILED_ROWS_POLICY,
+  TABLE_CREATE_TESTS_POLICY,
+  TABLE_EDIT_TESTS_POLICY,
+  TEST_CASE_VIEW_BASIC_POLICY,
+  TEST_SUITE_EDIT_ONLY_POLICY,
+  TEST_SUITE_POLICY,
+  VIEW_ALL_TEST_CASE_POLICY,
+} from '../../../constant/dataQualityPermissions';
 import { PolicyClass } from '../../../support/access-control/PoliciesClass';
 import { RolesClass } from '../../../support/access-control/RolesClass';
 import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext, redirectToHomePage, uuid } from '../../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
-
-// --- Policies ---
-
-// 1. Create Only Policy
-const CREATE_TEST_CASE_POLICY = [
-  {
-    name: `create-test-case-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['Create', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-table-policy-${uuid()}`,
-    resources: ['table'],
-    operations: [
-      'ViewAll',
-      'ViewBasic',
-      'ViewTests',
-      'CreateTests',
-      'EditTests',
-    ],
-    effect: 'allow',
-  },
-  {
-    name: `view-all-policy-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 2. Delete Only Policy
-const DELETE_TEST_CASE_POLICY = [
-  {
-    name: `delete-test-case-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['Delete', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-table-policy-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewAll', 'ViewBasic', 'ViewTests'],
-    effect: 'allow',
-  },
-];
-
-// 3. Failed Rows Policy
-const FAILED_ROWS_POLICY = [
-  {
-    name: `failed-rows-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: [
-      'ViewTestCaseFailedRowsSample',
-      'DeleteTestCaseFailedRowsSample',
-    ],
-    effect: 'allow',
-  },
-  {
-    name: `view-basic-policy-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewAll'],
-    effect: 'allow',
-  },
-];
-
-// 4. Test Suite Policy
-const TEST_SUITE_POLICY = [
-  {
-    name: `test-suite-policy-${uuid()}`,
-    resources: ['testSuite'],
-    operations: ['Create', 'Delete', 'EditAll', 'ViewAll'],
-    effect: 'allow',
-  },
-  {
-    name: `test-suite-view-basic-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 5. Test Case Basic View (Restricted)
-const TEST_CASE_VIEW_BASIC_POLICY = [
-  {
-    name: `test-case-view-basic-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `table-view-test-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `all-view-basic-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewAll'],
-    effect: 'allow',
-  },
-];
-
-// 6. Table Create Tests Policy (Specific Fix Coverage)
-const TABLE_CREATE_TESTS_POLICY = [
-  {
-    name: `table-create-tests-policy-${uuid()}`,
-    resources: ['table'],
-    operations: [
-      'CreateTests',
-      'EditTests',
-      'ViewAll',
-      'ViewBasic',
-      'ViewTests',
-    ],
-    effect: 'allow',
-  },
-  {
-    name: `view-all-basic-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 7. Delete Failed Rows Policy
-const DELETE_FAILED_ROWS_POLICY = [
-  {
-    name: `delete-failed-rows-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['DeleteTestCaseFailedRowsSample', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-all-basic-del-rows-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 8. Edit Test Case Policy (TEST_CASE.EDIT_ALL)
-const EDIT_TEST_CASE_POLICY = [
-  {
-    name: `edit-test-case-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['EditAll', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-view-table-policy-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewAll', 'ViewBasic', 'ViewTests', 'EditTests'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-view-all-policy-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 9. Table Edit Tests Policy (TABLE.EDIT_TESTS only, no testCase permissions)
-const TABLE_EDIT_TESTS_POLICY = [
-  {
-    name: `table-edit-tests-policy-${uuid()}`,
-    resources: ['table'],
-    operations: ['EditTests', 'ViewAll', 'ViewBasic', 'ViewTests'],
-    effect: 'allow',
-  },
-  {
-    name: `table-edit-view-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 10. Edit Tests on Test Case Policy (TEST_CASE.EDIT_TESTS for failedRows/inspectionQuery)
-const EDIT_TESTS_ON_TEST_CASE_POLICY = [
-  {
-    name: `edit-tests-tc-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['EditTests', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-tests-tc-view-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewAll', 'ViewBasic', 'ViewTests'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-tests-tc-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 11. View All Test Case Policy (TEST_CASE.VIEW_ALL for GET by id/fqn/versions)
-const VIEW_ALL_TEST_CASE_POLICY = [
-  {
-    name: `view-all-tc-policy-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-all-tc-table-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-all-tc-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 12. Test Suite Edit Only Policy (no Create/Delete)
-const TEST_SUITE_EDIT_ONLY_POLICY = [
-  {
-    name: `suite-edit-only-policy-${uuid()}`,
-    resources: ['testSuite'],
-    operations: ['EditAll', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `suite-edit-view-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-const getFailedRowsData = (table: TableClass) => {
-  const columns = table.entity.columns.map((col) => col.name);
-  const columnCount = columns.length;
-  const sampleRows = [
-    ['2345', 'facf92d7-05ea-43d2-ba2a-067d63dee60c', 'Amber Albert'],
-    ['3456', 'd4e5f6a7-8b9c-4d0e-9c2b-fa3e4c5d6e7f', 'John Doe'],
-    ['4567', 'b2d112f5-5d7e-4b11-9c0e-490f8a5a8b5a', 'Jane Smith'],
-  ];
-
-  return {
-    columns,
-    rows: sampleRows.map((row) => {
-      if (row.length < columnCount) {
-        return [...row, ...Array(columnCount - row.length).fill('-')];
-      }
-      return row.slice(0, columnCount);
-    }),
-  };
-};
-
-const setupTestCaseWithFailedRows = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  table: TableClass
-) => {
-  const testCaseId = table.testCasesResponseData[0].id;
-  const testCaseFqn = table.testCasesResponseData[0].fullyQualifiedName;
-
-  // Create a failed test case result first
-  await table.addTestCaseResult(apiContext, testCaseFqn, {
-    result: 'Test failed with sample data',
-    testCaseStatus: 'Failed',
-    timestamp: Date.now(),
-  });
-
-  // Now add failed rows sample (only works on failed test cases)
-  await apiContext.put(
-    `/api/v1/dataQuality/testCases/${testCaseId}/failedRowsSample`,
-    { data: getFailedRowsData(table) }
-  );
-};
+import { setupUserWithPolicy } from '../../../utils/permission';
+import {
+  getFailedRowsData,
+  setupTestCaseWithFailedRows,
+  waitForFailedRowsSampleResponse,
+  waitForTestCaseDetailsResponse,
+  waitForTestCaseListResponse,
+  waitForTestSuiteListResponse,
+} from '../../../utils/testCases';
 
 // --- Objects ---
 const createPolicy = new PolicyClass();
@@ -463,46 +205,6 @@ const test = base.extend<{
   },
 });
 
-// Helper to create user with role
-const setupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  policy: PolicyClass,
-  role: RolesClass,
-  policyRules: Array<{
-    name: string;
-    resources: string[];
-    operations: string[];
-    effect: string;
-  }>
-) => {
-  await user.create(apiContext, false);
-  const pol = await policy.create(apiContext, policyRules);
-  const rol = await role.create(apiContext, [pol.fullyQualifiedName]);
-  await user.patch({
-    apiContext,
-    patchData: [
-      {
-        op: 'add',
-        path: '/roles/0',
-        value: { id: rol.id, type: 'role', name: rol.name },
-      },
-    ],
-  });
-};
-
-// Helper to clean up user/role/policy
-const cleanupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  role: RolesClass,
-  policy: PolicyClass
-) => {
-  await user.delete(apiContext);
-  await role.delete(apiContext);
-  await policy.delete(apiContext);
-};
-
 test.describe(
   'Observability Permission Coverage',
   { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality` },
@@ -510,7 +212,7 @@ test.describe(
     let logicalTestSuiteId: string;
 
     test.beforeAll(async ({ browser }) => {
-      test.setTimeout(180000);
+      test.slow();
       const { apiContext, afterAction } = await performAdminLogin(browser);
 
       await table.create(apiContext);
@@ -650,105 +352,13 @@ test.describe(
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      test.setTimeout(180000);
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-
-      await dataConsumerUser.delete(apiContext);
-      await dataStewardUser.delete(apiContext);
-
-      await cleanupUserWithPolicy(
-        apiContext,
-        createUser,
-        createRole,
-        createPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        deleteUser,
-        deleteRole,
-        deletePolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        failedRowsUser,
-        failedRowsRole,
-        failedRowsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        suiteUser,
-        suiteRole,
-        suitePolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        viewBasicUser,
-        viewBasicRole,
-        viewBasicPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        tableCreateTestsUser,
-        tableCreateTestsRole,
-        tableCreateTestsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        deleteFailedRowsUser,
-        deleteFailedRowsRole,
-        deleteFailedRowsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        editTestCaseUser,
-        editTestCaseRole,
-        editTestCasePolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        tableEditTestsUser,
-        tableEditTestsRole,
-        tableEditTestsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        editTestsOnTcUser,
-        editTestsOnTcRole,
-        editTestsOnTcPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        viewAllTcUser,
-        viewAllTcRole,
-        viewAllTcPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        suiteEditOnlyUser,
-        suiteEditOnlyRole,
-        suiteEditOnlyPolicy
-      );
-
-      // Cleanup logical suite
-      if (logicalTestSuiteId) {
-        await apiContext.delete(
-          `/api/v1/dataQuality/testSuites/${logicalTestSuiteId}?hardDelete=true&recursive=true`
-        );
-      }
-
-      await table.delete(apiContext);
-      await afterAction();
-    });
-
     const visitProfilerPage = async (page: Page) => {
       await redirectToHomePage(page);
       await table.visitEntityPage(page);
       await page.getByTestId('profiler').click();
+      const testCaseListPromise = waitForTestCaseListResponse(page);
       await page.getByRole('tab', { name: 'Data Quality' }).click();
-      // Wait for Data Quality tab content to load
-      await expect(page.getByTestId('table-profiler-container')).toBeVisible({
-      });
+      await testCaseListPromise;
     };
 
     test.describe('Standard Roles (Negative Scenarios)', () => {
@@ -950,15 +560,6 @@ test.describe(
       }) => {
         test.slow();
         await visitProfilerPage(deletePage);
-
-        // Wait for all loaders to disappear
-        await deletePage
-          .locator('[data-testid="loader"]')
-          .first()
-          .waitFor({
-            state: 'detached',
-          })
-          .catch(() => {});
 
         // UI: Verify add test case button is hidden
         await expect(
@@ -1443,21 +1044,16 @@ test.describe(
         await visitProfilerPage(viewBasicPage);
         await expect(viewBasicPage.getByTestId(testCaseName)).toBeVisible();
 
-        await redirectToHomePage(viewBasicPage);
+        const testCaseDetailsPromise =
+          waitForTestCaseDetailsResponse(viewBasicPage);
         await viewBasicPage.goto(
           `/test-case/${encodeURIComponent(testCaseFqn)}`
         );
-
-        await waitForAllLoadersToDisappear(viewBasicPage);
+        await testCaseDetailsPromise;
 
         await expect(
           viewBasicPage.getByTestId('entity-page-header')
         ).toBeVisible();
-
-        // Wait for all loaders to disappear before checking visibility
-        await viewBasicPage.locator('[data-testid="loader"]').first().waitFor({
-          state: 'detached',
-        });
 
         await expect(
           viewBasicPage.getByText(/Table Row Count To Be Between/i)
@@ -1489,37 +1085,24 @@ test.describe(
         const { apiContext: adminContext } = await getApiContext(adminPage);
         await setupTestCaseWithFailedRows(adminContext, table);
 
-        await redirectToHomePage(failedRowsPage);
+        const testCaseDetailsPromise =
+          waitForTestCaseDetailsResponse(failedRowsPage);
         await failedRowsPage.goto(
           `/test-case/${encodeURIComponent(testCaseFqn)}`
         );
-        await waitForAllLoadersToDisappear(failedRowsPage);
+        await testCaseDetailsPromise;
         await expect(
           failedRowsPage.getByTestId('entity-page-header')
         ).toBeVisible();
-
-        // Wait for all loaders to disappear
-        await failedRowsPage
-          .locator('[data-testid="loader"]')
-          .first()
-          .waitFor({
-            state: 'detached',
-          })
-          .catch(() => {});
 
         const failedRowsTab = failedRowsPage.getByRole('tab', {
           name: /failed rows sample/i,
         });
         if (await failedRowsTab.isVisible()) {
+          const failedRowsPromise =
+            waitForFailedRowsSampleResponse(failedRowsPage);
           await failedRowsTab.click();
-          // Wait for failed rows data to load
-          await failedRowsPage
-            .locator('[data-testid="loader"]')
-            .first()
-            .waitFor({
-              state: 'detached',
-            })
-            .catch(() => {});
+          await failedRowsPromise;
 
           await expect(
             failedRowsPage.getByText('Amber Albert').first()
@@ -1600,7 +1183,6 @@ test.describe(
         suitePage,
       }) => {
         // UI: Navigate to test suites page and verify it loads
-        await redirectToHomePage(suitePage);
         await suitePage.goto('/data-quality/test-suites');
 
         // Wait for the page container to load
@@ -1620,23 +1202,14 @@ test.describe(
       test('User with TEST_SUITE.VIEW_ALL can view test suite CONTENT in UI', async ({
         suitePage,
       }) => {
-        await redirectToHomePage(suitePage);
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(suitePage);
         await suitePage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        // Wait for the page container to load
-        await expect(suitePage.getByTestId('test-suite-container')).toBeVisible(
-    
-        );
-
-        // Wait for test suite table to be visible and loaders to disappear
-        await suitePage
-          .locator('[data-testid="loader"]')
-          .first()
-          .waitFor({
-            state: 'detached',
-       
-          })
-          .catch(() => {});
+        await expect(
+          suitePage.getByTestId('test-suite-container')
+        ).toBeVisible();
 
         const suiteTable = suitePage.getByTestId('test-suite-table');
         await expect(suiteTable).toBeVisible();

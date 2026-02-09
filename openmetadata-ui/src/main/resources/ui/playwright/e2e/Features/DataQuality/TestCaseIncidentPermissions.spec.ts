@@ -12,97 +12,20 @@
  */
 import { test as base, expect, Page } from '@playwright/test';
 import { DOMAIN_TAGS } from '../../../constant/config';
+import {
+  CONSUMER_LIKE_POLICY,
+  EDIT_INCIDENTS_POLICY,
+  TABLE_EDIT_INCIDENTS_POLICY,
+  VIEW_INCIDENTS_POLICY,
+} from '../../../constant/dataQualityPermissions';
 import { PolicyClass } from '../../../support/access-control/PoliciesClass';
 import { RolesClass } from '../../../support/access-control/RolesClass';
 import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
-import { getApiContext, redirectToHomePage, uuid } from '../../../utils/common';
+import { getApiContext } from '../../../utils/common';
+import { setupUserWithPolicy } from '../../../utils/permission';
 import { getCurrentMillis } from '../../../utils/dateTime';
-
-// --- Policies ---
-
-// 1. View Incidents Policy (TEST_CASE.VIEW_ALL + TABLE.VIEW_TESTS)
-const VIEW_INCIDENTS_POLICY = [
-  {
-    name: `view-incidents-tc-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-incidents-table-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewAll', 'ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `view-incidents-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 2. Edit Incidents Policy (TEST_CASE.EDIT_TESTS + TEST_CASE.EDIT_ALL)
-const EDIT_INCIDENTS_POLICY = [
-  {
-    name: `edit-incidents-tc-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['EditTests', 'EditAll', 'ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-incidents-table-${uuid()}`,
-    resources: ['table'],
-    operations: ['EditTests', 'EditAll', 'ViewAll', 'ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `edit-incidents-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 3. Table Edit Incidents Policy (TABLE.EDIT_TESTS only)
-const TABLE_EDIT_INCIDENTS_POLICY = [
-  {
-    name: `table-edit-incidents-${uuid()}`,
-    resources: ['table'],
-    operations: ['EditTests', 'ViewAll', 'ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `table-edit-incidents-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
-
-// 4. Data Consumer Simulation (limited permissions, no edit)
-const CONSUMER_LIKE_POLICY = [
-  {
-    name: `consumer-like-tc-${uuid()}`,
-    resources: ['testCase'],
-    operations: ['ViewAll', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `consumer-like-table-${uuid()}`,
-    resources: ['table'],
-    operations: ['ViewAll', 'ViewTests', 'ViewBasic'],
-    effect: 'allow',
-  },
-  {
-    name: `consumer-like-all-${uuid()}`,
-    resources: ['all'],
-    operations: ['ViewBasic'],
-    effect: 'allow',
-  },
-];
 
 // --- Objects ---
 const viewIncidentsPolicy = new PolicyClass();
@@ -162,45 +85,6 @@ const test = base.extend<{
   },
 });
 
-// Helper to create user with role
-const setupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  policy: PolicyClass,
-  role: RolesClass,
-  policyRules: Array<{
-    name: string;
-    resources: string[];
-    operations: string[];
-    effect: string;
-  }>
-) => {
-  await user.create(apiContext, false);
-  const pol = await policy.create(apiContext, policyRules);
-  const rol = await role.create(apiContext, [pol.fullyQualifiedName]);
-  await user.patch({
-    apiContext,
-    patchData: [
-      {
-        op: 'add',
-        path: '/roles/0',
-        value: { id: rol.id, type: 'role', name: rol.name },
-      },
-    ],
-  });
-};
-
-const cleanupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  role: RolesClass,
-  policy: PolicyClass
-) => {
-  await user.delete(apiContext);
-  await role.delete(apiContext);
-  await policy.delete(apiContext);
-};
-
 test.describe(
   'TestCaseIncidentStatus Permission Coverage',
   { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality` },
@@ -210,7 +94,6 @@ test.describe(
     let incidentStateId: string;
 
     const visitTestCaseIncidentPage = async (page: Page) => {
-      await redirectToHomePage(page);
       await page.goto(`/test-case/${encodeURIComponent(testCaseFqn)}`);
       // Wait for test case page to load
       await expect(page.getByTestId('entity-page-header')).toBeVisible({
@@ -312,38 +195,6 @@ test.describe(
         CONSUMER_LIKE_POLICY
       );
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-
-      await cleanupUserWithPolicy(
-        apiContext,
-        viewIncidentsUser,
-        viewIncidentsRole,
-        viewIncidentsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        editIncidentsUser,
-        editIncidentsRole,
-        editIncidentsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        tableEditIncidentsUser,
-        tableEditIncidentsRole,
-        tableEditIncidentsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        consumerLikeUser,
-        consumerLikeRole,
-        consumerLikePolicy
-      );
-
-      await table.delete(apiContext);
       await afterAction();
     });
 

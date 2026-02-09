@@ -285,8 +285,8 @@ const TabFilters = () => {
                 color="primary"
                 data-testid="profiler-setting-btn"
                 sx={{
-                  minWidth: '36px',
-                  height: '32px',
+                  minWidth: theme.spacing(4.5),
+                  height: theme.spacing(4),
                 }}
                 variant="outlined"
                 onClick={onSettingButtonClick}>

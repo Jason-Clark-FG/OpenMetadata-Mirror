@@ -18,6 +18,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext, redirectToHomePage, uuid } from '../../../utils/common';
+import { setupUserWithPolicy } from '../../../utils/permission';
 import { getCurrentMillis } from '../../../utils/dateTime';
 
 // --- Policies ---
@@ -222,45 +223,6 @@ const test = base.extend<{
   },
 });
 
-// Helper to create user with role
-const setupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  policy: PolicyClass,
-  role: RolesClass,
-  policyRules: Array<{
-    name: string;
-    resources: string[];
-    operations: string[];
-    effect: string;
-  }>
-) => {
-  await user.create(apiContext, false);
-  const pol = await policy.create(apiContext, policyRules);
-  const rol = await role.create(apiContext, [pol.fullyQualifiedName]);
-  await user.patch({
-    apiContext,
-    patchData: [
-      {
-        op: 'add',
-        path: '/roles/0',
-        value: { id: rol.id, type: 'role', name: rol.name },
-      },
-    ],
-  });
-};
-
-const cleanupUserWithPolicy = async (
-  apiContext: Awaited<ReturnType<typeof getApiContext>>['apiContext'],
-  user: UserClass,
-  role: RolesClass,
-  policy: PolicyClass
-) => {
-  await user.delete(apiContext);
-  await role.delete(apiContext);
-  await policy.delete(apiContext);
-};
-
 test.describe(
   'TestCaseResult Permission Coverage',
   { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality` },
@@ -277,7 +239,6 @@ test.describe(
     };
 
     const visitTestCaseDetailsPage = async (page: Page) => {
-      await redirectToHomePage(page);
       await page.goto(`/test-case/${encodeURIComponent(testCaseFqn)}`);
       await page.waitForLoadState('networkidle');
     };
@@ -356,50 +317,6 @@ test.describe(
         PARTIAL_DELETE_TABLE_ONLY_POLICY
       );
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-
-      await cleanupUserWithPolicy(
-        apiContext,
-        viewResultsUser,
-        viewResultsRole,
-        viewResultsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        editResultsUser,
-        editResultsRole,
-        editResultsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        tableEditResultsUser,
-        tableEditResultsRole,
-        tableEditResultsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        deleteResultsUser,
-        deleteResultsRole,
-        deleteResultsPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        partialDeleteTcUser,
-        partialDeleteTcRole,
-        partialDeleteTcPolicy
-      );
-      await cleanupUserWithPolicy(
-        apiContext,
-        partialDeleteTableUser,
-        partialDeleteTableRole,
-        partialDeleteTablePolicy
-      );
-
-      await table.delete(apiContext);
       await afterAction();
     });
 
