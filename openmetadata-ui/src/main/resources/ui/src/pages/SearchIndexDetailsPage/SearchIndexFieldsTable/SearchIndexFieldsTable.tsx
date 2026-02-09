@@ -411,7 +411,13 @@ const SearchIndexFieldsTable = ({
       setSearchedFields(sortByOrdinalPosition);
       setExpandedRowKeys([]);
     }
-  }, [searchText, searchIndexFields]);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (!searchText) {
+      setSearchedFields(sortByOrdinalPosition);
+    }
+  }, [searchIndexFields, sortByOrdinalPosition]);
 
   // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
   useEffect(() => {
