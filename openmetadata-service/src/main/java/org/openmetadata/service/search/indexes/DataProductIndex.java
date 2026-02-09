@@ -18,6 +18,7 @@ public record DataProductIndex(DataProduct dataProduct) implements SearchIndex {
     Map<String, Object> commonAttributes = getCommonAttributesMap(dataProduct, Entity.DATA_PRODUCT);
     ParseTags parseTags = new ParseTags(Entity.getEntityTags(Entity.DATA_PRODUCT, dataProduct));
     doc.put("tags", parseTags.getTags());
+    doc.put("tier", parseTags.getTierTag());
     doc.put("classificationTags", parseTags.getClassificationTags());
     doc.put("glossaryTags", parseTags.getGlossaryTags());
     doc.putAll(commonAttributes);
