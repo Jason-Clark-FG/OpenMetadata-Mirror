@@ -363,7 +363,7 @@ export const LearningResourcesPage: React.FC = () => {
       mb: 5,
       backgroundColor: 'background.paper',
       borderRadius: '12px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)',
       display: 'flex',
       flexDirection: 'column' as const,
       flex: 1,
@@ -380,23 +380,20 @@ export const LearningResourcesPage: React.FC = () => {
       gap: 4,
       px: 6,
       py: 4,
-      borderBottom: '1px solid',
-      borderColor: theme.palette.allShades?.gray?.[200],
       flexShrink: 0,
     }),
-    [theme]
+    []
   );
 
   const paginationBoxSx = useMemo(
     () => ({
       flexShrink: 0,
       backgroundColor: 'background.paper',
-      borderTop: `1px solid ${theme.palette.allShades?.gray?.[200]}`,
       boxShadow:
-        '0px -13px 16px -4px rgba(10, 13, 18, 0.04), 0px -4px 6px -2px rgba(10, 13, 18, 0.04)',
+        '0 -13px 16px -4px rgba(10, 13, 18, 0.04), 0 -4px 6px -2px rgba(10, 13, 18, 0.03)',
       zIndex: 1,
     }),
-    [theme]
+    []
   );
 
   const renderCardView = useCallback(
@@ -528,6 +525,7 @@ export const LearningResourcesPage: React.FC = () => {
         <TableContainer
           className="learning-resources-table-container"
           component={Paper}
+          elevation={0}
           sx={tableContainerSx}>
           <Box sx={headerBoxSx}>
             <Box
