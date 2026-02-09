@@ -29,9 +29,9 @@ const matchesSearch = (
     return true;
   }
   const q = searchText.toLowerCase();
-  const nameMatch = resource.name?.toLowerCase().includes(q);
-  const displayNameMatch = resource.displayName?.toLowerCase().includes(q);
-  const descriptionMatch = resource.description?.toLowerCase().includes(q);
+  const nameMatch = resource.name?.toLowerCase().includes(q) ?? false;
+  const displayNameMatch = resource.displayName?.toLowerCase().includes(q) ?? false;
+  const descriptionMatch = resource.description?.toLowerCase().includes(q) ?? false;
 
   return nameMatch || displayNameMatch || descriptionMatch;
 };
