@@ -461,7 +461,8 @@
         }
       },
       "lifeCycle": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "dataProducts": {
         "properties": {
@@ -518,13 +519,16 @@
         "type": "keyword"
       },
       "descriptionSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "tagSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "tierSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "dashboards": {
         "properties": {
