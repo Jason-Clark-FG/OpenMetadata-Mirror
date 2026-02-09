@@ -75,7 +75,8 @@ import org.openmetadata.service.util.EntityHierarchyList;
 public class DomainResource extends EntityResource<Domain, DomainRepository> {
   public static final String COLLECTION_PATH = "/v1/domains/";
   private final DomainMapper mapper = new DomainMapper();
-  static final String FIELDS = "tags,children,childrenCount,owners,experts,extension,followers";
+  static final String FIELDS =
+      "tags,children,childrenCount,owners,experts,extension,followers,votes,certification";
 
   public DomainResource(Authorizer authorizer, Limits limits) {
     super(Entity.DOMAIN, authorizer, limits);

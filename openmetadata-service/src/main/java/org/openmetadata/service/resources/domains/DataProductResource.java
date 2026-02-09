@@ -82,7 +82,8 @@ import org.openmetadata.service.security.policyevaluator.OperationContext;
 public class DataProductResource extends EntityResource<DataProduct, DataProductRepository> {
   public static final String COLLECTION_PATH = "/v1/dataProducts/";
   private final DataProductMapper mapper = new DataProductMapper();
-  static final String FIELDS = "domains,owners,reviewers,experts,extension,tags,followers";
+  static final String FIELDS =
+      "domains,owners,reviewers,experts,extension,tags,followers,votes,certification";
   static final String PORT_FIELDS =
       "owners,tags,followers,domains,votes,extension"; // Common fields across all entity types
 
