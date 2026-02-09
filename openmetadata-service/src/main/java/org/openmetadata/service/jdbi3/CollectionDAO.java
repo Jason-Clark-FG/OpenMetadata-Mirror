@@ -7606,6 +7606,16 @@ public interface CollectionDAO {
       return "data_quality_data_time_series";
     }
 
+    @RegisterRowMapper(LatestRecordWithFQNHashMapper.class)
+    @SqlQuery(
+        "SELECT t1.entityFQNHash, t1.json FROM data_quality_data_time_series t1 "
+            + "INNER JOIN (SELECT entityFQNHash, MAX(timestamp) as maxTs "
+            + "FROM data_quality_data_time_series WHERE entityFQNHash IN (<entityFQNHashes>) "
+            + "GROUP BY entityFQNHash) t2 "
+            + "ON t1.entityFQNHash = t2.entityFQNHash AND t1.timestamp = t2.maxTs")
+    List<LatestRecordWithFQNHash> getLatestRecordBatch(
+        @BindListFQN("entityFQNHashes") List<String> entityFQNs);
+
     @SqlUpdate(
         "DELETE FROM data_quality_data_time_series WHERE entityFQNHash = :testCaseFQNHash AND extension = 'testCase.testCaseResult'")
     void deleteAll(@BindFQN("testCaseFQNHash") String entityFQNHash);
@@ -7635,6 +7645,31 @@ public interface CollectionDAO {
         String json,
         String incidentStateId) {
       insert(getTimeSeriesTableName(), entityFQNHash, extension, jsonSchema, json, incidentStateId);
+    }
+  }
+
+  class LatestRecordWithFQNHash {
+    private final String entityFQNHash;
+    private final String json;
+
+    public LatestRecordWithFQNHash(String entityFQNHash, String json) {
+      this.entityFQNHash = entityFQNHash;
+      this.json = json;
+    }
+
+    public String getEntityFQNHash() {
+      return entityFQNHash;
+    }
+
+    public String getJson() {
+      return json;
+    }
+  }
+
+  class LatestRecordWithFQNHashMapper implements RowMapper<LatestRecordWithFQNHash> {
+    @Override
+    public LatestRecordWithFQNHash map(ResultSet r, StatementContext ctx) throws SQLException {
+      return new LatestRecordWithFQNHash(r.getString("entityFQNHash"), r.getString("json"));
     }
   }
 

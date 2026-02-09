@@ -34,6 +34,7 @@ import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -41,6 +42,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -152,6 +154,8 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
         fields.contains(INCIDENTS_FIELD) ? getIncidentId(test) : test.getIncidentId());
   }
 
+  private final ThreadLocal<Map<String, Table>> linkedTablesCache = new ThreadLocal<>();
+
   @Override
   public void setFieldsInBulk(Fields fields, List<TestCase> testCases) {
     if (testCases == null || testCases.isEmpty()) {
@@ -162,105 +166,97 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
       fetchAndSetTestDefinitions(testCases);
     }
 
-    if (fields.contains(TEST_SUITE_FIELD)) {
-      fetchAndSetTestSuites(testCases);
+    if (fields.contains(TEST_SUITE_FIELD) || fields.contains(Entity.FIELD_TEST_SUITES)) {
+      fetchAndSetTestSuitesData(
+          testCases, fields.contains(TEST_SUITE_FIELD), fields.contains(Entity.FIELD_TEST_SUITES));
     }
 
-    if (fields.contains(Entity.FIELD_TEST_SUITES)) {
-      fetchAndSetAllTestSuites(testCases);
+    if (fields.contains(TEST_CASE_RESULT) || fields.contains(INCIDENTS_FIELD)) {
+      fetchAndSetTestCaseResultsAndIncidents(
+          testCases, fields.contains(TEST_CASE_RESULT), fields.contains(INCIDENTS_FIELD));
     }
 
-    if (fields.contains(TEST_CASE_RESULT)) {
-      fetchAndSetTestCaseResults(testCases);
+    boolean needTables =
+        fields.contains(FIELD_TAGS)
+            || fields.contains(FIELD_OWNERS)
+            || fields.contains("domains")
+            || fields.contains("followers");
+    if (needTables) {
+      Map<String, Table> tableCache = batchLoadLinkedTables(testCases);
+      linkedTablesCache.set(tableCache);
     }
 
-    // Fetch and set incident IDs in bulk if requested
-    if (fields.contains(INCIDENTS_FIELD)) {
-      fetchAndSetIncidentIds(testCases);
+    try {
+      if (fields.contains(FIELD_TAGS)) {
+        fetchAndSetTags(testCases);
+      }
+      super.setFieldsInBulk(fields, testCases);
+    } finally {
+      linkedTablesCache.remove();
+    }
+  }
+
+  private Map<String, Table> batchLoadLinkedTables(List<TestCase> testCases) {
+    Map<String, String> fqnToEntityLink = new HashMap<>();
+    for (TestCase tc : testCases) {
+      try {
+        EntityLink link = EntityLink.parse(tc.getEntityLink());
+        fqnToEntityLink.putIfAbsent(link.getEntityFQN(), tc.getEntityLink());
+      } catch (Exception e) {
+        LOG.warn("Failed to parse entity link for test case {}: {}", tc.getId(), e.getMessage());
+      }
     }
 
-    // Fetch and set tags in bulk if requested
-    if (fields.contains(FIELD_TAGS)) {
-      fetchAndSetTags(testCases);
+    if (fqnToEntityLink.isEmpty()) {
+      return new HashMap<>();
     }
 
-    // For all other fields, use the parent implementation which calls setFields individually
-    // This ensures we don't break existing functionality
-    super.setFieldsInBulk(fields, testCases);
+    TableRepository tableRepo = (TableRepository) Entity.getEntityRepository(TABLE);
+    List<Table> tables =
+        tableRepo.getDao().findEntityByNames(new ArrayList<>(fqnToEntityLink.keySet()), ALL);
+    tableRepo.setFieldsInBulk(
+        new Fields(
+            Set.of("tags", "columns", FIELD_OWNERS, "domains", "followers"),
+            "tags,columns,owners,domains,followers"),
+        tables);
+
+    return tables.stream()
+        .collect(Collectors.toMap(Table::getFullyQualifiedName, Function.identity(), (a, b) -> a));
   }
 
   private void fetchAndSetTestDefinitions(List<TestCase> testCases) {
     List<String> testCaseIds =
         testCases.stream().map(TestCase::getId).map(UUID::toString).distinct().toList();
 
-    // Bulk fetch test definitions
-    // Test definition CONTAINS test case, so we need to find relationships FROM test definition TO
-    // test cases
     List<CollectionDAO.EntityRelationshipObject> testDefinitionRecords =
         daoCollection
             .relationshipDAO()
             .findFromBatch(
                 testCaseIds, Relationship.CONTAINS.ordinal(), TEST_DEFINITION, TEST_CASE);
 
-    // Create a map of test case ID to test definition reference
+    List<UUID> testDefIds =
+        testDefinitionRecords.stream().map(r -> UUID.fromString(r.getFromId())).distinct().toList();
+    List<EntityReference> refs = Entity.getEntityReferencesByIds(TEST_DEFINITION, testDefIds, ALL);
+    Map<UUID, EntityReference> refMap =
+        refs.stream().collect(Collectors.toMap(EntityReference::getId, Function.identity()));
+
     Map<UUID, EntityReference> testDefinitionMap = new HashMap<>();
     for (CollectionDAO.EntityRelationshipObject testRecord : testDefinitionRecords) {
       UUID testCaseId = UUID.fromString(testRecord.getToId());
-      EntityReference testDefRef =
-          Entity.getEntityReferenceById(
-              TEST_DEFINITION, UUID.fromString(testRecord.getFromId()), Include.ALL);
-      testDefinitionMap.put(testCaseId, testDefRef);
-    }
-
-    // Set test definitions on test cases
-    for (TestCase testCase : testCases) {
-      EntityReference testDefRef = testDefinitionMap.get(testCase.getId());
-      testCase.setTestDefinition(testDefRef);
-    }
-  }
-
-  private void fetchAndSetTestSuites(List<TestCase> testCases) {
-    List<String> testCaseIds =
-        testCases.stream().map(TestCase::getId).map(UUID::toString).distinct().toList();
-
-    // Bulk fetch test suites
-    // Test suite CONTAINS test case, so we need to find FROM test suite TO test case
-    List<CollectionDAO.EntityRelationshipObject> testSuiteRecords =
-        daoCollection
-            .relationshipDAO()
-            .findFromBatch(testCaseIds, Relationship.CONTAINS.ordinal(), TEST_SUITE, TEST_CASE);
-
-    // Create a map of test case ID to test suite references (can have multiple)
-    Map<UUID, List<EntityReference>> testCaseToTestSuites = new HashMap<>();
-    for (CollectionDAO.EntityRelationshipObject testSuite : testSuiteRecords) {
-      UUID testCaseId = UUID.fromString(testSuite.getToId());
-      EntityReference testSuiteRef =
-          Entity.getEntityReferenceById(
-              TEST_SUITE, UUID.fromString(testSuite.getFromId()), Include.ALL);
-      testCaseToTestSuites.computeIfAbsent(testCaseId, k -> new ArrayList<>()).add(testSuiteRef);
-    }
-
-    // Set test suites on test cases - find the basic/executable test suite
-    for (TestCase testCase : testCases) {
-      List<EntityReference> testSuiteRefs = testCaseToTestSuites.get(testCase.getId());
-      if (testSuiteRefs != null && !testSuiteRefs.isEmpty()) {
-        // Find the basic test suite among the references
-        for (EntityReference ref : testSuiteRefs) {
-          TestSuite testSuite = Entity.getEntity(TEST_SUITE, ref.getId(), "", Include.ALL);
-          if (Boolean.TRUE.equals(testSuite.getBasic())) {
-            testCase.setTestSuite(testSuite.getEntityReference());
-            break;
-          }
-        }
-        // If no basic test suite found, use the first one
-        if (testCase.getTestSuite() == null) {
-          testCase.setTestSuite(testSuiteRefs.getFirst());
-        }
+      UUID testDefId = UUID.fromString(testRecord.getFromId());
+      EntityReference testDefRef = refMap.get(testDefId);
+      if (testDefRef != null) {
+        testDefinitionMap.put(testCaseId, testDefRef);
       }
     }
+
+    for (TestCase testCase : testCases) {
+      testCase.setTestDefinition(testDefinitionMap.get(testCase.getId()));
+    }
   }
 
-  private void fetchAndSetAllTestSuites(List<TestCase> testCases) {
+  private void fetchAndSetTestSuitesData(
+      List<TestCase> testCases, boolean setBasicSuite, boolean setAllSuites) {
     List<String> testCaseIds =
         testCases.stream().map(TestCase::getId).map(UUID::toString).distinct().toList();
 
@@ -269,151 +265,235 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
             .relationshipDAO()
             .findFromBatch(testCaseIds, Relationship.CONTAINS.ordinal(), TEST_SUITE, TEST_CASE);
 
-    Map<UUID, List<TestSuite>> testCaseToTestSuites = new HashMap<>();
+    Set<UUID> uniqueSuiteIds = new HashSet<>();
     for (CollectionDAO.EntityRelationshipObject record : testSuiteRecords) {
-      UUID testCaseId = UUID.fromString(record.getToId());
-      TestSuite testSuite =
-          Entity.<TestSuite>getEntity(
-                  TEST_SUITE,
-                  UUID.fromString(record.getFromId()),
-                  "owners,domains",
-                  Include.ALL,
-                  false)
-              .withInherited(true)
-              .withChangeDescription(null);
-      testCaseToTestSuites.computeIfAbsent(testCaseId, k -> new ArrayList<>()).add(testSuite);
+      uniqueSuiteIds.add(UUID.fromString(record.getFromId()));
     }
 
-    for (TestCase testCase : testCases) {
-      List<TestSuite> testSuiteList = testCaseToTestSuites.get(testCase.getId());
-      testCase.setTestSuites(testSuiteList != null ? testSuiteList : new ArrayList<>());
+    TestSuiteRepository testSuiteRepo =
+        (TestSuiteRepository) Entity.getEntityRepository(TEST_SUITE);
+    List<TestSuite> allSuites =
+        testSuiteRepo.getDao().findEntitiesByIds(new ArrayList<>(uniqueSuiteIds), ALL);
+
+    if (setAllSuites) {
+      testSuiteRepo.setFieldsInBulk(
+          new Fields(Set.of(FIELD_OWNERS, "domains"), "owners,domains"), allSuites);
+    }
+
+    Map<UUID, TestSuite> suiteMap =
+        allSuites.stream()
+            .collect(Collectors.toMap(TestSuite::getId, Function.identity(), (a, b) -> a));
+
+    if (setBasicSuite) {
+      Map<UUID, EntityReference> testCaseToBasicSuite = new HashMap<>();
+      Map<UUID, EntityReference> testCaseToFirstSuite = new HashMap<>();
+      for (CollectionDAO.EntityRelationshipObject record : testSuiteRecords) {
+        UUID testCaseId = UUID.fromString(record.getToId());
+        UUID suiteId = UUID.fromString(record.getFromId());
+        TestSuite suite = suiteMap.get(suiteId);
+        if (suite != null) {
+          testCaseToFirstSuite.putIfAbsent(testCaseId, suite.getEntityReference());
+          if (Boolean.TRUE.equals(suite.getBasic())) {
+            testCaseToBasicSuite.put(testCaseId, suite.getEntityReference());
+          }
+        }
+      }
+      for (TestCase testCase : testCases) {
+        EntityReference basicRef = testCaseToBasicSuite.get(testCase.getId());
+        testCase.setTestSuite(
+            basicRef != null ? basicRef : testCaseToFirstSuite.get(testCase.getId()));
+      }
+    }
+
+    if (setAllSuites) {
+      Map<UUID, List<TestSuite>> testCaseToTestSuites = new HashMap<>();
+      for (CollectionDAO.EntityRelationshipObject record : testSuiteRecords) {
+        UUID testCaseId = UUID.fromString(record.getToId());
+        UUID suiteId = UUID.fromString(record.getFromId());
+        TestSuite suite = suiteMap.get(suiteId);
+        if (suite != null) {
+          TestSuite copy =
+              JsonUtils.readValue(JsonUtils.pojoToJson(suite), TestSuite.class)
+                  .withInherited(true)
+                  .withChangeDescription(null);
+          testCaseToTestSuites.computeIfAbsent(testCaseId, k -> new ArrayList<>()).add(copy);
+        }
+      }
+      for (TestCase testCase : testCases) {
+        List<TestSuite> suiteList = testCaseToTestSuites.get(testCase.getId());
+        testCase.setTestSuites(suiteList != null ? suiteList : new ArrayList<>());
+      }
     }
   }
 
-  private void fetchAndSetTestCaseResults(List<TestCase> testCases) {
-    // For test case results, we need to fetch the latest result for each test case
-    // This requires looking at the time series data
-    Map<UUID, TestCaseResult> testCaseIdToResult = new HashMap<>();
+  private void fetchAndSetTestCaseResultsAndIncidents(
+      List<TestCase> testCases, boolean setResults, boolean setIncidents) {
+    List<String> fqns =
+        testCases.stream()
+            .filter(tc -> tc.getTestCaseResult() == null)
+            .map(TestCase::getFullyQualifiedName)
+            .distinct()
+            .toList();
 
-    for (TestCase testCase : testCases) {
-      if (testCase.getTestCaseResult() != null) {
-        // If already set, use the existing value
-        continue;
-      }
+    if (fqns.isEmpty()) {
+      return;
+    }
 
-      try {
-        // Get the latest test case result from the time series database
-        String json =
-            daoCollection
-                .dataQualityDataTimeSeriesDao()
-                .getLatestRecord(testCase.getFullyQualifiedName());
+    Map<String, String> fqnHashToFqn = new HashMap<>();
+    for (String fqn : fqns) {
+      fqnHashToFqn.put(FullyQualifiedName.buildHash(fqn), fqn);
+    }
 
-        if (json != null) {
-          TestCaseResult result = JsonUtils.readValue(json, TestCaseResult.class);
-          if (result != null) {
-            testCaseIdToResult.put(testCase.getId(), result);
-          }
+    List<CollectionDAO.LatestRecordWithFQNHash> records =
+        daoCollection.dataQualityDataTimeSeriesDao().getLatestRecordBatch(fqns);
+
+    Map<String, TestCaseResult> fqnToResult = new HashMap<>();
+    for (CollectionDAO.LatestRecordWithFQNHash record : records) {
+      String fqn = fqnHashToFqn.get(record.getEntityFQNHash());
+      if (fqn != null && record.getJson() != null) {
+        TestCaseResult result = JsonUtils.readValue(record.getJson(), TestCaseResult.class);
+        if (result != null) {
+          fqnToResult.put(fqn, result);
         }
-      } catch (Exception e) {
-        LOG.warn(
-            "Failed to fetch test case result for {}: {}",
-            testCase.getFullyQualifiedName(),
-            e.getMessage());
       }
     }
 
-    // Set the results on test cases
     for (TestCase testCase : testCases) {
-      TestCaseResult result = testCaseIdToResult.get(testCase.getId());
-      testCase.setTestCaseResult(result);
-    }
-  }
-
-  private void fetchAndSetIncidentIds(List<TestCase> testCases) {
-    // Incident IDs are stored in the latest test case result
-    Map<UUID, UUID> testCaseIdToIncidentId = new HashMap<>();
-
-    for (TestCase testCase : testCases) {
-      try {
-        String json =
-            daoCollection
-                .dataQualityDataTimeSeriesDao()
-                .getLatestRecord(testCase.getFullyQualifiedName());
-
-        if (json != null) {
-          TestCaseResult latestResult = JsonUtils.readValue(json, TestCaseResult.class);
-          if (latestResult != null && latestResult.getIncidentId() != null) {
-            testCaseIdToIncidentId.put(testCase.getId(), latestResult.getIncidentId());
-          }
+      TestCaseResult result = fqnToResult.get(testCase.getFullyQualifiedName());
+      if (result != null) {
+        if (setResults) {
+          testCase.setTestCaseResult(result);
         }
-      } catch (Exception e) {
-        LOG.warn(
-            "Failed to fetch incident ID for {}: {}",
-            testCase.getFullyQualifiedName(),
-            e.getMessage());
+        if (setIncidents && result.getIncidentId() != null) {
+          testCase.setIncidentId(result.getIncidentId());
+        }
       }
-    }
-
-    // Set the incident IDs on test cases
-    for (TestCase testCase : testCases) {
-      UUID incidentId = testCaseIdToIncidentId.get(testCase.getId());
-      testCase.setIncidentId(incidentId);
     }
   }
 
   private void fetchAndSetTags(List<TestCase> testCases) {
-    // Tags are inherited from the linked entity (table or column)
-    Map<UUID, List<TagLabel>> testCaseIdToTags = new HashMap<>();
+    Map<String, Table> tableCache = linkedTablesCache.get();
+    if (tableCache == null) {
+      tableCache = batchLoadLinkedTables(testCases);
+    }
 
     for (TestCase testCase : testCases) {
       try {
         EntityLink entityLink = EntityLink.parse(testCase.getEntityLink());
-        Table table = Entity.getEntity(entityLink, "tags,columns", ALL);
-        List<TagLabel> tags = new ArrayList<>(table.getTags());
+        Table table = tableCache.get(entityLink.getEntityFQN());
+        if (table == null) {
+          testCase.setTags(new ArrayList<>());
+          continue;
+        }
+        List<TagLabel> tags =
+            table.getTags() != null ? new ArrayList<>(table.getTags()) : new ArrayList<>();
 
         if (entityLink.getFieldName() != null && entityLink.getFieldName().equals("columns")) {
-          // If we have a column test case, get the column's tags as well
           table.getColumns().stream()
               .filter(column -> column.getName().equals(entityLink.getArrayFieldName()))
               .findFirst()
               .ifPresent(column -> tags.addAll(column.getTags()));
         }
 
-        testCaseIdToTags.put(testCase.getId(), tags);
+        testCase.setTags(tags);
       } catch (Exception e) {
         LOG.warn("Failed to fetch tags for test case {}: {}", testCase.getId(), e.getMessage());
+        testCase.setTags(new ArrayList<>());
       }
-    }
-
-    // Set the tags on test cases
-    for (TestCase testCase : testCases) {
-      List<TagLabel> tags = testCaseIdToTags.get(testCase.getId());
-      testCase.setTags(tags != null ? tags : new ArrayList<>());
     }
   }
 
   @Override
   public void setInheritedFields(TestCase testCase, Fields fields) {
-    // Inherit from the table/column
-    EntityInterface tableOrColumn =
-        Entity.getEntity(
-            EntityLink.parse(testCase.getEntityLink()),
-            "owners,domains,tags,columns,followers",
-            ALL);
-    if (tableOrColumn != null) {
-      inheritOwners(testCase, fields, tableOrColumn);
-      inheritDomains(testCase, fields, tableOrColumn);
-      if (tableOrColumn instanceof Table) {
-        inheritTags(testCase, fields, (Table) tableOrColumn);
-        inheritFollowers(testCase, fields, (Table) tableOrColumn);
+    Map<String, Table> tableCache = linkedTablesCache.get();
+    EntityLink entityLink = EntityLink.parse(testCase.getEntityLink());
+    Table table = tableCache != null ? tableCache.get(entityLink.getEntityFQN()) : null;
+
+    if (table == null) {
+      table = Entity.getEntity(entityLink, "owners,domains,tags,columns,followers", ALL);
+    }
+
+    if (table != null) {
+      inheritOwners(testCase, fields, table);
+      inheritDomains(testCase, fields, table);
+      inheritTags(testCase, fields, table);
+      inheritFollowers(testCase, fields, table);
+    }
+
+    if (fields.contains(FIELD_REVIEWERS)) {
+      List<TestSuite> testSuites =
+          testCase.getTestSuites() != null ? testCase.getTestSuites() : getTestSuites(testCase);
+      for (TestSuite testSuite : testSuites) {
+        inheritReviewers(testCase, fields, testSuite);
+      }
+    }
+  }
+
+  @Override
+  protected void setInheritedFields(List<TestCase> testCases, Fields fields) {
+    Map<String, Table> tableCache = linkedTablesCache.get();
+    if (tableCache == null) {
+      tableCache = batchLoadLinkedTables(testCases);
+    }
+
+    Map<UUID, List<TestSuite>> testCaseToSuites = null;
+    if (fields.contains(FIELD_REVIEWERS)) {
+      testCaseToSuites = new HashMap<>();
+      for (TestCase tc : testCases) {
+        if (tc.getTestSuites() != null) {
+          testCaseToSuites.put(tc.getId(), tc.getTestSuites());
+        }
+      }
+
+      List<TestCase> missingTestSuites =
+          testCases.stream().filter(tc -> tc.getTestSuites() == null).toList();
+      if (!missingTestSuites.isEmpty()) {
+        List<String> missingIds =
+            missingTestSuites.stream().map(TestCase::getId).map(UUID::toString).distinct().toList();
+        List<CollectionDAO.EntityRelationshipObject> suiteRecords =
+            daoCollection
+                .relationshipDAO()
+                .findFromBatch(missingIds, Relationship.CONTAINS.ordinal(), TEST_SUITE, TEST_CASE);
+
+        Set<UUID> suiteIds = new HashSet<>();
+        for (CollectionDAO.EntityRelationshipObject rec : suiteRecords) {
+          suiteIds.add(UUID.fromString(rec.getFromId()));
+        }
+        TestSuiteRepository testSuiteRepo =
+            (TestSuiteRepository) Entity.getEntityRepository(TEST_SUITE);
+        List<TestSuite> suites =
+            testSuiteRepo.getDao().findEntitiesByIds(new ArrayList<>(suiteIds), ALL);
+        testSuiteRepo.setFieldsInBulk(new Fields(Set.of(FIELD_REVIEWERS), "reviewers"), suites);
+        Map<UUID, TestSuite> suiteMap =
+            suites.stream()
+                .collect(Collectors.toMap(TestSuite::getId, Function.identity(), (a, b) -> a));
+
+        for (CollectionDAO.EntityRelationshipObject rec : suiteRecords) {
+          UUID testCaseId = UUID.fromString(rec.getToId());
+          UUID suiteId = UUID.fromString(rec.getFromId());
+          TestSuite suite = suiteMap.get(suiteId);
+          if (suite != null) {
+            testCaseToSuites.computeIfAbsent(testCaseId, k -> new ArrayList<>()).add(suite);
+          }
+        }
       }
     }
 
-    // Inherit reviewers from logical test suites
-    if (fields.contains(FIELD_REVIEWERS)) {
-      List<TestSuite> testSuites = getTestSuites(testCase);
-      for (TestSuite testSuite : testSuites) {
-        inheritReviewers(testCase, fields, testSuite);
+    for (TestCase testCase : testCases) {
+      EntityLink entityLink = EntityLink.parse(testCase.getEntityLink());
+      Table table = tableCache.get(entityLink.getEntityFQN());
+      if (table != null) {
+        inheritOwners(testCase, fields, table);
+        inheritDomains(testCase, fields, table);
+        inheritTags(testCase, fields, table);
+        inheritFollowers(testCase, fields, table);
+      }
+
+      if (fields.contains(FIELD_REVIEWERS) && testCaseToSuites != null) {
+        List<TestSuite> suites = testCaseToSuites.getOrDefault(testCase.getId(), List.of());
+        for (TestSuite testSuite : suites) {
+          inheritReviewers(testCase, fields, testSuite);
+        }
       }
     }
   }
