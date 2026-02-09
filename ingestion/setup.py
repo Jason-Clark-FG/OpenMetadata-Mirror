@@ -335,7 +335,7 @@ plugins: Dict[str, Set[str]] = {
     },
     "nifi": {},  # uses requests
     "openlineage": {*COMMONS["kafka"]},
-    "oracle": {"cx_Oracle>=8.3.0,<9", "oracledb~=1.2", DATA_DIFF["oracle"]},
+    "oracle": {"oracledb~=1.2", DATA_DIFF["oracle"]},
     "pgspider": {"psycopg2-binary", "sqlalchemy-pgspider"},
     "pinotdb": {"pinotdb~=5.0"},
     "postgres": {*COMMONS["postgres"]},
