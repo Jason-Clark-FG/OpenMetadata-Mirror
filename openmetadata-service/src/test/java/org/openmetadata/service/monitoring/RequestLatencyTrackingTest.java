@@ -123,11 +123,10 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
     // Check for specific endpoint metrics - the actual metrics use the endpoint path as-is
     LOG.info("Looking for metrics with endpoint: {}", getEndpoint);
 
-    String normalizedUri = MetricUtils.normalizeUri("v1/tables/" + createdTable.getId());
-    // Parse and verify latency metrics
-    assertLatencyMetricsExist(prometheusMetrics, "request_latency_total", normalizedUri);
-    assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", normalizedUri);
-    assertLatencyMetricsExist(prometheusMetrics, "request_latency_internal", normalizedUri);
+    // Metrics are classified at resource level: /v1/tables
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_total", "/v1/tables");
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", "/v1/tables");
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_internal", "/v1/tables");
   }
 
   @Test
@@ -219,8 +218,7 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
     String endpoint = "v1/tables/" + createdTable.getId();
 
     // Verify database operation count
-    assertLatencyMetricsExist(
-        prometheusMetrics, "request_latency_database", MetricUtils.normalizeUri(endpoint));
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", "/v1/tables");
 
     // Check that we have multiple database operations recorded
     assertTrue(

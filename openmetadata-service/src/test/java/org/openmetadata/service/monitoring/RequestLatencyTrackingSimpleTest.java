@@ -39,19 +39,18 @@ class RequestLatencyTrackingSimpleTest {
 
     RequestLatencyContext.endRequest();
 
-    String normalizedEndpoint = MetricUtils.normalizeUri(endpoint);
     Timer totalTimer =
-        Metrics.timer("request.latency.total", "endpoint", normalizedEndpoint, "method", "GET");
+        Metrics.timer("request.latency.total", "endpoint", endpoint, "method", "GET");
     assertNotNull(totalTimer);
     assertEquals(1, totalTimer.count(), "Should have recorded 1 request");
 
     Timer dbTimer =
-        Metrics.timer("request.latency.database", "endpoint", normalizedEndpoint, "method", "GET");
+        Metrics.timer("request.latency.database", "endpoint", endpoint, "method", "GET");
     assertNotNull(dbTimer);
     assertEquals(1, dbTimer.count(), "Should have recorded 1 database operation");
 
     Timer internalTimer =
-        Metrics.timer("request.latency.internal", "endpoint", normalizedEndpoint, "method", "GET");
+        Metrics.timer("request.latency.internal", "endpoint", endpoint, "method", "GET");
     assertNotNull(internalTimer);
     assertEquals(1, internalTimer.count(), "Should have recorded internal processing");
 

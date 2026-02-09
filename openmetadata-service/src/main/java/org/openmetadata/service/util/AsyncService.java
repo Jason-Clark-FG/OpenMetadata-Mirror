@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 
 @Slf4j
 public class AsyncService {
@@ -98,8 +99,11 @@ public class AsyncService {
     }
 
     ExecutorService executor = getInstance().getExecutorService();
+    Supplier<T> wrappedTask = RequestLatencyContext.wrapWithContext(task);
     return CompletableFuture.supplyAsync(
-            () -> executeWithRetry(task, operationName, context, maxRetries, initialRetryDelayMs),
+            () ->
+                executeWithRetry(
+                    wrappedTask, operationName, context, maxRetries, initialRetryDelayMs),
             executor)
         .orTimeout(timeoutSeconds, TimeUnit.SECONDS)
         .exceptionally(

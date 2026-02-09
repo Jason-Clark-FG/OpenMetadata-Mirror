@@ -18,6 +18,7 @@ import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.schema.type.Permission.Access.ALLOW;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.notAdmin;
 
+import io.micrometer.core.instrument.Timer;
 import jakarta.ws.rs.core.SecurityContext;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.ResourcePermission;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.PolicyEvaluator;
@@ -81,25 +83,25 @@ public class DefaultAuthorizer implements Authorizer {
       SecurityContext securityContext,
       OperationContext operationContext,
       ResourceContextInterface resourceContext) {
-    SubjectContext subjectContext = getSubjectContext(securityContext);
+    Timer.Sample authSample = RequestLatencyContext.startAuthOperation();
+    try {
+      SubjectContext subjectContext = getSubjectContext(securityContext);
 
-    // Check impersonation authorization if impersonation is happening
-    // This validates the bot has permission to impersonate
-    // After this check passes, we enforce the target user's permissions
-    if (subjectContext.impersonatedBy() != null) {
-      checkImpersonationAuthorization(subjectContext);
-    }
+      if (subjectContext.impersonatedBy() != null) {
+        checkImpersonationAuthorization(subjectContext);
+      }
 
-    // Check target user's permissions (or the authenticated user if no impersonation)
-    if (subjectContext.isAdmin()) {
-      return;
-    }
-    if (isReviewer(resourceContext, subjectContext)) {
-      return; // Reviewer of a resource gets admin level privilege on the resource
-    }
+      if (subjectContext.isAdmin()) {
+        return;
+      }
+      if (isReviewer(resourceContext, subjectContext)) {
+        return;
+      }
 
-    // Check if the user has resource level permission
-    PolicyEvaluator.hasPermission(subjectContext, resourceContext, operationContext);
+      PolicyEvaluator.hasPermission(subjectContext, resourceContext, operationContext);
+    } finally {
+      RequestLatencyContext.endAuthOperation(authSample);
+    }
   }
 
   public void authorizeRequests(

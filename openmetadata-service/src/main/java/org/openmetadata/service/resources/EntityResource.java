@@ -74,6 +74,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.mapper.EntityMapper;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.search.SearchListFilter;
 import org.openmetadata.service.search.SearchSortFilter;
 import org.openmetadata.service.security.AuthRequest;
@@ -657,23 +658,24 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
 
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
-        () -> {
-          try {
-            DeleteResponse<T> deleteResponse =
-                repository.delete(userName, id, recursive, hardDelete);
-            if (hardDelete) {
-              limits.invalidateCache(entityType);
-            }
-            WebsocketNotificationHandler.sendDeleteOperationCompleteNotification(
-                jobId, securityContext, deleteResponse.entity());
-          } catch (Exception e) {
-            WebsocketNotificationHandler.sendDeleteOperationFailedNotification(
-                jobId,
-                securityContext,
-                entity,
-                e.getMessage() == null ? e.toString() : e.getMessage());
-          }
-        });
+        RequestLatencyContext.wrapWithContext(
+            () -> {
+              try {
+                DeleteResponse<T> deleteResponse =
+                    repository.delete(userName, id, recursive, hardDelete);
+                if (hardDelete) {
+                  limits.invalidateCache(entityType);
+                }
+                WebsocketNotificationHandler.sendDeleteOperationCompleteNotification(
+                    jobId, securityContext, deleteResponse.entity());
+              } catch (Exception e) {
+                WebsocketNotificationHandler.sendDeleteOperationFailedNotification(
+                    jobId,
+                    securityContext,
+                    entity,
+                    e.getMessage() == null ? e.toString() : e.getMessage());
+              }
+            }));
 
     response =
         Response.accepted()
@@ -727,27 +729,28 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     String jobId = UUID.randomUUID().toString();
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
-        () -> {
-          try {
-            CsvExportProgressCallback progressCallback =
-                (exported, total, message) ->
-                    WebsocketNotificationHandler.sendCsvExportProgressNotification(
-                        jobId, securityContext, exported, total, message);
+        RequestLatencyContext.wrapWithContext(
+            () -> {
+              try {
+                CsvExportProgressCallback progressCallback =
+                    (exported, total, message) ->
+                        WebsocketNotificationHandler.sendCsvExportProgressNotification(
+                            jobId, securityContext, exported, total, message);
 
-            String csvData =
-                repository.exportToCsv(
-                    name,
-                    securityContext.getUserPrincipal().getName(),
-                    recursive,
-                    progressCallback);
-            WebsocketNotificationHandler.sendCsvExportCompleteNotification(
-                jobId, securityContext, csvData);
-          } catch (Exception e) {
-            LOG.error("Encountered Exception while exporting.", e);
-            WebsocketNotificationHandler.sendCsvExportFailedNotification(
-                jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
-          }
-        });
+                String csvData =
+                    repository.exportToCsv(
+                        name,
+                        securityContext.getUserPrincipal().getName(),
+                        recursive,
+                        progressCallback);
+                WebsocketNotificationHandler.sendCsvExportCompleteNotification(
+                    jobId, securityContext, csvData);
+              } catch (Exception e) {
+                LOG.error("Encountered Exception while exporting.", e);
+                WebsocketNotificationHandler.sendCsvExportFailedNotification(
+                    jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
+              }
+            }));
     CSVExportResponse response = new CSVExportResponse(jobId, "Export initiated successfully.");
     return Response.accepted().entity(response).type(MediaType.APPLICATION_JSON).build();
   }
@@ -788,17 +791,18 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     String jobId = UUID.randomUUID().toString();
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
-        () -> {
-          try {
-            BulkOperationResult result =
-                repository.bulkAddAndValidateTagsToAssets(entityId, request);
-            WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
-                jobId, securityContext, result);
-          } catch (Exception e) {
-            WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
-                jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
-          }
-        });
+        RequestLatencyContext.wrapWithContext(
+            () -> {
+              try {
+                BulkOperationResult result =
+                    repository.bulkAddAndValidateTagsToAssets(entityId, request);
+                WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
+                    jobId, securityContext, result);
+              } catch (Exception e) {
+                WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
+                    jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
+              }
+            }));
     BulkAssetsOperationResponse response =
         new BulkAssetsOperationResponse(
             jobId, "Bulk Add tags to Asset operation initiated successfully.");
@@ -838,17 +842,18 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     String jobId = UUID.randomUUID().toString();
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
-        () -> {
-          try {
-            BulkOperationResult result =
-                repository.bulkRemoveAndValidateTagsToAssets(entityId, request);
-            WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
-                jobId, securityContext, result);
-          } catch (Exception e) {
-            WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
-                jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
-          }
-        });
+        RequestLatencyContext.wrapWithContext(
+            () -> {
+              try {
+                BulkOperationResult result =
+                    repository.bulkRemoveAndValidateTagsToAssets(entityId, request);
+                WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
+                    jobId, securityContext, result);
+              } catch (Exception e) {
+                WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
+                    jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
+              }
+            }));
     BulkAssetsOperationResponse response =
         new BulkAssetsOperationResponse(
             jobId, "Bulk Remove tags to Asset operation initiated successfully.");
@@ -882,33 +887,35 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         Response.ok().entity(responseEntity).type(MediaType.APPLICATION_JSON).build();
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
-        () -> {
-          try {
-            WebsocketNotificationHandler.sendCsvImportStartedNotification(jobId, securityContext);
+        RequestLatencyContext.wrapWithContext(
+            () -> {
+              try {
+                WebsocketNotificationHandler.sendCsvImportStartedNotification(
+                    jobId, securityContext);
 
-            CsvImportProgressCallback progressCallback =
-                (rowsProcessed, totalRows, batchNumber, message) ->
-                    WebsocketNotificationHandler.sendCsvImportProgressNotification(
-                        jobId, securityContext, rowsProcessed, totalRows, message);
+                CsvImportProgressCallback progressCallback =
+                    (rowsProcessed, totalRows, batchNumber, message) ->
+                        WebsocketNotificationHandler.sendCsvImportProgressNotification(
+                            jobId, securityContext, rowsProcessed, totalRows, message);
 
-            CsvImportResult result =
-                importCsvInternal(
-                    uriInfo,
-                    securityContext,
-                    name,
-                    csv,
-                    dryRun,
-                    recursive,
-                    versioningEntityType,
-                    progressCallback);
-            WebsocketNotificationHandler.sendCsvImportCompleteNotification(
-                jobId, securityContext, result);
-          } catch (Exception e) {
-            LOG.error("Encountered Exception while importing.", e);
-            WebsocketNotificationHandler.sendCsvImportFailedNotification(
-                jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
-          }
-        });
+                CsvImportResult result =
+                    importCsvInternal(
+                        uriInfo,
+                        securityContext,
+                        name,
+                        csv,
+                        dryRun,
+                        recursive,
+                        versioningEntityType,
+                        progressCallback);
+                WebsocketNotificationHandler.sendCsvImportCompleteNotification(
+                    jobId, securityContext, result);
+              } catch (Exception e) {
+                LOG.error("Encountered Exception while importing.", e);
+                WebsocketNotificationHandler.sendCsvImportFailedNotification(
+                    jobId, securityContext, e.getMessage() == null ? e.toString() : e.getMessage());
+              }
+            }));
 
     return response;
   }
