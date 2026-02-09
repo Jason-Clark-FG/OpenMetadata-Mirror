@@ -117,6 +117,23 @@ public class EntityLifecycleEventDispatcher {
   }
 
   /**
+   * Dispatch bulk entity created event to all applicable handlers.
+   * Handlers that support bulk operations will receive the full list for batch processing.
+   */
+  public void onEntitiesCreated(List<EntityInterface> entities, SubjectContext subjectContext) {
+    if (entities == null || entities.isEmpty()) return;
+
+    String entityType = entities.getFirst().getEntityReference().getType();
+    LOG.debug(
+        "Dispatching bulk entity created event for {} {} entities", entityType, entities.size());
+
+    List<EntityInterface> entityList = List.copyOf(entities);
+    for (EntityLifecycleEventHandler handler : getApplicableHandlers(entityType)) {
+      executeHandler(() -> handler.onEntitiesCreated(entityList, subjectContext), handler);
+    }
+  }
+
+  /**
    * Dispatch entity updated event to all applicable handlers.
    */
   public void onEntityUpdated(

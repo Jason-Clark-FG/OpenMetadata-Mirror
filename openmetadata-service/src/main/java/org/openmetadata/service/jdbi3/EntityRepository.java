@@ -1999,10 +1999,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void postCreate(List<T> entities) {
-    for (T entity : entities) {
-      EntityLifecycleEventDispatcher.getInstance().onEntityCreated(entity, null);
+    EntityLifecycleEventDispatcher.getInstance().onEntitiesCreated(new ArrayList<>(entities), null);
 
-      // Update RDF
+    for (T entity : entities) {
       RdfUpdater.updateEntity(entity);
     }
   }
