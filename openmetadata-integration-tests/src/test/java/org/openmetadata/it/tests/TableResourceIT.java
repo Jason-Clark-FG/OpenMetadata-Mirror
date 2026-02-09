@@ -978,7 +978,6 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
   @Test
   void test_patchTable_removeColumnWithPrimaryKeyConstraint(TestNamespace ns) {
-    OpenMetadataClient client = SdkClients.adminClient();
 
     // Create a table with 3 columns: id (PRIMARY KEY), name, email
     CreateTable request = createMinimalRequest(ns);
@@ -1077,8 +1076,7 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
             ColumnBuilder.of("name", "VARCHAR").dataLength(255).build());
 
     originalMainTable.setColumns(updatedColumns);
-    // Remove the constraint since the referenced column is being removed
-    originalMainTable.setTableConstraints(List.of());
+    // Let the server-side cleanupConstraintsForRemovedColumns handle FK constraint removal
 
     Table updated = patchEntity(originalMainTable.getId().toString(), originalMainTable);
 
@@ -1102,7 +1100,6 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
   @Test
   void test_patchTable_removeColumnWithUniqueConstraint(TestNamespace ns) {
-    OpenMetadataClient client = SdkClients.adminClient();
 
     // Create a table with 3 columns: id, email (UNIQUE), name
     CreateTable request = createMinimalRequest(ns);

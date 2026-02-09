@@ -1220,6 +1220,17 @@ public class TableRepository extends EntityRepository<Table> {
     return constraint;
   }
 
+  /**
+   * Detect columns that have become null entries in the updated table via JSON patch operations.
+   *
+   * <p>This handles a specific edge case where a JSON patch "remove" operation on a column
+   * may result in a null entry at that position in the column list rather than shifting other
+   * columns. While detectRemovedColumns handles the general case of columns removed by name,
+   * this method catches null entries that may be produced by certain JSON patch implementations.
+   *
+   * <p>Note: This uses positional mapping which assumes columns maintain their order.
+   * It's defensive code that complements detectRemovedColumns.
+   */
   private Set<String> detectNullColumns(Table origTable, Table updatedTable) {
     Set<String> removedColumnNames = new HashSet<>();
 
@@ -1856,8 +1867,10 @@ public class TableRepository extends EntityRepository<Table> {
               "Duplicate constraint found in request: " + constraint);
         }
         for (String column : constraint.getColumns()) {
-          // Skip validation for columns that are being removed
-          if (columnsBeingRemoved != null && columnsBeingRemoved.contains(column)) {
+          // Skip validation for columns that are being removed (case-insensitive)
+          if (columnsBeingRemoved != null
+              && columnsBeingRemoved.stream()
+                  .anyMatch(col -> col.equalsIgnoreCase(column))) {
             continue;
           }
           validateColumn(table, column);
