@@ -113,10 +113,10 @@ const IncidentManager = ({
     // Only use date params if they exist in the URL
     if (urlParams.startTs || urlParams.endTs) {
       if (urlParams.startTs && isString(urlParams.startTs)) {
-        params.startTs = parseInt(urlParams.startTs as string, 10);
+        params.startTs = parseInt(urlParams.startTs, 10);
       }
       if (urlParams.endTs && isString(urlParams.endTs)) {
-        params.endTs = parseInt(urlParams.endTs as string, 10);
+        params.endTs = parseInt(urlParams.endTs, 10);
       }
     }
 
@@ -168,12 +168,11 @@ const IncidentManager = ({
     return options;
   }, [filters.assignee, users.options]);
 
-
   const selectedAssignees = useMemo(() => {
     if (!filters.assignee) {
       return [];
     }
-        const option = assigneeOptionsWithSelected.find(
+    const option = assigneeOptionsWithSelected.find(
       (opt) => opt.name === filters.assignee || opt.value === filters.assignee
     );
 

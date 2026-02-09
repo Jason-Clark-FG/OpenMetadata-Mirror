@@ -164,17 +164,13 @@ export const QualityTab = () => {
   }, [testCaseSummary]);
 
   const fetchIngestionPipelineCount = async () => {
-    try {
-      const { paging: ingestionPipelinePaging } = await getIngestionPipelines({
-        arrQueryFields: [],
-        testSuite: testSuite?.fullyQualifiedName ?? '',
-        pipelineType: [PipelineType.TestSuite],
-        limit: 0,
-      });
-      setIngestionPipelineCount(ingestionPipelinePaging.total);
-    } catch (error) {
-      // do nothing for count error
-    }
+    const { paging: ingestionPipelinePaging } = await getIngestionPipelines({
+      arrQueryFields: [],
+      testSuite: testSuite?.fullyQualifiedName ?? '',
+      pipelineType: [PipelineType.TestSuite],
+      limit: 0,
+    });
+    setIngestionPipelineCount(ingestionPipelinePaging.total);
   };
 
   useEffect(() => {
@@ -260,14 +256,14 @@ export const QualityTab = () => {
     };
 
     return table?.fullyQualifiedName
-      ? (ExtraTestCaseDropdownOptions(
+      ? ExtraTestCaseDropdownOptions(
           table.fullyQualifiedName,
           bulkImportExportTestCasePermission,
           table?.deleted ?? false,
           navigate,
           showModal,
           EntityType.TABLE
-        ) as ItemType[])
+        )
       : [];
   }, [globalPermissions, table, navigate, showModal]);
 
