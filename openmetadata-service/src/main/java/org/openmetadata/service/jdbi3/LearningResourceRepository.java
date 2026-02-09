@@ -253,9 +253,9 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
             tbl, column, column);
       }
       return String.format(
-          "(%sname ILIKE :searchPattern ESCAPE '\\\\' "
-              + "OR %s->>'displayName' ILIKE :searchPattern ESCAPE '\\\\' "
-              + "OR %s->>'description' ILIKE :searchPattern ESCAPE '\\\\')",
+          "(%sname ILIKE :searchPattern ESCAPE E'\\\\' "
+              + "OR %s->>'displayName' ILIKE :searchPattern ESCAPE E'\\\\' "
+              + "OR %s->>'description' ILIKE :searchPattern ESCAPE E'\\\\')",
           tbl, column, column);
     }
 

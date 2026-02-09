@@ -16,14 +16,19 @@ package org.openmetadata.service.resources.learning;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openmetadata.service.util.TestUtils.ADMIN_AUTH_HEADERS;
-import static org.openmetadata.service.util.TestUtils.get;
+import static org.openmetadata.service.util.TestUtils.readResponse;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.openmetadata.schema.entity.learning.LearningResource;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.OpenMetadataApplicationTest;
+import org.openmetadata.service.security.SecurityUtil;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LearningResourceResourceTest extends OpenMetadataApplicationTest {
@@ -35,10 +40,15 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     return getResource(LEARNING_RESOURCES).queryParam("limit", limit).queryParam("fields", FIELDS);
   }
 
+  private ResultList<LearningResource> getLearningResources(WebTarget target) throws Exception {
+    Response response = SecurityUtil.addHeaders(target, ADMIN_AUTH_HEADERS).get();
+    String json = readResponse(response, String.class, Status.OK.getStatusCode());
+    return JsonUtils.readValue(json, new TypeReference<ResultList<LearningResource>>() {});
+  }
+
   @Test
   void testListAll() throws Exception {
-    ResultList<LearningResource> result =
-        get(listTarget(1000), ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(listTarget(1000));
     assertNotNull(result);
     assertNotNull(result.getData());
   }
@@ -46,7 +56,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByTypeArticle() throws Exception {
     WebTarget target = listTarget(1000).queryParam("type", "Article");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -58,7 +68,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByTypeVideo() throws Exception {
     WebTarget target = listTarget(1000).queryParam("type", "Video");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -70,7 +80,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByTypeStorylane() throws Exception {
     WebTarget target = listTarget(1000).queryParam("type", "Storylane");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -82,7 +92,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByMultipleTypes() throws Exception {
     WebTarget target = listTarget(1000).queryParam("type", "Article").queryParam("type", "Video");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -94,7 +104,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByStatusActive() throws Exception {
     WebTarget target = listTarget(1000).queryParam("status", "Active");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -105,7 +115,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByStatusDraft() throws Exception {
     WebTarget target = listTarget(1000).queryParam("status", "Draft");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue(
@@ -117,7 +127,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   void testFilterByMultipleStatuses() throws Exception {
     WebTarget target =
         listTarget(1000).queryParam("status", "Active").queryParam("status", "Draft");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       String status = r.getStatus() != null ? r.getStatus().value() : null;
@@ -130,7 +140,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   @Test
   void testFilterByCategory() throws Exception {
     WebTarget target = listTarget(1000).queryParam("category", "DataGovernance");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
@@ -140,14 +150,14 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
         listTarget(1000)
             .queryParam("category", "DataGovernance")
             .queryParam("category", "Discovery");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
   @Test
   void testFilterByPageId() throws Exception {
     WebTarget target = listTarget(1000).queryParam("pageId", "glossary");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
@@ -155,28 +165,28 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   void testFilterByMultiplePageIds() throws Exception {
     WebTarget target =
         listTarget(1000).queryParam("pageId", "glossary").queryParam("pageId", "domains");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
   @Test
   void testFilterByComponentId() throws Exception {
     WebTarget target = listTarget(1000).queryParam("componentId", "glossary-list");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
   @Test
   void testFilterByDifficulty() throws Exception {
     WebTarget target = listTarget(1000).queryParam("difficulty", "Intro");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
   @Test
   void testSearchFilter() throws Exception {
     WebTarget target = listTarget(1000).queryParam("q", "glossary");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
@@ -184,7 +194,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   void testCombinedFiltersTypeAndStatus() throws Exception {
     WebTarget target =
         listTarget(1000).queryParam("type", "Article").queryParam("status", "Active");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue("Article".equals(r.getResourceType()));
@@ -196,7 +206,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   void testCombinedFiltersTypeAndCategory() throws Exception {
     WebTarget target =
         listTarget(1000).queryParam("type", "Article").queryParam("category", "DataGovernance");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 
@@ -204,7 +214,7 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
   void testCombinedFiltersTypeAndPageId() throws Exception {
     WebTarget target =
         listTarget(1000).queryParam("type", "Article").queryParam("pageId", "glossary");
-    ResultList<LearningResource> result = get(target, ResultList.class, ADMIN_AUTH_HEADERS);
+    ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
   }
 }
