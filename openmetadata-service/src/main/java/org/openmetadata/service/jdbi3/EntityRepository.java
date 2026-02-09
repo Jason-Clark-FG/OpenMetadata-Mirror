@@ -2119,12 +2119,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
       ChangeSource changeSource,
       String ifMatchHeader,
       String impersonatedBy) {
-    LOG.info(
-        "DEBUG PATCH EntityRepository: Entity type: {}, ID: {}, User: {}, Patch: {}",
-        entityType,
-        id,
-        user,
-        patch.toJsonArray());
     // Get all the fields in the original entity that can be updated during PATCH operation
     T original = setFieldsInternal(find(id, NON_DELETED, false), patchFields);
     setInheritedFields(original, patchFields);
