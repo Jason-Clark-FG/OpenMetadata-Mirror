@@ -673,7 +673,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     return (
       <div className="overview-tab-content">
         <CustomPropertiesSection
-          emptyStateMessage={t('label.column-plural')}
+          emptyStateMessage={t('label.table-entity-text', { entityText: t('label.column-plural') })}
           entityData={toEntityData(activeColumn)}
           entityType={entityType}
           entityTypeDetail={entityTypeDetail}
