@@ -336,7 +336,13 @@ const SearchIndexFieldsTable = ({
       setSearchedFields(sortByOrdinalPosition);
       setExpandedRowKeys([]);
     }
-  }, [searchText, searchIndexFields]);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (!searchText) {
+      setSearchedFields(sortByOrdinalPosition);
+    }
+  }, [searchIndexFields, sortByOrdinalPosition]);
 
   return (
     <>

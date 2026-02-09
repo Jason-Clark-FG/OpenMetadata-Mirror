@@ -64,6 +64,64 @@ const mockColumns = [
   },
 ] as Column[];
 
+const mockColumnsWithNested = [
+  {
+    name: 'comments',
+    dataType: 'STRING',
+    dataLength: 1,
+    dataTypeDisplay: 'string',
+    fullyQualifiedName:
+      'bigquery_gcp.ecommerce.shopify.raw_product_catalog.comments',
+    tags: [],
+    constraint: 'NULL',
+    ordinalPosition: 1,
+  },
+  {
+    name: 'products',
+    dataType: 'ARRAY',
+    arrayDataType: 'STRUCT',
+    dataLength: 1,
+    dataTypeDisplay:
+      'array<struct<product_id:character varying(24),price:int,onsale:boolean>>',
+    fullyQualifiedName:
+      'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products',
+    tags: [],
+    constraint: 'NULL',
+    ordinalPosition: 2,
+    children: [
+      {
+        name: 'product_id',
+        dataType: 'VARCHAR',
+        dataLength: 24,
+        dataTypeDisplay: 'character varying(24)',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.product_id',
+        tags: [],
+        description: 'Original product ID description',
+        ordinalPosition: 1,
+      },
+      {
+        name: 'price',
+        dataType: 'INT',
+        dataTypeDisplay: 'int',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.price',
+        tags: [],
+        ordinalPosition: 2,
+      },
+      {
+        name: 'onsale',
+        dataType: 'BOOLEAN',
+        dataTypeDisplay: 'boolean',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.onsale',
+        tags: [],
+        ordinalPosition: 3,
+      },
+    ],
+  },
+] as Column[];
+
 const mockGenericContextProps = {
   data: {
     ...MOCK_TABLE,
@@ -100,31 +158,54 @@ jest.mock('../../../utils/CommonUtils', () => ({
   getPartialNameFromTableFQN: jest.fn().mockImplementation((value) => value),
 }));
 
-jest.mock('../../../utils/TableUtils', () => ({
-  getAllRowKeysByKeyName: jest.fn(),
-  pruneEmptyChildren: jest.fn().mockImplementation((value) => value),
-  makeData: jest.fn().mockImplementation((value) => value),
-  prepareConstraintIcon: jest.fn(),
-  updateFieldTags: jest.fn(),
-  getTableExpandableConfig: jest.fn().mockImplementation(() => ({
-    expandIcon: jest.fn(({ onExpand, expandable, record }) =>
-      expandable ? (
-        <button data-testid="expand-icon" onClick={(e) => onExpand(record, e)}>
-          ExpandIcon
-        </button>
-      ) : null
-    ),
-  })),
-  getTableColumnConfigSelections: jest
-    .fn()
-    .mockReturnValue([
-      'name',
-      'description',
-      'dataTypeDisplay',
-      'tags',
-      'glossary',
-    ]),
-}));
+jest.mock('../../../utils/TableUtils', () => {
+  const actual = jest.requireActual('../../../utils/TableUtils');
+  const flattenColumnsMock = (items: Column[]): Column[] => {
+    if (!items || items.length === 0) {
+      return [];
+    }
+    const result: Column[] = [];
+    items.forEach((item) => {
+      result.push(item);
+      if (item.children && item.children.length > 0) {
+        result.push(...flattenColumnsMock(item.children));
+      }
+    });
+
+    return result;
+  };
+
+  return {
+    ...actual,
+    getAllRowKeysByKeyName: jest.fn(),
+    pruneEmptyChildren: jest.fn().mockImplementation((value) => value),
+    makeData: jest.fn().mockImplementation((value) => value),
+    prepareConstraintIcon: jest.fn(),
+    updateFieldTags: jest.fn(),
+    flattenColumns: jest.fn().mockImplementation(flattenColumnsMock),
+    getTableExpandableConfig: jest.fn().mockImplementation(() => ({
+      expandIcon: jest.fn(({ onExpand, expandable, record }) =>
+        expandable ? (
+          <button
+            data-testid="expand-icon"
+            onClick={(e) => onExpand(record, e)}>
+            ExpandIcon
+          </button>
+        ) : null
+      ),
+    })),
+    getTableColumnConfigSelections: jest
+      .fn()
+      .mockReturnValue([
+        'name',
+        'description',
+        'dataTypeDisplay',
+        'tags',
+        'glossary',
+      ]),
+    updateColumnInNestedStructure: actual.updateColumnInNestedStructure,
+  };
+});
 
 jest.mock(
   '../../common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider',
