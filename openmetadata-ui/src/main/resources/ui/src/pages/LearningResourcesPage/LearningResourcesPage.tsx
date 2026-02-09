@@ -73,7 +73,7 @@ export const LearningResourcesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const { filteredResources, isLoading, refetch } = useLearningResources({
+  const { resources, isLoading, refetch } = useLearningResources({
     searchText,
     filterState,
   });
@@ -324,14 +324,14 @@ export const LearningResourcesPage: React.FC = () => {
     ]
   );
 
-  const totalFiltered = filteredResources.length;
+  const totalFiltered = resources.length;
   const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
 
   const paginatedResources = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
 
-    return filteredResources.slice(start, start + pageSize);
-  }, [filteredResources, currentPage, pageSize]);
+    return resources.slice(start, start + pageSize);
+  }, [resources, currentPage, pageSize]);
 
   const { paginationControls } = usePaginationControls({
     currentPage,
