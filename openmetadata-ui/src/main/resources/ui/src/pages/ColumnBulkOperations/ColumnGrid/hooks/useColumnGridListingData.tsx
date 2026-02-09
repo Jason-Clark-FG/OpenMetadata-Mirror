@@ -169,7 +169,10 @@ export const useColumnGridListingData = (
       searchQuery: string,
       filters: ColumnGridFilters,
       pageSize: number,
-      options?: { skipGridItemsUpdate?: boolean }
+      options?: {
+        /** When true, fetch and store cursor/totals but do not update grid - used when chaining to reach page N */
+        skipGridItemsUpdate?: boolean;
+      }
     ) => {
       setLoading(true);
       try {
@@ -419,6 +422,9 @@ export const useColumnGridListingData = (
 
   const refetch = useCallback(async (): Promise<void> => {
     const pageToRestore = urlState.currentPage;
+
+    // Save cursors before clearing - we may reuse them to avoid chaining API calls
+    const savedCursors = new Map(cursorsByPageRef.current);
     // Clear ALL caches to ensure fresh data is fetched from the server
     // This is especially important after bulk updates when the search index
     // has been refreshed with new data
@@ -427,23 +433,54 @@ export const useColumnGridListingData = (
     totalUniqueColumnsRef.current = 0;
     totalOccurrencesRef.current = 0;
 
-    const skipPage1GridUpdate = pageToRestore > 1;
+    const skipGridUpdate = { skipGridItemsUpdate: true };
 
+    // Always load page 1 first: API is cursor-based, page 1 returns totals and cursor for page 2
     await loadData(
-      1, // API is cursor-based; page 2+ cursor comes from page 1 response
+      1,
       urlState.searchQuery,
       columnGridFilters,
       urlState.pageSize,
-      skipPage1GridUpdate ? { skipGridItemsUpdate: true } : undefined
+      pageToRestore > 1 ? skipGridUpdate : undefined
     );
 
     if (pageToRestore > 1) {
-      await loadData(
-        pageToRestore,
-        urlState.searchQuery,
-        columnGridFilters,
-        urlState.pageSize
-      );
+      // Try cached cursor to load target page in 2 API calls instead of N
+      // Cursor may be invalid after bulk update (search index refresh) - fall back to chain if it fails
+      const cachedCursor = savedCursors.get(pageToRestore - 1);
+      let cachedCursorWorked = false;
+      if (cachedCursor) {
+        try {
+          cursorsByPageRef.current.set(pageToRestore - 1, cachedCursor);
+          await loadData(
+            pageToRestore,
+            urlState.searchQuery,
+            columnGridFilters,
+            urlState.pageSize
+          );
+          cachedCursorWorked = true;
+        } catch {
+          cursorsByPageRef.current.delete(pageToRestore - 1);
+        }
+      }
+      // Fallback: chain load pages 2..N-1 (skip grid update), then load target page
+      if (!cachedCursorWorked) {
+        for (let page = 2; page < pageToRestore; page++) {
+          await loadData(
+            page,
+            urlState.searchQuery,
+            columnGridFilters,
+            urlState.pageSize,
+            skipGridUpdate
+          );
+        }
+        await loadData(
+          pageToRestore,
+          urlState.searchQuery,
+          columnGridFilters,
+          urlState.pageSize
+        );
+      }
     }
   }, [
     urlState.currentPage,
