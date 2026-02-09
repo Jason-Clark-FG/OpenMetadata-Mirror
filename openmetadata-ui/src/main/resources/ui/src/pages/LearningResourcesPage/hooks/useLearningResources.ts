@@ -21,38 +21,56 @@ import {
 import { showErrorToast } from '../../../utils/ToastUtils';
 import type { LearningResourceFilterState } from './useLearningResourceFilters';
 
-const matchesFilters = (
+const matchesSearch = (
   resource: LearningResource,
   searchText: string,
-  filters: LearningResourceFilterState
 ): boolean => {
-  if (searchText) {
-    const q = searchText.toLowerCase();
-    if (
-      !resource.name.toLowerCase().includes(q) &&
-      !resource.displayName?.toLowerCase().includes(q)
-    ) {
+  if (!searchText) {
+    return true;
+  }
+  const q = searchText.toLowerCase();
+  const nameMatch = resource.name?.toLowerCase().includes(q);
+  const displayNameMatch = resource.displayName?.toLowerCase().includes(q);
+  const descriptionMatch = resource.description?.toLowerCase().includes(q);
+
+  return nameMatch || displayNameMatch || descriptionMatch;
+};
+
+const matchesFilters = (
+  resource: LearningResource,
+  filters: LearningResourceFilterState,
+): boolean => {
+  const { type, category, context, status } = filters;
+
+  if (type?.length && !type.includes(resource.resourceType)) {
+    return false;
+  }
+
+  if (category?.length) {
+    const resourceCategories = resource.categories || [];
+    const hasMatchingCategory = resourceCategories.some((c) =>
+      category.includes(c),
+    );
+    if (!hasMatchingCategory) {
       return false;
     }
   }
-  if (filters.type?.length && !filters.type.includes(resource.resourceType)) {
-    return false;
+
+  if (context?.length) {
+    const resourceContexts = resource.contexts || [];
+    const hasMatchingContext = resourceContexts.some((c) =>
+      context.includes(c.pageId),
+    );
+    if (!hasMatchingContext) {
+      return false;
+    }
   }
-  const { category, context, status } = filters;
-  if (
-    category?.length &&
-    !resource.categories?.some((c) => category.includes(c))
-  ) {
-    return false;
-  }
-  if (
-    context?.length &&
-    !resource.contexts?.some((c) => context.includes(c.pageId))
-  ) {
-    return false;
-  }
-  if (status?.length && !status.includes(resource.status ?? 'Active')) {
-    return false;
+
+  if (status?.length) {
+    const resourceStatus = resource.status || 'Active';
+    if (!status.includes(resourceStatus)) {
+      return false;
+    }
   }
 
   return true;
@@ -82,7 +100,7 @@ export const useLearningResources = ({
     setIsLoading(true);
     try {
       const apiParams: Parameters<typeof getLearningResourcesList>[0] = {
-        limit: 100,
+        limit: 1000,
         fields: 'categories,contexts,difficulty,estimatedDuration,owners',
       };
 
@@ -91,7 +109,7 @@ export const useLearningResources = ({
     } catch (error) {
       showErrorToast(
         error as AxiosError,
-        t('server.learning-resources-fetch-error')
+        t('server.learning-resources-fetch-error'),
       );
     } finally {
       setIsLoading(false);
@@ -103,8 +121,11 @@ export const useLearningResources = ({
   }, [fetchResources]);
 
   const filteredResources = useMemo(
-    () => resources.filter((r) => matchesFilters(r, searchText, filterState)),
-    [resources, searchText, filterState]
+    () =>
+      resources.filter(
+        (r) => matchesSearch(r, searchText) && matchesFilters(r, filterState),
+      ),
+    [resources, searchText, filterState],
   );
 
   return {
