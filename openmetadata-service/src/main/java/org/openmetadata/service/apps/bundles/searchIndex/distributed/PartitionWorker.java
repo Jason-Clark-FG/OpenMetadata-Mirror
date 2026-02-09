@@ -288,7 +288,7 @@ public class PartitionWorker {
     // Flush the bulk processor to send any pending documents immediately
     // Without this, documents wait for the periodic flush interval (5 seconds)
     searchIndexSink.flushAndAwait(30);
-    
+
     // Check if there are pending vector tasks - if so, we need a longer timeout
     int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
     boolean hasVectorTasks = pendingVectorTasks > 0;
@@ -314,10 +314,6 @@ public class PartitionWorker {
     long statsTimeout = hasVectorTasks ? 60000 : 30000;
     boolean statsComplete = statsTracker.awaitSinkCompletion(statsTimeout);
     if (!statsComplete) {
-    // Wait for all pending sink operations to complete (with 30 second timeout)
-    // This ensures the async bulk callbacks have run and updated the tracker
-    boolean completed = statsTracker.awaitSinkCompletion(30000);
-    if (!completed) {
       LOG.warn(
           "Timed out waiting for sink stats completion, {} operations still pending for entity {}",
           statsTracker.getPendingSinkOps(),
@@ -472,44 +468,22 @@ public class PartitionWorker {
     LOG.info("Stop requested for partition worker");
   }
 
-  /**
-   * Check if this worker has been requested to stop.
-   *
-   * @return true if stop has been requested
-   */
   public boolean isStopped() {
     return stopped.get();
   }
 
-  /**
-   * Result of processing a single batch.
-   *
-   * @param successCount Number of successfully indexed entities
-   * @param failedCount Number of failed entities
-   */
   public record BatchResult(int successCount, int failedCount, int warningsCount) {}
 
-  /**
-   * Result of processing a partition.
-   *
-   * @param successCount Total successfully indexed entities
-   * @param failedCount Total failed entities (for backward compatibility, = readerFailed + sinkFailed)
-   * @param wasStopped Whether processing was stopped before completion
-   * @param readerFailed Number of entities that failed during reading
-   * @param readerWarnings Number of warnings from reading (e.g., stale references)
-   */
   public record PartitionResult(
       long successCount,
       long failedCount,
       boolean wasStopped,
       long readerFailed,
       long readerWarnings) {
-    /** Backward-compatible constructor for existing code */
     public PartitionResult(long successCount, long failedCount, boolean wasStopped) {
       this(successCount, failedCount, wasStopped, 0, 0);
     }
 
-    /** Constructor with readerFailed but no warnings (backward-compatible) */
     public PartitionResult(
         long successCount, long failedCount, boolean wasStopped, long readerFailed) {
       this(successCount, failedCount, wasStopped, readerFailed, 0);
