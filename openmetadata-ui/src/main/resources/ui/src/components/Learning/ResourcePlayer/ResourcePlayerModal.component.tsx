@@ -179,7 +179,7 @@ export const ResourcePlayerModal: React.FC<ResourcePlayerModalProps> = ({
             position: 'relative',
             ...(isFullScreen && { flexShrink: 0 }),
           }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ flex: 1, minWidth: 0, paddingRight: 9 }}>
             <Typography
               component="div"
               fontWeight={600}
@@ -189,6 +189,8 @@ export const ResourcePlayerModal: React.FC<ResourcePlayerModalProps> = ({
                 fontSize: 16,
                 lineHeight: 1.5,
                 marginBottom: 0.5,
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
               }}>
               {displayResource.displayName || displayResource.name}
             </Typography>
@@ -210,39 +212,73 @@ export const ResourcePlayerModal: React.FC<ResourcePlayerModalProps> = ({
 
             <Box
               sx={{
-                alignItems: 'center',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '6px',
+                pt: '12px',
+              }}>
+              {categoryTags.map((category) => {
+                const colors = getCategoryColors(category);
+
+                return (
+                  <Box
+                    component="span"
+                    key={category}
+                    sx={{
+                      backgroundColor: colors.bgColor,
+                      border: '1px solid',
+                      borderColor: colors.borderColor,
+                      borderRadius: '6px',
+                      color: colors.color,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      lineHeight: 1.5,
+                      padding: '2px 6px',
+                    }}>
+                    {LEARNING_CATEGORIES[
+                      category as keyof typeof LEARNING_CATEGORIES
+                    ]?.label ?? category}
+                  </Box>
+                );
+              })}
+            </Box>
+
+            <Box
+              sx={{
+                alignItems: 'flex-end',
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: 1,
                 justifyContent: 'space-between',
                 pt: '12px',
               }}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {categoryTags.map((category) => {
-                  const colors = getCategoryColors(category);
-
-                  return (
+              {contextItems.length > 0 ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {contextItems.map((ctx, idx) => (
                     <Box
                       component="span"
-                      key={category}
+                      key={`${ctx.pageId}-${idx}`}
                       sx={{
-                        backgroundColor: colors.bgColor,
+                        backgroundColor:
+                          theme.palette.allShades?.blueGray?.[50] ?? '#F8F9FC',
                         border: '1px solid',
-                        borderColor: colors.borderColor,
+                        borderColor:
+                          theme.palette.allShades?.blueGray?.[100] ?? '#EBEEF2',
                         borderRadius: '6px',
-                        color: colors.color,
+                        color:
+                          theme.palette.allShades?.gray?.[700] ?? '#363f72',
                         fontSize: 12,
                         fontWeight: 500,
                         lineHeight: 1.5,
                         padding: '2px 6px',
                       }}>
-                      {LEARNING_CATEGORIES[
-                        category as keyof typeof LEARNING_CATEGORIES
-                      ]?.label ?? category}
+                      {getContextLabel(ctx.pageId)}
                     </Box>
-                  );
-                })}
-              </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Box />
+              )}
 
               {(formattedDate || formattedDuration) && (
                 <Box
@@ -286,37 +322,6 @@ export const ResourcePlayerModal: React.FC<ResourcePlayerModalProps> = ({
                 </Box>
               )}
             </Box>
-
-            {contextItems.length > 0 && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
-                  pt: '12px',
-                }}>
-                {contextItems.map((ctx, idx) => (
-                  <Box
-                    component="span"
-                    key={`${ctx.pageId}-${idx}`}
-                    sx={{
-                      backgroundColor:
-                        theme.palette.allShades?.blueGray?.[50] ?? '#F8F9FC',
-                      border: '1px solid',
-                      borderColor:
-                        theme.palette.allShades?.blueGray?.[100] ?? '#EBEEF2',
-                      borderRadius: '6px',
-                      color: theme.palette.allShades?.gray?.[700] ?? '#363f72',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      lineHeight: 1.5,
-                      padding: '2px 6px',
-                    }}>
-                    {getContextLabel(ctx.pageId)}
-                  </Box>
-                ))}
-              </Box>
-            )}
           </Box>
 
           <Box

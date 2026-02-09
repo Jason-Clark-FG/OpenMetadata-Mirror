@@ -14,7 +14,119 @@
 @import (reference) '../../styles/variables.less';
 @import '../../components/common/atoms/filters/FilterSelection.less';
 
+.learning-resources-dropdown.custom-dropdown-render {
+  box-shadow: 0 4px 12px rgba(10, 13, 18, 0.12);
+
+  .ant-dropdown-menu-item:hover,
+  .ant-dropdown-menu-item-active {
+    background-color: @primary-25;
+  }
+
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: @primary-25;
+    border-color: @primary-color;
+    &::after {
+      border-color: @primary-color;
+    }
+  }
+
+  .ant-divider {
+    display: none;
+  }
+
+  [data-testid='clear-button'].ant-btn {
+    border: none;
+    box-shadow: none;
+  }
+}
+
+.page-layout-v1-vertical-scroll.learning-resources-page-layout {
+  overflow: hidden;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  > .ant-row {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    > .ant-col:last-child {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+  }
+}
+
 .learning-resources-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+
+  .filter-selection-clear-all {
+    border: none;
+    box-shadow: none;
+
+    &:hover,
+    &:focus {
+      border: none;
+      box-shadow: none;
+    }
+  }
+
+  > .breadcrumb-container {
+    flex-shrink: 0;
+  }
+
+  > .page-header {
+    flex-shrink: 0;
+  }
+
+  > .learning-resources-table-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .explore-quick-filters-container {
+      .ant-space-item:first-child .quick-filter-dropdown-trigger-btn.ant-btn {
+        border-start-end-radius: 0;
+        border-end-end-radius: 0;
+      }
+
+      .ant-space-item:last-child .quick-filter-dropdown-trigger-btn.ant-btn {
+        border-start-start-radius: 0;
+        border-end-start-radius: 0;
+      }
+
+      .quick-filter-dropdown-trigger-btn.ant-btn.active {
+        background-color: @primary-25;
+        border-color: @primary-2;
+        color: @primary-6;
+      }
+    }
+
+    > .MuiBox-root:first-child {
+      flex-shrink: 0;
+    }
+
+    > .MuiBox-root:last-child {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
   .breadcrumb-container {
     margin-bottom: @margin-md;
 
@@ -382,7 +494,19 @@
       vertical-align: middle;
     }
 
+    .ant-table-tbody > tr > td.ant-table-cell-fix-right {
+      background-color: @white;
+    }
+
     .ant-table-tbody > tr:hover > td {
+      background-color: @grey-50;
+    }
+
+    .ant-table-tbody > tr:hover > td.ant-table-cell-fix-right {
+      background-color: @grey-50;
+    }
+
+    .ant-table-thead > tr > th.ant-table-cell-fix-right {
       background-color: @grey-50;
     }
 
@@ -414,6 +538,8 @@
     align-items: center;
     gap: 12px;
     cursor: pointer;
+    min-width: 0;
+    overflow: hidden;
 
     &:hover .content-name {
       color: @primary-color;
@@ -435,14 +561,21 @@
       color: @grey-900;
       transition: color 0.2s ease;
       font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
   }
 
   .category-tags,
   .context-tags {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow: hidden;
     gap: 6px;
+    align-items: center;
+    min-height: 22px;
 
     .category-tag {
       margin: 0;
@@ -453,6 +586,9 @@
       font-weight: @font-medium;
       border-width: 1px;
       border-style: solid;
+      flex-shrink: 1;
+      min-width: 0;
+      white-space: nowrap;
     }
 
     .context-tag {
@@ -465,6 +601,9 @@
       background-color: @grey-50;
       border: 1px solid @grey-200;
       color: @grey-700;
+      flex-shrink: 1;
+      min-width: 0;
+      white-space: nowrap;
     }
 
     .context-tag.more-tag {
@@ -477,6 +616,7 @@
   .category-tags .category-tag.more-tag,
   .context-tags .context-tag.more-tag {
     cursor: pointer;
+    flex-shrink: 0;
   }
 
   .category-tags .category-tag.more-tag {

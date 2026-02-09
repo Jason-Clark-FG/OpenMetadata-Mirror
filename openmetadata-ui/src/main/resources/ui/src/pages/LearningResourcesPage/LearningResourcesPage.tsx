@@ -24,7 +24,13 @@ import { Button, Space, Table, Tag, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
 import { isEmpty } from 'lodash';
 import { DateTime } from 'luxon';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconEdit } from '../../assets/svg/edit-new.svg';
 import { ReactComponent as ArticleIcon } from '../../assets/svg/ic_article.svg';
@@ -86,6 +92,26 @@ export const LearningResourcesPage: React.FC = () => {
   } = useLearningResourceActions({ onRefetch: refetch });
 
   const { view, viewToggle } = useViewToggle({ defaultView: 'table' });
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const [tableScrollY, setTableScrollY] = useState(350);
+
+  useEffect(() => {
+    const el = tableWrapperRef.current;
+    if (!el || view !== 'table') {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const { height } = entries[0]?.contentRect ?? {};
+      if (height != null && height > 0) {
+        setTableScrollY(Math.max(200, height - 55));
+      }
+    });
+
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [view]);
   const { search } = useSearch({
     searchPlaceholder: t('label.search-entity', {
       entity: t('label.resource'),
@@ -193,7 +219,7 @@ export const LearningResourcesPage: React.FC = () => {
           );
         },
         title: t('label.category-plural'),
-        width: 250,
+        width: 220,
       },
       {
         dataIndex: 'contexts',
@@ -232,7 +258,7 @@ export const LearningResourcesPage: React.FC = () => {
           );
         },
         title: t('label.context'),
-        width: 200,
+        width: 180,
       },
       {
         dataIndex: 'updatedAt',
@@ -340,8 +366,9 @@ export const LearningResourcesPage: React.FC = () => {
       boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
       display: 'flex',
       flexDirection: 'column' as const,
-      height: 'calc(100vh - 220px)',
-      minHeight: 400,
+      flex: 1,
+      minHeight: 0,
+      overflow: 'hidden',
     }),
     []
   );
@@ -435,14 +462,23 @@ export const LearningResourcesPage: React.FC = () => {
   const renderTableView = useCallback(
     () => (
       <>
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Box
+          ref={tableWrapperRef}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
           <Table
             columns={columns}
             dataSource={paginatedResources}
             loading={isLoading}
             pagination={false}
             rowKey="id"
-            scroll={{ x: 1000, y: 'calc(100vh - 420px)' }}
+            scroll={{ x: 900, y: tableScrollY }}
+            tableLayout="fixed"
           />
         </Box>
         <Box sx={paginationBoxSx}>{paginationControls}</Box>
@@ -454,11 +490,18 @@ export const LearningResourcesPage: React.FC = () => {
       isLoading,
       paginationControls,
       paginationBoxSx,
+      tableScrollY,
     ]
   );
 
   return (
-    <PageLayoutV1 pageTitle={t('label.learning-resource')}>
+    <PageLayoutV1
+      mainContainerClassName="learning-resources-page-layout"
+      pageContainerStyle={{
+        height: 'calc(100vh - var(--ant-navbar-height, 64px))',
+        overflow: 'hidden',
+      }}
+      pageTitle={t('label.learning-resource')}>
       <div
         className="learning-resources-page"
         data-testid="learning-resources-page">
@@ -482,7 +525,10 @@ export const LearningResourcesPage: React.FC = () => {
           </Button>
         </div>
 
-        <TableContainer component={Paper} sx={tableContainerSx}>
+        <TableContainer
+          className="learning-resources-table-container"
+          component={Paper}
+          sx={tableContainerSx}>
           <Box sx={headerBoxSx}>
             <Box
               sx={{

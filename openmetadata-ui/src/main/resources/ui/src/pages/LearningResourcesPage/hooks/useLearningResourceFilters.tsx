@@ -163,6 +163,7 @@ export const useLearningResourceFilters = (
           <SearchDropdown
             hideCounts
             showSelectedCounts
+            dropdownClassName="learning-resources-dropdown"
             hideSearchBar={field.options.length <= 10}
             isSuggestionsLoading={false}
             key={field.key}

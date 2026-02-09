@@ -20,8 +20,8 @@ import {
 
 export { LearningResourceStatus, ResourceCategory, ResourceType };
 
-export const MAX_VISIBLE_TAGS = 3;
-export const MAX_VISIBLE_CONTEXTS = 3;
+export const MAX_VISIBLE_TAGS = 2;
+export const MAX_VISIBLE_CONTEXTS = 2;
 export const DEFAULT_PAGE_SIZE = 10;
 
 export const RESOURCE_TYPE_VALUES = [
