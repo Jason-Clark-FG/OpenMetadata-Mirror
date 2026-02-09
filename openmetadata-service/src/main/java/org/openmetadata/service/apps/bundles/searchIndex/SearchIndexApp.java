@@ -721,7 +721,7 @@ public class SearchIndexApp extends AbstractNativeApplication {
           .forEach(
               entityType -> {
                 try {
-                  finalizeEntityReindex(entityType, true);
+                  finalizeEntityReindex(entityType, finalSuccess);
                 } catch (Exception ex) {
                   LOG.error("Failed to finalize reindex for entity: {}", entityType, ex);
                 }
@@ -895,13 +895,7 @@ public class SearchIndexApp extends AbstractNativeApplication {
       sendUpdates(jobExecutionContext, true);
     }
 
-    if (searchIndexSink != null) {
-      try {
-        searchIndexSink.close();
-      } catch (Exception e) {
-        LOG.error("Error closing search index sink", e);
-      }
-    }
+    finalizeAllEntityReindex(false);
 
     LOG.info("Reindexing job stopped successfully.");
   }

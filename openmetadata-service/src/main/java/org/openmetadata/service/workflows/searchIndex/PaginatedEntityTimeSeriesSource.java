@@ -33,7 +33,6 @@ public class PaginatedEntityTimeSeriesSource
   private final StepStats stats = new StepStats();
   private String lastFailedCursor = null;
 
-  // Make cursor thread-safe using AtomicReference
   private final AtomicReference<String> cursor = new AtomicReference<>(RestUtil.encodeCursor("0"));
 
   private final AtomicReference<Boolean> isDone = new AtomicReference<>(false);
@@ -48,6 +47,14 @@ public class PaginatedEntityTimeSeriesSource
         .withTotalRecords(getEntityTimeSeriesRepository().getTimeSeriesDao().listCount(getFilter()))
         .withSuccessRecords(0)
         .withFailedRecords(0);
+  }
+
+  public PaginatedEntityTimeSeriesSource(
+      String entityType, int batchSize, List<String> fields, int knownTotal) {
+    this.entityType = entityType;
+    this.batchSize = batchSize;
+    this.fields = fields;
+    this.stats.withTotalRecords(knownTotal).withSuccessRecords(0).withFailedRecords(0);
   }
 
   public PaginatedEntityTimeSeriesSource(
