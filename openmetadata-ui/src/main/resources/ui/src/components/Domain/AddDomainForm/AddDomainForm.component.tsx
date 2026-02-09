@@ -43,6 +43,7 @@ import {
 } from '../../common/IconPicker';
 import '../domain.less';
 import { DomainFormType } from '../DomainPage.interface';
+import './add-domain-form.less';
 import { AddDomainFormProps } from './AddDomainForm.interface';
 
 const AddDomainForm = ({
@@ -172,7 +173,7 @@ const AddDomainForm = ({
           'data-testid': 'description',
           initialValue: '',
           height: 'auto',
-          className: 'add-domain-form-description new-form-style',
+          className: 'add-domain-form-description',
         },
       },
       {

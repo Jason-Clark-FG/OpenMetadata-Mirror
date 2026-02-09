@@ -19,7 +19,6 @@ export interface DrawerBodyConfig {
   loading?: boolean;
   loadingMessage?: string;
   padding?: number | string;
-  className?: string;
   sx?: any;
 }
 
@@ -54,14 +53,7 @@ export interface DrawerBodyConfig {
  * ```
  */
 export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
-  const {
-    children,
-    loading,
-    loadingMessage,
-    padding = 6,
-    className,
-    sx = {},
-  } = config;
+  const { children, loading, loadingMessage, padding = 6, sx = {} } = config;
 
   const drawerBody = useMemo(
     () => (
@@ -96,7 +88,6 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
           </Box>
         )}
         <Box
-          className={className}
           sx={{
             overflow: 'auto',
             height: '100%',
@@ -106,7 +97,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
         </Box>
       </Box>
     ),
-    [children, loading, loadingMessage, padding, className, sx]
+    [children, loading, loadingMessage, padding, sx]
   );
 
   return {
