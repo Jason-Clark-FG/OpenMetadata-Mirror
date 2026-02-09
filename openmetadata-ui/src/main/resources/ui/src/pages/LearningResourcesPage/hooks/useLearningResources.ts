@@ -21,21 +21,6 @@ import {
 import { showErrorToast } from '../../../utils/ToastUtils';
 import type { LearningResourceFilterState } from './useLearningResourceFilters';
 
-const matchesSearch = (
-  resource: LearningResource,
-  searchText: string,
-): boolean => {
-  if (!searchText) {
-    return true;
-  }
-  const q = searchText.toLowerCase();
-  const nameMatch = resource.name?.toLowerCase().includes(q) ?? false;
-  const displayNameMatch = resource.displayName?.toLowerCase().includes(q) ?? false;
-  const descriptionMatch = resource.description?.toLowerCase().includes(q) ?? false;
-
-  return nameMatch || displayNameMatch || descriptionMatch;
-};
-
 const matchesFilters = (
   resource: LearningResource,
   filters: LearningResourceFilterState,
@@ -102,6 +87,7 @@ export const useLearningResources = ({
       const apiParams: Parameters<typeof getLearningResourcesList>[0] = {
         limit: 1000,
         fields: 'categories,contexts,difficulty,estimatedDuration,owners',
+        q: searchText || undefined,
       };
 
       const response = await getLearningResourcesList(apiParams);
@@ -114,18 +100,15 @@ export const useLearningResources = ({
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, [t, searchText]);
 
   useEffect(() => {
     fetchResources();
   }, [fetchResources]);
 
   const filteredResources = useMemo(
-    () =>
-      resources.filter(
-        (r) => matchesSearch(r, searchText) && matchesFilters(r, filterState),
-      ),
-    [resources, searchText, filterState],
+    () => resources.filter((r) => matchesFilters(r, filterState)),
+    [resources, filterState],
   );
 
   return {

@@ -52,7 +52,7 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
         Entity.getCollectionDAO().learningResourceDAO(),
         UPDATE_FIELDS,
         PATCH_FIELDS);
-    supportsSearch = false;
+    supportsSearch = true;
   }
 
   /**
