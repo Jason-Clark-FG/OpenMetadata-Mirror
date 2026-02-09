@@ -247,9 +247,10 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
           'custom-dropdown-render',
           dropdownClassName,
           compactPadding && 'search-dropdown-compact-padding',
-          showClearAllBtn
-            ? 'search-dropdown-has-clear-all'
-            : 'search-dropdown-no-clear-all'
+          compactPadding &&
+            (showClearAllBtn
+              ? 'search-dropdown-has-clear-all'
+              : 'search-dropdown-no-clear-all')
         )}
         data-testid="drop-down-menu">
         <Space className="w-full" direction="vertical" size={0}>

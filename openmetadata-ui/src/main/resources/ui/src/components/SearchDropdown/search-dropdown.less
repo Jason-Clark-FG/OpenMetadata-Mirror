@@ -22,12 +22,14 @@
   padding: 0;
 }
 
-.search-dropdown-no-clear-all .ant-dropdown-menu {
-  padding-top: 6px;
-}
+.search-dropdown-compact-padding {
+  &.search-dropdown-no-clear-all .ant-dropdown-menu {
+    padding-top: 6px;
+  }
 
-.search-dropdown-has-clear-all .ant-dropdown-menu {
-  padding-top: 0;
+  &.search-dropdown-has-clear-all .ant-dropdown-menu {
+    padding-top: 0;
+  }
 }
 
 .search-dropdown-clear-all-divider {
