@@ -23,6 +23,7 @@ import {
 import { get, sortBy, toLower } from 'lodash';
 import {
   LIST_VALUE_OPERATORS,
+  MULTISELECT_FIELD_OPERATORS,
   RANGE_FIELD_OPERATORS,
   TEXT_FIELD_DESCRIPTION_OPERATORS,
 } from '../constants/AdvancedSearch.constants';
@@ -486,9 +487,10 @@ class JSONLogicSearchClassBase {
         subfields: {
           [EntityFields.FULLY_QUALIFIED_NAME]: {
             label: 'Related Terms',
-            type: 'select',
+            type: 'multiselect',
+            defaultOperator: 'multiselect_equals',
             mainWidgetProps: this.mainWidgetProps,
-            operators: this.defaultSelectOperators,
+            operators: MULTISELECT_FIELD_OPERATORS,
             fieldSettings: {
               asyncFetch: this.searchAutocomplete({
                 searchIndex: SearchIndex.GLOSSARY_TERM,
