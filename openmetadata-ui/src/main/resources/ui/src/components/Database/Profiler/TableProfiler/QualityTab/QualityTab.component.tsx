@@ -164,13 +164,17 @@ export const QualityTab = () => {
   }, [testCaseSummary]);
 
   const fetchIngestionPipelineCount = async () => {
-    const { paging: ingestionPipelinePaging } = await getIngestionPipelines({
-      arrQueryFields: [],
-      testSuite: testSuite?.fullyQualifiedName ?? '',
-      pipelineType: [PipelineType.TestSuite],
-      limit: 0,
-    });
-    setIngestionPipelineCount(ingestionPipelinePaging.total);
+    try {
+      const { paging: ingestionPipelinePaging } = await getIngestionPipelines({
+        arrQueryFields: [],
+        testSuite: testSuite?.fullyQualifiedName ?? '',
+        pipelineType: [PipelineType.TestSuite],
+        limit: 0,
+      });
+      setIngestionPipelineCount(ingestionPipelinePaging.total);
+    } catch {
+      // do nothing for count error
+    }
   };
 
   useEffect(() => {
