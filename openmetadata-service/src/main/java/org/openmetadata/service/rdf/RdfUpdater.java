@@ -1,13 +1,12 @@
 package org.openmetadata.service.rdf;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.configuration.rdf.RdfConfiguration;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityRelationship;
-import org.openmetadata.service.util.AsyncService;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 
 @Slf4j
 public class RdfUpdater {
@@ -28,26 +27,53 @@ public class RdfUpdater {
 
   public static void updateEntity(EntityInterface entity) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.createOrUpdate(entity), "update entity " + entity.getId());
+      Timer.Sample sample = RequestLatencyContext.startRdfOperation();
+      try {
+        rdfRepository.createOrUpdate(entity);
+      } catch (Exception e) {
+        LOG.error("Failed to update entity {} in RDF", entity.getId(), e);
+      } finally {
+        RequestLatencyContext.endRdfOperation(sample);
+      }
     }
   }
 
   public static void deleteEntity(EntityReference entityReference) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(
-          () -> rdfRepository.delete(entityReference), "delete entity " + entityReference.getId());
+      Timer.Sample sample = RequestLatencyContext.startRdfOperation();
+      try {
+        rdfRepository.delete(entityReference);
+      } catch (Exception e) {
+        LOG.error("Failed to delete entity {} in RDF", entityReference.getId(), e);
+      } finally {
+        RequestLatencyContext.endRdfOperation(sample);
+      }
     }
   }
 
   public static void addRelationship(EntityRelationship relationship) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.addRelationship(relationship), "add relationship");
+      Timer.Sample sample = RequestLatencyContext.startRdfOperation();
+      try {
+        rdfRepository.addRelationship(relationship);
+      } catch (Exception e) {
+        LOG.error("Failed to add relationship in RDF", e);
+      } finally {
+        RequestLatencyContext.endRdfOperation(sample);
+      }
     }
   }
 
   public static void removeRelationship(EntityRelationship relationship) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.removeRelationship(relationship), "remove relationship");
+      Timer.Sample sample = RequestLatencyContext.startRdfOperation();
+      try {
+        rdfRepository.removeRelationship(relationship);
+      } catch (Exception e) {
+        LOG.error("Failed to remove relationship in RDF", e);
+      } finally {
+        RequestLatencyContext.endRdfOperation(sample);
+      }
     }
   }
 
@@ -59,15 +85,5 @@ public class RdfUpdater {
     rdfRepository = null;
     RdfRepository.reset();
     LOG.info("RDF updater disabled");
-  }
-
-  private static void runAsync(Runnable task, String context) {
-    ExecutorService executor = AsyncService.getInstance().getExecutorService();
-    CompletableFuture.runAsync(task, executor)
-        .exceptionally(
-            ex -> {
-              LOG.error("Failed to {} in RDF", context, ex);
-              return null;
-            });
   }
 }

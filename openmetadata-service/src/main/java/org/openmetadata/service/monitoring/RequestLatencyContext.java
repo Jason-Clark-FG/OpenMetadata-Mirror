@@ -14,8 +14,8 @@ import lombok.extern.slf4j.Slf4j;
  * Thread-local context for tracking request latencies using Micrometer.
  *
  * <p>This context can be shared across multiple worker threads using {@link #setContext} or {@link
- * #wrapWithContext} for operations like bulk processing. Database, search, and auth time tracking
- * uses atomic operations and aggregates correctly across threads.
+ * #wrapWithContext} for operations like bulk processing. Database, search, auth, and RDF time
+ * tracking uses atomic operations and aggregates correctly across threads.
  */
 @Slf4j
 public class RequestLatencyContext {
@@ -27,14 +27,15 @@ public class RequestLatencyContext {
   private static final ConcurrentHashMap<String, Timer> databaseTimers = new ConcurrentHashMap<>();
   private static final ConcurrentHashMap<String, Timer> searchTimers = new ConcurrentHashMap<>();
   private static final ConcurrentHashMap<String, Timer> authTimers = new ConcurrentHashMap<>();
-  private static final ConcurrentHashMap<String, Timer> internalTimers = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Timer> rdfTimers = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<String, Timer> serverTimers = new ConcurrentHashMap<>();
 
   private static final Timer DUMMY_TIMER =
       Timer.builder("dummy.timer").register(Metrics.globalRegistry);
 
-  public static void startRequest(String endpoint, String method) {
+  public static void startRequest(String endpoint, String method, String uriPath) {
     String normalizedMethod = method.toUpperCase();
-    RequestContext context = new RequestContext(endpoint, normalizedMethod);
+    RequestContext context = new RequestContext(endpoint, normalizedMethod, uriPath);
     requestContext.set(context);
     String timerKey = endpoint + "|" + normalizedMethod;
     requestTimers.computeIfAbsent(
@@ -55,6 +56,10 @@ public class RequestLatencyContext {
     context.internalTimerStartNanos.set(System.nanoTime());
   }
 
+  public static void startRequest(String endpoint, String method) {
+    startRequest(endpoint, method, null);
+  }
+
   public static Timer.Sample startDatabaseOperation() {
     RequestContext context = requestContext.get();
     if (context == null) {
@@ -62,7 +67,7 @@ public class RequestLatencyContext {
     }
     long internalStart = context.internalTimerStartNanos.getAndSet(0);
     if (internalStart > 0) {
-      context.internalTime.addAndGet(System.nanoTime() - internalStart);
+      context.serverTime.addAndGet(System.nanoTime() - internalStart);
     }
     context.dbOperationCount.incrementAndGet();
     return Timer.start(Metrics.globalRegistry);
@@ -84,7 +89,7 @@ public class RequestLatencyContext {
     }
     long internalStart = context.internalTimerStartNanos.getAndSet(0);
     if (internalStart > 0) {
-      context.internalTime.addAndGet(System.nanoTime() - internalStart);
+      context.serverTime.addAndGet(System.nanoTime() - internalStart);
     }
     context.searchOperationCount.incrementAndGet();
     return Timer.start(Metrics.globalRegistry);
@@ -106,7 +111,7 @@ public class RequestLatencyContext {
     }
     long internalStart = context.internalTimerStartNanos.getAndSet(0);
     if (internalStart > 0) {
-      context.internalTime.addAndGet(System.nanoTime() - internalStart);
+      context.serverTime.addAndGet(System.nanoTime() - internalStart);
     }
     context.authOperationCount.incrementAndGet();
     return Timer.start(Metrics.globalRegistry);
@@ -118,6 +123,28 @@ public class RequestLatencyContext {
     if (context == null) return;
     long duration = timerSample.stop(DUMMY_TIMER);
     context.authTime.addAndGet(duration);
+    context.internalTimerStartNanos.set(System.nanoTime());
+  }
+
+  public static Timer.Sample startRdfOperation() {
+    RequestContext context = requestContext.get();
+    if (context == null) {
+      return null;
+    }
+    long internalStart = context.internalTimerStartNanos.getAndSet(0);
+    if (internalStart > 0) {
+      context.serverTime.addAndGet(System.nanoTime() - internalStart);
+    }
+    context.rdfOperationCount.incrementAndGet();
+    return Timer.start(Metrics.globalRegistry);
+  }
+
+  public static void endRdfOperation(Timer.Sample timerSample) {
+    if (timerSample == null) return;
+    RequestContext context = requestContext.get();
+    if (context == null) return;
+    long duration = timerSample.stop(DUMMY_TIMER);
+    context.rdfTime.addAndGet(duration);
     context.internalTimerStartNanos.set(System.nanoTime());
   }
 
@@ -136,13 +163,14 @@ public class RequestLatencyContext {
 
       long finalInternalStart = context.internalTimerStartNanos.get();
       if (finalInternalStart > 0) {
-        context.internalTime.addAndGet(System.nanoTime() - finalInternalStart);
+        context.serverTime.addAndGet(System.nanoTime() - finalInternalStart);
       }
 
       long dbTimeNanos = context.dbTime.get();
       long searchTimeNanos = context.searchTime.get();
       long authTimeNanos = context.authTime.get();
-      long internalTimeNanos = context.internalTime.get();
+      long rdfTimeNanos = context.rdfTime.get();
+      long serverTimeNanos = context.serverTime.get();
       int dbOps = context.dbOperationCount.get();
 
       Timer dbTimer =
@@ -181,30 +209,46 @@ public class RequestLatencyContext {
         authTimer.record(authTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
       }
 
-      Timer internalTimer =
-          internalTimers.computeIfAbsent(
+      Timer rdfTimer =
+          rdfTimers.computeIfAbsent(
               timerKey,
               k ->
-                  Timer.builder("request.latency.internal")
+                  Timer.builder("request.latency.rdf")
                       .tag(ENDPOINT, context.endpoint)
                       .tag(METHOD, context.method)
                       .register(Metrics.globalRegistry));
-      if (internalTimeNanos > 0) {
-        internalTimer.record(internalTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      if (rdfTimeNanos > 0) {
+        rdfTimer.record(rdfTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      }
+
+      Timer serverTimer =
+          serverTimers.computeIfAbsent(
+              timerKey,
+              k ->
+                  Timer.builder("request.latency.server")
+                      .tag(ENDPOINT, context.endpoint)
+                      .tag(METHOD, context.method)
+                      .register(Metrics.globalRegistry));
+      if (serverTimeNanos > 0) {
+        serverTimer.record(serverTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
       }
 
       if (context.totalTime > 1_000_000_000L) {
+        String path = context.uriPath != null ? context.uriPath : context.endpoint;
         LOG.warn(
-            "Slow request - endpoint: {} {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, internal: {}ms, dbOps: {}, searchOps: {}",
+            "Slow request - {} {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, rdf: {}ms,"
+                + " server: {}ms, dbOps: {}, searchOps: {}, rdfOps: {}",
             context.method,
-            context.endpoint,
+            path,
             context.totalTime / 1_000_000,
             dbTimeNanos / 1_000_000,
             searchTimeNanos / 1_000_000,
             authTimeNanos / 1_000_000,
-            internalTimeNanos / 1_000_000,
+            rdfTimeNanos / 1_000_000,
+            serverTimeNanos / 1_000_000,
             dbOps,
-            context.searchOperationCount.get());
+            context.searchOperationCount.get(),
+            context.rdfOperationCount.get());
       }
 
     } finally {
@@ -258,13 +302,15 @@ public class RequestLatencyContext {
     databaseTimers.clear();
     searchTimers.clear();
     authTimers.clear();
-    internalTimers.clear();
+    rdfTimers.clear();
+    serverTimers.clear();
   }
 
   @Getter
   public static class RequestContext {
     final String endpoint;
     final String method;
+    final String uriPath;
     volatile Timer.Sample requestTimerSample;
     final AtomicLong internalTimerStartNanos = new AtomicLong(0);
 
@@ -272,15 +318,22 @@ public class RequestLatencyContext {
     final AtomicLong dbTime = new AtomicLong(0);
     final AtomicLong searchTime = new AtomicLong(0);
     final AtomicLong authTime = new AtomicLong(0);
-    final AtomicLong internalTime = new AtomicLong(0);
+    final AtomicLong rdfTime = new AtomicLong(0);
+    final AtomicLong serverTime = new AtomicLong(0);
 
     final AtomicInteger dbOperationCount = new AtomicInteger(0);
     final AtomicInteger searchOperationCount = new AtomicInteger(0);
     final AtomicInteger authOperationCount = new AtomicInteger(0);
+    final AtomicInteger rdfOperationCount = new AtomicInteger(0);
 
-    RequestContext(String endpoint, String method) {
+    RequestContext(String endpoint, String method, String uriPath) {
       this.endpoint = endpoint;
       this.method = method;
+      this.uriPath = uriPath;
+    }
+
+    RequestContext(String endpoint, String method) {
+      this(endpoint, method, null);
     }
   }
 }

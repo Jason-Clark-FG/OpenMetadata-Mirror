@@ -26,7 +26,7 @@ class RequestLatencyTrackingSimpleTest {
     String endpoint = "/api/v1/test";
     RequestLatencyContext.startRequest(endpoint, "GET");
 
-    // First phase - internal processing
+    // First phase - server processing
     simulateWork(100);
 
     // Database operation phase
@@ -34,7 +34,7 @@ class RequestLatencyTrackingSimpleTest {
     simulateWork(100);
     RequestLatencyContext.endDatabaseOperation(dbSample);
 
-    // Second phase - more internal processing
+    // Second phase - more server processing
     simulateWork(50);
 
     RequestLatencyContext.endRequest();
@@ -49,42 +49,42 @@ class RequestLatencyTrackingSimpleTest {
     assertNotNull(dbTimer);
     assertEquals(1, dbTimer.count(), "Should have recorded 1 database operation");
 
-    Timer internalTimer =
-        Metrics.timer("request.latency.internal", "endpoint", endpoint, "method", "GET");
-    assertNotNull(internalTimer);
-    assertEquals(1, internalTimer.count(), "Should have recorded internal processing");
+    Timer serverTimer =
+        Metrics.timer("request.latency.server", "endpoint", endpoint, "method", "GET");
+    assertNotNull(serverTimer);
+    assertEquals(1, serverTimer.count(), "Should have recorded server processing");
 
     double totalMs = totalTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
     double dbMs = dbTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
-    double internalMs = internalTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
+    double serverMs = serverTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
 
     LOG.info("Total time: {} ms", totalMs);
     LOG.info("Database time: {} ms", dbMs);
-    LOG.info("Internal time: {} ms", internalMs);
+    LOG.info("Server time: {} ms", serverMs);
 
     // Test the relative proportions rather than absolute timing
     // DB operations should be ~40% of total time (100ms out of 250ms)
-    // Internal time should be ~60% of total time (150ms out of 250ms)
+    // Server time should be ~60% of total time (150ms out of 250ms)
     double dbPercentage = (dbMs / totalMs) * 100;
-    double internalPercentage = (internalMs / totalMs) * 100;
+    double serverPercentage = (serverMs / totalMs) * 100;
 
     LOG.info("DB percentage: {}%", String.format("%.2f", dbPercentage));
-    LOG.info("Internal percentage: {}%", String.format("%.2f", internalPercentage));
+    LOG.info("Server percentage: {}%", String.format("%.2f", serverPercentage));
 
     // Verify basic timing integrity
     assertTrue(totalMs > 0, "Total time should be positive");
     assertTrue(dbMs > 0, "Database time should be positive");
-    assertTrue(internalMs > 0, "Internal time should be positive");
+    assertTrue(serverMs > 0, "Server time should be positive");
 
-    // Verify that DB + Internal ≈ Total (within 5% margin)
-    double sumPercentage = dbPercentage + internalPercentage;
+    // Verify that DB + Server ≈ Total (within 5% margin)
+    double sumPercentage = dbPercentage + serverPercentage;
     assertTrue(
         sumPercentage >= 95 && sumPercentage <= 105,
-        "Sum of DB and internal percentages should be approximately 100%, got: " + sumPercentage);
+        "Sum of DB and server percentages should be approximately 100%, got: " + sumPercentage);
 
-    // Verify that internal time is roughly 60% of total (±15%)
+    // Verify that server time is roughly 60% of total (±15%)
     assertTrue(
-        internalPercentage >= 45 && internalPercentage <= 75,
-        "Internal time should be ~60% of total time, got: " + internalPercentage + "%");
+        serverPercentage >= 45 && serverPercentage <= 75,
+        "Server time should be ~60% of total time, got: " + serverPercentage + "%");
   }
 }

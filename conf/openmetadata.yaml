@@ -152,8 +152,23 @@ server:
 # Logging settings.
 # https://logback.qos.ch/manual/layouts.html#conversionWord
 logging:
-  level: ${LOG_LEVEL:-INFO}
+  level: ${LOG_LEVEL:-DEBUG }
   loggers:
+    org.openmetadata.service.util.jdbi.OMSqlLogger:
+      level: ${SQL_LOG_LEVEL:-DEBUG}
+      additive: false
+      appenders:
+        - type: file
+          layout:
+            type: json
+            appendLineSeparator: true
+          threshold: DEBUG
+          logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
+          currentLogFilename: ./logs/queries.log
+          archivedLogFilenamePattern: ./logs/queries-%d{yyyy-MM-dd}-%i.log.gz
+          archivedFileCount: 7
+          timeZone: UTC
+          maxFileSize: 50MB
     org.openmetadata.service.util.OpenMetadataSetup:
       level: INFO
       appenders:

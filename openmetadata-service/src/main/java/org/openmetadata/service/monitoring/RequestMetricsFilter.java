@@ -7,15 +7,12 @@ import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.ext.Provider;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
 @Provider
 @Priority(1)
 @Slf4j
 public class RequestMetricsFilter implements ContainerRequestFilter, ContainerResponseFilter {
-
-  private static final String REQUEST_START_TIME = "request.start.time";
 
   private final JettyMetrics jettyMetrics;
 
@@ -25,8 +22,6 @@ public class RequestMetricsFilter implements ContainerRequestFilter, ContainerRe
 
   @Override
   public void filter(ContainerRequestContext requestContext) throws IOException {
-    requestContext.setProperty(REQUEST_START_TIME, System.nanoTime());
-
     if (jettyMetrics != null) {
       try {
         jettyMetrics.incrementActiveRequests();
@@ -45,19 +40,6 @@ public class RequestMetricsFilter implements ContainerRequestFilter, ContainerRe
         jettyMetrics.decrementActiveRequests();
       } catch (Exception e) {
         LOG.debug("JettyMetrics not fully initialized yet: {}", e.getMessage());
-      }
-    }
-
-    Long requestStartTime = (Long) requestContext.getProperty(REQUEST_START_TIME);
-    if (requestStartTime != null) {
-      long totalTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - requestStartTime);
-
-      if (totalTimeMs > 1000) {
-        LOG.warn(
-            "Slow request - {}ms - {} {}",
-            totalTimeMs,
-            requestContext.getMethod(),
-            requestContext.getUriInfo().getPath());
       }
     }
   }

@@ -30,7 +30,8 @@ public class MetricsRequestFilter implements ContainerRequestFilter, ContainerRe
     String pathTemplate = extractPathTemplate(requestContext.getUriInfo());
     String endpoint = MetricUtils.classifyEndpoint(pathTemplate);
     String method = requestContext.getMethod();
-    RequestLatencyContext.startRequest(endpoint, method);
+    String uriPath = requestContext.getUriInfo().getPath();
+    RequestLatencyContext.startRequest(endpoint, method, uriPath);
   }
 
   @Override

@@ -126,7 +126,7 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
     // Metrics are classified at resource level: /v1/tables
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_total", "/v1/tables");
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", "/v1/tables");
-    assertLatencyMetricsExist(prometheusMetrics, "request_latency_internal", "/v1/tables");
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_server", "/v1/tables");
   }
 
   @Test
@@ -208,7 +208,7 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
 
     // Verify database latency metrics exist at the classified resource level
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", "/v1/tables");
-    assertLatencyMetricsExist(prometheusMetrics, "request_latency_internal", "/v1/tables");
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_server", "/v1/tables");
   }
 
   private String getPrometheusMetrics() {

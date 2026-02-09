@@ -58,20 +58,20 @@ class RequestLatencyContextTest {
             .tag("endpoint", endpoint)
             .tag("method", "GET")
             .timer();
-    Timer internalTimer =
+    Timer serverTimer =
         Metrics.globalRegistry
-            .find("request.latency.internal")
+            .find("request.latency.server")
             .tag("endpoint", endpoint)
             .tag("method", "GET")
             .timer();
 
     assertNotNull(totalTimer, "Total timer should exist");
     assertNotNull(dbTimer, "DB timer should exist");
-    assertNotNull(internalTimer, "Internal timer should exist");
+    assertNotNull(serverTimer, "Server timer should exist");
 
     assertEquals(1, totalTimer.count());
     assertEquals(1, dbTimer.count());
-    assertEquals(1, internalTimer.count());
+    assertEquals(1, serverTimer.count());
 
     double totalMs = totalTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
     double dbMs = dbTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -125,9 +125,9 @@ class RequestLatencyContextTest {
             .tag("endpoint", endpoint)
             .tag("method", "GET")
             .timer();
-    Timer internalTimer =
+    Timer serverTimer =
         Metrics.globalRegistry
-            .find("request.latency.internal")
+            .find("request.latency.server")
             .tag("endpoint", endpoint)
             .tag("method", "GET")
             .timer();
@@ -135,12 +135,12 @@ class RequestLatencyContextTest {
     assertNotNull(totalTimer);
     assertNotNull(dbTimer);
     assertNotNull(searchTimer);
-    assertNotNull(internalTimer);
+    assertNotNull(serverTimer);
 
     assertEquals(1, totalTimer.count());
     assertEquals(1, dbTimer.count());
     assertEquals(1, searchTimer.count());
-    assertEquals(1, internalTimer.count());
+    assertEquals(1, serverTimer.count());
   }
 
   @Test
@@ -201,11 +201,11 @@ class RequestLatencyContextTest {
         timer2.totalTime(java.util.concurrent.TimeUnit.NANOSECONDS));
   }
 
-  private void simulateRequest(String endpoint, long dbTime, long searchTime, long internalTime) {
+  private void simulateRequest(String endpoint, long dbTime, long searchTime, long serverTime) {
     RequestLatencyContext.startRequest(endpoint, "GET");
 
-    if (internalTime > 0) {
-      simulateWork(internalTime);
+    if (serverTime > 0) {
+      simulateWork(serverTime);
     }
 
     if (dbTime > 0) {
@@ -267,9 +267,9 @@ class RequestLatencyContextTest {
             .tag("endpoint", endpoint)
             .tag("method", "PATCH")
             .timer();
-    Timer internalTimer =
+    Timer serverTimer =
         Metrics.globalRegistry
-            .find("request.latency.internal")
+            .find("request.latency.server")
             .tag("endpoint", endpoint)
             .tag("method", "PATCH")
             .timer();
@@ -277,17 +277,17 @@ class RequestLatencyContextTest {
     assertNotNull(totalTimer);
     assertNotNull(dbTimer);
     assertNotNull(searchTimer);
-    assertNotNull(internalTimer);
+    assertNotNull(serverTimer);
 
     double totalMs = totalTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
     double dbMs = dbTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
     double searchMs = searchTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
-    double internalMs = internalTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
+    double serverMs = serverTimer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS);
 
     assertTrue(totalMs >= 450, "Total time should be at least 450ms");
     assertTrue(dbMs >= 120, "Database time should be at least 120ms");
     assertTrue(searchMs >= 180, "Search time should be at least 180ms");
-    assertTrue(internalMs >= 140, "Internal time should be at least 140ms");
+    assertTrue(serverMs >= 140, "Server time should be at least 140ms");
   }
 
   @Test

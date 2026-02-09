@@ -116,7 +116,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     // Execute the async bulk request
     CompletableFuture<BulkResponse> future =
-        asyncClient.bulk(b -> b.index(indexName).operations(operations).refresh(Refresh.False));
+        asyncClient.bulk(b -> b.index(indexName).operations(operations).refresh(Refresh.True));
 
     // Handle response asynchronously
     future.whenComplete(
@@ -161,7 +161,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       return;
     }
     DeleteResponse response =
-        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.False));
+        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.True));
     LOG.info(
         "Successfully deleted entity from ElasticSearch for index: {}, docId: {}, result: {}",
         indexName,
@@ -284,7 +284,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
         u ->
             u.index(indexName)
                 .id(docId)
-                .refresh(Refresh.False)
+                .refresh(Refresh.True)
                 .retryOnConflict(3)
                 .script(
                     s ->
@@ -354,7 +354,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           u ->
               u.index(indexName)
                   .id(docId)
-                  .refresh(Refresh.False)
+                  .refresh(Refresh.True)
                   .retryOnConflict(3)
                   .scriptedUpsert(true)
                   .upsert(params)
@@ -1283,7 +1283,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               .action(a -> a.docAsUpsert(true).doc(toJsonData(doc))))));
     }
 
-    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.False));
+    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.True));
 
     if (response.errors()) {
       LOG.error(
@@ -1388,7 +1388,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .docAsUpsert(true)
-                .refresh(Refresh.False)
+                .refresh(Refresh.True)
                 .retryOnConflict(3)
                 .doc(toJsonData(doc)),
         Map.class);
