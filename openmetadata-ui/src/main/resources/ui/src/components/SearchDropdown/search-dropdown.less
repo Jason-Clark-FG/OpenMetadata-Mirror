@@ -18,6 +18,27 @@
 @remove-icon-hover-color: #373737;
 @update-btn-hover-bg: #e2e2e2;
 
+.search-dropdown-overlay-compact {
+  padding: 0;
+}
+
+.search-dropdown-no-clear-all .ant-dropdown-menu {
+  padding-top: 6px;
+}
+
+.search-dropdown-has-clear-all .ant-dropdown-menu {
+  padding-top: 0;
+}
+
+.search-dropdown-clear-all-divider {
+  border-top: 1px solid @border-color;
+  margin: 4px 0 0;
+}
+
+.search-dropdown-compact-padding.custom-dropdown-render {
+  padding-top: 0;
+}
+
 .custom-dropdown-render {
   flex-direction: row-reverse;
   .ant-dropdown-menu {
@@ -54,15 +75,6 @@
 
 .quick-filter-dropdown-trigger-btn {
   padding: 4px 8px;
-
-  .remove-field-icon {
-    color: @remove-icon-color;
-    padding-bottom: 2px;
-  }
-
-  .remove-field-icon:hover {
-    color: @remove-icon-hover-color;
-  }
 
   .active {
     .filters-label.ant-typography {

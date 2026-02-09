@@ -33,6 +33,7 @@ export interface SearchDropdownProps {
   hasNullOption?: boolean; // Determines if the null option should be displayed or not. For e.g No Owner, No Tier etc
   showSelectedCounts?: boolean; // Show counts instead of labels for selected items
   hideSearchBar?: boolean; // Determines if the search bar should be hidden. Default is false
+  compactPadding?: boolean; // Reduce top padding above search/clear section
 }
 
 export interface SearchDropdownOption {

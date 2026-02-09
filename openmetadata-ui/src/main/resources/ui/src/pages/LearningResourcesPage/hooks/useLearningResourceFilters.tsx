@@ -161,6 +161,7 @@ export const useLearningResourceFilters = (
       <Space wrap className="explore-quick-filters-container" size={[8, 0]}>
         {FILTER_FIELDS.map((field) => (
           <SearchDropdown
+            compactPadding
             hideCounts
             showSelectedCounts
             dropdownClassName="learning-resources-dropdown"
