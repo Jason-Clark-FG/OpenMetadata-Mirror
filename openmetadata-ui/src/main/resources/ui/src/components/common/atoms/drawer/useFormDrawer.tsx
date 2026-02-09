@@ -11,8 +11,9 @@
  *  limitations under the License.
  */
 
-import React, { ReactNode, useCallback, useState } from 'react';
+import React, { ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { createScrollToErrorHandler } from '../../../../utils/formUtils';
 import {
   CompositeDrawerConfig,
   useCompositeDrawer,
@@ -110,6 +111,7 @@ export const useFormDrawer = <T,>(config: FormDrawerConfig<T>) => {
     body: {
       children: form,
       loading: loading || isSubmitting,
+      className: 'drawer-form-content',
       ...body,
     },
     footer: {
@@ -183,22 +185,26 @@ export const useFormDrawerWithRef = <T,>(
 ) => {
   const { formRef, onSubmit, ...restConfig } = config;
 
+  const scrollToError = useMemo(() => createScrollToErrorHandler(), []);
+
   const handleSubmit = useCallback(async () => {
     if (formRef?.validateFields) {
-      // Validate first
-      const values = await formRef.validateFields();
-      // If validation passes, submit the form
-      if (formRef?.submit) {
-        formRef.submit();
-      } else {
-        await onSubmit(values);
+      try {
+        const values = await formRef.validateFields();
+        if (formRef?.submit) {
+          formRef.submit();
+        } else {
+          await onSubmit(values);
+        }
+      } catch {
+        scrollToError();
       }
     } else if (formRef?.submit) {
       formRef.submit();
     } else {
       await onSubmit({} as T);
     }
-  }, [formRef, onSubmit]);
+  }, [formRef, onSubmit, scrollToError]);
 
   const drawer = useFormDrawer({
     ...restConfig,
