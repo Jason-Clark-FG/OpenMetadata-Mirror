@@ -854,8 +854,8 @@ public class DataProductResource extends EntityResource<DataProduct, DataProduct
   @Path("/{id}/vote")
   @Operation(
       operationId = "updateVoteForEntity",
-      summary = "Update Vote for a Entity",
-      description = "Update vote for a Entity",
+      summary = "Update Vote for an Entity",
+      description = "Update vote for an Entity",
       responses = {
         @ApiResponse(
             responseCode = "200",
