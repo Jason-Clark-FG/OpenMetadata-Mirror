@@ -116,7 +116,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     // Execute the async bulk request
     CompletableFuture<BulkResponse> future =
-        asyncClient.bulk(b -> b.index(indexName).operations(operations).refresh(Refresh.True));
+        asyncClient.bulk(b -> b.index(indexName).operations(operations).refresh(Refresh.False));
 
     // Handle response asynchronously
     future.whenComplete(
@@ -161,7 +161,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       return;
     }
     DeleteResponse response =
-        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.True));
+        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.False));
     LOG.info(
         "Successfully deleted entity from ElasticSearch for index: {}, docId: {}, result: {}",
         indexName,
@@ -185,7 +185,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     DeleteByQueryResponse response =
         client.deleteByQuery(
-            d -> d.index(indexNames).query(q -> q.bool(boolQueryBuilder.build())).refresh(true));
+            d -> d.index(indexNames).query(q -> q.bool(boolQueryBuilder.build())).refresh(false));
 
     LOG.info(
         "DeleteByQuery response From ES - Deleted: {}, Failures: {}",
@@ -218,7 +218,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                 p ->
                                     p.field("fullyQualifiedName.keyword")
                                         .value(fqnPrefix.toLowerCase())))
-                    .refresh(true));
+                    .refresh(false));
 
     LOG.info(
         "DeleteByQuery by FQN prefix response from ES - Deleted: {}, Failures: {}",
@@ -256,7 +256,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                                 .source(ss -> ss.scriptString(scriptTxt))
                                                 .lang(ScriptLanguage.Painless)
                                                 .params(convertToJsonDataMap(params)))))
-                    .refresh(true));
+                    .refresh(false));
 
     LOG.info(
         "DeleteByQuery by script response from ES - Deleted: {}, Failures: {}",
@@ -284,7 +284,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
         u ->
             u.index(indexName)
                 .id(docId)
-                .refresh(Refresh.True)
+                .refresh(Refresh.False)
                 .script(
                     s ->
                         s.source(ss -> ss.scriptString(scriptTxt))
@@ -323,7 +323,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                             s.source(ss -> ss.scriptString(scriptTxt))
                                 .lang(ScriptLanguage.Painless)
                                 .params(Map.of()))
-                    .refresh(true));
+                    .refresh(false));
 
     LOG.info(
         "Successfully soft deleted/restored children in ElasticSearch for indices: {}, updated documents: {}",
@@ -353,7 +353,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           u ->
               u.index(indexName)
                   .id(docId)
-                  .refresh(Refresh.True)
+                  .refresh(Refresh.False)
                   .scriptedUpsert(true)
                   .upsert(params)
                   .script(
@@ -415,7 +415,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                           s.source(ss -> ss.scriptString(updates.getKey()))
                               .lang(ScriptLanguage.Painless)
                               .params(params))
-                  .refresh(true));
+                  .refresh(false));
 
       LOG.info("Successfully updated children in ElasticSearch for index: {}", indexName);
     } catch (IOException | ElasticsearchException e) {
@@ -451,7 +451,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                         s.source(ss -> ss.scriptString(updates.getKey()))
                             .lang(ScriptLanguage.Painless)
                             .params(params))
-                .refresh(true));
+                .refresh(false));
 
     LOG.info("Successfully updated children in ElasticSearch for indices: {}", indexNames);
   }
@@ -517,7 +517,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               s.source(ss -> ss.scriptString(ADD_UPDATE_ENTITY_RELATIONSHIP))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated entity relationship in ElasticSearch for index: {}", indexName);
@@ -555,7 +555,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           r ->
               r.source(s -> s.index(sourceIndices).query(q -> q.ids(ids -> ids.values(queryIDs))))
                   .dest(d -> d.index(destinationIndex).pipeline(pipelineName))
-                  .refresh(true));
+                  .refresh(false));
 
       LOG.info("Reindex {} entities of type {} to vector index", entityIds.size(), entityType);
     } catch (IOException | ElasticsearchException e) {
@@ -585,7 +585,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               s.source(ss -> ss.scriptString(UPDATE_FQN_PREFIX_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info("Successfully propagated FQN updates for parent FQN: {}", oldParentFQN);
 
@@ -631,7 +631,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                             s.source(ss -> ss.scriptString(ADD_UPDATE_LINEAGE))
                                 .lang(ScriptLanguage.Painless)
                                 .params(params))
-                    .refresh(true));
+                    .refresh(false));
 
     LOG.info("Successfully updated lineage in ElasticSearch for index: {}", indexName);
 
@@ -671,7 +671,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     // Execute delete-by-query with refresh
     DeleteByQueryResponse response =
-        client.deleteByQuery(d -> d.index(index).query(query).refresh(true));
+        client.deleteByQuery(d -> d.index(index).query(query).refresh(false));
 
     LOG.info(
         "DeleteByQuery response from ES - Deleted: {}, Failures: {}",
@@ -727,7 +727,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     // Execute delete-by-query with refresh
     DeleteByQueryResponse response =
-        client.deleteByQuery(d -> d.index(index).query(combinedQuery).refresh(true));
+        client.deleteByQuery(d -> d.index(index).query(combinedQuery).refresh(false));
 
     LOG.info(
         "DeleteByRangeAndTerm response from ES - Deleted: {}, Failures: {}",
@@ -765,7 +765,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               s.source(ss -> ss.scriptString(UPDATE_COLUMN_LINEAGE_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated columns in upstream lineage for index: {}, updated: {}",
@@ -807,7 +807,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               s.source(ss -> ss.scriptString(DELETE_COLUMN_LINEAGE_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully deleted columns from upstream lineage for index: {}, updated: {}",
@@ -859,7 +859,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                               UPDATE_GLOSSARY_TERM_TAG_FQN_BY_PREFIX_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated glossary term FQN for index: {}, updated: {}",
@@ -911,7 +911,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                               UPDATE_CLASSIFICATION_TAG_FQN_BY_PREFIX_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated classification tag FQN for index: {}, updated: {}",
@@ -960,7 +960,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               s.source(ss -> ss.scriptString(UPDATE_DATA_PRODUCT_FQN_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated data product references from {} to {}, updated: {}",
@@ -1027,7 +1027,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                           ss.scriptString(SearchClient.UPDATE_ASSET_DOMAIN_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Successfully updated asset domains for data product {}: removed {}, added {}, updated {} documents",
@@ -1104,7 +1104,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                               SearchClient.UPDATE_ASSET_DOMAIN_FQN_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Updated asset domain FQNs by IDs: requested={}, total={}, updated={}, noops={}, newFqns={}",
@@ -1167,7 +1167,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                               SearchClient.UPDATE_DOMAIN_FQN_BY_PREFIX_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Updated domain FQNs: total={}, updated={}, noops={}",
@@ -1225,7 +1225,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                                                   .UPDATE_ASSET_DOMAIN_FQN_BY_PREFIX_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
-                      .refresh(true));
+                      .refresh(false));
 
       LOG.info(
           "Updated asset domain FQNs in search: total={}, updated={}, noops={}",
@@ -1280,7 +1280,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                               .action(a -> a.docAsUpsert(true).doc(toJsonData(doc))))));
     }
 
-    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.True));
+    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.False));
 
     if (response.errors()) {
       LOG.error(
@@ -1385,7 +1385,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .docAsUpsert(true)
-                .refresh(Refresh.True)
+                .refresh(Refresh.False)
                 .doc(toJsonData(doc)),
         Map.class);
     LOG.info(

@@ -202,6 +202,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.TypeRegistry;
 import org.openmetadata.service.cache.CacheBundle;
+import org.openmetadata.service.cache.CachedEntityDao;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.exception.EntityLockedException;
@@ -226,6 +227,7 @@ import org.openmetadata.service.search.SearchResultListMapper;
 import org.openmetadata.service.search.SearchSortFilter;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
+import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.EntityETag;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -1897,104 +1899,55 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return entity != null && entity.getId() != null && entity.getFullyQualifiedName() != null;
   }
 
-  /**
-   * Write to Redis cache after DB operations
-   * This is completely separate from Guava cache which manages itself through loaders
-   * Redis cache is optional and only used when configured for distributed caching
-   */
   protected void writeThroughCache(T entity, boolean update) {
-    // This method should ONLY handle Redis cache, not Guava cache
-    // Guava cache is self-managing through its CacheLoader implementation
-
-    // Only write to Redis if configured
-    writeToRedisCache(entity, update);
+    var cachedEntityDao = CacheBundle.getCachedEntityDao();
+    if (cachedEntityDao == null || !isValidEntityForCache(entity) || "user".equals(entityType)) {
+      return;
+    }
+    UUID entityId = entity.getId();
+    String fqn = entity.getFullyQualifiedName();
+    CompletableFuture.runAsync(
+        () -> writeToRedisCache(cachedEntityDao, entityId, fqn),
+        AsyncService.getInstance().getExecutorService());
   }
 
-  /**
-   * Write multiple entities to Redis cache after batch DB operations
-   * More efficient than calling writeThroughCache for each entity
-   */
   protected void writeThroughCacheMany(List<T> entities, boolean update) {
     var cachedEntityDao = CacheBundle.getCachedEntityDao();
     if (cachedEntityDao == null || entities == null || entities.isEmpty()) {
       return;
     }
-
-    // Skip user entities
     if ("user".equals(entityType)) {
       return;
     }
-
+    List<UUID> ids = new ArrayList<>();
+    List<String> fqns = new ArrayList<>();
     for (T entity : entities) {
-      try {
-        if (!isValidEntityForCache(entity)) {
-          continue;
-        }
-
-        String entityJson = dao.findById(dao.getTableName(), entity.getId(), "");
-        if (entityJson != null && !entityJson.isEmpty()) {
-          cachedEntityDao.putBase(entityType, entity.getId(), entityJson);
-          if (entity.getFullyQualifiedName() != null) {
-            cachedEntityDao.putByName(entityType, entity.getFullyQualifiedName(), entityJson);
-          }
-        }
-      } catch (Exception e) {
-        LOG.debug("Failed to write to Redis cache: {} {}", entityType, entity.getId(), e);
+      if (isValidEntityForCache(entity)) {
+        ids.add(entity.getId());
+        fqns.add(entity.getFullyQualifiedName());
       }
     }
-    LOG.debug("Batch populated Redis cache for {} {} entities", entities.size(), entityType);
+    if (ids.isEmpty()) return;
+    CompletableFuture.runAsync(
+        () -> {
+          for (int i = 0; i < ids.size(); i++) {
+            writeToRedisCache(cachedEntityDao, ids.get(i), fqns.get(i));
+          }
+        },
+        AsyncService.getInstance().getExecutorService());
   }
 
-  /**
-   * Write entity to Redis cache if available
-   * This reduces database calls in distributed deployments
-   */
-  private void writeToRedisCache(T entity, boolean update) {
-    // Only proceed if Redis cache is configured
-    var cachedEntityDao = CacheBundle.getCachedEntityDao();
-    if (cachedEntityDao == null) {
-      return; // No Redis cache configured
-    }
-
+  private void writeToRedisCache(CachedEntityDao cachedEntityDao, UUID entityId, String fqn) {
     try {
-      // Validate entity
-      if (!isValidEntityForCache(entity)) {
-        LOG.debug(
-            "Invalid entity for Redis cache: {} {}",
-            entityType,
-            entity != null ? entity.getId() : "null");
-        return;
-      }
-
-      // Skip user entities
-      if ("user".equals(entityType)) {
-        return;
-      }
-
-      if (update) {
-        // For updates, repopulate Redis cache with the updated entity
-        String entityJson = dao.findById(dao.getTableName(), entity.getId(), "");
-        if (entityJson != null && !entityJson.isEmpty()) {
-          cachedEntityDao.putBase(entityType, entity.getId(), entityJson);
-          if (entity.getFullyQualifiedName() != null) {
-            cachedEntityDao.putByName(entityType, entity.getFullyQualifiedName(), entityJson);
-          }
-          LOG.debug("Updated Redis cache after PATCH: {} {}", entityType, entity.getId());
-        }
-      } else {
-        // For creates, populate Redis cache with complete entity
-        String entityJson = dao.findById(dao.getTableName(), entity.getId(), "");
-        if (entityJson != null && !entityJson.isEmpty()) {
-          cachedEntityDao.putBase(entityType, entity.getId(), entityJson);
-          if (entity.getFullyQualifiedName() != null) {
-            cachedEntityDao.putByName(entityType, entity.getFullyQualifiedName(), entityJson);
-          }
-          LOG.debug("Populated Redis cache for new entity: {} {}", entityType, entity.getId());
+      String entityJson = dao.findById(dao.getTableName(), entityId, "");
+      if (entityJson != null && !entityJson.isEmpty()) {
+        cachedEntityDao.putBase(entityType, entityId, entityJson);
+        if (fqn != null) {
+          cachedEntityDao.putByName(entityType, fqn, entityJson);
         }
       }
     } catch (Exception e) {
-      // Redis cache failures should not affect the operation
-      LOG.debug("Failed to write to Redis cache: {} {}", entityType, entity.getId(), e);
+      LOG.debug("Failed to write to Redis cache: {} {}", entityType, entityId, e);
     }
   }
 

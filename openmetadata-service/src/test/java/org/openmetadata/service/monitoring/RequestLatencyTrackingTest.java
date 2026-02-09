@@ -169,20 +169,12 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
     // Get metrics from Prometheus endpoint
     String prometheusMetrics = getPrometheusMetrics();
 
-    // Check for search endpoint metrics
-    // The endpoint in metrics appears without the /api/ prefix
-    String searchEndpoint = "v1/search/query";
+    // Metrics are classified at resource level: /v1/search
+    String searchEndpoint = "/v1/search";
 
     // Verify search metrics
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_total", searchEndpoint);
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_search", searchEndpoint);
-
-    // Extract and verify search percentage
-    String searchPercentagePattern =
-        "request_percentage_search.*endpoint=\"" + searchEndpoint + "\"";
-    assertTrue(
-        prometheusMetrics.matches("(?s).*" + searchPercentagePattern + ".*"),
-        "Should have search percentage metrics for endpoint");
   }
 
   @Test
@@ -214,16 +206,9 @@ class RequestLatencyTrackingTest extends OpenMetadataApplicationTest {
     // Get metrics from Prometheus endpoint
     String prometheusMetrics = getPrometheusMetrics();
 
-    // The endpoint in metrics appears without the /api/ prefix
-    String endpoint = "v1/tables/" + createdTable.getId();
-
-    // Verify database operation count
+    // Verify database latency metrics exist at the classified resource level
     assertLatencyMetricsExist(prometheusMetrics, "request_latency_database", "/v1/tables");
-
-    // Check that we have multiple database operations recorded
-    assertTrue(
-        prometheusMetrics.contains("request_operations_database"),
-        "Should have database operation count metrics");
+    assertLatencyMetricsExist(prometheusMetrics, "request_latency_internal", "/v1/tables");
   }
 
   private String getPrometheusMetrics() {

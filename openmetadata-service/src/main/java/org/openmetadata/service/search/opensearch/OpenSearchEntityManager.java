@@ -117,7 +117,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                               .document(toJsonData(entry.getValue())))));
     }
 
-    BulkRequest bulkRequest = BulkRequest.of(b -> b.operations(operations).refresh(Refresh.True));
+    BulkRequest bulkRequest = BulkRequest.of(b -> b.operations(operations).refresh(Refresh.False));
     // Async call using OpenSearchAsyncClient
     CompletableFuture<BulkResponse> future = asyncClient.bulk(bulkRequest);
 
@@ -164,7 +164,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
     }
 
     DeleteResponse response =
-        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.True));
+        client.delete(d -> d.index(indexName).id(docId).refresh(Refresh.False));
     LOG.info(
         "Successfully deleted entity from OpenSearch for index: {}, docId: {}, result: {}",
         indexName,
@@ -194,7 +194,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
             d ->
                 d.index(indexNames)
                     .query(q -> q.bool(boolQueryBuilder.build()))
-                    .refresh(Refresh.True));
+                    .refresh(Refresh.False));
 
     LOG.info(
         "DeleteByQuery response from OS - Deleted: {}, Failures: {}",
@@ -228,7 +228,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                 p ->
                                     p.field("fullyQualifiedName.keyword")
                                         .value(fqnPrefix.toLowerCase())))
-                    .refresh(Refresh.True));
+                    .refresh(Refresh.False));
 
     LOG.info(
         "DeleteByQuery by FQN prefix response from OS - Deleted: {}, Failures: {}",
@@ -274,7 +274,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                                         .Painless))
                                                         .source(scriptTxt)
                                                         .params(convertToJsonDataMap(params))))))
-                    .refresh(Refresh.True));
+                    .refresh(Refresh.False));
 
     LOG.info(
         "DeleteByQuery by script response from OS - Deleted: {}, Failures: {}",
@@ -302,7 +302,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
         u ->
             u.index(indexName)
                 .id(docId)
-                .refresh(Refresh.True)
+                .refresh(Refresh.False)
                 .script(
                     s ->
                         s.inline(
@@ -355,7 +355,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                         .BuiltinScriptLanguage.Painless))
                                         .source(scriptTxt)
                                         .params(Map.of())))
-                    .refresh(Refresh.True));
+                    .refresh(Refresh.False));
 
     LOG.info(
         "Successfully soft deleted/restored children in OpenSearch for indices: {}, updated documents: {}",
@@ -386,7 +386,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
           u ->
               u.index(indexName)
                   .id(docId)
-                  .refresh(Refresh.True)
+                  .refresh(Refresh.False)
                   .scriptedUpsert(true)
                   .upsert(params)
                   .script(
@@ -457,7 +457,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                       .BuiltinScriptLanguage.Painless))
                                       .source(updates.getKey())
                                       .params(params)))
-                  .refresh(Refresh.True));
+                  .refresh(Refresh.False));
 
       LOG.info("Successfully updated children in OpenSearch for index: {}", indexName);
     } catch (IOException | OpenSearchException e) {
@@ -501,7 +501,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                     .BuiltinScriptLanguage.Painless))
                                     .source(updates.getKey())
                                     .params(params)))
-                .refresh(Refresh.True));
+                .refresh(Refresh.False));
 
     LOG.info("Successfully updated children in OpenSearch for indices: {}", indexNames);
   }
@@ -574,7 +574,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(ADD_UPDATE_ENTITY_RELATIONSHIP)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info("Successfully updated entity relationship in OpenSearch for index: {}", indexName);
 
@@ -610,7 +610,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
           r ->
               r.source(s -> s.index(sourceIndices).query(q -> q.ids(ids -> ids.values(queryIDs))))
                   .dest(d -> d.index(destinationIndex).pipeline(pipelineName))
-                  .refresh(Refresh.True));
+                  .refresh(Refresh.False));
 
       LOG.info("Reindex {} entities of type {} to vector index", entityIds.size(), entityType);
     } catch (IOException | OpenSearchException e) {
@@ -646,7 +646,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(UPDATE_FQN_PREFIX_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info("Successfully propagated FQN updates for parent FQN: {}", oldParentFQN);
 
@@ -698,7 +698,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                         .BuiltinScriptLanguage.Painless))
                                         .source(ADD_UPDATE_LINEAGE)
                                         .params(params)))
-                    .refresh(Refresh.True));
+                    .refresh(Refresh.False));
 
     LOG.info("Successfully updated lineage in OpenSearch for index: {}", indexName);
 
@@ -735,7 +735,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
 
     // Execute delete-by-query with refresh
     DeleteByQueryResponse response =
-        client.deleteByQuery(d -> d.index(index).query(query).refresh(Refresh.True));
+        client.deleteByQuery(d -> d.index(index).query(query).refresh(Refresh.False));
 
     LOG.info(
         "DeleteByQuery response from OS - Deleted: {}, Failures: {}",
@@ -789,7 +789,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
 
     // Execute delete-by-query with refresh
     DeleteByQueryResponse response =
-        client.deleteByQuery(d -> d.index(index).query(combinedQuery).refresh(Refresh.True));
+        client.deleteByQuery(d -> d.index(index).query(combinedQuery).refresh(Refresh.False));
 
     LOG.info(
         "DeleteByRangeAndTerm response from OS - Deleted: {}, Failures: {}",
@@ -832,7 +832,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(UPDATE_COLUMN_LINEAGE_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated columns in upstream lineage for index: {}, updated: {}",
@@ -879,7 +879,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(DELETE_COLUMN_LINEAGE_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully deleted columns from upstream lineage for index: {}, updated: {}",
@@ -933,7 +933,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(UPDATE_GLOSSARY_TERM_TAG_FQN_BY_PREFIX_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated glossary term FQN for index: {}, updated: {}",
@@ -988,7 +988,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(UPDATE_CLASSIFICATION_TAG_FQN_BY_PREFIX_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated classification tag FQN for index: {}, updated: {}",
@@ -1047,7 +1047,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(UPDATE_DATA_PRODUCT_FQN_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated data product references from {} to {}, updated: {}",
@@ -1122,7 +1122,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(SearchClient.UPDATE_ASSET_DOMAIN_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated asset domains for data product {}: removed {}, added {}, updated {} documents",
@@ -1196,7 +1196,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(SearchClient.UPDATE_ASSET_DOMAIN_FQN_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Successfully updated asset domain FQNs by IDs: {} assets, oldFqns={}, newFqns={}, updated {} documents",
@@ -1260,7 +1260,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                                           .BuiltinScriptLanguage.Painless))
                                           .source(SearchClient.UPDATE_DOMAIN_FQN_BY_PREFIX_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Updated domain FQNs: total={}, updated={}, noops={}",
@@ -1321,7 +1321,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                                           .source(
                                               SearchClient.UPDATE_ASSET_DOMAIN_FQN_BY_PREFIX_SCRIPT)
                                           .params(params)))
-                      .refresh(Refresh.True));
+                      .refresh(Refresh.False));
 
       LOG.info(
           "Updated asset domain FQNs in search: total={}, updated={}, noops={}",
@@ -1376,7 +1376,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                               .document(toJsonData(doc)))));
     }
 
-    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.True));
+    BulkResponse response = client.bulk(b -> b.operations(operations).refresh(Refresh.False));
 
     if (response.errors()) {
       LOG.error(
@@ -1403,7 +1403,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
         u ->
             u.index(indexName)
                 .id(docId)
-                .refresh(Refresh.True)
+                .refresh(Refresh.False)
                 .docAsUpsert(true)
                 .doc(toJsonData(doc)),
         Map.class);

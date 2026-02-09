@@ -605,7 +605,7 @@ public class OpenSearchClient implements SearchClient {
     return newClient.bulk(
         b ->
             b.operations(operations)
-                .refresh(os.org.opensearch.client.opensearch._types.Refresh.True));
+                .refresh(os.org.opensearch.client.opensearch._types.Refresh.False));
   }
 
   @Override
