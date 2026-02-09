@@ -1,20 +1,23 @@
 package org.openmetadata.service.rdf;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.configuration.rdf.RdfConfiguration;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityRelationship;
-import org.openmetadata.service.util.AsyncService;
 
+/**
+ * Utility class to handle RDF updates during entity lifecycle operations.
+ * This follows the same pattern as SearchRepository integration.
+ */
 @Slf4j
 public class RdfUpdater {
 
   private static RdfRepository rdfRepository;
 
-  private RdfUpdater() {}
+  private RdfUpdater() {
+    // Private constructor for utility class
+  }
 
   public static void initialize(RdfConfiguration config) {
     if (config.getEnabled() != null && config.getEnabled()) {
@@ -26,42 +29,71 @@ public class RdfUpdater {
     }
   }
 
+  /**
+   * Update RDF when entity is created or updated
+   */
   public static void updateEntity(EntityInterface entity) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.createOrUpdate(entity), "update entity " + entity.getId());
+      try {
+        rdfRepository.createOrUpdate(entity);
+      } catch (Exception e) {
+        LOG.error("Failed to update entity {} in RDF", entity.getId(), e);
+      }
     }
   }
 
+  /**
+   * Remove entity from RDF when deleted
+   */
   public static void deleteEntity(EntityReference entityReference) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(
-          () -> rdfRepository.delete(entityReference), "delete entity " + entityReference.getId());
+      try {
+        rdfRepository.delete(entityReference);
+      } catch (Exception e) {
+        LOG.error("Failed to delete entity {} from RDF", entityReference.getId(), e);
+      }
     }
   }
 
+  /**
+   * Add relationship to RDF
+   */
   public static void addRelationship(EntityRelationship relationship) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.addRelationship(relationship), "add relationship");
+      try {
+        rdfRepository.addRelationship(relationship);
+      } catch (Exception e) {
+        LOG.error("Failed to add relationship to RDF", e);
+      }
     }
   }
 
+  /**
+   * Remove relationship from RDF
+   */
   public static void removeRelationship(EntityRelationship relationship) {
     if (rdfRepository != null && rdfRepository.isEnabled()) {
-      runAsync(() -> rdfRepository.removeRelationship(relationship), "remove relationship");
+      try {
+        rdfRepository.removeRelationship(relationship);
+      } catch (Exception e) {
+        LOG.error("Failed to remove relationship from RDF", e);
+      }
     }
   }
 
+  /**
+   * Check if RDF is enabled
+   */
   public static boolean isEnabled() {
     return rdfRepository != null && rdfRepository.isEnabled();
   }
 
-  private static void runAsync(Runnable task, String context) {
-    ExecutorService executor = AsyncService.getInstance().getExecutorService();
-    CompletableFuture.runAsync(task, executor)
-        .exceptionally(
-            ex -> {
-              LOG.error("Failed to {} in RDF", context, ex);
-              return null;
-            });
+  /**
+   * Disable RDF updater. Used by tests to limit RDF operations to specific test classes.
+   */
+  public static void disable() {
+    rdfRepository = null;
+    RdfRepository.reset();
+    LOG.info("RDF updater disabled");
   }
 }
