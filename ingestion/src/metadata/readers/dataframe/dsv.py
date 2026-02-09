@@ -138,7 +138,9 @@ class DSVDataFrameReader(DataFrameReader):
             chunksize=CHUNKSIZE,
             storage_options=storage_options,
             compression=compression,
-            encoding_errors="ignore",  # ignore encoding errors
+            encoding_errors="ignore",
+            escapechar="\\",
+            engine="python",
         ) as reader:
             for chunks in reader:
                 chunk_list.append(chunks)
