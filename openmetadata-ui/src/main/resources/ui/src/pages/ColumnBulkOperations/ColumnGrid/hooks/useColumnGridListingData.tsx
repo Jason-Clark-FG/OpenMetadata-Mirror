@@ -172,6 +172,8 @@ export const useColumnGridListingData = (
       options?: {
         /** When true, fetch and store cursor/totals but do not update grid - used when chaining to reach page N */
         skipGridItemsUpdate?: boolean;
+        /** When true, rethrow on error so caller can handle (e.g. fallback when cached cursor is invalid) */
+        rethrowOnError?: boolean;
       }
     ) => {
       setLoading(true);
@@ -235,6 +237,9 @@ export const useColumnGridListingData = (
         if (process.env.NODE_ENV === 'development') {
           // eslint-disable-next-line no-console
           console.error('Error loading column grid:', error);
+        }
+        if (options?.rethrowOnError) {
+          throw error;
         }
       } finally {
         setLoading(false);
@@ -466,7 +471,8 @@ export const useColumnGridListingData = (
             effectivePage,
             urlState.searchQuery,
             columnGridFilters,
-            urlState.pageSize
+            urlState.pageSize,
+            { rethrowOnError: true }
           );
           cachedCursorWorked = true;
         } catch {
