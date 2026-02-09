@@ -56,8 +56,8 @@ export const CATEGORIES: CategoryOption[] = [
 ];
 
 export const LEARNING_RESOURCE_STATUSES = [
-  LearningResourceStatus.Draft,
   LearningResourceStatus.Active,
+  LearningResourceStatus.Draft,
   LearningResourceStatus.Deprecated,
 ];
 

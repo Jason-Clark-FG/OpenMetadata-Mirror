@@ -18,13 +18,14 @@ import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
 
 import com.google.gson.Gson;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.jdbi.v3.core.statement.Query;
 import org.openmetadata.schema.api.learning.ResourceCategory;
 import org.openmetadata.schema.entity.learning.LearningResource;
 import org.openmetadata.schema.entity.learning.LearningResourceContext;
@@ -209,47 +210,84 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
   }
 
   public static class LearningResourceFilter extends ListFilter {
+    private final Map<String, List<String>> listParams = new HashMap<>();
+
     public LearningResourceFilter(Include include) {
       super(include);
     }
 
-      @Override
-      public String getCategoryCondition(String tableName) {
-        return "";
+    public LearningResourceFilter addQueryParam(String name, List<String> values) {
+      listParams.put(name, values);
+      for (int i = 0; i < values.size(); i++) {
+        String paramKey = listParamKey(name, i);
+        queryParams.put(paramKey, values.get(i));
       }
+      return this;
+    }
 
-      @Override
-      @SuppressWarnings("unchecked")
-      public void bindQueryParams(Query query) {
-        super.bindQueryParams(query);
-        if (getQueryParam("pageIds") != null) {
-          List<String> pageIds = (List<String>) getQueryParam("pageIds");
-          for (int i = 0; i < pageIds.size(); i++) {
-            query.bind("pageId" + i, pageIds.get(i));
-          }
-        }
-        if (getQueryParam("categories") != null) {
-          List<String> categories = (List<String>) getQueryParam("categories");
-          for (int i = 0; i < categories.size(); i++) {
-            query.bind("category" + i, categories.get(i));
-          }
-        }
-        if (getQueryParam("types") != null) {
-          List<String> types = (List<String>) getQueryParam("types");
-          for (int i = 0; i < types.size(); i++) {
-            query.bind("type" + i, types.get(i));
-          }
-        }
-        if (getQueryParam("statuses") != null) {
-          List<String> statuses = (List<String>) getQueryParam("statuses");
-          for (int i = 0; i < statuses.size(); i++) {
-            query.bind("status" + i, statuses.get(i));
-          }
+    private static String listParamKey(String name, int index) {
+      return switch (name) {
+        case "pageIds" -> "pageId" + index;
+        case "componentIds" -> "componentId" + index;
+        case "categories" -> "category" + index;
+        case "types" -> "type" + index;
+        case "statuses" -> "status" + index;
+        default -> name + index;
+      };
+    }
+
+    private static String escapeForLike(String value) {
+      return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    private String searchCondition(String tableName) {
+      String column = jsonColumn(tableName);
+      String searchPattern = "%" + escapeForLike(getQueryParam("q")) + "%";
+      queryParams.put("searchPattern", searchPattern);
+      String tbl = tableName == null ? "" : tableName + ".";
+      if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+        return String.format(
+            "(%sname LIKE :searchPattern ESCAPE '\\\\' "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.displayName')) LIKE :searchPattern ESCAPE '\\\\' "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.description')) LIKE :searchPattern ESCAPE '\\\\')",
+            tbl, column, column);
+      }
+      return String.format(
+          "(%sname ILIKE :searchPattern ESCAPE '\\\\' "
+              + "OR %s->>'displayName' ILIKE :searchPattern ESCAPE '\\\\' "
+              + "OR %s->>'description' ILIKE :searchPattern ESCAPE '\\\\')",
+          tbl, column, column);
+    }
+
+    private String componentIdsCondition(String tableName) {
+      List<String> componentIds = listParams.get("componentIds");
+      String column = jsonColumn(tableName);
+      List<String> subConditions = new ArrayList<>();
+      for (int i = 0; i < componentIds.size(); i++) {
+        String paramName = "componentId" + i;
+        if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+          subConditions.add(
+              String.format(
+                  "JSON_SEARCH(%s, 'one', :%s, NULL, '$.contexts[*].componentId') IS NOT NULL",
+                  column, paramName));
+        } else {
+          subConditions.add(
+              String.format(
+                  "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
+                      + " WHERE ctx->>'componentId' = :%s)",
+                  column, paramName));
         }
       }
+      return "(" + String.join(" OR ", subConditions) + ")";
+    }
 
-      @Override
-      public String getCondition(String tableName) {
+    @Override
+    public String getCategoryCondition(String tableName) {
+      return "";
+    }
+
+    @Override
+    public String getCondition(String tableName) {
       String baseCondition = super.getCondition(tableName);
       String placementCondition = buildPlacementCondition(tableName);
       if (placementCondition.isEmpty()) {
@@ -261,137 +299,122 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
       return baseCondition + " AND " + placementCondition;
     }
 
-      private String buildPlacementCondition(String tableName) {
-        List<String> conditions = new ArrayList<>();
-        if (getQueryParam("pageIds") != null) {
-          conditions.add(pageIdsCondition(tableName));
-        }
-        if (getQueryParam("componentId") != null) {
-          conditions.add(componentCondition(tableName));
-        }
-        if (getQueryParam("categories") != null) {
-          conditions.add(categoriesCondition(tableName));
-        }
-        if (getQueryParam("types") != null) {
-          conditions.add(typesCondition(tableName));
-        }
-        if (getQueryParam("difficulty") != null) {
-          conditions.add(difficultyCondition(tableName));
-        }
-        if (getQueryParam("statuses") != null) {
-          conditions.add(statusesCondition(tableName));
-        }
-        return conditions.isEmpty() ? "" : addCondition(conditions);
+    private String buildPlacementCondition(String tableName) {
+      List<String> conditions = new ArrayList<>();
+      if (getQueryParam("q") != null) {
+        conditions.add(searchCondition(tableName));
       }
+      if (listParams.containsKey("pageIds")) {
+        conditions.add(pageIdsCondition(tableName));
+      }
+      if (listParams.containsKey("componentIds")) {
+        conditions.add(componentIdsCondition(tableName));
+      }
+      if (listParams.containsKey("categories")) {
+        conditions.add(categoriesCondition(tableName));
+      }
+      if (listParams.containsKey("types")) {
+        conditions.add(typesCondition(tableName));
+      }
+      if (getQueryParam("difficulty") != null) {
+        conditions.add(difficultyCondition(tableName));
+      }
+      if (listParams.containsKey("statuses")) {
+        conditions.add(statusesCondition(tableName));
+      }
+      return conditions.isEmpty() ? "" : addCondition(conditions);
+    }
 
     private String jsonColumn(String tableName) {
       return tableName == null ? "json" : tableName + ".json";
     }
 
-    private String componentCondition(String tableName) {
+    private String difficultyCondition(String tableName) {
       String column = jsonColumn(tableName);
       if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
         return String.format(
-            "JSON_SEARCH(%s, 'one', :componentId, NULL, '$.contexts[*].componentId') IS NOT NULL",
-            column);
+            "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.difficulty')) = :difficulty", column);
       }
-      return String.format(
-          "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
-              + " WHERE ctx->>'componentId' = :componentId)",
-          column);
+      return String.format("%s->>'difficulty' = :difficulty", column);
     }
 
-      private String difficultyCondition(String tableName) {
-        String column = jsonColumn(tableName);
+    private String pageIdsCondition(String tableName) {
+      List<String> pageIds = listParams.get("pageIds");
+      String column = jsonColumn(tableName);
+      List<String> subConditions = new ArrayList<>();
+      for (int i = 0; i < pageIds.size(); i++) {
+        String paramName = "pageId" + i;
         if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-          return String.format(
-              "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.difficulty')) = :difficulty", column);
+          subConditions.add(
+              String.format(
+                  "JSON_SEARCH(%s, 'one', :%s, NULL, '$.contexts[*].pageId') IS NOT NULL",
+                  column, paramName));
+        } else {
+          subConditions.add(
+              String.format(
+                  "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
+                      + " WHERE ctx->>'pageId' = :%s)",
+                  column, paramName));
         }
-        return String.format("%s->>'difficulty' = :difficulty", column);
       }
-
-      @SuppressWarnings("unchecked")
-      private String pageIdsCondition(String tableName) {
-        List<String> pageIds = (List<String>) getQueryParam("pageIds");
-        String column = jsonColumn(tableName);
-        List<String> subConditions = new ArrayList<>();
-        for (int i = 0; i < pageIds.size(); i++) {
-          String paramName = "pageId" + i;
-          if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-            subConditions.add(
-                String.format(
-                    "JSON_SEARCH(%s, 'one', :%s, NULL, '$.contexts[*].pageId') IS NOT NULL",
-                    column, paramName));
-          } else {
-            subConditions.add(
-                String.format(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements(COALESCE(%s->'contexts', '[]'::jsonb)) ctx"
-                        + " WHERE ctx->>'pageId' = :%s)",
-                    column, paramName));
-          }
-        }
-        return "(" + String.join(" OR ", subConditions) + ")";
-      }
-
-      @SuppressWarnings("unchecked")
-      private String categoriesCondition(String tableName) {
-        List<String> categories = (List<String>) getQueryParam("categories");
-        String column = jsonColumn(tableName);
-        List<String> subConditions = new ArrayList<>();
-        for (int i = 0; i < categories.size(); i++) {
-          String paramName = "category" + i;
-          if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-            subConditions.add(
-                String.format(
-                    "JSON_SEARCH(%s, 'one', :%s, NULL, '$.categories') IS NOT NULL",
-                    column, paramName));
-          } else {
-            subConditions.add(
-                String.format(
-                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE(%s->'categories', '[]'::jsonb)) cat"
-                        + " WHERE cat = :%s)",
-                    column, paramName));
-          }
-        }
-        return "(" + String.join(" OR ", subConditions) + ")";
-      }
-
-      @SuppressWarnings("unchecked")
-      private String typesCondition(String tableName) {
-        List<String> types = (List<String>) getQueryParam("types");
-        String column = jsonColumn(tableName);
-        List<String> subConditions = new ArrayList<>();
-        for (int i = 0; i < types.size(); i++) {
-          String paramName = "type" + i;
-          if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-            subConditions.add(
-                String.format(
-                    "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.resourceType')) = :%s", column, paramName));
-          } else {
-            subConditions.add(String.format("%s->>'resourceType' = :%s", column, paramName));
-          }
-        }
-        return "(" + String.join(" OR ", subConditions) + ")";
-      }
-
-      @SuppressWarnings("unchecked")
-      private String statusesCondition(String tableName) {
-        List<String> statuses = (List<String>) getQueryParam("statuses");
-        String column = jsonColumn(tableName);
-        List<String> subConditions = new ArrayList<>();
-        for (int i = 0; i < statuses.size(); i++) {
-          String paramName = "status" + i;
-          if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-            subConditions.add(
-                String.format(
-                    "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.status')) = :%s", column, paramName));
-          } else {
-            subConditions.add(String.format("%s->>'status' = :%s", column, paramName));
-          }
-        }
-        return "(" + String.join(" OR ", subConditions) + ")";
-      }
+      return "(" + String.join(" OR ", subConditions) + ")";
     }
+
+    private String categoriesCondition(String tableName) {
+      List<String> categories = listParams.get("categories");
+      String column = jsonColumn(tableName);
+      List<String> subConditions = new ArrayList<>();
+      for (int i = 0; i < categories.size(); i++) {
+        String paramName = "category" + i;
+        if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+          subConditions.add(
+              String.format(
+                  "JSON_SEARCH(%s, 'one', :%s, NULL, '$.categories') IS NOT NULL",
+                  column, paramName));
+        } else {
+          subConditions.add(
+              String.format(
+                  "EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE(%s->'categories', '[]'::jsonb)) cat"
+                      + " WHERE cat = :%s)",
+                  column, paramName));
+        }
+      }
+      return "(" + String.join(" OR ", subConditions) + ")";
+    }
+
+    private String typesCondition(String tableName) {
+      List<String> types = listParams.get("types");
+      String column = jsonColumn(tableName);
+      List<String> subConditions = new ArrayList<>();
+      for (int i = 0; i < types.size(); i++) {
+        String paramName = "type" + i;
+        if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+          subConditions.add(
+              String.format(
+                  "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.resourceType')) = :%s", column, paramName));
+        } else {
+          subConditions.add(String.format("%s->>'resourceType' = :%s", column, paramName));
+        }
+      }
+      return "(" + String.join(" OR ", subConditions) + ")";
+    }
+
+    private String statusesCondition(String tableName) {
+      List<String> statuses = listParams.get("statuses");
+      String column = jsonColumn(tableName);
+      List<String> subConditions = new ArrayList<>();
+      for (int i = 0; i < statuses.size(); i++) {
+        String paramName = "status" + i;
+        if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+          subConditions.add(
+              String.format("JSON_UNQUOTE(JSON_EXTRACT(%s, '$.status')) = :%s", column, paramName));
+        } else {
+          subConditions.add(String.format("%s->>'status' = :%s", column, paramName));
+        }
+      }
+      return "(" + String.join(" OR ", subConditions) + ")";
+    }
+  }
 
   class LearningResourceUpdater extends EntityUpdater {
     LearningResourceUpdater(

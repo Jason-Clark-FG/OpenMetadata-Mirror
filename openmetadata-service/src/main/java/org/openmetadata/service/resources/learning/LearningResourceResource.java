@@ -43,8 +43,11 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.data.RestoreEntity;
 import org.openmetadata.schema.api.learning.CreateLearningResource;
@@ -94,6 +97,24 @@ public class LearningResourceResource
     /* Required for serde */
   }
 
+  /**
+   * Parses multi-value query params supporting both formats: comma-separated (type=Article,Video)
+   * and repeated params (type=Article&type=Video). Trims whitespace and deduplicates.
+   */
+  private static List<String> parseMultiValueParam(List<String> params) {
+    if (params == null || params.isEmpty()) {
+      return List.of();
+    }
+    return params.stream()
+        .filter(Objects::nonNull)
+        .filter(s -> !s.isBlank())
+        .flatMap(s -> Arrays.stream(s.split(",")))
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .distinct()
+        .collect(Collectors.toList());
+  }
+
   @GET
   @Operation(
       operationId = "listLearningResources",
@@ -128,69 +149,80 @@ public class LearningResourceResource
       @Parameter(description = "Returns list of learning resources after this cursor")
           @QueryParam("after")
           String after,
-        @Parameter(
-                description = "Include all, deleted, or non-deleted entities",
-                schema = @Schema(implementation = Include.class))
-            @QueryParam("include")
-            @DefaultValue("non-deleted")
-            Include include,
-        @Parameter(
-                description = "Search query for text search across name, displayName, and description",
-                schema = @Schema(type = "string"))
-            @QueryParam("q")
-            String query,
-          @Parameter(
-                  description = "Filter resources to specific page identifiers (supports multiple values)",
-                  schema = @Schema(type = "array"))
-              @QueryParam("pageId")
-              List<String> pageIds,
-        @Parameter(
-                description = "Filter by component identifier within a page",
-                schema = @Schema(type = "string"))
-            @QueryParam("componentId")
-            String componentId,
-        @Parameter(
-                description = "Filter by primary categories (supports multiple values)",
-                schema = @Schema(type = "array", example = "DataGovernance"))
-            @QueryParam("category")
-            List<String> categories,
-        @Parameter(
-                description = "Filter by resource type (supports multiple values)",
-                schema = @Schema(type = "array", example = "Video"))
-            @QueryParam("type")
-            List<String> types,
-        @Parameter(
-                description = "Filter by difficulty tier",
-                schema = @Schema(type = "string", example = "Intro"))
-            @QueryParam("difficulty")
-            String difficulty,
-        @Parameter(
-                description = "Filter by lifecycle statuses (supports multiple values)",
-                schema = @Schema(type = "array", example = "Active"))
-            @QueryParam("status")
-            List<String> statuses) {
+      @Parameter(
+              description = "Include all, deleted, or non-deleted entities",
+              schema = @Schema(implementation = Include.class))
+          @QueryParam("include")
+          @DefaultValue("non-deleted")
+          Include include,
+      @Parameter(
+              description =
+                  "Search query for text search across name, displayName, and description",
+              schema = @Schema(type = "string"))
+          @QueryParam("q")
+          String query,
+      @Parameter(
+              description =
+                  "Filter by page identifiers. Comma-separated or repeated params (e.g. pageId=glossary,domains or pageId=glossary&pageId=domains)",
+              schema = @Schema(type = "string", example = "glossary,domains"))
+          @QueryParam("pageId")
+          List<String> pageIds,
+      @Parameter(
+              description =
+                  "Filter by component identifiers. Comma-separated or repeated params (e.g. componentId=glossary-list,table-list)",
+              schema = @Schema(type = "string", example = "glossary-list"))
+          @QueryParam("componentId")
+          List<String> componentIds,
+      @Parameter(
+              description =
+                  "Filter by primary categories. Comma-separated or repeated params (e.g. category=DataGovernance,Discovery)",
+              schema = @Schema(type = "string", example = "DataGovernance"))
+          @QueryParam("category")
+          List<String> categories,
+      @Parameter(
+              description =
+                  "Filter by resource type. Comma-separated or repeated params (e.g. type=Article,Video or type=Article&type=Video)",
+              schema = @Schema(type = "string", example = "Article,Video"))
+          @QueryParam("type")
+          List<String> types,
+      @Parameter(
+              description = "Filter by difficulty tier",
+              schema = @Schema(type = "string", example = "Intro"))
+          @QueryParam("difficulty")
+          String difficulty,
+      @Parameter(
+              description =
+                  "Filter by lifecycle statuses. Comma-separated or repeated params (e.g. status=Active,Draft)",
+              schema = @Schema(type = "string", example = "Active"))
+          @QueryParam("status")
+          List<String> statuses) {
     LearningResourceRepository.LearningResourceFilter filter =
         new LearningResourceRepository.LearningResourceFilter(include);
     if (query != null && !query.isEmpty()) {
       filter.addQueryParam("q", query);
     }
-    if (pageIds != null && !pageIds.isEmpty()) {
-      filter.addQueryParam("pageIds", pageIds);
+    List<String> pageIdList = parseMultiValueParam(pageIds);
+    if (!pageIdList.isEmpty()) {
+      filter.addQueryParam("pageIds", pageIdList);
     }
-    if (componentId != null) {
-      filter.addQueryParam("componentId", componentId);
+    List<String> componentIdList = parseMultiValueParam(componentIds);
+    if (!componentIdList.isEmpty()) {
+      filter.addQueryParam("componentIds", componentIdList);
     }
-    if (categories != null && !categories.isEmpty()) {
-      filter.addQueryParam("categories", categories);
+    List<String> categoryList = parseMultiValueParam(categories);
+    if (!categoryList.isEmpty()) {
+      filter.addQueryParam("categories", categoryList);
     }
-    if (types != null && !types.isEmpty()) {
-      filter.addQueryParam("types", types);
+    List<String> typeList = parseMultiValueParam(types);
+    if (!typeList.isEmpty()) {
+      filter.addQueryParam("types", typeList);
     }
     if (difficulty != null) {
       filter.addQueryParam("difficulty", difficulty);
     }
-    if (statuses != null && !statuses.isEmpty()) {
-      filter.addQueryParam("statuses", statuses);
+    List<String> statusList = parseMultiValueParam(statuses);
+    if (!statusList.isEmpty()) {
+      filter.addQueryParam("statuses", statusList);
     }
 
     return addHref(
