@@ -21,7 +21,7 @@ export interface NodeChildrenProps {
   node: SearchedDataProps['data'][number]['_source'];
   isConnectable: boolean;
   isChildrenListExpanded: boolean;
-  isOnlyShowColumnsWithLineageFilterActive?: boolean;
+  showColumnsWithLineageOnly: boolean;
 }
 
 export type EntityChildrenItem =

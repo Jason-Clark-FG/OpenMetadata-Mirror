@@ -161,6 +161,8 @@ const CustomNodeV1 = (props: NodeProps) => {
     isColumnLevelLineage,
   } = useLineageStore();
 
+  const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
+    useState(false);
   const [columnsExpanded, setColumnsExpanded] =
     useState<boolean>(isColumnLevelLineage);
 
@@ -220,6 +222,10 @@ const CustomNodeV1 = (props: NodeProps) => {
     [onNodeCollapse, props]
   );
 
+  const toggleShowColumnsWithLineageOnly = useCallback(() => {
+    setShowColumnsWithLineageOnly((prev) => !prev);
+  }, []);
+
   const nodeLabel = useMemo(() => {
     if (isNewNode) {
       return label;
@@ -230,7 +236,9 @@ const CustomNodeV1 = (props: NodeProps) => {
         <LineageNodeLabelV1
           isChildrenListExpanded={columnsExpanded}
           node={node}
+          showColumnsWithLineageOnly={showColumnsWithLineageOnly}
           toggleColumnsList={() => setColumnsExpanded((prev) => !prev)}
+          toggleShowColumnsWithLineageOnly={toggleShowColumnsWithLineageOnly}
         />
         {isSelected && isEditMode && !isRootNode && (
           <LineageNodeRemoveButton onRemove={() => removeNodeHandler(props)} />
@@ -238,11 +246,12 @@ const CustomNodeV1 = (props: NodeProps) => {
       </>
     );
   }, [
+    columnsExpanded,
     node.id,
+    showColumnsWithLineageOnly,
     isNewNode,
     label,
     isSelected,
-    isEditMode,
     isRootNode,
     removeNodeHandler,
     props,
@@ -308,6 +317,7 @@ const CustomNodeV1 = (props: NodeProps) => {
           isChildrenListExpanded={columnsExpanded}
           isConnectable={isConnectable}
           node={node}
+          showColumnsWithLineageOnly={showColumnsWithLineageOnly}
         />
       </div>
     </div>

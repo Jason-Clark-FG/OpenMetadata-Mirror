@@ -25,7 +25,6 @@ import { FOREIGN_OBJECT_SIZE } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { StatusType } from '../../../generated/entity/data/pipeline';
-import { LineageLayer } from '../../../generated/settings/settings';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import {
   getColumnSourceTargetHandles,
@@ -93,10 +92,9 @@ export const CustomEdge = ({
     dataQualityLineage,
     dqHighlightedEdges,
     selectedColumn,
-    allColumnsInCurrentPagesSet,
   } = useLineageProvider();
 
-  const { tracedNodes, tracedColumns, isEditMode, activeLayer } =
+  const { tracedNodes, tracedColumns, isEditMode, isDQEnabled } =
     useLineageStore();
 
   const theme = useTheme();
@@ -126,15 +124,12 @@ export const CustomEdge = ({
 
   // Compute if should show DQ tracing
   const showDqTracing = useMemo(() => {
-    if (
-      !activeLayer.includes(LineageLayer.DataObservability) ||
-      !dataQualityLineage?.nodes
-    ) {
+    if (!isDQEnabled || !dataQualityLineage?.nodes) {
       return false;
     }
 
     return dqHighlightedEdges?.has(id);
-  }, [activeLayer, dataQualityLineage?.nodes, id, dqHighlightedEdges]);
+  }, [isDQEnabled, dataQualityLineage?.nodes, id, dqHighlightedEdges]);
 
   // Determine if column is highlighted based on traced columns
   const isColumnHighlighted = useMemo(() => {
@@ -153,17 +148,17 @@ export const CustomEdge = ({
     );
   }, [isColumnLineage, tracedColumns, sourceHandle, targetHandle]);
 
-  const areBothColumnHandlesPresentInCurrentPage = useMemo(() => {
-    const decodedHandles = getColumnSourceTargetHandles({
-      sourceHandle,
-      targetHandle,
-    });
+  //   const areBothColumnHandlesPresentInCurrentPage = useMemo(() => {
+  //     const decodedHandles = getColumnSourceTargetHandles({
+  //       sourceHandle,
+  //       targetHandle,
+  //     });
 
-    return (
-      allColumnsInCurrentPagesSet.has(decodedHandles.sourceHandle ?? '') &&
-      allColumnsInCurrentPagesSet.has(decodedHandles.targetHandle ?? '')
-    );
-  }, [allColumnsInCurrentPagesSet, sourceHandle, targetHandle]);
+  //     return (
+  //       allColumnsInCurrentPagesSet.has(decodedHandles.sourceHandle ?? '') &&
+  //       allColumnsInCurrentPagesSet.has(decodedHandles.targetHandle ?? '')
+  //     );
+  //   }, [allColumnsInCurrentPagesSet, sourceHandle, targetHandle]);
 
   // Calculate edge style with memoization
   const updatedStyle = useMemo(() => {
@@ -183,7 +178,7 @@ export const CustomEdge = ({
 
     // For columns edges
     if (isColumnLineage) {
-      display = 'none';
+      display = 'block';
       const noTracing = tracedNodes.size === 0 && tracedColumns.size === 0;
 
       if (isColumnHighlighted) {
@@ -192,7 +187,7 @@ export const CustomEdge = ({
           ? theme.palette.allShades.indigo[600]
           : theme.palette.primary.main;
         opacity = 1;
-      } else if (noTracing && areBothColumnHandlesPresentInCurrentPage) {
+      } else if (noTracing) {
         display = 'block';
       }
     }
@@ -219,7 +214,6 @@ export const CustomEdge = ({
     theme.palette.allShades.indigo,
     theme.palette.allShades.error,
     isColumnHighlighted,
-    areBothColumnHandlesPresentInCurrentPage,
     selectedColumn,
   ]);
 
@@ -250,12 +244,9 @@ export const CustomEdge = ({
 
   // Calculate pipeline status for styling
   const currentPipelineStatus = useMemo(() => {
-    const isPipelineActiveNow = activeLayer.includes(
-      LineageLayer.DataObservability
-    );
     const pipelineData = pipeline?.pipelineStatus;
 
-    if (pipelineData && isPipelineActiveNow) {
+    if (pipelineData && isDQEnabled) {
       switch (pipelineData.executionStatus) {
         case StatusType.Failed:
           return 'red';
@@ -270,7 +261,7 @@ export const CustomEdge = ({
     }
 
     return '';
-  }, [pipeline?.pipelineStatus, activeLayer]);
+  }, [pipeline?.pipelineStatus, isDQEnabled]);
 
   // Calculate blinking class for pipeline nodes
   const blinkingClass = useMemo(() => {

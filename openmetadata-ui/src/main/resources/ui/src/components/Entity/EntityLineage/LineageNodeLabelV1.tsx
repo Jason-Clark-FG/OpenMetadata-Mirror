@@ -41,6 +41,8 @@ interface LineageNodeLabelProps {
   node: SourceType;
   isChildrenListExpanded?: boolean;
   toggleColumnsList?: () => void;
+  showColumnsWithLineageOnly?: boolean;
+  toggleShowColumnsWithLineageOnly?: () => void;
 }
 
 interface LineageNodeLabelPropsExtended
@@ -204,13 +206,11 @@ const EntityFooter = React.memo(
     isChildrenListExpanded,
     node,
     toggleColumnsList,
+    showColumnsWithLineageOnly,
+    toggleShowColumnsWithLineageOnly,
   }: LineageNodeLabelPropsExtended) => {
     const { t } = useTranslation();
-    const {
-      isEditMode,
-      showColumnsWithLineageOnly,
-      toggleShowColumnsWithLineageOnly,
-    } = useLineageStore();
+    const { isEditMode } = useLineageStore();
     const { childrenHeading, childrenCount } = useMemo(() => {
       const { children, childrenHeading } = getEntityChildrenAndLabel(node);
 
@@ -304,6 +304,8 @@ const LineageNodeLabelV1 = ({
   node,
   isChildrenListExpanded,
   toggleColumnsList,
+  showColumnsWithLineageOnly,
+  toggleShowColumnsWithLineageOnly,
 }: LineageNodeLabelProps) => {
   return (
     <div className="custom-node-label-container m-0">
@@ -311,7 +313,9 @@ const LineageNodeLabelV1 = ({
       <EntityFooter
         isChildrenListExpanded={isChildrenListExpanded}
         node={node}
+        showColumnsWithLineageOnly={showColumnsWithLineageOnly}
         toggleColumnsList={toggleColumnsList}
+        toggleShowColumnsWithLineageOnly={toggleShowColumnsWithLineageOnly}
       />
     </div>
   );

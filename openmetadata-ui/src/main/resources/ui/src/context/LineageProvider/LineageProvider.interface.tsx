@@ -96,7 +96,4 @@ export interface LineageContextType {
   redraw: () => Promise<void>;
   updateEntityFqn: (entityFqn: string) => void;
   dqHighlightedEdges?: Set<string>;
-  columnsInCurrentPages: Record<string, string[]>;
-  setColumnsInCurrentPages: Dispatch<SetStateAction<Record<string, string[]>>>;
-  allColumnsInCurrentPagesSet: Set<string>;
 }

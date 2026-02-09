@@ -68,10 +68,7 @@ import {
   ExportTypes,
   LINEAGE_EXPORT_SELECTOR,
 } from '../../constants/Export.constants';
-import {
-  ELEMENT_DELETE_STATE,
-  NODE_HEIGHT,
-} from '../../constants/Lineage.constants';
+import { ELEMENT_DELETE_STATE } from '../../constants/Lineage.constants';
 import { mockDatasetData } from '../../constants/mockTourData.constants';
 import { EntityLineageNodeType, EntityType } from '../../enums/entity.enum';
 import { AddLineage } from '../../generated/api/lineage/addLineage';
@@ -114,7 +111,6 @@ import {
   getConnectedNodesEdges,
   getEdgeDataFromEdge,
   getELKLayoutedElements,
-  getEntityChildrenAndLabel,
   getEntityTypeFromPlatformView,
   getLineageEdge,
   getLineageEdgeForAPI,
@@ -456,119 +452,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       return columnEdgeMap;
     },
     [entityLineage]
-  );
-
-  const applyColumnLayerToggle = useCallback(
-    async (turningOn: boolean) => {
-      if (!reactFlowInstance?.viewportInitialized || !entityLineage) {
-        return;
-      }
-
-      if (turningOn) {
-        const newColumnsHavingLineage = new Set<string>();
-
-        for (const edge of entityLineage.edges ?? []) {
-          if (!edge.columns?.length) {
-            continue;
-          }
-          for (const e of edge.columns) {
-            if (e.toColumn && e.fromColumns?.length) {
-              newColumnsHavingLineage.add(e.toColumn);
-              e.fromColumns.forEach((col) => newColumnsHavingLineage.add(col));
-            }
-          }
-        }
-
-        const columnEdgeMap = createColumnEdges(debouncedColumnsSet);
-
-        const nodesToUpdate: Node[] = [];
-        for (const node of nodes) {
-          if (!node.data?.node?.columns?.length) {
-            nodesToUpdate.push(node);
-
-            continue;
-          }
-
-          const { childrenHeight } = getEntityChildrenAndLabel(
-            node.data.node as SourceType,
-            isEditMode || expandAllColumns,
-            newColumnsHavingLineage
-          );
-
-          nodesToUpdate.push({
-            ...node,
-            height: childrenHeight + 220,
-          });
-        }
-
-        const currentEdgesMap = new Map(edges.map((e) => [e.id, e]));
-        for (const [id, edge] of columnEdgeMap) {
-          currentEdgesMap.set(id, edge);
-        }
-
-        setColumnsHavingLineage(newColumnsHavingLineage);
-
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // eslint-disable-next-line no-console
-        console.log('[applyColumnLayerToggle] Starting ELK layout...');
-        const startTime = Date.now();
-
-        const positioned = await positionNodesUsingElk(
-          nodesToUpdate,
-          Array.from(currentEdgesMap.values()),
-          true,
-          isEditMode || expandAllColumns,
-          newColumnsHavingLineage
-        );
-
-        // eslint-disable-next-line no-console
-        console.log('[applyColumnLayerToggle] ELK layout complete:', {
-          duration: `${Date.now() - startTime}ms`,
-          positionedNodes: positioned.nodes.length,
-          positionedEdges: positioned.edges.length,
-        });
-
-        setNodes(positioned.nodes);
-        setEdges(positioned.edges);
-
-        // eslint-disable-next-line no-console
-        console.log(
-          '[applyColumnLayerToggle] Column lineage enabled successfully'
-        );
-      } else {
-        const updatedNodes = nodes.map((node) => ({
-          ...node,
-          height: NODE_HEIGHT,
-        }));
-
-        const tableEdgesOnly = edges.filter(
-          (edge) => !edge.data?.isColumnLineage
-        );
-
-        const positioned = await positionNodesUsingElk(
-          updatedNodes,
-          tableEdgesOnly,
-          false,
-          isEditMode || expandAllColumns,
-          new Set<string>()
-        );
-
-        setNodes(positioned.nodes);
-        setEdges(positioned.edges);
-        setColumnsHavingLineage(new Set());
-      }
-    },
-    [
-      reactFlowInstance,
-      entityLineage,
-      nodes,
-      edges,
-      isEditMode,
-      expandAllColumns,
-      debouncedColumnsSet,
-      createColumnEdges,
-    ]
   );
 
   useEffect(() => {
@@ -1924,12 +1807,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
   useEffect(() => {
     if (isColumnLevelLineage) {
-      applyColumnLayerToggle(true);
-
       // Delay repositioning layout to allow for column layer toggle animation
-      setTimeout(() => {
-        repositionLayout();
-      }, 100);
+      repositionLayout();
     }
   }, [isColumnLevelLineage]);
 
@@ -1989,9 +1868,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       redraw,
       queryFilter,
       dqHighlightedEdges,
-      columnsInCurrentPages,
-      setColumnsInCurrentPages,
-      allColumnsInCurrentPagesSet,
     };
   }, [
     dataQualityLineage,
@@ -2032,9 +1908,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     redraw,
     onPlatformViewChange,
     dqHighlightedEdges,
-    columnsInCurrentPages,
-    setColumnsInCurrentPages,
-    allColumnsInCurrentPagesSet,
   ]);
 
   useEffect(() => {

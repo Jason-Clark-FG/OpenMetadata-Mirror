@@ -19,7 +19,7 @@ import classNames from 'classnames';
 import { isEmpty, isUndefined } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Handle, Position, useUpdateNodeInternals } from 'reactflow';
+import { useUpdateNodeInternals } from 'reactflow';
 import {
   BORDER_COLOR,
   LINEAGE_CHILD_ITEMS_PER_PAGE,
@@ -37,15 +37,10 @@ import {
 } from '../../../../generated/tests/testCase';
 import { useLineageStore } from '../../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../../rest/testAPI';
+import { getEntityChildrenAndLabel } from '../../../../utils/EntityLineageUtils';
 import {
-  encodeLineageHandles,
-  getEntityChildrenAndLabel,
-} from '../../../../utils/EntityLineageUtils';
-import {
-  areStringArraysEqual,
   calculateTotalPages,
   getCurrentPageItems,
-  getFlattenedPageItems,
 } from '../../../../utils/EntityLineageUtils/ColumnPaginationUtils';
 import EntityLink from '../../../../utils/EntityLink';
 import { getEntityName } from '../../../../utils/EntityUtils';
@@ -58,10 +53,6 @@ import {
 
 interface CustomPaginatedListProps {
   columns: EntityChildren;
-  columnsHavingLineage: Set<string>;
-  entityChildren: EntityChildren;
-  isConnectable: boolean;
-  isOnlyShowColumnsWithLineageFilterActive?: boolean;
   nodeId?: string;
   page: number;
   renderColumn: (column: Column) => React.ReactNode;
@@ -71,16 +62,11 @@ interface CustomPaginatedListProps {
 const CustomPaginatedList = React.memo(
   ({
     columns,
-    columnsHavingLineage,
-    entityChildren,
-    isConnectable,
-    isOnlyShowColumnsWithLineageFilterActive,
     nodeId,
     page,
     renderColumn,
     setPage,
   }: CustomPaginatedListProps) => {
-    const { setColumnsInCurrentPages } = useLineageProvider();
     const updateNodeInternals = useUpdateNodeInternals();
     const { t } = useTranslation();
 
@@ -108,73 +94,6 @@ const CustomPaginatedList = React.memo(
         }),
       [currentPageColumns, renderColumn]
     );
-
-    const offPageSentinels = useMemo(() => {
-      const sentinels: React.ReactNode[] = [];
-      const startIdx = (page - 1) * LINEAGE_CHILD_ITEMS_PER_PAGE;
-      const endIdx = startIdx + LINEAGE_CHILD_ITEMS_PER_PAGE;
-
-      columns.forEach((col, i) => {
-        const column = col as Column;
-        const fqn = column.fullyQualifiedName ?? '';
-        const isOffPage = i < startIdx || i >= endIdx;
-        const hasLineage = columnsHavingLineage.has(fqn);
-
-        if (isOffPage && hasLineage) {
-          sentinels.push(
-            <div
-              className="custom-node-column-container custom-node-header-column-tracing"
-              key={fqn}
-              style={{ height: 0, overflow: 'hidden', visibility: 'hidden' }}>
-              <Handle
-                id={encodeLineageHandles(fqn)}
-                isConnectable={isConnectable}
-                position={Position.Left}
-                type="target"
-              />
-              <Handle
-                id={encodeLineageHandles(fqn)}
-                isConnectable={isConnectable}
-                position={Position.Right}
-                type="source"
-              />
-            </div>
-          );
-        }
-      });
-
-      return sentinels;
-    }, [columns, page, columnsHavingLineage, isConnectable]);
-
-    const currentPageFQNs = useMemo(() => {
-      const allColumns = Object.values(entityChildren ?? {});
-
-      return getFlattenedPageItems(
-        allColumns,
-        page,
-        LINEAGE_CHILD_ITEMS_PER_PAGE
-      );
-    }, [entityChildren, page]);
-
-    useEffect(() => {
-      if (!nodeId) {
-        return;
-      }
-
-      setColumnsInCurrentPages((prev) => {
-        if (areStringArraysEqual(prev[nodeId], currentPageFQNs)) {
-          return prev;
-        }
-
-        return { ...prev, [nodeId]: currentPageFQNs };
-      });
-    }, [
-      nodeId,
-      currentPageFQNs,
-      page,
-      isOnlyShowColumnsWithLineageFilterActive,
-      setColumnsInCurrentPages,
-    ]);
 
     const handlePageChange = useCallback(
       (newPage: number) => {
@@ -205,10 +124,6 @@ const CustomPaginatedList = React.memo(
       <Stack spacing={2}>
         <Stack className="current-page-items" spacing={1}>
           {renderedItems}
-        </Stack>
-
-        <Stack className="off-page-sentinels" spacing={0}>
-          {offPageSentinels}
         </Stack>
 
         {totalPages > 1 && (
@@ -248,16 +163,11 @@ const NodeChildren = ({
   node,
   isConnectable,
   isChildrenListExpanded,
+  showColumnsWithLineageOnly,
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
   const { Panel } = Collapse;
-  const {
-    onColumnClick,
-    onColumnMouseEnter,
-    onColumnMouseLeave,
-    selectedColumn,
-    isCreatingEdge,
-  } = useLineageProvider();
+  const { selectedColumn, isCreatingEdge } = useLineageProvider();
 
   const {
     isEditMode,
@@ -266,9 +176,7 @@ const NodeChildren = ({
     expandAllColumns,
     isColumnLevelLineage,
     isDQEnabled,
-    showColumnsWithLineageOnly,
   } = useLineageStore();
-
   const updateNodeInternals = useUpdateNodeInternals();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
@@ -424,13 +332,7 @@ const NodeChildren = ({
     if (node.id) {
       updateNodeInternals?.(node.id);
     }
-  }, [
-    selectedColumn,
-    updateNodeInternals,
-    tracedColumns,
-    node.id,
-    showColumnsWithLineageOnly,
-  ]);
+  }, [updateNodeInternals, tracedColumns, node.id, showColumnsWithLineageOnly]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
     setIsLoading(true);
@@ -528,11 +430,7 @@ const NodeChildren = ({
     [
       tracedColumns,
       getColumnSummary,
-      selectedColumn,
       isConnectable,
-      onColumnClick,
-      onColumnMouseEnter,
-      onColumnMouseLeave,
       showDataObservabilitySummary,
       isLoading,
       Panel,
@@ -569,11 +467,7 @@ const NodeChildren = ({
       renderRecord,
       tracedColumns,
       isColumnVisible,
-      selectedColumn,
       isConnectable,
-      onColumnClick,
-      onColumnMouseEnter,
-      onColumnMouseLeave,
       showDataObservabilitySummary,
       isLoading,
     ]
@@ -610,9 +504,6 @@ const NodeChildren = ({
                 <div className="rounded-4 overflow-hidden">
                   <CustomPaginatedList
                     columns={filteredColumns}
-                    columnsHavingLineage={columnsHavingLineage}
-                    entityChildren={entityChildren}
-                    isConnectable={isConnectable}
                     nodeId={node.id}
                     page={page}
                     renderColumn={renderColumnsData}

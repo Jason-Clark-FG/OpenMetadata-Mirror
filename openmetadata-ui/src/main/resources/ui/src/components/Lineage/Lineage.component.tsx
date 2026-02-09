@@ -19,6 +19,7 @@ import {
   MIN_ZOOM_VALUE,
 } from '../../constants/Lineage.constants';
 import { useLineageProvider } from '../../context/LineageProvider/LineageProvider';
+import { useLineageStore } from '../../hooks/useLineageStore';
 import {
   customEdges,
   dragHandle,
@@ -46,7 +47,6 @@ const Lineage = ({
   const {
     nodes,
     edges,
-    isEditMode,
     init,
     onNodeClick,
     onEdgeClick,
@@ -60,6 +60,7 @@ const Lineage = ({
     onInitReactFlow,
     updateEntityData,
   } = useLineageProvider();
+  const { isEditMode } = useLineageStore();
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
