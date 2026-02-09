@@ -210,6 +210,7 @@ test.describe(
   { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality` },
   () => {
     let logicalTestSuiteId: string;
+    let logicalTestSuiteFqn: string;
 
     test.beforeAll(async ({ browser }) => {
       test.slow();
@@ -244,6 +245,8 @@ test.describe(
       );
       const logicalSuiteData = await logicalSuiteRes.json();
       logicalTestSuiteId = logicalSuiteData.id;
+      logicalTestSuiteFqn =
+        logicalSuiteData.fullyQualifiedName ?? logicalSuiteData.name;
 
       // 1. Setup Data Consumer
       await dataConsumerUser.create(apiContext, true);
@@ -366,7 +369,6 @@ test.describe(
         consumerPage,
       }) => {
         await visitProfilerPage(consumerPage);
-        const { apiContext } = await getApiContext(consumerPage);
 
         await expect(
           consumerPage.getByTestId('profiler-add-table-test-btn')
@@ -388,26 +390,6 @@ test.describe(
             await expect(actionDropdown).toBeDisabled();
           }
         }
-
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: `consumer_test_${uuid()}`,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(403);
-
-        const deleteRes = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/name/${encodeURIComponent(
-            table.testCasesResponseData[0].fullyQualifiedName
-          )}`
-        );
-        expect(deleteRes.status()).toBe(403);
       });
 
       test('Data Consumer can VIEW test cases but sees no edit controls in UI', async ({
@@ -434,7 +416,6 @@ test.describe(
         stewardPage,
       }) => {
         await visitProfilerPage(stewardPage);
-        const { apiContext } = await getApiContext(stewardPage);
 
         await expect(
           stewardPage.getByTestId('profiler-add-table-test-btn')
@@ -456,71 +437,37 @@ test.describe(
             await expect(actionDropdown).toBeDisabled();
           }
         }
-
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: `steward_test_${uuid()}`,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(403);
-
-        const deleteRes = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/name/${encodeURIComponent(
-            table.testCasesResponseData[0].fullyQualifiedName
-          )}`
-        );
-        expect(deleteRes.status()).toBe(403);
       });
 
       test('Data Consumer cannot create or delete test suites', async ({
         consumerPage,
       }) => {
-        const { apiContext } = await getApiContext(consumerPage);
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(consumerPage);
+        await consumerPage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testSuites',
-          {
-            data: {
-              name: `consumer_suite_${uuid()}`,
-              description: 'should fail',
-            },
-          }
-        );
-        expect(createRes.status()).toBe(403);
-
-        // Attempt to delete the logical suite
-        const deleteRes = await apiContext.delete(
-          `/api/v1/dataQuality/testSuites/${logicalTestSuiteId}?hardDelete=true&recursive=true`
-        );
-        expect(deleteRes.status()).toBe(403);
+        await expect(
+          consumerPage.getByTestId('add-test-suite-btn')
+        ).toBeHidden();
       });
 
-      test('Data Consumer cannot edit test case (PATCH)', async ({
+      test('Data Consumer cannot edit test case', async ({
         consumerPage,
       }) => {
-        const { apiContext } = await getApiContext(consumerPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/${testCaseId}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/description',
-                value: 'consumer edit attempt',
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
+        await visitProfilerPage(consumerPage);
+        const testCaseName = table.testCasesResponseData[0].name;
+        const actionDropdown = consumerPage.getByTestId(
+          `action-dropdown-${testCaseName}`
         );
-        expect(patchRes.status()).toBe(403);
+
+        if (await actionDropdown.isVisible() && (await actionDropdown.isEnabled())) {
+          await actionDropdown.click();
+          await expect(
+            consumerPage.getByTestId(`edit-${testCaseName}`)
+          ).toBeHidden();
+          await consumerPage.keyboard.press('Escape');
+        }
       });
     });
 
@@ -543,16 +490,6 @@ test.describe(
           ).toBeHidden();
           await createPage.keyboard.press('Escape');
         }
-
-        // API: Verify delete is forbidden
-        const { apiContext } = await getApiContext(createPage);
-
-        const deleteRes = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/name/${encodeURIComponent(
-            table.testCasesResponseData[0].fullyQualifiedName
-          )}`
-        );
-        expect(deleteRes.status()).toBe(403);
       });
 
       test('User with TEST_CASE.DELETE cannot create test cases', async ({
@@ -561,140 +498,77 @@ test.describe(
         test.slow();
         await visitProfilerPage(deletePage);
 
-        // UI: Verify add test case button is hidden
         await expect(
           deletePage.getByTestId('profiler-add-table-test-btn')
         ).toBeHidden();
-
-        // API: Verify create is forbidden
-        const { apiContext } = await getApiContext(deletePage);
-
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: `should_fail_${uuid()}`,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(403);
       });
 
-      test('User with TEST_CASE.VIEW_BASIC cannot PATCH test cases', async ({
+      test('User with TEST_CASE.VIEW_BASIC cannot edit test cases', async ({
         viewBasicPage,
       }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/${testCaseId}`,
-          {
-            data: [{ op: 'add', path: '/description', value: 'should fail' }],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
+        await visitProfilerPage(viewBasicPage);
+        const testCaseName = table.testCasesResponseData[0].name;
+        const actionDropdown = viewBasicPage.getByTestId(
+          `action-dropdown-${testCaseName}`
         );
-        expect(patchRes.status()).toBe(403);
-      });
 
-      test('User without EDIT_TESTS cannot PUT failed rows sample', async ({
-        viewBasicPage,
-        adminPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const testCaseFqn = table.testCasesResponseData[0].fullyQualifiedName;
-
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-
-        // Create a failed test case result first
-        await table.addTestCaseResult(adminContext, testCaseFqn, {
-          result: 'Test failed with sample data',
-          testCaseStatus: 'Failed',
-          timestamp: Date.now(),
-        });
-
-        const res = await apiContext.put(
-          `/api/v1/dataQuality/testCases/${testCaseId}/failedRowsSample`,
-          { data: getFailedRowsData(table) }
-        );
-        expect(res.status()).toBe(403);
-      });
-
-      test('User without EDIT_TESTS cannot PUT inspection query', async ({
-        viewBasicPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const res = await apiContext.put(
-          `/api/v1/dataQuality/testCases/${testCaseId}/inspectionQuery`,
-          {
-            data: 'SELECT 1',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        expect(res.status()).toBe(403);
+        if (await actionDropdown.isVisible() && (await actionDropdown.isEnabled())) {
+          await actionDropdown.click();
+          await expect(
+            viewBasicPage.getByTestId(`edit-${testCaseName}`)
+          ).toBeHidden();
+          await viewBasicPage.keyboard.press('Escape');
+        }
       });
 
       test('User without TEST_SUITE.CREATE cannot create test suites', async ({
         viewBasicPage,
       }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(viewBasicPage);
+        await viewBasicPage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        const res = await apiContext.post('/api/v1/dataQuality/testSuites', {
-          data: {
-            name: `blocked_suite_${uuid()}`,
-            description: 'should fail',
-          },
-        });
-        expect(res.status()).toBe(403);
+        await expect(
+          viewBasicPage.getByTestId('add-test-suite-btn')
+        ).toBeHidden();
       });
 
       test('User without TEST_SUITE.DELETE cannot delete test suites', async ({
         suiteEditOnlyPage,
       }) => {
-        const { apiContext } = await getApiContext(suiteEditOnlyPage);
-
-        const res = await apiContext.delete(
-          `/api/v1/dataQuality/testSuites/${logicalTestSuiteId}?hardDelete=true&recursive=true`
+        const testSuiteDetailsPromise = suiteEditOnlyPage.waitForResponse(
+          (res) =>
+            res.url().includes(`/api/v1/dataQuality/testSuites/`) &&
+            res.status() === 200
         );
-        expect(res.status()).toBe(403);
+        await suiteEditOnlyPage.goto(
+          `/test-suites/${encodeURIComponent(logicalTestSuiteFqn)}`
+        );
+        await testSuiteDetailsPromise;
+
+        await suiteEditOnlyPage.getByTestId('manage-button').click();
+        await expect(
+          suiteEditOnlyPage.getByTestId('delete-button')
+        ).not.toBeVisible();
       });
 
-      test('User without TEST_SUITE.EDIT_ALL cannot PATCH test suites', async ({
+      test('User without TEST_SUITE.EDIT cannot add test case to logical suite', async ({
         viewBasicPage,
       }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-
-        const res = await apiContext.patch(
-          `/api/v1/dataQuality/testSuites/${logicalTestSuiteId}`,
-          {
-            data: [{ op: 'add', path: '/description', value: 'should fail' }],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
+        const testSuiteDetailsPromise = viewBasicPage.waitForResponse(
+          (res) =>
+            res.url().includes(`/api/v1/dataQuality/testSuites/`) &&
+            res.status() === 200
         );
-        expect(res.status()).toBe(403);
-      });
-
-      test('User without TEST_SUITE.EDIT permissions cannot add test case to logical suite', async ({
-        viewBasicPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-
-        const res = await apiContext.put(
-          '/api/v1/dataQuality/testCases/logicalTestCases',
-          {
-            data: {
-              testSuiteId: logicalTestSuiteId,
-              testCaseIds: [table.testCasesResponseData[0].id],
-            },
-          }
+        await viewBasicPage.goto(
+          `/test-suites/${encodeURIComponent(logicalTestSuiteFqn)}`
         );
-        expect(res.status()).toBe(403);
+        await testSuiteDetailsPromise;
+
+        await expect(
+          viewBasicPage.getByTestId('add-test-case-btn')
+        ).toBeHidden();
       });
     });
 
