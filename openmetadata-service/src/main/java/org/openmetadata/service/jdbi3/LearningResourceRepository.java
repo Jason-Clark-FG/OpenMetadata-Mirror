@@ -213,6 +213,11 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
     }
 
     @Override
+    public String getCategoryCondition(String tableName) {
+      return "";
+    }
+
+    @Override
     public String getCondition(String tableName) {
       String baseCondition = super.getCondition(tableName);
       String placementCondition = buildPlacementCondition(tableName);
