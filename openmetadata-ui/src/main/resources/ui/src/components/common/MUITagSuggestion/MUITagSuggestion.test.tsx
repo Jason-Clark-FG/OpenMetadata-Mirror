@@ -267,7 +267,9 @@ describe('MUITagSuggestion', () => {
     });
 
     expect(mockOnChange).toHaveBeenCalled();
+
     const callArg = mockOnChange.mock.calls[0][0];
+
     expect(callArg).toHaveLength(1);
     expect(callArg[0].tagFQN).toBe('PersonalData.Personal');
   });

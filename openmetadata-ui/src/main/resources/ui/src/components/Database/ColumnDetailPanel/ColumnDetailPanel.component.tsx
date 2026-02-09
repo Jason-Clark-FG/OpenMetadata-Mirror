@@ -286,6 +286,29 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     [flattenedColumns, allColumns, onNavigate]
   );
 
+  const handleBreadcrumbClick = useCallback(
+    (breadcrumbColumn: Column) => {
+      if (!onNavigate) {
+        return;
+      }
+
+      const targetIndex = flattenedColumns.findIndex(
+        (col) => col.fullyQualifiedName === breadcrumbColumn.fullyQualifiedName
+      );
+
+      const originalIndex = findOriginalColumnIndex(
+        breadcrumbColumn as T,
+        allColumns ?? []
+      );
+
+      onNavigate(
+        breadcrumbColumn as T,
+        originalIndex >= 0 ? originalIndex : targetIndex
+      );
+    },
+    [flattenedColumns, allColumns, onNavigate]
+  );
+
   // Common handler for column field updates
   const performColumnFieldUpdate = useCallback(
     async (
@@ -299,10 +322,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
       const response = onColumnFieldUpdate
         ? await onColumnFieldUpdate(activeColumn.fullyQualifiedName, update)
         : // Fallback to direct API call for Table entities when used outside GenericProvider
-          ((await updateTableColumn(
-            activeColumn.fullyQualifiedName,
-            update
-          )) as T);
+        ((await updateTableColumn(
+          activeColumn.fullyQualifiedName,
+          update
+        )) as T);
 
       showSuccessToast(
         t('server.update-entity-success', {
@@ -455,10 +478,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         if (response) {
           setActiveColumn(
             (prev) =>
-              ({
-                ...prev,
-                displayName: response.displayName,
-              } as T)
+            ({
+              ...prev,
+              displayName: response.displayName,
+            } as T)
           );
         }
       } catch (error) {
@@ -650,6 +673,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     return (
       <div className="overview-tab-content">
         <CustomPropertiesSection
+          emptyStateMessage={t('label.column-plural')}
           entityData={toEntityData(activeColumn)}
           entityType={entityType}
           entityTypeDetail={entityTypeDetail}
@@ -678,51 +702,67 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
 
   const columnTitle = activeColumn ? (
     <div className="title-section">
+      <Box sx={{ marginLeft: 4 }}>
+        {breadcrumbPath.length > 1 && breadcrumbPath.map((breadcrumb, index) => {
+          const isLastItem = index === breadcrumbPath.length - 1;
+
+          return (
+            <Box
+              key={breadcrumb.fullyQualifiedName}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}>
+              <Typography.Text
+                style={{
+                  fontSize: 12,
+                  color: isLastItem
+                    ? theme.palette.allShades?.gray?.[700]
+                    : theme.palette.allShades?.gray?.[500],
+                  fontWeight: isLastItem ? 500 : 400,
+                  cursor: isLastItem ? 'default' : 'pointer',
+                }}
+                onClick={
+                  isLastItem
+                    ? undefined
+                    : () => handleBreadcrumbClick(breadcrumb)
+                }
+                onMouseEnter={(e) => {
+                  if (!isLastItem) {
+                    e.currentTarget.style.textDecoration = 'underline';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.textDecoration = 'none';
+                }}>
+                {getEntityName(breadcrumb)}
+              </Typography.Text>
+              {index < breadcrumbPath.length - 1 && (
+                <ChevronRight
+                  color={theme.palette.allShades?.gray?.[400]}
+                  height={16}
+                  width={16}
+                />
+              )}
+            </Box>
+          );
+        })}
+      </Box>
       <div className="title-container items-start">
-        {breadcrumbPath.length > 1 && (
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              flexWrap: 'wrap',
-              marginBottom: 1,
-            }}>
-            {breadcrumbPath.map((breadcrumb, index) => (
-              <Box
-                key={breadcrumb.fullyQualifiedName}
-                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography.Text
-                  style={{
-                    fontSize: 12,
-                    color: theme.palette.allShades?.gray?.[500],
-                    fontWeight: 400,
-                  }}>
-                  {getEntityName(breadcrumb)}
-                </Typography.Text>
-                {index < breadcrumbPath.length - 1 && (
-                  <ChevronRight
-                    color={theme.palette.allShades?.gray?.[400]}
-                    height={16}
-                    width={16}
-                  />
-                )}
-              </Box>
-            ))}
-          </Box>
-        )}
-        <Tooltip
-          mouseEnterDelay={0.5}
-          placement="topLeft"
-          title={getEntityName(activeColumn)}
-          trigger="hover">
-          <div className="d-flex items-center justify-between w-full">
-            <div className="d-flex items-center w-full">
-              <span className="entity-icon margin-right-xs">
-                <ColumnIcon />
-              </span>
-              <div className="d-flex flex-column w-full overflow-hidden">
-                <div className="d-flex items-center gap-2 w-full">
+        <div className="d-flex items-center justify-between w-full">
+
+          <div className="d-flex items-center w-full gap-2">
+            <span className="entity-icon margin-right-xs">
+              <ColumnIcon />
+            </span>
+            <div className="d-flex flex-column w-full overflow-hidden">
+              <div className="d-flex items-center gap-2 w-full">
+                <Tooltip
+                  mouseEnterDelay={0.5}
+                  placement="topLeft"
+                  title={getEntityName(activeColumn)}
+                  trigger="hover">
                   <Typography.Text
                     className="entity-title-link"
                     data-testid="entity-link"
@@ -731,54 +771,55 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                       (activeColumn as any).displayName || activeColumn.name
                     )}
                   </Typography.Text>
-                  {hasEditPermission.displayName &&
-                    (entityType === EntityType.TABLE ||
-                      entityType === EntityType.DASHBOARD_DATA_MODEL) && (
-                      <Tooltip placement="top" title={t('label.edit')}>
-                        <Button
-                          ghost
-                          className="hover-cell-icon flex-center"
-                          data-testid="edit-displayName-button"
-                          icon={
-                            <IconEdit
-                              color={DE_ACTIVE_COLOR}
-                              {...ICON_DIMENSION}
-                            />
-                          }
-                          style={{
-                            width: '24px',
-                            height: '24px',
-                          }}
-                          type="text"
-                          onClick={() => setIsDisplayNameEditing(true)}
-                        />
-                      </Tooltip>
-                    )}
-                </div>
-                {(activeColumn as any).displayName &&
-                  (activeColumn as any).displayName !== activeColumn.name &&
+                </Tooltip>
+
+                {hasEditPermission.displayName &&
                   (entityType === EntityType.TABLE ||
                     entityType === EntityType.DASHBOARD_DATA_MODEL) && (
-                    <Typography.Text
-                      className="text-grey-muted text-xs"
-                      data-testid="entity-name"
-                      ellipsis={{ tooltip: true }}>
-                      {stringToHTML(activeColumn.name || '')}
-                    </Typography.Text>
+                    <Tooltip placement="top" title={t('label.edit')}>
+                      <Button
+                        ghost
+                        className="hover-cell-icon flex-center"
+                        data-testid="edit-displayName-button"
+                        icon={
+                          <IconEdit
+                            color={DE_ACTIVE_COLOR}
+                            {...ICON_DIMENSION}
+                          />
+                        }
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                        }}
+                        type="text"
+                        onClick={() => setIsDisplayNameEditing(true)}
+                      />
+                    </Tooltip>
                   )}
               </div>
-            </div>
-            <div>
-              <IconButton data-testid="close-button" onClick={onClose}>
-                <XClose
-                  color={theme.palette.allShades?.gray?.[600]}
-                  height={16}
-                  width={16}
-                />
-              </IconButton>
+              {(activeColumn as any).displayName &&
+                (activeColumn as any).displayName !== activeColumn.name &&
+                (entityType === EntityType.TABLE ||
+                  entityType === EntityType.DASHBOARD_DATA_MODEL) && (
+                  <Typography.Text
+                    className="text-grey-muted text-xs"
+                    data-testid="entity-name"
+                    ellipsis={{ tooltip: true }}>
+                    {stringToHTML(activeColumn.name || '')}
+                  </Typography.Text>
+                )}
             </div>
           </div>
-        </Tooltip>
+          <div>
+            <IconButton data-testid="close-button" onClick={onClose}>
+              <XClose
+                color={theme.palette.allShades?.gray?.[600]}
+                height={16}
+                width={16}
+              />
+            </IconButton>
+          </div>
+        </div>
         <div className="d-flex items-center gap-2">
           {isColumn(activeColumn) && getDataTypeDisplay(activeColumn) && (
             <Tooltip

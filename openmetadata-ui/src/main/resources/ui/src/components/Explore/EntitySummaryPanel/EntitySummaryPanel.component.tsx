@@ -786,6 +786,7 @@ export default function EntitySummaryPanel({
               />
             )}
             <CustomPropertiesSection
+              emptyStateMessage={entityType}
               entityData={entityData}
               entityDetails={entityDetails}
               entityType={entityType}
@@ -846,13 +847,11 @@ export default function EntitySummaryPanel({
       <div className="d-flex gap-2 w-full h-full">
         <Card
           bordered={false}
-          className={`summary-panel-container ${
-            isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          className={`summary-panel-container ${isSideDrawer ? 'drawer-summary-panel-container' : ''
+            }`}>
           <Card
-            className={`content-area ${
-              isSideDrawer ? 'drawer-content-area' : ''
-            }`}
+            className={`content-area ${isSideDrawer ? 'drawer-content-area' : ''
+              }`}
             style={{ width: '100%', display: 'block' }}>
             {renderTabContent()}
           </Card>
