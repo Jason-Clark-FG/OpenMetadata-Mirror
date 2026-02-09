@@ -77,7 +77,8 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
     (item: string) => (
       <Typography.Text
         className="text-grey-muted lineage-breadcrumb-item"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+        key={item}>
         {item}
       </Typography.Text>
     ),
