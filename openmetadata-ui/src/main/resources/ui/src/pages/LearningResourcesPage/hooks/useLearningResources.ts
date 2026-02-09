@@ -12,7 +12,7 @@
  */
 
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getLearningResourcesList,
@@ -21,46 +21,6 @@ import {
 import { showErrorToast } from '../../../utils/ToastUtils';
 import type { LearningResourceFilterState } from './useLearningResourceFilters';
 
-const matchesFilters = (
-  resource: LearningResource,
-  filters: LearningResourceFilterState,
-): boolean => {
-  const { type, category, context, status } = filters;
-
-  if (type?.length && !type.includes(resource.resourceType)) {
-    return false;
-  }
-
-  if (category?.length) {
-    const resourceCategories = resource.categories || [];
-    const hasMatchingCategory = resourceCategories.some((c) =>
-      category.includes(c),
-    );
-    if (!hasMatchingCategory) {
-      return false;
-    }
-  }
-
-  if (context?.length) {
-    const resourceContexts = resource.contexts || [];
-    const hasMatchingContext = resourceContexts.some((c) =>
-      context.includes(c.pageId),
-    );
-    if (!hasMatchingContext) {
-      return false;
-    }
-  }
-
-  if (status?.length) {
-    const resourceStatus = resource.status || 'Active';
-    if (!status.includes(resourceStatus)) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
 interface UseLearningResourcesParams {
   searchText: string;
   filterState: LearningResourceFilterState;
@@ -68,7 +28,6 @@ interface UseLearningResourcesParams {
 
 interface UseLearningResourcesReturn {
   resources: LearningResource[];
-  filteredResources: LearningResource[];
   isLoading: boolean;
   refetch: () => Promise<void>;
 }
@@ -88,6 +47,10 @@ export const useLearningResources = ({
         limit: 1000,
         fields: 'categories,contexts,difficulty,estimatedDuration,owners',
         q: searchText || undefined,
+        category: filterState.category?.length ? filterState.category : undefined,
+        pageId: filterState.context?.length ? filterState.context : undefined,
+        type: filterState.type?.length ? filterState.type : undefined,
+        status: filterState.status?.length ? filterState.status : undefined,
       };
 
       const response = await getLearningResourcesList(apiParams);
@@ -100,20 +63,14 @@ export const useLearningResources = ({
     } finally {
       setIsLoading(false);
     }
-  }, [t, searchText]);
+  }, [t, searchText, filterState]);
 
   useEffect(() => {
     fetchResources();
   }, [fetchResources]);
 
-  const filteredResources = useMemo(
-    () => resources.filter((r) => matchesFilters(r, filterState)),
-    [resources, filterState],
-  );
-
   return {
     resources,
-    filteredResources,
     isLoading,
     refetch: fetchResources,
   };

@@ -88,11 +88,12 @@ export interface CreateLearningResource {
 
 export type ListLearningResourcesParams = ListParams & {
   q?: string;
-  pageId?: string;
+  pageId?: string | string[];
   componentId?: string;
-  category?: string;
+  category?: string | string[];
+  type?: string | string[];
   difficulty?: string;
-  status?: string;
+  status?: string | string[];
 };
 
 const BASE_URL = '/learning/resources';

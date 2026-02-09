@@ -43,6 +43,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.data.RestoreEntity;
@@ -133,47 +134,55 @@ public class LearningResourceResource
           @QueryParam("include")
           @DefaultValue("non-deleted")
           Include include,
-      @Parameter(
-              description = "Filter resources to a specific page identifier",
-              schema = @Schema(type = "string"))
-          @QueryParam("pageId")
-          String pageId,
-      @Parameter(
-              description = "Filter by component identifier within a page",
-              schema = @Schema(type = "string"))
-          @QueryParam("componentId")
-          String componentId,
-      @Parameter(
-              description = "Filter by primary category",
-              schema = @Schema(type = "string", example = "DataGovernance"))
-          @QueryParam("category")
-          String category,
-      @Parameter(
-              description = "Filter by difficulty tier",
-              schema = @Schema(type = "string", example = "Intro"))
-          @QueryParam("difficulty")
-          String difficulty,
-      @Parameter(
-              description = "Filter by lifecycle status",
-              schema = @Schema(type = "string", example = "Active"))
-          @QueryParam("status")
-          String status) {
+        @Parameter(
+                description = "Filter resources to specific page identifiers (supports multiple values)",
+                schema = @Schema(type = "array"))
+            @QueryParam("pageId")
+            List<String> pageIds,
+        @Parameter(
+                description = "Filter by component identifier within a page",
+                schema = @Schema(type = "string"))
+            @QueryParam("componentId")
+            String componentId,
+        @Parameter(
+                description = "Filter by primary categories (supports multiple values)",
+                schema = @Schema(type = "array", example = "DataGovernance"))
+            @QueryParam("category")
+            List<String> categories,
+        @Parameter(
+                description = "Filter by resource type (supports multiple values)",
+                schema = @Schema(type = "array", example = "Video"))
+            @QueryParam("type")
+            List<String> types,
+        @Parameter(
+                description = "Filter by difficulty tier",
+                schema = @Schema(type = "string", example = "Intro"))
+            @QueryParam("difficulty")
+            String difficulty,
+        @Parameter(
+                description = "Filter by lifecycle statuses (supports multiple values)",
+                schema = @Schema(type = "array", example = "Active"))
+            @QueryParam("status")
+            List<String> statuses) {
     LearningResourceRepository.LearningResourceFilter filter =
         new LearningResourceRepository.LearningResourceFilter(include);
-    if (pageId != null) {
-      filter.addQueryParam("pageId", pageId);
+    if (pageIds != null && !pageIds.isEmpty()) {
+      filter.addQueryParam("pageIds", pageIds);
     }
     if (componentId != null) {
       filter.addQueryParam("componentId", componentId);
     }
-    if (category != null) {
-      filter.addQueryParam("category", category);
+    if (categories != null && !categories.isEmpty()) {
+      filter.addQueryParam("categories", categories);
+    }
+    if (types != null && !types.isEmpty()) {
+      filter.addQueryParam("types", types);
     }
     if (difficulty != null) {
       filter.addQueryParam("difficulty", difficulty);
     }
-    if (status != null) {
-      filter.addQueryParam("statusPrefix", status);
+    if (statuses != null && !statuses.isEmpty()) {
+      filter.addQueryParam("statuses", statuses);
     }
 
     return addHref(
