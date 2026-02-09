@@ -283,6 +283,51 @@
           },
           "ordinalPosition": {
             "type": "integer"
+          },
+          "extension": {
+            "type": "flattened"
+          },
+          "customPropertiesTyped": {
+            "type": "nested",
+            "properties": {
+              "name": {
+                "type": "keyword"
+              },
+              "propertyType": {
+                "type": "keyword"
+              },
+              "stringValue": {
+                "type": "keyword"
+              },
+              "textValue": {
+                "type": "text",
+                "analyzer": "om_analyzer"
+              },
+              "longValue": {
+                "type": "long"
+              },
+              "doubleValue": {
+                "type": "double"
+              },
+              "start": {
+                "type": "long"
+              },
+              "end": {
+                "type": "long"
+              },
+              "refId": {
+                "type": "keyword"
+              },
+              "refType": {
+                "type": "keyword"
+              },
+              "refName": {
+                "type": "keyword"
+              },
+              "refFqn": {
+                "type": "keyword"
+              }
+            }
           }
         }
       },
@@ -543,7 +588,7 @@
         }
       },
       "extension": {
-        "type": "object"
+        "type": "flattened"
       },
       "dataProducts": {
         "properties": {
@@ -594,7 +639,8 @@
         }
       },
       "lifeCycle": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "location": {
         "properties": {
@@ -926,13 +972,16 @@
         "type": "keyword"
       },
       "descriptionSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "tagSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "tierSources": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false
       },
       "columnDescriptionStatus": {
         "type": "keyword"
@@ -980,6 +1029,48 @@
       "changeSummary": {
         "type": "object",
         "dynamic": false
+      },
+      "customPropertiesTyped": {
+        "type": "nested",
+        "properties": {
+          "name": {
+            "type": "keyword"
+          },
+          "propertyType": {
+            "type": "keyword"
+          },
+          "stringValue": {
+            "type": "keyword"
+          },
+          "textValue": {
+            "type": "text",
+            "analyzer": "om_analyzer"
+          },
+          "longValue": {
+            "type": "long"
+          },
+          "doubleValue": {
+            "type": "double"
+          },
+          "start": {
+            "type": "long"
+          },
+          "end": {
+            "type": "long"
+          },
+          "refId": {
+            "type": "keyword"
+          },
+          "refType": {
+            "type": "keyword"
+          },
+          "refName": {
+            "type": "keyword"
+          },
+          "refFqn": {
+            "type": "keyword"
+          }
+        }
       }
     }
   }

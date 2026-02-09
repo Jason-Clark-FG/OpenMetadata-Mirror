@@ -287,7 +287,13 @@ export class EntityClass {
     const description =
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus varius quam eu mi ullamcorper, in porttitor magna mollis. Duis a tellus aliquet nunc commodo bibendum. Donec euismod maximus porttitor. Aenean quis lacus ultrices, tincidunt erat ac, dapibus felis.';
 
-    await updateDescription(page, description);
+    await updateDescription(
+      page,
+      description,
+      false,
+      'asset-description-container',
+      this.endpoint
+    );
   }
 
   async descriptionUpdateChildren(

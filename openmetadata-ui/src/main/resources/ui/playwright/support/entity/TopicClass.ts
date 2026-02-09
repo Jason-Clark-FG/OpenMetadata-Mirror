@@ -24,6 +24,14 @@ import {
 } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
+export interface TopicChildrenDetails {
+  name: string;
+  dataType: string;
+  description?: string;
+  tags?: unknown[];
+  children?: Array<TopicChildrenDetails>;
+}
+
 export class TopicClass extends EntityClass {
   service: {
     name: string;
@@ -40,7 +48,7 @@ export class TopicClass extends EntityClass {
     };
   };
   private readonly topicName: string;
-  children: unknown[];
+  children: TopicChildrenDetails[];
   entity: {
     name: string;
     displayName: string;

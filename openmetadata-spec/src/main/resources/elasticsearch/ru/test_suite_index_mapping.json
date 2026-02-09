@@ -180,7 +180,16 @@
         "null_value": 0
       },
       "votes": {
-        "type": "object"
+        "type": "object",
+        "dynamic": false,
+        "properties": {
+          "upVotes": {
+            "type": "integer"
+          },
+          "downVotes": {
+            "type": "integer"
+          }
+        }
       },
       "displayName": {
         "type": "text",
@@ -210,29 +219,8 @@
           }
         }
       },
-      "testCaseResultSummary": {
-        "type": "nested",
-        "properties": {
-          "status": {
-            "type": "keyword"
-          },
-          "testCaseName": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
-              },
-              "ngram": {
-                "type": "text",
-                "analyzer": "om_ngram"
-              }
-            }
-          },
-          "timestamp": {
-            "type": "long"
-          }
-        }
+      "lastResultTimestamp": {
+        "type": "long"
       },
       "owners": {
         "properties": {

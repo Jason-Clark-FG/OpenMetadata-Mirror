@@ -24,6 +24,14 @@ import {
 } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
+export interface ApiEndpointChildren {
+  name: string;
+  dataType: string;
+  description?: string;
+  fullyQualifiedName: string;
+  tags: unknown[];
+  children?: ApiEndpointChildren[];
+}
 export class ApiEndpointClass extends EntityClass {
   private readonly serviceName: string;
   private readonly apiCollectionName: string;
@@ -48,26 +56,7 @@ export class ApiEndpointClass extends EntityClass {
   private readonly apiEndpointName: string;
   private readonly fqn: string;
 
-  children: Array<{
-    name: string;
-    dataType: string;
-    fullyQualifiedName: string;
-    tags: unknown[];
-    children: Array<{
-      name: string;
-      dataType: string;
-      fullyQualifiedName: string;
-      tags: unknown[];
-      description?: string;
-      children?: Array<{
-        name: string;
-        dataType: string;
-        fullyQualifiedName: string;
-        tags: unknown[];
-        description?: string;
-      }>;
-    }>;
-  }>;
+  children: ApiEndpointChildren[];
 
   entity: {
     name: string;

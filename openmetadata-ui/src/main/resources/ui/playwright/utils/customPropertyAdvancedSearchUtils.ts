@@ -301,6 +301,7 @@ export const setupCustomPropertyAdvancedSearchTest = async (
 
   // Map and prepare the data required for creating custom properties of different types
   const cpCreationData = getCustomPropertyCreationData(testData.types);
+  testData.createdCPData = Object.values(cpCreationData);
 
   // The API calls need to be sequential as the server replaces some types with others
   // due to simultaneous requests causing conflicts.
