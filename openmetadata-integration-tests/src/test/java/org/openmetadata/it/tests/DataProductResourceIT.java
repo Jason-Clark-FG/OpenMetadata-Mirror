@@ -1164,8 +1164,14 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     bulkAddAssets(dataProduct.getFullyQualifiedName(), addTable);
 
     // Verify asset is linked
-    ResultList<EntityReference> assets = getAssets(dataProduct.getId(), 10, 0);
-    assertEquals(1, assets.getPaging().getTotal());
+    Awaitility.await("Wait for asset to be linked")
+        .pollInterval(Duration.ofSeconds(1))
+        .atMost(Duration.ofSeconds(15))
+        .untilAsserted(
+            () -> {
+              ResultList<EntityReference> a = getAssets(dataProduct.getId(), 10, 0);
+              assertEquals(1, a.getPaging().getTotal());
+            });
 
     // Verify table is in domain1
     Table tableBeforeChange =
@@ -1182,7 +1188,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     assertEquals(domain2.getId(), updated.getDomains().get(0).getId());
 
     // Verify asset is still linked
-    assets = getAssets(updated.getId(), 10, 0);
+    ResultList<EntityReference> assets = getAssets(updated.getId(), 10, 0);
     assertEquals(
         1, assets.getPaging().getTotal(), "Asset should still be linked after domain change");
 
@@ -1207,25 +1213,35 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
         tableAfterChange.getDomains().getFirst().getFullyQualifiedName(),
         "Domain FQN should match the new domain");
 
-    waitForSearchIndexing();
+    Awaitility.await("Wait for search index to reflect domain migration")
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .atMost(Duration.ofSeconds(30))
+        .untilAsserted(
+            () -> {
+              List<EntityReference> searchIndexDomains =
+                  getEntityReferencesFromSearchIndex(
+                      table.getId(), "table_search_index", "domains");
+              assertNotNull(
+                  searchIndexDomains, "Table should be present in search index with domains");
+              assertEquals(
+                  1,
+                  searchIndexDomains.size(),
+                  "Search index should show exactly 1 domain after migration");
 
-    List<EntityReference> searchIndexDomains =
-        getEntityReferencesFromSearchIndex(table.getId(), "table_search_index", "domains");
-    assertNotNull(searchIndexDomains, "Table should be present in search index with domains");
-    assertEquals(
-        1, searchIndexDomains.size(), "Search index should show exactly 1 domain after migration");
+              List<UUID> searchDomainIds =
+                  searchIndexDomains.stream().map(EntityReference::getId).toList();
+              long uniqueSearchDomainIds = searchDomainIds.stream().distinct().count();
+              assertEquals(
+                  searchDomainIds.size(),
+                  uniqueSearchDomainIds,
+                  "No duplicate domains should exist in search index");
 
-    List<UUID> searchDomainIds = searchIndexDomains.stream().map(EntityReference::getId).toList();
-    long uniqueSearchDomainIds = searchDomainIds.stream().distinct().count();
-    assertEquals(
-        searchDomainIds.size(),
-        uniqueSearchDomainIds,
-        "No duplicate domains should exist in search index (all domain IDs should be unique)");
-
-    assertEquals(
-        domain2.getId(),
-        searchIndexDomains.getFirst().getId(),
-        "Search index should show the migrated domain2");
+              assertEquals(
+                  domain2.getId(),
+                  searchIndexDomains.getFirst().getId(),
+                  "Search index should show the migrated domain2");
+            });
   }
 
   @Test
@@ -1258,8 +1274,14 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     bulkAddAssets(dataProduct.getFullyQualifiedName(), addTables);
 
     // Verify all assets are linked
-    ResultList<EntityReference> assets = getAssets(dataProduct.getId(), 10, 0);
-    assertEquals(3, assets.getPaging().getTotal());
+    Awaitility.await("Wait for all assets to be linked")
+        .pollInterval(Duration.ofSeconds(1))
+        .atMost(Duration.ofSeconds(15))
+        .untilAsserted(
+            () -> {
+              ResultList<EntityReference> a = getAssets(dataProduct.getId(), 10, 0);
+              assertEquals(3, a.getPaging().getTotal());
+            });
 
     // Change data product domain to domain2
     dataProduct.setDomains(List.of(domain2.getEntityReference()));
@@ -1269,7 +1291,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     assertEquals(domain2.getId(), updated.getDomains().get(0).getId());
 
     // Verify all assets are still linked
-    assets = getAssets(updated.getId(), 10, 0);
+    ResultList<EntityReference> assets = getAssets(updated.getId(), 10, 0);
     assertEquals(3, assets.getPaging().getTotal(), "All assets should still be linked");
 
     // Verify all tables' domains were migrated to domain2
@@ -1487,29 +1509,36 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
         tableAfter.getDomains().get(0).getFullyQualifiedName(),
         "Domain FQN should match the new domain after consolidation");
 
-    waitForSearchIndexing();
+    Awaitility.await("Wait for search index to reflect domain after consolidation")
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .atMost(Duration.ofSeconds(30))
+        .untilAsserted(
+            () -> {
+              List<EntityReference> searchIndexDomains =
+                  getEntityReferencesFromSearchIndex(
+                      table.getId(), "table_search_index", "domains");
+              assertNotNull(
+                  searchIndexDomains,
+                  "Table should be present in search index with domains after consolidation");
+              assertEquals(
+                  1,
+                  searchIndexDomains.size(),
+                  "Search index should show exactly 1 domain after consolidation");
 
-    List<EntityReference> searchIndexDomains =
-        getEntityReferencesFromSearchIndex(table.getId(), "table_search_index", "domains");
-    assertNotNull(
-        searchIndexDomains,
-        "Table should be present in search index with domains after consolidation");
-    assertEquals(
-        1,
-        searchIndexDomains.size(),
-        "Search index should show exactly 1 domain after consolidation");
+              List<UUID> searchDomainIds =
+                  searchIndexDomains.stream().map(EntityReference::getId).toList();
+              long uniqueSearchDomainIds = searchDomainIds.stream().distinct().count();
+              assertEquals(
+                  searchDomainIds.size(),
+                  uniqueSearchDomainIds,
+                  "No duplicate domains in search index after domain change and consolidation");
 
-    List<UUID> searchDomainIds = searchIndexDomains.stream().map(EntityReference::getId).toList();
-    long uniqueSearchDomainIds = searchDomainIds.stream().distinct().count();
-    assertEquals(
-        searchDomainIds.size(),
-        uniqueSearchDomainIds,
-        "No duplicate domains in search index after domain change and consolidation");
-
-    assertEquals(
-        domain2.getId(),
-        searchIndexDomains.get(0).getId(),
-        "Search index should reflect domain2 after consolidation");
+              assertEquals(
+                  domain2.getId(),
+                  searchIndexDomains.get(0).getId(),
+                  "Search index should reflect domain2 after consolidation");
+            });
   }
 
   // ===================================================================

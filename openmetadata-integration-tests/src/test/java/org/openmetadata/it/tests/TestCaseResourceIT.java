@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -2025,14 +2027,19 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
     // Delete the latest result
     client.testCaseResults().delete(testCase.getFullyQualifiedName(), timestamp2);
 
-    // Fetch test case - should have first result as latest
-    TestCase fetchedCase = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-
-    assertNotNull(fetchedCase.getTestCaseResult());
-    assertEquals(timestamp1, fetchedCase.getTestCaseResult().getTimestamp());
-    assertEquals(
-        org.openmetadata.schema.tests.type.TestCaseStatus.Success,
-        fetchedCase.getTestCaseResult().getTestCaseStatus());
+    Awaitility.await("Wait for test case result deletion to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fetchedCase =
+                  client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertNotNull(fetchedCase.getTestCaseResult());
+              assertEquals(timestamp1, fetchedCase.getTestCaseResult().getTimestamp());
+              assertEquals(
+                  org.openmetadata.schema.tests.type.TestCaseStatus.Success,
+                  fetchedCase.getTestCaseResult().getTestCaseStatus());
+            });
   }
 
   @Test
@@ -2131,12 +2138,19 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
     result2.setResult("Second test result");
     client.testCaseResults().create(testCase.getFullyQualifiedName(), result2);
 
-    TestCase fetchedCase = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-    assertNotNull(fetchedCase.getTestCaseResult());
-    assertEquals(timestamp2, fetchedCase.getTestCaseResult().getTimestamp());
-    assertEquals(
-        org.openmetadata.schema.tests.type.TestCaseStatus.Failed,
-        fetchedCase.getTestCaseResult().getTestCaseStatus());
+    Awaitility.await("Wait for test case result to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fetchedCase =
+                  client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertNotNull(fetchedCase.getTestCaseResult());
+              assertEquals(timestamp2, fetchedCase.getTestCaseResult().getTimestamp());
+              assertEquals(
+                  org.openmetadata.schema.tests.type.TestCaseStatus.Failed,
+                  fetchedCase.getTestCaseResult().getTestCaseStatus());
+            });
   }
 
   @Test
@@ -2165,8 +2179,14 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
     org.openmetadata.schema.tests.type.TestCaseResult result1 =
         client.testCaseResults().create(testCase.getFullyQualifiedName(), createResult1);
 
-    TestCase fetchedCase1 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-    assertEquals(result1.getTimestamp(), fetchedCase1.getTestCaseResult().getTimestamp());
+    Awaitility.await("Wait for first result to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fc1 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertEquals(result1.getTimestamp(), fc1.getTestCaseResult().getTimestamp());
+            });
 
     org.openmetadata.schema.api.tests.CreateTestCaseResult createResult2 =
         new org.openmetadata.schema.api.tests.CreateTestCaseResult();
@@ -2175,8 +2195,14 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
     createResult2.setResult("Recent result");
     client.testCaseResults().create(testCase.getFullyQualifiedName(), createResult2);
 
-    TestCase fetchedCase2 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-    assertEquals(timestamp2, fetchedCase2.getTestCaseResult().getTimestamp());
+    Awaitility.await("Wait for second result to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fc2 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertEquals(timestamp2, fc2.getTestCaseResult().getTimestamp());
+            });
 
     org.openmetadata.schema.api.tests.CreateTestCaseResult createResult3 =
         new org.openmetadata.schema.api.tests.CreateTestCaseResult();
@@ -2186,13 +2212,25 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
     org.openmetadata.schema.tests.type.TestCaseResult result3 =
         client.testCaseResults().create(testCase.getFullyQualifiedName(), createResult3);
 
-    TestCase fetchedCase3 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-    assertEquals(result3.getTimestamp(), fetchedCase3.getTestCaseResult().getTimestamp());
+    Awaitility.await("Wait for third result to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fc3 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertEquals(result3.getTimestamp(), fc3.getTestCaseResult().getTimestamp());
+            });
 
     client.testCaseResults().delete(testCase.getFullyQualifiedName(), timestamp3);
 
-    TestCase fetchedCase4 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
-    assertEquals(timestamp2, fetchedCase4.getTestCaseResult().getTimestamp());
+    Awaitility.await("Wait for delete to be reflected")
+        .atMost(15, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              TestCase fc4 = client.testCases().get(testCase.getId().toString(), "testCaseResult");
+              assertEquals(timestamp2, fc4.getTestCaseResult().getTimestamp());
+            });
   }
 
   @Test

@@ -285,6 +285,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .refresh(Refresh.False)
+                .retryOnConflict(3)
                 .script(
                     s ->
                         s.source(ss -> ss.scriptString(scriptTxt))
@@ -354,6 +355,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
               u.index(indexName)
                   .id(docId)
                   .refresh(Refresh.False)
+                  .retryOnConflict(3)
                   .scriptedUpsert(true)
                   .upsert(params)
                   .script(
@@ -1277,6 +1279,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                       u ->
                           u.index(indexName)
                               .id(entity.getId().toString())
+                              .retryOnConflict(3)
                               .action(a -> a.docAsUpsert(true).doc(toJsonData(doc))))));
     }
 
@@ -1386,6 +1389,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                 .id(docId)
                 .docAsUpsert(true)
                 .refresh(Refresh.False)
+                .retryOnConflict(3)
                 .doc(toJsonData(doc)),
         Map.class);
     LOG.info(

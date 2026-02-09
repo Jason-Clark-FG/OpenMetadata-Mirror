@@ -428,6 +428,7 @@ public class SearchRepository {
 
     String entityId = entity.getId().toString();
     String entityType = entity.getEntityReference().getType();
+    Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
     try {
       IndexMapping indexMapping = entityIndexMap.get(entityType);
       SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
@@ -441,6 +442,8 @@ public class SearchRepository {
           ie.getMessage(),
           ie.getCause(),
           ExceptionUtils.getStackTrace(ie));
+    } finally {
+      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 
@@ -450,7 +453,6 @@ public class SearchRepository {
    */
   public void createEntitiesIndex(List<EntityInterface> entities) {
     if (!nullOrEmpty(entities)) {
-      // All entities in the list are of the same type
       String entityType = entities.getFirst().getEntityReference().getType();
       IndexMapping indexMapping = entityIndexMap.get(entityType);
       List<Map<String, String>> docs = new ArrayList<>();
@@ -460,6 +462,7 @@ public class SearchRepository {
         docs.add(Collections.singletonMap(entity.getId().toString(), doc));
       }
 
+      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
       try {
         searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
       } catch (Exception ie) {
@@ -469,6 +472,8 @@ public class SearchRepository {
             ie.getMessage(),
             ie.getCause(),
             ExceptionUtils.getStackTrace(ie));
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
     }
   }
@@ -493,6 +498,7 @@ public class SearchRepository {
         entityType = entity.getEntityReference().getType();
       }
       String entityId = entity.getId().toString();
+      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
       try {
         IndexMapping indexMapping = entityIndexMap.get(entityType);
         SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
@@ -506,6 +512,8 @@ public class SearchRepository {
             ie.getMessage(),
             ie.getCause(),
             ExceptionUtils.getStackTrace(ie));
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
     }
   }
@@ -514,6 +522,7 @@ public class SearchRepository {
     if (entityTimeSeries != null) {
       String entityType = entityTimeSeries.getEntityReference().getType();
       String entityId = entityTimeSeries.getId().toString();
+      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
       try {
         IndexMapping indexMapping = entityIndexMap.get(entityType);
         SearchIndex elasticSearchIndex =
@@ -529,6 +538,8 @@ public class SearchRepository {
             e.getMessage(),
             e.getCause(),
             ExceptionUtils.getStackTrace(e));
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
     }
   }
@@ -720,23 +731,40 @@ public class SearchRepository {
    */
   public void updateAssetDomainsForDataProduct(
       String dataProductFqn, List<String> oldDomainFqns, List<EntityReference> newDomains) {
-    getSearchClient().updateAssetDomainsForDataProduct(dataProductFqn, oldDomainFqns, newDomains);
+    Timer.Sample s = RequestLatencyContext.startSearchOperation();
+    try {
+      getSearchClient().updateAssetDomainsForDataProduct(dataProductFqn, oldDomainFqns, newDomains);
+    } finally {
+      RequestLatencyContext.endSearchOperation(s);
+    }
   }
 
-  /**
-   * Bulk updates domain references for specific assets by their IDs.
-   */
   public void updateAssetDomainsByIds(
       List<UUID> assetIds, List<String> oldDomainFqns, List<EntityReference> newDomains) {
-    getSearchClient().updateAssetDomainsByIds(assetIds, oldDomainFqns, newDomains);
+    Timer.Sample s = RequestLatencyContext.startSearchOperation();
+    try {
+      getSearchClient().updateAssetDomainsByIds(assetIds, oldDomainFqns, newDomains);
+    } finally {
+      RequestLatencyContext.endSearchOperation(s);
+    }
   }
 
   public void updateDomainFqnByPrefix(String oldFqn, String newFqn) {
-    getSearchClient().updateDomainFqnByPrefix(oldFqn, newFqn);
+    Timer.Sample s = RequestLatencyContext.startSearchOperation();
+    try {
+      getSearchClient().updateDomainFqnByPrefix(oldFqn, newFqn);
+    } finally {
+      RequestLatencyContext.endSearchOperation(s);
+    }
   }
 
   public void updateAssetDomainFqnByPrefix(String oldFqn, String newFqn) {
-    getSearchClient().updateAssetDomainFqnByPrefix(oldFqn, newFqn);
+    Timer.Sample s = RequestLatencyContext.startSearchOperation();
+    try {
+      getSearchClient().updateAssetDomainFqnByPrefix(oldFqn, newFqn);
+    } finally {
+      RequestLatencyContext.endSearchOperation(s);
+    }
   }
 
   public boolean checkIfIndexingIsSupported(String entityType) {
@@ -1253,6 +1281,7 @@ public class SearchRepository {
   }
 
   public void deleteByScript(String entityType, String scriptTxt, Map<String, Object> params) {
+    Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
     try {
       IndexMapping indexMapping = getIndexMapping(entityType);
       searchClient.deleteByScript(indexMapping.getIndexName(clusterAlias), scriptTxt, params);
@@ -1263,6 +1292,8 @@ public class SearchRepository {
           ie.getMessage(),
           ie.getCause(),
           ExceptionUtils.getStackTrace(ie));
+    } finally {
+      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 
@@ -1285,6 +1316,7 @@ public class SearchRepository {
     String entityId = entity.getId().toString();
     String entityType = entity.getEntityReference().getType();
     IndexMapping indexMapping = entityIndexMap.get(entityType);
+    Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
     try {
       searchClient.deleteEntity(indexMapping.getIndexName(clusterAlias), entityId);
       deleteOrUpdateChildren(entity, indexMapping);
@@ -1296,6 +1328,8 @@ public class SearchRepository {
           ie.getMessage(),
           ie.getCause(),
           ExceptionUtils.getStackTrace(ie));
+    } finally {
+      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 
@@ -1304,6 +1338,7 @@ public class SearchRepository {
       String entityType = entity.getEntityReference().getType();
       String fqn = entity.getFullyQualifiedName();
       IndexMapping indexMapping = entityIndexMap.get(entityType);
+      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
       try {
         searchClient.deleteEntityByFQNPrefix(indexMapping.getIndexName(clusterAlias), fqn);
       } catch (Exception ie) {
@@ -1314,6 +1349,8 @@ public class SearchRepository {
             ie.getMessage(),
             ie.getCause(),
             ExceptionUtils.getStackTrace(ie));
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
     }
   }
@@ -1323,6 +1360,7 @@ public class SearchRepository {
       String entityId = entity.getId().toString();
       String entityType = entity.getEntityReference().getType();
       IndexMapping indexMapping = entityIndexMap.get(entityType);
+      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
       try {
         searchClient.deleteEntity(indexMapping.getIndexName(clusterAlias), entityId);
       } catch (Exception ie) {
@@ -1333,6 +1371,8 @@ public class SearchRepository {
             ie.getMessage(),
             ie.getCause(),
             ExceptionUtils.getStackTrace(ie));
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
     }
   }
@@ -1357,6 +1397,7 @@ public class SearchRepository {
     String entityType = entity.getEntityReference().getType();
     IndexMapping indexMapping = entityIndexMap.get(entityType);
     String scriptTxt = String.format(SOFT_DELETE_RESTORE_SCRIPT, delete);
+    Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
     try {
       searchClient.softDeleteOrRestoreEntity(
           indexMapping.getIndexName(clusterAlias), entityId, scriptTxt);
@@ -1369,6 +1410,8 @@ public class SearchRepository {
           ie.getMessage(),
           ie.getCause(),
           ExceptionUtils.getStackTrace(ie));
+    } finally {
+      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 

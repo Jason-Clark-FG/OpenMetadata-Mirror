@@ -13,7 +13,6 @@
 
 package org.openmetadata.service.events.lifecycle.handlers;
 
-import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,15 +21,9 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventHandler;
-import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 
-/**
- * Search index handler that manages search indexing operations as part of the
- * entity lifecycle event framework. This handler replaces direct SearchRepository
- * calls from EntityRepository with a more flexible delegation pattern.
- */
 @Slf4j
 public class SearchIndexHandler implements EntityLifecycleEventHandler {
 
@@ -46,22 +39,14 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
       LOG.warn("Received null entity in onEntityCreated");
       return;
     }
-
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       searchRepository.createEntityIndex(entity);
-      LOG.debug(
-          "Successfully created search index for entity {} {}",
-          entity.getEntityReference().getType(),
-          entity.getId());
     } catch (Exception e) {
       LOG.error(
           "Failed to create search index for entity {} {}",
           entity.getEntityReference().getType(),
           entity.getId(),
           e);
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 
@@ -72,22 +57,14 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
       LOG.warn("Received null entity in onEntityUpdated");
       return;
     }
-
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       searchRepository.updateEntityIndex(entity);
-      LOG.debug(
-          "Successfully updated search index for entity {} {}",
-          entity.getEntityReference().getType(),
-          entity.getId());
     } catch (Exception e) {
       LOG.error(
           "Failed to update search index for entity {} {}",
           entity.getEntityReference().getType(),
           entity.getId(),
           e);
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 
@@ -97,22 +74,14 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
       LOG.warn("Received null entity in onEntityUpdated");
       return;
     }
-
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       searchRepository.updateEntity(entityRef);
-      LOG.debug(
-          "Successfully updated search index for entity {} {}",
-          entityRef.getType(),
-          entityRef.getId());
     } catch (Exception e) {
       LOG.error(
           "Failed to update search index for entity {} {}",
           entityRef.getType(),
           entityRef.getId(),
           e);
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 
@@ -122,22 +91,14 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
       LOG.warn("Received null entity in onEntityDeleted");
       return;
     }
-
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       searchRepository.deleteEntityIndex(entity);
-      LOG.debug(
-          "Successfully deleted search index for entity {} {}",
-          entity.getEntityReference().getType(),
-          entity.getId());
     } catch (Exception e) {
       LOG.error(
           "Failed to delete search index for entity {} {}",
           entity.getEntityReference().getType(),
           entity.getId(),
           e);
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 
@@ -148,14 +109,8 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
       LOG.warn("Received null entity in onEntitySoftDeletedOrRestored");
       return;
     }
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       searchRepository.softDeleteOrRestoreEntityIndex(entity, isDeleted);
-      LOG.debug(
-          "Successfully {} search index for entity {} {}",
-          isDeleted ? "soft deleted" : "restored",
-          entity.getEntityReference().getType(),
-          entity.getId());
     } catch (Exception e) {
       LOG.error(
           "Failed to {} search index for entity {} {}",
@@ -163,8 +118,6 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
           entity.getEntityReference().getType(),
           entity.getId(),
           e);
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 
@@ -183,39 +136,24 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
     return false;
   }
 
-  /**
-   * Handle bulk entity creation for better performance.
-   * This method can be used by the dispatcher for optimized bulk operations.
-   */
   public void onEntitiesCreated(List<EntityInterface> entities, SubjectContext subjectContext) {
     if (entities == null || entities.isEmpty()) {
       LOG.warn("Received null entities in onEntitiesCreated");
       return;
     }
 
-    LOG.debug("Search index handler: Creating search indexes for {} entities", entities.size());
-
-    Timer.Sample sample = RequestLatencyContext.startSearchOperation();
     try {
       Map<String, List<EntityInterface>> entitiesByType =
           entities.stream().collect(Collectors.groupingBy(e -> e.getEntityReference().getType()));
 
       for (Map.Entry<String, List<EntityInterface>> entry : entitiesByType.entrySet()) {
-        List<EntityInterface> typedEntities = entry.getValue();
-        LOG.debug(
-            "Creating search indexes for {} {} entities", typedEntities.size(), entry.getKey());
-        searchRepository.createEntitiesIndex(typedEntities);
+        searchRepository.createEntitiesIndex(entry.getValue());
       }
-
-      LOG.debug("Successfully created search indexes for {} entities", entities.size());
     } catch (Exception e) {
       LOG.error("Failed to create search indexes for {} entities", entities.size(), e);
-      LOG.info("Falling back to individual entity indexing");
       for (EntityInterface entity : entities) {
         onEntityCreated(entity, subjectContext);
       }
-    } finally {
-      RequestLatencyContext.endSearchOperation(sample);
     }
   }
 }

@@ -26,6 +26,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.EntityReference;
@@ -97,17 +99,21 @@ public final class RdfTestUtils {
         entity.getName(),
         rdfType);
 
-    boolean exists = executeSparqlAsk(sparql);
-
-    if (!exists) {
-      logDebugInfo(entity, rdfType);
-    }
-
-    assertTrue(
-        exists,
-        String.format(
-            "Entity '%s' (FQN: %s) should exist in RDF as type %s",
-            entity.getName(), entity.getFullyQualifiedName(), rdfType));
+    Awaitility.await("Wait for entity to appear in RDF: " + entity.getFullyQualifiedName())
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              boolean exists = executeSparqlAsk(sparql);
+              if (!exists) {
+                logDebugInfo(entity, rdfType);
+              }
+              assertTrue(
+                  exists,
+                  String.format(
+                      "Entity '%s' (FQN: %s) should exist in RDF as type %s",
+                      entity.getName(), entity.getFullyQualifiedName(), rdfType));
+            });
   }
 
   /**
@@ -126,9 +132,16 @@ public final class RdfTestUtils {
                 + "}",
             escapeSparqlString(entityFqn));
 
-    boolean exists = executeSparqlAsk(sparql);
-    assertFalse(
-        exists, String.format("Entity %s should not exist in RDF after deletion", entityFqn));
+    Awaitility.await("Wait for entity to be removed from RDF: " + entityFqn)
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              boolean exists = executeSparqlAsk(sparql);
+              assertFalse(
+                  exists,
+                  String.format("Entity %s should not exist in RDF after deletion", entityFqn));
+            });
   }
 
   /**
@@ -148,10 +161,17 @@ public final class RdfTestUtils {
                 + "}",
             escapeSparqlString(entity.getFullyQualifiedName()));
 
-    boolean exists = executeSparqlAsk(sparql);
-    assertTrue(
-        exists,
-        String.format("Updated entity %s should exist in RDF", entity.getFullyQualifiedName()));
+    Awaitility.await("Wait for entity update in RDF: " + entity.getFullyQualifiedName())
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              boolean exists = executeSparqlAsk(sparql);
+              assertTrue(
+                  exists,
+                  String.format(
+                      "Updated entity %s should exist in RDF", entity.getFullyQualifiedName()));
+            });
   }
 
   /**

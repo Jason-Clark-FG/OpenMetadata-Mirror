@@ -16,7 +16,7 @@ import org.glassfish.jersey.uri.UriTemplate;
 
 @Slf4j
 @Provider
-@Priority(Priorities.HEADER_DECORATOR)
+@Priority(Priorities.AUTHENTICATION - 1)
 public class MetricsRequestFilter implements ContainerRequestFilter, ContainerResponseFilter {
   private final OpenMetadataMetrics metrics;
 

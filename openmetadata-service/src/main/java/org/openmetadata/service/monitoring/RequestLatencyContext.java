@@ -195,14 +195,16 @@ public class RequestLatencyContext {
 
       if (context.totalTime > 1_000_000_000L) {
         LOG.warn(
-            "Slow request - endpoint: {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, internal: {}ms, dbOps: {}",
+            "Slow request - endpoint: {} {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, internal: {}ms, dbOps: {}, searchOps: {}",
+            context.method,
             context.endpoint,
             context.totalTime / 1_000_000,
             dbTimeNanos / 1_000_000,
             searchTimeNanos / 1_000_000,
             authTimeNanos / 1_000_000,
             internalTimeNanos / 1_000_000,
-            dbOps);
+            dbOps,
+            context.searchOperationCount.get());
       }
 
     } finally {

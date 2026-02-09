@@ -303,6 +303,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .refresh(Refresh.False)
+                .retryOnConflict(3)
                 .script(
                     s ->
                         s.inline(
@@ -387,6 +388,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
               u.index(indexName)
                   .id(docId)
                   .refresh(Refresh.False)
+                  .retryOnConflict(3)
                   .scriptedUpsert(true)
                   .upsert(params)
                   .script(
@@ -1372,6 +1374,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                       u ->
                           u.index(indexName)
                               .id(entity.getId().toString())
+                              .retryOnConflict(3)
                               .docAsUpsert(true)
                               .document(toJsonData(doc)))));
     }
@@ -1404,6 +1407,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .refresh(Refresh.False)
+                .retryOnConflict(3)
                 .docAsUpsert(true)
                 .doc(toJsonData(doc)),
         Map.class);
