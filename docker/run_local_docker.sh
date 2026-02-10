@@ -107,6 +107,11 @@ if [[ $database == "postgresql" ]]; then
     COMPOSE_FILE="docker/development/docker-compose-postgres.yml"
     DB_SERVICE="postgresql"
     SEARCH_SERVICE="opensearch"
+
+    if [[ "${USE_TMPFS:-false}" == "true" ]]; then
+        echo "Using tmpfs for PostgreSQL and OpenSearch (CI performance mode)"
+        COMPOSE_FILE="docker/development/docker-compose-postgres.yml -f docker/development/docker-compose-postgres-tmpfs.yml"
+    fi
 elif [[ $database == "mysql" ]]; then
     COMPOSE_FILE="docker/development/docker-compose.yml"
     DB_SERVICE="mysql"
