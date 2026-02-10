@@ -152,7 +152,14 @@ const ResourceRow = ({
   return (
     <TableRow
       key={record.id}
-      sx={{ cursor: 'pointer', height: 50, '& td': { paddingY: 1 } }}
+      sx={{
+        cursor: 'pointer',
+        height: '54px !important',
+        '& .MuiTableCell-root': {
+          paddingTop: 0,
+          paddingBottom: 0,
+        },
+      }}
       onClick={() => handlePreview(record)}>
       {/* Name */}
       <TableCell
@@ -160,7 +167,11 @@ const ResourceRow = ({
           maxWidth: 360,
           overflow: 'hidden',
         }}>
-        <Stack direction="row" spacing={1} sx={{ minWidth: 0 }}>
+        <Stack
+          alignItems="center"
+          direction="row"
+          spacing={1}
+          sx={{ minWidth: 0 }}>
           {getResourceTypeIcon(record.resourceType)}
           <Typography
             noWrap
@@ -550,7 +561,7 @@ export const LearningResourcesPage: React.FC = () => {
                   overflow: 'auto',
                   borderRadius: 0, // Ensure no border radius here either
                 }}>
-                <Table stickyHeader sx={{ tableLayout: 'fixed' }}>
+                <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
                   <TableHead>
                     <TableRow>
                       <TableCell
