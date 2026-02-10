@@ -105,15 +105,17 @@ echo "Starting Local Docker Containers"
 
 if [[ $database == "postgresql" ]]; then
     COMPOSE_FILE="docker/development/docker-compose-postgres.yml"
+    COMPOSE_FILE_OVERRIDE=""
     DB_SERVICE="postgresql"
     SEARCH_SERVICE="opensearch"
 
     if [[ "${USE_TMPFS:-false}" == "true" ]]; then
         echo "Using tmpfs for PostgreSQL and OpenSearch (CI performance mode)"
-        COMPOSE_FILE="docker/development/docker-compose-postgres.yml -f docker/development/docker-compose-postgres-tmpfs.yml"
+        COMPOSE_FILE_OVERRIDE="-f docker/development/docker-compose-postgres-tmpfs.yml"
     fi
 elif [[ $database == "mysql" ]]; then
     COMPOSE_FILE="docker/development/docker-compose.yml"
+    COMPOSE_FILE_OVERRIDE=""
     DB_SERVICE="mysql"
     SEARCH_SERVICE="elasticsearch"
 else
@@ -123,11 +125,11 @@ fi
 
 if [[ $includeIngestion == "true" ]]; then
     echo "Building all services including ingestion (dependency: ${INGESTION_DEPENDENCY:-all})"
-    docker compose -f $COMPOSE_FILE build --build-arg INGESTION_DEPENDENCY="${INGESTION_DEPENDENCY:-all}" && docker compose -f $COMPOSE_FILE up -d
+    docker compose -f $COMPOSE_FILE $COMPOSE_FILE_OVERRIDE build --build-arg INGESTION_DEPENDENCY="${INGESTION_DEPENDENCY:-all}" && docker compose -f $COMPOSE_FILE $COMPOSE_FILE_OVERRIDE up -d
 else
     echo "Building services without ingestion"
-    docker compose -f $COMPOSE_FILE build $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server && \
-    docker compose -f $COMPOSE_FILE up -d $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server
+    docker compose -f $COMPOSE_FILE $COMPOSE_FILE_OVERRIDE build $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server && \
+    docker compose -f $COMPOSE_FILE $COMPOSE_FILE_OVERRIDE up -d $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server
 fi
 
 RESULT=$?
