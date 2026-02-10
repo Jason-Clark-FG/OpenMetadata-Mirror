@@ -19,7 +19,7 @@ public final class TextChunkManager {
       return List.of("");
     }
 
-    String[] words = text.split("\\s+");
+    String[] words = text.trim().split("\\s+");
     List<String> chunks = new ArrayList<>();
     StringBuilder current = new StringBuilder();
     int wordCount = 0;

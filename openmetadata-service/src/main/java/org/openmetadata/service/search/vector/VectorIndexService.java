@@ -13,14 +13,18 @@ public interface VectorIndexService {
   String VECTOR_INDEX_NAME = "vector_search_index";
 
   static String getClusteredIndexName() {
-    String clusterAlias = Entity.getSearchRepository().getClusterAlias();
-    if (clusterAlias == null || clusterAlias.isEmpty()) {
+    try {
+      String clusterAlias = Entity.getSearchRepository().getClusterAlias();
+      if (clusterAlias == null || clusterAlias.isEmpty()) {
+        return VECTOR_INDEX_NAME;
+      }
+      if (VECTOR_INDEX_NAME.startsWith(clusterAlias + INDEX_NAME_SEPARATOR)) {
+        return VECTOR_INDEX_NAME;
+      }
+      return clusterAlias + INDEX_NAME_SEPARATOR + VECTOR_INDEX_NAME;
+    } catch (Exception ex) {
       return VECTOR_INDEX_NAME;
     }
-    if (VECTOR_INDEX_NAME.startsWith(clusterAlias + INDEX_NAME_SEPARATOR)) {
-      return VECTOR_INDEX_NAME;
-    }
-    return clusterAlias + INDEX_NAME_SEPARATOR + VECTOR_INDEX_NAME;
   }
 
   void updateVectorEmbeddings(EntityInterface entity, String targetIndex);

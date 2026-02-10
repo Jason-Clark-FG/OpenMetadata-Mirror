@@ -50,7 +50,12 @@ public class VectorSearchQueryBuilder {
       case "certification" -> buildFlatFilter("certification.tagFQN", values);
       case "entityType" -> buildFlatFilter("entityType", values);
       case "serviceType" -> buildFlatFilter("serviceType", values);
-      default -> buildCustomPropertyFilter(key, values);
+      default -> {
+        if (key.startsWith("customProperties.")) {
+          yield buildCustomPropertyFilter(key.substring("customProperties.".length()), values);
+        }
+        yield null;
+      }
     };
   }
 

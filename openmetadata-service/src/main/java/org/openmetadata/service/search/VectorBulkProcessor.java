@@ -117,6 +117,11 @@ public class VectorBulkProcessor implements AutoCloseable {
       }
     } catch (Exception e) {
       totalFailed.addAndGet(toFlush.size());
+      if (statsTracker != null) {
+        for (int i = 0; i < toFlush.size(); i++) {
+          statsTracker.recordVector(StatsResult.FAILED);
+        }
+      }
       LOG.error(
           "Vector bulk flush failed for {} documents in {}: {}",
           toFlush.size(),
@@ -137,8 +142,12 @@ public class VectorBulkProcessor implements AutoCloseable {
       size += (long) arr.length * 4;
     }
     for (Map.Entry<String, Object> entry : doc.entrySet()) {
-      if (!"embedding".equals(entry.getKey()) && entry.getValue() instanceof String s) {
+      if ("embedding".equals(entry.getKey())) continue;
+      Object value = entry.getValue();
+      if (value instanceof String s) {
         size += s.length() * 2L;
+      } else if (value instanceof List<?> list) {
+        size += list.size() * 50L;
       }
     }
     return (long) (size * 1.2);

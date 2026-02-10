@@ -132,8 +132,7 @@ public class OpenSearchVectorService implements VectorIndexService {
       return new VectorSearchResponse(tookMillis, results);
     } catch (Exception e) {
       LOG.error("Vector search failed: {}", e.getMessage(), e);
-      long tookMillis = System.currentTimeMillis() - start;
-      return new VectorSearchResponse(tookMillis, Collections.emptyList());
+      throw new RuntimeException("Vector search failed", e);
     }
   }
 

@@ -7,7 +7,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -122,17 +121,6 @@ class VectorEmbeddingHandlerTest {
 
     verify(vectorIndexService, never()).softDeleteEmbeddings(any());
     verify(vectorIndexService, never()).restoreEmbeddings(any());
-  }
-
-  @Test
-  void testProcessEntitiesBatch() {
-    EntityInterface e1 = createMockEntity("table");
-    EntityInterface e2 = createMockEntity("table");
-
-    handler.processEntitiesBatch(List.of(e1, e2), "table", "vector_search_index");
-
-    verify(vectorIndexService).updateVectorEmbeddings(e1, "vector_search_index");
-    verify(vectorIndexService).updateVectorEmbeddings(e2, "vector_search_index");
   }
 
   private EntityInterface createMockEntity(String entityType) {

@@ -1,8 +1,6 @@
 package org.openmetadata.service.search.vector;
 
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.ChangeDescription;
@@ -132,28 +130,5 @@ public class VectorEmbeddingHandler implements EntityLifecycleEventHandler {
 
   private boolean isSupportedEntityType(String entityType) {
     return AvailableEntityTypes.SET.contains(entityType.toLowerCase(Locale.ROOT));
-  }
-
-  public void processEntitiesBatch(
-      List<EntityInterface> entities, String entityType, String targetIndex) {
-    if (!isSupportedEntityType(entityType)) {
-      return;
-    }
-    for (EntityInterface entity : entities) {
-      try {
-        vectorService.updateVectorEmbeddings(entity, targetIndex);
-      } catch (Exception e) {
-        LOG.error(
-            "Failed to process vector embedding for entity {}: {}",
-            entity.getId(),
-            e.getMessage(),
-            e);
-      }
-    }
-  }
-
-  public void updateFilterFields(
-      String entityId, String entityType, Map<String, Object> filterFields) {
-    // No-op in new architecture; filter fields are part of the vector document
   }
 }

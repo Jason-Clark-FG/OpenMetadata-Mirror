@@ -140,6 +140,7 @@ public class VectorDocBuilder {
     parts.add("displayName: " + orEmpty(entity.getDisplayName()));
     parts.add("entityType: " + entityType);
     parts.add("serviceType: " + orEmpty(extractServiceType(entity)));
+    parts.add("fullyQualifiedName: " + orEmpty(entity.getFullyQualifiedName()));
 
     if (isGlossaryTerm) {
       GlossaryTerm term = (GlossaryTerm) entity;
@@ -162,7 +163,12 @@ public class VectorDocBuilder {
         parts.add("metricType: " + metric.getMetricType().value());
       }
       if (metric.getUnitOfMeasurement() != null) {
-        parts.add("unitOfMeasurement: " + metric.getUnitOfMeasurement().value());
+        String unit = metric.getUnitOfMeasurement().value();
+        if ("OTHER".equals(unit) && metric.getCustomUnitOfMeasurement() != null) {
+          parts.add("unitOfMeasurement: " + metric.getCustomUnitOfMeasurement());
+        } else {
+          parts.add("unitOfMeasurement: " + unit);
+        }
       }
       if (metric.getGranularity() != null) {
         parts.add("granularity: " + metric.getGranularity().toString());
@@ -306,12 +312,15 @@ public class VectorDocBuilder {
   private static void addPopularityMetrics(Map<String, Object> doc, EntityInterface entity) {
     Votes votes = entity.getVotes();
     if (votes != null) {
-      doc.put("upVotes", votes.getUpVotes() != null ? votes.getUpVotes() : 0);
-      doc.put("downVotes", votes.getDownVotes() != null ? votes.getDownVotes() : 0);
-      int total =
-          (votes.getUpVotes() != null ? votes.getUpVotes() : 0)
-              + (votes.getDownVotes() != null ? votes.getDownVotes() : 0);
-      doc.put("totalVotes", total);
+      int up = votes.getUpVotes() != null ? votes.getUpVotes() : 0;
+      int down = votes.getDownVotes() != null ? votes.getDownVotes() : 0;
+      doc.put("upVotes", up);
+      doc.put("downVotes", down);
+      doc.put("totalVotes", up + down);
+    } else {
+      doc.put("upVotes", 0);
+      doc.put("downVotes", 0);
+      doc.put("totalVotes", 0);
     }
 
     List<EntityReference> followers = entity.getFollowers();
@@ -393,6 +402,9 @@ public class VectorDocBuilder {
       }
       if (metric.getUnitOfMeasurement() != null) {
         doc.put("unitOfMeasurement", metric.getUnitOfMeasurement().value());
+      }
+      if (metric.getCustomUnitOfMeasurement() != null) {
+        doc.put("customUnitOfMeasurement", metric.getCustomUnitOfMeasurement());
       }
       if (metric.getGranularity() != null) {
         doc.put("granularity", metric.getGranularity().value());

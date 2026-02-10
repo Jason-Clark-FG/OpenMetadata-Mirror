@@ -30,7 +30,7 @@ public final class AvailableEntityTypes {
           "topic");
 
   public static final Set<String> SET =
-      LIST.stream().map(s -> s.toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+      LIST.stream().map(s -> s.toLowerCase(Locale.ROOT)).collect(Collectors.toUnmodifiableSet());
 
   public static boolean isVectorIndexable(String entityType) {
     return entityType != null && SET.contains(entityType.toLowerCase(Locale.ROOT));

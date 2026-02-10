@@ -45,15 +45,22 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
     this.apiKey = openaiCfg.getApiKey();
     this.modelId = openaiCfg.getEmbeddingModelId();
     this.dimension = openaiCfg.getEmbeddingDimension();
-    this.isAzure =
-        openaiCfg.getDeploymentName() != null && !openaiCfg.getDeploymentName().isBlank();
-    this.endpoint = resolveEndpoint(openaiCfg);
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
 
-    if (isAzure && (openaiCfg.getApiVersion() == null || openaiCfg.getApiVersion().isBlank())) {
+    String endpoint = openaiCfg.getEndpoint();
+    String deploymentName = openaiCfg.getDeploymentName();
+    boolean hasEndpoint = endpoint != null && !endpoint.isBlank();
+    boolean hasDeployment = deploymentName != null && !deploymentName.isBlank();
+
+    this.isAzure = hasEndpoint && hasDeployment;
+
+    if (this.isAzure
+        && (openaiCfg.getApiVersion() == null || openaiCfg.getApiVersion().isBlank())) {
       throw new IllegalArgumentException(
           "Azure API version is required for Azure OpenAI deployments");
     }
+
+    this.endpoint = resolveEndpoint(openaiCfg);
+    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
 
     LOG.info(
         "Initialized OpenAIEmbeddingClient with model={}, dimension={}, endpoint={}, azure={}",
@@ -79,14 +86,19 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
   }
 
   private String resolveEndpoint(Openai config) {
-    if (config.getDeploymentName() != null && !config.getDeploymentName().isBlank()) {
-      String base = config.getEndpoint() != null ? config.getEndpoint().replaceAll("/+$", "") : "";
+    String endpoint = config.getEndpoint();
+    String deploymentName = config.getDeploymentName();
+    boolean hasEndpoint = endpoint != null && !endpoint.isBlank();
+    boolean hasDeployment = deploymentName != null && !deploymentName.isBlank();
+
+    if (hasEndpoint && hasDeployment) {
+      String base = endpoint.replaceAll("/+$", "");
       return String.format(
           "%s/openai/deployments/%s/embeddings?api-version=%s",
-          base, config.getDeploymentName(), config.getApiVersion());
+          base, deploymentName, config.getApiVersion());
     }
-    if (config.getEndpoint() != null && !config.getEndpoint().isBlank()) {
-      String base = config.getEndpoint().replaceAll("/+$", "");
+    if (hasEndpoint) {
+      String base = endpoint.replaceAll("/+$", "");
       return base + "/embeddings";
     }
     return "https://api.openai.com/v1/embeddings";

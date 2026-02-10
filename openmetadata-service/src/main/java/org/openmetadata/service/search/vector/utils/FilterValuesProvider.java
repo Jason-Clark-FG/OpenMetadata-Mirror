@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityRepository;
@@ -90,11 +91,13 @@ public final class FilterValuesProvider {
       EntityRepository<EntityInterface> repo =
           (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.DOMAIN);
       List<EntityInterface> entities =
-          repo.listAll(repo.getFields("fullyQualifiedName"), new ListFilter());
+          repo.listAll(repo.getFields("name"), new ListFilter(Include.ALL));
       return entities.stream()
-          .map(EntityInterface::getFullyQualifiedName)
-          .filter(fqn -> fqn != null)
-          .collect(Collectors.toList());
+          .map(EntityInterface::getName)
+          .filter(Objects::nonNull)
+          .distinct()
+          .sorted()
+          .collect(Collectors.toUnmodifiableList());
     } catch (Exception e) {
       LOG.warn("Failed to load domains for vector filter cache: {}", e.getMessage());
       return Collections.emptyList();
@@ -110,11 +113,13 @@ public final class FilterValuesProvider {
       EntityRepository<EntityInterface> repo =
           (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.TAG);
       List<EntityInterface> entities =
-          repo.listAll(repo.getFields("fullyQualifiedName"), new ListFilter());
+          repo.listAll(repo.getFields("fullyQualifiedName"), new ListFilter(Include.ALL));
       return entities.stream()
           .map(EntityInterface::getFullyQualifiedName)
-          .filter(fqn -> fqn != null)
-          .collect(Collectors.toList());
+          .filter(Objects::nonNull)
+          .distinct()
+          .sorted()
+          .collect(Collectors.toUnmodifiableList());
     } catch (Exception e) {
       LOG.warn("Failed to load tags for vector filter cache: {}", e.getMessage());
       return Collections.emptyList();
@@ -126,7 +131,8 @@ public final class FilterValuesProvider {
       List<String> ownerNames = new ArrayList<>();
       if (Entity.hasEntityRepository(Entity.USER)) {
         UserRepository userRepo = (UserRepository) Entity.getEntityRepository(Entity.USER);
-        List<User> users = userRepo.listAll(userRepo.getFields("name,isBot"), new ListFilter());
+        List<User> users =
+            userRepo.listAll(userRepo.getFields("name,isBot"), new ListFilter(Include.ALL));
         users.stream()
             .filter(u -> !Boolean.TRUE.equals(u.getIsBot()))
             .map(User::getName)
@@ -138,14 +144,14 @@ public final class FilterValuesProvider {
         EntityRepository<EntityInterface> teamRepo =
             (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.TEAM);
         List<EntityInterface> teams =
-            teamRepo.listAll(teamRepo.getFields("fullyQualifiedName"), new ListFilter());
+            teamRepo.listAll(teamRepo.getFields("name"), new ListFilter(Include.ALL));
         for (EntityInterface team : teams) {
           if (team.getName() != null) {
             ownerNames.add(team.getName());
           }
         }
       }
-      return ownerNames;
+      return ownerNames.stream().distinct().sorted().collect(Collectors.toUnmodifiableList());
     } catch (Exception e) {
       LOG.warn("Failed to load owners for vector filter cache: {}", e.getMessage());
       return Collections.emptyList();
@@ -177,11 +183,13 @@ public final class FilterValuesProvider {
       EntityRepository<EntityInterface> repo =
           (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.TAG);
       List<EntityInterface> entities =
-          repo.listAll(repo.getFields("fullyQualifiedName"), new ListFilter());
+          repo.listAll(repo.getFields("fullyQualifiedName"), new ListFilter(Include.ALL));
       return entities.stream()
           .map(EntityInterface::getFullyQualifiedName)
           .filter(fqn -> fqn != null && fqn.startsWith("Tier."))
-          .collect(Collectors.toList());
+          .distinct()
+          .sorted()
+          .collect(Collectors.toUnmodifiableList());
     } catch (Exception e) {
       LOG.warn("Failed to load tiers for vector filter cache: {}", e.getMessage());
       return Collections.emptyList();

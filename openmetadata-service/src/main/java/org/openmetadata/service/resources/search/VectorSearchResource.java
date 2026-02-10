@@ -17,7 +17,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.Entity;
@@ -138,34 +137,5 @@ public class VectorSearchResource {
           .entity("{\"error\":\"An internal error occurred\"}")
           .build();
     }
-  }
-
-  @GET
-  @Path("/status")
-  @Operation(
-      operationId = "vectorSearchStatus",
-      summary = "Get vector search status",
-      description = "Returns the current status of the vector search service.")
-  public Response getStatus(@Context SecurityContext securityContext) {
-    boolean enabled = Entity.getSearchRepository().isVectorEmbeddingEnabled();
-
-    String modelId = "N/A";
-    int dimension = 0;
-    boolean indexExists = false;
-
-    OpenSearchVectorService vectorService = OpenSearchVectorService.getInstance();
-    if (enabled && vectorService != null) {
-      modelId = vectorService.getEmbeddingClient().getModelId();
-      dimension = vectorService.getEmbeddingClient().getDimension();
-      indexExists = vectorService.indexExists();
-    }
-
-    return Response.ok(
-            Map.of(
-                "enabled", enabled,
-                "modelId", modelId,
-                "dimension", dimension,
-                "indexExists", indexExists))
-        .build();
   }
 }

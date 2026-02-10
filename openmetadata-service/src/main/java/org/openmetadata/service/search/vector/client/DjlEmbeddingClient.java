@@ -102,12 +102,23 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
     }
 
     List<String> processedTexts = new ArrayList<>(texts.size());
-    for (String text : texts) {
-      processedTexts.add(text == null || text.isBlank() ? "placeholder" : text);
+    List<Integer> emptyIndices = new ArrayList<>();
+    for (int i = 0; i < texts.size(); i++) {
+      String text = texts.get(i);
+      if (text == null || text.isBlank()) {
+        emptyIndices.add(i);
+        processedTexts.add("placeholder");
+      } else {
+        processedTexts.add(text);
+      }
     }
 
     try (Predictor<String, float[]> pred = model.newPredictor()) {
-      return pred.batchPredict(processedTexts);
+      List<float[]> embeddings = pred.batchPredict(processedTexts);
+      for (int idx : emptyIndices) {
+        embeddings.set(idx, new float[dimension]);
+      }
+      return embeddings;
     } catch (TranslateException e) {
       throw new EmbeddingGenerationException("DJL batch embedding generation failed", e);
     } catch (Exception e) {

@@ -87,17 +87,18 @@ public class OpenSearchBulkSinkExt extends OpenSearchBulkSink {
       }
     }
 
-    List<String> parentIds = new ArrayList<>(entities.size());
-    for (EntityInterface entity : entities) {
-      parentIds.add(entity.getId().toString());
-    }
-
-    String fingerprintLookupIndex = finalSourceIndex != null ? finalSourceIndex : finalTargetIndex;
-    Map<String, String> existingFingerprints =
-        vectorService.getExistingFingerprintsBatch(fingerprintLookupIndex, parentIds);
-
     String srcIdx = finalSourceIndex;
     String tgtIdx = finalTargetIndex;
+
+    Map<String, String> existingFingerprints = Map.of();
+    if (srcIdx != null) {
+      List<String> parentIds = new ArrayList<>(entities.size());
+      for (EntityInterface entity : entities) {
+        parentIds.add(entity.getId().toString());
+      }
+      existingFingerprints = vectorService.getExistingFingerprintsBatch(srcIdx, parentIds);
+    }
+
     for (EntityInterface entity : entities) {
       String parentId = entity.getId().toString();
       String existingFp = existingFingerprints.get(parentId);
@@ -105,7 +106,7 @@ public class OpenSearchBulkSinkExt extends OpenSearchBulkSink {
 
       if (existingFp != null && existingFp.equals(currentFp) && srcIdx != null) {
         submitVectorTask(
-            () -> processMigration(vectorService, srcIdx, tgtIdx, parentId, currentFp));
+            () -> processMigration(vectorService, srcIdx, tgtIdx, parentId, currentFp, entity));
       } else {
         submitVectorTask(() -> processEmbedding(vectorService, entity, tgtIdx));
       }
@@ -117,13 +118,21 @@ public class OpenSearchBulkSinkExt extends OpenSearchBulkSink {
       String sourceIndex,
       String targetIndex,
       String parentId,
-      String fingerprint) {
+      String fingerprint,
+      EntityInterface entity) {
     try {
-      vectorService.copyExistingVectorDocuments(sourceIndex, targetIndex, parentId, fingerprint);
-      vectorSuccess.incrementAndGet();
+      if (vectorService.copyExistingVectorDocuments(
+          sourceIndex, targetIndex, parentId, fingerprint)) {
+        vectorSuccess.incrementAndGet();
+      } else {
+        processEmbedding(vectorService, entity, targetIndex);
+      }
     } catch (Exception e) {
-      vectorFailed.incrementAndGet();
-      LOG.error("Vector migration failed for parent_id={}: {}", parentId, e.getMessage(), e);
+      LOG.warn(
+          "Vector migration failed for parent_id={}, falling back to recomputation: {}",
+          parentId,
+          e.getMessage());
+      processEmbedding(vectorService, entity, targetIndex);
     }
   }
 
