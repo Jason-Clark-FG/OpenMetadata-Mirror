@@ -21,6 +21,7 @@ import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
 import { Column } from '../../../generated/entity/data/table';
 import { ColumnTestSummaryDefinition } from '../../../generated/tests/testCase';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { encodeLineageHandles } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getColumnDataTypeIcon } from '../../../utils/TableUtils';
@@ -194,7 +195,6 @@ const getColumnNameContent = (column: Column, isLoading: boolean) => {
 
 interface ColumnContentProps {
   column: Column;
-  isColumnTraced: boolean;
   isConnectable: boolean;
   showDataObservabilitySummary: boolean;
   isLoading: boolean;
@@ -203,27 +203,26 @@ interface ColumnContentProps {
 
 export const ColumnContent = ({
   column,
-  isColumnTraced,
   isConnectable,
   showDataObservabilitySummary,
   isLoading,
   summary,
 }: ColumnContentProps) => {
-  const {
-    onColumnClick,
-    onColumnMouseEnter,
-    onColumnMouseLeave,
-    selectedColumn,
-  } = useLineageProvider();
+  const { onColumnMouseEnter } = useLineageProvider();
+
+  const { selectedColumn, setSelectedColumn, tracedColumns, setTracedColumns } =
+    useLineageStore();
+
+  const isColumnTraced = tracedColumns.has(column.fullyQualifiedName ?? '');
 
   const { fullyQualifiedName } = column;
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onColumnClick(fullyQualifiedName ?? '');
+      setSelectedColumn(fullyQualifiedName ?? '');
     },
-    [fullyQualifiedName, onColumnClick]
+    [fullyQualifiedName, setSelectedColumn]
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -237,8 +236,8 @@ export const ColumnContent = ({
     if (selectedColumn) {
       return;
     }
-    onColumnMouseLeave();
-  }, [selectedColumn, onColumnMouseLeave]);
+    setTracedColumns(new Set());
+  }, [selectedColumn, setTracedColumns]);
 
   const columnNameContentRender = getColumnNameContent(column, isLoading);
 

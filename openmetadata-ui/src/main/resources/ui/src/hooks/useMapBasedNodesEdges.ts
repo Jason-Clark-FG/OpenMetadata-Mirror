@@ -12,10 +12,13 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Edge, Node, OnEdgesChange, OnNodesChange } from 'reactflow';
+import { getClassifiedEdge } from '../utils/EntityLineageUtils';
 
 interface UseMapBasedNodesEdgesReturn {
   nodes: Node[];
   edges: Edge[];
+  nodeEdges: Edge[];
+  columnEdges: Edge[];
   setNodes: (update: Node[] | ((prev: Node[]) => Node[])) => void;
   setEdges: (update: Edge[] | ((prev: Edge[]) => Edge[])) => void;
   onNodesChange: OnNodesChange;
@@ -44,6 +47,10 @@ export const useMapBasedNodesEdges = (
 
   const nodes = useMemo(() => Array.from(nodesMap.values()), [nodesMap]);
   const edges = useMemo(() => Array.from(edgesMap.values()), [edgesMap]);
+  const { normalEdge: nodeEdges, columnEdge: columnEdges } = useMemo(
+    () => getClassifiedEdge(edges),
+    [edges]
+  );
 
   const setNodes = useCallback(
     (update: Node[] | ((prev: Node[]) => Node[])) => {
@@ -263,6 +270,8 @@ export const useMapBasedNodesEdges = (
   return {
     nodes,
     edges,
+    nodeEdges,
+    columnEdges,
     setNodes,
     setEdges,
     onNodesChange,

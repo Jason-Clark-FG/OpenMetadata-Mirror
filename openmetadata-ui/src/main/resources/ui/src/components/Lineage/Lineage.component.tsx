@@ -55,12 +55,10 @@ const Lineage = ({
     onEdgesChange,
     onPaneClick,
     onConnect,
-    onConnectStart,
-    onConnectEnd,
     onInitReactFlow,
     updateEntityData,
   } = useLineageProvider();
-  const { isEditMode } = useLineageStore();
+  const { isEditMode, setIsCreatingEdge } = useLineageStore();
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
@@ -102,6 +100,14 @@ const Lineage = ({
 
   const toggleMiniMapVisibility = useCallback(() => {
     setShowMiniMap((show) => !show);
+  }, []);
+
+  const onConnectStart = useCallback(() => {
+    setIsCreatingEdge(true);
+  }, []);
+
+  const onConnectEnd = useCallback(() => {
+    setIsCreatingEdge(false);
   }, []);
 
   // Loading the react flow component after the nodes and edges are initialised improves performance

@@ -19,8 +19,6 @@ import {
   Node,
   NodeChange,
   NodeProps,
-  OnConnectEnd,
-  OnConnectStart,
   ReactFlowInstance,
 } from 'reactflow';
 import { CSVExportResponse } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
@@ -52,16 +50,12 @@ export interface LineageContextType {
   status: LoadingState;
   entityLineage: EntityLineageResponse;
   entityFqn: string;
-  isCreatingEdge: boolean;
-  selectedColumn: string;
   exportLineageData: (_: string) => Promise<CSVExportResponse>;
   onInitReactFlow: (reactFlowInstance: ReactFlowInstance) => void;
   onPaneClick: () => void;
   onNodeClick: (node: Node) => void;
   onEdgeClick: (edge: Edge) => void;
-  onColumnClick: (node: string) => void;
   onColumnMouseEnter: (columnName: string) => void;
-  onColumnMouseLeave: () => void;
   selectedQuickFilters: ExploreQuickFilterField[];
   setSelectedQuickFilters: Dispatch<SetStateAction<ExploreQuickFilterField[]>>;
   onNodeDrop: (event: DragEvent, reactFlowBounds: DOMRect) => void;
@@ -86,8 +80,6 @@ export interface LineageContextType {
   onColumnEdgeRemove: () => void;
   onAddPipelineClick: () => void;
   onConnect: (connection: Edge | Connection) => void;
-  onConnectStart: OnConnectStart;
-  onConnectEnd: OnConnectEnd;
   updateEntityData: (
     entityType: EntityType,
     entity?: SourceType,

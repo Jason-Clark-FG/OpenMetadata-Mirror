@@ -91,11 +91,15 @@ export const CustomEdge = ({
     onColumnEdgeRemove,
     dataQualityLineage,
     dqHighlightedEdges,
-    selectedColumn,
   } = useLineageProvider();
 
-  const { tracedNodes, tracedColumns, isEditMode, isDQEnabled } =
-    useLineageStore();
+  const {
+    tracedNodes,
+    tracedColumns,
+    isEditMode,
+    isDQEnabled,
+    selectedColumn,
+  } = useLineageStore();
 
   const theme = useTheme();
 

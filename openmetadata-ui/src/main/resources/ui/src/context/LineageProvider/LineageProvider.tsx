@@ -176,10 +176,11 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     selectedEdge,
     setSelectedEdge,
     isColumnLevelLineage,
+    selectedColumn,
+    setSelectedColumn,
     reset,
   } = useLineageStore();
 
-  const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [showAddEdgeModal, setShowAddEdgeModal] = useState<boolean>(false);
   const [entityLineage, setEntityLineage] = useState<EntityLineageResponse>({
     nodes: [],
@@ -201,6 +202,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const {
     nodes,
     edges,
+    columnEdges,
     setNodes,
     setEdges,
     onNodesChange,
@@ -226,7 +228,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const backspacePressed = useKeyPress('Backspace');
   const { showModal } = useEntityExportModalProvider();
   const [dqHighlightedEdges, setDqHighlightedEdges] = useState<Set<string>>();
-  const [isCreatingEdge, setIsCreatingEdge] = useState<boolean>(false);
 
   // Add state for entityFqn that can be updated independently of URL params
   const [entityFqn, setEntityFqn] = useState<string>(decodedFqn);
@@ -742,37 +743,31 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     []
   );
 
-  const onColumnClick = useCallback(
-    (column: string) => {
-      setSelectedColumn(column);
-      const { columnEdge } = getClassifiedEdge(edges);
-      const { connectedColumnEdges } = getAllTracedColumnEdge(
-        column,
-        columnEdge
-      );
+  useEffect(() => {
+    if (!selectedColumn) {
+      return;
+    }
 
-      setTracedColumns(connectedColumnEdges);
-      setTracedNodes(new Set());
-      setSelectedEdge(undefined);
-    },
-    [nodes, edges]
-  );
+    const { connectedColumnEdges } = getAllTracedColumnEdge(
+      selectedColumn,
+      columnEdges
+    );
+
+    setTracedColumns(connectedColumnEdges);
+    setTracedNodes(new Set());
+    setSelectedEdge(undefined);
+  }, [selectedColumn, columnEdges]);
 
   const onColumnMouseEnter = useCallback(
     (column: string) => {
-      const { columnEdge } = getClassifiedEdge(edges);
       const { connectedColumnEdges } = getAllTracedColumnEdge(
         column,
-        columnEdge
+        columnEdges
       );
       setTracedColumns(connectedColumnEdges);
     },
-    [edges]
+    [columnEdges]
   );
-
-  const onColumnMouseLeave = useCallback(() => {
-    setTracedColumns(new Set());
-  }, []);
 
   const removeEdgeHandler = async (
     edge: Edge,
@@ -1292,14 +1287,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     ]
   );
 
-  const onConnectStart = useCallback(() => {
-    setIsCreatingEdge(true);
-  }, []);
-
-  const onConnectEnd = useCallback(() => {
-    setIsCreatingEdge(false);
-  }, []);
-
   const onAddPipelineClick = useCallback(() => {
     setShowAddEdgeModal(true);
   }, []);
@@ -1705,6 +1692,10 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     isLineageSettingsLoaded,
   ]);
 
+  useEffect(() => {
+    redraw();
+  }, [isColumnLevelLineage]);
+
   const activityFeedContextValues: LineageContextType = useMemo(() => {
     return {
       nodes,
@@ -1714,20 +1705,14 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       status,
       init,
       entityFqn,
-      isCreatingEdge,
-      selectedColumn,
       exportLineageData,
       updateEntityFqn,
       onInitReactFlow,
       onPaneClick,
       onConnect,
-      onConnectStart,
-      onConnectEnd,
       onNodeDrop,
       onNodeCollapse,
-      onColumnClick,
       onColumnMouseEnter,
-      onColumnMouseLeave,
       onNodesChange,
       onEdgesChange,
       updateEntityData,
@@ -1755,20 +1740,14 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     status,
     init,
     entityFqn,
-    isCreatingEdge,
-    selectedColumn,
     exportLineageData,
     updateEntityFqn,
     onInitReactFlow,
     onPaneClick,
     onConnect,
-    onConnectStart,
-    onConnectEnd,
     onNodeDrop,
     onNodeCollapse,
-    onColumnClick,
     onColumnMouseEnter,
-    onColumnMouseLeave,
     selectedQuickFilters,
     setSelectedQuickFilters,
     onNodesChange,

@@ -24,7 +24,6 @@ import {
   LINEAGE_CHILD_ITEMS_PER_PAGE,
 } from '../../../../constants/constants';
 import { DATATYPES_HAVING_SUBFIELDS } from '../../../../constants/Lineage.constants';
-import { useLineageProvider } from '../../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../../enums/entity.enum';
 import { Column, Table } from '../../../../generated/entity/data/table';
 import {
@@ -153,15 +152,15 @@ const NodeChildren = ({
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
   const { Panel } = Collapse;
-  const { selectedColumn, isCreatingEdge } = useLineageProvider();
 
   const {
     isEditMode,
     columnsHavingLineage,
-    tracedColumns,
     expandAllColumns,
     isColumnLevelLineage,
     isDQEnabled,
+    selectedColumn,
+    isCreatingEdge,
   } = useLineageStore();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
@@ -326,14 +325,11 @@ const NodeChildren = ({
 
   const renderRecord = useCallback(
     (record: Column) => {
-      const isColumnTraced = tracedColumns.has(record.fullyQualifiedName ?? '');
-
       const columnSummary = getColumnSummary(record);
 
       const headerContent = (
         <ColumnContent
           column={record}
-          isColumnTraced={isColumnTraced}
           isConnectable={isConnectable}
           isLoading={isLoading}
           showDataObservabilitySummary={showDataObservabilitySummary}
@@ -357,8 +353,6 @@ const NodeChildren = ({
         if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
           return renderRecord(child);
         } else {
-          const isColumnTraced = tracedColumns.has(fullyQualifiedName ?? '');
-
           if (!isColumnVisible(child)) {
             return null;
           }
@@ -366,7 +360,6 @@ const NodeChildren = ({
           return (
             <ColumnContent
               column={child}
-              isColumnTraced={isColumnTraced}
               isConnectable={isConnectable}
               isLoading={isLoading}
               key={fullyQualifiedName}
@@ -397,7 +390,6 @@ const NodeChildren = ({
       );
     },
     [
-      tracedColumns,
       getColumnSummary,
       isConnectable,
       showDataObservabilitySummary,
@@ -408,13 +400,12 @@ const NodeChildren = ({
   );
   const renderColumnsData = useCallback(
     (column: Column) => {
-      const { fullyQualifiedName, dataType } = column;
+      const { dataType } = column;
       const columnSummary = getColumnSummary(column);
 
       if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
         return renderRecord(column);
       } else {
-        const isColumnTraced = tracedColumns.has(fullyQualifiedName ?? '');
         if (!isColumnVisible(column)) {
           return null;
         }
@@ -422,7 +413,6 @@ const NodeChildren = ({
         return (
           <ColumnContent
             column={column}
-            isColumnTraced={isColumnTraced}
             isConnectable={isConnectable}
             isLoading={isLoading}
             showDataObservabilitySummary={showDataObservabilitySummary}
@@ -434,7 +424,6 @@ const NodeChildren = ({
     [
       getColumnSummary,
       renderRecord,
-      tracedColumns,
       isColumnVisible,
       isConnectable,
       showDataObservabilitySummary,

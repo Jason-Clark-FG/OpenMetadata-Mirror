@@ -34,9 +34,9 @@ import serviceUtilClassBase from '../../../../utils/ServiceUtilClassBase';
 
 const LineageSearchSelect = () => {
   const { t } = useTranslation();
-  const { nodes, reactFlowInstance, onNodeClick, onColumnClick } =
-    useLineageProvider();
-  const { zoomValue, isPlatformLineage, platformView } = useLineageStore();
+  const { nodes, reactFlowInstance, onNodeClick } = useLineageProvider();
+  const { zoomValue, isPlatformLineage, platformView, setSelectedColumn } =
+    useLineageStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [allOptions, setAllOptions] = useState<DefaultOptionType[]>([]);
   const [renderedOptions, setRenderedOptions] = useState<DefaultOptionType[]>(
@@ -206,10 +206,10 @@ const LineageSearchSelect = () => {
           zoom: zoomValue,
         });
       } else {
-        onColumnClick(value ?? '');
+        setSelectedColumn(value ?? '');
       }
     },
-    [onNodeClick, reactFlowInstance, onColumnClick, nodes, zoomValue]
+    [onNodeClick, reactFlowInstance, setSelectedColumn, nodes, zoomValue]
   );
 
   if (isPlatformLineage || platformView !== LineagePlatformView.None) {

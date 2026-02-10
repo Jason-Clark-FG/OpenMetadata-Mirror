@@ -36,6 +36,8 @@ interface LineageState {
   selectedNode?: SourceType;
   isColumnLevelLineage: boolean;
   isDQEnabled: boolean;
+  selectedColumn?: string;
+  isCreatingEdge: boolean;
 
   // Actions
   setIsEditMode: (isEditMode: boolean) => void;
@@ -56,6 +58,8 @@ interface LineageState {
   setActiveNode: (activeNode?: Node) => void;
   setSelectedNode: (selectedNode?: SourceType) => void;
   setSelectedEdge: (selectedEdge?: Edge) => void;
+  setSelectedColumn: (selectedColumn?: string) => void;
+  setIsCreatingEdge: (isCreatingEdge: boolean) => void;
   reset: () => void;
 }
 
@@ -80,6 +84,7 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   isColumnLevelLineage: false,
   isDQEnabled: false,
   showColumnsWithLineageOnly: false,
+  isCreatingEdge: false,
 
   // Actions
   setLineageConfig: (lineageConfig: LineageConfig) => set({ lineageConfig }),
@@ -188,7 +193,11 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   setActiveNode: (activeNode?: Node) => set({ activeNode }),
 
   setSelectedNode: (selectedNode?: SourceType) => set({ selectedNode }),
+
   setSelectedEdge: (selectedEdge?: Edge) => set({ selectedEdge }),
+
+  setSelectedColumn: (selectedColumn?: string) => set({ selectedColumn }),
+  setIsCreatingEdge: (isCreatingEdge: boolean) => set({ isCreatingEdge }),
 
   reset: () =>
     set({

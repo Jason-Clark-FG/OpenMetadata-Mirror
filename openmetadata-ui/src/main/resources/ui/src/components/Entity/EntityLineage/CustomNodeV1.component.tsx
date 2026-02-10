@@ -171,6 +171,7 @@ const CustomNodeV1 = (props: NodeProps) => {
   // Expand column on ColumnLevelLineage change
   useEffect(() => {
     setColumnsExpanded(isColumnLevelLineage);
+    setShowColumnsWithLineageOnly(isColumnLevelLineage);
   }, [isColumnLevelLineage]);
 
   const {
@@ -329,10 +330,6 @@ const CustomNodeV1 = (props: NodeProps) => {
     node,
     showColumnsWithLineageOnly,
   ]);
-
-  useEffect(() => {
-    setShowColumnsWithLineageOnly(isColumnLevelLineage);
-  }, [isColumnLevelLineage]);
 
   return (
     <div
