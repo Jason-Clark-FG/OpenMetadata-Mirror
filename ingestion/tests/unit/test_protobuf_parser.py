@@ -99,9 +99,7 @@ class ProtobufParserTests:
         }
 
     def test_field_types(self, parsed_schema):
-        field_types = {
-            str(field.dataType.name) for field in parsed_schema[0].children
-        }
+        field_types = {str(field.dataType.name) for field in parsed_schema[0].children}
         assert field_types == {"INT", "ENUM", "RECORD", "FIXED", "STRING", "BOOLEAN"}
 
     def test_column_types(self, protobuf_parser):

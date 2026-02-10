@@ -17,7 +17,6 @@ from copy import deepcopy
 
 import pytest
 
-from ..conftest import _safe_delete
 from metadata.generated.schema.api.data.createAPICollection import (
     CreateAPICollectionRequest,
 )
@@ -45,6 +44,7 @@ from metadata.generated.schema.type.basic import EntityName
 from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.generated.schema.type.entityReferenceList import EntityReferenceList
 
+from ..conftest import _safe_delete
 from ..integration_base import generate_name
 
 

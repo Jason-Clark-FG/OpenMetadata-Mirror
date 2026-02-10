@@ -16,7 +16,6 @@ from typing import Dict
 
 import pytest
 
-from ..conftest import _safe_delete
 from metadata.generated.schema.api.data.createCustomProperty import (
     CreateCustomPropertyRequest,
 )
@@ -44,6 +43,7 @@ from metadata.ingestion.models.custom_properties import (
 )
 from metadata.utils.constants import ENTITY_REFERENCE_TYPE_MAP
 
+from ..conftest import _safe_delete
 from ..integration_base import generate_name, get_create_service
 
 EXPECTED_CUSTOM_PROPERTIES = [

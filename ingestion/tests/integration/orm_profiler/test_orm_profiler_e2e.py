@@ -22,8 +22,6 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
-
-from ..conftest import _safe_delete
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base
 
@@ -49,6 +47,8 @@ from metadata.workflow.classification import AutoClassificationWorkflow
 from metadata.workflow.metadata import MetadataWorkflow
 from metadata.workflow.profiler import ProfilerWorkflow
 from metadata.workflow.workflow_output_handler import WorkflowResultStatus
+
+from ..conftest import _safe_delete
 
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)

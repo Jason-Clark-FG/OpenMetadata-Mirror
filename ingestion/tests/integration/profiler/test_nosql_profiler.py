@@ -34,8 +34,6 @@ from pymongo import MongoClient, database
 from testcontainers.mongodb import MongoDbContainer
 
 from _openmetadata_testutils.ometa import int_admin_ometa
-
-from ..conftest import _safe_delete
 from metadata.generated.schema.entity.data.table import ColumnProfile, Table
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
 from metadata.generated.schema.type.basic import Timestamp
@@ -49,6 +47,8 @@ from metadata.workflow.classification import AutoClassificationWorkflow
 from metadata.workflow.metadata import MetadataWorkflow
 from metadata.workflow.profiler import ProfilerWorkflow
 from metadata.workflow.workflow_output_handler import WorkflowResultStatus
+
+from ..conftest import _safe_delete
 
 SERVICE_NAME = Path(__file__).stem
 
@@ -158,7 +158,9 @@ class NoSQLProfiler(TestCase):
 
     @classmethod
     def delete_service(cls):
-        service_entity = cls.metadata.get_by_name(entity=DatabaseService, fqn=SERVICE_NAME)
+        service_entity = cls.metadata.get_by_name(
+            entity=DatabaseService, fqn=SERVICE_NAME
+        )
         if service_entity:
             _safe_delete(
                 cls.metadata,

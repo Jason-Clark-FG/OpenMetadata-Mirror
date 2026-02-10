@@ -16,7 +16,6 @@ import uuid
 import pytest
 import yaml
 
-from ..conftest import _safe_delete
 from metadata.config.common import ConfigurationError, load_config_file
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
 from metadata.generated.schema.entity.services.ingestionPipelines.ingestionPipeline import (
@@ -27,9 +26,13 @@ from metadata.generated.schema.entity.services.ingestionPipelines.status import 
 )
 from metadata.workflow.metadata import MetadataWorkflow
 
+from ..conftest import _safe_delete
+
 
 def delete_service(metadata):
-    service_entity = metadata.get_by_name(entity=DatabaseService, fqn="local_mysql_test")
+    service_entity = metadata.get_by_name(
+        entity=DatabaseService, fqn="local_mysql_test"
+    )
     if service_entity:
         _safe_delete(
             metadata,

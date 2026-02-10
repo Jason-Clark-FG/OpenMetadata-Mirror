@@ -108,64 +108,137 @@ def unit_plugins(session, plugin):
 
 
 # ---------------------------------------------------------------------------
-# Integration tests
+# Static checks
 # ---------------------------------------------------------------------------
-# Default number of parallel workers.  Override via:
-#   nox -s integration -- --workers 4
-#   INTEGRATION_WORKERS=4 nox -s integration
-DEFAULT_WORKERS = "2"
-
-# Integration suites that match subdirectories under tests/integration/.
-# Pass one or more suite names to run only those:
-#   nox -s integration -- ometa
-#   nox -s integration -- ometa postgres
-INTEGRATION_DIR = "tests/integration"
-
-
 @nox.session(
-    name="integration",
+    name="static-checks",
     reuse_venv=True,
     venv_backend="uv|venv",
+    python=get_python_versions(),
 )
-def integration(session):
-    """Run integration tests in parallel (pytest-xdist).
+def static_checks(session):
+    session.install(".[dev]")
+    session.run("basedpyright", "-p", "pyproject.toml")
 
-    Each subdirectory under tests/integration/ is treated as a separate
-    xdist_group, so all tests within a suite run on the same worker while
-    different suites run in parallel.
+
+# ---------------------------------------------------------------------------
+# Unit tests
+# ---------------------------------------------------------------------------
+@nox.session(
+    name="unit-tests",
+    reuse_venv=True,
+    venv_backend="uv|venv",
+    python=get_python_versions(),
+)
+def unit_tests(session):
+    """Run Python unit tests with coverage and parallel execution."""
+    session.install(".[all]")
+    session.install(".[test]")
+    session.run(
+        "pytest",
+        "-c",
+        "pyproject.toml",
+        "--cov=metadata",
+        "--cov-branch",
+        "--cov-config=pyproject.toml",
+        "--junitxml=junit/test-results-unit.xml",
+        "-n",
+        "auto",
+        "tests/unit/",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Integration tests
+# ---------------------------------------------------------------------------
+@nox.session(
+    name="integration-tests",
+    reuse_venv=True,
+    venv_backend="uv|venv",
+    python=get_python_versions(),
+)
+def integration_tests(session):
+    """Run Python integration tests with coverage.
+
+    By default includes --cov-append for local use (run after unit tests).
+    Pass --standalone to produce standalone coverage for CI split jobs.
 
     Examples:
-        nox -s integration                        # all suites, 2 workers
-        nox -s integration -- ometa               # only ometa suite
-        nox -s integration -- ometa postgres      # ometa + postgres
-        nox -s integration -- --workers 4         # all suites, 4 workers
-        nox -s integration -- --workers 4 ometa   # ometa, 4 workers
+        nox -s integration-tests                   # local, appends to .coverage
+        nox -s integration-tests -- --standalone   # CI, standalone .coverage
     """
-    session.install(".[dev, test]")
-
-    workers = os.environ.get("INTEGRATION_WORKERS", DEFAULT_WORKERS)
+    session.install(".[all]")
+    session.install(".[test]")
 
     args = list(session.posargs)
+    standalone = "--standalone" in args
+    if standalone:
+        args.remove("--standalone")
+
+    workers = os.environ.get("PYTEST_INTEGRATION_WORKERS", "0")
     if "--workers" in args:
         idx = args.index("--workers")
         workers = args[idx + 1]
         args = args[:idx] + args[idx + 2 :]
 
-    suites = [a for a in args if not a.startswith("-")]
-    extra_flags = [a for a in args if a.startswith("-")]
-
-    if suites:
-        test_paths = [f"{INTEGRATION_DIR}/{s}" for s in suites]
-    else:
-        test_paths = [INTEGRATION_DIR]
-
-    session.run(
-        "pytest",
-        f"-n{workers}",
-        "--dist=loadgroup",
+    pytest_args = [
+        "-c",
+        "pyproject.toml",
         "--cov=metadata",
         "--cov-branch",
-        "-v",
-        *extra_flags,
-        *test_paths,
+        "--cov-config=pyproject.toml",
+        "--junitxml=junit/test-results-integration.xml",
+    ]
+
+    if not standalone:
+        pytest_args.append("--cov-append")
+    if int(workers) > 0:
+        pytest_args.extend([f"-n{workers}", "--dist=loadgroup"])
+    pytest_args.append("tests/integration/")
+
+    pytest_args.extend(args)
+
+    session.run("pytest", *pytest_args)
+
+
+# ---------------------------------------------------------------------------
+# Combine coverage
+# ---------------------------------------------------------------------------
+@nox.session(
+    name="combine-coverage",
+    reuse_venv=True,
+    venv_backend="uv|venv",
+)
+def combine_coverage(session):
+    """Combine coverage from multiple test runs and generate reports.
+
+    Used in CI to merge coverage artifacts from separate unit and
+    integration jobs. Expects .coverage files under coverage-data/.
+
+    Example:
+        nox -s combine-coverage
+    """
+    session.install("coverage[toml]")
+    session.run("coverage", "combine")
+    session.run(
+        "coverage",
+        "report",
+        "--rcfile=pyproject.toml",
+        success_codes=[0, 1],
     )
+    session.run(
+        "coverage",
+        "xml",
+        "--rcfile=pyproject.toml",
+        "-o",
+        "coverage.xml",
+        success_codes=[0, 1],
+    )
+    session.run(
+        "sed",
+        r's|filename="[^"]*\(/metadata/[^"]*"\)|filename="src\1|g',
+        "coverage.xml",
+        "-i",
+        external=True,
+    )
+    session.run("mv", "coverage.xml", "ci-coverage.xml", external=True)

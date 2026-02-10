@@ -23,7 +23,6 @@ from unittest import TestCase
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base
 
-from ..conftest import _safe_delete
 from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
     OpenMetadataConnection,
@@ -36,6 +35,8 @@ from metadata.generated.schema.tests.testSuite import TestSuite
 from metadata.ingestion.connections.session import create_and_bind_session
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.workflow.metadata import MetadataWorkflow
+
+from ..conftest import _safe_delete
 
 Base = declarative_base()
 
@@ -207,7 +208,9 @@ class TestGreatExpectationIntegration(TestCase):
         Clean up
         """
 
-        service_entity = cls.metadata.get_by_name(entity=DatabaseService, fqn="test_sqlite")
+        service_entity = cls.metadata.get_by_name(
+            entity=DatabaseService, fqn="test_sqlite"
+        )
         if service_entity:
             _safe_delete(
                 cls.metadata,

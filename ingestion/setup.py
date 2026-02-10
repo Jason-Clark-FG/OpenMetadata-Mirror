@@ -400,6 +400,7 @@ dev = {
     "pre-commit",
     "pycln",
     "pylint~=3.2.0",  # 3.3.0+ breaks our current linting
+    "basedpyright~=1.14",
     # For publishing
     "twine",
     "build",
@@ -428,7 +429,6 @@ test = {
     "coverage",
     # Install GE because it's not in the `all` plugin
     VERSIONS["great-expectations"],
-    "basedpyright~=1.14",
     "pytest==7.0.1",
     "pytest-cov",
     "pytest-xdist~=3.5",

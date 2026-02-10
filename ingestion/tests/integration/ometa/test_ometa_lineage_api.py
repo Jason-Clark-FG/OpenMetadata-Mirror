@@ -16,8 +16,6 @@ import time
 
 import pytest
 
-from ..conftest import _safe_delete
-
 from metadata.generated.schema.api.data.createAPICollection import (
     CreateAPICollectionRequest,
 )
@@ -65,6 +63,7 @@ from metadata.generated.schema.type.entityLineage import (
 from metadata.generated.schema.type.entityLineage import Source as LineageSource
 from metadata.generated.schema.type.entityReference import EntityReference
 
+from ..conftest import _safe_delete
 from ..integration_base import generate_name, get_create_entity, get_create_service
 
 
