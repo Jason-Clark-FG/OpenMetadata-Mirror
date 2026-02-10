@@ -9,9 +9,9 @@ import org.openmetadata.sdk.exceptions.OpenMetadataException;
 import org.openmetadata.sdk.models.ListResponse;
 import org.openmetadata.sdk.network.HttpClient;
 import org.openmetadata.sdk.network.HttpMethod;
-import org.openmetadata.sdk.resources.BaseResource;
+import org.openmetadata.sdk.services.EntityServiceBase;
 
-public class PipelineService extends BaseResource<Pipeline> {
+public class PipelineService extends EntityServiceBase<Pipeline> {
   public PipelineService(HttpClient httpClient) {
     super(httpClient, "/v1/pipelines");
   }
@@ -21,8 +21,11 @@ public class PipelineService extends BaseResource<Pipeline> {
     return Pipeline.class;
   }
 
-  // Create using CreatePipeline request
-  public org.openmetadata.schema.entity.data.Pipeline create(CreatePipeline request)
+  public Pipeline create(CreatePipeline request) throws OpenMetadataException {
+    return httpClient.execute(HttpMethod.POST, basePath, request, Pipeline.class);
+  }
+
+  public Pipeline addPipelineStatus(String fqn, PipelineStatus status)
       throws OpenMetadataException {
     String encodedFqn;
     try {
