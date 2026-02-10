@@ -210,7 +210,7 @@ public class OpenSearchVectorService implements VectorIndexService {
       String query =
           "{\"size\":1,\"_source\":[\"fingerprint\"],"
               + "\"query\":{\"term\":{\"parent_id\":\""
-              + parentId
+              + VectorSearchQueryBuilder.escape(parentId)
               + "\"}}}";
       String response = executeGenericRequest("POST", "/" + indexName + "/_search", query);
       JsonNode root = MAPPER.readTree(response);
@@ -238,7 +238,10 @@ public class OpenSearchVectorService implements VectorIndexService {
       StringBuilder termsArray = new StringBuilder("[");
       for (int i = 0; i < parentIds.size(); i++) {
         if (i > 0) termsArray.append(',');
-        termsArray.append("\"").append(parentIds.get(i)).append("\"");
+        termsArray
+            .append("\"")
+            .append(VectorSearchQueryBuilder.escape(parentIds.get(i)))
+            .append("\"");
       }
       termsArray.append("]");
 
@@ -275,7 +278,9 @@ public class OpenSearchVectorService implements VectorIndexService {
       String sourceIndex, String targetIndex, String parentId, String fingerprint) {
     try {
       String searchQuery =
-          "{\"size\":1000,\"query\":{\"term\":{\"parent_id\":\"" + parentId + "\"}}}";
+          "{\"size\":1000,\"query\":{\"term\":{\"parent_id\":\""
+              + VectorSearchQueryBuilder.escape(parentId)
+              + "\"}}}";
       String response = executeGenericRequest("POST", "/" + sourceIndex + "/_search", searchQuery);
       JsonNode root = MAPPER.readTree(response);
       JsonNode hits = root.path("hits").path("hits");
@@ -309,7 +314,7 @@ public class OpenSearchVectorService implements VectorIndexService {
       String script =
           "{\"script\":{\"source\":\"ctx._source.deleted = true\"},"
               + "\"query\":{\"term\":{\"parent_id\":\""
-              + parentId
+              + VectorSearchQueryBuilder.escape(parentId)
               + "\"}}}";
       executeGenericRequest("POST", "/" + indexName + "/_update_by_query", script);
     } catch (Exception e) {
@@ -338,7 +343,7 @@ public class OpenSearchVectorService implements VectorIndexService {
       String script =
           "{\"script\":{\"source\":\"ctx._source.deleted = false\"},"
               + "\"query\":{\"term\":{\"parent_id\":\""
-              + parentId
+              + VectorSearchQueryBuilder.escape(parentId)
               + "\"}}}";
       executeGenericRequest("POST", "/" + indexName + "/_update_by_query", script);
     } catch (Exception e) {
@@ -349,7 +354,10 @@ public class OpenSearchVectorService implements VectorIndexService {
 
   private void deleteByParentId(String indexName, String parentId) {
     try {
-      String query = "{\"query\":{\"term\":{\"parent_id\":\"" + parentId + "\"}}}";
+      String query =
+          "{\"query\":{\"term\":{\"parent_id\":\""
+              + VectorSearchQueryBuilder.escape(parentId)
+              + "\"}}}";
       executeGenericRequest("POST", "/" + indexName + "/_delete_by_query", query);
     } catch (Exception e) {
       LOG.error(

@@ -29,7 +29,6 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
   }
 
   private final ZooModel<String, float[]> model;
-  private final Predictor<String, float[]> predictor;
   private final String modelName;
   private final int dimension;
 
@@ -55,7 +54,6 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
                       .build();
 
       this.model = criteria.loadModel();
-      this.predictor = model.newPredictor();
       this.dimension = detectDimension();
 
       LOG.info("Initialized DjlEmbeddingClient with model={}, dimension={}", modelName, dimension);
@@ -69,8 +67,8 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
   }
 
   private int detectDimension() {
-    try {
-      float[] sample = predictor.predict("test");
+    try (Predictor<String, float[]> pred = model.newPredictor()) {
+      float[] sample = pred.predict("test");
       return sample.length;
     } catch (TranslateException e) {
       throw new EmbeddingInitializationException(
@@ -85,10 +83,10 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
       return new float[dimension];
     }
 
-    try {
+    try (Predictor<String, float[]> pred = model.newPredictor()) {
       String preview = text.length() > 100 ? text.substring(0, 100) + "..." : text;
       LOG.debug("Generating embedding for text: {}", preview);
-      return predictor.predict(text);
+      return pred.predict(text);
     } catch (TranslateException e) {
       throw new EmbeddingGenerationException("DJL embedding generation failed", e);
     } catch (Exception e) {
@@ -107,8 +105,8 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
       processedTexts.add(text == null || text.isBlank() ? "placeholder" : text);
     }
 
-    try {
-      return predictor.batchPredict(processedTexts);
+    try (Predictor<String, float[]> pred = model.newPredictor()) {
+      return pred.batchPredict(processedTexts);
     } catch (TranslateException e) {
       throw new EmbeddingGenerationException("DJL batch embedding generation failed", e);
     } catch (Exception e) {
@@ -129,9 +127,6 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
 
   @Override
   public void close() {
-    if (predictor != null) {
-      predictor.close();
-    }
     if (model != null) {
       model.close();
     }

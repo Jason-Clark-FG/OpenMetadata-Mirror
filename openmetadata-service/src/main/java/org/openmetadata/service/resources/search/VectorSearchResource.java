@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.SecurityContext;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.Collection;
@@ -73,6 +74,12 @@ public class VectorSearchResource {
           .build();
     }
 
+    if (query == null || query.isBlank()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity("{\"error\":\"query parameter 'q' is required\"}")
+          .build();
+    }
+
     OpenSearchVectorService vectorService = OpenSearchVectorService.getInstance();
     if (vectorService == null) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -91,7 +98,7 @@ public class VectorSearchResource {
     } catch (Exception e) {
       LOG.error("Vector search failed: {}", e.getMessage(), e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("{\"error\":\"" + e.getMessage() + "\"}")
+          .entity("{\"error\":\"An internal error occurred\"}")
           .build();
     }
   }
@@ -114,6 +121,12 @@ public class VectorSearchResource {
       })
   public Response vectorSearchPost(
       @Context SecurityContext securityContext, VectorSearchRequest request) {
+    if (request.query == null || request.query.isBlank()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity("{\"error\":\"query is required\"}")
+          .build();
+    }
+
     if (!Entity.getSearchRepository().isVectorEmbeddingEnabled()) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
           .entity("{\"error\":\"Vector search is not enabled\"}")
@@ -139,7 +152,7 @@ public class VectorSearchResource {
     } catch (Exception e) {
       LOG.error("Vector search failed: {}", e.getMessage(), e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("{\"error\":\"" + e.getMessage() + "\"}")
+          .entity("{\"error\":\"An internal error occurred\"}")
           .build();
     }
   }
@@ -168,6 +181,14 @@ public class VectorSearchResource {
     }
 
     try {
+      UUID.fromString(parentId);
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity("{\"error\":\"Invalid parentId format\"}")
+          .build();
+    }
+
+    try {
       String indexName = vectorService.getIndexName();
       String fingerprint = vectorService.getExistingFingerprint(indexName, parentId);
       FingerprintResponse response =
@@ -177,7 +198,7 @@ public class VectorSearchResource {
     } catch (Exception e) {
       LOG.error("Failed to get fingerprint for {}: {}", parentId, e.getMessage(), e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("{\"error\":\"" + e.getMessage() + "\"}")
+          .entity("{\"error\":\"An internal error occurred\"}")
           .build();
     }
   }
