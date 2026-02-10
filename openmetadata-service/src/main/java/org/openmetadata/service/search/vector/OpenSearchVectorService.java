@@ -3,6 +3,7 @@ package org.openmetadata.service.search.vector;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.stream.JsonParser;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -86,46 +87,49 @@ public class OpenSearchVectorService implements VectorIndexService {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public VectorSearchResponse search(
       String query, Map<String, List<String>> filters, int size, int k, double threshold) {
     long start = System.currentTimeMillis();
     try {
       float[] queryVector = embeddingClient.embed(query);
       int overFetchSize = size * OVER_FETCH_MULTIPLIER;
-      int overFetchK = k * OVER_FETCH_MULTIPLIER;
 
-      String queryJson =
-          VectorSearchQueryBuilder.build(queryVector, overFetchSize, overFetchK, filters);
+      String queryJson = VectorSearchQueryBuilder.build(queryVector, overFetchSize, k, filters);
       String indexName = getClusteredIndexName();
       String responseBody = executeGenericRequest("POST", "/" + indexName + "/_search", queryJson);
 
       JsonNode root = MAPPER.readTree(responseBody);
       JsonNode hitsNode = root.path("hits").path("hits");
 
-      LinkedHashMap<String, Map<String, Object>> parentGroups = new LinkedHashMap<>();
+      LinkedHashMap<String, List<Map<String, Object>>> byParent = new LinkedHashMap<>();
       for (JsonNode hit : hitsNode) {
         double score = hit.path("_score").asDouble(0.0);
-        if (threshold > 0 && score < threshold) {
+        if (score < threshold) {
           continue;
         }
 
-        JsonNode source = hit.path("_source");
-        String parentId = source.path("parent_id").asText(hit.path("_id").asText());
+        Map<String, Object> hitMap = MAPPER.convertValue(hit.path("_source"), Map.class);
+        hitMap.put("_score", score);
 
-        if (!parentGroups.containsKey(parentId)) {
-          Map<String, Object> hitMap = MAPPER.convertValue(source, Map.class);
-          hitMap.put("_id", hit.path("_id").asText());
-          hitMap.put("_score", score);
-          parentGroups.put(parentId, hitMap);
-        }
-
-        if (parentGroups.size() >= size) {
-          break;
+        String parentId = (String) hitMap.get("parent_id");
+        if (parentId != null) {
+          byParent.computeIfAbsent(parentId, kVal -> new ArrayList<>()).add(hitMap);
         }
       }
 
+      List<Map<String, Object>> results = new ArrayList<>();
+      int parentCount = 0;
+      for (List<Map<String, Object>> chunks : byParent.values()) {
+        if (parentCount >= size) {
+          break;
+        }
+        results.addAll(chunks);
+        parentCount++;
+      }
+
       long tookMillis = System.currentTimeMillis() - start;
-      return new VectorSearchResponse(tookMillis, new ArrayList<>(parentGroups.values()));
+      return new VectorSearchResponse(tookMillis, results);
     } catch (Exception e) {
       LOG.error("Vector search failed: {}", e.getMessage(), e);
       long tookMillis = System.currentTimeMillis() - start;
@@ -133,23 +137,28 @@ public class OpenSearchVectorService implements VectorIndexService {
     }
   }
 
-  @SuppressWarnings("unchecked")
   String executeGenericRequest(String method, String endpoint, String body) {
     try {
       OpenSearchGenericClient genericClient = client.generic();
       var request = Requests.builder().endpoint(endpoint).method(method).json(body).build();
-      var response = genericClient.execute(request);
-      return response
-          .getBody()
-          .map(
-              b -> {
-                try {
-                  return new String(b.bodyAsBytes(), StandardCharsets.UTF_8);
-                } catch (Exception e) {
-                  return "{}";
-                }
-              })
-          .orElse("{}");
+      try (var response = genericClient.execute(request)) {
+        if (response.getStatus() >= 400) {
+          String errorBody = response.getBody().map(b -> b.bodyAsString()).orElse("no body");
+          throw new IOException(
+              "OpenSearch request failed with status " + response.getStatus() + ": " + errorBody);
+        }
+        return response
+            .getBody()
+            .map(
+                b -> {
+                  try {
+                    return new String(b.bodyAsBytes(), StandardCharsets.UTF_8);
+                  } catch (Exception e) {
+                    return "{}";
+                  }
+                })
+            .orElse("{}");
+      }
     } catch (Exception e) {
       LOG.error("Generic request failed: {} {}", method, endpoint, e);
       throw new RuntimeException("OpenSearch generic request failed", e);
@@ -186,11 +195,22 @@ public class OpenSearchVectorService implements VectorIndexService {
     try {
       String parentId = entity.getId().toString();
       String currentFingerprint = VectorDocBuilder.computeFingerprintForEntity(entity);
-      String existingFingerprint = getExistingFingerprint(sourceIndex, parentId);
 
-      if (currentFingerprint.equals(existingFingerprint)) {
-        copyExistingVectorDocuments(sourceIndex, targetIndex, parentId, currentFingerprint);
-        return;
+      if (sourceIndex != null) {
+        try {
+          String existingFingerprint = getExistingFingerprint(sourceIndex, parentId);
+          if (currentFingerprint.equals(existingFingerprint)) {
+            if (copyExistingVectorDocuments(
+                sourceIndex, targetIndex, parentId, currentFingerprint)) {
+              return;
+            }
+          }
+        } catch (Exception ex) {
+          LOG.warn(
+              "Migration copy failed for entity {}, falling back to recomputation: {}",
+              parentId,
+              ex.getMessage());
+        }
       }
 
       List<Map<String, Object>> docs = VectorDocBuilder.fromEntity(entity, embeddingClient);
@@ -274,7 +294,8 @@ public class OpenSearchVectorService implements VectorIndexService {
   }
 
   @Override
-  public void copyExistingVectorDocuments(
+  @SuppressWarnings("unchecked")
+  public boolean copyExistingVectorDocuments(
       String sourceIndex, String targetIndex, String parentId, String fingerprint) {
     try {
       String searchQuery =
@@ -286,15 +307,17 @@ public class OpenSearchVectorService implements VectorIndexService {
       JsonNode hits = root.path("hits").path("hits");
 
       if (!hits.isArray() || hits.isEmpty()) {
-        return;
+        return false;
       }
 
       List<Map<String, Object>> docs = new ArrayList<>();
       for (JsonNode hit : hits) {
         Map<String, Object> source = MAPPER.convertValue(hit.path("_source"), Map.class);
+        source.put("fingerprint", fingerprint);
         docs.add(source);
       }
       bulkIndex(docs, targetIndex);
+      return true;
     } catch (Exception e) {
       LOG.error(
           "Failed to copy vector documents from {} to {} for parent_id={}: {}",
@@ -303,6 +326,7 @@ public class OpenSearchVectorService implements VectorIndexService {
           parentId,
           e.getMessage(),
           e);
+      return false;
     }
   }
 
@@ -440,7 +464,7 @@ public class OpenSearchVectorService implements VectorIndexService {
         Map<String, Object> doc = documents.get(i);
         String parentId = (String) doc.get("parent_id");
         int chunkIndex = doc.containsKey("chunk_index") ? (int) doc.get("chunk_index") : i;
-        String docId = parentId + "_" + chunkIndex;
+        String docId = parentId + "-" + chunkIndex;
 
         operations.add(
             BulkOperation.of(

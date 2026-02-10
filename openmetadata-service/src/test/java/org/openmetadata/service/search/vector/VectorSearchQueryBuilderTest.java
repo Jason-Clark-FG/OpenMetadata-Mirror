@@ -1,9 +1,12 @@
 package org.openmetadata.service.search.vector;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -219,5 +222,30 @@ class VectorSearchQueryBuilderTest {
     assertTrue(query.contains("\"should\""));
     assertTrue(query.contains("\"exists\""));
     assertTrue(query.contains("table"));
+  }
+
+  @Test
+  void testEfficientKnnPreFilteringStructure() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    float[] vector = {0.1f, 0.2f};
+    int size = 10;
+    int k = 100;
+    Map<String, List<String>> filters = Map.of("entityType", List.of("table"));
+
+    String query = VectorSearchQueryBuilder.build(vector, size, k, filters);
+
+    JsonNode root = mapper.readTree(query);
+    assertTrue(root.has("query"));
+    JsonNode queryNode = root.get("query");
+
+    assertTrue(queryNode.has("knn"));
+    assertNotNull(queryNode.get("knn").get("embedding").get("filter"));
+
+    JsonNode filter = queryNode.get("knn").get("embedding").get("filter");
+    assertTrue(filter.has("bool"));
+    assertTrue(filter.get("bool").has("must"));
+
+    JsonNode mustFilters = filter.get("bool").get("must");
+    assertEquals(2, mustFilters.size());
   }
 }

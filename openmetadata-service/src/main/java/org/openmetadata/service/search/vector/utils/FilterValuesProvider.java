@@ -3,16 +3,18 @@ package org.openmetadata.service.search.vector.utils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
-import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.jdbi3.UserRepository;
 
 @Slf4j
 public final class FilterValuesProvider {
@@ -119,21 +121,20 @@ public final class FilterValuesProvider {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private static List<String> loadOwners() {
     try {
       List<String> ownerNames = new ArrayList<>();
       if (Entity.hasEntityRepository(Entity.USER)) {
-        EntityRepository<EntityInterface> userRepo =
-            (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.USER);
-        List<EntityInterface> users = userRepo.listAll(Fields.EMPTY_FIELDS, new ListFilter());
-        for (EntityInterface user : users) {
-          if (user.getName() != null) {
-            ownerNames.add(user.getName());
-          }
-        }
+        UserRepository userRepo = (UserRepository) Entity.getEntityRepository(Entity.USER);
+        List<User> users = userRepo.listAll(userRepo.getFields("name,isBot"), new ListFilter());
+        users.stream()
+            .filter(u -> !Boolean.TRUE.equals(u.getIsBot()))
+            .map(User::getName)
+            .filter(Objects::nonNull)
+            .forEach(ownerNames::add);
       }
       if (Entity.hasEntityRepository(Entity.TEAM)) {
+        @SuppressWarnings("unchecked")
         EntityRepository<EntityInterface> teamRepo =
             (EntityRepository<EntityInterface>) Entity.getEntityRepository(Entity.TEAM);
         List<EntityInterface> teams =

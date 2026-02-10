@@ -1,6 +1,5 @@
 package org.openmetadata.service.search.vector;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.experimental.UtilityClass;
@@ -11,18 +10,18 @@ public class VectorSearchQueryBuilder {
   private static final String NONE_MARKER = "__NONE__";
 
   public static String build(float[] vector, int size, int k, Map<String, List<String>> filters) {
-    StringBuilder sb = new StringBuilder();
+    StringBuilder sb = new StringBuilder(512);
     sb.append("{\"size\":").append(size);
     sb.append(",\"_source\":{\"excludes\":[\"embedding\"]}");
-    sb.append(",\"query\":{\"bool\":{\"must\":[{\"knn\":{\"embedding\":{\"vector\":[");
+    sb.append(",\"query\":{\"knn\":{\"embedding\":{\"vector\":[");
     for (int i = 0; i < vector.length; i++) {
       if (i > 0) sb.append(',');
       sb.append(vector[i]);
     }
-    sb.append("],\"k\":").append(k).append("}}}");
+    sb.append("],\"k\":").append(k);
 
-    List<String> filterClauses = new ArrayList<>();
-    filterClauses.add("{\"term\":{\"deleted\":false}}");
+    sb.append(",\"filter\":{\"bool\":{\"must\":[");
+    sb.append("{\"term\":{\"deleted\":false}}");
 
     if (filters != null) {
       for (Map.Entry<String, List<String>> entry : filters.entrySet()) {
@@ -32,17 +31,13 @@ public class VectorSearchQueryBuilder {
 
         String clause = buildFilterClause(key, values);
         if (clause != null) {
-          filterClauses.add(clause);
+          sb.append(',');
+          sb.append(clause);
         }
       }
     }
 
-    sb.append("],\"filter\":[");
-    for (int i = 0; i < filterClauses.size(); i++) {
-      if (i > 0) sb.append(',');
-      sb.append(filterClauses.get(i));
-    }
-    sb.append("]}}}");
+    sb.append("]}}}}}}");
     return sb.toString();
   }
 

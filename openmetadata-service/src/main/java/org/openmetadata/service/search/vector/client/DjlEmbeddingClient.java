@@ -1,6 +1,8 @@
 package org.openmetadata.service.search.vector.client;
 
+import ai.djl.Application;
 import ai.djl.MalformedModelException;
+import ai.djl.huggingface.translator.TextEmbeddingTranslatorFactory;
 import ai.djl.inference.Predictor;
 import ai.djl.repository.zoo.Criteria;
 import ai.djl.repository.zoo.ModelNotFoundException;
@@ -32,7 +34,6 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
   private final String modelName;
   private final int dimension;
 
-  @SuppressWarnings("unchecked")
   public DjlEmbeddingClient(ElasticSearchConfiguration config) {
     NaturalLanguageSearchConfiguration nlsCfg = config.getNaturalLanguageSearch();
     if (nlsCfg.getDjl() == null) {
@@ -45,13 +46,13 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
 
     try {
       Criteria<String, float[]> criteria =
-          (Criteria<String, float[]>)
-              (Criteria<?, ?>)
-                  Criteria.builder()
-                      .setTypes(String.class, float[].class)
-                      .optModelUrls("djl://" + modelName)
-                      .optEngine("PyTorch")
-                      .build();
+          Criteria.builder()
+              .setTypes(String.class, float[].class)
+              .optModelUrls("djl://" + modelName)
+              .optEngine("PyTorch")
+              .optTranslatorFactory(new TextEmbeddingTranslatorFactory())
+              .optApplication(Application.NLP.TEXT_EMBEDDING)
+              .build();
 
       this.model = criteria.loadModel();
       this.dimension = detectDimension();

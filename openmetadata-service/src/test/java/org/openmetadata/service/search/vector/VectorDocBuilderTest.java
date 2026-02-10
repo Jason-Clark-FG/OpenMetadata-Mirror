@@ -188,7 +188,7 @@ class VectorDocBuilderTest {
     assertTrue(metaLight.contains("name: meta_table"));
     assertTrue(metaLight.contains("displayName: Meta Display"));
     assertTrue(metaLight.contains("entityType: table"));
-    assertTrue(metaLight.contains("fqn: svc.db.schema.meta_table"));
+    assertTrue(metaLight.endsWith(" | "));
   }
 
   @Test
@@ -223,14 +223,14 @@ class VectorDocBuilderTest {
   @Test
   void testOrEmpty() {
     assertEquals("value", VectorDocBuilder.orEmpty("value"));
-    assertEquals("", VectorDocBuilder.orEmpty(null));
+    assertEquals("[]", VectorDocBuilder.orEmpty(null));
   }
 
   @Test
   void testJoinOrEmpty() {
     assertEquals("a, b", VectorDocBuilder.joinOrEmpty(List.of("a", "b")));
-    assertEquals("", VectorDocBuilder.joinOrEmpty(null));
-    assertEquals("", VectorDocBuilder.joinOrEmpty(List.of()));
+    assertEquals("[]", VectorDocBuilder.joinOrEmpty(null));
+    assertEquals("[]", VectorDocBuilder.joinOrEmpty(List.of()));
   }
 
   @Test
@@ -249,8 +249,8 @@ class VectorDocBuilderTest {
 
   @Test
   void testColumnsToStringNull() {
-    assertEquals("", VectorDocBuilder.columnsToString(null));
-    assertEquals("", VectorDocBuilder.columnsToString(List.of()));
+    assertEquals("[]", VectorDocBuilder.columnsToString(null));
+    assertEquals("[]", VectorDocBuilder.columnsToString(List.of()));
   }
 
   @Test

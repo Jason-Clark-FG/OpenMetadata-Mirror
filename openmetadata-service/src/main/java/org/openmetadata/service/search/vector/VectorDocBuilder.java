@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.api.data.MetricExpression;
+import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.data.Metric;
 import org.openmetadata.schema.entity.data.Table;
@@ -41,9 +43,14 @@ public class VectorDocBuilder {
     String fingerprint = computeFingerprintForEntity(entity);
 
     List<String> chunks = TextChunkManager.chunk(body);
-    List<String> textsToEmbed = new ArrayList<>(chunks.size());
-    for (String chunk : chunks) {
-      textsToEmbed.add(metaLight + " " + chunk);
+    int chunkCount = chunks.size();
+    List<String> textsToEmbed = new ArrayList<>(chunkCount);
+    for (int ci = 0; ci < chunkCount; ci++) {
+      String contTag = (ci == 0) ? "" : "description (continued): ";
+      String text =
+          String.format(
+              "%s%s%s | chunk %d/%d", metaLight, contTag, chunks.get(ci), ci + 1, chunkCount);
+      textsToEmbed.add(text);
     }
 
     List<float[]> embeddings = embeddingClient.embedBatch(textsToEmbed);
@@ -54,9 +61,9 @@ public class VectorDocBuilder {
       doc.put("parent_id", parentId);
       doc.put("sourceId", parentId);
       doc.put("entityType", entityType);
-      doc.put("fullyQualifiedName", orEmpty(entity.getFullyQualifiedName()));
-      doc.put("name", orEmpty(entity.getName()));
-      doc.put("displayName", orEmpty(entity.getDisplayName()));
+      doc.put("fullyQualifiedName", stringOrEmpty(entity.getFullyQualifiedName()));
+      doc.put("name", stringOrEmpty(entity.getName()));
+      doc.put("displayName", stringOrEmpty(entity.getDisplayName()));
       doc.put("serviceType", extractServiceType(entity));
       doc.put("deleted", entity.getDeleted() != null && entity.getDeleted());
       doc.put("fingerprint", fingerprint);
@@ -82,58 +89,135 @@ public class VectorDocBuilder {
     String entityType = entity.getEntityReference().getType();
     String metaLight = buildMetaLightText(entity, entityType);
     String body = buildBodyText(entity, entityType);
-    return TextChunkManager.computeFingerprint(metaLight + body);
+    return TextChunkManager.computeFingerprint(metaLight + "|" + body);
   }
 
   static String buildMetaLightText(EntityInterface entity, String entityType) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("name: ").append(orEmpty(entity.getName()));
-    sb.append("; displayName: ").append(orEmpty(entity.getDisplayName()));
-    sb.append("; entityType: ").append(entityType);
-    sb.append("; fqn: ").append(orEmpty(entity.getFullyQualifiedName()));
-    sb.append("; serviceType: ").append(orEmpty(extractServiceType(entity)));
+    boolean isGlossary = entity instanceof Glossary;
+    boolean isGlossaryTerm = entity instanceof GlossaryTerm;
+    boolean isMetric = entity instanceof Metric;
 
-    if (entity.getTags() != null && !entity.getTags().isEmpty()) {
-      sb.append("; tags: ")
-          .append(
-              entity.getTags().stream().map(TagLabel::getTagFQN).collect(Collectors.joining(", ")));
+    List<TagLabel> tagsPojo = entity.getTags() != null ? entity.getTags() : Collections.emptyList();
+
+    List<String> classificationTagFqns =
+        tagsPojo.stream()
+            .filter(tag -> tag.getSource() == null || !"Glossary".equals(tag.getSource().value()))
+            .filter(tag -> !tag.getTagFQN().startsWith("Tier."))
+            .map(TagLabel::getTagFQN)
+            .collect(Collectors.toList());
+    List<String> glossaryTermFqns =
+        tagsPojo.stream()
+            .filter(tag -> tag.getSource() != null && "Glossary".equals(tag.getSource().value()))
+            .map(TagLabel::getTagFQN)
+            .collect(Collectors.toList());
+
+    List<EntityReference> ownersPojo =
+        entity.getOwners() != null ? entity.getOwners() : Collections.emptyList();
+    List<String> ownerNames =
+        ownersPojo.stream()
+            .map(
+                owner -> {
+                  String type = owner.getType();
+                  String name = owner.getName();
+                  if (type != null && name != null) {
+                    return type.toLowerCase() + "." + name;
+                  }
+                  return name;
+                })
+            .filter(n -> n != null)
+            .collect(Collectors.toList());
+
+    List<EntityReference> domainsPojo =
+        entity.getDomains() != null ? entity.getDomains() : Collections.emptyList();
+    List<String> domainFqns =
+        domainsPojo.stream()
+            .map(EntityReference::getFullyQualifiedName)
+            .filter(fqn -> fqn != null)
+            .collect(Collectors.toList());
+
+    List<String> parts = new ArrayList<>();
+    parts.add("name: " + orEmpty(entity.getName()));
+    parts.add("displayName: " + orEmpty(entity.getDisplayName()));
+    parts.add("entityType: " + entityType);
+    parts.add("serviceType: " + orEmpty(extractServiceType(entity)));
+
+    if (isGlossaryTerm) {
+      GlossaryTerm term = (GlossaryTerm) entity;
+      List<String> synonyms =
+          term.getSynonyms() != null ? term.getSynonyms() : Collections.emptyList();
+      parts.add("synonyms: " + joinOrEmpty(synonyms));
+      List<EntityReference> relatedTerms =
+          term.getRelatedTerms() != null ? term.getRelatedTerms() : Collections.emptyList();
+      List<String> relatedTermFqns =
+          relatedTerms.stream()
+              .map(EntityReference::getFullyQualifiedName)
+              .filter(fqn -> fqn != null)
+              .collect(Collectors.toList());
+      parts.add("relatedTerms: " + joinOrEmpty(relatedTermFqns));
     }
 
-    if (entity.getOwners() != null && !entity.getOwners().isEmpty()) {
-      sb.append("; owners: ")
-          .append(
-              entity.getOwners().stream()
-                  .map(EntityReference::getName)
-                  .collect(Collectors.joining(", ")));
-    }
-
-    if (entity.getDomains() != null && !entity.getDomains().isEmpty()) {
-      sb.append("; domains: ")
-          .append(
-              entity.getDomains().stream()
-                  .map(EntityReference::getName)
-                  .collect(Collectors.joining(", ")));
-    }
-
-    return sb.toString();
-  }
-
-  static String buildBodyText(EntityInterface entity, String entityType) {
-    StringBuilder sb = new StringBuilder();
-    String desc = removeHtml(orEmpty(entity.getDescription()));
-    if (!desc.isEmpty()) {
-      sb.append(desc);
-    }
-
-    if (entity instanceof Table table) {
-      String cols = columnsToString(table.getColumns());
-      if (!cols.isEmpty()) {
-        if (!sb.isEmpty()) sb.append(" ");
-        sb.append(cols);
+    if (isMetric) {
+      Metric metric = (Metric) entity;
+      if (metric.getMetricType() != null) {
+        parts.add("metricType: " + metric.getMetricType().value());
+      }
+      if (metric.getUnitOfMeasurement() != null) {
+        parts.add("unitOfMeasurement: " + metric.getUnitOfMeasurement().value());
+      }
+      if (metric.getGranularity() != null) {
+        parts.add("granularity: " + metric.getGranularity().toString());
+      }
+      MetricExpression metricExpression = metric.getMetricExpression();
+      if (metricExpression != null && metricExpression.getCode() != null) {
+        String lang =
+            metricExpression.getLanguage() != null ? metricExpression.getLanguage().toString() : "";
+        parts.add(String.format("metricCode: ```%s\n%s\n```", lang, metricExpression.getCode()));
+      }
+      List<EntityReference> relatedMetrics =
+          metric.getRelatedMetrics() != null ? metric.getRelatedMetrics() : Collections.emptyList();
+      if (!relatedMetrics.isEmpty()) {
+        List<String> relatedMetricFqns =
+            relatedMetrics.stream()
+                .map(EntityReference::getFullyQualifiedName)
+                .filter(fqn -> fqn != null)
+                .collect(Collectors.toList());
+        parts.add("relatedMetrics: " + joinOrEmpty(relatedMetricFqns));
       }
     }
 
-    return sb.toString();
+    if (!isGlossary && !isGlossaryTerm) {
+      parts.add("tier: " + orEmpty(extractTierLabel(entity)));
+      parts.add("certification: " + orEmpty(extractCertificationLabel(entity)));
+    }
+
+    parts.add("domains: " + joinOrEmpty(domainFqns));
+    parts.add("tags: " + joinOrEmpty(classificationTagFqns));
+
+    if (!isGlossary && !isGlossaryTerm) {
+      parts.add("Associated glossary terms: " + joinOrEmpty(glossaryTermFqns));
+    }
+
+    parts.add("owners: " + joinOrEmpty(ownerNames));
+
+    Object customProperties = entity.getExtension();
+    parts.add(
+        "customProperties: "
+            + (customProperties != null && !String.valueOf(customProperties).isBlank()
+                ? String.valueOf(customProperties)
+                : "[]"));
+
+    return String.join("; ", parts) + " | ";
+  }
+
+  static String buildBodyText(EntityInterface entity, String entityType) {
+    List<String> bodyParts = new ArrayList<>();
+    bodyParts.add("description: " + removeHtml(orEmpty(entity.getDescription())));
+
+    if (entity instanceof Table table) {
+      bodyParts.add("columns: " + columnsToString(table.getColumns()));
+    }
+
+    return String.join("; ", bodyParts);
   }
 
   private static void addTagsAndTier(Map<String, Object> doc, EntityInterface entity) {
@@ -356,17 +440,31 @@ public class VectorDocBuilder {
     return text.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
   }
 
-  static String orEmpty(String value) {
+  static String orEmpty(Object value) {
+    return (value == null || String.valueOf(value).isBlank()) ? "[]" : String.valueOf(value);
+  }
+
+  static String stringOrEmpty(String value) {
     return value != null ? value : "";
   }
 
   static String joinOrEmpty(List<String> values) {
-    if (values == null || values.isEmpty()) return "";
+    if (values == null || values.isEmpty()) return "[]";
     return String.join(", ", values);
   }
 
   static String columnsToString(List<Column> columns) {
-    if (columns == null || columns.isEmpty()) return "";
-    return columns.stream().map(Column::getName).collect(Collectors.joining(", "));
+    if (columns == null || columns.isEmpty()) return "[]";
+    return columns.stream()
+        .map(
+            col -> {
+              String name = col.getName();
+              String desc = col.getDescription();
+              desc = desc == null ? "" : desc.trim();
+              return desc.isEmpty() || "null".equalsIgnoreCase(desc)
+                  ? name
+                  : name + " (" + desc + ")";
+            })
+        .collect(Collectors.joining(", "));
   }
 }

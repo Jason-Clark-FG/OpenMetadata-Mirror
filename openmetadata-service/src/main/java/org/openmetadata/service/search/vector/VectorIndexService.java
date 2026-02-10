@@ -32,7 +32,7 @@ public interface VectorIndexService {
 
   Map<String, String> getExistingFingerprintsBatch(String indexName, List<String> parentIds);
 
-  void copyExistingVectorDocuments(
+  boolean copyExistingVectorDocuments(
       String sourceIndex, String targetIndex, String parentId, String fingerprint);
 
   void softDeleteEmbeddings(EntityInterface entity);

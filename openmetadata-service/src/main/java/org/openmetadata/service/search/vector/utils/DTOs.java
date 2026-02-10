@@ -19,7 +19,7 @@ public final class DTOs {
     public String query;
     public Map<String, List<String>> filters;
     public int size = 10;
-    public int k = 10;
+    public int k = 10000;
     public double threshold = 0.0;
   }
 
