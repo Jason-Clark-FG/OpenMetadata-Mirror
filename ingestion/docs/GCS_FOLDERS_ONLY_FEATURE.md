@@ -128,6 +128,30 @@ For buckets with millions of files:
 - Apply different strategies per data tier
 - Balance between visibility and performance
 
+## Limitations and Considerations
+
+### Current Limitations
+
+1. **Pagination Limit**: Current implementation uses `max_results=1000` for blob listings
+   - For paths with more than 1000 objects, some folders might be missed
+   - This is a known limitation shared with existing depth-based ingestion
+   - Future enhancement: Implement pagination to handle very large buckets
+
+2. **Snapshot-Based**: Folder structure reflects the state at ingestion time
+   - New folders created after ingestion won't appear until next run
+   - Deleted folders may still show until manual cleanup
+
+3. **No Aggregated Metrics**: Folder-only mode does not provide:
+   - File count per folder
+   - Size aggregation per folder
+   - File type distribution
+
+### Best Practices
+
+- For buckets with >1000 objects in a single prefix, consider using more specific `dataPath` values
+- Run periodic ingestion to keep folder structure up-to-date
+- Combine with selective file ingestion for critical data paths
+
 ## Testing
 
 Unit tests added in `test_gcs_folders_only.py`:

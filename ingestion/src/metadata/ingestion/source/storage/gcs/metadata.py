@@ -302,6 +302,7 @@ class GcsSource(StorageServiceSource):
                 client = self.gcs_clients.storage_client.clients[
                     bucket_response.project_id
                 ]
+                # TODO: Implement pagination for buckets with >1000 objects to ensure complete folder discovery
                 response = client.list_blobs(
                     bucket_response.name,
                     prefix=prefix,
@@ -670,6 +671,7 @@ class GcsSource(StorageServiceSource):
         """
         bucket_name = bucket_response.name
         client = self.gcs_clients.storage_client.clients[bucket_response.project_id]
+        # TODO: Implement pagination for buckets with >1000 objects to ensure complete folder discovery
         response = client.list_blobs(
             bucket_name,
             prefix=metadata_entry.dataPath,
