@@ -30,11 +30,11 @@ version: "3.9"
 
 services:
   postgresql:
-    volumes: []
+    volumes: !override []
     tmpfs:
       - /var/lib/postgresql/data:rw,noexec,nosuid,size=2g
 
   opensearch:
-    volumes: []
+    volumes: !override []
     tmpfs:
       - /usr/share/opensearch/data:rw,noexec,nosuid,size=1500m

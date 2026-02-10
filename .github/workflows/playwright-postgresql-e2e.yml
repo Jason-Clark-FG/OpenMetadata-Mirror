@@ -93,6 +93,8 @@ jobs:
 
       - name: Setup Openmetadata Test Environment
         uses: ./.github/actions/setup-openmetadata-test-environment
+        env:
+          USE_TMPFS: "true"
         with:
           python-version: "3.10"
           # Pass different args depending on the shardIndex:
@@ -100,7 +102,6 @@ jobs:
           # - other shards: skip ingestion setup
           args: ${{ matrix.shardIndex == 2 && '-d postgresql' || '-d postgresql -i false' }}
           ingestion_dependency: "all"
-          use_tmpfs: "true"
 
       - name: Monitor System Resources
         if: always()
