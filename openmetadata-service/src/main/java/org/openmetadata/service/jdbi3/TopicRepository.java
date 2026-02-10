@@ -94,7 +94,7 @@ public class TopicRepository extends EntityRepository<Topic> {
 
   @Override
   public void prepare(Topic topic, boolean update) {
-    MessagingService messagingService = Entity.getEntity(topic.getService(), "", ALL);
+    var messagingService = (MessagingService) getCachedParentOrLoad(topic.getService(), "", ALL);
     topic.setService(messagingService.getEntityReference());
     topic.setServiceType(messagingService.getServiceType());
   }
@@ -372,6 +372,11 @@ public class TopicRepository extends EntityRepository<Topic> {
     if (topic.getMessageSchema() != null) {
       applyTags(topic.getMessageSchema().getSchemaFields());
     }
+  }
+
+  @Override
+  protected EntityReference getParentReference(Topic entity) {
+    return entity.getService();
   }
 
   @Override

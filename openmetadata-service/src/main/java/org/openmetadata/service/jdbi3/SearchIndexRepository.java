@@ -91,7 +91,7 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
 
   @Override
   public void prepare(SearchIndex searchIndex, boolean update) {
-    SearchService searchService = Entity.getEntity(searchIndex.getService(), "", ALL);
+    var searchService = (SearchService) getCachedParentOrLoad(searchIndex.getService(), "", ALL);
     searchIndex.setService(searchService.getEntityReference());
     searchIndex.setServiceType(searchService.getServiceType());
   }
@@ -378,6 +378,11 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
     if (searchIndex.getFields() != null) {
       applyFieldTags(searchIndex.getFields());
     }
+  }
+
+  @Override
+  protected EntityReference getParentReference(SearchIndex entity) {
+    return entity.getService();
   }
 
   @Override

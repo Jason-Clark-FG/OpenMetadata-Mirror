@@ -51,7 +51,8 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
 
   @Override
   public void prepare(StoredProcedure storedProcedure, boolean update) {
-    DatabaseSchema schema = Entity.getEntity(storedProcedure.getDatabaseSchema(), "", ALL);
+    var schema =
+        (DatabaseSchema) getCachedParentOrLoad(storedProcedure.getDatabaseSchema(), "", ALL);
     storedProcedure
         .withDatabaseSchema(schema.getEntityReference())
         .withDatabase(schema.getDatabase())
@@ -201,6 +202,11 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
       Operation operation,
       ChangeSource changeSource) {
     return new StoredProcedureUpdater(original, updated, operation);
+  }
+
+  @Override
+  protected EntityReference getParentReference(StoredProcedure entity) {
+    return entity.getDatabaseSchema();
   }
 
   @Override

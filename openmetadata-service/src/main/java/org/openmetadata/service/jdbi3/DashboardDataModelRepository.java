@@ -142,8 +142,8 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
 
   @Override
   public void prepare(DashboardDataModel dashboardDataModel, boolean update) {
-    DashboardService dashboardService =
-        Entity.getEntity(dashboardDataModel.getService(), "", Include.ALL);
+    var dashboardService =
+        (DashboardService) getCachedParentOrLoad(dashboardDataModel.getService(), "", Include.ALL);
     dashboardDataModel.setService(dashboardService.getEntityReference());
     dashboardDataModel.setServiceType(dashboardService.getServiceType());
   }
@@ -285,6 +285,11 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
     // Add table level tags by adding tag to table relationship
     super.applyTags(dashboardDataModel);
     applyColumnTags(dashboardDataModel.getColumns());
+  }
+
+  @Override
+  protected EntityReference getParentReference(DashboardDataModel entity) {
+    return entity.getService();
   }
 
   @Override

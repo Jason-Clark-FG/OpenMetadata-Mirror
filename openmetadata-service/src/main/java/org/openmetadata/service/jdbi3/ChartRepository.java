@@ -69,7 +69,8 @@ public class ChartRepository extends EntityRepository<Chart> {
 
   @Override
   public void prepare(Chart chart, boolean update) {
-    DashboardService dashboardService = Entity.getEntity(chart.getService(), "", Include.ALL);
+    var dashboardService =
+        (DashboardService) getCachedParentOrLoad(chart.getService(), "", Include.ALL);
     chart.setService(dashboardService.getEntityReference());
     chart.setServiceType(dashboardService.getServiceType());
     chart.setDashboards(EntityUtil.getEntityReferences(chart.getDashboards(), Include.NON_DELETED));
@@ -181,6 +182,11 @@ public class ChartRepository extends EntityRepository<Chart> {
   public EntityRepository<Chart>.EntityUpdater getUpdater(
       Chart original, Chart updated, Operation operation, ChangeSource changeSource) {
     return new ChartUpdater(original, updated, operation);
+  }
+
+  @Override
+  protected EntityReference getParentReference(Chart entity) {
+    return entity.getService();
   }
 
   @Override

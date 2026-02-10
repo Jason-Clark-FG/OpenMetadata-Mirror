@@ -294,8 +294,8 @@ public class ContainerRepository extends EntityRepository<Container> {
   public void prepare(Container container, boolean update) {
     // the storage service is not fully filled in terms of props - go to the db and get it in full
     // and re-set it
-    StorageService storageService =
-        Entity.getEntity(container.getService(), "", Include.NON_DELETED);
+    var storageService =
+        (StorageService) getCachedParentOrLoad(container.getService(), "", Include.NON_DELETED);
     container.setService(storageService.getEntityReference());
     container.setServiceType(storageService.getServiceType());
 
@@ -405,6 +405,11 @@ public class ContainerRepository extends EntityRepository<Container> {
     if (container.getDataModel() != null) {
       validateColumnTags(container.getDataModel().getColumns());
     }
+  }
+
+  @Override
+  protected EntityReference getParentReference(Container entity) {
+    return entity.getService();
   }
 
   @Override

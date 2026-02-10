@@ -112,6 +112,11 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
   }
 
   @Override
+  protected EntityReference getParentReference(APICollection entity) {
+    return entity.getService();
+  }
+
+  @Override
   public EntityInterface getParentEntity(APICollection entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -208,7 +213,8 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
   }
 
   private void populateService(APICollection apiCollection) {
-    ApiService service = Entity.getEntity(apiCollection.getService(), "", Include.NON_DELETED);
+    var service =
+        (ApiService) getCachedParentOrLoad(apiCollection.getService(), "", Include.NON_DELETED);
     apiCollection.setService(service.getEntityReference());
     apiCollection.setServiceType(service.getServiceType());
   }

@@ -365,6 +365,11 @@ public class MlModelRepository extends EntityRepository<MlModel> {
   }
 
   @Override
+  protected EntityReference getParentReference(MlModel entity) {
+    return entity.getService();
+  }
+
+  @Override
   public EntityInterface getParentEntity(MlModel entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -439,7 +444,8 @@ public class MlModelRepository extends EntityRepository<MlModel> {
   }
 
   private void populateService(MlModel mlModel) {
-    MlModelService service = Entity.getEntity(mlModel.getService(), "", Include.NON_DELETED);
+    var service =
+        (MlModelService) getCachedParentOrLoad(mlModel.getService(), "", Include.NON_DELETED);
     mlModel.setService(service.getEntityReference());
     mlModel.setServiceType(service.getServiceType());
   }

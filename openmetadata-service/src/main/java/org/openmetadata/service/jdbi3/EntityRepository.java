@@ -119,6 +119,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -345,6 +346,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   protected boolean supportsSearch = false;
   protected final Map<String, BiConsumer<List<T>, Fields>> fieldFetchers = new HashMap<>();
+
+  /**
+   * Thread-local cache for parent entities during bulk prepare operations.
+   * Set by {@link #preloadParentsForBulk(List)} and cleared after use.
+   */
+  private final ThreadLocal<Map<UUID, EntityInterface>> parentCacheForPrepare = new ThreadLocal<>();
 
   protected final ChangeSummarizer<T> changeSummarizer;
 
@@ -654,13 +661,108 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   /**
-   * The default behavior is to execute one by one. For batch execution, override this method in the subclass.
-   *
-   * @see GlossaryTermRepository#setInheritedFields(List, Fields) for an example implementation
+   * Return the parent's EntityReference without loading the parent entity. Subclasses override this
+   * to enable batch parent loading in {@link #setInheritedFields(List, Fields)}.
+   */
+  protected EntityReference getParentReference(T entity) {
+    return null;
+  }
+
+  /** Fields to load on parent entities for inheritance. Override for repos that inherit more than domains. */
+  protected String getInheritableFields() {
+    return "domains";
+  }
+
+  /** Apply inherited fields from a loaded parent to the entity. Override for custom inheritance logic. */
+  protected void applyInheritance(T entity, Fields fields, EntityInterface parent) {
+    inheritDomains(entity, fields, parent);
+  }
+
+  /**
+   * Batch-preload parent entities needed by {@link #prepare(Object, boolean)} during bulk operations.
+   * Default uses {@link #getParentReference(Object)} to collect unique parents and batch-load them.
+   * Repos with custom parent loading in prepare() can override for different behavior.
+   */
+  public void preloadParentsForBulk(List<T> entities) {
+    if (entities == null || entities.isEmpty()) return;
+    var uniqueRefs = new LinkedHashMap<UUID, EntityReference>();
+    for (var entity : entities) {
+      var ref = getParentReference(entity);
+      if (ref != null && ref.getId() != null) {
+        uniqueRefs.putIfAbsent(ref.getId(), ref);
+      }
+    }
+    if (uniqueRefs.isEmpty()) return;
+    var loaded = new HashMap<UUID, EntityInterface>();
+    for (var ref : uniqueRefs.values()) {
+      loaded.put(ref.getId(), Entity.getEntity(ref, "", ALL));
+    }
+    setParentCache(loaded);
+  }
+
+  /** Get a parent entity from the bulk-prepare cache, or load from DB if not cached. */
+  protected EntityInterface getCachedParentOrLoad(
+      EntityReference ref, String fields, Include include) {
+    var cache = parentCacheForPrepare.get();
+    if (cache != null && ref != null && ref.getId() != null) {
+      var cached = cache.get(ref.getId());
+      if (cached != null) return cached;
+    }
+    return Entity.getEntity(ref, fields, include);
+  }
+
+  /** Store preloaded parents in the thread-local cache. */
+  protected void setParentCache(Map<UUID, EntityInterface> cache) {
+    parentCacheForPrepare.set(cache);
+  }
+
+  /** Clear the parent cache after bulk prepare. */
+  public void clearParentCache() {
+    parentCacheForPrepare.remove();
+  }
+
+  /**
+   * Batch implementation that collects unique parent references, loads them in bulk, and applies
+   * inheritance. Subclasses only need to override {@link #getParentReference(Object)},
+   * {@link #getInheritableFields()}, and {@link #applyInheritance(Object, Fields, EntityInterface)}.
+   * Repos with complex inheritance (e.g. GlossaryTerm, TestCase) can still override this method directly.
    */
   protected void setInheritedFields(List<T> entities, Fields fields) {
-    for (T entity : entities) {
-      setInheritedFields(entity, fields);
+    if (entities.isEmpty()) return;
+
+    var parentRefMap = new HashMap<UUID, EntityReference>();
+    for (var entity : entities) {
+      var ref = getParentReference(entity);
+      if (ref != null && ref.getId() != null) {
+        parentRefMap.putIfAbsent(ref.getId(), ref);
+      }
+    }
+
+    if (parentRefMap.isEmpty()) {
+      for (var entity : entities) {
+        setInheritedFields(entity, fields);
+      }
+      return;
+    }
+
+    var refsByType =
+        parentRefMap.values().stream().collect(Collectors.groupingBy(EntityReference::getType));
+
+    var loadedParents = new HashMap<UUID, EntityInterface>();
+    var inheritableFields = getInheritableFields();
+    for (var entry : refsByType.entrySet()) {
+      List<? extends EntityInterface> parents =
+          Entity.getEntities(entry.getValue(), inheritableFields, ALL);
+      for (var parent : parents) {
+        loadedParents.put(parent.getId(), parent);
+      }
+    }
+
+    for (var entity : entities) {
+      var ref = getParentReference(entity);
+      if (ref != null && loadedParents.get(ref.getId()) instanceof EntityInterface parent) {
+        applyInheritance(entity, fields, parent);
+      }
     }
   }
 
@@ -6056,7 +6158,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     private void storeNewVersion() {
-      LOG.info(
+      LOG.debug(
           "storeNewVersion called for entity: {} {}, changeDescription={}",
           entityType,
           updated.getId(),
@@ -7750,17 +7852,19 @@ public abstract class EntityRepository<T extends EntityInterface> {
         updateMany(entitiesToStore);
       }
 
+      // Batch set inherited fields for all updated entities at once
+      var allUpdated = updaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
+      setInheritedFields(allUpdated, new Fields(allowedFields));
+
       // Per-entity: cache write-through + events + metrics
       long batchDuration = System.nanoTime() - batchStartTime;
       long perEntityDuration = batchDuration / updaters.size();
-      for (EntityUpdater updater : updaters) {
+      for (var updater : updaters) {
         if (updater.isVersionChanged() || updater.isEntityChanged()) {
           writeThroughCache(updater.getUpdated(), true);
         }
-        setInheritedFields(updater.getUpdated(), new Fields(allowedFields));
         postUpdate(updater.getOriginal(), updater.getUpdated());
-        EventType changeType =
-            updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
+        var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
         createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
         entityLatenciesNanos.add(perEntityDuration);
         recordEntityMetrics(entityType, perEntityDuration, 0, true);
@@ -7771,27 +7875,34 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     } catch (Exception batchError) {
       LOG.warn("Batch update store failed, falling back to per-entity updates", batchError);
-      for (EntityUpdater updater : updaters) {
+      List<EntityUpdater> succeededUpdaters = new ArrayList<>();
+      for (var updater : updaters) {
         try {
           updater.storeUpdate();
           if (updater.isVersionChanged() || updater.isEntityChanged()) {
             writeThroughCache(updater.getUpdated(), true);
           }
-          setInheritedFields(updater.getUpdated(), new Fields(allowedFields));
-          postUpdate(updater.getOriginal(), updater.getUpdated());
-          EventType changeType =
-              updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
-          createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
-          successRequests.add(
-              new BulkResponse()
-                  .withRequest(updater.getUpdated().getFullyQualifiedName())
-                  .withStatus(Status.OK.getStatusCode()));
+          succeededUpdaters.add(updater);
         } catch (Exception e) {
           failedRequests.add(
               new BulkResponse()
                   .withRequest(updater.getUpdated().getFullyQualifiedName())
                   .withStatus(Status.BAD_REQUEST.getStatusCode())
                   .withMessage(e.getMessage()));
+        }
+      }
+      if (!succeededUpdaters.isEmpty()) {
+        var fallbackUpdated =
+            succeededUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
+        setInheritedFields(fallbackUpdated, new Fields(allowedFields));
+        for (var updater : succeededUpdaters) {
+          postUpdate(updater.getOriginal(), updater.getUpdated());
+          var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
+          createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
+          successRequests.add(
+              new BulkResponse()
+                  .withRequest(updater.getUpdated().getFullyQualifiedName())
+                  .withStatus(Status.OK.getStatusCode()));
         }
       }
     }

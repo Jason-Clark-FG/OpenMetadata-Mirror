@@ -41,6 +41,7 @@ import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1110,9 +1111,9 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     List<T> validEntities = new ArrayList<>();
     List<BulkResponse> failedResponses = new ArrayList<>();
 
-    // Phase 1: Validate and prepare all entities (in-memory, no DB)
-    List<T> preparedEntities = new ArrayList<>();
-    Map<String, C> entityToRequest = new HashMap<>();
+    // Phase 1a: Validate and map all requests to entities
+    List<T> mappedEntities = new ArrayList<>();
+    Map<T, C> entityToCreateRequest = new IdentityHashMap<>();
     for (C createRequest : createRequests) {
       try {
         String violations = ValidatorUtil.validate(createRequest);
@@ -1121,10 +1122,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         }
         T entity =
             mapper.createToEntity(createRequest, securityContext.getUserPrincipal().getName());
-        repository.prepareInternal(entity, false);
-        repository.setFullyQualifiedName(entity);
-        preparedEntities.add(entity);
-        entityToRequest.put(entity.getFullyQualifiedName(), createRequest);
+        mappedEntities.add(entity);
+        entityToCreateRequest.put(entity, createRequest);
       } catch (Exception e) {
         BulkResponse failedResponse = new BulkResponse();
         failedResponse.setRequest(createRequest);
@@ -1132,6 +1131,32 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         failedResponse.setStatus(400);
         failedResponses.add(failedResponse);
       }
+    }
+
+    // Phase 1b: Preload shared parent entities for all mapped entities (1 batch query per type)
+    repository.preloadParentsForBulk(mappedEntities);
+
+    // Phase 1c: Prepare each entity (uses preloaded parent cache)
+    List<T> preparedEntities = new ArrayList<>();
+    Map<String, C> entityToRequest = new HashMap<>();
+    try {
+      for (T entity : mappedEntities) {
+        try {
+          repository.prepareInternal(entity, false);
+          repository.setFullyQualifiedName(entity);
+          preparedEntities.add(entity);
+          entityToRequest.put(entity.getFullyQualifiedName(), entityToCreateRequest.get(entity));
+        } catch (Exception e) {
+          C createRequest = entityToCreateRequest.get(entity);
+          BulkResponse failedResponse = new BulkResponse();
+          failedResponse.setRequest(createRequest);
+          failedResponse.setMessage(e.getMessage());
+          failedResponse.setStatus(400);
+          failedResponses.add(failedResponse);
+        }
+      }
+    } finally {
+      repository.clearParentCache();
     }
 
     // Phase 2: Batch fetch existing entities (1 DB query instead of N)

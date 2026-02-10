@@ -177,10 +177,7 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     }
 
     boolean needTables =
-        fields.contains(FIELD_TAGS)
-            || fields.contains(FIELD_OWNERS)
-            || fields.contains("domains")
-            || fields.contains("followers");
+        fields.contains(FIELD_TAGS) || fields.contains(FIELD_OWNERS) || fields.contains("domains");
     if (needTables) {
       Map<String, Table> tableCache = batchLoadLinkedTables(testCases);
       linkedTablesCache.set(tableCache);
@@ -216,8 +213,7 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
         tableRepo.getDao().findEntityByNames(new ArrayList<>(fqnToEntityLink.keySet()), ALL);
     tableRepo.setFieldsInBulk(
         new Fields(
-            Set.of("tags", "columns", FIELD_OWNERS, "domains", "followers"),
-            "tags,columns,owners,domains,followers"),
+            Set.of("tags", "columns", FIELD_OWNERS, "domains"), "tags,columns,owners,domains"),
         tables);
 
     return tables.stream()
@@ -410,14 +406,12 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     Table table = tableCache != null ? tableCache.get(entityLink.getEntityFQN()) : null;
 
     if (table == null) {
-      table = Entity.getEntity(entityLink, "owners,domains,tags,columns,followers", ALL);
+      table = Entity.getEntity(entityLink, "owners,domains,tags,columns", ALL);
     }
 
     if (table != null) {
       inheritOwners(testCase, fields, table);
       inheritDomains(testCase, fields, table);
-      inheritTags(testCase, fields, table);
-      inheritFollowers(testCase, fields, table);
     }
 
     if (fields.contains(FIELD_REVIEWERS)) {
@@ -485,8 +479,6 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
       if (table != null) {
         inheritOwners(testCase, fields, table);
         inheritDomains(testCase, fields, table);
-        inheritTags(testCase, fields, table);
-        inheritFollowers(testCase, fields, table);
       }
 
       if (fields.contains(FIELD_REVIEWERS) && testCaseToSuites != null) {
@@ -556,8 +548,12 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     EntityLink entityLink = EntityLink.parse(test.getEntityLink());
     EntityUtil.validateEntityLink(entityLink);
 
+    // Load the linked table once with all fields needed across prepare + setInheritedFields
+    Table table = Entity.getEntity(entityLink, "owners,domains,columns", ALL);
+    linkedTablesCache.set(Map.of(entityLink.getEntityFQN(), table));
+
     // Get existing basic test suite or create a new one if it doesn't exist
-    EntityReference testSuite = getOrCreateTestSuite(test);
+    var testSuite = getOrCreateTestSuite(test, table);
     test.setTestSuite(testSuite);
 
     // validate test definition
@@ -578,36 +574,36 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
         testDefinition.getParameterDefinition(),
         testDefinition.getTestPlatforms(),
         testDefinition);
-    validateColumnTestCase(entityLink, testDefinition.getEntityType());
-    validateDimensionColumns(test, entityLink);
+    validateColumnTestCase(table, entityLink, testDefinition.getEntityType());
+    validateDimensionColumns(test, table);
   }
 
   /*
    * Get the test suite for a test case. We'll use the entity linked to the test case
    * to find the basic test suite. If it doesn't exist, create a new one.
    */
-  private EntityReference getOrCreateTestSuite(TestCase test) {
-    EntityReference entityReference = null;
+  EntityReference getOrCreateTestSuite(TestCase test) {
+    var entityLink = EntityLink.parse(test.getEntityLink());
+    EntityInterface tableEntity = Entity.getEntity(entityLink, "", ALL);
+    return getOrCreateTestSuite(test, tableEntity);
+  }
+
+  private EntityReference getOrCreateTestSuite(TestCase test, EntityInterface tableEntity) {
     try {
-      EntityLink entityLink = EntityLink.parse(test.getEntityLink());
-      EntityInterface entity = Entity.getEntity(entityLink, "", ALL);
-      return getTestSuite(entity.getId(), TEST_SUITE, TABLE, Direction.TO);
+      return getTestSuite(tableEntity.getId(), TEST_SUITE, TABLE, Direction.TO);
     } catch (EntityNotFoundException e) {
-      // If the test suite is not found, we'll create a new one
-      EntityLink entityLink = EntityLink.parse(test.getEntityLink());
-      TestSuiteRepository testSuiteRepository =
-          (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
-      TestSuiteMapper mapper = new TestSuiteMapper();
-      CreateTestSuite createTestSuite =
+      var entityLink = EntityLink.parse(test.getEntityLink());
+      var testSuiteRepository = (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
+      var mapper = new TestSuiteMapper();
+      var createTestSuite =
           new CreateTestSuite()
               .withName(entityLink.getEntityFQN() + ".testSuite")
               .withBasicEntityReference(entityLink.getEntityFQN());
-      TestSuite testSuite = mapper.createToEntity(createTestSuite, INGESTION_BOT_NAME);
+      var testSuite = mapper.createToEntity(createTestSuite, INGESTION_BOT_NAME);
       testSuite.setBasic(true);
       testSuiteRepository.create(null, testSuite);
-      entityReference = testSuite.getEntityReference();
+      return testSuite.getEntityReference();
     }
-    return entityReference;
   }
 
   private EntityReference getTestSuite(UUID id, String to, String from, Direction direction)
@@ -707,14 +703,13 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
   }
 
   private void validateColumnTestCase(
-      EntityLink entityLink, TestDefinitionEntityType testDefinitionEntityType) {
+      Table table, EntityLink entityLink, TestDefinitionEntityType testDefinitionEntityType) {
     if (testDefinitionEntityType.equals(TestDefinitionEntityType.COLUMN)) {
       if (entityLink.getFieldName() == null) {
         throw new IllegalArgumentException(
             "Column test case must have a field name and an array field name in the entity link."
                 + " e.g. <#E::table::{entityFqn}::columns::{columnName}>");
       }
-      // Validate that the field name is a valid column name
       if (!entityLink.getFieldName().equals("columns")) {
         throw new IllegalArgumentException(
             String.format(
@@ -722,21 +717,14 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
                     + " e.g. <#E::table::{entityFqn}::columns::{columnName}>",
                 entityLink.getFieldName()));
       }
-
-      // Validate that the referenced column actually exists in the table
       if (entityLink.getArrayFieldName() != null) {
-        Table table = Entity.getEntity(entityLink, "columns", ALL);
         validateColumn(table, entityLink.getArrayFieldName(), Boolean.FALSE);
       }
     }
   }
 
-  private void validateDimensionColumns(TestCase test, EntityLink entityLink) {
+  private void validateDimensionColumns(TestCase test, Table table) {
     if (test.getDimensionColumns() != null && !test.getDimensionColumns().isEmpty()) {
-      // Get the table referenced by the entityLink to validate dimension columns exist
-      Table table = Entity.getEntity(entityLink, "columns", ALL);
-
-      // Validate each dimension column exists in the table
       for (String dimensionColumn : test.getDimensionColumns()) {
         validateColumn(table, dimensionColumn, Boolean.FALSE);
       }
@@ -825,22 +813,20 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
   protected void postCreate(TestCase testCase) {
     super.postCreate(testCase);
     updateTestSuite(testCase);
+    linkedTablesCache.remove();
   }
 
   private void updateTestSuite(TestCase testCase) {
-    // Update test suite with updated test case in search index
-    TestSuiteRepository testSuiteRepository =
-        (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
+    var testSuiteRepository = (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
     TestSuite testSuite = Entity.getEntity(testCase.getTestSuite(), "*", ALL);
-    TestSuite original = TestSuiteRepository.copyTestSuite(testSuite);
+    var original = TestSuiteRepository.copyTestSuite(testSuite);
     testSuiteRepository.postUpdate(original, testSuite);
   }
 
   private void updateLogicalTestSuite(UUID testSuiteId) {
-    TestSuiteRepository testSuiteRepository =
-        (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
+    var testSuiteRepository = (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
     TestSuite testSuite = Entity.getEntity(Entity.TEST_SUITE, testSuiteId, "*", ALL);
-    TestSuite original = TestSuiteRepository.copyTestSuite(testSuite);
+    var original = TestSuiteRepository.copyTestSuite(testSuite);
     testSuiteRepository.postUpdate(original, testSuite);
   }
 

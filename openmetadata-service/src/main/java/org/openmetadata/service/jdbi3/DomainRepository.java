@@ -397,6 +397,11 @@ public class DomainRepository extends EntityRepository<Domain> {
   }
 
   @Override
+  protected EntityReference getParentReference(Domain entity) {
+    return entity.getParent();
+  }
+
+  @Override
   public EntityInterface getParentEntity(Domain entity, String fields) {
     return entity.getParent() != null
         ? Entity.getEntity(entity.getParent(), fields, Include.NON_DELETED)

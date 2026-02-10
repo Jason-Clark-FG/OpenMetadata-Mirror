@@ -355,7 +355,8 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
   }
 
   private void populateService(Dashboard dashboard) {
-    DashboardService service = Entity.getEntity(dashboard.getService(), "", Include.NON_DELETED);
+    var service =
+        (DashboardService) getCachedParentOrLoad(dashboard.getService(), "", Include.NON_DELETED);
     dashboard.setService(service.getEntityReference());
     dashboard.setServiceType(service.getServiceType());
   }
@@ -435,6 +436,11 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
   public EntityRepository<Dashboard>.EntityUpdater getUpdater(
       Dashboard original, Dashboard updated, Operation operation, ChangeSource changeSource) {
     return new DashboardUpdater(original, updated, operation);
+  }
+
+  @Override
+  protected EntityReference getParentReference(Dashboard entity) {
+    return entity.getService();
   }
 
   @Override

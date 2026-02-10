@@ -686,6 +686,11 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
   }
 
   @Override
+  protected EntityReference getParentReference(Pipeline entity) {
+    return entity.getService();
+  }
+
+  @Override
   public EntityInterface getParentEntity(Pipeline entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -780,7 +785,8 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
   }
 
   private void populateService(Pipeline pipeline) {
-    PipelineService service = Entity.getEntity(pipeline.getService(), "", Include.NON_DELETED);
+    var service =
+        (PipelineService) getCachedParentOrLoad(pipeline.getService(), "", Include.NON_DELETED);
     pipeline.setService(service.getEntityReference());
     pipeline.setServiceType(service.getServiceType());
   }

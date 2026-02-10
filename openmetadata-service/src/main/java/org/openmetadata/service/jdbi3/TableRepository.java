@@ -222,16 +222,15 @@ public class TableRepository extends EntityRepository<Table> {
     setInheritedFields(entities, fields);
 
     // Handle table-specific fields that aren't in fetchAndSetFields
+    // Only call per-entity populateEntityFieldTags when FIELD_TAGS was NOT requested,
+    // since fetchAndSetColumnTags already handles column tags via bulkPopulateEntityFieldTags
+    var needPerEntityColumnTags = fields.contains(COLUMN_FIELD) && !fields.contains(FIELD_TAGS);
     entities.forEach(
         table -> {
-          if (fields.contains(COLUMN_FIELD)) {
+          if (needPerEntityColumnTags) {
             populateEntityFieldTags(
-                entityType,
-                table.getColumns(),
-                table.getFullyQualifiedName(),
-                fields.contains(FIELD_TAGS));
+                entityType, table.getColumns(), table.getFullyQualifiedName(), false);
           }
-
           clearFieldsInternal(table, fields);
         });
   }
@@ -1102,7 +1101,7 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Override
   public void prepare(Table table, boolean update) {
-    DatabaseSchema schema = Entity.getEntity(table.getDatabaseSchema(), "", ALL);
+    var schema = (DatabaseSchema) getCachedParentOrLoad(table.getDatabaseSchema(), "", ALL);
     table
         .withDatabaseSchema(schema.getEntityReference())
         .withDatabase(schema.getDatabase())
@@ -1186,6 +1185,28 @@ public class TableRepository extends EntityRepository<Table> {
     // Add table level tags by adding tag to table relationship
     super.applyTags(table);
     applyColumnTags(table.getColumns());
+  }
+
+  @Override
+  protected EntityReference getParentReference(Table entity) {
+    return entity.getDatabaseSchema();
+  }
+
+  @Override
+  protected String getInheritableFields() {
+    return "owners,domains";
+  }
+
+  @Override
+  protected void applyInheritance(Table entity, Fields fields, EntityInterface parent) {
+    inheritOwners(entity, fields, parent);
+    inheritDomains(entity, fields, parent);
+    if (parent instanceof DatabaseSchema schema) {
+      entity.withRetentionPeriod(
+          entity.getRetentionPeriod() == null
+              ? schema.getRetentionPeriod()
+              : entity.getRetentionPeriod());
+    }
   }
 
   @Override

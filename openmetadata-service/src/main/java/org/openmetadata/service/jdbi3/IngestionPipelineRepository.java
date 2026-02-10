@@ -219,9 +219,8 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
 
   @Override
   public void prepare(IngestionPipeline ingestionPipeline, boolean update) {
-    EntityReference entityReference =
-        Entity.getEntityReference(ingestionPipeline.getService(), Include.NON_DELETED);
-    ingestionPipeline.setService(entityReference);
+    var service = getCachedParentOrLoad(ingestionPipeline.getService(), "", Include.NON_DELETED);
+    ingestionPipeline.setService(service.getEntityReference());
   }
 
   protected boolean requiresRedeployment(IngestionPipeline original, IngestionPipeline updated) {
@@ -465,6 +464,11 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
     daoCollection
         .entityExtensionTimeSeriesDao()
         .delete(entity.getFullyQualifiedName(), PIPELINE_STATUS_EXTENSION);
+  }
+
+  @Override
+  protected EntityReference getParentReference(IngestionPipeline entity) {
+    return entity.getService();
   }
 
   @Override

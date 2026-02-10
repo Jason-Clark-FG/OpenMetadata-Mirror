@@ -409,50 +409,32 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
   }
 
   @Override
-  protected void setInheritedFields(List<DatabaseSchema> schemas, Fields fields) {
-    if (schemas == null || schemas.isEmpty()) {
-      return;
-    }
-
-    // Collect all unique database IDs
-    Set<UUID> databaseIds =
-        schemas.stream()
-            .map(schema -> schema.getDatabase().getId())
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet());
-
-    // Bulk fetch all databases with required fields
-    DatabaseRepository databaseRepository =
-        (DatabaseRepository) Entity.getEntityRepository(Entity.DATABASE);
-    List<Database> databases =
-        databaseRepository.getDao().findEntitiesByIds(new ArrayList<>(databaseIds), ALL);
-
-    // Set owners and domain fields on all databases
-    databaseRepository.setFieldsInBulk(new Fields(Set.of("owners", "domains")), databases);
-
-    // Create a map for O(1) lookup
-    Map<UUID, Database> databaseMap =
-        databases.stream().collect(Collectors.toMap(Database::getId, database -> database));
-
-    // Apply inherited fields to all schemas
-    for (DatabaseSchema schema : schemas) {
-      Database database = databaseMap.get(schema.getDatabase().getId());
-      if (database != null) {
-        inheritOwners(schema, fields, database);
-        inheritDomains(schema, fields, database);
-        schema.withRetentionPeriod(
-            schema.getRetentionPeriod() == null
-                ? database.getRetentionPeriod()
-                : schema.getRetentionPeriod());
-      }
-    }
-  }
-
-  @Override
   public void restorePatchAttributes(DatabaseSchema original, DatabaseSchema updated) {
     // Patch can't make changes to following fields. Ignore the changes
     super.restorePatchAttributes(original, updated);
     updated.withService(original.getService());
+  }
+
+  @Override
+  protected EntityReference getParentReference(DatabaseSchema entity) {
+    return entity.getDatabase();
+  }
+
+  @Override
+  protected String getInheritableFields() {
+    return "owners,domains";
+  }
+
+  @Override
+  protected void applyInheritance(DatabaseSchema entity, Fields fields, EntityInterface parent) {
+    inheritOwners(entity, fields, parent);
+    inheritDomains(entity, fields, parent);
+    if (parent instanceof Database database) {
+      entity.withRetentionPeriod(
+          entity.getRetentionPeriod() == null
+              ? database.getRetentionPeriod()
+              : entity.getRetentionPeriod());
+    }
   }
 
   @Override
@@ -470,7 +452,7 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
   }
 
   private void populateDatabase(DatabaseSchema schema) {
-    Database database = Entity.getEntity(schema.getDatabase(), "", ALL);
+    var database = (Database) getCachedParentOrLoad(schema.getDatabase(), "", ALL);
     schema
         .withDatabase(database.getEntityReference())
         .withService(database.getService())

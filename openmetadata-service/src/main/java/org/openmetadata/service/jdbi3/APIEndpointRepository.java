@@ -289,7 +289,8 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
   }
 
   private void populateAPICollection(APIEndpoint apiEndpoint) {
-    APICollection apiCollection = Entity.getEntity(apiEndpoint.getApiCollection(), "", ALL);
+    var apiCollection =
+        (APICollection) getCachedParentOrLoad(apiEndpoint.getApiCollection(), "", ALL);
     apiEndpoint.setApiCollection(apiCollection.getEntityReference());
     apiEndpoint.setService(apiCollection.getService());
     apiEndpoint.setServiceType(apiCollection.getServiceType());
@@ -359,6 +360,11 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     if (apiEndpoint.getResponseSchema() != null) {
       applyTags(apiEndpoint.getResponseSchema().getSchemaFields());
     }
+  }
+
+  @Override
+  protected EntityReference getParentReference(APIEndpoint entity) {
+    return entity.getApiCollection();
   }
 
   @Override

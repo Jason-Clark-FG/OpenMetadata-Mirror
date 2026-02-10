@@ -168,6 +168,11 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
   }
 
   @Override
+  protected EntityReference getParentReference(LLMModel entity) {
+    return entity.getService();
+  }
+
+  @Override
   public EntityInterface getParentEntity(LLMModel entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -176,7 +181,8 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
   }
 
   private void populateService(LLMModel llmModel) {
-    LLMService service = Entity.getEntity(llmModel.getService(), "", Include.NON_DELETED);
+    var service =
+        (LLMService) getCachedParentOrLoad(llmModel.getService(), "", Include.NON_DELETED);
     llmModel.setService(service.getEntityReference());
   }
 

@@ -156,6 +156,11 @@ public class DatabaseRepository extends EntityRepository<Database> {
   }
 
   @Override
+  protected EntityReference getParentReference(Database entity) {
+    return entity.getService();
+  }
+
+  @Override
   public EntityInterface getParentEntity(Database entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -329,7 +334,8 @@ public class DatabaseRepository extends EntityRepository<Database> {
   }
 
   private void populateService(Database database) {
-    DatabaseService service = Entity.getEntity(database.getService(), "", Include.NON_DELETED);
+    var service =
+        (DatabaseService) getCachedParentOrLoad(database.getService(), "", Include.NON_DELETED);
     database.setService(service.getEntityReference());
     database.setServiceType(service.getServiceType());
   }
