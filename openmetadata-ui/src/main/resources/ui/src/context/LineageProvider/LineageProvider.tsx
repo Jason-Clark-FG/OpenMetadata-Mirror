@@ -84,7 +84,6 @@ import {
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
-import { useDebounce } from '../../hooks/useDebounce';
 import { useFqn } from '../../hooks/useFqn';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import { useMapBasedNodesEdges } from '../../hooks/useMapBasedNodesEdges';
@@ -230,20 +229,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const { showModal } = useEntityExportModalProvider();
   const [dqHighlightedEdges, setDqHighlightedEdges] = useState<Set<string>>();
   const [isCreatingEdge, setIsCreatingEdge] = useState<boolean>(false);
-  const [columnsInCurrentPages, setColumnsInCurrentPages] = useState<
-    Record<string, string[]>
-  >({});
-
-  const allColumnsInCurrentPagesSet = useMemo(() => {
-    const columns: string[] = [];
-    for (const pageColumns of Object.values(columnsInCurrentPages)) {
-      columns.push(...pageColumns);
-    }
-
-    return new Set(columns);
-  }, [columnsInCurrentPages]);
-
-  const debouncedColumnsSet = useDebounce(allColumnsInCurrentPagesSet, 150);
 
   // Add state for entityFqn that can be updated independently of URL params
   const [entityFqn, setEntityFqn] = useState<string>(decodedFqn);
@@ -394,84 +379,83 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     ]
   );
 
-  const createColumnEdges = useCallback(
-    (visibleColumnsSet: Set<string>) => {
-      const columnEdgeMap = new Map<string, Edge>();
+  const columnEdgeCache = useMemo(() => {
+    const cache = new Map<string, Edge>();
 
-      for (const edge of entityLineage?.edges ?? []) {
-        if (isUndefined(edge.columns) || !edge.columns.length) {
+    for (const edge of entityLineage?.edges ?? []) {
+      if (isUndefined(edge.columns) || !edge.columns.length) {
+        continue;
+      }
+
+      const sourceId = edge.fromEntity.id;
+      const targetId = edge.toEntity.id;
+
+      for (const e of edge.columns) {
+        const toColumn = e.toColumn ?? '';
+        if (!toColumn || !e.fromColumns?.length) {
           continue;
         }
 
-        const sourceId = edge.fromEntity.id;
-        const targetId = edge.toEntity.id;
+        for (const fromColumn of e.fromColumns) {
+          const encodedFrom = encodeLineageHandles(fromColumn);
+          const encodedTo = encodeLineageHandles(toColumn);
+          const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
 
-        for (const e of edge.columns) {
-          const toColumn = e.toColumn ?? '';
-          if (!toColumn || !e.fromColumns?.length) {
-            continue;
-          }
-
-          for (const fromColumn of e.fromColumns) {
-            const isSourceVisible = visibleColumnsSet.has(fromColumn);
-            const isTargetVisible = visibleColumnsSet.has(toColumn);
-
-            if (!isSourceVisible && !isTargetVisible) {
-              continue;
-            }
-
-            const encodedFrom = encodeLineageHandles(fromColumn);
-            const encodedTo = encodeLineageHandles(toColumn);
-            const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
-
-            if (!columnEdgeMap.has(edgeId)) {
-              columnEdgeMap.set(edgeId, {
-                id: edgeId,
-                source: sourceId,
-                target: targetId,
+          if (!cache.has(edgeId)) {
+            cache.set(edgeId, {
+              id: edgeId,
+              source: sourceId,
+              target: targetId,
+              targetHandle: encodedTo,
+              sourceHandle: encodedFrom,
+              style: { strokeWidth: '2px' },
+              type: 'buttonedge',
+              markerEnd: { type: MarkerType.ArrowClosed },
+              data: {
+                edge,
+                isColumnLineage: true,
                 targetHandle: encodedTo,
                 sourceHandle: encodedFrom,
-                style: { strokeWidth: '2px' },
-                type: 'buttonedge',
-                markerEnd: { type: MarkerType.ArrowClosed },
-                data: {
-                  edge,
-                  isColumnLineage: true,
-                  targetHandle: encodedTo,
-                  sourceHandle: encodedFrom,
-                  dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
-                },
-              });
-            }
+                dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
+              },
+            });
           }
         }
       }
-
-      return columnEdgeMap;
-    },
-    [entityLineage]
-  );
-
-  useEffect(() => {
-    if (!isColumnLevelLineage || !entityLineage) {
-      return;
     }
 
-    const columnEdgeMap = createColumnEdges(debouncedColumnsSet);
+    return cache;
+  }, [entityLineage]);
+
+  const createColumnEdges = useCallback(() => {
+    const columnEdgeMap = new Map<string, Edge>();
+
+    for (const [edgeId, cachedEdge] of columnEdgeCache) {
+      columnEdgeMap.set(edgeId, cachedEdge);
+    }
+
+    return columnEdgeMap;
+  }, [columnEdgeCache]);
+
+  useEffect(() => {
+    if (!entityLineage) {
+      return;
+    }
 
     setEdges((prevEdges) => {
       const tableEdges = prevEdges.filter(
         (edge) => !edge.data?.isColumnLineage
       );
 
+      if (!isColumnLevelLineage) {
+        return tableEdges;
+      }
+
+      const columnEdgeMap = createColumnEdges();
+
       return [...tableEdges, ...Array.from(columnEdgeMap.values())];
     });
-  }, [
-    debouncedColumnsSet,
-    createColumnEdges,
-    isColumnLevelLineage,
-    entityLineage,
-  ]);
+  }, [createColumnEdges, isColumnLevelLineage, entityLineage]);
 
   const updateLineageData = useCallback(
     (
@@ -1023,13 +1007,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       });
 
       setNewAddedNode({} as Node);
-
-      setColumnsInCurrentPages((prev) => {
-        const updated = { ...prev };
-        delete updated[node.id];
-
-        return updated;
-      });
     },
     [nodes, entityLineage]
   );
@@ -1179,7 +1156,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       updateNodeData(entityId, updatedEntity);
       setSelectedNode({ ...selectedNode, ...updatedEntity } as SourceType);
     },
-    [updateNodeData]
+    [updateNodeData, selectedNode]
   );
 
   const onNodeClick = useCallback(
@@ -1817,6 +1794,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       init,
       entityFqn,
       isCreatingEdge,
+      selectedColumn,
       exportLineageData,
       updateEntityFqn,
       onInitReactFlow,
@@ -1857,6 +1835,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     init,
     entityFqn,
     isCreatingEdge,
+    selectedColumn,
     exportLineageData,
     updateEntityFqn,
     onInitReactFlow,

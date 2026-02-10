@@ -181,7 +181,6 @@ export const CustomEdge = ({
       ...style,
       stroke,
       opacity,
-      display,
     };
   }, [
     tracedNodes,

@@ -53,6 +53,7 @@ export interface LineageContextType {
   entityLineage: EntityLineageResponse;
   entityFqn: string;
   isCreatingEdge: boolean;
+  selectedColumn: string;
   exportLineageData: (_: string) => Promise<CSVExportResponse>;
   onInitReactFlow: (reactFlowInstance: ReactFlowInstance) => void;
   onPaneClick: () => void;
