@@ -596,6 +596,26 @@ public final class Entity {
     return entities;
   }
 
+  @SuppressWarnings("unchecked")
+  public static <T> T getEntityForInheritance(
+      String entityType, UUID id, String fields, Include include) {
+    EntityRepository<?> repo = Entity.getEntityRepository(entityType);
+    return (T) repo.getForInheritance(id, repo.getFields(fields), include);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> List<T> getEntitiesForInheritance(
+      List<EntityReference> refs, String fields, Include include) {
+    if (CollectionUtils.isEmpty(refs)) return new ArrayList<>();
+    EntityRepository<?> repo = Entity.getEntityRepository(refs.get(0).getType());
+    Fields parsedFields = repo.getFields(fields);
+    List<UUID> ids = refs.stream().map(EntityReference::getId).toList();
+    List<?> parents = repo.find(ids, include);
+    repo.fetchInheritableRelationshipsUntyped(parents, parsedFields);
+    repo.setInheritedFieldsUntyped(parents, parsedFields);
+    return (List<T>) parents;
+  }
+
   public static <T> T getEntityOrNull(
       EntityReference entityReference, String field, Include include) {
     if (entityReference == null) return null;

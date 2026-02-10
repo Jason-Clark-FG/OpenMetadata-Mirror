@@ -37,6 +37,7 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
   private final String name;
   private T entity; // Will be lazily initialized
   private ResourceContextInterface.Operation operation = ResourceContextInterface.Operation.NONE;
+  private Include include;
 
   public ResourceContext(@NonNull String resource) {
     this.resource = resource;
@@ -52,15 +53,33 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
     this.entityRepository = (EntityRepository<T>) Entity.getEntityRepository(resource);
   }
 
+  public ResourceContext(@NonNull String resource, UUID id, String name, Include include) {
+    this.resource = resource;
+    this.id = id;
+    this.name = name;
+    this.include = include;
+    this.entityRepository = (EntityRepository<T>) Entity.getEntityRepository(resource);
+  }
+
   public ResourceContext(
       @NonNull String resource,
       UUID id,
       String name,
       ResourceContextInterface.Operation operation) {
+    this(resource, id, name, operation, null);
+  }
+
+  public ResourceContext(
+      @NonNull String resource,
+      UUID id,
+      String name,
+      ResourceContextInterface.Operation operation,
+      Include include) {
     this.resource = resource;
     this.id = id;
     this.name = name;
     this.operation = operation;
+    this.include = include;
     this.entityRepository = (EntityRepository<T>) Entity.getEntityRepository(resource);
   }
 
@@ -171,16 +190,35 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
         fieldList = entityRepository.getFields(fields);
       }
 
+      Include includeToUse = resolveInclude();
+      boolean fromCache = useRepositoryCache();
+
       try {
         if (id != null) {
-          entity = entityRepository.get(null, id, fieldList, Include.ALL, true);
+          entity = entityRepository.get(null, id, fieldList, includeToUse, fromCache);
         } else if (name != null) {
-          entity = entityRepository.getByName(null, name, fieldList, Include.ALL, true);
+          entity = entityRepository.getByName(null, name, fieldList, includeToUse, fromCache);
         }
       } catch (EntityNotFoundException e) {
         entity = null;
       }
     }
     return entity;
+  }
+
+  private Include resolveInclude() {
+    if (operation == ResourceContextInterface.Operation.PATCH
+        || operation == ResourceContextInterface.Operation.PUT) {
+      return Include.NON_DELETED;
+    }
+    if (operation == ResourceContextInterface.Operation.DELETE) {
+      return Include.ALL;
+    }
+    return include != null ? include : Include.ALL;
+  }
+
+  private boolean useRepositoryCache() {
+    return operation != ResourceContextInterface.Operation.PATCH
+        && operation != ResourceContextInterface.Operation.PUT;
   }
 }

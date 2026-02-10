@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,8 +18,9 @@ import lombok.extern.slf4j.Slf4j;
  * #wrapWithContext} for operations like bulk processing. Database, search, auth, and RDF time
  * tracking uses atomic operations and aggregates correctly across threads.
  */
-@Slf4j
+@Slf4j(topic = "org.openmetadata.slowrequest")
 public class RequestLatencyContext {
+
   private static final String ENDPOINT = "endpoint";
   private static final String METHOD = "method";
   private static final ThreadLocal<RequestContext> requestContext = new ThreadLocal<>();
@@ -148,6 +150,36 @@ public class RequestLatencyContext {
     context.internalTimerStartNanos.set(System.nanoTime());
   }
 
+  public static Phase phase(String name) {
+    RequestContext context = requestContext.get();
+    if (context == null) {
+      return Phase.NOOP;
+    }
+    return new Phase(name, context);
+  }
+
+  public static class Phase implements AutoCloseable {
+    static final Phase NOOP = new Phase(null, null);
+
+    private final String name;
+    private final RequestContext context;
+    private final long startNanos;
+
+    private Phase(String name, RequestContext context) {
+      this.name = name;
+      this.context = context;
+      this.startNanos = context != null ? System.nanoTime() : 0;
+    }
+
+    @Override
+    public void close() {
+      if (context != null) {
+        long elapsed = System.nanoTime() - startNanos;
+        context.phaseTime.computeIfAbsent(name, k -> new AtomicLong(0)).addAndGet(elapsed);
+      }
+    }
+  }
+
   public static void endRequest() {
     RequestContext context = requestContext.get();
     if (context == null) return;
@@ -233,11 +265,12 @@ public class RequestLatencyContext {
         serverTimer.record(serverTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
       }
 
-      if (context.totalTime > 1_000_000_000L) {
+      if (context.totalTime > 200_000_000L) {
         String path = context.uriPath != null ? context.uriPath : context.endpoint;
+        String phaseBreakdown = formatPhaseBreakdown(context.phaseTime);
         LOG.warn(
             "Slow request - {} {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, rdf: {}ms,"
-                + " server: {}ms, dbOps: {}, searchOps: {}, rdfOps: {}",
+                + " server: {}ms, dbOps: {}, searchOps: {}, rdfOps: {}{}",
             context.method,
             path,
             context.totalTime / 1_000_000,
@@ -248,12 +281,25 @@ public class RequestLatencyContext {
             serverTimeNanos / 1_000_000,
             dbOps,
             context.searchOperationCount.get(),
-            context.rdfOperationCount.get());
+            context.rdfOperationCount.get(),
+            phaseBreakdown);
       }
 
     } finally {
       requestContext.remove();
     }
+  }
+
+  private static String formatPhaseBreakdown(ConcurrentHashMap<String, AtomicLong> phaseTime) {
+    if (phaseTime.isEmpty()) {
+      return "";
+    }
+    String phases =
+        phaseTime.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue().get(), a.getValue().get()))
+            .map(e -> e.getKey() + ": " + (e.getValue().get() / 1_000_000) + "ms")
+            .collect(Collectors.joining(", "));
+    return ", phases: {" + phases + "}";
   }
 
   public static RequestContext getContext() {
@@ -325,6 +371,8 @@ public class RequestLatencyContext {
     final AtomicInteger searchOperationCount = new AtomicInteger(0);
     final AtomicInteger authOperationCount = new AtomicInteger(0);
     final AtomicInteger rdfOperationCount = new AtomicInteger(0);
+
+    final ConcurrentHashMap<String, AtomicLong> phaseTime = new ConcurrentHashMap<>();
 
     RequestContext(String endpoint, String method, String uriPath) {
       this.endpoint = endpoint;

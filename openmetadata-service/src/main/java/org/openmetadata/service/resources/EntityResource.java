@@ -287,7 +287,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         fields,
         relationIncludes,
         operationContext,
-        getResourceContextById(id));
+        getResourceContextById(id, include));
   }
 
   public T getInternal(
@@ -390,7 +390,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         fields,
         relationIncludes,
         operationContext,
-        getResourceContextByName(name));
+        getResourceContextByName(name, include));
   }
 
   public T getByNameInternal(
@@ -632,7 +632,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       boolean recursive,
       boolean hardDelete) {
     OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
-    authorizer.authorize(securityContext, operationContext, getResourceContextById(id));
+    authorizer.authorize(
+        securityContext,
+        operationContext,
+        getResourceContextById(id, ResourceContextInterface.Operation.DELETE));
     DeleteResponse<T> response =
         repository.delete(securityContext.getUserPrincipal().getName(), id, recursive, hardDelete);
     if (hardDelete) {
@@ -653,7 +656,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     Response response;
 
     OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
-    authorizer.authorize(securityContext, operationContext, getResourceContextById(id));
+    authorizer.authorize(
+        securityContext,
+        operationContext,
+        getResourceContextById(id, ResourceContextInterface.Operation.DELETE));
     entity = repository.get(uriInfo, id, repository.getFields("name"), Include.ALL, false);
     String userName = securityContext.getUserPrincipal().getName();
 
@@ -699,7 +705,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       boolean recursive,
       boolean hardDelete) {
     OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
-    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
+    authorizer.authorize(
+        securityContext,
+        operationContext,
+        getResourceContextByName(name, ResourceContextInterface.Operation.DELETE));
     DeleteResponse<T> response =
         repository.deleteByName(
             securityContext.getUserPrincipal().getName(), name, recursive, hardDelete);
@@ -1023,6 +1032,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     return new ResourceContext<>(entityType, id, null, operation);
   }
 
+  protected ResourceContext<T> getResourceContextById(UUID id, Include include) {
+    return new ResourceContext<>(entityType, id, null, include);
+  }
+
   protected ResourceContext<T> getResourceContextByName(String name) {
     return new ResourceContext<>(entityType, null, name);
   }
@@ -1030,6 +1043,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   protected ResourceContext<T> getResourceContextByName(
       String name, ResourceContextInterface.Operation operation) {
     return new ResourceContext<>(entityType, null, name, operation);
+  }
+
+  protected ResourceContext<T> getResourceContextByName(String name, Include include) {
+    return new ResourceContext<>(entityType, null, name, include);
   }
 
   protected static final MetadataOperation[] VIEW_ALL_OPERATIONS = {MetadataOperation.VIEW_ALL};

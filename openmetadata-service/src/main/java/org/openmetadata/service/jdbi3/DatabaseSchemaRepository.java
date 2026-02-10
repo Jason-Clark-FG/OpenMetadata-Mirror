@@ -397,15 +397,34 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
   }
 
   @Override
+  protected boolean requiresParentForInheritance(DatabaseSchema schema, Fields fields) {
+    return super.requiresParentForInheritance(schema, fields)
+        || schema.getRetentionPeriod() == null;
+  }
+
+  @Override
   public void setInheritedFields(DatabaseSchema schema, Fields fields) {
+    if (schema.getDatabase() == null || schema.getDatabase().getId() == null) {
+      return;
+    }
+
+    boolean needsOwnersOrDomains = super.requiresParentForInheritance(schema, fields);
+    boolean needsRetention = schema.getRetentionPeriod() == null;
+    if (!needsOwnersOrDomains && !needsRetention) {
+      return;
+    }
+
+    String inheritanceFields = needsOwnersOrDomains ? "owners,domains" : "";
     Database database =
-        Entity.getEntity(Entity.DATABASE, schema.getDatabase().getId(), "owners,domains", ALL);
-    inheritOwners(schema, fields, database);
-    inheritDomains(schema, fields, database);
-    schema.withRetentionPeriod(
-        schema.getRetentionPeriod() == null
-            ? database.getRetentionPeriod()
-            : schema.getRetentionPeriod());
+        Entity.getEntityForInheritance(
+            Entity.DATABASE, schema.getDatabase().getId(), inheritanceFields, ALL);
+    if (needsOwnersOrDomains) {
+      inheritOwners(schema, fields, database);
+      inheritDomains(schema, fields, database);
+    }
+    if (needsRetention) {
+      schema.withRetentionPeriod(database.getRetentionPeriod());
+    }
   }
 
   @Override
