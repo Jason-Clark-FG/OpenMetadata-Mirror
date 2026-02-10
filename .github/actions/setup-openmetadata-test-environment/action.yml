@@ -41,13 +41,11 @@ runs:
 
     # ---- Setup Node --------------------------------------------------------------
     - name: Use Node.js ${{ inputs.npm-version }}
-      if: ${{ !contains(inputs.args, '-m no-ui') }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.npm-version }}
 
     - name: Install yarn
-      if: ${{ !contains(inputs.args, '-m no-ui') }}
       run: npm install -g yarn
       shell: bash
     # ------------------------------------------------------------------------------
@@ -69,14 +67,14 @@ runs:
         python3 -m venv env
         source env/bin/activate
         sudo make install_antlr_cli
-        uv pip install "${{ github.workspace }}/ingestion[dev]/"
+        uv pip install "${{ github.workspace }}/ingestion[dev]"
         make generate
       shell: bash
 
     - name: Install Python Dependencies
       run: |
         source env/bin/activate
-        uv pip install "${{ github.workspace }}/ingestion[all,test]/"
+        uv pip install "${{ github.workspace }}/ingestion[all,test]"
       shell: bash
     # ------------------------------------------------------------------------------
 

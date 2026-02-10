@@ -61,19 +61,29 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup Python
+      - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.py-version}}
+          python-version: ${{ inputs.python-version }}
           cache: 'pip'
           cache-dependency-path: 'ingestion/setup.py'
 
-      - name: Run Static Checks
+      - name: Install uv
+        run: pip install uv
+        shell: bash
+
+      - name: Generate Models
         run: |
           python3 -m venv env
           source env/bin/activate
           sudo make install_antlr_cli
-          make install_dev generate install_test
+          uv pip install "${{ github.workspace }}/ingestion[dev,test]"
+          make generate
+        shell: bash
+
+      - name: Run Static Checks
+        run: |
+          source env/bin/activate
           make static-checks
 
   py-run-tests:
