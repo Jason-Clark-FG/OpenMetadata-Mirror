@@ -88,29 +88,24 @@ async function scrollDrawerToShowResource(page: Page, resourceText: string) {
 // Helper function to search for a resource by name (MUI TextField)
 async function searchResource(page: Page, searchText: string) {
   const searchInput = page
-    .locator('[data-testid="learning-resources-page"]')
+    .getByTestId('learning-resources-page')
     .getByPlaceholder(/search/i);
   await searchInput.fill(searchText);
 }
 
-// Helper function to select a filter option from SearchDropdown
 async function selectSearchDropdownFilter(
   page: Page,
   filterKey: 'type' | 'category' | 'context' | 'status',
   optionText: string
 ) {
-  const filterLabels: Record<string, RegExp> = {
-    type: /type/i,
-    category: /categor/i,
-    context: /context/i,
-    status: /status/i,
-  };
-  const filterBtn = page
-    .locator('[data-testid="learning-resources-page"]')
-    .getByRole('button', { name: filterLabels[filterKey] });
-  await expect(filterBtn).toBeVisible();
-  await expect(filterBtn).toBeEnabled();
-  await filterBtn.click();
+  const trigger = page
+    .getByTestId('learning-resources-page')
+    .getByTestId(filterKey)
+    .locator('button')
+    .first();
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
 
   const menuItem = page
     .locator('[data-testid="drop-down-menu"]')
@@ -119,9 +114,8 @@ async function selectSearchDropdownFilter(
   await expect(menuItem).toBeVisible();
   await menuItem.click();
 
-  const updateBtn = page.getByTestId('update-btn');
-  await expect(updateBtn).toBeVisible();
-  await updateBtn.click();
+  await expect(page.getByTestId('update-btn')).toBeVisible();
+  await page.getByTestId('update-btn').click();
 }
 
 test.describe(
@@ -303,10 +297,7 @@ test.describe(
         const dialog = page.getByRole('dialog');
         await expect(dialog).toBeVisible();
         await expect(dialog.getByText(resource.data.displayName ?? '')).toBeVisible();
-        const closeBtn = page
-          .locator('.MuiDialog-paper')
-          .getByRole('button', { name: /close/i });
-        await closeBtn.click();
+        await page.getByTestId('close-resource-player').click();
         await expect(dialog).not.toBeVisible();
       });
 
@@ -567,7 +558,7 @@ test.describe('Learning Icon on Pages', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await waitForAllLoadersToDisappear(page);
 
     // Check if learning icon exists
-    const learningIcon = page.locator('[data-testid="learning-icon"]');
+    const learningIcon = page.getByTestId('learning-icon');
     const isIconVisible = await learningIcon.isVisible().catch(() => false);
 
     if (isIconVisible) {
@@ -605,7 +596,7 @@ test.describe('Learning Icon on Pages', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await sidebarClick(page, SidebarItem.LINEAGE);
     await lineageRes;
 
-    const learningIcon = page.locator('[data-testid="learning-icon"]');
+    const learningIcon = page.getByTestId('learning-icon');
     await learningIcon.scrollIntoViewIfNeeded();
     await learningIcon.click();
     await scrollDrawerToShowResource(page, displayName);
@@ -643,7 +634,7 @@ test.describe('Learning Icon on Pages', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await waitForAllLoadersToDisappear(page);
 
     await test.step('Open learning drawer and player, verify resource name in player', async () => {
-      await page.locator('[data-testid="learning-icon"]').click();
+      await page.getByTestId('learning-icon').click();
       await scrollDrawerToShowResource(page, `PW Player Resource ${uniqueId}`);
       const resourceCard = page.getByTestId(
         `learning-resource-card-PW_Player_Resource_${uniqueId}`
@@ -651,7 +642,7 @@ test.describe('Learning Icon on Pages', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await resourceCard.click();
       const playerDialog = page.getByRole('dialog');
       await expect(playerDialog.getByText(`PW Player Resource ${uniqueId}`)).toBeVisible();
-      await page.keyboard.press('Escape');
+      await page.getByTestId('close-resource-player').click();
       await expect(playerDialog).not.toBeVisible();
       await page.keyboard.press('Escape');
     });
@@ -743,7 +734,7 @@ test.describe.serial(
         async () => {
           await sidebarClick(page, SidebarItem.GLOSSARY);
           await waitForAllLoadersToDisappear(page);
-          await page.locator('[data-testid="learning-icon"]').click();
+          await page.getByTestId('learning-icon').click();
           await scrollDrawerToShowResource(page, resourceName);
           await expect(
             page.locator('.learning-drawer').getByText(resourceName)
@@ -798,7 +789,7 @@ test.describe.serial(
           await sidebarClick(page, SidebarItem.GLOSSARY);
           await waitForAllLoadersToDisappear(page);
 
-          const learningIcon = page.locator('[data-testid="learning-icon"]');
+          const learningIcon = page.getByTestId('learning-icon');
           await expect(learningIcon).toBeVisible();
 
           // Verify our resource is in the drawer
@@ -868,7 +859,7 @@ test.describe.serial(
           await waitForAllLoadersToDisappear(page);
 
           // The learning icon should not be visible or should not show our resource
-          const learningIcon = page.locator('[data-testid="learning-icon"]');
+          const learningIcon = page.getByTestId('learning-icon');
           const isIconVisible = await learningIcon
             .isVisible()
             .catch(() => false);
@@ -894,7 +885,7 @@ test.describe.serial(
           await sidebarClick(page, SidebarItem.LINEAGE);
           await lineageRes;
 
-          const learningIcon = page.locator('[data-testid="learning-icon"]');
+          const learningIcon = page.getByTestId('learning-icon');
           await expect(learningIcon).toBeVisible();
 
           await learningIcon.scrollIntoViewIfNeeded();
@@ -941,7 +932,7 @@ test.describe.serial(
           await sidebarClick(page, SidebarItem.GLOSSARY);
           await waitForAllLoadersToDisappear(page);
 
-          const learningIcon = page.locator('[data-testid="learning-icon"]');
+          const learningIcon = page.getByTestId('learning-icon');
           await expect(learningIcon).toBeVisible();
 
           // Verify our resource is in the drawer
@@ -980,7 +971,7 @@ test.describe.serial(
           await sidebarClick(page, SidebarItem.GLOSSARY);
           await waitForAllLoadersToDisappear(page);
 
-          const learningIcon = page.locator('[data-testid="learning-icon"]');
+          const learningIcon = page.getByTestId('learning-icon');
           const isIconVisible = await learningIcon
             .isVisible()
             .catch(() => false);

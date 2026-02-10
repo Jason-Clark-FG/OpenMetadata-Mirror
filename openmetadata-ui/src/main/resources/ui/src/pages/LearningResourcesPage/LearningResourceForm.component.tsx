@@ -16,7 +16,6 @@ import { Button, Drawer, Form, Input, Select, Space } from 'antd';
 import { AxiosError } from 'axios';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as ArticleIcon } from '../../assets/svg/ic_article.svg';
 import { ReactComponent as StoryLaneIcon } from '../../assets/svg/ic_storylane.svg';
 import { ReactComponent as VideoIcon } from '../../assets/svg/ic_video.svg';
 import {
@@ -60,11 +59,6 @@ export const LearningResourceForm: React.FC<LearningResourceFormProps> = ({
         value: ResourceType.Storylane,
         label: t('label.storylane'),
         icon: <StoryLaneIcon height={24} width={24} />,
-      },
-      {
-        value: ResourceType.Article,
-        label: t('label.article'),
-        icon: <ArticleIcon height={24} width={24} />,
       },
     ],
     [t]
@@ -323,16 +317,12 @@ export const LearningResourceForm: React.FC<LearningResourceFormProps> = ({
               validator: (_, value) => {
                 const type = form.getFieldValue('resourceType');
                 if (
-                  type === ResourceType.Article &&
+                  type !== ResourceType.Storylane &&
                   value &&
-                  isVideoUrl(value)
+                  !isVideoUrl(value)
                 ) {
                   return Promise.reject(
-                    new Error(
-                      t(
-                        'message.learning-resource-video-url-article-type-error'
-                      )
-                    )
+                    new Error(t('message.invalid-video-url'))
                   );
                 }
 

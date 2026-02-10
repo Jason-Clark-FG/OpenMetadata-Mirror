@@ -27,7 +27,6 @@ export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_CHAIN_PAGES = 25;
 
 export const RESOURCE_TYPE_VALUES = [
-  ResourceType.Article,
   ResourceType.Video,
   ResourceType.Storylane,
 ];

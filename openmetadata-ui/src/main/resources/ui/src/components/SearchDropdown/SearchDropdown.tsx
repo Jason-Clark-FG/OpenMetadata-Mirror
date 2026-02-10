@@ -72,7 +72,6 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
   showSelectedCounts = false,
   triggerButtonSize = 'small',
   hideSearchBar = false,
-  compactPadding = false,
 }) => {
   const tabsInfo = searchClassBase.getTabsInfo();
   const { t } = useTranslation();
@@ -243,23 +242,11 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
     (menuNode: ReactNode) => (
       <Card
         bodyStyle={{ padding: 0 }}
-        className={classNames(
-          'custom-dropdown-render',
-          dropdownClassName,
-          compactPadding && 'search-dropdown-compact-padding',
-          compactPadding &&
-            (showClearAllBtn
-              ? 'search-dropdown-has-clear-all'
-              : 'search-dropdown-no-clear-all')
-        )}
+        className={classNames('custom-dropdown-render', dropdownClassName)}
         data-testid="drop-down-menu">
         <Space className="w-full" direction="vertical" size={0}>
           {!hideSearchBar && (
-            <div
-              className={classNames(
-                'p-x-sm',
-                compactPadding ? 'p-t-xss' : 'p-t-sm'
-              )}>
+            <div className="p-t-sm p-x-sm">
               <Input
                 autoFocus
                 data-testid="search-input"
@@ -275,36 +262,21 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
           )}
           {showClearAllBtn && (
             <>
-              {!compactPadding && <Divider className="m-t-xs m-b-0" />}
-              <div
-                className={classNames(
-                  'd-flex p-x-sm',
-                  compactPadding && 'p-t-0'
-                )}>
-                <Button
-                  className={classNames(
-                    'p-0',
-                    compactPadding ? 'm-l-0' : 'm-l-sm'
-                  )}
-                  data-testid="clear-button"
-                  type="link"
-                  onClick={handleClear}>
-                  {t('label.clear-entity', {
-                    entity: t('label.all'),
-                  })}
-                </Button>
-              </div>
-              {compactPadding && (
-                <div className="search-dropdown-clear-all-divider" />
-              )}
+              <Divider className="m-t-xs m-b-0" />
+              <Button
+                className="p-0 m-l-sm"
+                data-testid="clear-button"
+                type="link"
+                onClick={handleClear}>
+                {t('label.clear-entity', {
+                  entity: t('label.all'),
+                })}
+              </Button>
             </>
           )}
           {!hideSearchBar && (
             <Divider
-              className={classNames(
-                'm-b-0',
-                showClearAllBtn || compactPadding ? 'm-t-0' : 'm-t-xs'
-              )}
+              className={classNames(showClearAllBtn ? 'm-y-0' : 'm-t-xs m-b-0')}
             />
           )}
 
@@ -348,7 +320,6 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
       label,
       debouncedOnSearch,
       dropdownClassName,
-      compactPadding,
       hasNullOption,
       showClearAllBtn,
       nullOptionSelected,
@@ -368,9 +339,6 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
       key={searchKey}
       menu={{ items: menuOptions, onClick: handleMenuItemClick }}
       open={isDropDownOpen}
-      overlayClassName={
-        compactPadding ? 'search-dropdown-overlay-compact' : undefined
-      }
       transitionName=""
       trigger={['click']}
       onOpenChange={(visible) => {

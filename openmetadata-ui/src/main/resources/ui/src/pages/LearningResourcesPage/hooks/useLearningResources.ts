@@ -12,7 +12,13 @@
  */
 
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { MAX_CHAIN_PAGES } from '../../../constants/Learning.constants';
 import { Paging } from '../../../generated/type/paging';
@@ -30,6 +36,29 @@ const INITIAL_PAGING: Paging = { total: 0 };
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error &&
   (error.name === 'CanceledError' || error.name === 'AbortError');
+
+function applyResponseToRefs(
+  page: number,
+  list: LearningResource[],
+  nextPaging: Paging,
+  refs: {
+    itemsByPageRef: MutableRefObject<Map<number, LearningResource[]>>;
+    cursorsByPageRef: MutableRefObject<Map<number, string>>;
+    beforeCursorsByPageRef: MutableRefObject<Map<number, string>>;
+    totalFromPage1Ref: MutableRefObject<number>;
+  }
+): void {
+  refs.itemsByPageRef.current.set(page, list);
+  if (nextPaging.after != null) {
+    refs.cursorsByPageRef.current.set(page, nextPaging.after);
+  }
+  if (page >= 2 && nextPaging.before != null) {
+    refs.beforeCursorsByPageRef.current.set(page, nextPaging.before);
+  }
+  if (page === 1) {
+    refs.totalFromPage1Ref.current = nextPaging.total ?? 0;
+  }
+}
 
 interface UseLearningResourcesParams {
   searchText: string;
@@ -90,14 +119,12 @@ export const useLearningResources = ({
     ): Promise<void> => {
       const before = beforeCursorsByPageRef.current.get(2);
       const after = cursorsByPageRef.current.get(page - 1);
-      const cursor =
-        page === 1
-          ? before
-            ? { before }
-            : undefined
-          : after
-          ? { after }
-          : undefined;
+      let cursor: { before?: string; after?: string } | undefined;
+      if (page === 1) {
+        cursor = before ? { before } : undefined;
+      } else {
+        cursor = after ? { after } : undefined;
+      }
 
       const signal = options?.signal;
 
@@ -119,16 +146,12 @@ export const useLearningResources = ({
         const list = response?.data ?? [];
         const nextPaging = response?.paging ?? INITIAL_PAGING;
 
-        itemsByPageRef.current.set(page, list);
-        if (nextPaging.after != null) {
-          cursorsByPageRef.current.set(page, nextPaging.after);
-        }
-        if (page >= 2 && nextPaging.before != null) {
-          beforeCursorsByPageRef.current.set(page, nextPaging.before);
-        }
-        if (page === 1) {
-          totalFromPage1Ref.current = nextPaging.total ?? 0;
-        }
+        applyResponseToRefs(page, list, nextPaging, {
+          itemsByPageRef,
+          cursorsByPageRef,
+          beforeCursorsByPageRef,
+          totalFromPage1Ref,
+        });
 
         if (!options?.skipGridItemsUpdate) {
           setResources(list);
