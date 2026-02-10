@@ -247,15 +247,15 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
       String tbl = tableName == null ? "" : tableName + ".";
       if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
         return String.format(
-            "(%sname LIKE :searchPattern ESCAPE '\\\\' "
-                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.displayName')) LIKE :searchPattern ESCAPE '\\\\' "
-                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.description')) LIKE :searchPattern ESCAPE '\\\\')",
+            "(%sname LIKE :searchPattern "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :searchPattern "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.displayName')) LIKE :searchPattern)",
             tbl, column, column);
       }
       return String.format(
           "(%sname ILIKE :searchPattern ESCAPE E'\\\\' "
-              + "OR %s->>'displayName' ILIKE :searchPattern ESCAPE E'\\\\' "
-              + "OR %s->>'description' ILIKE :searchPattern ESCAPE E'\\\\')",
+              + "OR %s->>'fullyQualifiedName' ILIKE :searchPattern ESCAPE E'\\\\' "
+              + "OR %s->>'displayName' ILIKE :searchPattern ESCAPE E'\\\\')",
           tbl, column, column);
     }
 
