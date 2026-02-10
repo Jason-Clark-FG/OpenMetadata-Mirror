@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -18,7 +17,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -42,73 +40,12 @@ public class VectorSearchResource {
     this.authorizer = authorizer;
   }
 
-  @GET
-  @Path("/query")
-  @Operation(
-      operationId = "vectorSearch",
-      summary = "Vector semantic search",
-      description = "Search entities using vector embeddings for semantic similarity.",
-      responses = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Vector search results",
-            content =
-                @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = VectorSearchResponse.class)))
-      })
-  public Response vectorSearch(
-      @Context SecurityContext securityContext,
-      @Parameter(description = "Search query text", required = true) @QueryParam("q") String query,
-      @Parameter(description = "Entity type to filter results") @QueryParam("entityType")
-          String entityType,
-      @Parameter(description = "Number of results to return") @DefaultValue("10") @QueryParam("k")
-          int k,
-      @Parameter(description = "Score threshold for filtering")
-          @DefaultValue("0.0")
-          @QueryParam("threshold")
-          double threshold) {
-    if (!Entity.getSearchRepository().isVectorEmbeddingEnabled()) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity("{\"error\":\"Vector search is not enabled\"}")
-          .build();
-    }
-
-    if (query == null || query.isBlank()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-          .entity("{\"error\":\"query parameter 'q' is required\"}")
-          .build();
-    }
-
-    OpenSearchVectorService vectorService = OpenSearchVectorService.getInstance();
-    if (vectorService == null) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity("{\"error\":\"Vector search service is not initialized\"}")
-          .build();
-    }
-
-    try {
-      Map<String, List<String>> filters =
-          entityType != null && !entityType.isBlank()
-              ? Map.of("entityType", List.of(entityType))
-              : Collections.emptyMap();
-
-      VectorSearchResponse response = vectorService.search(query, filters, k, k, threshold);
-      return Response.ok(response).build();
-    } catch (Exception e) {
-      LOG.error("Vector search failed: {}", e.getMessage(), e);
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("{\"error\":\"An internal error occurred\"}")
-          .build();
-    }
-  }
-
   @POST
   @Path("/query")
   @Consumes(MediaType.APPLICATION_JSON)
   @Operation(
-      operationId = "vectorSearchPost",
-      summary = "Vector semantic search (POST)",
+      operationId = "vectorSearch",
+      summary = "Vector semantic search",
       description = "Search entities using vector embeddings with full filter support.",
       responses = {
         @ApiResponse(
