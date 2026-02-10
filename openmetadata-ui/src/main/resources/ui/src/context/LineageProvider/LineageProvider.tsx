@@ -1215,6 +1215,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setSelectedColumn('');
     setActiveNode(undefined);
     setSelectedNode(undefined);
+    setSelectedEdge(undefined);
   }, []);
 
   const onEdgeClick = useCallback((edge: Edge) => {
