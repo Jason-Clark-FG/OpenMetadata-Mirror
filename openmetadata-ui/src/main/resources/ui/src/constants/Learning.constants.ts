@@ -32,6 +32,34 @@ export const RESOURCE_TYPE_VALUES = [
   ResourceType.Storylane,
 ];
 
+export const YOUTUBE_VIDEO_HOSTNAMES = [
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+];
+
+export const VIMEO_VIDEO_HOSTNAMES = [
+  'vimeo.com',
+  'www.vimeo.com',
+  'player.vimeo.com',
+];
+
+const VIDEO_HOSTNAMES = [...YOUTUBE_VIDEO_HOSTNAMES, ...VIMEO_VIDEO_HOSTNAMES];
+
+export const isVideoUrl = (url: string | undefined): boolean => {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+
+    return VIDEO_HOSTNAMES.some((h) => h === hostname);
+  } catch {
+    return false;
+  }
+};
+
 export interface ResourceTypeOption {
   value: ResourceType;
   label: string;

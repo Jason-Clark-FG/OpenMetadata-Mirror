@@ -51,6 +51,8 @@ function buildListParams(
   pageSize: number,
   cursor?: { after?: string; before?: string }
 ): Parameters<typeof getLearningResourcesList>[0] {
+  const hasCursor = cursor && (cursor.after ?? cursor.before);
+
   return {
     limit: pageSize,
     fields: FIELDS,
@@ -59,7 +61,7 @@ function buildListParams(
     pageId: filterState.context?.length ? filterState.context : undefined,
     type: filterState.type?.length ? filterState.type : undefined,
     status: filterState.status?.length ? filterState.status : undefined,
-    ...cursor,
+    ...(hasCursor ? cursor : undefined),
   };
 }
 
@@ -86,14 +88,16 @@ export const useLearningResources = ({
       page: number,
       options?: { skipGridItemsUpdate?: boolean; signal?: AbortSignal }
     ): Promise<void> => {
+      const before = beforeCursorsByPageRef.current.get(2);
+      const after = cursorsByPageRef.current.get(page - 1);
       const cursor =
         page === 1
-          ? beforeCursorsByPageRef.current.get(2)
-            ? { before: beforeCursorsByPageRef.current.get(2) }
-            : {}
-          : cursorsByPageRef.current.get(page - 1)
-          ? { after: cursorsByPageRef.current.get(page - 1) }
-          : {};
+          ? before
+            ? { before }
+            : undefined
+          : after
+          ? { after }
+          : undefined;
 
       const signal = options?.signal;
 
@@ -102,7 +106,7 @@ export const useLearningResources = ({
           searchText,
           filterState,
           pageSize,
-          Object.keys(cursor).length ? cursor : undefined
+          cursor
         );
         const response = await getLearningResourcesList(apiParams, {
           ...(signal && { signal }),
@@ -147,7 +151,47 @@ export const useLearningResources = ({
     [t, searchText, filterState, pageSize]
   );
 
+  const loadPageWithChain = useCallback(
+    async (signal: AbortSignal): Promise<void> => {
+      const opts = { signal };
+      if (currentPage === 1) {
+        await loadData(1, opts);
+
+        return;
+      }
+      if (cursorsByPageRef.current.has(currentPage - 1)) {
+        await loadData(currentPage, opts);
+
+        return;
+      }
+      if (currentPage > MAX_CHAIN_PAGES) {
+        await loadData(1, opts);
+        setResources(itemsByPageRef.current.get(1) ?? []);
+        setPaging((prev) => ({
+          ...prev,
+          total: totalFromPage1Ref.current,
+        }));
+        showErrorToast(t('message.please-refresh-the-page'));
+
+        return;
+      }
+      for (let p = 1; p < currentPage; p++) {
+        if (signal.aborted) {
+          return;
+        }
+        await loadData(p, { skipGridItemsUpdate: true, signal });
+      }
+      if (signal.aborted) {
+        return;
+      }
+      await loadData(currentPage, opts);
+    },
+    [loadData, currentPage, t]
+  );
+
   useEffect(() => {
+    abortControllerRef.current?.abort();
+
     const requestKey = JSON.stringify({ searchText, filterState, pageSize });
     const filtersChanged = prevRequestKeyRef.current !== requestKey;
     if (filtersChanged) {
@@ -175,46 +219,8 @@ export const useLearningResources = ({
     setIsLoading(true);
 
     const run = async () => {
-      const opts = { signal: controller.signal };
       try {
-        if (currentPage === 1) {
-          await loadData(1, opts);
-
-          return;
-        }
-
-        const hasCursorForPage = cursorsByPageRef.current.has(currentPage - 1);
-        if (hasCursorForPage) {
-          await loadData(currentPage, opts);
-
-          return;
-        }
-
-        if (currentPage > MAX_CHAIN_PAGES) {
-          await loadData(1, opts);
-          setResources(itemsByPageRef.current.get(1) ?? []);
-          setPaging((prev) => ({
-            ...prev,
-            total: totalFromPage1Ref.current,
-          }));
-          showErrorToast(t('message.please-refresh-the-page'));
-
-          return;
-        }
-
-        for (let p = 1; p < currentPage; p++) {
-          if (controller.signal.aborted) {
-            return;
-          }
-          await loadData(p, {
-            skipGridItemsUpdate: true,
-            signal: controller.signal,
-          });
-        }
-        if (controller.signal.aborted) {
-          return;
-        }
-        await loadData(currentPage, opts);
+        await loadPageWithChain(controller.signal);
       } catch {
         if (!cancelled && abortControllerRef.current === controller) {
           setResources([]);
@@ -233,7 +239,7 @@ export const useLearningResources = ({
       cancelled = true;
       controller.abort();
     };
-  }, [currentPage, searchText, filterState, pageSize, loadData, t]);
+  }, [currentPage, searchText, filterState, pageSize, loadPageWithChain]);
 
   const refetch = useCallback(async () => {
     cursorsByPageRef.current = new Map();
@@ -241,28 +247,23 @@ export const useLearningResources = ({
     itemsByPageRef.current = new Map();
     totalFromPage1Ref.current = 0;
     prevRequestKeyRef.current = '';
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
     setIsLoading(true);
     try {
-      if (currentPage === 1) {
-        await loadData(1);
-
-        return;
+      await loadPageWithChain(controller.signal);
+    } catch (error) {
+      if (!isAbortError(error)) {
+        setResources([]);
+        setPaging(INITIAL_PAGING);
       }
-      for (let p = 1; p < currentPage; p++) {
-        await loadData(p, { skipGridItemsUpdate: true });
-      }
-      await loadData(currentPage);
-    } catch {
-      setResources([]);
-      setPaging(INITIAL_PAGING);
     } finally {
       if (abortControllerRef.current === controller) {
         setIsLoading(false);
       }
     }
-  }, [currentPage, loadData]);
+  }, [loadPageWithChain]);
 
   return {
     resources,

@@ -2522,6 +2522,8 @@
     "latest-offset-description": "システム内の最新のイベントオフセットです。",
     "ldap-group-dn-placeholder": "例：cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "このLDAPグループDNはすでにマップされています。各LDAPグループは一度のみマップできます。",
+    "learning-resource-video-url-article-type-error": "このURLは動画リンクです（YouTube、Vimeoなど）。正確な検索とフィルタリングにはタイプを「動画」に設定してください。",
+    "learning-resource-video-url-article-type-warning": "このURLは動画のようです。正確な検索・フィルタ結果のため、タイプを「動画」に設定してください。",
     "learning-resources-management-description": "製品の機能を探索し、リソースを通じてその仕組みを学びましょう",
     "leave-the-team-team-name": "チーム {{teamName}} から退出する",
     "length-validator-error": "{{length}} 文字以上の {{field}} が必要です",

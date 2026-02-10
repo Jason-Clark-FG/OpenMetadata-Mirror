@@ -2522,6 +2522,8 @@
     "latest-offset-description": "De laatste offset van de gebeurtenis in het systeem.",
     "ldap-group-dn-placeholder": "bijv. cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "Deze LDAP-groep DN is al toegewezen. Elke LDAP-groep kan slechts één keer worden toegewezen.",
+    "learning-resource-video-url-article-type-error": "Deze URL is een videolink (bijv. YouTube, Vimeo). Stel type in op Video voor nauwkeurig zoeken en filteren.",
+    "learning-resource-video-url-article-type-warning": "Deze URL lijkt een video te zijn. Stel type in op Video voor nauwkeurige zoek- en filterresultaten.",
     "learning-resources-management-description": "Ontdek productfuncties en leer hoe ze werken via onze bronnen",
     "leave-the-team-team-name": "Verlaat het team {{teamName}}",
     "length-validator-error": "Minimaal {{length}} {{field}} vereist",

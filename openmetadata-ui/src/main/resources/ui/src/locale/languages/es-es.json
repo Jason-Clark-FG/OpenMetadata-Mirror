@@ -2522,6 +2522,8 @@
     "latest-offset-description": "El último offset del evento en el sistema.",
     "ldap-group-dn-placeholder": "ej. cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "Este DN de grupo LDAP ya está mapeado. Cada grupo LDAP solo puede mapearse una vez.",
+    "learning-resource-video-url-article-type-error": "Esta URL es un enlace de vídeo (p. ej. YouTube, Vimeo). Establece el tipo como Vídeo para una búsqueda y filtrado precisos.",
+    "learning-resource-video-url-article-type-warning": "Esta URL parece ser un vídeo. Para resultados de búsqueda y filtrado precisos, establece el tipo como Vídeo.",
     "learning-resources-management-description": "Explora las funciones del producto y aprende cómo funcionan a través de nuestros recursos",
     "leave-the-team-team-name": "Abandonar el equipo {{teamName}}",
     "length-validator-error": "Se requiere al menos {{length}} {{field}}",

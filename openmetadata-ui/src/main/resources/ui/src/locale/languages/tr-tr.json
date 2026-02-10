@@ -2522,6 +2522,8 @@
     "latest-offset-description": "Sistemdeki olayın en son ofseti.",
     "ldap-group-dn-placeholder": "örn. cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "Bu LDAP grup DN'i zaten eşlenmiştir. Her LDAP grubu sadece bir kez eşlenebilir.",
+    "learning-resource-video-url-article-type-error": "Bu URL bir video bağlantısıdır (örn. YouTube, Vimeo). Doğru arama ve filtreleme için türü Video olarak ayarlayın.",
+    "learning-resource-video-url-article-type-warning": "Bu URL bir videoya benziyor. Doğru arama ve filtre sonuçları için türü Video olarak ayarlayın.",
     "learning-resources-management-description": "Ürün özelliklerini keşfedin ve kaynaklarımız aracılığıyla nasıl çalıştıklarını öğrenin",
     "leave-the-team-team-name": "{{teamName}} takımından ayrıl",
     "length-validator-error": "En az {{length}} {{field}} gerekli",
