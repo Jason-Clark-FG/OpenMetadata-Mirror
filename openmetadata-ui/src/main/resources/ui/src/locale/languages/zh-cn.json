@@ -2522,8 +2522,6 @@
     "latest-offset-description": "系统中事件的最新偏移量。",
     "ldap-group-dn-placeholder": "例如 cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "此LDAP组DN已被映射。每个LDAP组只能映射一次。",
-    "learning-resource-video-url-article-type-error": "此 URL 是视频链接（如 YouTube、Vimeo）。请将类型设为“视频”以获得准确的搜索和筛选。",
-    "learning-resource-video-url-article-type-warning": "此 URL 看起来是视频。为获得准确的搜索和筛选结果，请将类型设为“视频”。",
     "learning-resources-management-description": "探索产品功能，通过我们的资源了解它们的工作原理",
     "leave-the-team-team-name": "离开团队{{teamName}}",
     "length-validator-error": "至少需要{{length}}个{{field}}",

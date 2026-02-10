@@ -2522,8 +2522,6 @@
     "latest-offset-description": "The latest offset of the event in the system.",
     "ldap-group-dn-placeholder": "उदा. cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "हा LDAP ग्रुप DN आधीच मॅप केला आहे. प्रत्येक LDAP ग्रुप फक्त एकदाच मॅप केला जाऊ शकतो.",
-    "learning-resource-video-url-article-type-error": "हा URL व्हिडिओ लिंक आहे (उदा. YouTube, Vimeo). अचूक शोध आणि फिल्टरिंगसाठी प्रकार व्हिडिओ वर सेट करा.",
-    "learning-resource-video-url-article-type-warning": "हा URL व्हिडिओसारखा दिसतो. अचूक शोध आणि फिल्टर परिणामांसाठी प्रकार व्हिडिओ वर सेट करा.",
     "learning-resources-management-description": "उत्पादन वैशिष्ट्ये एक्सप्लोर करा आणि आमच्या संसाधनांद्वारे ते कसे कार्य करतात ते शिका",
     "leave-the-team-team-name": "टीम {{teamName}} सोडा",
     "length-validator-error": "किमान {{length}} {{field}} आवश्यक",

@@ -2522,8 +2522,6 @@
     "latest-offset-description": "Последнее смещение события в системе.",
     "ldap-group-dn-placeholder": "например cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "Этот DN группы LDAP уже сопоставлен. Каждая группа LDAP может быть сопоставлена только один раз.",
-    "learning-resource-video-url-article-type-error": "Этот URL — ссылка на видео (например, YouTube, Vimeo). Установите тип «Видео» для точного поиска и фильтрации.",
-    "learning-resource-video-url-article-type-warning": "Этот URL похож на видео. Для точных результатов поиска и фильтрации установите тип «Видео».",
     "learning-resources-management-description": "Изучайте возможности продукта и узнавайте, как они работают, с помощью наших ресурсов",
     "leave-the-team-team-name": "Покинуть команду «{{teamName}}»",
     "length-validator-error": "Требуется не менее {{length}} {{field}}",

@@ -2522,8 +2522,6 @@
     "latest-offset-description": "시스템 내 이벤트의 최신 오프셋입니다.",
     "ldap-group-dn-placeholder": "예: cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "이 LDAP 그룹 DN은 이미 매핑되어 있습니다. 각 LDAP 그룹은 한 번만 매핑할 수 있습니다.",
-    "learning-resource-video-url-article-type-error": "이 URL은 동영상 링크입니다(예: YouTube, Vimeo). 정확한 검색 및 필터링을 위해 유형을 동영상으로 설정하세요.",
-    "learning-resource-video-url-article-type-warning": "이 URL은 동영상으로 보입니다. 정확한 검색 및 필터 결과를 위해 유형을 동영상으로 설정하세요.",
     "learning-resources-management-description": "제품 기능을 탐색하고 리소스를 통해 작동 방식을 알아보세요",
     "leave-the-team-team-name": "{{teamName}} 팀 떠나기",
     "length-validator-error": "최소 {{length}}개의 {{field}}이(가) 필요합니다",

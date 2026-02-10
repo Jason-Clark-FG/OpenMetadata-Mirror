@@ -21,7 +21,6 @@ import { ReactComponent as VideoIcon } from '../../assets/svg/ic_video.svg';
 import {
   CATEGORIES,
   DURATIONS,
-  isVideoUrl,
   LearningResourceStatus,
   LEARNING_RESOURCE_STATUSES,
   PAGE_IDS,
@@ -313,22 +312,6 @@ export const LearningResourceForm: React.FC<LearningResourceFormProps> = ({
               required: true,
             },
             { message: t('label.invalid-url'), type: 'url' },
-            {
-              validator: (_, value) => {
-                const type = form.getFieldValue('resourceType');
-                if (
-                  type !== ResourceType.Storylane &&
-                  value &&
-                  !isVideoUrl(value)
-                ) {
-                  return Promise.reject(
-                    new Error(t('message.invalid-video-url'))
-                  );
-                }
-
-                return Promise.resolve();
-              },
-            },
           ]}>
           <Input placeholder="https://www.youtube.com/watch?v=..." />
         </Form.Item>

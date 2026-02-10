@@ -2522,8 +2522,6 @@
     "latest-offset-description": "ה-offset האחרון של האירוע במערכת.",
     "ldap-group-dn-placeholder": "לדוגמה cn=admins,ou=groups,dc=example,dc=com",
     "ldap-group-duplicate-error": "DN של קבוצת LDAP זו כבר ממופה. כל קבוצת LDAP יכולה להיות ממופה רק פעם אחת.",
-    "learning-resource-video-url-article-type-error": "כתובת זו היא קישור לוידאו (למשל YouTube, Vimeo). הגדר סוג כווידאו לחיפוש וסינון מדויקים.",
-    "learning-resource-video-url-article-type-warning": "כתובת זו נראית כווידאו. לתוצאות חיפוש וסינון מדויקות, הגדר סוג כווידאו.",
     "learning-resources-management-description": "חקור את תכונות המוצר ולמד כיצד הן עובדות באמצעות המשאבים שלנו",
     "leave-the-team-team-name": "עזוב את הקבוצה {{teamName}}",
     "length-validator-error": "נדרשים לפחות {{length}} {{field}}",
