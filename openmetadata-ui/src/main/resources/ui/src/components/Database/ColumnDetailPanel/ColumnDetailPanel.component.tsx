@@ -603,6 +603,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         {isColumn(activeColumn ?? null) && (
           <NestedColumnsSection
             columns={nestedColumns}
+            entityType={entityType}
             onColumnClick={handleNestedColumnClick}
           />
         )}
