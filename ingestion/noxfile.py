@@ -12,8 +12,8 @@
 Nox sessions for testing and formatting checks.
 """
 import os
-
 import nox
+from nox.virtualenv import PassthroughEnv
 
 # NOTE: This is still a work in progress! We still need to:
 #    - Fix ignored unit tests
@@ -33,6 +33,12 @@ def get_python_versions():
         # if some versions are not supported, they will be ignored by nox
         return python_versions
     return SUPPORTED_PYTHON_VERSIONS
+
+
+def install(session, *args, **kwargs):
+    """Install packages unless running with --no-venv (packages already installed)."""
+    if not isinstance(session.virtualenv, PassthroughEnv):
+        session.install(*args, **kwargs)
 
 
 @nox.session(
@@ -117,7 +123,7 @@ def unit_plugins(session, plugin):
     python=get_python_versions(),
 )
 def static_checks(session):
-    session.install(".[dev]")
+    install(session, ".[dev]")
     session.run("basedpyright", "-p", "pyproject.toml")
 
 
@@ -132,8 +138,8 @@ def static_checks(session):
 )
 def unit_tests(session):
     """Run Python unit tests with coverage and parallel execution."""
-    session.install(".[all]")
-    session.install(".[test]")
+    install(session, ".[all]")
+    install(session, ".[test]")
     session.run(
         "pytest",
         "-c",
@@ -167,8 +173,8 @@ def integration_tests(session):
         nox -s integration-tests                   # local, appends to .coverage
         nox -s integration-tests -- --standalone   # CI, standalone .coverage
     """
-    session.install(".[all]")
-    session.install(".[test]")
+    install(session, ".[all]")
+    install(session, ".[test]")
 
     args = list(session.posargs)
     standalone = "--standalone" in args
@@ -218,7 +224,7 @@ def combine_coverage(session):
     Example:
         nox -s combine-coverage
     """
-    session.install("coverage[toml]")
+    install(session, "coverage[toml]")
     session.run("coverage", "combine")
     session.run(
         "coverage",
