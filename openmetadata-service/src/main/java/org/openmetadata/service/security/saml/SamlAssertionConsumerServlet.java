@@ -61,10 +61,19 @@ public class SamlAssertionConsumerServlet extends HttpServlet {
 
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-    // Delegate to the unified SAML handler for consistent behavior with /callback endpoint
-    // This ensures both /api/v1/saml/acs and /callback use the same logic
-    AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler();
-    handler.handleCallback(request, response);
+    try {
+      AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler();
+      handler.handleCallback(request, response);
+    } catch (Exception e) {
+      LOG.error("Error processing SAML response at ACS endpoint", e);
+      try {
+        response.sendError(
+            HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+            "SAML response processing failed: " + e.getMessage());
+      } catch (Exception writeError) {
+        LOG.error("Failed to write SAML error response", writeError);
+      }
+    }
   }
 
   private void handleResponse(HttpServletRequest req, HttpServletResponse resp) throws Exception {

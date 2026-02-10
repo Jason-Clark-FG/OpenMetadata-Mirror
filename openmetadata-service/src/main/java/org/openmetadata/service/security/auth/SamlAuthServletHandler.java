@@ -117,15 +117,19 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       Auth auth = new Auth(SamlSettingsHolder.getSaml2Settings(), wrappedRequest, wrappedResponse);
       auth.processResponse();
 
-      if (!auth.isAuthenticated()) {
-        throw new AuthenticationException("SAML authentication failed");
-      }
-
+      // Check errors first to capture the detailed SAML validation error reason
+      // before the generic isAuthenticated() check loses the details
       List<String> errors = auth.getErrors();
       if (!errors.isEmpty()) {
         String errorReason = auth.getLastErrorReason();
-        LOG.error("SAML authentication errors: {}", errorReason);
+        LOG.error("SAML authentication errors: {} - Details: {}", errors, errorReason);
         sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, errorReason);
+        return;
+      }
+
+      if (!auth.isAuthenticated()) {
+        LOG.error("SAML authentication failed - no errors reported but not authenticated");
+        sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "SAML authentication failed");
         return;
       }
 
