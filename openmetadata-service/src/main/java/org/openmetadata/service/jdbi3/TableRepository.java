@@ -1122,6 +1122,11 @@ public class TableRepository extends EntityRepository<Table> {
   /**
    * Detect columns that exist in the original table but not in the updated table.
    * This method accepts both entities as parameters to avoid redundant DB lookups.
+   *
+   * <p>This also handles null entries in the updated column list (e.g. from JSON patch "remove"
+   * operations): null columns are excluded via filter(Objects::nonNull), so original columns
+   * at those positions are correctly identified as removed. Any remaining null entries are
+   * cleaned up as a side effect.
    */
   private Set<String> detectRemovedColumns(Table origTable, Table updatedTable) {
     Set<String> removedColumnNames = new HashSet<>();
@@ -1218,46 +1223,6 @@ public class TableRepository extends EntityRepository<Table> {
       return null;
     }
     return constraint;
-  }
-
-  /**
-   * Detect columns that have become null entries in the updated table via JSON patch operations.
-   *
-   * <p>This handles a specific edge case where a JSON patch "remove" operation on a column
-   * may result in a null entry at that position in the column list rather than shifting other
-   * columns. While detectRemovedColumns handles the general case of columns removed by name,
-   * this method catches null entries that may be produced by certain JSON patch implementations.
-   *
-   * <p>Note: This uses positional mapping which assumes columns maintain their order.
-   * It's defensive code that complements detectRemovedColumns.
-   */
-  private Set<String> detectNullColumns(Table origTable, Table updatedTable) {
-    Set<String> removedColumnNames = new HashSet<>();
-
-    if (updatedTable.getColumns() != null && origTable != null && origTable.getColumns() != null) {
-      List<Column> updatedColumns = updatedTable.getColumns();
-      List<Column> originalColumns = origTable.getColumns();
-
-      // Check each position in the updated table's column list, but ensure we don't go out of
-      // bounds
-      for (int i = 0; i < updatedColumns.size(); i++) {
-        Column updatedColumn = updatedColumns.get(i);
-
-        // If this position has a null column, find what was there originally (if position exists)
-        if (updatedColumn == null && i < originalColumns.size()) {
-          Column originalColumn = originalColumns.get(i);
-          if (originalColumn != null) {
-            removedColumnNames.add(originalColumn.getName());
-            LOG.debug(
-                "Detected null column at position {}, original column name: {}",
-                i,
-                originalColumn.getName());
-          }
-        }
-      }
-    }
-
-    return removedColumnNames;
   }
 
   @Override
@@ -1869,8 +1834,7 @@ public class TableRepository extends EntityRepository<Table> {
         for (String column : constraint.getColumns()) {
           // Skip validation for columns that are being removed (case-insensitive)
           if (columnsBeingRemoved != null
-              && columnsBeingRemoved.stream()
-                  .anyMatch(col -> col.equalsIgnoreCase(column))) {
+              && columnsBeingRemoved.stream().anyMatch(col -> col.equalsIgnoreCase(column))) {
             continue;
           }
           validateColumn(table, column);
@@ -1940,10 +1904,9 @@ public class TableRepository extends EntityRepository<Table> {
     }
 
     private void updateTableConstraints(Table origTable, Table updatedTable, Operation operation) {
-      // Detect columns that were removed (exist in original but not in updated)
+      // Detect columns that were removed (exist in original but not in updated).
+      // This also handles null column entries produced by JSON patch operations.
       Set<String> removedColumns = detectRemovedColumns(origTable, updatedTable);
-      // Also detect null columns (nulls in updated that correspond to original columns)
-      removedColumns.addAll(detectNullColumns(origTable, updatedTable));
 
       // Clean up constraints that reference removed columns BEFORE validation
       if (!removedColumns.isEmpty()) {
