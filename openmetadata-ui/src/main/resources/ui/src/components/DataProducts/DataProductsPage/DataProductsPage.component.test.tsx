@@ -14,6 +14,7 @@
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
+import { ENTITY_PERMISSIONS } from '../../../mocks/Permissions.mock';
 import PageLayoutV1 from '../../PageLayoutV1/PageLayoutV1';
 import DataProductsPage from './DataProductsPage.component';
 
@@ -110,6 +111,14 @@ jest.mock('../../Entity/EntityVersionTimeLine/EntityVersionTimeLine', () => {
 jest.mock('../../common/ErrorWithPlaceholder/ErrorPlaceHolder', () => {
   return jest.fn().mockImplementation(({ children }) => <div>{children}</div>);
 });
+
+jest.mock('../../../context/PermissionProvider/PermissionProvider', () => ({
+  usePermissionProvider: () => ({
+    permissions: {
+      dataProduct: ENTITY_PERMISSIONS,
+    },
+  }),
+}));
 
 describe('DataProductsPage component', () => {
   it('should render successfully', async () => {

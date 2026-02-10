@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
 import { TabSpecificField } from '../../../enums/entity.enum';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -52,6 +53,7 @@ const DomainDetailPage = () => {
   const { updateDomains } = useDomainStore();
   const [isMainContentLoading, setIsMainContentLoading] = useState(false);
   const [activeDomain, setActiveDomain] = useState<Domain>();
+  const [isForbidden, setIsForbidden] = useState(false);
   const [isFollowingLoading, setIsFollowingLoading] = useState<boolean>(false);
 
   const { isFollowing } = useMemo(() => {
@@ -110,12 +112,16 @@ const DomainDetailPage = () => {
       });
       setActiveDomain(data);
     } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        t('server.entity-fetch-error', {
-          entity: t('label.domain-lowercase'),
-        })
-      );
+      if ((error as AxiosError)?.response?.status === ClientErrors.FORBIDDEN) {
+        setIsForbidden(true);
+      } else {
+        showErrorToast(
+          error as AxiosError,
+          t('server.entity-fetch-error', {
+            entity: t('label.domain-lowercase'),
+          })
+        );
+      }
     } finally {
       setIsMainContentLoading(false);
     }
@@ -193,7 +199,7 @@ const DomainDetailPage = () => {
     }
   }, [domainFqn, navigate]);
 
-  if (!(viewBasicDomainPermission || viewAllDomainPermission)) {
+  if (!(viewBasicDomainPermission || viewAllDomainPermission) || isForbidden) {
     return (
       <ErrorPlaceHolder
         className="mt-0-important"

@@ -320,6 +320,19 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
       checkPermission(Operation.Create, ResourceEntity.BOT, permissions),
     [permissions]
   );
+  const domainViewPermission = useMemo(
+    () =>
+      userPermissions.hasViewPermissions(ResourceEntity.DOMAIN, permissions),
+    [permissions]
+  );
+  const dataProductViewPermission = useMemo(
+    () =>
+      userPermissions.hasViewPermissions(
+        ResourceEntity.DATA_PRODUCT,
+        permissions
+      ),
+    [permissions]
+  );
 
   return (
     <Routes>
@@ -750,9 +763,20 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
       <Route element={<GlossaryRouter />} path="/glossary/*" />
       <Route element={<GlossaryTermRouter />} path="/glossary-term/*" />
       <Route element={<SettingsRouter />} path="/settings/*" />
-      <Route element={<DomainRouter />} path="/domain/*" />
       <Route
-        element={<DataProductListPage pageTitle={t('label.data-product')} />}
+        element={
+          <AdminProtectedRoute hasPermission={domainViewPermission}>
+            <DomainRouter />
+          </AdminProtectedRoute>
+        }
+        path="/domain/*"
+      />
+      <Route
+        element={
+          <AdminProtectedRoute hasPermission={dataProductViewPermission}>
+            <DataProductListPage pageTitle={t('label.data-product')} />
+          </AdminProtectedRoute>
+        }
         path={ROUTES.DATA_PRODUCT}
       />
       <Route element={<MetricListPage />} path={ROUTES.METRICS} />

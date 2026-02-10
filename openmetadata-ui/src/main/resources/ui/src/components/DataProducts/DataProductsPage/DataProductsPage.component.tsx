@@ -19,9 +19,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../constants/constants';
-import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
+import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
+import { ClientErrors } from '../../../enums/Axios.enum';
+import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
 import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
+import { Operation } from '../../../generated/entity/policies/policy';
 import { EntityHistory } from '../../../generated/type/entityHistory';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useFqn } from '../../../hooks/useFqn';
@@ -35,6 +39,7 @@ import {
   removeFollower,
 } from '../../../rest/dataProductAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { checkPermission } from '../../../utils/PermissionsUtils';
 import {
   getDomainPath,
   getEntityDetailsPath,
@@ -55,8 +60,25 @@ const DataProductsPage = () => {
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';
   const { fqn: dataProductFqn } = useFqn();
+  const { permissions } = usePermissionProvider();
   const [isMainContentLoading, setIsMainContentLoading] = useState(true);
   const [dataProduct, setDataProduct] = useState<DataProduct>();
+  const [isForbidden, setIsForbidden] = useState(false);
+
+  const [viewBasicPermission, viewAllPermission] = useMemo(() => {
+    return [
+      checkPermission(
+        Operation.ViewBasic,
+        ResourceEntity.DATA_PRODUCT,
+        permissions
+      ),
+      checkPermission(
+        Operation.ViewAll,
+        ResourceEntity.DATA_PRODUCT,
+        permissions
+      ),
+    ];
+  }, [permissions]);
   const [versionList, setVersionList] = useState<EntityHistory>(
     {} as EntityHistory
   );
@@ -140,7 +162,11 @@ const DataProductsPage = () => {
         fetchActiveVersion(data);
       }
     } catch (error) {
-      showErrorToast(error as AxiosError);
+      if ((error as AxiosError)?.response?.status === ClientErrors.FORBIDDEN) {
+        setIsForbidden(true);
+      } else {
+        showErrorToast(error as AxiosError);
+      }
     } finally {
       setIsMainContentLoading(false);
     }
@@ -276,6 +302,19 @@ const DataProductsPage = () => {
       fetchDataProductByFqn(dataProductFqn);
     }
   }, [dataProductFqn, version]);
+
+  if (!(viewBasicPermission || viewAllPermission) || isForbidden) {
+    return (
+      <ErrorPlaceHolder
+        className="mt-0-important"
+        permissionValue={t('label.view-entity', {
+          entity: t('label.data-product'),
+        })}
+        size={SIZE.LARGE}
+        type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+      />
+    );
+  }
 
   if (isMainContentLoading) {
     return <Loader />;
