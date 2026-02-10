@@ -59,9 +59,9 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
+      String resourceType = r.getResourceType() != null ? r.getResourceType().value() : null;
       assertTrue(
-          "Article".equals(r.getResourceType()),
-          "Expected resourceType=Article, got " + r.getResourceType());
+          "Article".equals(resourceType), "Expected resourceType=Article, got " + resourceType);
     }
   }
 
@@ -71,9 +71,8 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
-      assertTrue(
-          "Video".equals(r.getResourceType()),
-          "Expected resourceType=Video, got " + r.getResourceType());
+      String resourceType = r.getResourceType() != null ? r.getResourceType().value() : null;
+      assertTrue("Video".equals(resourceType), "Expected resourceType=Video, got " + resourceType);
     }
   }
 
@@ -83,9 +82,9 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
+      String resourceType = r.getResourceType() != null ? r.getResourceType().value() : null;
       assertTrue(
-          "Storylane".equals(r.getResourceType()),
-          "Expected resourceType=Storylane, got " + r.getResourceType());
+          "Storylane".equals(resourceType), "Expected resourceType=Storylane, got " + resourceType);
     }
   }
 
@@ -95,9 +94,10 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
+      String resourceType = r.getResourceType() != null ? r.getResourceType().value() : null;
       assertTrue(
-          "Article".equals(r.getResourceType()) || "Video".equals(r.getResourceType()),
-          "Expected resourceType in [Article,Video], got " + r.getResourceType());
+          "Article".equals(resourceType) || "Video".equals(resourceType),
+          "Expected resourceType in [Article,Video], got " + resourceType);
     }
   }
 
@@ -197,7 +197,9 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
-      assertTrue("Article".equals(r.getResourceType()));
+      String resourceType = r.getResourceType() != null ? r.getResourceType().value() : null;
+      assertTrue(
+          "Article".equals(resourceType), "Expected resourceType=Article, got " + resourceType);
       String status = r.getStatus() != null ? r.getStatus().value() : null;
       assertTrue("Active".equals(status), "Expected status=Active, got " + status);
     }

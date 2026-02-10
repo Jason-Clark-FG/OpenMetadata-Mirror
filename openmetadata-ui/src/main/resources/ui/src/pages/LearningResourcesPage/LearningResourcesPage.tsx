@@ -73,9 +73,11 @@ export const LearningResourcesPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const { resources, isLoading, refetch } = useLearningResources({
+  const { resources, paging, isLoading, refetch } = useLearningResources({
     searchText,
     filterState,
+    pageSize,
+    currentPage,
   });
 
   const {
@@ -325,14 +327,8 @@ export const LearningResourcesPage: React.FC = () => {
     ]
   );
 
-  const totalFiltered = resources.length;
+  const totalFiltered = paging.total;
   const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
-
-  const paginatedResources = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-
-    return resources.slice(start, start + pageSize);
-  }, [resources, currentPage, pageSize]);
 
   const { paginationControls } = usePaginationControls({
     currentPage,
@@ -418,7 +414,7 @@ export const LearningResourcesPage: React.FC = () => {
               }}>
               <Loader />
             </Box>
-          ) : isEmpty(paginatedResources) ? (
+          ) : isEmpty(resources) ? (
             <Box
               sx={{
                 textAlign: 'center',
@@ -434,7 +430,7 @@ export const LearningResourcesPage: React.FC = () => {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: '20px',
               }}>
-              {paginatedResources.map((resource) => (
+              {resources.map((resource) => (
                 <LearningResourceCard
                   key={resource.id}
                   resource={resource}
@@ -449,7 +445,7 @@ export const LearningResourcesPage: React.FC = () => {
     ),
     [
       isLoading,
-      paginatedResources,
+      resources,
       handlePreview,
       paginationControls,
       paginationBoxSx,
@@ -471,7 +467,7 @@ export const LearningResourcesPage: React.FC = () => {
           }}>
           <Table
             columns={columns}
-            dataSource={paginatedResources}
+            dataSource={resources}
             loading={isLoading}
             pagination={false}
             rowKey="id"
@@ -484,7 +480,7 @@ export const LearningResourcesPage: React.FC = () => {
     ),
     [
       columns,
-      paginatedResources,
+      resources,
       isLoading,
       paginationControls,
       paginationBoxSx,

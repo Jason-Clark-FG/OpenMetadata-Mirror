@@ -14,6 +14,7 @@
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Paging } from '../../../generated/type/paging';
 import {
   getLearningResourcesList,
   LearningResource,
@@ -21,39 +22,66 @@ import {
 import { showErrorToast } from '../../../utils/ToastUtils';
 import type { LearningResourceFilterState } from './useLearningResourceFilters';
 
-interface UseLearningResourcesParams {
-  searchText: string;
-  filterState: LearningResourceFilterState;
-}
+const FIELDS = 'categories,contexts,difficulty,estimatedDuration,owners';
 
-interface UseLearningResourcesReturn {
-  resources: LearningResource[];
-  isLoading: boolean;
-  refetch: () => Promise<void>;
-}
+const INITIAL_PAGING: Paging = { total: 0 };
 
 const isAbortError = (error: unknown): boolean =>
   error instanceof Error &&
   (error.name === 'CanceledError' || error.name === 'AbortError');
 
+interface UseLearningResourcesParams {
+  searchText: string;
+  filterState: LearningResourceFilterState;
+  pageSize: number;
+  currentPage: number;
+}
+
+interface UseLearningResourcesReturn {
+  resources: LearningResource[];
+  paging: Paging;
+  isLoading: boolean;
+  refetch: () => Promise<void>;
+}
+
 export const useLearningResources = ({
   searchText,
   filterState,
+  pageSize,
+  currentPage,
 }: UseLearningResourcesParams): UseLearningResourcesReturn => {
   const { t } = useTranslation();
   const [resources, setResources] = useState<LearningResource[]>([]);
+  const [paging, setPaging] = useState<Paging>(INITIAL_PAGING);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const lastPagingRef = useRef<Paging | null>(null);
+  const prevRequestKeyRef = useRef<string>('');
 
   const fetchResources = useCallback(async () => {
+    const requestKey = JSON.stringify({ searchText, filterState });
+    if (prevRequestKeyRef.current !== requestKey) {
+      lastPagingRef.current = null;
+      prevRequestKeyRef.current = requestKey;
+    }
+
+    const cursor =
+      currentPage === 1
+        ? lastPagingRef.current?.before
+          ? { before: lastPagingRef.current.before }
+          : {}
+        : lastPagingRef.current?.after
+        ? { after: lastPagingRef.current.after }
+        : {};
+
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
     setIsLoading(true);
     try {
       const apiParams: Parameters<typeof getLearningResourcesList>[0] = {
-        limit: 1000,
-        fields: 'categories,contexts,difficulty,estimatedDuration,owners',
+        limit: pageSize,
+        fields: FIELDS,
         q: searchText || undefined,
         category: filterState.category?.length
           ? filterState.category
@@ -61,13 +89,22 @@ export const useLearningResources = ({
         pageId: filterState.context?.length ? filterState.context : undefined,
         type: filterState.type?.length ? filterState.type : undefined,
         status: filterState.status?.length ? filterState.status : undefined,
+        ...cursor,
       };
 
       const response = await getLearningResourcesList(apiParams, {
         signal: controller.signal,
       });
 
-      setResources(response.data ?? []);
+      if (abortControllerRef.current !== controller) {
+        return;
+      }
+
+      const list = response?.data ?? [];
+      const nextPaging = response?.paging ?? INITIAL_PAGING;
+      setResources(list);
+      setPaging(nextPaging);
+      lastPagingRef.current = nextPaging;
     } catch (error) {
       if (!isAbortError(error)) {
         showErrorToast(
@@ -80,7 +117,7 @@ export const useLearningResources = ({
         setIsLoading(false);
       }
     }
-  }, [t, searchText, filterState]);
+  }, [t, searchText, filterState, pageSize, currentPage]);
 
   useEffect(() => {
     fetchResources();
@@ -92,6 +129,7 @@ export const useLearningResources = ({
 
   return {
     resources,
+    paging,
     isLoading,
     refetch: fetchResources,
   };
