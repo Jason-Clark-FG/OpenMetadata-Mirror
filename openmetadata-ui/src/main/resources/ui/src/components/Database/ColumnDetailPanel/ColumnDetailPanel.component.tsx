@@ -215,7 +215,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
               return prev;
             }
 
-            return { ...prev, ...latestColumn }
+            return { ...prev, ...latestColumn } as T;
           });
         }
 
