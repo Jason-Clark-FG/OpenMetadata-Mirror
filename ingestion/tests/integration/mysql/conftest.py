@@ -1,4 +1,5 @@
 import os
+import uuid
 from subprocess import CalledProcessError
 
 import pytest
@@ -75,10 +76,10 @@ def assert_dangling_connections(container, max_connections):
 
 
 @pytest.fixture(scope="module")
-def create_service_request(mysql_container, tmp_path_factory):
+def create_service_request(mysql_container):
     return CreateDatabaseServiceRequest.model_validate(
         {
-            "name": "docker_test_" + tmp_path_factory.mktemp("mysql").name,
+            "name": f"docker_test_mysql_{uuid.uuid4().hex[:8]}",
             "serviceType": DatabaseServiceType.Mysql.value,
             "connection": {
                 "config": {

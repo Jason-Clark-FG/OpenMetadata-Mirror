@@ -29,6 +29,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  py-static-checks:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        py-version: ["3.10", "3.11"] # , "3.12"]
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: Wait for the labeler
+        uses: lewagon/wait-on-check-action@v1.3.4
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: Team Label
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+
+      - name: Verify PR labels
+        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          valid-labels: "safe to test"
+          pull-request-number: "${{ github.event.pull_request.number }}"
+          disable-reviews: true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py-version}}
+          cache: 'pip'
+          cache-dependency-path: 'ingestion/setup.py'
+
+      - name: Run Static Checks
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          sudo make install_antlr_cli
+          make install_dev generate install_test
+          make static-checks
+
   py-run-tests:
     timeout-minutes: 180
     runs-on: ubuntu-latest

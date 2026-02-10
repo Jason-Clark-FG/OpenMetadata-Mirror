@@ -11,7 +11,6 @@
 
 import importlib
 import pathlib
-import sys
 import uuid
 
 import pytest
@@ -26,9 +25,6 @@ from metadata.generated.schema.entity.services.ingestionPipelines.status import 
     StepSummary,
 )
 from metadata.workflow.metadata import MetadataWorkflow
-
-if sys.version_info < (3, 9):
-    pytest.skip("requires python 3.9+", allow_module_level=True)
 
 
 def delete_service(metadata):

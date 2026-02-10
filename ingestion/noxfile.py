@@ -105,3 +105,67 @@ def unit_plugins(session, plugin):
     session.install(f".[{plugin}]")
     # Assuming the plugin has its own tests in a specific directory
     session.run("pytest", PLUGINS_TESTS[plugin])
+
+
+# ---------------------------------------------------------------------------
+# Integration tests
+# ---------------------------------------------------------------------------
+# Default number of parallel workers.  Override via:
+#   nox -s integration -- --workers 4
+#   INTEGRATION_WORKERS=4 nox -s integration
+DEFAULT_WORKERS = "2"
+
+# Integration suites that match subdirectories under tests/integration/.
+# Pass one or more suite names to run only those:
+#   nox -s integration -- ometa
+#   nox -s integration -- ometa postgres
+INTEGRATION_DIR = "tests/integration"
+
+
+@nox.session(
+    name="integration",
+    reuse_venv=True,
+    venv_backend="uv|venv",
+)
+def integration(session):
+    """Run integration tests in parallel (pytest-xdist).
+
+    Each subdirectory under tests/integration/ is treated as a separate
+    xdist_group, so all tests within a suite run on the same worker while
+    different suites run in parallel.
+
+    Examples:
+        nox -s integration                        # all suites, 2 workers
+        nox -s integration -- ometa               # only ometa suite
+        nox -s integration -- ometa postgres      # ometa + postgres
+        nox -s integration -- --workers 4         # all suites, 4 workers
+        nox -s integration -- --workers 4 ometa   # ometa, 4 workers
+    """
+    session.install(".[dev, test]")
+
+    workers = os.environ.get("INTEGRATION_WORKERS", DEFAULT_WORKERS)
+
+    args = list(session.posargs)
+    if "--workers" in args:
+        idx = args.index("--workers")
+        workers = args[idx + 1]
+        args = args[:idx] + args[idx + 2 :]
+
+    suites = [a for a in args if not a.startswith("-")]
+    extra_flags = [a for a in args if a.startswith("-")]
+
+    if suites:
+        test_paths = [f"{INTEGRATION_DIR}/{s}" for s in suites]
+    else:
+        test_paths = [INTEGRATION_DIR]
+
+    session.run(
+        "pytest",
+        f"-n{workers}",
+        "--dist=loadgroup",
+        "--cov=metadata",
+        "--cov-branch",
+        "-v",
+        *extra_flags,
+        *test_paths,
+    )

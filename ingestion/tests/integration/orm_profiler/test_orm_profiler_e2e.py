@@ -137,7 +137,10 @@ def create_data(engine, session):
         User.__table__.create(bind=engine)
         NewUser.__table__.create(bind=engine)
     except:
-        logger.warning("Table Already exists")
+        logger.warning("Table Already exists, clearing existing data")
+        session.query(User).delete()
+        session.query(NewUser).delete()
+        session.commit()
 
     data = [
         User(

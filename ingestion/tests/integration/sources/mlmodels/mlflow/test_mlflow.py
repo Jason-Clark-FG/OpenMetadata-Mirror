@@ -9,8 +9,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """mlflow integration tests"""
+import logging
 import os
-import sys
+import time
 from urllib.parse import urlparse
 
 import mlflow
@@ -47,14 +48,14 @@ from metadata.generated.schema.metadataIngestion.workflow import (
 )
 from metadata.workflow.metadata import MetadataWorkflow
 
+from ....integration_base import generate_name
+
 MODEL_HYPERPARAMS = {
     "alpha": {"name": "alpha", "value": "0.5", "description": None},
     "l1_ratio": {"name": "l1_ratio", "value": "1.0", "description": None},
 }
 
 MODEL_NAME = "ElasticnetWineModel"
-
-SERVICE_NAME = "docker_test_mlflow"
 
 
 def eval_metrics(actual, pred):
@@ -112,25 +113,35 @@ def create_data(mlflow_environment):
         tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
         # Model registry does not work with file store
-        if tracking_url_type_store != "file":
-            # Register the model
-            # There are other ways to use the Model Registry, which depends on the use case,
-            # please refer to the doc for more information:
-            # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-            mlflow.sklearn.log_model(
-                lr,
-                "model",
-                registered_model_name=MODEL_NAME,
-                signature=signature,
-            )
-        else:
-            mlflow.sklearn.log_model(lr, "model")
+        # Retry S3 upload since minio can be transiently unavailable under parallel load
+        for attempt in range(3):
+            try:
+                if tracking_url_type_store != "file":
+                    mlflow.sklearn.log_model(
+                        lr,
+                        "model",
+                        registered_model_name=MODEL_NAME,
+                        signature=signature,
+                    )
+                else:
+                    mlflow.sklearn.log_model(lr, "model")
+                break
+            except Exception:
+                if attempt < 2:
+                    logging.getLogger(__name__).warning(
+                        "Retry %d/3: S3 upload failed, retrying...", attempt + 1
+                    )
+                    time.sleep(3 * (attempt + 1))
+                else:
+                    raise
 
 
 @pytest.fixture(scope="module")
 def service(metadata, mlflow_environment):
+    service_name = generate_name()
+
     service = CreateMlModelServiceRequest(
-        name=SERVICE_NAME,
+        name=service_name,
         serviceType=MlModelServiceType.Mlflow,
         connection=MlModelConnection(
             config=MlflowConnection(
@@ -161,19 +172,16 @@ def ingest_mlflow(metadata, service, create_data):
 
     metadata_ingestion = MetadataWorkflow.create(workflow_config)
     metadata_ingestion.execute()
+    metadata_ingestion.raise_from_status()
     return
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 9),
-    reason="testcontainers Network feature requires python3.9 or higher",
-)
-def test_mlflow(ingest_mlflow, metadata):
+def test_mlflow(ingest_mlflow, metadata, service):
     ml_models = metadata.list_all_entities(entity=MlModel)
 
     # Check we only get the same amount of models we should have ingested
     filtered_ml_models = [
-        ml_model for ml_model in ml_models if ml_model.service.name == SERVICE_NAME
+        ml_model for ml_model in ml_models if ml_model.service.name == service.name.root
     ]
 
     assert len(filtered_ml_models) == 1

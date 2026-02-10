@@ -41,11 +41,13 @@ runs:
 
     # ---- Setup Node --------------------------------------------------------------
     - name: Use Node.js ${{ inputs.npm-version }}
+      if: ${{ !contains(inputs.args, '-m no-ui') }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.npm-version }}
 
     - name: Install yarn
+      if: ${{ !contains(inputs.args, '-m no-ui') }}
       run: npm install -g yarn
       shell: bash
     # ------------------------------------------------------------------------------
@@ -55,19 +57,26 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+        cache-dependency-path: 'ingestion/setup.py'
+
+    - name: Install uv
+      run: pip install uv
+      shell: bash
 
     - name: Generate Models
       run: |
         python3 -m venv env
         source env/bin/activate
         sudo make install_antlr_cli
-        make install_dev generate
+        uv pip install "${{ github.workspace }}/ingestion[dev]/"
+        make generate
       shell: bash
 
     - name: Install Python Dependencies
       run: |
         source env/bin/activate
-        make install_all install_test
+        uv pip install "${{ github.workspace }}/ingestion[all,test]/"
       shell: bash
     # ------------------------------------------------------------------------------
 

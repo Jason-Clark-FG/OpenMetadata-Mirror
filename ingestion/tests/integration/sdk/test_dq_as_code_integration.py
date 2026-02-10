@@ -2,9 +2,6 @@
 Integration tests for DQ as Code SDK with a running OpenMetadata server.
 Tests that data quality validators are actually executed against real PostgreSQL data.
 """
-import sys
-
-import pytest
 from dirty_equals import HasAttributes
 
 from metadata.generated.schema.entity.data.table import Table
@@ -20,12 +17,6 @@ from metadata.sdk.data_quality import (
     TableRowCountToBeBetween,
     TestRunner,
 )
-
-if not sys.version_info >= (3, 9):
-    pytest.skip(
-        "requires python 3.9+ due to incompatibility with testcontainers",
-        allow_module_level=True,
-    )
 
 
 def test_table_row_count_tests(
