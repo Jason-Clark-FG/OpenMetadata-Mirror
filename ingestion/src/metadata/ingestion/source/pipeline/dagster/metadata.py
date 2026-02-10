@@ -415,6 +415,30 @@ class DagsterSource(PipelineServiceSource):
             return False
         return any(job.name == pipeline_name for job in asset.jobs)
 
+    @staticmethod
+    def _get_asset_key_candidates(
+        parts: List[str],
+    ) -> List[tuple]:
+        """
+        Build a list of (database, schema, table) candidates from asset key parts.
+
+        For keys with more than 3 parts (e.g. project/sub_project/schema/table),
+        we try progressively shorter suffixes: last 3, last 2, then last 1 part.
+        """
+        if len(parts) == 3:
+            return [(parts[0], parts[1], parts[2])]
+        if len(parts) == 2:
+            return [(None, parts[0], parts[1])]
+        if len(parts) == 1:
+            return [(None, None, parts[0])]
+        if len(parts) > 3:
+            return [
+                (parts[-3], parts[-2], parts[-1]),
+                (None, parts[-2], parts[-1]),
+                (None, None, parts[-1]),
+            ]
+        return []
+
     def _resolve_asset_to_table(
         self, asset: DagsterAssetNode, db_services: List[str]
     ) -> TableResolutionResult:
@@ -422,50 +446,56 @@ class DagsterSource(PipelineServiceSource):
         Resolve Dagster asset to OpenMetadata Table entity.
         Tries multiple strategies to parse asset key into database/schema/table.
 
+        For asset keys with more than 3 parts (e.g. project/sub_project/schema/table),
+        the leading prefix segments are progressively stripped and each suffix is tried.
+
         Returns: TableResolutionResult with table_fqn and table_entity (or None if not found)
         """
         asset_key_str = asset.assetKey.to_string()
-
         parts = asset.assetKey.path
-        if len(parts) == 3:
-            database, schema, table = parts
-        elif len(parts) == 2:
-            database = None
-            schema, table = parts
-        elif len(parts) == 1:
-            database = None
-            schema = None
-            table = parts[0]
-        else:
-            logger.debug(f"Unexpected asset key format: {asset_key_str}")
+
+        candidates = self._get_asset_key_candidates(parts)
+        if not candidates:
+            logger.debug(f"Empty asset key: {asset_key_str}")
             return TableResolutionResult()
 
-        if not database or not schema:
-            metadata_parts = self._parse_asset_from_materialization(asset)
-            if metadata_parts:
-                database = database or metadata_parts.get("database")
-                schema = schema or metadata_parts.get("schema")
+        materialization_parts = None
 
-        for service_name in db_services or ["*"]:
-            try:
-                table_fqn = fqn.build(
-                    metadata=self.metadata,
-                    entity_type=Table,
-                    service_name=service_name,
-                    database_name=database,
-                    schema_name=schema,
-                    table_name=table,
-                )
+        for database, schema, table in candidates:
+            db = database
+            sch = schema
+            if not db or not sch:
+                if materialization_parts is None:
+                    materialization_parts = (
+                        self._parse_asset_from_materialization(asset) or {}
+                    )
+                db = db or materialization_parts.get("database")
+                sch = sch or materialization_parts.get("schema")
 
-                table_entity = self.metadata.get_by_name(entity=Table, fqn=table_fqn)
-
-                if table_entity:
-                    return TableResolutionResult(
-                        table_fqn=table_fqn, table_entity=table_entity
+            for service_name in db_services or ["*"]:
+                try:
+                    table_fqn = fqn.build(
+                        metadata=self.metadata,
+                        entity_type=Table,
+                        service_name=service_name,
+                        database_name=db,
+                        schema_name=sch,
+                        table_name=table,
                     )
 
-            except Exception as exc:
-                logger.debug(f"Failed to resolve for service {service_name}: {exc}")
+                    table_entity = self.metadata.get_by_name(
+                        entity=Table, fqn=table_fqn
+                    )
+
+                    if table_entity:
+                        return TableResolutionResult(
+                            table_fqn=table_fqn, table_entity=table_entity
+                        )
+
+                except Exception as exc:
+                    logger.debug(
+                        f"Failed to resolve for service {service_name}: {exc}"
+                    )
 
         return TableResolutionResult()
 

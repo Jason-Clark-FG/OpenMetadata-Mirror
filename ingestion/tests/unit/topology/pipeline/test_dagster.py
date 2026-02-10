@@ -620,3 +620,45 @@ class TestDagsterLineageHelpers(TestCase):
         self.assertEqual(result["database"], "my_database")
         self.assertEqual(result["schema"], "my_schema")
         self.assertEqual(result["table"], "my_table")
+
+
+class TestGetAssetKeyCandidates(TestCase):
+    """Test _get_asset_key_candidates static method"""
+
+    def test_three_parts(self):
+        result = DagsterSource._get_asset_key_candidates(
+            ["my_database", "my_schema", "my_table"]
+        )
+        assert result == [("my_database", "my_schema", "my_table")]
+
+    def test_two_parts(self):
+        result = DagsterSource._get_asset_key_candidates(["my_schema", "my_table"])
+        assert result == [(None, "my_schema", "my_table")]
+
+    def test_one_part(self):
+        result = DagsterSource._get_asset_key_candidates(["my_table"])
+        assert result == [(None, None, "my_table")]
+
+    def test_four_parts(self):
+        result = DagsterSource._get_asset_key_candidates(
+            ["project", "sub_project", "db_schema", "table_name"]
+        )
+        assert result == [
+            ("sub_project", "db_schema", "table_name"),
+            (None, "db_schema", "table_name"),
+            (None, None, "table_name"),
+        ]
+
+    def test_five_parts(self):
+        result = DagsterSource._get_asset_key_candidates(
+            ["org", "project", "sub_project", "db_schema", "table_name"]
+        )
+        assert result == [
+            ("sub_project", "db_schema", "table_name"),
+            (None, "db_schema", "table_name"),
+            (None, None, "table_name"),
+        ]
+
+    def test_empty_parts(self):
+        result = DagsterSource._get_asset_key_candidates([])
+        assert result == []
