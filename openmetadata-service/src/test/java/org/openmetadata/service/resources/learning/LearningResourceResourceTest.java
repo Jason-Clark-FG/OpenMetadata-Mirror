@@ -107,8 +107,9 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
+      String status = r.getStatus() != null ? r.getStatus().value() : null;
       assertTrue(
-          "Active".equals(r.getStatus().value()), "Expected status=Active, got " + r.getStatus());
+          "Active".equals(status), "Expected status=Active, got " + status);
     }
   }
 
@@ -118,8 +119,9 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     ResultList<LearningResource> result = getLearningResources(target);
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
+      String status = r.getStatus() != null ? r.getStatus().value() : null;
       assertTrue(
-          "Draft".equals(r.getStatus().value()), "Expected status=Draft, got " + r.getStatus());
+          "Draft".equals(status), "Expected status=Draft, got " + status);
     }
   }
 
@@ -198,7 +200,8 @@ class LearningResourceResourceTest extends OpenMetadataApplicationTest {
     assertNotNull(result);
     for (LearningResource r : result.getData()) {
       assertTrue("Article".equals(r.getResourceType()));
-      assertTrue("Active".equals(r.getStatus().value()));
+      String status = r.getStatus() != null ? r.getStatus().value() : null;
+      assertTrue("Active".equals(status), "Expected status=Active, got " + status);
     }
   }
 
