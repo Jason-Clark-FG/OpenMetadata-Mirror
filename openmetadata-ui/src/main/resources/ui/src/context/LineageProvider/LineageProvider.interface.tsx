@@ -51,7 +51,6 @@ export interface LineageContextType {
   init: boolean;
   status: LoadingState;
   entityLineage: EntityLineageResponse;
-  selectedColumn: string;
   entityFqn: string;
   isCreatingEdge: boolean;
   exportLineageData: (_: string) => Promise<CSVExportResponse>;

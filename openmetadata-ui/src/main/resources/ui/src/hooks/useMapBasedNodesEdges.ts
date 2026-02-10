@@ -174,13 +174,25 @@ export const useMapBasedNodesEdges = (
 
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setNodesMap((prev) => {
-      const next = new Map(prev);
+      let next = new Map(prev);
       for (const change of changes) {
         switch (change.type) {
+          case 'add': {
+            const nodeToAdd = change.item;
+            next.set(nodeToAdd.id, nodeToAdd);
+
+            break;
+          }
           case 'remove':
             next.delete(change.id);
 
             break;
+          case 'reset': {
+            const nodeToReset = change.item;
+            next = new Map([[nodeToReset.id, nodeToReset]]);
+
+            break;
+          }
           case 'position':
           case 'dimensions':
           case 'select': {
@@ -214,13 +226,25 @@ export const useMapBasedNodesEdges = (
 
   const onEdgesChange: OnEdgesChange = useCallback((changes) => {
     setEdgesMap((prev) => {
-      const next = new Map(prev);
+      let next = new Map(prev);
       for (const change of changes) {
         switch (change.type) {
+          case 'add': {
+            const edgeToAdd = change.item;
+            next.set(edgeToAdd.id, edgeToAdd);
+
+            break;
+          }
           case 'remove':
             next.delete(change.id);
 
             break;
+          case 'reset': {
+            const edgeToReset = change.item;
+            next = new Map([[edgeToReset.id, edgeToReset]]);
+
+            break;
+          }
           case 'select': {
             const edge = next.get(change.id);
             if (edge) {

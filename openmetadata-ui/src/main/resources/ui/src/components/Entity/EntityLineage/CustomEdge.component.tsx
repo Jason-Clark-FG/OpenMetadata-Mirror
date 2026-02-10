@@ -148,25 +148,12 @@ export const CustomEdge = ({
     );
   }, [isColumnLineage, tracedColumns, sourceHandle, targetHandle]);
 
-  //   const areBothColumnHandlesPresentInCurrentPage = useMemo(() => {
-  //     const decodedHandles = getColumnSourceTargetHandles({
-  //       sourceHandle,
-  //       targetHandle,
-  //     });
-
-  //     return (
-  //       allColumnsInCurrentPagesSet.has(decodedHandles.sourceHandle ?? '') &&
-  //       allColumnsInCurrentPagesSet.has(decodedHandles.targetHandle ?? '')
-  //     );
-  //   }, [allColumnsInCurrentPagesSet, sourceHandle, targetHandle]);
-
   // Calculate edge style with memoization
   const updatedStyle = useMemo(() => {
     const isNodeTraced =
       tracedNodes.has(edge.fromEntity.id) && tracedNodes.has(edge.toEntity.id);
 
     let stroke = '';
-    let display = 'block';
     let opacity = 1;
 
     // For nodes edges
@@ -178,17 +165,11 @@ export const CustomEdge = ({
 
     // For columns edges
     if (isColumnLineage) {
-      display = 'block';
-      const noTracing = tracedNodes.size === 0 && tracedColumns.size === 0;
-
       if (isColumnHighlighted) {
-        display = 'block';
         stroke = selectedColumn
           ? theme.palette.allShades.indigo[600]
           : theme.palette.primary.main;
         opacity = 1;
-      } else if (noTracing) {
-        display = 'block';
       }
     }
 
