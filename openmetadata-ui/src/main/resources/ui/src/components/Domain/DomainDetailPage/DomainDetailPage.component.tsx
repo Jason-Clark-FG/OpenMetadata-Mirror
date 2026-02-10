@@ -98,6 +98,7 @@ const DomainDetailPage = () => {
 
   const fetchDomainByName = async (domainFqn: string) => {
     setIsMainContentLoading(true);
+    setIsForbidden(false);
     try {
       const data = await getDomainByName(domainFqn, {
         fields: [
@@ -199,7 +200,7 @@ const DomainDetailPage = () => {
     }
   }, [domainFqn, navigate]);
 
-  if (!(viewBasicDomainPermission || viewAllDomainPermission) || isForbidden) {
+  if (!(viewBasicDomainPermission || viewAllDomainPermission)) {
     return (
       <ErrorPlaceHolder
         className="mt-0-important"
@@ -214,6 +215,19 @@ const DomainDetailPage = () => {
 
   if (isMainContentLoading) {
     return <Loader />;
+  }
+
+  if (isForbidden) {
+    return (
+      <ErrorPlaceHolder
+        className="mt-0-important"
+        permissionValue={t('label.view-entity', {
+          entity: t('label.domain'),
+        })}
+        size={SIZE.LARGE}
+        type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+      />
+    );
   }
 
   if (!activeDomain) {

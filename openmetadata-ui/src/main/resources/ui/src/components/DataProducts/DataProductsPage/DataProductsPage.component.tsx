@@ -142,6 +142,7 @@ const DataProductsPage = () => {
 
   const fetchDataProductByFqn = async (fqn: string) => {
     setIsMainContentLoading(true);
+    setIsForbidden(false);
     try {
       const data = await getDataProductByName(fqn, {
         fields: [
@@ -303,7 +304,7 @@ const DataProductsPage = () => {
     }
   }, [dataProductFqn, version]);
 
-  if (!(viewBasicPermission || viewAllPermission) || isForbidden) {
+  if (!(viewBasicPermission || viewAllPermission)) {
     return (
       <ErrorPlaceHolder
         className="mt-0-important"
@@ -318,6 +319,19 @@ const DataProductsPage = () => {
 
   if (isMainContentLoading) {
     return <Loader />;
+  }
+
+  if (isForbidden) {
+    return (
+      <ErrorPlaceHolder
+        className="mt-0-important"
+        permissionValue={t('label.view-entity', {
+          entity: t('label.data-product'),
+        })}
+        size={SIZE.LARGE}
+        type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+      />
+    );
   }
 
   if (!dataProduct) {
