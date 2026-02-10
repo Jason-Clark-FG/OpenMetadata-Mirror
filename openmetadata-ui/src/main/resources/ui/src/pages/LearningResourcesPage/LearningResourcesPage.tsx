@@ -38,16 +38,20 @@ import { ReactComponent as StoryLaneIcon } from '../../assets/svg/ic_storylane.s
 import { ReactComponent as VideoIcon } from '../../assets/svg/ic_video.svg';
 import { useSearch } from '../../components/common/atoms/navigation/useSearch';
 import { useViewToggle } from '../../components/common/atoms/navigation/useViewToggle';
-import { usePaginationControls } from '../../components/common/atoms/pagination/usePaginationControls';
 import Loader from '../../components/common/Loader/Loader';
+import NextPrevious from '../../components/common/NextPrevious/NextPrevious';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { LEARNING_CATEGORIES } from '../../components/Learning/Learning.interface';
 import { LearningResourceCard } from '../../components/Learning/LearningResourceCard/LearningResourceCard.component';
 import { ResourcePlayerModal } from '../../components/Learning/ResourcePlayer/ResourcePlayerModal.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
+import {
+  PAGE_SIZE_BASE,
+  PAGE_SIZE_LARGE,
+  PAGE_SIZE_MEDIUM,
+} from '../../constants/constants';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
 import {
-  DEFAULT_PAGE_SIZE,
   MAX_VISIBLE_CONTEXTS,
   MAX_VISIBLE_TAGS,
   PAGE_IDS,
@@ -71,7 +75,12 @@ export const LearningResourcesPage: React.FC = () => {
     {}
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_BASE);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  }, []);
 
   const { resources, paging, isLoading, refetch } = useLearningResources({
     searchText,
@@ -328,16 +337,21 @@ export const LearningResourcesPage: React.FC = () => {
   );
 
   const totalFiltered = paging.total;
-  const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
 
-  const { paginationControls } = usePaginationControls({
-    currentPage,
-    totalPages,
-    totalEntities: totalFiltered,
-    pageSize,
-    onPageChange: setCurrentPage,
-    loading: isLoading,
-  });
+  const paginationData = useMemo(
+    () => ({
+      paging: { total: totalFiltered },
+      pagingHandler: ({ currentPage: page }: { currentPage: number }) =>
+        setCurrentPage(page),
+      pageSize,
+      currentPage,
+      isNumberBased: true,
+      isLoading,
+      pageSizeOptions: [PAGE_SIZE_BASE, PAGE_SIZE_MEDIUM, PAGE_SIZE_LARGE],
+      onShowSizeChange: handlePageSizeChange,
+    }),
+    [totalFiltered, pageSize, currentPage, isLoading, handlePageSizeChange]
+  );
 
   useEffect(() => {
     setCurrentPage(1);
@@ -440,17 +454,12 @@ export const LearningResourcesPage: React.FC = () => {
             </Box>
           )}
         </Box>
-        <Box sx={paginationBoxSx}>{paginationControls}</Box>
+        <Box className="learning-resources-pagination" sx={paginationBoxSx}>
+          <NextPrevious {...paginationData} />
+        </Box>
       </>
     ),
-    [
-      isLoading,
-      resources,
-      handlePreview,
-      paginationControls,
-      paginationBoxSx,
-      t,
-    ]
+    [isLoading, resources, handlePreview, paginationData, paginationBoxSx, t]
   );
 
   const renderTableView = useCallback(
@@ -475,14 +484,16 @@ export const LearningResourcesPage: React.FC = () => {
             tableLayout="fixed"
           />
         </Box>
-        <Box sx={paginationBoxSx}>{paginationControls}</Box>
+        <Box className="learning-resources-pagination" sx={paginationBoxSx}>
+          <NextPrevious {...paginationData} />
+        </Box>
       </>
     ),
     [
       columns,
       resources,
       isLoading,
-      paginationControls,
+      paginationData,
       paginationBoxSx,
       tableScrollY,
     ]

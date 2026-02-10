@@ -236,20 +236,28 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
       };
     }
 
-    private static String escapeForLike(String value) {
-      return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    /**
+     * Escapes %, _ and the escape character for use in LIKE. Uses the given
+     * escape character so that the SQL ESCAPE clause can be specified explicitly
+     * (avoids backslash in MySQL where it can be mangled by the driver).
+     */
+    private static String escapeForLike(String value, char escapeChar) {
+      String e = String.valueOf(escapeChar);
+      return value.replace(e, e + e).replace("%", e + "%").replace("_", e + "_");
     }
 
     private String searchCondition(String tableName) {
       String column = jsonColumn(tableName);
-      String searchPattern = "%" + escapeForLike(getQueryParam("q")) + "%";
-      queryParams.put("searchPattern", searchPattern);
       String tbl = tableName == null ? "" : tableName + ".";
-      if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+      boolean isMySQL = Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL());
+      char escapeChar = isMySQL ? '!' : '\\';
+      String searchPattern = "%" + escapeForLike(getQueryParam("q"), escapeChar) + "%";
+      queryParams.put("searchPattern", searchPattern);
+      if (isMySQL) {
         return String.format(
-            "(%sname LIKE :searchPattern "
-                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :searchPattern "
-                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.displayName')) LIKE :searchPattern)",
+            "(%sname LIKE :searchPattern ESCAPE '!' "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :searchPattern ESCAPE '!' "
+                + "OR JSON_UNQUOTE(JSON_EXTRACT(%s, '$.displayName')) LIKE :searchPattern ESCAPE '!')",
             tbl, column, column);
       }
       return String.format(

@@ -14,6 +14,7 @@
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MAX_CHAIN_PAGES } from '../../../constants/Learning.constants';
 import { Paging } from '../../../generated/type/paging';
 import {
   getLearningResourcesList,
@@ -44,6 +45,24 @@ interface UseLearningResourcesReturn {
   refetch: () => Promise<void>;
 }
 
+function buildListParams(
+  searchText: string,
+  filterState: LearningResourceFilterState,
+  pageSize: number,
+  cursor?: { after?: string; before?: string }
+): Parameters<typeof getLearningResourcesList>[0] {
+  return {
+    limit: pageSize,
+    fields: FIELDS,
+    q: searchText || undefined,
+    category: filterState.category?.length ? filterState.category : undefined,
+    pageId: filterState.context?.length ? filterState.context : undefined,
+    type: filterState.type?.length ? filterState.type : undefined,
+    status: filterState.status?.length ? filterState.status : undefined,
+    ...cursor,
+  };
+}
+
 export const useLearningResources = ({
   searchText,
   filterState,
@@ -55,82 +74,200 @@ export const useLearningResources = ({
   const [paging, setPaging] = useState<Paging>(INITIAL_PAGING);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const lastPagingRef = useRef<Paging | null>(null);
   const prevRequestKeyRef = useRef<string>('');
 
-  const fetchResources = useCallback(async () => {
-    const requestKey = JSON.stringify({ searchText, filterState });
-    if (prevRequestKeyRef.current !== requestKey) {
-      lastPagingRef.current = null;
+  const cursorsByPageRef = useRef<Map<number, string>>(new Map());
+  const beforeCursorsByPageRef = useRef<Map<number, string>>(new Map());
+  const itemsByPageRef = useRef<Map<number, LearningResource[]>>(new Map());
+  const totalFromPage1Ref = useRef<number>(0);
+
+  const loadData = useCallback(
+    async (
+      page: number,
+      options?: { skipGridItemsUpdate?: boolean; signal?: AbortSignal }
+    ): Promise<void> => {
+      const cursor =
+        page === 1
+          ? beforeCursorsByPageRef.current.get(2)
+            ? { before: beforeCursorsByPageRef.current.get(2) }
+            : {}
+          : cursorsByPageRef.current.get(page - 1)
+          ? { after: cursorsByPageRef.current.get(page - 1) }
+          : {};
+
+      const signal = options?.signal;
+
+      try {
+        const apiParams = buildListParams(
+          searchText,
+          filterState,
+          pageSize,
+          Object.keys(cursor).length ? cursor : undefined
+        );
+        const response = await getLearningResourcesList(apiParams, {
+          ...(signal && { signal }),
+        });
+
+        if (signal?.aborted) {
+          return;
+        }
+
+        const list = response?.data ?? [];
+        const nextPaging = response?.paging ?? INITIAL_PAGING;
+
+        itemsByPageRef.current.set(page, list);
+        if (nextPaging.after != null) {
+          cursorsByPageRef.current.set(page, nextPaging.after);
+        }
+        if (page >= 2 && nextPaging.before != null) {
+          beforeCursorsByPageRef.current.set(page, nextPaging.before);
+        }
+        if (page === 1) {
+          totalFromPage1Ref.current = nextPaging.total ?? 0;
+        }
+
+        if (!options?.skipGridItemsUpdate) {
+          setResources(list);
+          setPaging({
+            ...nextPaging,
+            total: totalFromPage1Ref.current || nextPaging.total,
+          });
+        }
+      } catch (error) {
+        if (!isAbortError(error)) {
+          showErrorToast(
+            error as AxiosError,
+            t('server.learning-resources-fetch-error')
+          );
+        }
+
+        throw error;
+      }
+    },
+    [t, searchText, filterState, pageSize]
+  );
+
+  useEffect(() => {
+    const requestKey = JSON.stringify({ searchText, filterState, pageSize });
+    const filtersChanged = prevRequestKeyRef.current !== requestKey;
+    if (filtersChanged) {
       prevRequestKeyRef.current = requestKey;
+      cursorsByPageRef.current = new Map();
+      beforeCursorsByPageRef.current = new Map();
+      itemsByPageRef.current = new Map();
+      totalFromPage1Ref.current = 0;
     }
 
-    const cursor =
-      currentPage === 1
-        ? lastPagingRef.current?.before
-          ? { before: lastPagingRef.current.before }
-          : {}
-        : lastPagingRef.current?.after
-        ? { after: lastPagingRef.current.after }
-        : {};
+    const cachedItems = itemsByPageRef.current.get(currentPage);
+    if (cachedItems && !filtersChanged) {
+      setResources(cachedItems);
+      setPaging((prev) => ({
+        ...prev,
+        total: totalFromPage1Ref.current || prev.total,
+      }));
 
-    abortControllerRef.current?.abort();
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setIsLoading(true);
+
+    const run = async () => {
+      const opts = { signal: controller.signal };
+      try {
+        if (currentPage === 1) {
+          await loadData(1, opts);
+
+          return;
+        }
+
+        const hasCursorForPage = cursorsByPageRef.current.has(currentPage - 1);
+        if (hasCursorForPage) {
+          await loadData(currentPage, opts);
+
+          return;
+        }
+
+        if (currentPage > MAX_CHAIN_PAGES) {
+          await loadData(1, opts);
+          setResources(itemsByPageRef.current.get(1) ?? []);
+          setPaging((prev) => ({
+            ...prev,
+            total: totalFromPage1Ref.current,
+          }));
+          showErrorToast(t('message.please-refresh-the-page'));
+
+          return;
+        }
+
+        for (let p = 1; p < currentPage; p++) {
+          if (controller.signal.aborted) {
+            return;
+          }
+          await loadData(p, {
+            skipGridItemsUpdate: true,
+            signal: controller.signal,
+          });
+        }
+        if (controller.signal.aborted) {
+          return;
+        }
+        await loadData(currentPage, opts);
+      } catch {
+        if (!cancelled && abortControllerRef.current === controller) {
+          setResources([]);
+          setPaging(INITIAL_PAGING);
+        }
+      } finally {
+        if (abortControllerRef.current === controller && !cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [currentPage, searchText, filterState, pageSize, loadData, t]);
+
+  const refetch = useCallback(async () => {
+    cursorsByPageRef.current = new Map();
+    beforeCursorsByPageRef.current = new Map();
+    itemsByPageRef.current = new Map();
+    totalFromPage1Ref.current = 0;
+    prevRequestKeyRef.current = '';
     const controller = new AbortController();
     abortControllerRef.current = controller;
     setIsLoading(true);
     try {
-      const apiParams: Parameters<typeof getLearningResourcesList>[0] = {
-        limit: pageSize,
-        fields: FIELDS,
-        q: searchText || undefined,
-        category: filterState.category?.length
-          ? filterState.category
-          : undefined,
-        pageId: filterState.context?.length ? filterState.context : undefined,
-        type: filterState.type?.length ? filterState.type : undefined,
-        status: filterState.status?.length ? filterState.status : undefined,
-        ...cursor,
-      };
+      if (currentPage === 1) {
+        await loadData(1);
 
-      const response = await getLearningResourcesList(apiParams, {
-        signal: controller.signal,
-      });
-
-      if (abortControllerRef.current !== controller) {
         return;
       }
-
-      const list = response?.data ?? [];
-      const nextPaging = response?.paging ?? INITIAL_PAGING;
-      setResources(list);
-      setPaging(nextPaging);
-      lastPagingRef.current = nextPaging;
-    } catch (error) {
-      if (!isAbortError(error)) {
-        showErrorToast(
-          error as AxiosError,
-          t('server.learning-resources-fetch-error')
-        );
+      for (let p = 1; p < currentPage; p++) {
+        await loadData(p, { skipGridItemsUpdate: true });
       }
+      await loadData(currentPage);
+    } catch {
+      setResources([]);
+      setPaging(INITIAL_PAGING);
     } finally {
       if (abortControllerRef.current === controller) {
         setIsLoading(false);
       }
     }
-  }, [t, searchText, filterState, pageSize, currentPage]);
-
-  useEffect(() => {
-    fetchResources();
-
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, [fetchResources]);
+  }, [currentPage, loadData]);
 
   return {
     resources,
     paging,
     isLoading,
-    refetch: fetchResources,
+    refetch,
   };
 };

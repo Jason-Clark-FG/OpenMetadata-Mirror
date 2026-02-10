@@ -24,6 +24,8 @@ export const MAX_VISIBLE_TAGS = 2;
 export const MAX_VISIBLE_CONTEXTS = 2;
 export const DEFAULT_PAGE_SIZE = 10;
 
+export const MAX_CHAIN_PAGES = 25;
+
 export const RESOURCE_TYPE_VALUES = [
   ResourceType.Article,
   ResourceType.Video,
