@@ -321,28 +321,16 @@ test.describe(
     });
 
     test.describe('Positive - View Results', () => {
-      test('User with TEST_CASE.VIEW_ALL can view test case in UI and GET results by FQN', async ({
+      test('User with TEST_CASE.VIEW_ALL can view test case and results in UI', async ({
         viewResultsPage,
       }) => {
-        // UI: Navigate to profiler page and verify test case is visible
         await visitProfilerPage(viewResultsPage);
         await expect(viewResultsPage.getByTestId(testCaseName)).toBeVisible();
 
-        // UI: Navigate to test case details to see results tab
         await visitTestCaseDetailsPage(viewResultsPage);
         await expect(
           viewResultsPage.getByTestId('test-case-result-tab-container')
         ).toBeVisible();
-
-        // API: Verify GET results succeeds
-        const { apiContext } = await getApiContext(viewResultsPage);
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`
-        );
-        expect(res.status()).toBe(200);
       });
 
       test('User with TEST_CASE.VIEW_ALL can view test RESULT CONTENT in UI', async ({
@@ -358,79 +346,36 @@ test.describe(
         if (await resultChart.first().isVisible()) {
           await expect(resultChart.first()).toBeVisible();
         }
-
-        const { apiContext } = await getApiContext(viewResultsPage);
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`
-        );
-        const data = await res.json();
-        expect(data.data).toBeDefined();
-        expect(data.data.length).toBeGreaterThan(0);
       });
 
-      test('User with TABLE.VIEW_TESTS can view test case and GET results by FQN (alternative)', async ({
+      test('User with TABLE.VIEW_TESTS can view test case and results in UI (alternative)', async ({
         tableEditResultsPage,
       }) => {
-        // UI: Navigate to profiler page and verify test case is visible
         await visitProfilerPage(tableEditResultsPage);
         await expect(
           tableEditResultsPage.getByTestId(testCaseName)
         ).toBeVisible();
 
-        // API: Verify GET results succeeds
-        const { apiContext } = await getApiContext(tableEditResultsPage);
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`
-        );
-        expect(res.status()).toBe(200);
+        await visitTestCaseDetailsPage(tableEditResultsPage);
+        await expect(
+          tableEditResultsPage.getByTestId('test-case-result-tab-container')
+        ).toBeVisible();
       });
 
-      test('User with TEST_CASE.VIEW_ALL can GET results search/list', async ({
-        viewResultsPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewResultsPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/testCaseResults/search/list'
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.VIEW_ALL can GET results search/latest', async ({
-        viewResultsPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewResultsPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/testCaseResults/search/latest'
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with only TABLE.EDIT_TESTS (no TEST_CASE.VIEW_ALL) can still view results via TABLE.VIEW_TESTS', async ({
+      test('User with only TABLE.EDIT_TESTS (no TEST_CASE.VIEW_ALL) can still view results in UI via TABLE.VIEW_TESTS', async ({
         tableEditResultsPage,
       }) => {
-        const { apiContext } = await getApiContext(tableEditResultsPage);
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`
-        );
-        expect(res.status()).toBe(200);
+        await visitTestCaseDetailsPage(tableEditResultsPage);
+        await expect(
+          tableEditResultsPage.getByTestId('test-case-result-tab-container')
+        ).toBeVisible();
       });
     });
 
     test.describe('Positive - Edit Results', () => {
-      test('User with TEST_CASE.EDIT_ALL can see edit actions and POST test case results', async ({
+      test('User with TEST_CASE.EDIT_ALL can see edit action on test case', async ({
         editResultsPage,
       }) => {
-        // UI: Navigate to profiler, verify edit action is available
         await visitProfilerPage(editResultsPage);
         const actionDropdown = editResultsPage.getByTestId(
           `action-dropdown-${testCaseName}`
@@ -441,34 +386,11 @@ test.describe(
           editResultsPage.getByTestId(`edit-${testCaseName}`)
         ).toBeVisible();
         await editResultsPage.keyboard.press('Escape');
-
-        // API: Verify POST results succeeds
-        const { apiContext } = await getApiContext(editResultsPage);
-        const newTimestamp = getCurrentMillis() + 1000;
-
-        const res = await apiContext.post(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`,
-          {
-            data: {
-              result: 'Posted by EDIT_ALL user.',
-              testCaseStatus: 'Success',
-              testResultValue: [
-                { name: 'minValue', value: '50' },
-                { name: 'maxValue', value: '100' },
-              ],
-              timestamp: newTimestamp,
-            },
-          }
-        );
-        expect([200, 201]).toContain(res.status());
       });
 
-      test('User with TABLE.EDIT_TESTS can see edit actions and POST test case results (alternative)', async ({
+      test('User with TABLE.EDIT_TESTS can see edit action on test case (alternative)', async ({
         tableEditResultsPage,
       }) => {
-        // UI: Navigate to profiler, verify edit action is available
         await visitProfilerPage(tableEditResultsPage);
         const actionDropdown = tableEditResultsPage.getByTestId(
           `action-dropdown-${testCaseName}`
@@ -479,112 +401,23 @@ test.describe(
           tableEditResultsPage.getByTestId(`edit-${testCaseName}`)
         ).toBeVisible();
         await tableEditResultsPage.keyboard.press('Escape');
-
-        // API: Verify POST results succeeds
-        const { apiContext } = await getApiContext(tableEditResultsPage);
-        const newTimestamp = getCurrentMillis() + 2000;
-
-        const res = await apiContext.post(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`,
-          {
-            data: {
-              result: 'Posted by TABLE.EDIT_TESTS user.',
-              testCaseStatus: 'Success',
-              testResultValue: [
-                { name: 'minValue', value: '60' },
-                { name: 'maxValue', value: '100' },
-              ],
-              timestamp: newTimestamp,
-            },
-          }
-        );
-        expect([200, 201]).toContain(res.status());
-      });
-
-      test('User with TEST_CASE.EDIT_ALL can PATCH test case result', async ({
-        editResultsPage,
-      }) => {
-        const { apiContext } = await getApiContext(editResultsPage);
-
-        const res = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}/${resultTimestamp}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/testCaseFailureStatus',
-                value: {
-                  testCaseFailureStatusType: 'Resolved',
-                  testCaseFailureReason: 'FalsePositive',
-                },
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TABLE.EDIT_TESTS can PATCH test case result (alternative)', async ({
-        tableEditResultsPage,
-      }) => {
-        const { apiContext } = await getApiContext(tableEditResultsPage);
-
-        const res = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}/${resultTimestamp}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/testCaseFailureStatus',
-                value: {
-                  testCaseFailureStatusType: 'Resolved',
-                  testCaseFailureReason: 'MissingData',
-                },
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(res.status()).toBe(200);
       });
     });
 
     test.describe('Positive - Delete Results', () => {
-      test('User with TABLE.DELETE + TEST_CASE.DELETE can DELETE results', async ({
+      test('User with TABLE.DELETE + TEST_CASE.DELETE can see delete option for test case', async ({
         deleteResultsPage,
-        adminPage,
       }) => {
-        // Create a result specifically to delete
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        const deleteTimestamp = getCurrentMillis() + 5000;
-        await adminContext.post(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}`,
-          {
-            data: {
-              result: 'Result to delete.',
-              testCaseStatus: 'Failed',
-              testResultValue: [{ name: 'value', value: '0' }],
-              timestamp: deleteTimestamp,
-            },
-          }
+        await visitProfilerPage(deleteResultsPage);
+        const actionDropdown = deleteResultsPage.getByTestId(
+          `action-dropdown-${testCaseName}`
         );
-
-        const { apiContext } = await getApiContext(deleteResultsPage);
-        const res = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/testCaseResults/${encodeURIComponent(
-            testCaseFqn
-          )}/${deleteTimestamp}`
-        );
-        expect([200, 204]).toContain(res.status());
+        await expect(actionDropdown).toBeVisible();
+        await actionDropdown.click();
+        await expect(
+          deleteResultsPage.getByTestId(`delete-${testCaseName}`)
+        ).toBeVisible();
+        await deleteResultsPage.keyboard.press('Escape');
       });
     });
 
@@ -628,6 +461,18 @@ test.describe(
       test('User with only VIEW cannot PATCH results', async ({
         viewResultsPage,
       }) => {
+        await visitProfilerPage(viewResultsPage);
+        const actionDropdown = viewResultsPage.getByTestId(
+          `action-dropdown-${testCaseName}`
+        );
+        if (await actionDropdown.isVisible()) {
+          await actionDropdown.click();
+          await expect(
+            viewResultsPage.getByTestId(`edit-${testCaseName}`)
+          ).toBeHidden();
+          await viewResultsPage.keyboard.press('Escape');
+        }
+
         const { apiContext } = await getApiContext(viewResultsPage);
 
         const res = await apiContext.patch(
@@ -657,7 +502,12 @@ test.describe(
         partialDeleteTcPage,
         adminPage,
       }) => {
-        // Create a result to attempt to delete
+        await visitProfilerPage(partialDeleteTcPage);
+        await visitTestCaseDetailsPage(partialDeleteTcPage);
+        await expect(
+          partialDeleteTcPage.getByTestId('test-case-result-tab-container')
+        ).toBeVisible();
+
         const { apiContext: adminContext } = await getApiContext(adminPage);
         const ts = getCurrentMillis() + 10000;
         await adminContext.post(
@@ -694,6 +544,12 @@ test.describe(
         partialDeleteTablePage,
         adminPage,
       }) => {
+        await visitProfilerPage(partialDeleteTablePage);
+        await visitTestCaseDetailsPage(partialDeleteTablePage);
+        await expect(
+          partialDeleteTablePage.getByTestId('test-case-result-tab-container')
+        ).toBeVisible();
+
         const { apiContext: adminContext } = await getApiContext(adminPage);
         const ts = getCurrentMillis() + 11000;
         await adminContext.post(

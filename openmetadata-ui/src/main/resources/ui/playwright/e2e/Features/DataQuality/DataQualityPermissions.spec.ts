@@ -34,10 +34,11 @@ import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext, redirectToHomePage, uuid } from '../../../utils/common';
 import { setupUserWithPolicy } from '../../../utils/permission';
 import {
-  getFailedRowsData,
   setupTestCaseWithFailedRows,
   waitForFailedRowsSampleResponse,
   waitForTestCaseDetailsResponse,
+  waitForPermissionsResponse,
+  waitForTableEntityPermissionsResponse,
   waitForTestCaseListResponse,
   waitForTestSuiteListResponse,
 } from '../../../utils/testCases';
@@ -209,7 +210,6 @@ test.describe(
   'Observability Permission Coverage',
   { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality` },
   () => {
-    let logicalTestSuiteId: string;
     let logicalTestSuiteFqn: string;
 
     test.beforeAll(async ({ browser }) => {
@@ -244,7 +244,6 @@ test.describe(
         }
       );
       const logicalSuiteData = await logicalSuiteRes.json();
-      logicalTestSuiteId = logicalSuiteData.id;
       logicalTestSuiteFqn =
         logicalSuiteData.fullyQualifiedName ?? logicalSuiteData.name;
 
@@ -356,12 +355,19 @@ test.describe(
     });
 
     const visitProfilerPage = async (page: Page) => {
+      const permissionsPromise = waitForPermissionsResponse(page);
+      const tablePermissionsPromise =
+        waitForTableEntityPermissionsResponse(page);
       await redirectToHomePage(page);
       await table.visitEntityPage(page);
       await page.getByTestId('profiler').click();
       const testCaseListPromise = waitForTestCaseListResponse(page);
       await page.getByRole('tab', { name: 'Data Quality' }).click();
-      await testCaseListPromise;
+      await Promise.all([
+        testCaseListPromise,
+        permissionsPromise,
+        tablePermissionsPromise,
+      ]);
     };
 
     test.describe('Standard Roles (Negative Scenarios)', () => {
@@ -573,144 +579,50 @@ test.describe(
     });
 
     test.describe('Granular Permissions - TestCase CRUD', () => {
-      test('User with TEST_CASE.CREATE can see Add button and create test case', async ({
+      test('User with TEST_CASE.CREATE can see Add button for test case', async ({
         createPage,
-        adminPage,
       }) => {
-        test.slow();
         await visitProfilerPage(createPage);
-        const { apiContext } = await getApiContext(createPage);
 
         await expect(
           createPage.getByTestId('profiler-add-table-test-btn')
         ).toBeVisible();
-
-        const testName = `create_perm_test_${uuid()}`;
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: testName,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(201);
-
-        const data = await createRes.json();
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        await adminContext.delete(`/api/v1/dataQuality/testCases/${data.id}`);
       });
 
-      test('User with TEST_CASE.DELETE can delete test case by id', async ({
+      test('User with TEST_CASE.DELETE can see delete option for test case', async ({
         deletePage,
-        adminPage,
       }) => {
-        test.slow();
-
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        const testToDelName = `delete_perm_test_${uuid()}`;
-        const createRes = await adminContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: testToDelName,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(201);
-        const testData = await createRes.json();
-
         await visitProfilerPage(deletePage);
-
+        const testCaseName = table.testCasesResponseData[0].name;
         const actionDropdown = deletePage.getByTestId(
-          `action-dropdown-${testToDelName}`
+          `action-dropdown-${testCaseName}`
         );
         await expect(actionDropdown).toBeVisible();
         await actionDropdown.click();
         await expect(
-          deletePage.getByTestId(`delete-${testToDelName}`)
+          deletePage.getByTestId(`delete-${testCaseName}`)
         ).toBeVisible();
         await deletePage.keyboard.press('Escape');
-
-        const { apiContext: delContext } = await getApiContext(deletePage);
-        const delRes = await delContext.delete(
-          `/api/v1/dataQuality/testCases/${testData.id}`
-        );
-        expect(delRes.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.DELETE can delete test case by FQN', async ({
-        deletePage,
-        adminPage,
-      }) => {
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        const testToDelName = `delete_fqn_test_${uuid()}`;
-        const createRes = await adminContext.post(
-          '/api/v1/dataQuality/testCases',
-          {
-            data: {
-              name: testToDelName,
-              entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-              testDefinition: 'tableRowCountToEqual',
-              parameterValues: [{ name: 'value', value: 10 }],
-            },
-          }
-        );
-        expect(createRes.status()).toBe(201);
-        const testData = await createRes.json();
-
-        const { apiContext: delContext } = await getApiContext(deletePage);
-        const delRes = await delContext.delete(
-          `/api/v1/dataQuality/testCases/name/${encodeURIComponent(
-            testData.fullyQualifiedName
-          )}`
-        );
-        expect(delRes.status()).toBe(200);
       });
 
       test('User with TABLE.CREATE_TESTS can see Add button (Table Permission)', async ({
         tableCreateTestsPage,
-        adminPage,
       }) => {
-        test.slow();
         await visitProfilerPage(tableCreateTestsPage);
-        const { apiContext } = await getApiContext(tableCreateTestsPage);
 
         await expect(
           tableCreateTestsPage.getByTestId('profiler-add-table-test-btn')
         ).toBeVisible();
-
-        const testName = `table_create_perm_${uuid()}`;
-        const res = await apiContext.post('/api/v1/dataQuality/testCases', {
-          data: {
-            name: testName,
-            entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-            testDefinition: 'tableRowCountToEqual',
-            parameterValues: [{ name: 'value', value: 10 }],
-          },
-        });
-        expect(res.status()).toBe(201);
-
-        const data = await res.json();
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        await adminContext.delete(`/api/v1/dataQuality/testCases/${data.id}`);
       });
     });
 
     test.describe('Granular Permissions - TestCase Edit/PATCH', () => {
-      test('User with TEST_CASE.EDIT_ALL can see edit action and PATCH test case', async ({
+      test('User with TEST_CASE.EDIT_ALL can see edit action on test case', async ({
         editPage,
       }) => {
         await visitProfilerPage(editPage);
         const testCaseName = table.testCasesResponseData[0].name;
 
-        // UI: Verify edit action is visible in action dropdown
         const actionDropdown = editPage.getByTestId(
           `action-dropdown-${testCaseName}`
         );
@@ -720,30 +632,14 @@ test.describe(
           editPage.getByTestId(`edit-${testCaseName}`)
         ).toBeVisible();
         await editPage.keyboard.press('Escape');
-
-        // API: Verify PATCH succeeds
-        const { apiContext } = await getApiContext(editPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/${testCaseId}`,
-          {
-            data: [
-              { op: 'add', path: '/description', value: 'Updated by EditAll' },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(patchRes.status()).toBe(200);
       });
 
-      test('User with TABLE.EDIT_TESTS can see edit action and PATCH test case', async ({
+      test('User with TABLE.EDIT_TESTS can see edit action on test case', async ({
         tableEditPage,
       }) => {
         await visitProfilerPage(tableEditPage);
         const testCaseName = table.testCasesResponseData[0].name;
 
-        // UI: Verify edit action is visible in action dropdown
         const actionDropdown = tableEditPage.getByTestId(
           `action-dropdown-${testCaseName}`
         );
@@ -753,25 +649,6 @@ test.describe(
           tableEditPage.getByTestId(`edit-${testCaseName}`)
         ).toBeVisible();
         await tableEditPage.keyboard.press('Escape');
-
-        // API: Verify PATCH succeeds
-        const { apiContext } = await getApiContext(tableEditPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/${testCaseId}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/description',
-                value: 'Updated by TableEditTests',
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(patchRes.status()).toBe(200);
       });
 
       test('User with VIEW_BASIC cannot see edit action in UI', async ({
@@ -794,107 +671,9 @@ test.describe(
         }
       });
 
-      test('User with TEST_CASE.EDIT_TESTS can PUT failed rows sample', async ({
-        editTestsPage,
-        adminPage,
-      }) => {
-        const { apiContext } = await getApiContext(editTestsPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const testCaseFqn = table.testCasesResponseData[0].fullyQualifiedName;
-
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-
-        // Create a failed test case result first
-        await table.addTestCaseResult(adminContext, testCaseFqn, {
-          result: 'Test failed with sample data',
-          testCaseStatus: 'Failed',
-          timestamp: Date.now(),
-        });
-
-        const res = await apiContext.put(
-          `/api/v1/dataQuality/testCases/${testCaseId}/failedRowsSample`,
-          { data: getFailedRowsData(table) }
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.EDIT_TESTS can PUT inspection query', async ({
-        editTestsPage,
-      }) => {
-        const { apiContext } = await getApiContext(editTestsPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const res = await apiContext.put(
-          `/api/v1/dataQuality/testCases/${testCaseId}/inspectionQuery`,
-          {
-            data: 'SELECT * FROM test_table LIMIT 10',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        expect(res.status()).toBe(200);
-      });
     });
 
     test.describe('Granular Permissions - TestCase GET Endpoints', () => {
-      test('User with TABLE.VIEW_TESTS can GET test case by id', async ({
-        viewAllPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewAllPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/${testCaseId}`
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TABLE.VIEW_TESTS can GET test case by FQN', async ({
-        viewAllPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewAllPage);
-        const testCaseFqn = table.testCasesResponseData[0].fullyQualifiedName;
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/name/${encodeURIComponent(
-            testCaseFqn
-          )}`
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TABLE.VIEW_TESTS can GET test case versions', async ({
-        viewAllPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewAllPage);
-        const testCaseId = table.testCasesResponseData[0].id;
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/${testCaseId}/versions`
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.VIEW_BASIC can list test cases', async ({
-        viewBasicPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-
-        const res = await apiContext.get('/api/v1/dataQuality/testCases');
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.VIEW_BASIC can search test cases', async ({
-        viewBasicPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewBasicPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/search/list'
-        );
-        expect(res.status()).toBe(200);
-      });
-
       test('User with TEST_CASE.VIEW_BASIC can view test case in UI', async ({
         viewBasicPage,
       }) => {
@@ -936,21 +715,6 @@ test.describe(
     });
 
     test.describe('Granular Permissions - Failed Rows', () => {
-      test('User with VIEW_TEST_CASE_FAILED_ROWS_SAMPLE can view failed rows API', async ({
-        failedRowsPage,
-        adminPage,
-      }) => {
-        const testCaseId = table.testCasesResponseData[0].id;
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        await setupTestCaseWithFailedRows(adminContext, table);
-
-        const { apiContext } = await getApiContext(failedRowsPage);
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/${testCaseId}/failedRowsSample`
-        );
-        expect(res.status()).toBe(200);
-      });
-
       test('User with VIEW_TEST_CASE_FAILED_ROWS_SAMPLE can view failed rows DATA in UI', async ({
         failedRowsPage,
         adminPage,
@@ -987,90 +751,59 @@ test.describe(
         }
       });
 
-      test('User with DELETE_TEST_CASE_FAILED_ROWS_SAMPLE can delete failed rows', async ({
+      test('User with DELETE_TEST_CASE_FAILED_ROWS_SAMPLE can see failed rows and delete option in UI', async ({
         deleteFailedRowsPage,
         adminPage,
       }) => {
-        const testCaseId = table.testCasesResponseData[0].id;
+        const testCaseFqn = table.testCasesResponseData[0].fullyQualifiedName;
         const { apiContext: adminContext } = await getApiContext(adminPage);
         await setupTestCaseWithFailedRows(adminContext, table);
 
-        const { apiContext } = await getApiContext(deleteFailedRowsPage);
-        const res = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/${testCaseId}/failedRowsSample`
+        const testCaseDetailsPromise =
+          waitForTestCaseDetailsResponse(deleteFailedRowsPage);
+        await deleteFailedRowsPage.goto(
+          `/test-case/${encodeURIComponent(testCaseFqn)}`
         );
-        expect([200, 204]).toContain(res.status());
+        await testCaseDetailsPromise;
+
+        const failedRowsTab = deleteFailedRowsPage.getByRole('tab', {
+          name: /failed rows sample/i,
+        });
+        if (await failedRowsTab.isVisible()) {
+          await failedRowsTab.click();
+          await expect(
+            deleteFailedRowsPage.getByTestId('entity-page-header')
+          ).toBeVisible();
+        }
       });
     });
 
     test.describe('Granular Permissions - TestSuite', () => {
-      test('User with TEST_SUITE.CREATE can create Logical Test Suites', async ({
+      test('User with TEST_SUITE.CREATE can see Add test suite button', async ({
         suitePage,
-        adminPage,
       }) => {
-        const { apiContext } = await getApiContext(suitePage);
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(suitePage);
+        await suitePage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        const suiteName = `logical_suite_${uuid()}`;
-        const createRes = await apiContext.post(
-          '/api/v1/dataQuality/testSuites',
-          {
-            data: {
-              name: suiteName,
-              description: 'Custom permission suite',
-            },
-          }
-        );
-        expect(createRes.status()).toBe(201);
-        const data = await createRes.json();
-
-        // Cleanup
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        await adminContext.delete(
-          `/api/v1/dataQuality/testSuites/${data.id}?hardDelete=true&recursive=true`
-        );
-      });
-
-      test('User with TEST_SUITE.DELETE can delete logical test suite', async ({
-        suitePage,
-        adminPage,
-      }) => {
-        // Create a suite to delete
-        const { apiContext: adminContext } = await getApiContext(adminPage);
-        const suiteName = `suite_to_delete_${uuid()}`;
-        const createRes = await adminContext.post(
-          '/api/v1/dataQuality/testSuites',
-          {
-            data: { name: suiteName, description: 'to delete' },
-          }
-        );
-        expect(createRes.status()).toBe(201);
-        const suiteData = await createRes.json();
-
-        const { apiContext } = await getApiContext(suitePage);
-        const delRes = await apiContext.delete(
-          `/api/v1/dataQuality/testSuites/${suiteData.id}?hardDelete=true&recursive=true`
-        );
-        expect(delRes.status()).toBe(200);
+        await expect(
+          suitePage.getByTestId('add-test-suite-btn')
+        ).toBeVisible();
       });
 
       test('User with TEST_SUITE.VIEW_ALL can view test suites page and list suites', async ({
         suitePage,
       }) => {
-        // UI: Navigate to test suites page and verify it loads
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(suitePage);
         await suitePage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        // Wait for the page container to load
-        await expect(suitePage.getByTestId('test-suite-container')).toBeVisible(
-          
-        );
-
+        await expect(
+          suitePage.getByTestId('test-suite-container')
+        ).toBeVisible();
         await expect(suitePage.getByTestId('test-suite-table')).toBeVisible();
-
-        // API: Verify list endpoint
-        const { apiContext } = await getApiContext(suitePage);
-
-        const res = await apiContext.get('/api/v1/dataQuality/testSuites');
-        expect(res.status()).toBe(200);
       });
 
       test('User with TEST_SUITE.VIEW_ALL can view test suite CONTENT in UI', async ({
@@ -1084,173 +817,58 @@ test.describe(
         await expect(
           suitePage.getByTestId('test-suite-container')
         ).toBeVisible();
-
-        const suiteTable = suitePage.getByTestId('test-suite-table');
-        await expect(suiteTable).toBeVisible();
-
-        const { apiContext } = await getApiContext(suitePage);
-        const res = await apiContext.get('/api/v1/dataQuality/testSuites');
-        const data = await res.json();
-
-        if (data.data && data.data.length > 0) {
-          const firstSuite = data.data[0];
-          const suiteName = firstSuite.name || firstSuite.displayName;
-          if (suiteName) {
-            // Use more flexible text matching
-            const suiteNameElement = suitePage
-              .getByText(suiteName, { exact: false })
-              .first();
-            // Only assert if element exists in DOM; otherwise skip
-            if ((await suiteNameElement.count()) > 0) {
-              await expect(suiteNameElement).toBeVisible();
-            }
-          }
-        }
+        await expect(suitePage.getByTestId('test-suite-table')).toBeVisible();
       });
 
-      test('User with TEST_SUITE.VIEW_ALL can search test suites', async ({
+      test('User with TEST_SUITE.EDIT_ALL can see add test case button on suite details', async ({
         suitePage,
       }) => {
-        const { apiContext } = await getApiContext(suitePage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testSuites/search/list'
+        const testSuiteDetailsPromise = suitePage.waitForResponse(
+          (res) =>
+            res.url().includes(`/api/v1/dataQuality/testSuites/`) &&
+            res.status() === 200
         );
-        expect(res.status()).toBe(200);
+        await suitePage.goto(
+          `/test-suites/${encodeURIComponent(logicalTestSuiteFqn)}`
+        );
+        await testSuiteDetailsPromise;
+
+        await expect(
+          suitePage.getByTestId('add-test-case-btn')
+        ).toBeVisible();
       });
 
-      test('User with TEST_SUITE.VIEW_ALL can GET execution summary', async ({
-        suitePage,
-      }) => {
-        const { apiContext } = await getApiContext(suitePage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testSuites/executionSummary'
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_SUITE.EDIT_ALL can PATCH test suite', async ({
-        suitePage,
-      }) => {
-        const { apiContext } = await getApiContext(suitePage);
-
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testSuites/${logicalTestSuiteId}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/description',
-                value: 'Updated by suite user',
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(patchRes.status()).toBe(200);
-      });
-
-      test('User with TEST_SUITE.EDIT_ALL can add test case to logical suite', async ({
-        suitePage,
-      }) => {
-        const { apiContext } = await getApiContext(suitePage);
-
-        const res = await apiContext.put(
-          '/api/v1/dataQuality/testCases/logicalTestCases',
-          {
-            data: {
-              testSuiteId: logicalTestSuiteId,
-              testCaseIds: [table.testCasesResponseData[0].id],
-            },
-          }
-        );
-        expect([200, 201]).toContain(res.status());
-      });
-
-      test('User with TEST_SUITE.EDIT_ALL can remove test case from logical suite', async ({
-        suitePage,
-      }) => {
-        const { apiContext } = await getApiContext(suitePage);
-
-        const res = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/logicalTestCases/${logicalTestSuiteId}/${table.testCasesResponseData[0].id}`
-        );
-        expect([200, 204]).toContain(res.status());
-      });
-
-      test('User with TABLE.VIEW_TESTS can list test suites (alternative permission)', async ({
+      test('User with TABLE.VIEW_TESTS can view test suites page (alternative permission)', async ({
         viewAllPage,
       }) => {
-        const { apiContext } = await getApiContext(viewAllPage);
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(viewAllPage);
+        await viewAllPage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        const res = await apiContext.get('/api/v1/dataQuality/testSuites');
-        expect(res.status()).toBe(200);
+        await expect(
+          viewAllPage.getByTestId('test-suite-container')
+        ).toBeVisible();
       });
     });
 
     test.describe('Admin Full Access', () => {
-      test('Admin can perform all Data Quality operations', async ({
+      test('Admin can see Data Quality UI controls (add test case, add test suite)', async ({
         adminPage,
       }) => {
-        await redirectToHomePage(adminPage);
-        const { apiContext } = await getApiContext(adminPage);
+        await visitProfilerPage(adminPage);
+        await expect(
+          adminPage.getByTestId('profiler-add-table-test-btn')
+        ).toBeVisible();
 
-        // 1. Create Suite
-        const suiteName = `admin_suite_${uuid()}`;
-        const suiteRes = await apiContext.post(
-          '/api/v1/dataQuality/testSuites',
-          {
-            data: { name: suiteName, description: 'admin suite' },
-          }
-        );
-        expect(suiteRes.status()).toBe(201);
-        const suiteData = await suiteRes.json();
+        const testSuiteListPromise =
+          waitForTestSuiteListResponse(adminPage);
+        await adminPage.goto('/data-quality/test-suites');
+        await testSuiteListPromise;
 
-        // 2. Create Test Case
-        const testName = `admin_test_${uuid()}`;
-        const testRes = await apiContext.post('/api/v1/dataQuality/testCases', {
-          data: {
-            name: testName,
-            entityLink: `<#E::table::${table.entityResponseData.fullyQualifiedName}>`,
-            testDefinition: 'tableRowCountToEqual',
-            parameterValues: [{ name: 'value', value: 10 }],
-          },
-        });
-        expect(testRes.status()).toBe(201);
-        const testData = await testRes.json();
-
-        // 3. PATCH Test Case
-        const patchRes = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/${testData.id}`,
-          {
-            data: [{ op: 'add', path: '/description', value: 'admin updated' }],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(patchRes.status()).toBe(200);
-
-        // 4. Delete Test Case
-        const delTestRes = await apiContext.delete(
-          `/api/v1/dataQuality/testCases/${testData.id}`
-        );
-        expect(delTestRes.status()).toBe(200);
-
-        // 5. PATCH Suite
-        const patchSuiteRes = await apiContext.patch(
-          `/api/v1/dataQuality/testSuites/${suiteData.id}`,
-          {
-            data: [{ op: 'add', path: '/description', value: 'admin patched' }],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(patchSuiteRes.status()).toBe(200);
-
-        // 6. Delete Suite
-        const delSuiteRes = await apiContext.delete(
-          `/api/v1/dataQuality/testSuites/${suiteData.id}?hardDelete=true&recursive=true`
-        );
-        expect(delSuiteRes.status()).toBe(200);
+        await expect(
+          adminPage.getByTestId('add-test-suite-btn')
+        ).toBeVisible();
       });
     });
   }

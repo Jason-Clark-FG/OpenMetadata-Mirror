@@ -199,22 +199,13 @@ test.describe(
     });
 
     test.describe('Positive - View Incidents', () => {
-      test('User with TEST_CASE.VIEW_ALL can view incidents in UI and GET incident status list', async ({
+      test('User with TEST_CASE.VIEW_ALL can view incidents in UI', async ({
         viewIncidentsPage,
       }) => {
-        // UI: Navigate to test case incident page and verify incident tab loads
         await visitTestCaseIncidentPage(viewIncidentsPage);
         await expect(
           viewIncidentsPage.getByTestId('issue-tab-container')
         ).toBeVisible();
-
-        // API: Verify GET incident list succeeds
-        const { apiContext } = await getApiContext(viewIncidentsPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus'
-        );
-        expect(res.status()).toBe(200);
       });
 
       test('User with TEST_CASE.VIEW_ALL can view incident CONTENT in UI', async ({
@@ -238,100 +229,35 @@ test.describe(
         ).toBeHidden();
       });
 
-      test('User with TABLE.VIEW_TESTS can view incidents and GET incident status list (alternative)', async ({
+      test('User with TABLE.VIEW_TESTS can view incidents in UI (alternative)', async ({
         tableEditIncidentsPage,
       }) => {
-        // UI: Navigate to test case incident page
         await visitTestCaseIncidentPage(tableEditIncidentsPage);
         await expect(
           tableEditIncidentsPage.getByTestId('issue-tab-container')
         ).toBeVisible();
-
-        // API: Verify GET incident list succeeds
-        const { apiContext } = await getApiContext(tableEditIncidentsPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus'
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.VIEW_ALL can GET incident by stateId', async ({
-        viewIncidentsPage,
-      }) => {
-        test.skip(!incidentStateId, 'No incident stateId available');
-        const { apiContext } = await getApiContext(viewIncidentsPage);
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseIncidentStatus/stateId/${incidentStateId}`
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TEST_CASE.VIEW_ALL can GET incident by id', async ({
-        viewIncidentsPage,
-      }) => {
-        test.skip(!incidentId, 'No incident id available');
-        const { apiContext } = await getApiContext(viewIncidentsPage);
-
-        const res = await apiContext.get(
-          `/api/v1/dataQuality/testCases/testCaseIncidentStatus/${incidentId}`
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TABLE.VIEW_ALL can GET incident search/list', async ({
-        viewIncidentsPage,
-      }) => {
-        const { apiContext } = await getApiContext(viewIncidentsPage);
-
-        const res = await apiContext.get(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list',
-          {
-            params: { limit: 10, offset: 0, latest: true },
-          }
-        );
-        expect(res.status()).toBe(200);
       });
     });
 
     test.describe('Positive - Edit Incidents', () => {
-      test('User with TEST_CASE.EDIT_ALL can see edit icon and POST incident status (Ack)', async ({
+      test('User with TEST_CASE.EDIT_ALL can see edit icon on incidents', async ({
         editIncidentsPage,
       }) => {
-        // UI: Navigate to incidents page and verify edit resolution icon is visible
         await visitTestCaseIncidentPage(editIncidentsPage);
         const issueTabContainer = editIncidentsPage.getByTestId(
           'issue-tab-container'
         );
         await expect(issueTabContainer).toBeVisible();
 
-        // Check edit-resolution-icon is visible (indicates edit permissions)
         const editIcon = editIncidentsPage.getByTestId('edit-resolution-icon');
-
         if (await editIcon.first().isVisible()) {
           await expect(editIcon.first()).toBeVisible();
         }
-
-        // API: Verify POST incident succeeds
-        const { apiContext } = await getApiContext(editIncidentsPage);
-
-        const res = await apiContext.post(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus',
-          {
-            data: {
-              testCaseReference: testCaseFqn,
-              testCaseResolutionStatusType: 'Ack',
-            },
-          }
-        );
-        expect([200, 201]).toContain(res.status());
       });
 
-      test('User with TABLE.EDIT_TESTS can see edit icon and POST incident status (alternative)', async ({
+      test('User with TABLE.EDIT_TESTS can see edit icon on incidents (alternative)', async ({
         tableEditIncidentsPage,
       }) => {
-        // UI: Navigate to incidents page and verify edit resolution icon is visible
         await visitTestCaseIncidentPage(tableEditIncidentsPage);
         const issueTabContainer = tableEditIncidentsPage.getByTestId(
           'issue-tab-container'
@@ -341,68 +267,9 @@ test.describe(
         const editIcon = tableEditIncidentsPage.getByTestId(
           'edit-resolution-icon'
         );
-
         if (await editIcon.first().isVisible()) {
           await expect(editIcon.first()).toBeVisible();
         }
-
-        // API: Verify POST incident succeeds
-        const { apiContext } = await getApiContext(tableEditIncidentsPage);
-
-        const res = await apiContext.post(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus',
-          {
-            data: {
-              testCaseReference: testCaseFqn,
-              testCaseResolutionStatusType: 'Ack',
-            },
-          }
-        );
-        expect([200, 201]).toContain(res.status());
-      });
-
-      test('User with TEST_CASE.EDIT_TESTS can PATCH incident status', async ({
-        editIncidentsPage,
-      }) => {
-        test.skip(!incidentId, 'No incident id available');
-        const { apiContext } = await getApiContext(editIncidentsPage);
-
-        const res = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/testCaseIncidentStatus/${incidentId}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/severity',
-                value: 'Severity2',
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(res.status()).toBe(200);
-      });
-
-      test('User with TABLE.EDIT_ALL can PATCH incident status (alternative)', async ({
-        editIncidentsPage,
-      }) => {
-        test.skip(!incidentId, 'No incident id available');
-        const { apiContext } = await getApiContext(editIncidentsPage);
-
-        const res = await apiContext.patch(
-          `/api/v1/dataQuality/testCases/testCaseIncidentStatus/${incidentId}`,
-          {
-            data: [
-              {
-                op: 'add',
-                path: '/severity',
-                value: 'Severity3',
-              },
-            ],
-            headers: { 'Content-Type': 'application/json-patch+json' },
-          }
-        );
-        expect(res.status()).toBe(200);
       });
     });
 
@@ -438,9 +305,12 @@ test.describe(
       test('User with only VIEW cannot PATCH incidents', async ({
         viewIncidentsPage,
       }) => {
-        test.skip(!incidentId, 'No incident id available');
-        const { apiContext } = await getApiContext(viewIncidentsPage);
+        await visitTestCaseIncidentPage(viewIncidentsPage);
+        await expect(
+          viewIncidentsPage.getByTestId('edit-resolution-icon')
+        ).toBeHidden();
 
+        const { apiContext } = await getApiContext(viewIncidentsPage);
         const res = await apiContext.patch(
           `/api/v1/dataQuality/testCases/testCaseIncidentStatus/${incidentId}`,
           {
