@@ -12,25 +12,24 @@
  */
 
 import { PlusOutlined } from '@ant-design/icons';
+import type { SxProps, Theme } from '@mui/material';
 import {
   Box,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
   TableContainer,
+  TableHead,
+  TableRow,
   Typography,
   useTheme,
 } from '@mui/material';
 import { Trash01 } from '@untitledui/icons';
-import { Button, Space, Table, Tag, Tooltip } from 'antd';
-import { ColumnsType } from 'antd/lib/table';
+import { Button, Space, Tag, Tooltip } from 'antd';
 import { isEmpty } from 'lodash';
 import { DateTime } from 'luxon';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconEdit } from '../../assets/svg/edit-new.svg';
 import { ReactComponent as ArticleIcon } from '../../assets/svg/ic_article.svg';
@@ -103,26 +102,6 @@ export const LearningResourcesPage: React.FC = () => {
   } = useLearningResourceActions({ onRefetch: refetch });
 
   const { view, viewToggle } = useViewToggle({ defaultView: 'table' });
-  const tableWrapperRef = useRef<HTMLDivElement>(null);
-  const [tableScrollY, setTableScrollY] = useState(350);
-
-  useEffect(() => {
-    const el = tableWrapperRef.current;
-    if (!el || view !== 'table') {
-      return;
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const { height } = entries[0]?.contentRect ?? {};
-      if (height != null && height > 0) {
-        setTableScrollY(Math.max(200, height - 55));
-      }
-    });
-
-    observer.observe(el);
-
-    return () => observer.disconnect();
-  }, [view]);
 
   const { search } = useSearch({
     searchPlaceholder: t('label.search-entity', {
@@ -165,12 +144,20 @@ export const LearningResourcesPage: React.FC = () => {
     };
   }, []);
 
-  const columns: ColumnsType<LearningResource> = useMemo(
+  type ColumnConfig = {
+    key: string;
+    labelKey: string;
+    render: (resource: LearningResource) => React.ReactNode;
+    cellSx?: SxProps<Theme>;
+  };
+
+  const tableColumns: ColumnConfig[] = useMemo(
     () => [
       {
-        dataIndex: 'displayName',
         key: 'displayName',
-        render: (_, record) => (
+        labelKey: 'label.content-name',
+        cellSx: { maxWidth: 280, overflow: 'hidden' },
+        render: (record) => (
           <div
             className="content-name-cell"
             role="button"
@@ -178,18 +165,19 @@ export const LearningResourcesPage: React.FC = () => {
             onClick={() => handlePreview(record)}
             onKeyDown={(e) => e.key === 'Enter' && handlePreview(record)}>
             {getResourceTypeIcon(record.resourceType)}
-            <span className="content-name">
+            <span
+              className="content-name"
+              title={record.displayName || record.name}>
               {record.displayName || record.name}
             </span>
           </div>
         ),
-        title: t('label.content-name'),
-        width: 300,
       },
       {
-        dataIndex: 'categories',
         key: 'categories',
-        render: (categories: string[], record: LearningResource) => {
+        labelKey: 'label.category-plural',
+        render: (record) => {
+          const categories = record.categories;
           if (!categories?.length) {
             return null;
           }
@@ -230,16 +218,12 @@ export const LearningResourcesPage: React.FC = () => {
             </div>
           );
         },
-        title: t('label.category-plural'),
-        width: 220,
       },
       {
-        dataIndex: 'contexts',
         key: 'contexts',
-        render: (
-          contexts: Array<{ pageId: string; componentId?: string }>,
-          record: LearningResource
-        ) => {
+        labelKey: 'label.context',
+        render: (record) => {
+          const contexts = record.contexts;
           if (!contexts?.length) {
             return null;
           }
@@ -269,31 +253,27 @@ export const LearningResourcesPage: React.FC = () => {
             </div>
           );
         },
-        title: t('label.context'),
-        width: 180,
       },
       {
-        dataIndex: 'updatedAt',
         key: 'updatedAt',
-        render: (updatedAt: number) => (
+        labelKey: 'label.updated-at',
+        render: (record) => (
           <Typography
             component="span"
             sx={{
               color: theme.palette.allShades?.gray?.[600],
               fontSize: 14,
             }}>
-            {updatedAt
-              ? DateTime.fromMillis(updatedAt).toFormat('LLL d, yyyy')
+            {record.updatedAt
+              ? DateTime.fromMillis(record.updatedAt).toFormat('LLL d, yyyy')
               : '-'}
           </Typography>
         ),
-        title: t('label.updated-at'),
-        width: 120,
       },
       {
-        fixed: 'right',
         key: 'actions',
-        render: (_, record) => (
+        labelKey: 'label.action-plural',
+        render: (record) => (
           <Space align="center" size={8}>
             <Tooltip placement="topRight" title={t('label.edit')}>
               <Button
@@ -321,8 +301,6 @@ export const LearningResourcesPage: React.FC = () => {
             </Tooltip>
           </Space>
         ),
-        title: t('label.action-plural'),
-        width: 80,
       },
     ],
     [
@@ -373,13 +351,8 @@ export const LearningResourcesPage: React.FC = () => {
     () => ({
       mb: 5,
       backgroundColor: 'background.paper',
-      borderRadius: '12px',
-      boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      flex: 1,
-      minHeight: 0,
-      overflow: 'hidden',
+      borderRadius: 0,
+      boxShadow: 1,
     }),
     []
   );
@@ -392,19 +365,10 @@ export const LearningResourcesPage: React.FC = () => {
       px: 6,
       py: 4,
       flexShrink: 0,
+      borderBottom: '1px solid',
+      borderColor: theme.palette.allShades?.gray?.[200],
     }),
-    []
-  );
-
-  const paginationBoxSx = useMemo(
-    () => ({
-      flexShrink: 0,
-      backgroundColor: 'background.paper',
-      boxShadow:
-        '0 -13px 16px -4px rgba(10, 13, 18, 0.04), 0 -4px 6px -2px rgba(10, 13, 18, 0.03)',
-      zIndex: 1,
-    }),
-    []
+    [theme]
   );
 
   const renderCardView = useCallback(
@@ -454,49 +418,88 @@ export const LearningResourcesPage: React.FC = () => {
             </Box>
           )}
         </Box>
-        <Box className="learning-resources-pagination" sx={paginationBoxSx}>
+        <Box className="learning-resources-pagination">
           <NextPrevious {...paginationData} />
         </Box>
       </>
     ),
-    [isLoading, resources, handlePreview, paginationData, paginationBoxSx, t]
+    [isLoading, resources, handlePreview, paginationData, t]
   );
 
   const renderTableView = useCallback(
     () => (
       <>
-        <Box
-          ref={tableWrapperRef}
+        <TableContainer
+          className="learning-resources-table-scroll"
           sx={{
             flex: 1,
             minHeight: 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
+            overflow: 'auto',
+            borderRadius: 0,
           }}>
           <Table
-            columns={columns}
-            dataSource={resources}
-            loading={isLoading}
-            pagination={false}
-            rowKey="id"
-            scroll={{ x: 900, y: tableScrollY }}
-            tableLayout="fixed"
-          />
-        </Box>
-        <Box className="learning-resources-pagination" sx={paginationBoxSx}>
+            stickyHeader
+            className="learning-resources-table"
+            size="medium">
+            <TableHead>
+              <TableRow>
+                {tableColumns.map((col) => (
+                  <TableCell key={col.key} sx={col.cellSx}>
+                    {t(col.labelKey)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody data-testid="learning-resources-table-body">
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    align="center"
+                    colSpan={tableColumns.length}
+                    sx={{ py: 8 }}>
+                    <Loader />
+                  </TableCell>
+                </TableRow>
+              ) : isEmpty(resources) ? (
+                <TableRow>
+                  <TableCell
+                    align="center"
+                    colSpan={tableColumns.length}
+                    sx={{ py: 4 }}>
+                    {t('server.no-records-found')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                resources.map((resource) => (
+                  <TableRow
+                    hover
+                    key={resource.id}
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => handlePreview(resource)}>
+                    {tableColumns.map((col) => (
+                      <TableCell
+                        key={col.key}
+                        sx={col.cellSx}
+                        onClick={
+                          col.key === 'actions'
+                            ? (e) => e.stopPropagation()
+                            : undefined
+                        }>
+                        {col.render(resource)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Box className="learning-resources-pagination">
           <NextPrevious {...paginationData} />
         </Box>
       </>
     ),
-    [
-      columns,
-      resources,
-      isLoading,
-      paginationData,
-      paginationBoxSx,
-      tableScrollY,
-    ]
+    [tableColumns, resources, isLoading, paginationData, t, handlePreview]
   );
 
   return (
@@ -554,10 +557,11 @@ export const LearningResourcesPage: React.FC = () => {
             <Box
               data-testid="table-view-container"
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
                 flex: 1,
                 minHeight: 0,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
               }}>
               {renderTableView()}
             </Box>
@@ -565,10 +569,11 @@ export const LearningResourcesPage: React.FC = () => {
             <Box
               data-testid="card-view-container"
               sx={{
-                display: 'flex',
-                flexDirection: 'column',
                 flex: 1,
                 minHeight: 0,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
               }}>
               {renderCardView()}
             </Box>

@@ -245,41 +245,42 @@ export const ResourcePlayerModal: React.FC<ResourcePlayerModalProps> = ({
 
             <Box
               sx={{
-                alignItems: 'flex-end',
+                alignItems: 'center',
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: 1,
+                gap: 2,
                 justifyContent: 'space-between',
                 pt: '12px',
               }}>
-              {contextItems.length > 0 ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {contextItems.map((ctx, idx) => (
-                    <Box
-                      component="span"
-                      key={`${ctx.pageId}-${idx}`}
-                      sx={{
-                        backgroundColor:
-                          theme.palette.allShades?.blueGray?.[50] ?? '#F8F9FC',
-                        border: '1px solid',
-                        borderColor:
-                          theme.palette.allShades?.blueGray?.[100] ?? '#EBEEF2',
-                        borderRadius: '6px',
-                        color:
-                          theme.palette.allShades?.gray?.[700] ?? '#363f72',
-                        fontSize: 12,
-                        fontWeight: 500,
-                        lineHeight: 1.5,
-                        padding: '2px 6px',
-                      }}>
-                      {getContextLabel(ctx.pageId)}
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Box />
-              )}
-
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                {contextItems.length > 0 && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {contextItems.map((ctx, idx) => (
+                      <Box
+                        component="span"
+                        key={`${ctx.pageId}-${idx}`}
+                        sx={{
+                          backgroundColor:
+                            theme.palette.allShades?.blueGray?.[50] ??
+                            '#F8F9FC',
+                          border: '1px solid',
+                          borderColor:
+                            theme.palette.allShades?.blueGray?.[100] ??
+                            '#EBEEF2',
+                          borderRadius: '6px',
+                          color:
+                            theme.palette.allShades?.gray?.[700] ?? '#363f72',
+                          fontSize: 12,
+                          fontWeight: 500,
+                          lineHeight: 1.5,
+                          padding: '2px 6px',
+                        }}>
+                        {getContextLabel(ctx.pageId)}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
               {(formattedDate || formattedDuration) && (
                 <Box
                   sx={{
