@@ -13,8 +13,9 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
+import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
-import { EntityLineageNodeType } from '../../../enums/entity.enum';
+import { EntityLineageNodeType, EntityType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
 import { LineageLayer } from '../../../generated/configuration/lineageSettings';
 import { useLineageStore } from '../../../hooks/useLineageStore';
@@ -163,7 +164,7 @@ const CustomNodeV1 = (props: NodeProps) => {
   } = useLineageStore();
 
   const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
-    useState(false);
+    useState(isColumnLevelLineage);
   const [columnsExpanded, setColumnsExpanded] =
     useState<boolean>(isColumnLevelLineage);
 
@@ -197,7 +198,6 @@ const CustomNodeV1 = (props: NodeProps) => {
     upstreamExpandPerformed = false,
     downstreamExpandPerformed = false,
   } = node;
-  const [isTraced, setIsTraced] = useState(false);
 
   const showDqTracing = useMemo(
     () =>
@@ -209,7 +209,7 @@ const CustomNodeV1 = (props: NodeProps) => {
   const containerClass = getNodeClassNames({
     isSelected,
     showDqTracing: showDqTracing ?? false,
-    isTraced,
+    isTraced: tracedNodes.has(id),
     isBaseNode: isRootNode,
     isChildrenListExpanded: columnsExpanded,
   });
@@ -303,9 +303,36 @@ const CustomNodeV1 = (props: NodeProps) => {
     [expandCollapseProps]
   );
 
+  const nodeChildren = useMemo(() => {
+    const supportColumns = LINEAGE_COLUMN_NODE_SUPPORTED.includes(
+      node.entityType as EntityType
+    );
+
+    if (!supportColumns) {
+      return null;
+    }
+
+    return (
+      <NodeChildren
+        entityChildrenData={entityChildrenData}
+        isChildrenListExpanded={columnsExpanded}
+        isConnectable={isConnectable}
+        node={node}
+        showColumnsWithLineageOnly={showColumnsWithLineageOnly}
+      />
+    );
+  }, [
+    node.entityType,
+    entityChildrenData,
+    columnsExpanded,
+    isConnectable,
+    node,
+    showColumnsWithLineageOnly,
+  ]);
+
   useEffect(() => {
-    setIsTraced(tracedNodes.has(id));
-  }, [tracedNodes, id]);
+    setShowColumnsWithLineageOnly(isColumnLevelLineage);
+  }, [isColumnLevelLineage]);
 
   return (
     <div
@@ -324,13 +351,7 @@ const CustomNodeV1 = (props: NodeProps) => {
           isConnectable={isConnectable}
           nodeType={nodeType}
         />
-        <NodeChildren
-          entityChildrenData={entityChildrenData}
-          isChildrenListExpanded={columnsExpanded}
-          isConnectable={isConnectable}
-          node={node}
-          showColumnsWithLineageOnly={showColumnsWithLineageOnly}
-        />
+        {nodeChildren}
       </div>
     </div>
   );

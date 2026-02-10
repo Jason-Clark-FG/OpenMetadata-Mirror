@@ -19,15 +19,11 @@ import classNames from 'classnames';
 import { isEmpty, isUndefined } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUpdateNodeInternals } from 'reactflow';
 import {
   BORDER_COLOR,
   LINEAGE_CHILD_ITEMS_PER_PAGE,
 } from '../../../../constants/constants';
-import {
-  DATATYPES_HAVING_SUBFIELDS,
-  LINEAGE_COLUMN_NODE_SUPPORTED,
-} from '../../../../constants/Lineage.constants';
+import { DATATYPES_HAVING_SUBFIELDS } from '../../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../../enums/entity.enum';
 import { Column, Table } from '../../../../generated/entity/data/table';
@@ -59,14 +55,7 @@ interface CustomPaginatedListProps {
 }
 
 const CustomPaginatedList = React.memo(
-  ({
-    columns,
-    nodeId,
-    page,
-    renderColumn,
-    setPage,
-  }: CustomPaginatedListProps) => {
-    const updateNodeInternals = useUpdateNodeInternals();
+  ({ columns, page, renderColumn, setPage }: CustomPaginatedListProps) => {
     const { t } = useTranslation();
 
     const totalPages = useMemo(
@@ -97,11 +86,8 @@ const CustomPaginatedList = React.memo(
     const handlePageChange = useCallback(
       (newPage: number) => {
         setPage(newPage);
-        if (nodeId) {
-          updateNodeInternals(nodeId);
-        }
       },
-      [nodeId, setPage, updateNodeInternals]
+      [setPage]
     );
     const handlePrev = useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -177,7 +163,6 @@ const NodeChildren = ({
     isColumnLevelLineage,
     isDQEnabled,
   } = useLineageStore();
-  const updateNodeInternals = useUpdateNodeInternals();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
@@ -206,13 +191,6 @@ const NodeChildren = ({
         (node as Table).testSuite
     );
   }, [node, isDQEnabled, entityType]);
-
-  const supportsColumns = useMemo(() => {
-    return (
-      node &&
-      LINEAGE_COLUMN_NODE_SUPPORTED.includes(node.entityType as EntityType)
-    );
-  }, [node]);
 
   const { children: entityChildren, childrenHeading } = entityChildrenData;
 
@@ -324,12 +302,6 @@ const NodeChildren = ({
   useEffect(() => {
     setShowAllColumns(expandAllColumns);
   }, [expandAllColumns]);
-
-  useEffect(() => {
-    if (node.id) {
-      updateNodeInternals?.(node.id);
-    }
-  }, [updateNodeInternals, tracedColumns, node.id, showColumnsWithLineageOnly]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
     setIsLoading(true);
@@ -474,7 +446,7 @@ const NodeChildren = ({
     return null;
   }
 
-  if (supportsColumns && (isColumnLevelLineage || isDQEnabled)) {
+  if (isColumnLevelLineage || isDQEnabled) {
     return (
       !isEmpty(entityChildren) && (
         <div

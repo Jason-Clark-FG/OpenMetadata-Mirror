@@ -35,7 +35,6 @@ import {
   getConnectedEdges,
   getIncomers,
   getOutgoers,
-  MarkerType,
   Node,
   NodeProps,
   ReactFlowInstance,
@@ -102,7 +101,6 @@ import {
   createNewEdge,
   createNodes,
   decodeLineageHandles,
-  encodeLineageHandles,
   getAllDownstreamEdges,
   getAllTracedColumnEdge,
   getClassifiedEdge,
@@ -376,86 +374,9 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       reactFlowInstance,
       zoomValue,
       expandAllColumns,
+      isColumnLevelLineage,
     ]
   );
-
-  const columnEdgeCache = useMemo(() => {
-    const cache = new Map<string, Edge>();
-
-    for (const edge of entityLineage?.edges ?? []) {
-      if (isUndefined(edge.columns) || !edge.columns.length) {
-        continue;
-      }
-
-      const sourceId = edge.fromEntity.id;
-      const targetId = edge.toEntity.id;
-
-      for (const e of edge.columns) {
-        const toColumn = e.toColumn ?? '';
-        if (!toColumn || !e.fromColumns?.length) {
-          continue;
-        }
-
-        for (const fromColumn of e.fromColumns) {
-          const encodedFrom = encodeLineageHandles(fromColumn);
-          const encodedTo = encodeLineageHandles(toColumn);
-          const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
-
-          if (!cache.has(edgeId)) {
-            cache.set(edgeId, {
-              id: edgeId,
-              source: sourceId,
-              target: targetId,
-              targetHandle: encodedTo,
-              sourceHandle: encodedFrom,
-              style: { strokeWidth: '2px' },
-              type: 'buttonedge',
-              markerEnd: { type: MarkerType.ArrowClosed },
-              data: {
-                edge,
-                isColumnLineage: true,
-                targetHandle: encodedTo,
-                sourceHandle: encodedFrom,
-                dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
-              },
-            });
-          }
-        }
-      }
-    }
-
-    return cache;
-  }, [entityLineage]);
-
-  const createColumnEdges = useCallback(() => {
-    const columnEdgeMap = new Map<string, Edge>();
-
-    for (const [edgeId, cachedEdge] of columnEdgeCache) {
-      columnEdgeMap.set(edgeId, cachedEdge);
-    }
-
-    return columnEdgeMap;
-  }, [columnEdgeCache]);
-
-  useEffect(() => {
-    if (!entityLineage) {
-      return;
-    }
-
-    setEdges((prevEdges) => {
-      const tableEdges = prevEdges.filter(
-        (edge) => !edge.data?.isColumnLineage
-      );
-
-      if (!isColumnLevelLineage) {
-        return tableEdges;
-      }
-
-      const columnEdgeMap = createColumnEdges();
-
-      return [...tableEdges, ...Array.from(columnEdgeMap.values())];
-    });
-  }, [createColumnEdges, isColumnLevelLineage, entityLineage]);
 
   const updateLineageData = useCallback(
     (
