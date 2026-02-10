@@ -23,6 +23,7 @@ import {
   isEqual,
   isNil,
   isUndefined,
+  pick,
   uniqueId,
   uniqWith,
 } from 'lodash';
@@ -241,7 +242,8 @@ const layoutOptions = {
 };
 
 const elk = new ELK({
-  workerUrl: 'elkjs/lib/elk-worker.min.js',
+  workerFactory: () =>
+    new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
 });
 
 export const getELKLayoutedElements = async (
@@ -1436,7 +1438,26 @@ const processNodeArray = (
 ): LineageEntityReference[] => {
   return Object.values(nodes)
     .map((node: NodeData) => ({
-      ...node.entity,
+      ...(pick(node.entity, [
+        'id',
+        'type',
+        'fullyQualifiedName',
+        'name',
+        'displayName',
+        'columns',
+        'upstreamLineage',
+        'entityType',
+        'dataModel',
+        'deleted',
+        'mlFeatures',
+        'charts',
+        'messageSchema',
+        'responseSchema',
+        'requestSchema',
+        'fields',
+        'serviceType',
+        'testSuite',
+      ]) as unknown as LineageEntityReference),
       paging: {
         entityUpstreamCount: node.paging?.entityUpstreamCount ?? 0,
         entityDownstreamCount: node.paging?.entityDownstreamCount ?? 0,

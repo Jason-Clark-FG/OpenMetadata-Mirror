@@ -17,11 +17,19 @@ import { Field } from '../../../../generated/entity/data/topic';
 import { EntityReference } from '../../../../generated/entity/type';
 import { SearchedDataProps } from '../../../SearchedData/SearchedData.interface';
 
+export interface EntityChildrenData {
+  children: EntityChildren;
+  childrenHeading: string;
+  childrenHeight: number;
+  childrenFlatten: EntityChildren;
+}
+
 export interface NodeChildrenProps {
   node: SearchedDataProps['data'][number]['_source'];
   isConnectable: boolean;
   isChildrenListExpanded: boolean;
   showColumnsWithLineageOnly: boolean;
+  entityChildrenData: EntityChildrenData;
 }
 
 export type EntityChildrenItem =

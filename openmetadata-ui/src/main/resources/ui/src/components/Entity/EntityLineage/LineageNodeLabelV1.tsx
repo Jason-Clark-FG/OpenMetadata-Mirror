@@ -28,13 +28,13 @@ import {
 } from '../../../generated/tests/testCase';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../rest/testAPI';
-import { getEntityChildrenAndLabel } from '../../../utils/EntityLineageUtils';
 import {
   getBreadcrumbsFromFqn,
   getEntityName,
 } from '../../../utils/EntityUtils';
 import { getEntityTypeIcon, getServiceIcon } from '../../../utils/TableUtils';
 import { SourceType } from '../../SearchedData/SearchedData.interface';
+import { EntityChildrenData } from './NodeChildren/NodeChildren.interface';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
 
 interface LineageNodeLabelProps {
@@ -43,6 +43,7 @@ interface LineageNodeLabelProps {
   toggleColumnsList?: () => void;
   showColumnsWithLineageOnly?: boolean;
   toggleShowColumnsWithLineageOnly?: () => void;
+  entityChildrenData: EntityChildrenData;
 }
 
 interface LineageNodeLabelPropsExtended
@@ -53,7 +54,10 @@ interface LineageNodeLabelPropsExtended
   };
 }
 
-const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
+const EntityLabel = ({
+  node,
+  entityChildrenData,
+}: LineageNodeLabelPropsExtended) => {
   const { showDeletedIcon, showDbtIcon } = useMemo(() => {
     return {
       showDbtIcon:
@@ -64,11 +68,10 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
     };
   }, [node]);
 
-  const { children } = useMemo(
-    () => getEntityChildrenAndLabel(node),
-    [node.id]
+  const childrenCount = useMemo(
+    () => entityChildrenData.children.length,
+    [entityChildrenData.children.length]
   );
-  const childrenCount = children.length;
 
   const breadcrumbs = useMemo(
     () => getBreadcrumbsFromFqn(node.fullyQualifiedName ?? ''),
@@ -138,7 +141,9 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
   );
 };
 
-const TestSuiteSummaryContainer = ({ node }: LineageNodeLabelPropsExtended) => {
+const TestSuiteSummaryContainer = ({
+  node,
+}: Pick<LineageNodeLabelPropsExtended, 'node'>) => {
   const { entityType } = node;
   const [summary, setSummary] = useState<TestSummary>();
   const [isLoading, setIsLoading] = useState(true);
@@ -208,17 +213,18 @@ const EntityFooter = React.memo(
     toggleColumnsList,
     showColumnsWithLineageOnly,
     toggleShowColumnsWithLineageOnly,
+    entityChildrenData,
   }: LineageNodeLabelPropsExtended) => {
     const { t } = useTranslation();
     const { isEditMode } = useLineageStore();
-    const { childrenHeading, childrenCount } = useMemo(() => {
-      const { children, childrenHeading } = getEntityChildrenAndLabel(node);
-
-      return {
-        childrenHeading,
-        childrenCount: children.length,
-      };
-    }, [node.id]);
+    const childrenHeading = useMemo(
+      () => entityChildrenData.childrenHeading,
+      [entityChildrenData.childrenHeading]
+    );
+    const childrenCount = useMemo(
+      () => entityChildrenData.children.length,
+      [entityChildrenData.children.length]
+    );
 
     const handleClickColumnInfoDropdown = useCallback(
       (e: React.MouseEvent) => {
@@ -306,11 +312,13 @@ const LineageNodeLabelV1 = ({
   toggleColumnsList,
   showColumnsWithLineageOnly,
   toggleShowColumnsWithLineageOnly,
+  entityChildrenData,
 }: LineageNodeLabelProps) => {
   return (
     <div className="custom-node-label-container m-0">
-      <EntityLabel node={node} />
+      <EntityLabel entityChildrenData={entityChildrenData} node={node} />
       <EntityFooter
+        entityChildrenData={entityChildrenData}
         isChildrenListExpanded={isChildrenListExpanded}
         node={node}
         showColumnsWithLineageOnly={showColumnsWithLineageOnly}

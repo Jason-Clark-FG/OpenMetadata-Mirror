@@ -37,7 +37,6 @@ import {
 } from '../../../../generated/tests/testCase';
 import { useLineageStore } from '../../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../../rest/testAPI';
-import { getEntityChildrenAndLabel } from '../../../../utils/EntityLineageUtils';
 import {
   calculateTotalPages,
   getCurrentPageItems,
@@ -164,6 +163,7 @@ const NodeChildren = ({
   isConnectable,
   isChildrenListExpanded,
   showColumnsWithLineageOnly,
+  entityChildrenData,
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
   const { Panel } = Collapse;
@@ -214,10 +214,7 @@ const NodeChildren = ({
     );
   }, [node]);
 
-  const { children: entityChildren, childrenHeading } = useMemo(
-    () => getEntityChildrenAndLabel(node),
-    [node]
-  );
+  const { children: entityChildren, childrenHeading } = entityChildrenData;
 
   const currentNodeAllColumns = useMemo(
     () => Object.values(entityChildren ?? {}),

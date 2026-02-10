@@ -18,6 +18,7 @@ import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
 import { LineageLayer } from '../../../generated/configuration/lineageSettings';
 import { useLineageStore } from '../../../hooks/useLineageStore';
+import { getEntityChildrenAndLabel } from '../../../utils/EntityLineageUtils';
 import LineageNodeRemoveButton from '../../Lineage/LineageNodeRemoveButton';
 import './custom-node.less';
 import {
@@ -182,6 +183,11 @@ const CustomNodeV1 = (props: NodeProps) => {
     isDownstreamNode = false,
   } = data;
 
+  const entityChildrenData = useMemo(
+    () => getEntityChildrenAndLabel(node),
+    [node]
+  );
+
   const nodeType = isEditMode ? EntityLineageNodeType.DEFAULT : type;
   const isSelected = selectedNode === node;
   const {
@@ -226,6 +232,10 @@ const CustomNodeV1 = (props: NodeProps) => {
     setShowColumnsWithLineageOnly((prev) => !prev);
   }, []);
 
+  const handleNodeRemove = useCallback(() => {
+    removeNodeHandler(props);
+  }, [removeNodeHandler, props]);
+
   const nodeLabel = useMemo(() => {
     if (isNewNode) {
       return label;
@@ -234,6 +244,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     return (
       <>
         <LineageNodeLabelV1
+          entityChildrenData={entityChildrenData}
           isChildrenListExpanded={columnsExpanded}
           node={node}
           showColumnsWithLineageOnly={showColumnsWithLineageOnly}
@@ -246,6 +257,7 @@ const CustomNodeV1 = (props: NodeProps) => {
       </>
     );
   }, [
+    entityChildrenData,
     columnsExpanded,
     node.id,
     showColumnsWithLineageOnly,
@@ -253,8 +265,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     label,
     isSelected,
     isRootNode,
-    removeNodeHandler,
-    props,
+    handleNodeRemove,
     isEditMode,
   ]);
 
@@ -314,6 +325,7 @@ const CustomNodeV1 = (props: NodeProps) => {
           nodeType={nodeType}
         />
         <NodeChildren
+          entityChildrenData={entityChildrenData}
           isChildrenListExpanded={columnsExpanded}
           isConnectable={isConnectable}
           node={node}
