@@ -12,8 +12,6 @@
 import traceback
 from typing import Iterable, Optional
 
-from ibm_db_sa.base import ischema_names
-from ibm_db_sa.reflection import DB2Reflector, OS390Reflector
 from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.engine.row import LegacyRow
 from sqlalchemy.sql.sqltypes import BOOLEAN
@@ -32,12 +30,17 @@ from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
+# ibm_db_sa is only required for the db2+ibm_db scheme (z/OS, LUW).
+# The ibmi scheme uses sqlalchemy-ibmi which does not depend on ibm_db_sa.
+try:
+    from ibm_db_sa.base import ischema_names
+    from ibm_db_sa.reflection import DB2Reflector, OS390Reflector
 
-ischema_names.update({"BOOLEAN": BOOLEAN})
-
-
-DB2Reflector.get_unique_constraints = get_unique_constraints
-OS390Reflector.get_unique_constraints = get_unique_constraints
+    ischema_names.update({"BOOLEAN": BOOLEAN})
+    DB2Reflector.get_unique_constraints = get_unique_constraints
+    OS390Reflector.get_unique_constraints = get_unique_constraints
+except ImportError:
+    logger.debug("ibm_db_sa not installed - db2+ibm_db scheme unavailable")
 
 
 class Db2Source(CommonDbSourceService):
