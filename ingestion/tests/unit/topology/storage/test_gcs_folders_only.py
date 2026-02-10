@@ -143,6 +143,8 @@ def test_folders_only_extracts_hierarchy(test_connection):
     assert all(
         not getattr(container, "leaf_container", False) for container in containers
     ), "Should not generate leaf (file) containers"
+    # Note: The actual folder names may differ based on the parent hierarchy handling,
+    # but we ensure all folders are represented in the hierarchy
 
 
 @patch(
