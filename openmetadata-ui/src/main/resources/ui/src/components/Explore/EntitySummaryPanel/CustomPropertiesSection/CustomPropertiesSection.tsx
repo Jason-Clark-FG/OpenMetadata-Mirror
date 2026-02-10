@@ -100,7 +100,7 @@ const CustomPropertiesSection = ({
         </ErrorPlaceHolderNew>
       </div>
     );
-  }, [searchText]);
+  }, [searchText, emptyStateMessage]);
 
   if (isEntityDataLoading) {
     return <Loader size="default" />;
