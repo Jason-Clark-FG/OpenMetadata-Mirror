@@ -16,6 +16,8 @@ import time
 
 import pytest
 
+from ..conftest import _safe_delete
+
 from metadata.generated.schema.api.data.createAPICollection import (
     CreateAPICollectionRequest,
 )
@@ -93,11 +95,12 @@ def lineage_database_service(metadata):
 
     yield service
 
-    service_id = str(
-        metadata.get_by_name(entity=DatabaseService, fqn=service_name).id.root
-    )
-    metadata.delete(
-        entity=DatabaseService, entity_id=service_id, recursive=True, hard_delete=True
+    _safe_delete(
+        metadata,
+        entity=DatabaseService,
+        entity_id=service.id,
+        recursive=True,
+        hard_delete=True,
     )
 
 
@@ -110,11 +113,12 @@ def lineage_pipeline_service(metadata):
 
     yield service
 
-    service_id = str(
-        metadata.get_by_name(entity=PipelineService, fqn=service_name).id.root
-    )
-    metadata.delete(
-        entity=PipelineService, entity_id=service_id, recursive=True, hard_delete=True
+    _safe_delete(
+        metadata,
+        entity=PipelineService,
+        entity_id=service.id,
+        recursive=True,
+        hard_delete=True,
     )
 
 
@@ -127,12 +131,10 @@ def lineage_dashboard_service(metadata):
 
     yield service
 
-    service_id = str(
-        metadata.get_by_name(entity=DashboardService, fqn=service_name).id.root
-    )
-    metadata.delete(
+    _safe_delete(
+        metadata,
         entity=DashboardService,
-        entity_id=service_id,
+        entity_id=service.id,
         recursive=True,
         hard_delete=True,
     )
@@ -156,9 +158,12 @@ def lineage_api_service(metadata):
 
     yield service
 
-    service_id = str(metadata.get_by_name(entity=ApiService, fqn=service_name).id.root)
-    metadata.delete(
-        entity=ApiService, entity_id=service_id, recursive=True, hard_delete=True
+    _safe_delete(
+        metadata,
+        entity=ApiService,
+        entity_id=service.id,
+        recursive=True,
+        hard_delete=True,
     )
 
 

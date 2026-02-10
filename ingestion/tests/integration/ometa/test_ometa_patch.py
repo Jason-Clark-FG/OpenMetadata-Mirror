@@ -122,13 +122,10 @@ def patch_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=DatabaseService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=DatabaseService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )

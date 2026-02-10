@@ -22,6 +22,8 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
+
+from ..conftest import _safe_delete
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base
 
@@ -207,16 +209,15 @@ def ingest(service_name, create_data, metadata, engine, session):
 
     yield
 
-    service_id = str(
-        metadata.get_by_name(entity=DatabaseService, fqn=service_name).id.root
-    )
-
-    metadata.delete(
-        entity=DatabaseService,
-        entity_id=service_id,
-        recursive=True,
-        hard_delete=True,
-    )
+    service_entity = metadata.get_by_name(entity=DatabaseService, fqn=service_name)
+    if service_entity:
+        _safe_delete(
+            metadata,
+            entity=DatabaseService,
+            entity_id=service_entity.id,
+            recursive=True,
+            hard_delete=True,
+        )
 
     User.__table__.drop(bind=engine)
     NewUser.__table__.drop(bind=engine)

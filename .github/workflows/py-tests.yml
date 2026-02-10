@@ -61,10 +61,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup Python ${{ inputs.python-version }}
+      - name: Setup Python ${{ matrix.py-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: ${{ matrix.py-version }}
           cache: 'pip'
           cache-dependency-path: 'ingestion/setup.py'
 

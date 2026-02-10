@@ -115,13 +115,10 @@ def database_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=DatabaseService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=DatabaseService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
@@ -136,13 +133,10 @@ def dashboard_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=DashboardService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=DashboardService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
@@ -157,13 +151,10 @@ def messaging_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=MessagingService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=MessagingService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
@@ -182,13 +173,10 @@ def pipeline_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=PipelineService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=PipelineService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
@@ -203,13 +191,10 @@ def storage_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=StorageService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=StorageService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
@@ -224,13 +209,10 @@ def mlmodel_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=MlModelService, fqn=service_name).id.root
-    )
     _safe_delete(
         metadata,
         entity=MlModelService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )

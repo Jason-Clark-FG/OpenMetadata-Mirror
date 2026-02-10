@@ -16,6 +16,7 @@ from typing import Dict
 
 import pytest
 
+from ..conftest import _safe_delete
 from metadata.generated.schema.api.data.createCustomProperty import (
     CreateCustomPropertyRequest,
 )
@@ -247,12 +248,10 @@ def cp_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=DatabaseService, fqn=service_name.root).id.root
-    )
-    metadata.delete(
+    _safe_delete(
+        metadata,
         entity=DatabaseService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )

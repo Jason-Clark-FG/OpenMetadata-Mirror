@@ -34,6 +34,8 @@ from pymongo import MongoClient, database
 from testcontainers.mongodb import MongoDbContainer
 
 from _openmetadata_testutils.ometa import int_admin_ometa
+
+from ..conftest import _safe_delete
 from metadata.generated.schema.entity.data.table import ColumnProfile, Table
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
 from metadata.generated.schema.type.basic import Timestamp
@@ -156,15 +158,15 @@ class NoSQLProfiler(TestCase):
 
     @classmethod
     def delete_service(cls):
-        service_id = str(
-            cls.metadata.get_by_name(entity=DatabaseService, fqn=SERVICE_NAME).id.root
-        )
-        cls.metadata.delete(
-            entity=DatabaseService,
-            entity_id=service_id,
-            recursive=True,
-            hard_delete=True,
-        )
+        service_entity = cls.metadata.get_by_name(entity=DatabaseService, fqn=SERVICE_NAME)
+        if service_entity:
+            _safe_delete(
+                cls.metadata,
+                entity=DatabaseService,
+                entity_id=service_entity.id,
+                recursive=True,
+                hard_delete=True,
+            )
 
     def test_setup_teardown(self):
         """

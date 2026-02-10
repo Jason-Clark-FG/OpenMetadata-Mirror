@@ -74,6 +74,9 @@ runs:
     - name: Install Python Dependencies
       run: |
         source env/bin/activate
+        uv pip install "setuptools<81"
+        uv pip install --no-build-isolation "cx_Oracle>=8.3.0,<9"
+        uv pip install "${{ github.workspace }}/ingestion[all]"
         uv pip install "${{ github.workspace }}/ingestion[test]"
       shell: bash
     # ------------------------------------------------------------------------------

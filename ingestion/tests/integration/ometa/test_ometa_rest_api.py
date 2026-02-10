@@ -17,6 +17,7 @@ from copy import deepcopy
 
 import pytest
 
+from ..conftest import _safe_delete
 from metadata.generated.schema.api.data.createAPICollection import (
     CreateAPICollectionRequest,
 )
@@ -65,12 +66,10 @@ def api_service(metadata):
 
     yield service_entity
 
-    service_id = str(
-        metadata.get_by_name(entity=ApiService, fqn=service_name.root).id.root
-    )
-    metadata.delete(
+    _safe_delete(
+        metadata,
         entity=ApiService,
-        entity_id=service_id,
+        entity_id=service_entity.id,
         recursive=True,
         hard_delete=True,
     )
