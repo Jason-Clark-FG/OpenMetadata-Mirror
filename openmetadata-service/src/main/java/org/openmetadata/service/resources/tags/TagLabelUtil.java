@@ -59,6 +59,8 @@ public class TagLabelUtil {
       List<CollectionDAO.TagUsageDAO.TagLabelWithFQNHash> tagUsages) {
     Map<String, List<String>> tagFqnMap = new HashMap<>();
     Map<String, List<String>> termFqnMap = new HashMap<>();
+    Set<String> allTagFqns = new HashSet<>();
+    Set<String> allTermFqns = new HashSet<>();
 
     for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash usage : tagUsages) {
       String targetHash = usage.getTargetFQNHash();
@@ -66,8 +68,10 @@ public class TagLabelUtil {
 
       if (usage.getSource() == TagSource.CLASSIFICATION.ordinal()) {
         tagFqnMap.computeIfAbsent(targetHash, k -> new ArrayList<>()).add(tagFQN);
+        allTagFqns.add(tagFQN);
       } else if (usage.getSource() == TagSource.GLOSSARY.ordinal()) {
         termFqnMap.computeIfAbsent(targetHash, k -> new ArrayList<>()).add(tagFQN);
+        allTermFqns.add(tagFQN);
       }
     }
 
@@ -76,35 +80,63 @@ public class TagLabelUtil {
     allTargetHashes.addAll(termFqnMap.keySet());
 
     Map<String, List<TagLabel>> result = new HashMap<>();
+    Map<String, TagLabel> tagLabelsByFqn = new HashMap<>();
+    Map<String, TagLabel> termLabelsByFqn = new HashMap<>();
+
+    if (!allTagFqns.isEmpty()) {
+      try {
+        getTags(new ArrayList<>(allTagFqns))
+            .forEach(
+                tag -> {
+                  TagLabel label = EntityUtil.toTagLabel(tag);
+                  if (label != null) {
+                    tagLabelsByFqn.put(tag.getFullyQualifiedName(), label);
+                  }
+                });
+      } catch (Exception ex) {
+        LOG.warn(
+            "Failed to batch fetch classification tags for {} targets. Skipping classification tags. Error: {}",
+            allTargetHashes.size(),
+            ex.getMessage());
+      }
+    }
+
+    if (!allTermFqns.isEmpty()) {
+      try {
+        getGlossaryTerms(new ArrayList<>(allTermFqns))
+            .forEach(
+                term -> {
+                  TagLabel label = EntityUtil.toTagLabel(term);
+                  if (label != null) {
+                    termLabelsByFqn.put(term.getFullyQualifiedName(), label);
+                  }
+                });
+      } catch (Exception ex) {
+        LOG.warn(
+            "Failed to batch fetch glossary terms for {} targets. Skipping glossary tags. Error: {}",
+            allTargetHashes.size(),
+            ex.getMessage());
+      }
+    }
 
     for (String targetHash : allTargetHashes) {
-      List<TagLabel> tagLabels = new ArrayList<>();
+      Set<TagLabel> tagLabels = new TreeSet<>(compareTagLabel);
 
-      List<String> tagFQNs = tagFqnMap.getOrDefault(targetHash, Collections.emptyList());
-      List<String> termFQNs = termFqnMap.getOrDefault(targetHash, Collections.emptyList());
-
-      try {
-        Tag[] tags = getTags(tagFQNs).toArray(new Tag[0]);
-        tagLabels.addAll(listOrEmpty(EntityUtil.toTagLabels(tags)));
-      } catch (Exception ex) {
-        LOG.warn(
-            "Failed to fetch classification tags for target {}. Skipping these tags. Error: {}",
-            targetHash,
-            ex.getMessage());
+      for (String tagFqn : tagFqnMap.getOrDefault(targetHash, Collections.emptyList())) {
+        TagLabel label = tagLabelsByFqn.get(tagFqn);
+        if (label != null) {
+          tagLabels.add(label);
+        }
       }
 
-      try {
-        GlossaryTerm[] terms = getGlossaryTerms(termFQNs).toArray(new GlossaryTerm[0]);
-        tagLabels.addAll(listOrEmpty(EntityUtil.toTagLabels(terms)));
-      } catch (Exception ex) {
-        LOG.warn(
-            "Failed to fetch glossary terms {} for target {}. Skipping these terms. Error: {}",
-            termFQNs,
-            targetHash,
-            ex.getMessage());
+      for (String termFqn : termFqnMap.getOrDefault(targetHash, Collections.emptyList())) {
+        TagLabel label = termLabelsByFqn.get(termFqn);
+        if (label != null) {
+          tagLabels.add(label);
+        }
       }
 
-      result.put(targetHash, tagLabels);
+      result.put(targetHash, new ArrayList<>(tagLabels));
     }
 
     return result;

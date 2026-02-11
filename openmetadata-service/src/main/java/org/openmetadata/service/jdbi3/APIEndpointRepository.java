@@ -22,12 +22,14 @@ import static org.openmetadata.service.Entity.FIELD_DISPLAY_NAME;
 import static org.openmetadata.service.Entity.FIELD_TAGS;
 import static org.openmetadata.service.Entity.populateEntityFieldTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTags;
-import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTagsGracefully;
+import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTagsWithPreFetched;
+import static org.openmetadata.service.resources.tags.TagLabelUtil.batchFetchDerivedTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusive;
 
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -59,6 +61,7 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
+  private static final String PREFETCH_DEFAULT_FIELDS = "apiEndpoint.defaultFields";
 
   public APIEndpointRepository() {
     super(
@@ -108,7 +111,7 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     if (endpoint.getApiCollection() != null) {
       APICollection apiCollection =
           Entity.getEntityForInheritance(
-              API_COLLECTION, endpoint.getApiCollection().getId(), "owners,domains", ALL);
+              API_COLLECTION, endpoint.getApiCollection().getId(), getInheritableFields(), ALL);
       inheritOwners(endpoint, fields, apiCollection);
       inheritDomains(endpoint, fields, apiCollection);
     }
@@ -209,6 +212,25 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<APIEndpoint> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (APIEndpoint endpoint : entities) {
+      if (endpoint.getApiCollection() == null || endpoint.getApiCollection().getId() == null) {
+        continue;
+      }
+      EntityReference apiCollection = endpoint.getApiCollection();
+      relationships.add(
+          newRelationship(
+              apiCollection.getId(),
+              endpoint.getId(),
+              apiCollection.getType(),
+              Entity.API_ENDPOINT,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void setFields(APIEndpoint apiEndpoint, Fields fields, RelationIncludes relationIncludes) {
     setDefaultFields(apiEndpoint);
     if (apiEndpoint.getRequestSchema() != null) {
@@ -232,6 +254,15 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     /* Nothing to do */
   }
 
+  @Override
+  public void setFieldsInBulk(Fields fields, List<APIEndpoint> entities) {
+    if (entities == null || entities.isEmpty()) {
+      return;
+    }
+    fetchAndSetDefaultFields(entities);
+    super.setFieldsInBulk(fields, entities);
+  }
+
   // Individual field fetchers registered in constructor
   private void fetchAndSetSchemaFieldTags(List<APIEndpoint> apiEndpoints, Fields fields) {
     if (!fields.contains(FIELD_TAGS) || apiEndpoints == null || apiEndpoints.isEmpty()) {
@@ -242,41 +273,54 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     List<String> entityFQNs =
         apiEndpoints.stream().map(APIEndpoint::getFullyQualifiedName).toList();
     Map<String, List<TagLabel>> tagsMap = batchFetchTags(entityFQNs);
+    Map<String, List<TagLabel>> derivedEndpointTags =
+        batchFetchDerivedTags(tagsMap.values().stream().flatMap(List::stream).toList());
     for (APIEndpoint endpoint : apiEndpoints) {
       endpoint.setTags(
-          addDerivedTagsGracefully(
-              tagsMap.getOrDefault(endpoint.getFullyQualifiedName(), Collections.emptyList())));
+          addDerivedTagsWithPreFetched(
+              tagsMap.getOrDefault(endpoint.getFullyQualifiedName(), Collections.emptyList()),
+              derivedEndpointTags));
     }
 
     // Then, if schemas are requested, also fetch schema field tags
     if (fields.contains("requestSchema") || fields.contains("responseSchema")) {
-      // Bulk fetch tags for request schemas
-      List<APIEndpoint> endpointsWithRequestSchema =
-          apiEndpoints.stream()
-              .filter(e -> e.getRequestSchema() != null)
-              .collect(java.util.stream.Collectors.toList());
+      fetchAndSetSchemaFieldTagsInBatch(apiEndpoints);
+    }
+  }
 
-      if (!endpointsWithRequestSchema.isEmpty()) {
-        bulkPopulateEntityFieldTags(
-            endpointsWithRequestSchema,
-            entityType,
-            e -> e.getRequestSchema().getSchemaFields(),
-            e -> e.getFullyQualifiedName() + ".requestSchema");
+  private void fetchAndSetSchemaFieldTagsInBatch(List<APIEndpoint> apiEndpoints) {
+    List<Field> schemaFields = new ArrayList<>();
+    for (APIEndpoint endpoint : apiEndpoints) {
+      if (endpoint.getRequestSchema() != null) {
+        schemaFields.addAll(EntityUtil.getFlattenedEntityField(endpoint.getRequestSchema().getSchemaFields()));
       }
-
-      // Bulk fetch tags for response schemas
-      List<APIEndpoint> endpointsWithResponseSchema =
-          apiEndpoints.stream()
-              .filter(e -> e.getResponseSchema() != null)
-              .collect(java.util.stream.Collectors.toList());
-
-      if (!endpointsWithResponseSchema.isEmpty()) {
-        bulkPopulateEntityFieldTags(
-            endpointsWithResponseSchema,
-            entityType,
-            e -> e.getResponseSchema().getSchemaFields(),
-            e -> e.getFullyQualifiedName() + ".responseSchema");
+      if (endpoint.getResponseSchema() != null) {
+        schemaFields.addAll(EntityUtil.getFlattenedEntityField(endpoint.getResponseSchema().getSchemaFields()));
       }
+    }
+
+    if (schemaFields.isEmpty()) {
+      return;
+    }
+
+    List<String> schemaFieldFQNs =
+        schemaFields.stream()
+            .map(Field::getFullyQualifiedName)
+            .filter(fqn -> !nullOrEmpty(fqn))
+            .distinct()
+            .toList();
+    if (schemaFieldFQNs.isEmpty()) {
+      return;
+    }
+
+    Map<String, List<TagLabel>> schemaFieldTags = batchFetchTags(schemaFieldFQNs);
+    Map<String, List<TagLabel>> derivedSchemaFieldTags =
+        batchFetchDerivedTags(schemaFieldTags.values().stream().flatMap(List::stream).toList());
+
+    for (Field schemaField : schemaFields) {
+      List<TagLabel> fieldTags =
+          schemaFieldTags.getOrDefault(schemaField.getFullyQualifiedName(), Collections.emptyList());
+      schemaField.setTags(addDerivedTagsWithPreFetched(fieldTags, derivedSchemaFieldTags));
     }
   }
 
@@ -287,9 +331,10 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
   }
 
   private void setDefaultFields(APIEndpoint apiEndpoint) {
-    EntityReference apiCollectionRef = getContainer(apiEndpoint.getId());
-    APICollection apiCollection = Entity.getEntity(apiCollectionRef, "", Include.ALL);
-    apiEndpoint.withApiCollection(apiCollectionRef).withService(apiCollection.getService());
+    if (hasDefaultFields(apiEndpoint)) {
+      return;
+    }
+    fetchAndSetDefaultFields(List.of(apiEndpoint));
   }
 
   private void populateAPICollection(APIEndpoint apiEndpoint) {
@@ -372,8 +417,119 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
   }
 
   @Override
+  protected String getInheritableFields() {
+    return "owners,domains";
+  }
+
+  @Override
+  protected void applyInheritance(APIEndpoint entity, Fields fields, EntityInterface parent) {
+    inheritOwners(entity, fields, parent);
+    inheritDomains(entity, fields, parent);
+  }
+
+  @Override
   public EntityInterface getParentEntity(APIEndpoint entity, String fields) {
     return Entity.getEntity(entity.getApiCollection(), fields, Include.ALL);
+  }
+
+  @Override
+  protected void augmentReadPlan(
+      ReadPlanBuilder builder, APIEndpoint entity, Fields fields, RelationIncludes relationIncludes) {
+    builder.addEntitySpecificPrefetch(PREFETCH_DEFAULT_FIELDS);
+  }
+
+  @Override
+  protected void prefetchEntitySpecificReadData(
+      APIEndpoint entity, ReadPlan readPlan, ReadBundle bundle) {
+    if (entity == null
+        || entity.getId() == null
+        || hasDefaultFields(entity)
+        || !readPlan.getEntitySpecificPrefetchKeys().contains(PREFETCH_DEFAULT_FIELDS)) {
+      return;
+    }
+    fetchAndSetDefaultFields(List.of(entity));
+  }
+
+  private boolean hasDefaultFields(APIEndpoint apiEndpoint) {
+    return apiEndpoint.getApiCollection() != null && apiEndpoint.getService() != null;
+  }
+
+  private void fetchAndSetDefaultFields(List<APIEndpoint> apiEndpoints) {
+    if (apiEndpoints == null || apiEndpoints.isEmpty()) {
+      return;
+    }
+
+    List<APIEndpoint> endpointsMissingDefaults =
+        apiEndpoints.stream().filter(endpoint -> !hasDefaultFields(endpoint)).toList();
+    if (endpointsMissingDefaults.isEmpty()) {
+      return;
+    }
+
+    Map<UUID, EntityReference> apiCollectionRefs =
+        batchFetchContainers(endpointsMissingDefaults, API_COLLECTION, Include.ALL);
+    if (apiCollectionRefs.isEmpty()) {
+      return;
+    }
+
+    Map<UUID, EntityReference> servicesByApiCollection = batchFetchApiCollectionServices(apiCollectionRefs);
+
+    for (APIEndpoint endpoint : endpointsMissingDefaults) {
+      EntityReference apiCollectionRef = apiCollectionRefs.get(endpoint.getId());
+      if (apiCollectionRef == null) {
+        continue;
+      }
+      endpoint.withApiCollection(apiCollectionRef);
+
+      EntityReference serviceRef = servicesByApiCollection.get(apiCollectionRef.getId());
+      if (serviceRef != null) {
+        endpoint.withService(serviceRef);
+      }
+    }
+  }
+
+  private Map<UUID, EntityReference> batchFetchApiCollectionServices(
+      Map<UUID, EntityReference> apiCollectionRefs) {
+    Map<UUID, EntityReference> servicesByApiCollection = new HashMap<>();
+    if (apiCollectionRefs == null || apiCollectionRefs.isEmpty()) {
+      return servicesByApiCollection;
+    }
+
+    List<String> apiCollectionIds =
+        apiCollectionRefs.values().stream().map(EntityReference::getId).distinct().map(UUID::toString).toList();
+    if (apiCollectionIds.isEmpty()) {
+      return servicesByApiCollection;
+    }
+
+    List<CollectionDAO.EntityRelationshipObject> relations =
+        daoCollection
+            .relationshipDAO()
+            .findFromBatch(
+                apiCollectionIds, Relationship.CONTAINS.ordinal(), Entity.API_SERVICE, Include.ALL);
+    if (relations.isEmpty()) {
+      return servicesByApiCollection;
+    }
+
+    List<UUID> serviceIds =
+        relations.stream().map(relation -> UUID.fromString(relation.getFromId())).distinct().toList();
+    if (serviceIds.isEmpty()) {
+      return servicesByApiCollection;
+    }
+
+    Map<UUID, EntityReference> serviceRefMap =
+        Entity.getEntityReferencesByIds(Entity.API_SERVICE, serviceIds, Include.ALL).stream()
+            .collect(Collectors.toMap(EntityReference::getId, ref -> ref));
+
+    relations.forEach(
+        relation -> {
+          UUID apiCollectionId = UUID.fromString(relation.getToId());
+          UUID serviceId = UUID.fromString(relation.getFromId());
+          EntityReference serviceRef = serviceRefMap.get(serviceId);
+          if (serviceRef != null) {
+            servicesByApiCollection.putIfAbsent(apiCollectionId, serviceRef);
+          }
+        });
+
+    return servicesByApiCollection;
   }
 
   @Override

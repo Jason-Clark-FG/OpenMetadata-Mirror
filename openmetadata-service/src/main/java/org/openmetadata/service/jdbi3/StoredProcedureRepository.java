@@ -110,6 +110,24 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<StoredProcedure> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (StoredProcedure storedProcedure : entities) {
+      if (storedProcedure.getDatabaseSchema() == null || storedProcedure.getDatabaseSchema().getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              storedProcedure.getDatabaseSchema().getId(),
+              storedProcedure.getId(),
+              DATABASE_SCHEMA,
+              STORED_PROCEDURE,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   protected void entitySpecificCleanup(StoredProcedure storedProcedure) {
     // When a pipeline is removed , the linege needs to be removed
     daoCollection
@@ -155,30 +173,31 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
         || fields.contains("database")
         || fields.contains("service")) {
 
-      // First, collect all unique schema IDs
-      Map<UUID, EntityReference> schemaMap = new HashMap<>();
-      for (StoredProcedure sp : storedProcedures) {
-        EntityReference schemaRef = getContainer(sp.getId());
-        if (schemaRef != null) {
-          schemaMap.put(schemaRef.getId(), schemaRef);
+      Map<UUID, EntityReference> schemaRefs =
+          batchFetchContainers(storedProcedures, DATABASE_SCHEMA, Include.ALL);
+      if (!schemaRefs.isEmpty()) {
+        List<UUID> schemaIds =
+            schemaRefs.values().stream().map(EntityReference::getId).distinct().toList();
+        var schemaRepository = (DatabaseSchemaRepository) Entity.getEntityRepository(DATABASE_SCHEMA);
+        List<DatabaseSchema> schemas =
+            schemaRepository.getDao().findEntitiesByIds(new ArrayList<>(schemaIds), Include.ALL);
+        schemaRepository.setFieldsInBulk(EntityUtil.Fields.EMPTY_FIELDS, schemas);
+        Map<UUID, DatabaseSchema> schemaById = new HashMap<>();
+        for (DatabaseSchema schema : schemas) {
+          schemaById.put(schema.getId(), schema);
         }
-      }
 
-      // Batch fetch all database schemas with their service info
-      Map<UUID, DatabaseSchema> schemas = new HashMap<>();
-      for (UUID schemaId : schemaMap.keySet()) {
-        DatabaseSchema schema = Entity.getEntity(DATABASE_SCHEMA, schemaId, "", ALL);
-        schemas.put(schemaId, schema);
-      }
-
-      // Apply all the fetched data to stored procedures
-      for (StoredProcedure sp : storedProcedures) {
-        EntityReference schemaRef = getContainer(sp.getId());
-        if (schemaRef != null && schemas.containsKey(schemaRef.getId())) {
-          DatabaseSchema schema = schemas.get(schemaRef.getId());
-          sp.withDatabaseSchema(schemaRef)
-              .withDatabase(schema.getDatabase())
-              .withService(schema.getService());
+        for (StoredProcedure sp : storedProcedures) {
+          EntityReference schemaRef = schemaRefs.get(sp.getId());
+          if (schemaRef == null) {
+            continue;
+          }
+          DatabaseSchema schema = schemaById.get(schemaRef.getId());
+          if (schema != null) {
+            sp.withDatabaseSchema(schemaRef)
+                .withDatabase(schema.getDatabase())
+                .withService(schema.getService());
+          }
         }
       }
     }

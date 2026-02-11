@@ -188,6 +188,25 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<DashboardDataModel> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (DashboardDataModel dataModel : entities) {
+      EntityReference service = dataModel.getService();
+      if (service == null || service.getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              service.getId(),
+              dataModel.getId(),
+              service.getType(),
+              entityType,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void setFields(
       DashboardDataModel dashboardDataModel, Fields fields, RelationIncludes relationIncludes) {
     setDefaultFields(dashboardDataModel);

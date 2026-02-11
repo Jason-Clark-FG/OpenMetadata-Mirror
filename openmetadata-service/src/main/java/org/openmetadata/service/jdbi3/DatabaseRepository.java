@@ -149,6 +149,25 @@ public class DatabaseRepository extends EntityRepository<Database> {
     addServiceRelationship(database, database.getService());
   }
 
+  @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Database> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Database database : entities) {
+      EntityReference service = database.getService();
+      if (service == null || service.getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              service.getId(),
+              database.getId(),
+              service.getType(),
+              entityType,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
   private List<EntityReference> getSchemas(Database database) {
     return database == null
         ? null
@@ -459,11 +478,22 @@ public class DatabaseRepository extends EntityRepository<Database> {
       return;
     }
 
+    List<Database> databasesMissingDefaultService =
+        databases.stream().filter(this::needsDefaultService).toList();
+    if (databasesMissingDefaultService.isEmpty()) {
+      return;
+    }
+
     // Batch fetch service references for all databases
-    var serviceMap = batchFetchServices(databases);
+    var serviceMap = batchFetchServices(databasesMissingDefaultService);
 
     // Set service for all databases
-    databases.forEach(database -> database.setService(serviceMap.get(database.getId())));
+    databasesMissingDefaultService.forEach(
+        database -> database.setService(serviceMap.get(database.getId())));
+  }
+
+  private boolean needsDefaultService(Database database) {
+    return database.getService() == null;
   }
 
   private Map<UUID, EntityReference> batchFetchServices(List<Database> databases) {

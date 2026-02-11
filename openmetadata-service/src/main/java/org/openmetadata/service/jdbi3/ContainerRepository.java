@@ -385,6 +385,34 @@ public class ContainerRepository extends EntityRepository<Container> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Container> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Container container : entities) {
+      EntityReference service = container.getService();
+      if (service != null && service.getId() != null) {
+        relationships.add(
+            newRelationship(
+                service.getId(),
+                container.getId(),
+                service.getType(),
+                entityType,
+                Relationship.CONTAINS));
+      }
+      EntityReference parent = container.getParent();
+      if (parent != null && parent.getId() != null) {
+        relationships.add(
+            newRelationship(
+                parent.getId(),
+                container.getId(),
+                CONTAINER,
+                CONTAINER,
+                Relationship.CONTAINS));
+      }
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public EntityRepository<Container>.EntityUpdater getUpdater(
       Container original, Container updated, Operation operation, ChangeSource changeSource) {
     return new ContainerUpdater(original, updated, operation);

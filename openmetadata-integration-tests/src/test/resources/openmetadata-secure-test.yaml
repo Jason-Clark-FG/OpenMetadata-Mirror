@@ -12,9 +12,42 @@ server:
       port: 0
 logging:
   level: INFO
+  loggers:
+    org.openmetadata.service.util.jdbi.OMSqlLogger:
+      level: DEBUG
+      additive: false
+      appenders:
+        - type: file
+          threshold: DEBUG
+          currentLogFilename: ./logs/queries.log
+          archivedLogFilenamePattern: ./logs/queries-%d{yyyy-MM-dd}-%i.log.gz
+          archivedFileCount: 3
+          maxFileSize: 50MB
+          timeZone: UTC
+          logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
+    org.openmetadata.slowrequest:
+      level: WARN
+      additive: false
+      appenders:
+        - type: file
+          threshold: WARN
+          currentLogFilename: ./logs/slow-requests.log
+          archivedLogFilenamePattern: ./logs/slow-requests-%d{yyyy-MM-dd}-%i.log.gz
+          archivedFileCount: 3
+          maxFileSize: 50MB
+          timeZone: UTC
+          logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
   appenders:
     - type: console
       logFormat: "%level %logger{5} - %msg%n"
+    - type: file
+      threshold: INFO
+      currentLogFilename: ./logs/openmetadata-it.log
+      archivedLogFilenamePattern: ./logs/openmetadata-it-%d{yyyy-MM-dd}-%i.log.gz
+      archivedFileCount: 3
+      maxFileSize: 50MB
+      timeZone: UTC
+      logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
 database:
   driverClass: org.postgresql.Driver
   user: test

@@ -326,6 +326,34 @@ public class MlModelRepository extends EntityRepository<MlModel> {
     setMlFeatureSourcesLineage(mlModel);
   }
 
+  @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<MlModel> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (MlModel mlModel : entities) {
+      EntityReference service = mlModel.getService();
+      if (service != null && service.getId() != null) {
+        relationships.add(
+            newRelationship(
+                service.getId(),
+                mlModel.getId(),
+                service.getType(),
+                entityType,
+                Relationship.CONTAINS));
+      }
+      if (mlModel.getDashboard() != null && mlModel.getDashboard().getId() != null) {
+        relationships.add(
+            newRelationship(
+                mlModel.getId(),
+                mlModel.getDashboard().getId(),
+                Entity.MLMODEL,
+                Entity.DASHBOARD,
+                Relationship.USES));
+      }
+      setMlFeatureSourcesLineage(mlModel);
+    }
+    bulkInsertRelationships(relationships);
+  }
+
   /**
    * If we have the properties MLFeatures -> MlFeatureSources and the feature sources have properly
    * informed the Data Source EntityRef, then we will automatically build the lineage between tables

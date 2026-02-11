@@ -773,10 +773,27 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   }
 
   protected EntityReference getGlossary(GlossaryTerm term) {
-    Relationship relationship = term.getParent() != null ? Relationship.HAS : Relationship.CONTAINS;
-    return term.getGlossary() != null
-        ? term.getGlossary()
-        : getFromEntityRef(term.getId(), relationship, GLOSSARY, true);
+    if (term.getGlossary() != null) {
+      return term.getGlossary();
+    }
+
+    Relationship preferred =
+        term.getParent() != null ? Relationship.HAS : Relationship.CONTAINS;
+    EntityReference glossaryRef = getFromEntityRef(term.getId(), preferred, GLOSSARY, false);
+    if (glossaryRef != null) {
+      return glossaryRef;
+    }
+
+    // Parent resolution can be unavailable for some list/read paths (for example, when the parent
+    // term was removed). In that case, fallback to the alternate glossary relationship type.
+    Relationship fallback =
+        preferred == Relationship.HAS ? Relationship.CONTAINS : Relationship.HAS;
+    glossaryRef = getFromEntityRef(term.getId(), fallback, GLOSSARY, false);
+    if (glossaryRef != null) {
+      return glossaryRef;
+    }
+
+    return getFromEntityRef(term.getId(), preferred, GLOSSARY, true);
   }
 
   public EntityReference getGlossary(String id) {

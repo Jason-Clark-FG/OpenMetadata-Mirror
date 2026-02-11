@@ -679,6 +679,41 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Pipeline> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Pipeline pipeline : entities) {
+      EntityReference service = pipeline.getService();
+      if (service != null && service.getId() != null) {
+        relationships.add(
+            newRelationship(
+                service.getId(),
+                pipeline.getId(),
+                service.getType(),
+                entityType,
+                Relationship.CONTAINS));
+      }
+      for (Task task : listOrEmpty(pipeline.getTasks())) {
+        if (!nullOrEmpty(task.getOwners())) {
+          for (EntityReference owner : task.getOwners()) {
+            daoCollection
+                .fieldRelationshipDAO()
+                .insert(
+                    FullyQualifiedName.buildHash(owner.getFullyQualifiedName()),
+                    FullyQualifiedName.buildHash(task.getFullyQualifiedName()),
+                    owner.getFullyQualifiedName(),
+                    task.getFullyQualifiedName(),
+                    owner.getType(),
+                    Entity.TASK,
+                    OWNS.ordinal(),
+                    null);
+          }
+        }
+      }
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void applyTags(Pipeline pipeline) {
     // Add table level tags by adding tag to table relationship
     super.applyTags(pipeline);

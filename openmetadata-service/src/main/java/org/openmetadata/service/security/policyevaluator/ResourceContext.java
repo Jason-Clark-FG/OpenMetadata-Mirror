@@ -22,6 +22,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 
 /**
  * Builds ResourceContext lazily. ResourceContext includes all the attributes of a resource a user is trying to access
@@ -38,6 +39,8 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
   private T entity; // Will be lazily initialized
   private ResourceContextInterface.Operation operation = ResourceContextInterface.Operation.NONE;
   private Include include;
+  private Fields requestedFields;
+  private RelationIncludes relationIncludes;
 
   public ResourceContext(@NonNull String resource) {
     this.resource = resource;
@@ -58,6 +61,22 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
     this.id = id;
     this.name = name;
     this.include = include;
+    this.entityRepository = (EntityRepository<T>) Entity.getEntityRepository(resource);
+  }
+
+  public ResourceContext(
+      @NonNull String resource,
+      UUID id,
+      String name,
+      Include include,
+      Fields requestedFields,
+      RelationIncludes relationIncludes) {
+    this.resource = resource;
+    this.id = id;
+    this.name = name;
+    this.include = include;
+    this.requestedFields = requestedFields;
+    this.relationIncludes = relationIncludes;
     this.entityRepository = (EntityRepository<T>) Entity.getEntityRepository(resource);
   }
 
@@ -170,10 +189,13 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
     if (entity == null) {
       Fields fieldList;
       String fields = "";
+      RelationIncludes relationIncludesToUse = relationIncludes;
       if (operation == ResourceContextInterface.Operation.PATCH) {
         fieldList = entityRepository.getPatchFields();
       } else if (operation == ResourceContextInterface.Operation.PUT) {
         fieldList = entityRepository.getPutFields();
+      } else if (requestedFields != null) {
+        fieldList = requestedFields;
       } else {
         if (entityRepository.isSupportsOwners()) {
           fields = EntityUtil.addField(fields, Entity.FIELD_OWNERS);
@@ -192,12 +214,16 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
 
       Include includeToUse = resolveInclude();
       boolean fromCache = useRepositoryCache();
+      if (relationIncludesToUse == null) {
+        relationIncludesToUse = RelationIncludes.fromInclude(includeToUse);
+      }
 
       try {
         if (id != null) {
-          entity = entityRepository.get(null, id, fieldList, includeToUse, fromCache);
+          entity = entityRepository.get(null, id, fieldList, relationIncludesToUse, fromCache);
         } else if (name != null) {
-          entity = entityRepository.getByName(null, name, fieldList, includeToUse, fromCache);
+          entity =
+              entityRepository.getByName(null, name, fieldList, relationIncludesToUse, fromCache);
         }
       } catch (EntityNotFoundException e) {
         entity = null;
@@ -218,6 +244,9 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
   }
 
   private boolean useRepositoryCache() {
+    if (requestedFields != null) {
+      return false;
+    }
     return operation != ResourceContextInterface.Operation.PATCH
         && operation != ResourceContextInterface.Operation.PUT;
   }

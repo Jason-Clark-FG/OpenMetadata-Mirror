@@ -78,6 +78,7 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
       "databaseSchema.databaseSchemaProfilerConfig";
 
   public static final String DATABASE_SCHEMA_PROFILER_CONFIG = "databaseSchemaProfilerConfig";
+  private static final String RETENTION_PERIOD_FIELD = "retentionPeriod";
 
   public DatabaseSchemaRepository() {
     super(
@@ -153,6 +154,25 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
         Relationship.CONTAINS);
   }
 
+  @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<DatabaseSchema> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (DatabaseSchema schema : entities) {
+      if (schema.getDatabase() == null || schema.getDatabase().getId() == null) {
+        continue;
+      }
+      EntityReference database = schema.getDatabase();
+      relationships.add(
+          newRelationship(
+              database.getId(),
+              schema.getId(),
+              database.getType(),
+              Entity.DATABASE_SCHEMA,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
   private List<EntityReference> getTables(DatabaseSchema schema) {
     return schema == null
         ? Collections.emptyList()
@@ -183,9 +203,33 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
   }
 
   private void setDefaultFields(DatabaseSchema schema) {
-    EntityReference databaseRef = getContainer(schema.getId());
-    Database database = Entity.getEntity(databaseRef, "", Include.ALL);
-    schema.withDatabase(databaseRef).withService(database.getService());
+    if (hasDefaultFields(schema)) {
+      return;
+    }
+
+    EntityReference databaseRef = schema.getDatabase();
+    if (databaseRef == null || databaseRef.getId() == null) {
+      databaseRef = getContainer(schema.getId());
+    }
+
+    EntityReference serviceRef = schema.getService();
+    if ((serviceRef == null || serviceRef.getId() == null)
+        && databaseRef != null
+        && databaseRef.getId() != null) {
+      // Fast path: schema JSON already stores database ref, resolve service directly from database.
+      serviceRef =
+          getFromEntityRef(databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+    }
+
+    // Fallback for legacy rows with incomplete parent refs.
+    if ((serviceRef == null || serviceRef.getId() == null)
+        && databaseRef != null
+        && databaseRef.getId() != null) {
+      Database database = Entity.getEntity(databaseRef, "", Include.ALL);
+      serviceRef = database.getService();
+    }
+
+    schema.withDatabase(databaseRef).withService(serviceRef);
   }
 
   @Override
@@ -220,7 +264,13 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
     if (schemas == null || schemas.isEmpty()) {
       return;
     }
-    var databaseRefsMap = batchFetchDatabases(schemas);
+    List<DatabaseSchema> schemasMissingDefaults =
+        schemas.stream().filter(schema -> !hasDefaultFields(schema)).toList();
+    if (schemasMissingDefaults.isEmpty()) {
+      return;
+    }
+
+    var databaseRefsMap = batchFetchDatabases(schemasMissingDefaults);
     var uniqueDatabaseIds =
         databaseRefsMap.values().stream().map(EntityReference::getId).distinct().toList();
     var databaseRepository = (DatabaseRepository) Entity.getEntityRepository(Entity.DATABASE);
@@ -234,7 +284,7 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
     var databases =
         databasesList.stream().collect(Collectors.toMap(Database::getId, database -> database));
 
-    schemas.forEach(
+    schemasMissingDefaults.forEach(
         schema -> {
           var databaseRef = databaseRefsMap.get(schema.getId());
           if (databaseRef != null) {
@@ -244,6 +294,10 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
             }
           }
         });
+  }
+
+  private boolean hasDefaultFields(DatabaseSchema schema) {
+    return schema.getDatabase() != null && schema.getService() != null;
   }
 
   private Map<UUID, EntityReference> batchFetchDatabases(List<DatabaseSchema> schemas) {
@@ -399,7 +453,7 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
   @Override
   protected boolean requiresParentForInheritance(DatabaseSchema schema, Fields fields) {
     return super.requiresParentForInheritance(schema, fields)
-        || schema.getRetentionPeriod() == null;
+        || (shouldResolveRetentionInheritance(fields) && schema.getRetentionPeriod() == null);
   }
 
   @Override
@@ -409,12 +463,14 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
     }
 
     boolean needsOwnersOrDomains = super.requiresParentForInheritance(schema, fields);
-    boolean needsRetention = schema.getRetentionPeriod() == null;
+    boolean needsRetention =
+        shouldResolveRetentionInheritance(fields) && schema.getRetentionPeriod() == null;
     if (!needsOwnersOrDomains && !needsRetention) {
       return;
     }
 
-    String inheritanceFields = needsOwnersOrDomains ? "owners,domains" : "";
+    String inheritanceFields =
+        needsOwnersOrDomains ? "owners,domains,retentionPeriod" : "retentionPeriod";
     Database database =
         Entity.getEntityForInheritance(
             Entity.DATABASE, schema.getDatabase().getId(), inheritanceFields, ALL);
@@ -441,7 +497,7 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
 
   @Override
   protected String getInheritableFields() {
-    return "owners,domains";
+    return "owners,domains,retentionPeriod";
   }
 
   @Override
@@ -476,6 +532,12 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
         .withDatabase(database.getEntityReference())
         .withService(database.getService())
         .withServiceType(database.getServiceType());
+  }
+
+  private boolean shouldResolveRetentionInheritance(Fields fields) {
+    return fields == null
+        || fields.getFieldList().isEmpty()
+        || fields.contains(RETENTION_PERIOD_FIELD);
   }
 
   @Override

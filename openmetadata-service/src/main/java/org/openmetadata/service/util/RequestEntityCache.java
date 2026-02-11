@@ -63,8 +63,7 @@ public final class RequestEntityCache {
     put(
         EntityCacheKey.forId(
             entityType, id, fieldsKey(fields), relationIncludesKey(relationIncludes), fromCache),
-        entity,
-        entityClass);
+        entity);
   }
 
   public static <T extends EntityInterface> void putByName(
@@ -78,8 +77,7 @@ public final class RequestEntityCache {
     put(
         EntityCacheKey.forName(
             entityType, name, fieldsKey(fields), relationIncludesKey(relationIncludes), fromCache),
-        entity,
-        entityClass);
+        entity);
   }
 
   private static <T extends EntityInterface> T get(EntityCacheKey key, Class<T> entityClass) {
@@ -87,15 +85,16 @@ public final class RequestEntityCache {
     if (cached == null) {
       return null;
     }
+    // Defensive copy on read keeps cache entries immutable for callers while avoiding
+    // an extra deep copy at cache put time.
     return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
   }
 
-  private static <T extends EntityInterface> void put(
-      EntityCacheKey key, T entity, Class<T> entityClass) {
+  private static <T extends EntityInterface> void put(EntityCacheKey key, T entity) {
     if (entity == null) {
       return;
     }
-    REQUEST_CACHE.get().put(key, JsonUtils.deepCopy(entity, entityClass));
+    REQUEST_CACHE.get().put(key, entity);
   }
 
   private static String fieldsKey(Fields fields) {

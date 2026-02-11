@@ -1971,12 +1971,30 @@ public interface CollectionDAO {
         "SELECT fromId, toId, fromEntity, toEntity, relation, json, jsonSchema "
             + "FROM entity_relationship "
             + "WHERE toId = :entityId AND toEntity = :entityType "
-            + "AND relation IN (<relations>)")
+            + "AND relation IN (<relations>) "
+            + "<cond>")
     @UseRowMapper(RelationshipObjectMapper.class)
-    List<EntityRelationshipObject> findToRelationshipsForEntity(
+    List<EntityRelationshipObject> findToRelationshipsForEntityWithCondition(
         @BindUUID("entityId") UUID entityId,
         @Bind("entityType") String entityType,
-        @BindList("relations") List<Integer> relations);
+        @BindList("relations") List<Integer> relations,
+        @Define("cond") String condition);
+
+    default List<EntityRelationshipObject> findToRelationshipsForEntity(
+        UUID entityId, String entityType, List<Integer> relations, Include include) {
+      String condition = "";
+      if (include == null || include == Include.NON_DELETED) {
+        condition = "AND deleted = FALSE";
+      } else if (include == Include.DELETED) {
+        condition = "AND deleted = TRUE";
+      }
+      return findToRelationshipsForEntityWithCondition(entityId, entityType, relations, condition);
+    }
+
+    default List<EntityRelationshipObject> findToRelationshipsForEntity(
+        UUID entityId, String entityType, List<Integer> relations) {
+      return findToRelationshipsForEntity(entityId, entityType, relations, Include.ALL);
+    }
 
     // Fetch relationships for specific relation types (FROM direction: entity -> others)
     // Used for children, experts
@@ -1984,12 +2002,31 @@ public interface CollectionDAO {
         "SELECT fromId, toId, fromEntity, toEntity, relation, json, jsonSchema "
             + "FROM entity_relationship "
             + "WHERE fromId = :entityId AND fromEntity = :entityType "
-            + "AND relation IN (<relations>)")
+            + "AND relation IN (<relations>) "
+            + "<cond>")
     @UseRowMapper(RelationshipObjectMapper.class)
-    List<EntityRelationshipObject> findFromRelationshipsForEntity(
+    List<EntityRelationshipObject> findFromRelationshipsForEntityWithCondition(
         @BindUUID("entityId") UUID entityId,
         @Bind("entityType") String entityType,
-        @BindList("relations") List<Integer> relations);
+        @BindList("relations") List<Integer> relations,
+        @Define("cond") String condition);
+
+    default List<EntityRelationshipObject> findFromRelationshipsForEntity(
+        UUID entityId, String entityType, List<Integer> relations, Include include) {
+      String condition = "";
+      if (include == null || include == Include.NON_DELETED) {
+        condition = "AND deleted = FALSE";
+      } else if (include == Include.DELETED) {
+        condition = "AND deleted = TRUE";
+      }
+      return findFromRelationshipsForEntityWithCondition(
+          entityId, entityType, relations, condition);
+    }
+
+    default List<EntityRelationshipObject> findFromRelationshipsForEntity(
+        UUID entityId, String entityType, List<Integer> relations) {
+      return findFromRelationshipsForEntity(entityId, entityType, relations, Include.ALL);
+    }
 
     @SqlQuery(
         "SELECT fromId, toId, fromEntity, toEntity, relation, json, jsonSchema "
@@ -7573,6 +7610,31 @@ public interface CollectionDAO {
     }
 
     @SqlQuery(
+        "SELECT p.entityFQNHash, p.json "
+            + "FROM <table> p "
+            + "JOIN ("
+            + "  SELECT entityFQNHash, MAX(timestamp) AS latestTs "
+            + "  FROM <table> "
+            + "  WHERE entityFQNHash IN (<entityFQNHashes>) AND extension = :extension "
+            + "  GROUP BY entityFQNHash"
+            + ") latest "
+            + "ON p.entityFQNHash = latest.entityFQNHash AND p.timestamp = latest.latestTs "
+            + "WHERE p.extension = :extension")
+    @RegisterRowMapper(LatestExtensionRecordMapper.class)
+    List<LatestExtensionRecord> getLatestExtensionsBatch(
+        @Define("table") String table,
+        @BindListFQN("entityFQNHashes") List<String> entityFQNHashes,
+        @Bind("extension") String extension);
+
+    default List<LatestExtensionRecord> getLatestExtensionsBatch(
+        List<String> entityFQNHashes, String extension) {
+      if (entityFQNHashes == null || entityFQNHashes.isEmpty()) {
+        return Collections.emptyList();
+      }
+      return getLatestExtensionsBatch(getTimeSeriesTableName(), entityFQNHashes, extension);
+    }
+
+    @SqlQuery(
         "SELECT json FROM <table> <cond> "
             + "AND timestamp >= :startTs and timestamp <= :endTs ORDER BY timestamp DESC")
     List<String> listEntityProfileAtTimestamp(
@@ -7597,6 +7659,15 @@ public interface CollectionDAO {
     default void deleteEntityProfileData(ListFilter filter, Long timestamp) {
       deleteEntityProfileData(
           getTimeSeriesTableName(), filter.getQueryParams(), filter.getCondition(), timestamp);
+    }
+
+    record LatestExtensionRecord(String entityFQNHash, String json) {}
+
+    class LatestExtensionRecordMapper implements RowMapper<LatestExtensionRecord> {
+      @Override
+      public LatestExtensionRecord map(ResultSet rs, StatementContext ctx) throws SQLException {
+        return new LatestExtensionRecord(rs.getString("entityFQNHash"), rs.getString("json"));
+      }
     }
   }
 

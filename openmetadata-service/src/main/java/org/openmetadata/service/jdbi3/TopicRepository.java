@@ -163,6 +163,21 @@ public class TopicRepository extends EntityRepository<Topic> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Topic> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Topic topic : entities) {
+      EntityReference service = topic.getService();
+      if (service == null || service.getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              service.getId(), topic.getId(), service.getType(), entityType, Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void setFields(Topic topic, Fields fields, RelationIncludes relationIncludes) {
     // Set default service field
     topic.setService(getContainer(topic.getId()));

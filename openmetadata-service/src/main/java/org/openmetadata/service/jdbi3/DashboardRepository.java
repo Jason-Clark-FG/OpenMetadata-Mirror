@@ -433,6 +433,44 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Dashboard> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Dashboard dashboard : entities) {
+      EntityReference service = dashboard.getService();
+      if (service != null && service.getId() != null) {
+        relationships.add(
+            newRelationship(
+                service.getId(),
+                dashboard.getId(),
+                service.getType(),
+                entityType,
+                Relationship.CONTAINS));
+      }
+      for (EntityReference chart : listOrEmpty(dashboard.getCharts())) {
+        if (chart.getId() == null) {
+          continue;
+        }
+        relationships.add(
+            newRelationship(
+                dashboard.getId(), chart.getId(), Entity.DASHBOARD, Entity.CHART, Relationship.HAS));
+      }
+      for (EntityReference dataModel : listOrEmpty(dashboard.getDataModels())) {
+        if (dataModel.getId() == null) {
+          continue;
+        }
+        relationships.add(
+            newRelationship(
+                dashboard.getId(),
+                dataModel.getId(),
+                Entity.DASHBOARD,
+                Entity.DASHBOARD_DATA_MODEL,
+                Relationship.HAS));
+      }
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public EntityRepository<Dashboard>.EntityUpdater getUpdater(
       Dashboard original, Dashboard updated, Operation operation, ChangeSource changeSource) {
     return new DashboardUpdater(original, updated, operation);

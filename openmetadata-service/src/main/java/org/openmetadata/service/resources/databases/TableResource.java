@@ -1639,12 +1639,13 @@ public class TableResource extends EntityResource<Table, TableRepository> {
                   @Schema(
                       type = "string",
                       allowableValues = {"asc", "desc"}))
-          @QueryParam("sortOrder")
+      @QueryParam("sortOrder")
           @DefaultValue("asc")
           String sortOrder) {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.VIEW_BASIC);
-    authorizer.authorize(securityContext, operationContext, getResourceContextById(id));
+    ResourceContext<Table> resourceContext = getResourceContextById(id, include);
+    authorizer.authorize(securityContext, operationContext, resourceContext);
 
     ResultList<org.openmetadata.schema.type.Column> result =
         repository.getTableColumns(
@@ -1655,6 +1656,7 @@ public class TableResource extends EntityResource<Table, TableRepository> {
             include,
             sortBy,
             sortOrder,
+            resourceContext.getOwners(),
             authorizer,
             securityContext);
     TableColumnList tableColumnList = new TableColumnList();
@@ -1725,13 +1727,14 @@ public class TableResource extends EntityResource<Table, TableRepository> {
                   @Schema(
                       type = "string",
                       allowableValues = {"asc", "desc"}))
-          @QueryParam("sortOrder")
+      @QueryParam("sortOrder")
           @DefaultValue("asc")
           String sortOrder) {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.VIEW_BASIC);
     // JAX-RS automatically URL-decodes path parameters, so fqn is already decoded
-    authorizer.authorize(securityContext, operationContext, getResourceContextByName(fqn));
+    ResourceContext<Table> resourceContext = getResourceContextByName(fqn, include);
+    authorizer.authorize(securityContext, operationContext, resourceContext);
 
     ResultList<org.openmetadata.schema.type.Column> result =
         repository.getTableColumnsByFQN(
@@ -1742,6 +1745,7 @@ public class TableResource extends EntityResource<Table, TableRepository> {
             include,
             sortBy,
             sortOrder,
+            resourceContext.getOwners(),
             authorizer,
             securityContext);
     TableColumnList tableColumnList = new TableColumnList();

@@ -126,6 +126,32 @@ public class ChartRepository extends EntityRepository<Chart> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Chart> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Chart chart : entities) {
+      EntityReference service = chart.getService();
+      if (service != null && service.getId() != null) {
+        relationships.add(
+            newRelationship(
+                service.getId(), chart.getId(), service.getType(), entityType, Relationship.CONTAINS));
+      }
+      for (EntityReference dashboard : listOrEmpty(chart.getDashboards())) {
+        if (dashboard.getId() == null) {
+          continue;
+        }
+        relationships.add(
+            newRelationship(
+                dashboard.getId(),
+                chart.getId(),
+                Entity.DASHBOARD,
+                Entity.CHART,
+                Relationship.HAS));
+      }
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void setFields(Chart chart, Fields fields, RelationIncludes relationIncludes) {
     chart.withService(getContainer(chart.getId()));
     // Use Include.ALL for dashboards to match legacy behavior - dashboard-chart relationship

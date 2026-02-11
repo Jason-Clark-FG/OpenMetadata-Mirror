@@ -3,7 +3,7 @@ package org.openmetadata.service.jdbi3;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-final class ReadBundleContext {
+public final class ReadBundleContext {
   private static final ThreadLocal<Deque<ReadBundle>> BUNDLES =
       ThreadLocal.withInitial(ArrayDeque::new);
 
@@ -28,7 +28,7 @@ final class ReadBundleContext {
     }
   }
 
-  static void clear() {
+  public static void clear() {
     BUNDLES.remove();
   }
 }

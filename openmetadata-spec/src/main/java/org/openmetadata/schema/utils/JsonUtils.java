@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.module.blackbird.BlackbirdModule;
 import com.fasterxml.jackson.datatype.jsr353.JSR353Module;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.github.fge.jsonpatch.diff.JsonDiff;
@@ -68,7 +69,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.annotations.ExposedField;
 import org.openmetadata.annotations.IgnoreMaskedFieldAnnotationIntrospector;
@@ -109,6 +109,8 @@ public final class JsonUtils {
     OBJECT_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     OBJECT_MAPPER.setDateFormat(DATE_TIME_FORMAT);
     OBJECT_MAPPER.registerModule(new JSR353Module());
+    // Java 21 optimized introspection/accessors for faster convertValue/read/write paths.
+    OBJECT_MAPPER.registerModule(new BlackbirdModule());
 
     // Lenient ObjectMapper to ignore unknown properties
     OBJECT_MAPPER_LENIENT = OBJECT_MAPPER.copy();
@@ -617,23 +619,14 @@ public final class JsonUtils {
     }
   }
 
-  @SneakyThrows
   public static <T> T deepCopy(T original, Class<T> clazz) {
-    // Serialize the original object to JSON
-    String json = pojoToJson(original);
-
-    // Deserialize the JSON back into a new object of the specified class
-    return OBJECT_MAPPER.readValue(json, clazz);
+    return OBJECT_MAPPER.convertValue(original, clazz);
   }
 
-  @SneakyThrows
   public static <T> List<T> deepCopyList(List<T> original, Class<T> clazz) {
-    List<T> list = new ArrayList<>();
+    List<T> list = new ArrayList<>(original.size());
     for (T t : original) {
-      // Serialize the original object to JSON
-      String json = pojoToJson(t);
-      // Deserialize the JSON back into a new object of the specified class
-      list.add(OBJECT_MAPPER.readValue(json, clazz));
+      list.add(OBJECT_MAPPER.convertValue(t, clazz));
     }
     return list;
   }

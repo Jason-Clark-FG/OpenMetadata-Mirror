@@ -148,9 +148,12 @@ public class TableRepository extends EntityRepository<Table> {
   public static final String TABLE_EXTENSION = "table.table";
   public static final String CUSTOM_METRICS_EXTENSION = "customMetrics.";
   public static final String TABLE_PROFILER_CONFIG = "tableProfilerConfig";
+  private static final String PREFETCH_DEFAULT_FIELDS = "table.defaultFields";
+  private static final String DEFAULT_SCHEMA_FIELDS = "database,service,serviceType";
 
   public static final String COLUMN_FIELD = "columns";
   public static final String CUSTOM_METRICS = "customMetrics";
+  private static final String RETENTION_PERIOD_FIELD = "retentionPeriod";
   private static final Set<String> CHANGE_SUMMARY_FIELDS =
       Set.of("description", "owners", "columns.description");
 
@@ -321,7 +324,8 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Override
   protected boolean requiresParentForInheritance(Table table, Fields fields) {
-    return super.requiresParentForInheritance(table, fields) || table.getRetentionPeriod() == null;
+    return super.requiresParentForInheritance(table, fields)
+        || (shouldResolveRetentionInheritance(fields) && table.getRetentionPeriod() == null);
   }
 
   @Override
@@ -331,12 +335,14 @@ public class TableRepository extends EntityRepository<Table> {
     }
 
     boolean needsOwnersOrDomains = super.requiresParentForInheritance(table, fields);
-    boolean needsRetention = table.getRetentionPeriod() == null;
+    boolean needsRetention =
+        shouldResolveRetentionInheritance(fields) && table.getRetentionPeriod() == null;
     if (!needsOwnersOrDomains && !needsRetention) {
       return;
     }
 
-    String inheritanceFields = needsOwnersOrDomains ? "owners,domains" : "";
+    String inheritanceFields =
+        needsOwnersOrDomains ? "owners,domains,retentionPeriod" : "retentionPeriod";
     DatabaseSchema schema =
         Entity.getEntityForInheritance(
             DATABASE_SCHEMA, table.getDatabaseSchema().getId(), inheritanceFields, ALL);
@@ -350,13 +356,76 @@ public class TableRepository extends EntityRepository<Table> {
   }
 
   private void setDefaultFields(Table table) {
-    EntityReference schemaRef = getContainer(table.getId(), DATABASE_SCHEMA);
-    DatabaseSchema schema = Entity.getEntity(schemaRef, "", ALL);
-    table
-        .withDatabaseSchema(schemaRef)
-        .withDatabase(schema.getDatabase())
-        .withService(schema.getService())
-        .withServiceType(schema.getServiceType());
+    if (hasDefaultFields(table)) {
+      return;
+    }
+
+    EntityReference schemaRef = table.getDatabaseSchema();
+    EntityReference databaseRef = table.getDatabase();
+    DatabaseSchema schema = null;
+
+    // Fallback for legacy rows where table JSON may not contain parent references.
+    if (!hasId(schemaRef)) {
+      schemaRef = getContainer(table.getId(), DATABASE_SCHEMA);
+    }
+
+    // If database ref is missing, load schema once to recover it.
+    if (!hasId(databaseRef) && hasId(schemaRef)) {
+      schema = Entity.getEntity(DATABASE_SCHEMA, schemaRef.getId(), DEFAULT_SCHEMA_FIELDS, ALL);
+      databaseRef = schema.getDatabase();
+    }
+
+    EntityReference serviceRef = table.getService();
+    if (!hasId(serviceRef) && hasId(databaseRef)) {
+      // Fast path: table JSON already stores database ref, resolve service directly from database.
+      serviceRef =
+          getFromEntityRef(databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+    }
+
+    if (table.getServiceType() == null && hasId(schemaRef)) {
+      if (schema == null) {
+        schema = Entity.getEntity(DATABASE_SCHEMA, schemaRef.getId(), DEFAULT_SCHEMA_FIELDS, ALL);
+      }
+      table.withServiceType(schema.getServiceType());
+      if (!hasId(databaseRef)) {
+        databaseRef = schema.getDatabase();
+      }
+      if (!hasId(serviceRef)) {
+        serviceRef = schema.getService();
+      }
+    }
+
+    table.withDatabaseSchema(schemaRef).withDatabase(databaseRef).withService(serviceRef);
+  }
+
+  private boolean shouldResolveRetentionInheritance(Fields fields) {
+    return fields == null
+        || fields.getFieldList().isEmpty()
+        || fields.contains(RETENTION_PERIOD_FIELD);
+  }
+
+  private boolean hasDefaultFields(Table table) {
+    return hasId(table.getDatabaseSchema())
+        && hasId(table.getDatabase())
+        && hasId(table.getService())
+        && table.getServiceType() != null;
+  }
+
+  @Override
+  protected void augmentReadPlan(
+      ReadPlanBuilder builder, Table entity, Fields fields, RelationIncludes relationIncludes) {
+    builder.addEntitySpecificPrefetch(PREFETCH_DEFAULT_FIELDS);
+  }
+
+  @Override
+  protected void prefetchEntitySpecificReadData(Table table, ReadPlan readPlan, ReadBundle bundle) {
+    if (table == null
+        || table.getId() == null
+        || hasDefaultFields(table)
+        || !readPlan.getEntitySpecificPrefetchKeys().contains(PREFETCH_DEFAULT_FIELDS)) {
+      return;
+    }
+    setDefaultFields(table);
   }
 
   private void fetchAndSetDefaultFields(List<Table> tables) {
@@ -364,28 +433,66 @@ public class TableRepository extends EntityRepository<Table> {
       return;
     }
 
-    var schemaRefsMap = batchFetchSchemas(tables);
+    List<Table> tablesMissingDefaults =
+        tables.stream().filter(table -> !hasDefaultFields(table)).toList();
+    if (tablesMissingDefaults.isEmpty()) {
+      return;
+    }
+
+    var schemaRefsMap = new HashMap<UUID, EntityReference>();
+    List<Table> tablesNeedingSchemaLookup = new ArrayList<>();
+    for (Table table : tablesMissingDefaults) {
+      if (hasId(table.getDatabaseSchema())) {
+        schemaRefsMap.put(table.getId(), table.getDatabaseSchema());
+      } else {
+        tablesNeedingSchemaLookup.add(table);
+      }
+    }
+    if (!tablesNeedingSchemaLookup.isEmpty()) {
+      schemaRefsMap.putAll(batchFetchSchemas(tablesNeedingSchemaLookup));
+    }
+    if (schemaRefsMap.isEmpty()) {
+      return;
+    }
+
     var uniqueSchemaIds =
         schemaRefsMap.values().stream().map(EntityReference::getId).distinct().toList();
 
     var schemaRepository = (DatabaseSchemaRepository) Entity.getEntityRepository(DATABASE_SCHEMA);
     var schemasList =
         schemaRepository.getDao().findEntitiesByIds(new ArrayList<>(uniqueSchemaIds), ALL);
-    schemaRepository.setFieldsInBulk(Fields.EMPTY_FIELDS, schemasList);
     var schemas =
         schemasList.stream().collect(Collectors.toMap(DatabaseSchema::getId, schema -> schema));
-    tables.forEach(
+    tablesMissingDefaults.forEach(
         table -> {
           var schemaRef = schemaRefsMap.get(table.getId());
-          if (schemaRef != null) {
-            var schema = schemas.get(schemaRef.getId());
-            table
-                .withDatabaseSchema(schemaRef)
-                .withDatabase(schema.getDatabase())
-                .withService(schema.getService())
-                .withServiceType(schema.getServiceType());
+          if (!hasId(schemaRef)) {
+            return;
+          }
+          var schema = schemas.get(schemaRef.getId());
+          if (schema == null) {
+            return;
+          }
+
+          EntityReference databaseRef =
+              hasId(table.getDatabase()) ? table.getDatabase() : schema.getDatabase();
+          EntityReference serviceRef =
+              hasId(table.getService()) ? table.getService() : schema.getService();
+          if (!hasId(serviceRef) && hasId(databaseRef)) {
+            serviceRef =
+                getFromEntityRef(
+                    databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+          }
+
+          table.withDatabaseSchema(schemaRef).withDatabase(databaseRef).withService(serviceRef);
+          if (table.getServiceType() == null) {
+            table.withServiceType(schema.getServiceType());
           }
         });
+  }
+
+  private boolean hasId(EntityReference ref) {
+    return ref != null && ref.getId() != null;
   }
 
   private Map<UUID, EntityReference> batchFetchSchemas(List<Table> tables) {
@@ -968,25 +1075,53 @@ public class TableRepository extends EntityRepository<Table> {
   }
 
   private void setColumnProfile(List<Column> columnList) {
-    for (Column column : listOrEmpty(columnList)) {
+    List<Column> flattenedColumns = EntityUtil.getFlattenedEntityField(columnList);
+    if (flattenedColumns.isEmpty()) {
+      return;
+    }
+
+    Map<String, EntityProfile> latestProfilesByColumn = batchFetchLatestColumnProfiles(flattenedColumns);
+    for (Column column : flattenedColumns) {
       ColumnProfile columnProfile = null;
       EntityProfile entityProfile =
-          JsonUtils.readValue(
-              daoCollection
-                  .profilerDataTimeSeriesDao()
-                  .getLatestExtension(
-                      column.getFullyQualifiedName(), TABLE_COLUMN_PROFILE_EXTENSION),
-              EntityProfile.class);
+          latestProfilesByColumn.get(FullyQualifiedName.buildHash(column.getFullyQualifiedName()));
       if (entityProfile != null) {
         columnProfile =
             (ColumnProfile)
                 EntityProfileRepository.deserializeProfileData(entityProfile).getProfileData();
       }
       column.setProfile(columnProfile);
-      if (column.getChildren() != null) {
-        setColumnProfile(column.getChildren());
+    }
+  }
+
+  private Map<String, EntityProfile> batchFetchLatestColumnProfiles(List<Column> columns) {
+    Map<String, EntityProfile> latestProfiles = new HashMap<>();
+    if (columns == null || columns.isEmpty()) {
+      return latestProfiles;
+    }
+
+    List<String> columnFqns =
+        columns.stream()
+            .map(Column::getFullyQualifiedName)
+            .filter(fqn -> !nullOrEmpty(fqn))
+            .distinct()
+            .toList();
+    if (columnFqns.isEmpty()) {
+      return latestProfiles;
+    }
+
+    List<CollectionDAO.ProfilerDataTimeSeriesDAO.LatestExtensionRecord> records =
+        daoCollection
+            .profilerDataTimeSeriesDao()
+            .getLatestExtensionsBatch(columnFqns, TABLE_COLUMN_PROFILE_EXTENSION);
+
+    for (CollectionDAO.ProfilerDataTimeSeriesDAO.LatestExtensionRecord record : records) {
+      EntityProfile entityProfile = JsonUtils.readValue(record.json(), EntityProfile.class);
+      if (entityProfile != null) {
+        latestProfiles.put(record.entityFQNHash(), entityProfile);
       }
     }
+    return latestProfiles;
   }
 
   public Table getLatestTableProfile(
@@ -1192,6 +1327,24 @@ public class TableRepository extends EntityRepository<Table> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<Table> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (Table table : entities) {
+      if (table.getDatabaseSchema() == null || table.getDatabaseSchema().getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              table.getDatabaseSchema().getId(),
+              table.getId(),
+              DATABASE_SCHEMA,
+              TABLE,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public EntityUpdater getUpdater(
       Table original, Table updated, Operation operation, ChangeSource changeSource) {
     return new TableUpdater(original, updated, operation, changeSource);
@@ -1211,7 +1364,7 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Override
   protected String getInheritableFields() {
-    return "owners,domains";
+    return "owners,domains,retentionPeriod";
   }
 
   @Override
@@ -2151,7 +2304,7 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumns(
-        tableId, limit, offset, fieldsParam, include, null, authorizer, securityContext);
+        tableId, limit, offset, fieldsParam, include, null, "asc", null, authorizer, securityContext);
   }
 
   public ResultList<Column> getTableColumns(
@@ -2164,7 +2317,16 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumns(
-        tableId, limit, offset, fieldsParam, include, sortBy, "asc", authorizer, securityContext);
+        tableId,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        "asc",
+        null,
+        authorizer,
+        securityContext);
   }
 
   public ResultList<Column> getTableColumns(
@@ -2177,9 +2339,42 @@ public class TableRepository extends EntityRepository<Table> {
       String sortOrder,
       Authorizer authorizer,
       SecurityContext securityContext) {
+    return getTableColumns(
+        tableId,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        sortOrder,
+        null,
+        authorizer,
+        securityContext);
+  }
+
+  public ResultList<Column> getTableColumns(
+      UUID tableId,
+      int limit,
+      int offset,
+      String fieldsParam,
+      Include include,
+      String sortBy,
+      String sortOrder,
+      List<EntityReference> piiOwners,
+      Authorizer authorizer,
+      SecurityContext securityContext) {
     Table table = find(tableId, include);
     return getTableColumnsInternal(
-        table, limit, offset, fieldsParam, include, sortBy, sortOrder, authorizer, securityContext);
+        table,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        sortOrder,
+        piiOwners,
+        authorizer,
+        securityContext);
   }
 
   public ResultList<Column> getTableColumnsByFQN(
@@ -2191,7 +2386,7 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumnsByFQN(
-        fqn, limit, offset, fieldsParam, include, null, authorizer, securityContext);
+        fqn, limit, offset, fieldsParam, include, null, "asc", null, authorizer, securityContext);
   }
 
   public ResultList<Column> getTableColumnsByFQN(
@@ -2204,7 +2399,16 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumnsByFQN(
-        fqn, limit, offset, fieldsParam, include, sortBy, "asc", authorizer, securityContext);
+        fqn,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        "asc",
+        null,
+        authorizer,
+        securityContext);
   }
 
   public ResultList<Column> getTableColumnsByFQN(
@@ -2217,9 +2421,42 @@ public class TableRepository extends EntityRepository<Table> {
       String sortOrder,
       Authorizer authorizer,
       SecurityContext securityContext) {
+    return getTableColumnsByFQN(
+        fqn,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        sortOrder,
+        null,
+        authorizer,
+        securityContext);
+  }
+
+  public ResultList<Column> getTableColumnsByFQN(
+      String fqn,
+      int limit,
+      int offset,
+      String fieldsParam,
+      Include include,
+      String sortBy,
+      String sortOrder,
+      List<EntityReference> piiOwners,
+      Authorizer authorizer,
+      SecurityContext securityContext) {
     Table table = findByName(fqn, include);
     return getTableColumnsInternal(
-        table, limit, offset, fieldsParam, include, sortBy, sortOrder, authorizer, securityContext);
+        table,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        sortBy,
+        sortOrder,
+        piiOwners,
+        authorizer,
+        securityContext);
   }
 
   private ResultList<Column> getTableColumnsInternal(
@@ -2230,11 +2467,10 @@ public class TableRepository extends EntityRepository<Table> {
       Include include,
       String sortBy,
       String sortOrder,
+      List<EntityReference> piiOwners,
       Authorizer authorizer,
       SecurityContext securityContext) {
-    // For paginated column access, we need to load the table with columns
-    // but we'll optimize the field loading to only process what we need
-    Table fullTable = get(null, table.getId(), getFields(Set.of(COLUMN_FIELD)), include, false);
+    Table fullTable = table;
 
     List<Column> allColumns = fullTable.getColumns();
     if (allColumns == null || allColumns.isEmpty()) {
@@ -2289,8 +2525,10 @@ public class TableRepository extends EntityRepository<Table> {
       setColumnProfile(paginatedColumns);
       populateEntityFieldTags(entityType, paginatedColumns, table.getFullyQualifiedName(), true);
       paginatedColumns =
-          PIIMasker.getTableProfile(
-              table.getFullyQualifiedName(), paginatedColumns, authorizer, securityContext);
+          piiOwners != null
+              ? PIIMasker.getTableProfile(piiOwners, paginatedColumns, authorizer, securityContext)
+              : PIIMasker.getTableProfile(
+                  table.getFullyQualifiedName(), paginatedColumns, authorizer, securityContext);
     }
 
     // Calculate pagination metadata

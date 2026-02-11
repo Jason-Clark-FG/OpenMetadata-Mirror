@@ -35,6 +35,9 @@ final class ReadBundle {
   private final Map<UUID, Votes> voteValues = new HashMap<>();
   private final Set<UUID> loadedVotes = new HashSet<>();
 
+  private final Map<UUID, Object> extensionValues = new HashMap<>();
+  private final Set<UUID> loadedExtensions = new HashSet<>();
+
   void putRelations(UUID entityId, String field, Include include, List<EntityReference> refs) {
     RelationKey key = new RelationKey(entityId, field, normalize(include));
     loadedRelations.add(key);
@@ -71,6 +74,19 @@ final class ReadBundle {
       return Optional.empty();
     }
     return Optional.of(voteValues.getOrDefault(entityId, new Votes()));
+  }
+
+  void putExtension(UUID entityId, Object extension) {
+    loadedExtensions.add(entityId);
+    extensionValues.put(entityId, extension);
+  }
+
+  boolean hasExtension(UUID entityId) {
+    return loadedExtensions.contains(entityId);
+  }
+
+  Object getExtensionOrNull(UUID entityId) {
+    return extensionValues.get(entityId);
   }
 
   private Include normalize(Include include) {

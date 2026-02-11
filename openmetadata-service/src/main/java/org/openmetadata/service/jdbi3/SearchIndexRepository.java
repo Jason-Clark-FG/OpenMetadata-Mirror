@@ -160,6 +160,25 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
   }
 
   @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<SearchIndex> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (SearchIndex searchIndex : entities) {
+      EntityReference service = searchIndex.getService();
+      if (service == null || service.getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              service.getId(),
+              searchIndex.getId(),
+              service.getType(),
+              entityType,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
+  @Override
   public void setFields(SearchIndex searchIndex, Fields fields, RelationIncludes relationIncludes) {
     searchIndex.setService(getContainer(searchIndex.getId()));
     if (searchIndex.getFields() != null) {

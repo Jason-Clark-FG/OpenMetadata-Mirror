@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.openmetadata.schema.EntityInterface;
@@ -101,6 +102,25 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
     addServiceRelationship(apiCollection, apiCollection.getService());
   }
 
+  @Override
+  protected void storeEntitySpecificRelationshipsForMany(List<APICollection> entities) {
+    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
+    for (APICollection apiCollection : entities) {
+      EntityReference service = apiCollection.getService();
+      if (service == null || service.getId() == null) {
+        continue;
+      }
+      relationships.add(
+          newRelationship(
+              service.getId(),
+              apiCollection.getId(),
+              service.getType(),
+              entityType,
+              Relationship.CONTAINS));
+    }
+    bulkInsertRelationships(relationships);
+  }
+
   private List<EntityReference> getAPIEndpoints(APICollection apiCollection) {
     return apiCollection == null
         ? null
@@ -127,7 +147,9 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
   @Override
   public void setFields(
       APICollection apiCollection, Fields fields, RelationIncludes relationIncludes) {
-    apiCollection.setService(getContainer(apiCollection.getId()));
+    if (apiCollection.getService() == null) {
+      apiCollection.setService(getContainer(apiCollection.getId()));
+    }
     apiCollection.setApiEndpoints(
         fields.contains("apiEndpoints")
             ? getAPIEndpoints(apiCollection)
@@ -151,11 +173,17 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
       return;
     }
 
+    List<APICollection> collectionsMissingService =
+        apiCollections.stream().filter(collection -> collection.getService() == null).toList();
+    if (collectionsMissingService.isEmpty()) {
+      return;
+    }
+
     // Batch fetch service references for all API collections
-    Map<UUID, EntityReference> serviceRefs = batchFetchServices(apiCollections);
+    Map<UUID, EntityReference> serviceRefs = batchFetchServices(collectionsMissingService);
 
     // Set service field for all API collections
-    for (APICollection apiCollection : apiCollections) {
+    for (APICollection apiCollection : collectionsMissingService) {
       EntityReference serviceRef = serviceRefs.get(apiCollection.getId());
       if (serviceRef != null) {
         apiCollection.withService(serviceRef);
@@ -175,15 +203,32 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
     List<CollectionDAO.EntityRelationshipObject> records =
         daoCollection
             .relationshipDAO()
-            .findFromBatch(entityListToStrings(apiCollections), Relationship.CONTAINS.ordinal());
+            .findFromBatch(
+                entityListToStrings(apiCollections),
+                Relationship.CONTAINS.ordinal(),
+                Entity.API_SERVICE,
+                Include.ALL);
+
+    if (records.isEmpty()) {
+      return serviceMap;
+    }
+
+    List<UUID> serviceIds =
+        records.stream()
+            .map(record -> UUID.fromString(record.getFromId()))
+            .distinct()
+            .toList();
+
+    Map<UUID, EntityReference> serviceRefMap =
+        Entity.getEntityReferencesByIds(Entity.API_SERVICE, serviceIds, Include.ALL).stream()
+            .collect(Collectors.toMap(EntityReference::getId, ref -> ref));
 
     for (CollectionDAO.EntityRelationshipObject record : records) {
       // We're looking for records where API Service contains API Collection
-      if (Entity.API_SERVICE.equals(record.getFromEntity())) {
-        UUID apiCollectionId = UUID.fromString(record.getToId());
-        EntityReference serviceRef =
-            Entity.getEntityReferenceById(
-                Entity.API_SERVICE, UUID.fromString(record.getFromId()), Include.NON_DELETED);
+      UUID apiCollectionId = UUID.fromString(record.getToId());
+      UUID serviceId = UUID.fromString(record.getFromId());
+      EntityReference serviceRef = serviceRefMap.get(serviceId);
+      if (serviceRef != null) {
         serviceMap.put(apiCollectionId, serviceRef);
       }
     }
