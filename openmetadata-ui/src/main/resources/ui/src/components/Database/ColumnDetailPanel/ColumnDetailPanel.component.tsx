@@ -351,10 +351,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
 
       const response = onColumnFieldUpdate
         ? await onColumnFieldUpdate(
-            activeColumn.fullyQualifiedName,
-            update,
-            true
-          )
+          activeColumn.fullyQualifiedName,
+          update,
+          true
+        )
         : // Fallback to direct API call for Table entities when used outside GenericProvider
         ((await updateTableColumn(
           activeColumn.fullyQualifiedName,
