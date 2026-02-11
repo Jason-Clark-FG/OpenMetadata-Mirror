@@ -204,26 +204,29 @@ test.describe(
       }) => {
         await visitTestCaseIncidentPage(viewIncidentsPage);
         await expect(
-          viewIncidentsPage.getByTestId('issue-tab-container')
+          viewIncidentsPage.getByTestId('open-task')
         ).toBeVisible();
+        await expect(
+          viewIncidentsPage.getByTestId('closed-task')
+        ).toBeVisible();
+        await expect(
+          viewIncidentsPage.getByTestId('edit-resolution-icon')
+        ).toBeHidden();
       });
 
       test('User with TEST_CASE.VIEW_ALL can view incident CONTENT in UI', async ({
         viewIncidentsPage,
       }) => {
         await visitTestCaseIncidentPage(viewIncidentsPage);
-        const issueTabContainer = viewIncidentsPage.getByTestId(
-          'issue-tab-container'
-        );
-        await expect(issueTabContainer).toBeVisible();
-
-        const statusBadge = viewIncidentsPage
-          .getByTestId('status-badge')
-          .first();
-        if (await statusBadge.isVisible()) {
-          await expect(statusBadge).toBeVisible();
-        }
-
+        await expect(
+          viewIncidentsPage.getByTestId('open-task')
+        ).toBeVisible();
+        await expect(
+          viewIncidentsPage.getByTestId('closed-task')
+        ).toBeVisible();
+        await expect(
+          viewIncidentsPage.getByTestId('open-task')
+        ).toContainText(/open/i);
         await expect(
           viewIncidentsPage.getByTestId('edit-resolution-icon')
         ).toBeHidden();
@@ -234,8 +237,14 @@ test.describe(
       }) => {
         await visitTestCaseIncidentPage(tableEditIncidentsPage);
         await expect(
-          tableEditIncidentsPage.getByTestId('issue-tab-container')
+          tableEditIncidentsPage.getByTestId('open-task')
         ).toBeVisible();
+        await expect(
+          tableEditIncidentsPage.getByTestId('closed-task')
+        ).toBeVisible();
+        await expect(
+          tableEditIncidentsPage.getByTestId('edit-resolution-icon')
+        ).toBeHidden();
       });
     });
 
@@ -244,32 +253,24 @@ test.describe(
         editIncidentsPage,
       }) => {
         await visitTestCaseIncidentPage(editIncidentsPage);
-        const issueTabContainer = editIncidentsPage.getByTestId(
-          'issue-tab-container'
-        );
-        await expect(issueTabContainer).toBeVisible();
-
+        await expect(
+          editIncidentsPage.getByTestId('open-task')
+        ).toBeVisible();
         const editIcon = editIncidentsPage.getByTestId('edit-resolution-icon');
-        if (await editIcon.first().isVisible()) {
-          await expect(editIcon.first()).toBeVisible();
-        }
+        await expect(editIcon.first()).toBeVisible();
       });
 
       test('User with TABLE.EDIT_TESTS can see edit icon on incidents (alternative)', async ({
         tableEditIncidentsPage,
       }) => {
         await visitTestCaseIncidentPage(tableEditIncidentsPage);
-        const issueTabContainer = tableEditIncidentsPage.getByTestId(
-          'issue-tab-container'
-        );
-        await expect(issueTabContainer).toBeVisible();
-
+        await expect(
+          tableEditIncidentsPage.getByTestId('open-task')
+        ).toBeVisible();
         const editIcon = tableEditIncidentsPage.getByTestId(
           'edit-resolution-icon'
         );
-        if (await editIcon.first().isVisible()) {
-          await expect(editIcon.first()).toBeVisible();
-        }
+        await expect(editIcon.first()).toBeVisible();
       });
     });
 
@@ -277,19 +278,15 @@ test.describe(
       test('User with only VIEW cannot see edit icon and cannot POST incidents', async ({
         viewIncidentsPage,
       }) => {
-        // UI: Navigate to incidents page and verify edit-resolution-icon is NOT visible
         await visitTestCaseIncidentPage(viewIncidentsPage);
         await expect(
-          viewIncidentsPage.getByTestId('issue-tab-container')
+          viewIncidentsPage.getByTestId('open-task')
         ).toBeVisible();
-
         await expect(
           viewIncidentsPage.getByTestId('edit-resolution-icon')
         ).toBeHidden();
 
-        // API: Verify POST is forbidden
         const { apiContext } = await getApiContext(viewIncidentsPage);
-
         const res = await apiContext.post(
           '/api/v1/dataQuality/testCases/testCaseIncidentStatus',
           {
@@ -324,19 +321,15 @@ test.describe(
       test('Consumer-like user cannot see edit icon and cannot create/edit incidents', async ({
         consumerLikePage,
       }) => {
-        // UI: Navigate to incidents page and verify edit-resolution-icon is NOT visible
         await visitTestCaseIncidentPage(consumerLikePage);
         await expect(
-          consumerLikePage.getByTestId('issue-tab-container')
+          consumerLikePage.getByTestId('open-task')
         ).toBeVisible();
-
         await expect(
           consumerLikePage.getByTestId('edit-resolution-icon')
         ).toBeHidden();
 
-        // API: Verify POST is forbidden
         const { apiContext } = await getApiContext(consumerLikePage);
-
         const postRes = await apiContext.post(
           '/api/v1/dataQuality/testCases/testCaseIncidentStatus',
           {

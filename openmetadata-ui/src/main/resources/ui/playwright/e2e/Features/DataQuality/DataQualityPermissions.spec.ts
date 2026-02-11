@@ -769,12 +769,14 @@ test.describe(
         const failedRowsTab = deleteFailedRowsPage.getByRole('tab', {
           name: /failed rows sample/i,
         });
-        if (await failedRowsTab.isVisible()) {
-          await failedRowsTab.click();
-          await expect(
-            deleteFailedRowsPage.getByTestId('entity-page-header')
-          ).toBeVisible();
-        }
+        await expect(failedRowsTab).toBeVisible();
+        const failedRowsPromise =
+          waitForFailedRowsSampleResponse(deleteFailedRowsPage);
+        await failedRowsTab.click();
+        await failedRowsPromise;
+        await expect(
+          deleteFailedRowsPage.getByTestId('sample-data-manage-button')
+        ).toBeVisible();
       });
     });
 
@@ -801,23 +803,29 @@ test.describe(
         await testSuiteListPromise;
 
         await expect(
-          suitePage.getByTestId('test-suite-container')
+          suitePage.getByTestId('add-test-suite-btn')
         ).toBeVisible();
-        await expect(suitePage.getByTestId('test-suite-table')).toBeVisible();
+        await expect(
+          suitePage.getByTestId('table-suite-radio-btn')
+        ).toBeVisible();
       });
 
-      test('User with TEST_SUITE.VIEW_ALL can view test suite CONTENT in UI', async ({
-        suitePage,
+      test('User with TEST_SUITE.VIEW_ALL can view test suite CONTENT but cannot add test case', async ({
+        viewBasicPage,
       }) => {
-        const testSuiteListPromise =
-          waitForTestSuiteListResponse(suitePage);
-        await suitePage.goto('/data-quality/test-suites');
-        await testSuiteListPromise;
+        const testSuiteDetailsPromise = viewBasicPage.waitForResponse(
+          (res) =>
+            res.url().includes(`/api/v1/dataQuality/testSuites/`) &&
+            res.status() === 200
+        );
+        await viewBasicPage.goto(
+          `/test-suites/${encodeURIComponent(logicalTestSuiteFqn)}`
+        );
+        await testSuiteDetailsPromise;
 
         await expect(
-          suitePage.getByTestId('test-suite-container')
-        ).toBeVisible();
-        await expect(suitePage.getByTestId('test-suite-table')).toBeVisible();
+          viewBasicPage.getByTestId('add-test-case-btn')
+        ).toBeHidden();
       });
 
       test('User with TEST_SUITE.EDIT_ALL can see add test case button on suite details', async ({
@@ -847,7 +855,10 @@ test.describe(
         await testSuiteListPromise;
 
         await expect(
-          viewAllPage.getByTestId('test-suite-container')
+          viewAllPage.getByTestId('add-test-suite-btn')
+        ).toBeHidden();
+        await expect(
+          viewAllPage.getByTestId('table-suite-radio-btn')
         ).toBeVisible();
       });
     });
