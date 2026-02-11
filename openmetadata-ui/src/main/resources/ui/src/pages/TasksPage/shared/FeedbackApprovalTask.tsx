@@ -96,8 +96,8 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
     gap: 2,
     minWidth: 0,
     display: 'flex',
-    flex: '0 0 45%',
-    maxWidth: '45%',
+    flex: '0 0 46%',
+    maxWidth: '46%',
     alignItems: 'center',
     color: theme.palette.grey[700],
   };
@@ -111,7 +111,6 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
         rowGap: 4,
         flexDirection: 'column',
         mt: -1.5,
-        maxWidth: '405px',
       }}>
       {recognizerName && (
         <Box sx={rowStyle}>
