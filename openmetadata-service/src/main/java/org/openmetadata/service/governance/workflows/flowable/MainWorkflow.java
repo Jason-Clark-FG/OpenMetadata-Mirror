@@ -14,16 +14,19 @@ import java.util.Set;
 import lombok.Getter;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.FlowableListener;
 import org.flowable.bpmn.model.Process;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.EdgeDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.governance.workflows.WorkflowInstanceListener;
 import org.openmetadata.service.governance.workflows.elements.Edge;
 import org.openmetadata.service.governance.workflows.elements.NodeFactory;
 import org.openmetadata.service.governance.workflows.elements.NodeInterface;
 import org.openmetadata.service.governance.workflows.elements.nodes.endEvent.EndEvent;
+import org.openmetadata.service.governance.workflows.flowable.builders.FlowableListenerBuilder;
 
 @Getter
 public class MainWorkflow {
@@ -43,6 +46,8 @@ public class MainWorkflow {
     process.setName(
         Optional.ofNullable(workflowDefinition.getDisplayName())
             .orElse(workflowDefinition.getFullyQualifiedName()));
+    attachWorkflowInstanceListeners(process);
+
     model.addProcess(process);
 
     // Add Nodes
@@ -224,6 +229,28 @@ public class MainWorkflow {
       for (WorkflowNodeDefinitionInterface nodeDefinition : nodeMap.values()) {
         validateNode(nodeDefinition);
       }
+    }
+  }
+
+  private void attachWorkflowInstanceListeners(Process process) {
+    List<FlowableListener> listeners = new ArrayList<>();
+
+    // Add start listener to create workflow instance
+    listeners.add(
+        new FlowableListenerBuilder()
+            .event("start")
+            .implementation(WorkflowInstanceListener.class.getName())
+            .build());
+
+    // Add end listener to update workflow instance
+    listeners.add(
+        new FlowableListenerBuilder()
+            .event("end")
+            .implementation(WorkflowInstanceListener.class.getName())
+            .build());
+
+    for (FlowableListener listener : listeners) {
+      process.getExecutionListeners().add(listener);
     }
   }
 }

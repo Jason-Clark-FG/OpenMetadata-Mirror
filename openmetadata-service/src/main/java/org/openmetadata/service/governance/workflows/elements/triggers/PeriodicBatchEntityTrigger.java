@@ -4,6 +4,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.Workflow.getFlowableElementId;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
@@ -13,10 +14,13 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.CallActivity;
 import org.flowable.bpmn.model.EndEvent;
+import org.flowable.bpmn.model.ErrorEventDefinition;
 import org.flowable.bpmn.model.FieldExtension;
+import org.flowable.bpmn.model.FlowableListener;
 import org.flowable.bpmn.model.IOParameter;
 import org.flowable.bpmn.model.MultiInstanceLoopCharacteristics;
 import org.flowable.bpmn.model.Process;
@@ -29,11 +33,13 @@ import org.openmetadata.schema.entity.app.ScheduleTimeline;
 import org.openmetadata.schema.governance.workflows.elements.triggers.PeriodicBatchEntityTriggerDefinition;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.scheduler.AppScheduler;
+import org.openmetadata.service.governance.workflows.TriggerExceptionListener;
 import org.openmetadata.service.governance.workflows.elements.TriggerInterface;
 import org.openmetadata.service.governance.workflows.elements.triggers.impl.FetchEntitiesImpl;
 import org.openmetadata.service.governance.workflows.flowable.builders.CallActivityBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.EndEventBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.FieldExtensionBuilder;
+import org.openmetadata.service.governance.workflows.flowable.builders.FlowableListenerBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.MultiInstanceLoopCharacteristicsBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.ServiceTaskBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.StartEventBuilder;
@@ -69,7 +75,8 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
       Process process = new Process();
       process.setId(processId);
       process.setName(processId);
-      attachWorkflowInstanceListeners(process);
+      // Do not attach workflow instance listeners to trigger workflows
+      // Only the main workflow should create workflow instance records
 
       Optional<TimerEventDefinition> oTimerDefinition =
           Optional.ofNullable(getTimerEventDefinition(triggerDefinition.getConfig().getSchedule()));
@@ -86,6 +93,30 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
 
       CallActivity workflowTrigger = getWorkflowTriggerCallActivity(processId, mainWorkflowName);
       process.addFlowElement(workflowTrigger);
+
+      // Add boundary event for workflow trigger exceptions
+      ErrorEventDefinition runtimeExceptionDefinition = new ErrorEventDefinition();
+      runtimeExceptionDefinition.setErrorCode(WORKFLOW_RUNTIME_EXCEPTION);
+
+      BoundaryEvent runtimeExceptionBoundaryEvent = new BoundaryEvent();
+      runtimeExceptionBoundaryEvent.setId(
+          getFlowableElementId(workflowTrigger.getId(), "runtimeExceptionBoundaryEvent"));
+      runtimeExceptionBoundaryEvent.addEventDefinition(runtimeExceptionDefinition);
+      runtimeExceptionBoundaryEvent.setAttachedToRef(workflowTrigger);
+
+      // Add specialized trigger exception listener for boundary event
+      // This only creates workflow instance records when the trigger itself fails
+      FlowableListener triggerExceptionListener =
+          new FlowableListenerBuilder()
+              .event("end")
+              .implementation(TriggerExceptionListener.class.getName())
+              .build();
+      runtimeExceptionBoundaryEvent.getExecutionListeners().add(triggerExceptionListener);
+      process.addFlowElement(runtimeExceptionBoundaryEvent);
+
+      EndEvent errorEndEvent =
+          new EndEventBuilder().id(getFlowableElementId(processId, "errorEndEvent")).build();
+      process.addFlowElement(errorEndEvent);
 
       EndEvent endEvent =
           new EndEventBuilder().id(getFlowableElementId(processId, "endEvent")).build();
@@ -106,6 +137,9 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
       process.addFlowElement(notFinished);
       // WorkflowTrigger -> Fetch Entities (Loop Back to get next batch)
       process.addFlowElement(new SequenceFlow(workflowTrigger.getId(), fetchEntitiesTask.getId()));
+      // Boundary event -> Error end event
+      process.addFlowElement(
+          new SequenceFlow(runtimeExceptionBoundaryEvent.getId(), errorEndEvent.getId()));
 
       processes.add(process);
     }

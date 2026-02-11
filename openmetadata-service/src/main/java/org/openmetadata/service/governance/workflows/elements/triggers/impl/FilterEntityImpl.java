@@ -38,6 +38,12 @@ public class FilterEntityImpl implements JavaDelegate {
 
   @Override
   public void execute(DelegateExecution execution) {
+    // Always set business key for the trigger workflow so it can be inherited by main workflow
+    // This follows the same pattern as main branch where WorkflowInstanceListener always set
+    // business key
+    java.util.UUID businessKey = java.util.UUID.randomUUID();
+    WorkflowHandler.getInstance().updateBusinessKey(execution.getProcessInstanceId(), businessKey);
+
     WorkflowVariableHandler varHandler = new WorkflowVariableHandler(execution);
     List<String> excludedFilter = null;
     if (excludedFieldsExpr != null && excludedFieldsExpr.getValue(execution) != null) {

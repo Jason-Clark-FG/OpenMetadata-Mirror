@@ -21,9 +21,11 @@ import org.flowable.bpmn.model.Process;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.StartEvent;
 import org.openmetadata.schema.governance.workflows.elements.triggers.NoOpTriggerDefinition;
+import org.openmetadata.service.governance.workflows.TriggerExceptionListener;
 import org.openmetadata.service.governance.workflows.elements.TriggerInterface;
 import org.openmetadata.service.governance.workflows.flowable.builders.CallActivityBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.EndEventBuilder;
+import org.openmetadata.service.governance.workflows.flowable.builders.FlowableListenerBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.StartEventBuilder;
 
 public class NoOpTrigger implements TriggerInterface {
@@ -36,7 +38,8 @@ public class NoOpTrigger implements TriggerInterface {
     Process process = new Process();
     process.setId(triggerWorkflowId);
     process.setName(triggerWorkflowId);
-    attachWorkflowInstanceListeners(process);
+    // Do not attach workflow instance listeners to trigger workflows
+    // Only the main workflow should create workflow instance records
 
     StartEvent startEvent =
         new StartEventBuilder().id(getFlowableElementId(triggerWorkflowId, "startEvent")).build();
@@ -55,9 +58,15 @@ public class NoOpTrigger implements TriggerInterface {
     runtimeExceptionBoundaryEvent.addEventDefinition(runtimeExceptionDefinition);
 
     runtimeExceptionBoundaryEvent.setAttachedToRef(workflowTrigger);
-    for (FlowableListener listener : getWorkflowInstanceListeners(List.of("end"))) {
-      runtimeExceptionBoundaryEvent.getExecutionListeners().add(listener);
-    }
+
+    // Add specialized trigger exception listener for boundary event
+    // This only creates workflow instance records when the trigger itself fails
+    FlowableListener triggerExceptionListener =
+        new FlowableListenerBuilder()
+            .event("end")
+            .implementation(TriggerExceptionListener.class.getName())
+            .build();
+    runtimeExceptionBoundaryEvent.getExecutionListeners().add(triggerExceptionListener);
     process.addFlowElement(runtimeExceptionBoundaryEvent);
 
     EndEvent errorEndEvent =

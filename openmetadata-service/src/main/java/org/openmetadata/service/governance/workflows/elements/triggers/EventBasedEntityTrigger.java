@@ -31,11 +31,13 @@ import org.openmetadata.schema.governance.workflows.elements.triggers.Config;
 import org.openmetadata.schema.governance.workflows.elements.triggers.Event;
 import org.openmetadata.schema.governance.workflows.elements.triggers.EventBasedEntityTriggerDefinition;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.governance.workflows.TriggerExceptionListener;
 import org.openmetadata.service.governance.workflows.elements.TriggerInterface;
 import org.openmetadata.service.governance.workflows.elements.triggers.impl.FilterEntityImpl;
 import org.openmetadata.service.governance.workflows.flowable.builders.CallActivityBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.EndEventBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.FieldExtensionBuilder;
+import org.openmetadata.service.governance.workflows.flowable.builders.FlowableListenerBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.ServiceTaskBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.SignalBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.StartEventBuilder;
@@ -59,7 +61,8 @@ public class EventBasedEntityTrigger implements TriggerInterface {
     Process process = new Process();
     process.setId(triggerWorkflowId);
     process.setName(triggerWorkflowId);
-    attachWorkflowInstanceListeners(process);
+    // Do not attach workflow instance listeners to trigger workflows
+    // Only the main workflow should create workflow instance records
 
     setStartEvents(triggerWorkflowId, triggerDefinition);
 
@@ -79,9 +82,16 @@ public class EventBasedEntityTrigger implements TriggerInterface {
     runtimeExceptionBoundaryEvent.addEventDefinition(runtimeExceptionDefinition);
 
     runtimeExceptionBoundaryEvent.setAttachedToRef(workflowTrigger);
-    for (FlowableListener listener : getWorkflowInstanceListeners(List.of("end"))) {
-      runtimeExceptionBoundaryEvent.getExecutionListeners().add(listener);
-    }
+
+    // Add specialized trigger exception listener for boundary event
+    // This only creates workflow instance records when the trigger itself fails
+    FlowableListener triggerExceptionListener =
+        new FlowableListenerBuilder()
+            .event("end")
+            .implementation(TriggerExceptionListener.class.getName())
+            .build();
+    runtimeExceptionBoundaryEvent.getExecutionListeners().add(triggerExceptionListener);
+
     process.addFlowElement(runtimeExceptionBoundaryEvent);
 
     EndEvent errorEndEvent =
