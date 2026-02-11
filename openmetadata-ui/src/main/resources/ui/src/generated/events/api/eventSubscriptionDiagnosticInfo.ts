@@ -221,6 +221,6 @@ export enum EventType {
     TaskResolved = "taskResolved",
     ThreadCreated = "threadCreated",
     ThreadUpdated = "threadUpdated",
-    UserLoggedIn = "userLoggedIn",
-    UserLoggedOut = "userLoggedOut",
+    UserLogin = "userLogin",
+    UserLogout = "userLogout",
 }
