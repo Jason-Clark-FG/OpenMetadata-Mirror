@@ -228,6 +228,7 @@ export const useLearningResources = ({
     const cachedItems = itemsByPageRef.current.get(currentPage);
     if (cachedItems && !filtersChanged) {
       setResources(cachedItems);
+      setIsLoading(false);
       setPaging((prev) => ({
         ...prev,
         total: totalFromPage1Ref.current || prev.total,

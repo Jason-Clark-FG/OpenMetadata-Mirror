@@ -335,6 +335,7 @@ const ResourceRow = ({
         <Box sx={{ display: 'flex', gap: '10px' }}>
           <Tooltip title={t('label.edit')}>
             <IconButton
+              data-testid={`edit-${record.name}`}
               size="small"
               sx={{
                 borderRadius: '4px',
@@ -351,6 +352,7 @@ const ResourceRow = ({
 
           <Tooltip title={t('label.delete')}>
             <IconButton
+              data-testid={`delete-${record.name}`}
               size="small"
               sx={{
                 borderRadius: '4px',
@@ -461,6 +463,7 @@ export const LearningResourcesPage: React.FC = () => {
       pageTitle={t('label.learning-resource')}>
       <GlobalStyles styles={layoutStyles} />
       <Box
+        data-testid="learning-resources-page"
         sx={{
           display: 'flex',
           flexDirection: 'column',
@@ -515,6 +518,7 @@ export const LearningResourcesPage: React.FC = () => {
           </Box>
 
           <Button
+            data-testid="create-resource"
             startIcon={<PlusOutlined />}
             variant="contained"
             onClick={handleCreate}>
@@ -612,7 +616,7 @@ export const LearningResourcesPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
 
-                  <TableBody>
+                  <TableBody data-testid="learning-resources-table-body">
                     {isLoading ? (
                       <TableRow>
                         <TableCell align="center" colSpan={5}>
