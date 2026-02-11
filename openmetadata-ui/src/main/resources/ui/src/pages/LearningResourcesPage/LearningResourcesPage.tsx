@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { PlusOutlined } from '@ant-design/icons'; // icon only is fine
+import { PlusOutlined } from '@ant-design/icons';
 import { Trash01 } from '@untitledui/icons';
 import { isEmpty } from 'lodash';
 import { DateTime } from 'luxon';
@@ -20,7 +20,6 @@ import {
   Box,
   Button,
   Chip,
-  GlobalStyles,
   IconButton,
   Paper,
   Stack,
@@ -76,26 +75,28 @@ import { LearningResourceCard } from '../../components/Learning/LearningResource
 import { ResourcePlayerModal } from '../../components/Learning/ResourcePlayer/ResourcePlayerModal.component';
 import { LearningResourceForm } from './LearningResourceForm.component';
 
-const layoutStyles = {
-  '.page-layout-v1-vertical-scroll.learning-resources-page-layout': {
+import { styled } from '@mui/material/styles';
+
+const StyledPageLayout = styled(PageLayoutV1)(() => ({
+  '& .page-layout-v1-vertical-scroll.learning-resources-page-layout': {
     overflow: 'hidden',
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
   },
-  '.learning-resources-page-layout > .ant-row': {
+  '& .learning-resources-page-layout > .ant-row': {
     flex: 1,
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
   },
-  '.learning-resources-page-layout .ant-row .ant-col:last-child': {
+  '& .learning-resources-page-layout .ant-row .ant-col:last-child': {
     minHeight: 0,
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
   },
-};
+}));
 
 const getResourceTypeIcon = (type: string) => {
   const icons: Record<
@@ -129,9 +130,9 @@ const getCategoryColors = (category: string) => {
     LEARNING_CATEGORIES[category as keyof typeof LEARNING_CATEGORIES];
 
   return {
-    bg: info?.bgColor ?? '#f8f9fc',
-    border: info?.borderColor ?? '#d5d9eb',
-    color: info?.color ?? '#363f72',
+    bg: info?.bgColor,
+    border: info?.borderColor,
+    color: info?.color,
   };
 };
 
@@ -454,14 +455,13 @@ export const LearningResourcesPage: React.FC = () => {
   );
 
   return (
-    <PageLayoutV1
+    <StyledPageLayout
       mainContainerClassName="learning-resources-page-layout"
       pageContainerStyle={{
         height: 'calc(100vh - 64px)',
         overflow: 'hidden',
       }}
       pageTitle={t('label.learning-resource')}>
-      <GlobalStyles styles={layoutStyles} />
       <Box
         data-testid="learning-resources-page"
         sx={{
@@ -713,6 +713,6 @@ export const LearningResourcesPage: React.FC = () => {
           />
         )}
       </Box>
-    </PageLayoutV1>
+    </StyledPageLayout>
   );
 };
