@@ -111,6 +111,12 @@ if [[ $database == "postgresql" ]]; then
 
     if [[ "${USE_TMPFS:-false}" == "true" ]]; then
         echo "Using tmpfs for PostgreSQL and OpenSearch (CI performance mode)"
+
+        TEMP_BASE_COMPOSE="/tmp/docker-compose-postgres-base-$$.yml"
+        sed '/^\s*-\s*\.\/docker-volume\/db-data-postgres:/d; /^\s*-\s*es-data:/d' \
+            docker/development/docker-compose-postgres.yml > "$TEMP_BASE_COMPOSE"
+
+        COMPOSE_FILE="$TEMP_BASE_COMPOSE"
         COMPOSE_FILE_OVERRIDE="-f docker/development/docker-compose-postgres-tmpfs.yml"
     fi
 elif [[ $database == "mysql" ]]; then

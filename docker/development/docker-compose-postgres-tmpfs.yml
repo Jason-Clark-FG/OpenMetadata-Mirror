@@ -14,7 +14,10 @@
 #
 # Usage:
 #   Via environment variable: USE_TMPFS=true ./docker/run_local_docker.sh -d postgresql
-#   Or directly: docker compose -f docker-compose-postgres.yml -f docker-compose-postgres-tmpfs.yml up
+#
+# Note: This file should be used with a modified base compose file that has volume mounts removed.
+# The run_local_docker.sh script handles this automatically when USE_TMPFS=true by using sed to
+# remove conflicting volume mounts before layering this override file.
 #
 # Performance impact:
 #   - PostgreSQL: 30-70% faster for write-heavy operations (migrations, bulk inserts)
@@ -30,11 +33,9 @@ version: "3.9"
 
 services:
   postgresql:
-    volumes: !override []
     tmpfs:
       - /var/lib/postgresql/data:rw,noexec,nosuid,size=2g
 
   opensearch:
-    volumes: !override []
     tmpfs:
       - /usr/share/opensearch/data:rw,noexec,nosuid,size=1500m
