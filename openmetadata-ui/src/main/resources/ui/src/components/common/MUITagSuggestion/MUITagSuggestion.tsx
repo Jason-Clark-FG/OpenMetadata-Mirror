@@ -16,7 +16,6 @@ import { debounce, isArray, isEmpty } from 'lodash';
 import { EntityTags } from 'Models';
 import {
   FC,
-  HtmlHTMLAttributes,
   ReactNode,
   useCallback,
   useEffect,
@@ -173,12 +172,6 @@ const MUITagSuggestion: FC<MUITagSuggestionProps> = ({
       disableCloseOnSelect
       freeSolo
       multiple
-      // Force listbox to remount when options change to fix async search not updating dropdown
-      ListboxProps={
-        {
-          key: `listbox-${memoizedOptions.length}`,
-        } as HtmlHTMLAttributes<HTMLUListElement>
-      }
       autoFocus={autoFocus}
       data-testid="tag-suggestion"
       filterOptions={asyncFilterOptions}
@@ -244,7 +237,7 @@ const MUITagSuggestion: FC<MUITagSuggestionProps> = ({
           </Box>
         );
       }}
-      renderTags={(value: (string | TagOption)[], getTagProps) =>
+      renderValue={(value: (string | TagOption)[], getTagProps) =>
         value
           .filter((v): v is TagOption => typeof v !== 'string')
           .map((option: TagOption, index: number) => {
