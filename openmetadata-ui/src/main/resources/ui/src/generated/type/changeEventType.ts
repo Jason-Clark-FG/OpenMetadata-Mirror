@@ -33,4 +33,6 @@ export enum ChangeEventType {
     TaskResolved = "taskResolved",
     ThreadCreated = "threadCreated",
     ThreadUpdated = "threadUpdated",
+    UserLoggedIn = "userLoggedIn",
+    UserLoggedOut = "userLoggedOut",
 }
