@@ -172,8 +172,20 @@ const CustomNodeV1 = (props: NodeProps) => {
 
   // Expand column on ColumnLevelLineage change
   useEffect(() => {
+    if (isEditMode) {
+      setShowColumnsWithLineageOnly(false);
+    } else if (isColumnLevelLineage) {
+      setShowColumnsWithLineageOnly(true);
+    } else {
+      setShowColumnsWithLineageOnly(false);
+    }
+
     setColumnsExpanded(isColumnLevelLineage);
-  }, [isColumnLevelLineage]);
+  }, [isColumnLevelLineage, isEditMode]);
+
+  useEffect(() => {
+    setColumnsExpanded(isEditMode);
+  }, [isEditMode]);
 
   const {
     label,
@@ -251,7 +263,8 @@ const CustomNodeV1 = (props: NodeProps) => {
       <>
         <LineageNodeLabelV1
           entityChildrenData={entityChildrenData}
-          isChildrenListExpanded={columnsExpanded}
+          // derived expand state from local or global state
+          isChildrenListExpanded={columnsExpanded || expandAllColumns}
           node={node}
           showColumnsWithLineageOnly={showColumnsWithLineageOnly}
           toggleColumnsList={toggleColumnsExpanded}
@@ -265,6 +278,7 @@ const CustomNodeV1 = (props: NodeProps) => {
   }, [
     entityChildrenData,
     columnsExpanded,
+    expandAllColumns,
     node.id,
     showColumnsWithLineageOnly,
     isNewNode,
@@ -319,7 +333,7 @@ const CustomNodeV1 = (props: NodeProps) => {
       !supportColumns ||
       !isColumnLevelLineage ||
       isEmpty(entityChildrenData.children) ||
-      !columnsExpanded
+      !(columnsExpanded || expandAllColumns)
     ) {
       return null;
     }
@@ -327,7 +341,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     return (
       <NodeChildren
         entityChildrenData={entityChildrenData}
-        isChildrenListExpanded={columnsExpanded}
+        isChildrenListExpanded={columnsExpanded || expandAllColumns}
         isConnectable={isConnectable}
         node={node}
         showColumnsWithLineageOnly={showColumnsWithLineageOnly}
@@ -337,6 +351,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     node.entityType,
     entityChildrenData,
     columnsExpanded,
+    expandAllColumns,
     isConnectable,
     node,
     isColumnLevelLineage,

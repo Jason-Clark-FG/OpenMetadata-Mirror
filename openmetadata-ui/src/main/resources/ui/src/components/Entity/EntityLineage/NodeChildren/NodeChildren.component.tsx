@@ -63,7 +63,7 @@ const CustomPaginatedList = React.memo(
     showColumnsWithLineageOnly,
   }: CustomPaginatedListProps) => {
     const { t } = useTranslation();
-    const { tracedColumns } = useLineageStore();
+    const { tracedColumns, isEditMode } = useLineageStore();
 
     const totalPages = useMemo(
       () =>
@@ -88,21 +88,26 @@ const CustomPaginatedList = React.memo(
 
     const renderedItems = useMemo(
       () =>
-        (showColumnsWithLineageOnly ? columns : currentPageColumns).map(
-          (col) => {
-            const column = col as Column;
-            const rendered = renderColumn(column);
+        (showColumnsWithLineageOnly || isEditMode
+          ? columns
+          : currentPageColumns
+        ).map((col) => {
+          const column = col as Column;
+          const rendered = renderColumn(column);
 
-            return rendered ? (
-              <div
-                className="current-page-item"
-                key={column.fullyQualifiedName}>
-                {rendered}
-              </div>
-            ) : null;
-          }
-        ),
-      [currentPageColumns, renderColumn]
+          return rendered ? (
+            <div className="current-page-item" key={column.fullyQualifiedName}>
+              {rendered}
+            </div>
+          ) : null;
+        }),
+      [
+        currentPageColumns,
+        renderColumn,
+        isEditMode,
+        showColumnsWithLineageOnly,
+        columns,
+      ]
     );
 
     const handlePageChange = useCallback(
@@ -126,6 +131,10 @@ const CustomPaginatedList = React.memo(
       },
       [page, totalPages, handlePageChange]
     );
+
+    if (isEditMode || showColumnsWithLineageOnly) {
+      return renderedItems;
+    }
 
     return (
       <Stack spacing={2}>
@@ -414,13 +423,14 @@ const NodeChildren = ({
       isColumnVisible,
     ]
   );
+
   const renderColumnsData = useCallback(
     (column: Column) => {
       const { dataType } = column;
       const columnSummary = getColumnSummary(column);
 
       if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
-        return renderRecord(column);
+        return []; // renderRecord(column);
       } else {
         return (
           <ColumnContent

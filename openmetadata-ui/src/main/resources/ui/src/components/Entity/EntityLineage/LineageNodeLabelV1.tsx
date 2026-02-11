@@ -216,7 +216,7 @@ const EntityFooter = React.memo(
     entityChildrenData,
   }: LineageNodeLabelPropsExtended) => {
     const { t } = useTranslation();
-    const { isEditMode } = useLineageStore();
+    const { isEditMode, isColumnLevelLineage } = useLineageStore();
     const childrenHeading = useMemo(
       () => entityChildrenData.childrenHeading,
       [entityChildrenData.childrenHeading]
@@ -286,20 +286,22 @@ const EntityFooter = React.memo(
         </div>
         <div className="entity-footer__test-summary-and-filter">
           <TestSuiteSummaryContainer node={node} />
-          <Tooltip
-            placement="right"
-            title={t('message.only-show-columns-with-lineage')}>
-            <IconButton
-              className={classNames(
-                'only-show-columns-with-lineage-filter-button',
-                showColumnsWithLineageOnly && 'active'
-              )}
-              data-testid="lineage-filter-button"
-              disabled={isEditMode}
-              onClick={handleOnlyShowColumnsWithLineage}>
-              <FilterIcon height={20} width={20} />
-            </IconButton>
-          </Tooltip>
+          {isColumnLevelLineage && (
+            <Tooltip
+              placement="right"
+              title={t('message.only-show-columns-with-lineage')}>
+              <IconButton
+                className={classNames(
+                  'only-show-columns-with-lineage-filter-button',
+                  showColumnsWithLineageOnly && 'active'
+                )}
+                data-testid="lineage-filter-button"
+                disabled={isEditMode}
+                onClick={handleOnlyShowColumnsWithLineage}>
+                <FilterIcon height={20} width={20} />
+              </IconButton>
+            </Tooltip>
+          )}
         </div>
       </div>
     );

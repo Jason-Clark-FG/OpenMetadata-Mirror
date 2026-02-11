@@ -92,15 +92,16 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   setIsEditMode: (isEditMode: boolean) => set({ isEditMode }),
 
   toggleEditMode: () => {
-    const { activeLayer, isEditMode, updateActiveLayer } = get();
+    const { activeLayer, isEditMode, updateActiveLayer, setActiveLayer } =
+      get();
+    const updatedEditMode = !isEditMode;
 
-    const hasColumnLayer = activeLayer.includes(
-      LineageLayer.ColumnLevelLineage
-    );
-
-    if (!isEditMode && !hasColumnLayer) {
+    if (updatedEditMode) {
       updateActiveLayer(LineageLayer.ColumnLevelLineage);
-    } else if (isEditMode) {
+    } else {
+      setActiveLayer(
+        activeLayer.filter((layer) => layer !== LineageLayer.ColumnLevelLineage)
+      );
       set({ tracedColumns: new Set(), tracedNodes: new Set() });
     }
 
@@ -216,5 +217,7 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       selectedEdge: undefined,
       isColumnLevelLineage: false,
       isDQEnabled: false,
+      selectedColumn: undefined,
+      isCreatingEdge: false,
     }),
 }));
