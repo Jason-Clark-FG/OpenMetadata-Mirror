@@ -149,7 +149,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
   const schemaAllRowKeys = useMemo(() => {
     return getAllRowKeysByKeyName<Field>(
       messageSchema?.schemaFields ?? [],
-      'name'
+      'fullyQualifiedName'
     );
   }, [messageSchema?.schemaFields]);
 
@@ -495,7 +495,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
                 }
                 pagination={false}
                 rowClassName={getRowClassName}
-                rowKey="name"
+                rowKey="fullyQualifiedName"
                 scroll={TABLE_SCROLL_VALUE}
                 size="small"
                 staticVisibleColumns={COMMON_STATIC_TABLE_VISIBLE_COLUMNS}

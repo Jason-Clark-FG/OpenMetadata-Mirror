@@ -1492,7 +1492,7 @@ export const shouldCollapseSchema = <T extends { children?: T[] }>(
 };
 
 export const getExpandAllKeysToDepth = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   maxDepth = 3
@@ -1506,8 +1506,8 @@ export const getExpandAllKeysToDepth = <
 
     items.forEach((item) => {
       if (item.children && item.children.length > 0) {
-        if (item.name) {
-          keys.push(item.name);
+        if (item.fullyQualifiedName) {
+          keys.push(item.fullyQualifiedName);
         }
         // Continue collecting keys from children up to maxDepth
         collectKeys(item.children, currentDepth + 1);
