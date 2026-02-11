@@ -48,7 +48,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +75,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.mapper.EntityMapper;
+import org.openmetadata.service.monitoring.LatencyPhase;
 import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.search.SearchListFilter;
 import org.openmetadata.service.search.SearchSortFilter;
@@ -105,6 +105,7 @@ import org.openmetadata.service.util.ValidatorUtil;
 import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
+@LatencyPhase
 public abstract class EntityResource<T extends EntityInterface, K extends EntityRepository<T>> {
   protected final Class<T> entityClass;
   protected final String entityType;
@@ -317,14 +318,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       RelationIncludes relationIncludes,
       OperationContext operationContext,
       ResourceContextInterface resourceContext) {
-    return withPhase(
-        "resourceGet",
-        () -> {
-          authorizer.authorize(securityContext, operationContext, resourceContext);
-          return withPhase(
-              "resourceGetRepository",
-              () -> addHref(uriInfo, repository.get(uriInfo, id, fields, relationIncludes, false)));
-        });
+    authorizer.authorize(securityContext, operationContext, resourceContext);
+    return addHref(uriInfo, repository.get(uriInfo, id, fields, relationIncludes, false));
   }
 
   public T getVersionInternal(SecurityContext securityContext, UUID id, String version) {
@@ -426,42 +421,25 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       RelationIncludes relationIncludes,
       OperationContext operationContext,
       ResourceContextInterface resourceContext) {
-    return withPhase(
-        "resourceGetByName",
-        () -> {
-          authorizer.authorize(securityContext, operationContext, resourceContext);
-          return withPhase(
-              "resourceGetByNameRepository",
-              () ->
-                  addHref(
-                      uriInfo,
-                      repository.getByName(uriInfo, name, fields, relationIncludes, false)));
-        });
+    authorizer.authorize(securityContext, operationContext, resourceContext);
+    return addHref(uriInfo, repository.getByName(uriInfo, name, fields, relationIncludes, false));
   }
 
   public Response create(UriInfo uriInfo, SecurityContext securityContext, T entity) {
-    return withPhase(
-        "resourceCreate",
-        () -> {
-          OperationContext operationContext = new OperationContext(entityType, CREATE);
-          CreateResourceContext<T> createResourceContext =
-              new CreateResourceContext<>(entityType, entity);
-          limits.enforceLimits(securityContext, createResourceContext, operationContext);
-          authorizer.authorize(securityContext, operationContext, createResourceContext);
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          T createdEntity =
-              withPhase(
-                  "resourceCreateRepository",
-                  () ->
-                      addHref(
-                          uriInfo,
-                          repository.create(
-                              uriInfo,
-                              entity,
-                              securityContext.getUserPrincipal().getName(),
-                              impersonatedBy)));
-          return Response.created(createdEntity.getHref()).entity(createdEntity).build();
-        });
+    OperationContext operationContext = new OperationContext(entityType, CREATE);
+    CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+    limits.enforceLimits(securityContext, createResourceContext, operationContext);
+    authorizer.authorize(securityContext, operationContext, createResourceContext);
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    T createdEntity =
+        addHref(
+            uriInfo,
+            repository.create(
+                uriInfo,
+                entity,
+                securityContext.getUserPrincipal().getName(),
+                impersonatedBy));
+    return Response.created(createdEntity.getHref()).entity(createdEntity).build();
   }
 
   public Response create(
@@ -470,73 +448,48 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       List<AuthRequest> authRequests,
       AuthorizationLogic authorizationLogic,
       T entity) {
-    return withPhase(
-        "resourceCreate",
-        () -> {
-          OperationContext operationContext = new OperationContext(entityType, CREATE);
-          CreateResourceContext<T> createResourceContext =
-              new CreateResourceContext<>(entityType, entity);
-          limits.enforceLimits(securityContext, createResourceContext, operationContext);
-          authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          T createdEntity =
-              withPhase(
-                  "resourceCreateRepository",
-                  () ->
-                      addHref(
-                          uriInfo,
-                          repository.create(
-                              uriInfo,
-                              entity,
-                              securityContext.getUserPrincipal().getName(),
-                              impersonatedBy)));
-          return Response.created(createdEntity.getHref()).entity(createdEntity).build();
-        });
+    OperationContext operationContext = new OperationContext(entityType, CREATE);
+    CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+    limits.enforceLimits(securityContext, createResourceContext, operationContext);
+    authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    T createdEntity =
+        addHref(
+            uriInfo,
+            repository.create(
+                uriInfo,
+                entity,
+                securityContext.getUserPrincipal().getName(),
+                impersonatedBy));
+    return Response.created(createdEntity.getHref()).entity(createdEntity).build();
   }
 
   public Response createOrUpdate(UriInfo uriInfo, SecurityContext securityContext, T entity) {
-    return withPhase(
-        "resourceCreateOrUpdate",
-        () -> {
-          repository.prepareInternal(entity, true);
-          // If entity does not exist, this is a create operation, else update operation
-          ResourceContext<T> resourceContext =
-              getResourceContextByName(entity.getFullyQualifiedName());
-          MetadataOperation operation = createOrUpdateOperation(resourceContext);
-          OperationContext operationContext = new OperationContext(entityType, operation);
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          if (operation == CREATE) {
-            CreateResourceContext<T> createResourceContext =
-                new CreateResourceContext<>(entityType, entity);
-            limits.enforceLimits(securityContext, createResourceContext, operationContext);
-            authorizer.authorize(securityContext, operationContext, createResourceContext);
-            T createdEntity =
-                withPhase(
-                    "resourceCreateRepository",
-                    () ->
-                        addHref(
-                            uriInfo,
-                            repository.create(
-                                uriInfo,
-                                entity,
-                                securityContext.getUserPrincipal().getName(),
-                                impersonatedBy)));
-            return new PutResponse<>(Response.Status.CREATED, createdEntity, ENTITY_CREATED)
-                .toResponse();
-          }
-          resourceContext =
-              getResourceContextByName(
-                  entity.getFullyQualifiedName(), ResourceContextInterface.Operation.PUT);
-          authorizer.authorize(securityContext, operationContext, resourceContext);
-          PutResponse<T> response =
-              withPhase(
-                  "resourcePutRepository",
-                  () ->
-                      repository.createOrUpdate(
-                          uriInfo, entity, securityContext.getUserPrincipal().getName()));
-          addHref(uriInfo, response.getEntity());
-          return response.toResponse();
-        });
+    repository.prepareInternal(entity, true);
+    // If entity does not exist, this is a create operation, else update operation
+    ResourceContext<T> resourceContext = getResourceContextByName(entity.getFullyQualifiedName());
+    MetadataOperation operation = createOrUpdateOperation(resourceContext);
+    OperationContext operationContext = new OperationContext(entityType, operation);
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    if (operation == CREATE) {
+      CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+      limits.enforceLimits(securityContext, createResourceContext, operationContext);
+      authorizer.authorize(securityContext, operationContext, createResourceContext);
+      T createdEntity =
+          addHref(
+              uriInfo,
+              repository.create(
+                  uriInfo, entity, securityContext.getUserPrincipal().getName(), impersonatedBy));
+      return new PutResponse<>(Response.Status.CREATED, createdEntity, ENTITY_CREATED).toResponse();
+    }
+    resourceContext =
+        getResourceContextByName(
+            entity.getFullyQualifiedName(), ResourceContextInterface.Operation.PUT);
+    authorizer.authorize(securityContext, operationContext, resourceContext);
+    PutResponse<T> response =
+        repository.createOrUpdate(uriInfo, entity, securityContext.getUserPrincipal().getName());
+    addHref(uriInfo, response.getEntity());
+    return response.toResponse();
   }
 
   public Response createOrUpdate(
@@ -545,45 +498,28 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       List<AuthRequest> authRequests,
       AuthorizationLogic authorizationLogic,
       T entity) {
-    return withPhase(
-        "resourceCreateOrUpdate",
-        () -> {
-          repository.prepareInternal(entity, true);
-          // If entity does not exist, this is a create operation, else update operation
-          ResourceContext<T> resourceContext =
-              getResourceContextByName(entity.getFullyQualifiedName());
-          MetadataOperation operation = createOrUpdateOperation(resourceContext);
-          OperationContext operationContext = new OperationContext(entityType, operation);
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          if (operation == CREATE) {
-            CreateResourceContext<T> createResourceContext =
-                new CreateResourceContext<>(entityType, entity);
-            limits.enforceLimits(securityContext, createResourceContext, operationContext);
-            authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
-            T createdEntity =
-                withPhase(
-                    "resourceCreateRepository",
-                    () ->
-                        addHref(
-                            uriInfo,
-                            repository.create(
-                                uriInfo,
-                                entity,
-                                securityContext.getUserPrincipal().getName(),
-                                impersonatedBy)));
-            return new PutResponse<>(Response.Status.CREATED, createdEntity, ENTITY_CREATED)
-                .toResponse();
-          }
-          authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
-          PutResponse<T> response =
-              withPhase(
-                  "resourcePutRepository",
-                  () ->
-                      repository.createOrUpdate(
-                          uriInfo, entity, securityContext.getUserPrincipal().getName()));
-          addHref(uriInfo, response.getEntity());
-          return response.toResponse();
-        });
+    repository.prepareInternal(entity, true);
+    // If entity does not exist, this is a create operation, else update operation
+    ResourceContext<T> resourceContext = getResourceContextByName(entity.getFullyQualifiedName());
+    MetadataOperation operation = createOrUpdateOperation(resourceContext);
+    OperationContext operationContext = new OperationContext(entityType, operation);
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    if (operation == CREATE) {
+      CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+      limits.enforceLimits(securityContext, createResourceContext, operationContext);
+      authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
+      T createdEntity =
+          addHref(
+              uriInfo,
+              repository.create(
+                  uriInfo, entity, securityContext.getUserPrincipal().getName(), impersonatedBy));
+      return new PutResponse<>(Response.Status.CREATED, createdEntity, ENTITY_CREATED).toResponse();
+    }
+    authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
+    PutResponse<T> response =
+        repository.createOrUpdate(uriInfo, entity, securityContext.getUserPrincipal().getName());
+    addHref(uriInfo, response.getEntity());
+    return response.toResponse();
   }
 
   /** Deprecated: use method with changeContext
@@ -617,30 +553,23 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       JsonPatch patch,
       ChangeSource changeSource,
       String ifMatchHeader) {
-    return withPhase(
-        "resourcePatch",
-        () -> {
-          OperationContext operationContext = new OperationContext(entityType, patch);
-          authorizer.authorize(
-              securityContext,
-              operationContext,
-              getResourceContextById(id, ResourceContextInterface.Operation.PATCH));
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          PatchResponse<T> response =
-              withPhase(
-                  "resourcePatchRepository",
-                  () ->
-                      repository.patch(
-                          uriInfo,
-                          id,
-                          securityContext.getUserPrincipal().getName(),
-                          patch,
-                          changeSource,
-                          ifMatchHeader,
-                          impersonatedBy));
-          addHref(uriInfo, response.entity());
-          return response.toResponse();
-        });
+    OperationContext operationContext = new OperationContext(entityType, patch);
+    authorizer.authorize(
+        securityContext,
+        operationContext,
+        getResourceContextById(id, ResourceContextInterface.Operation.PATCH));
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    PatchResponse<T> response =
+        repository.patch(
+            uriInfo,
+            id,
+            securityContext.getUserPrincipal().getName(),
+            patch,
+            changeSource,
+            ifMatchHeader,
+            impersonatedBy);
+    addHref(uriInfo, response.entity());
+    return response.toResponse();
   }
 
   public Response patchInternal(
@@ -681,30 +610,23 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       JsonPatch patch,
       ChangeSource changeSource,
       String ifMatchHeader) {
-    return withPhase(
-        "resourcePatch",
-        () -> {
-          OperationContext operationContext = new OperationContext(entityType, patch);
-          authorizer.authorize(
-              securityContext,
-              operationContext,
-              getResourceContextByName(fqn, ResourceContextInterface.Operation.PATCH));
-          String impersonatedBy = ImpersonationContext.getImpersonatedBy();
-          PatchResponse<T> response =
-              withPhase(
-                  "resourcePatchRepository",
-                  () ->
-                      repository.patch(
-                          uriInfo,
-                          fqn,
-                          securityContext.getUserPrincipal().getName(),
-                          patch,
-                          changeSource,
-                          ifMatchHeader,
-                          impersonatedBy));
-          addHref(uriInfo, response.entity());
-          return response.toResponse();
-        });
+    OperationContext operationContext = new OperationContext(entityType, patch);
+    authorizer.authorize(
+        securityContext,
+        operationContext,
+        getResourceContextByName(fqn, ResourceContextInterface.Operation.PATCH));
+    String impersonatedBy = ImpersonationContext.getImpersonatedBy();
+    PatchResponse<T> response =
+        repository.patch(
+            uriInfo,
+            fqn,
+            securityContext.getUserPrincipal().getName(),
+            patch,
+            changeSource,
+            ifMatchHeader,
+            impersonatedBy);
+    addHref(uriInfo, response.entity());
+    return response.toResponse();
   }
 
   public Response delete(
@@ -1373,12 +1295,6 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         // Some common fields for all the entities might be missing. Ignore it.
         throw new IllegalArgumentException(CatalogExceptionMessage.invalidField(field));
       }
-    }
-  }
-
-  protected <R> R withPhase(String phaseName, Supplier<R> action) {
-    try (var ignored = RequestLatencyContext.phase(phaseName)) {
-      return action.get();
     }
   }
 

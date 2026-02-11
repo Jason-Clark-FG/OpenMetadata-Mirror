@@ -463,6 +463,24 @@ public class TableRepository extends EntityRepository<Table> {
         schemaRepository.getDao().findEntitiesByIds(new ArrayList<>(uniqueSchemaIds), ALL);
     var schemas =
         schemasList.stream().collect(Collectors.toMap(DatabaseSchema::getId, schema -> schema));
+    var databaseIdsNeedingService = new HashSet<UUID>();
+    for (Table table : tablesMissingDefaults) {
+      var schemaRef = schemaRefsMap.get(table.getId());
+      if (!hasId(schemaRef)) {
+        continue;
+      }
+      var schema = schemas.get(schemaRef.getId());
+      if (schema == null) {
+        continue;
+      }
+      EntityReference databaseRef =
+          hasId(table.getDatabase()) ? table.getDatabase() : schema.getDatabase();
+      if (!hasId(table.getService()) && hasId(databaseRef)) {
+        databaseIdsNeedingService.add(databaseRef.getId());
+      }
+    }
+    var servicesByDatabase = batchFetchServicesByDatabase(databaseIdsNeedingService);
+
     tablesMissingDefaults.forEach(
         table -> {
           var schemaRef = schemaRefsMap.get(table.getId());
@@ -479,9 +497,7 @@ public class TableRepository extends EntityRepository<Table> {
           EntityReference serviceRef =
               hasId(table.getService()) ? table.getService() : schema.getService();
           if (!hasId(serviceRef) && hasId(databaseRef)) {
-            serviceRef =
-                getFromEntityRef(
-                    databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+            serviceRef = servicesByDatabase.get(databaseRef.getId());
           }
 
           table.withDatabaseSchema(schemaRef).withDatabase(databaseRef).withService(serviceRef);
@@ -532,6 +548,52 @@ public class TableRepository extends EntityRepository<Table> {
           }
         });
     return schemaMap;
+  }
+
+  private Map<UUID, EntityReference> batchFetchServicesByDatabase(Set<UUID> databaseIds) {
+    var servicesByDatabase = new HashMap<UUID, EntityReference>();
+    if (databaseIds == null || databaseIds.isEmpty()) {
+      return servicesByDatabase;
+    }
+
+    List<String> databaseIdStrings = databaseIds.stream().map(UUID::toString).toList();
+    var relations =
+        daoCollection
+            .relationshipDAO()
+            .findFromBatch(databaseIdStrings, Relationship.CONTAINS.ordinal(), ALL);
+    if (relations.isEmpty()) {
+      return servicesByDatabase;
+    }
+
+    var serviceIdsByType = new HashMap<String, Set<UUID>>();
+    for (var relation : relations) {
+      if (!Entity.DATABASE.equals(relation.getToEntity())) {
+        continue;
+      }
+      serviceIdsByType
+          .computeIfAbsent(relation.getFromEntity(), ignored -> new HashSet<>())
+          .add(UUID.fromString(relation.getFromId()));
+    }
+
+    var serviceRefsById = new HashMap<UUID, EntityReference>();
+    for (var entry : serviceIdsByType.entrySet()) {
+      List<EntityReference> refs =
+          Entity.getEntityReferencesByIds(entry.getKey(), new ArrayList<>(entry.getValue()), ALL);
+      refs.forEach(ref -> serviceRefsById.put(ref.getId(), ref));
+    }
+
+    for (var relation : relations) {
+      if (!Entity.DATABASE.equals(relation.getToEntity())) {
+        continue;
+      }
+      UUID databaseId = UUID.fromString(relation.getToId());
+      UUID serviceId = UUID.fromString(relation.getFromId());
+      var serviceRef = serviceRefsById.get(serviceId);
+      if (serviceRef != null) {
+        servicesByDatabase.putIfAbsent(databaseId, serviceRef);
+      }
+    }
+    return servicesByDatabase;
   }
 
   @Override

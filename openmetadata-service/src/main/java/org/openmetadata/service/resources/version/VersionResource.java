@@ -24,6 +24,7 @@ import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.OpenMetadataServerVersion;
 import org.openmetadata.service.OpenMetadataApplication;
+import org.openmetadata.service.monitoring.LatencyPhase;
 import org.openmetadata.service.resources.Collection;
 
 @Slf4j
@@ -31,6 +32,7 @@ import org.openmetadata.service.resources.Collection;
 @Tag(name = "System", description = "APIs related to System configuration and settings.")
 @Produces(MediaType.APPLICATION_JSON)
 @Collection(name = "version")
+@LatencyPhase
 public class VersionResource {
   private static final OpenMetadataServerVersion OPEN_METADATA_SERVER_VERSION;
 

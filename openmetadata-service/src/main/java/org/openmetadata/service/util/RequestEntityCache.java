@@ -1,6 +1,7 @@
 package org.openmetadata.service.util;
 
 import static org.openmetadata.schema.type.Include.ALL;
+import static org.openmetadata.service.monitoring.RequestLatencyContext.phase;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,20 +82,27 @@ public final class RequestEntityCache {
   }
 
   private static <T extends EntityInterface> T get(EntityCacheKey key, Class<T> entityClass) {
-    EntityInterface cached = REQUEST_CACHE.get().get(key);
+    EntityInterface cached;
+    try (var ignored = phase("requestCacheGet")) {
+      cached = REQUEST_CACHE.get().get(key);
+    }
     if (cached == null) {
       return null;
     }
     // Defensive copy on read keeps cache entries immutable for callers while avoiding
     // an extra deep copy at cache put time.
-    return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
+    try (var ignored = phase("requestCacheCopy")) {
+      return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
+    }
   }
 
   private static <T extends EntityInterface> void put(EntityCacheKey key, T entity) {
     if (entity == null) {
       return;
     }
-    REQUEST_CACHE.get().put(key, entity);
+    try (var ignored = phase("requestCachePut")) {
+      REQUEST_CACHE.get().put(key, entity);
+    }
   }
 
   private static String fieldsKey(Fields fields) {

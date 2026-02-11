@@ -19,6 +19,7 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.ext.Provider;
+import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ReadBundleContext;
 import org.openmetadata.service.resources.filters.ETagRequestFilter;
 import org.openmetadata.service.util.RequestEntityCache;
@@ -39,5 +40,6 @@ public class ImpersonationCleanupFilter implements ContainerResponseFilter {
     ETagRequestFilter.clearIfMatchHeader();
     RequestEntityCache.clear();
     ReadBundleContext.clear();
+    EntityRepository.clearInheritanceParentCache();
   }
 }

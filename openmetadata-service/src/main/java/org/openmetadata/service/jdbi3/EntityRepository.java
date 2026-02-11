@@ -281,6 +281,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public static final String BULK_IMPORT = "bulkImport";
 
   public record EntityHistoryWithOffset(EntityHistory entityHistory, int nextOffset) {}
+  private record InheritanceCacheKey(String entityType, UUID entityId, String fieldsKey) {}
 
   public static final LoadingCache<Pair<String, String>, EntityInterface> CACHE_WITH_NAME =
       CacheBuilder.newBuilder()
@@ -355,6 +356,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * Set by {@link #preloadParentsForBulk(List)} and cleared after use.
    */
   private final ThreadLocal<Map<UUID, EntityInterface>> parentCacheForPrepare = new ThreadLocal<>();
+  private static final ThreadLocal<Map<InheritanceCacheKey, EntityInterface>>
+      inheritanceParentCache = ThreadLocal.withInitial(HashMap::new);
 
   protected final ChangeSummarizer<T> changeSummarizer;
 
@@ -660,7 +663,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (!requiresParentForInheritance(entity, fields)) {
       return;
     }
-    EntityInterface parent = getParentEntity(entity, getInheritableFields());
+    String inheritableFields = getInheritableFields();
+    EntityReference parentRef = getParentReference(entity);
+    EntityInterface parent = getCachedInheritanceParent(parentRef, inheritableFields);
+    if (parent == null) {
+      parent = getParentEntity(entity, inheritableFields);
+      cacheInheritanceParent(parentRef, inheritableFields, parent);
+    }
     if (parent != null) {
       // Keep single-entity inheritance path aligned with batch/recursive inheritance path.
       applyInheritance(entity, fields, parent);
@@ -807,6 +816,32 @@ public abstract class EntityRepository<T extends EntityInterface> {
     parentCacheForPrepare.remove();
   }
 
+  public static void clearInheritanceParentCache() {
+    inheritanceParentCache.remove();
+  }
+
+  private EntityInterface getCachedInheritanceParent(EntityReference parentRef, String fields) {
+    if (parentRef == null || parentRef.getId() == null || nullOrEmpty(parentRef.getType())) {
+      return null;
+    }
+    return inheritanceParentCache.get().get(inheritanceCacheKey(parentRef, fields));
+  }
+
+  private void cacheInheritanceParent(
+      EntityReference parentRef, String fields, EntityInterface parent) {
+    if (parentRef == null || parentRef.getId() == null || nullOrEmpty(parentRef.getType())) {
+      return;
+    }
+    if (parent == null || parent.getId() == null) {
+      return;
+    }
+    inheritanceParentCache.get().put(inheritanceCacheKey(parentRef, fields), parent);
+  }
+
+  private InheritanceCacheKey inheritanceCacheKey(EntityReference parentRef, String fields) {
+    return new InheritanceCacheKey(parentRef.getType(), parentRef.getId(), fields == null ? "" : fields);
+  }
+
   /**
    * Batch implementation that collects unique parent references, loads them in bulk, and applies
    * inheritance. Subclasses only need to override {@link #getParentReference(Object)},
@@ -815,6 +850,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
    */
   protected void setInheritedFields(List<T> entities, Fields fields) {
     if (entities.isEmpty()) return;
+    String inheritableFields = getInheritableFields();
 
     var parentRefMap = new HashMap<UUID, EntityReference>();
     for (var entity : entities) {
@@ -838,12 +874,30 @@ public abstract class EntityRepository<T extends EntityInterface> {
         parentRefMap.values().stream().collect(Collectors.groupingBy(EntityReference::getType));
 
     var loadedParents = new HashMap<UUID, EntityInterface>();
-    var inheritableFields = getInheritableFields();
+    var missingRefsByType = new HashMap<String, List<EntityReference>>();
     for (var entry : refsByType.entrySet()) {
-      List<? extends EntityInterface> parents =
-          Entity.getEntities(entry.getValue(), inheritableFields, ALL);
+      var missingRefs = new ArrayList<EntityReference>();
+      for (var ref : entry.getValue()) {
+        var cachedParent = getCachedInheritanceParent(ref, inheritableFields);
+        if (cachedParent != null) {
+          loadedParents.put(ref.getId(), cachedParent);
+        } else {
+          missingRefs.add(ref);
+        }
+      }
+      if (!missingRefs.isEmpty()) {
+        missingRefsByType.put(entry.getKey(), missingRefs);
+      }
+    }
+
+    for (var entry : missingRefsByType.entrySet()) {
+      List<? extends EntityInterface> parents = Entity.getEntities(entry.getValue(), inheritableFields, ALL);
       for (var parent : parents) {
         loadedParents.put(parent.getId(), parent);
+        var parentRef = parentRefMap.get(parent.getId());
+        if (parentRef != null) {
+          cacheInheritanceParent(parentRef, inheritableFields, parent);
+        }
       }
     }
 
@@ -854,6 +908,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       var ref = getParentReference(entity);
       if (ref != null && loadedParents.get(ref.getId()) instanceof EntityInterface parent) {
         applyInheritance(entity, fields, parent);
+      } else {
+        // Preserve behavior when a parent cannot be resolved via batch loading.
+        setInheritedFields(entity, fields);
       }
     }
   }
@@ -1047,7 +1104,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       entity = find(id, relationIncludes.getDefaultInclude());
     }
     ReadPlan readPlan = createReadPlan(entity, fields, relationIncludes);
-    ReadBundle readBundle = buildReadBundle(entity, readPlan);
+    ReadBundle readBundle;
+    try (var ignored = phase("buildReadBundle")) {
+      readBundle = buildReadBundle(entity, readPlan);
+    }
     ReadBundleContext.push(readBundle);
     try {
       try (var ignored = phase("setFields")) {
@@ -1061,8 +1121,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     clearFieldsInternal(entity, fields);
     entity = withHref(uriInfo, entity);
-    RequestEntityCache.putById(
-        entityType, id, fields, relationIncludes, fromCache, entity, entityClass);
+    try (var ignored = phase("requestCachePutById")) {
+      RequestEntityCache.putById(
+          entityType, id, fields, relationIncludes, fromCache, entity, entityClass);
+    }
     return entity;
   }
 
@@ -1171,7 +1233,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       entity = findByName(fqn, relationIncludes.getDefaultInclude());
     }
     ReadPlan readPlan = createReadPlan(entity, fields, relationIncludes);
-    ReadBundle readBundle = buildReadBundle(entity, readPlan);
+    ReadBundle readBundle;
+    try (var ignored = phase("buildReadBundle")) {
+      readBundle = buildReadBundle(entity, readPlan);
+    }
     ReadBundleContext.push(readBundle);
     try {
       try (var ignored = phase("setFields")) {
@@ -1185,8 +1250,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     clearFieldsInternal(entity, fields);
     entity = withHref(uriInfo, entity);
-    RequestEntityCache.putByName(
-        entityType, fqn, fields, relationIncludes, fromCache, entity, entityClass);
+    try (var ignored = phase("requestCachePutByName")) {
+      RequestEntityCache.putByName(
+          entityType, fqn, fields, relationIncludes, fromCache, entity, entityClass);
+    }
     return entity;
   }
 
@@ -1233,11 +1300,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return bundle;
     }
 
-    List<CollectionDAO.EntityRelationshipObject> toRecords =
-        fetchToRelationshipsForEntity(entity.getId(), entityType, readPlan.getToRelationsByInclude());
-    List<CollectionDAO.EntityRelationshipObject> fromRecords =
-        fetchFromRelationshipsForEntity(
-            entity.getId(), entityType, readPlan.getFromRelationsByInclude());
+    List<CollectionDAO.EntityRelationshipObject> toRecords;
+    try (var ignored = phase("readBundleFetchToRelationships")) {
+      toRecords =
+          fetchToRelationshipsForEntity(
+              entity.getId(), entityType, readPlan.getToRelationsByInclude());
+    }
+    List<CollectionDAO.EntityRelationshipObject> fromRecords;
+    try (var ignored = phase("readBundleFetchFromRelationships")) {
+      fromRecords =
+          fetchFromRelationshipsForEntity(
+              entity.getId(), entityType, readPlan.getFromRelationsByInclude());
+    }
 
     readPlan
         .getRelationSpecs()
@@ -1257,23 +1331,34 @@ public abstract class EntityRepository<T extends EntityInterface> {
             });
 
     if (readPlan.shouldLoadTags()) {
-      List<TagLabel> tags =
-          batchFetchTags(List.of(entity.getFullyQualifiedName()))
-              .getOrDefault(entity.getFullyQualifiedName(), Collections.emptyList());
+      List<TagLabel> tags;
+      try (var ignored = phase("readBundleFetchTags")) {
+        tags =
+            batchFetchTags(List.of(entity.getFullyQualifiedName()))
+                .getOrDefault(entity.getFullyQualifiedName(), Collections.emptyList());
+      }
       bundle.putTags(entity.getId(), tags);
     }
 
     if (readPlan.shouldLoadVotes()) {
-      Votes votes = batchFetchVotes(List.of(entity)).getOrDefault(entity.getId(), new Votes());
+      Votes votes;
+      try (var ignored = phase("readBundleFetchVotes")) {
+        votes = batchFetchVotes(List.of(entity)).getOrDefault(entity.getId(), new Votes());
+      }
       bundle.putVotes(entity.getId(), votes);
     }
 
     if (readPlan.shouldLoadExtension()) {
-      Object extension = batchFetchExtensions(List.of(entity)).get(entity.getId());
+      Object extension;
+      try (var ignored = phase("readBundleFetchExtension")) {
+        extension = batchFetchExtensions(List.of(entity)).get(entity.getId());
+      }
       bundle.putExtension(entity.getId(), extension);
     }
 
-    prefetchEntitySpecificReadData(entity, readPlan, bundle);
+    try (var ignored = phase("readBundlePrefetchEntitySpecific")) {
+      prefetchEntitySpecificReadData(entity, readPlan, bundle);
+    }
     return bundle;
   }
 
@@ -2651,22 +2736,36 @@ public abstract class EntityRepository<T extends EntityInterface> {
       ChangeSource changeSource,
       boolean useOptimisticLocking,
       String impersonatedBy) {
-    // Start timing JSON patch application
-    T updated = JsonUtils.applyPatch(original, patch, entityClass);
+    T updated;
+    try (var ignored = phase("patchApplyJson")) {
+      updated = JsonUtils.applyPatch(original, patch, entityClass);
+    }
     updated.setUpdatedBy(user);
     updated.setUpdatedAt(System.currentTimeMillis());
 
-    prepareInternal(updated, true);
-    RuleEngine.getInstance().evaluateUpdate(original, updated);
+    try (var ignored = phase("patchPrepareInternal")) {
+      prepareInternal(updated, true);
+    }
+    try (var ignored = phase("patchRuleEvaluation")) {
+      RuleEngine.getInstance().evaluateUpdate(original, updated);
+    }
 
     // Validate and populate owners
-    List<EntityReference> validatedOwners = getValidatedOwners(updated.getOwners());
+    List<EntityReference> validatedOwners;
+    try (var ignored = phase("patchValidateOwners")) {
+      validatedOwners = getValidatedOwners(updated.getOwners());
+    }
     updated.setOwners(validatedOwners);
 
     // Validate and populate domain
-    List<EntityReference> validatedDomains = getValidatedDomains(updated.getDomains());
+    List<EntityReference> validatedDomains;
+    try (var ignored = phase("patchValidateDomains")) {
+      validatedDomains = getValidatedDomains(updated.getDomains());
+    }
     updated.setDomains(validatedDomains);
-    restorePatchAttributes(original, updated);
+    try (var ignored = phase("patchRestoreAttributes")) {
+      restorePatchAttributes(original, updated);
+    }
 
     // Always set impersonatedBy to the passed value (which can be null)
     // This ensures that when regular users make changes (impersonatedBy=null),
@@ -2675,15 +2774,17 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     // Update the attributes and relationships of an entity
     EntityUpdater entityUpdater;
-    if (useOptimisticLocking) {
-      // Use the 5-parameter version for optimistic locking
-      entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource, true);
-      entityUpdater.updateWithOptimisticLocking();
-    } else {
-      // Use the 4-parameter version to maintain backward compatibility with concrete repository
-      // implementations
-      entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource);
-      entityUpdater.update();
+    try (var ignored = phase("patchEntityUpdate")) {
+      if (useOptimisticLocking) {
+        // Use the 5-parameter version for optimistic locking
+        entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource, true);
+        entityUpdater.updateWithOptimisticLocking();
+      } else {
+        // Use the 4-parameter version to maintain backward compatibility with concrete repository
+        // implementations
+        entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource);
+        entityUpdater.update();
+      }
     }
 
     if (entityUpdater.fieldsChanged()) {
@@ -3238,14 +3339,24 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   @Transaction
   protected T createNewEntity(T entity) {
-    storeEntity(entity, false);
-    storeExtension(entity);
-    storeRelationshipsInternal(entity);
-    setInheritedFields(entity, new Fields(allowedFields));
-    postCreate(entity);
+    try (var ignored = phase("createStoreEntity")) {
+      storeEntity(entity, false);
+      storeExtension(entity);
+    }
+    try (var ignored = phase("createStoreRelationships")) {
+      storeRelationshipsInternal(entity);
+    }
+    try (var ignored = phase("createSetInheritedFields")) {
+      setInheritedFields(entity, new Fields(allowedFields));
+    }
+    try (var ignored = phase("createPostCreate")) {
+      postCreate(entity);
+    }
 
     // Write-through cache: store entity in cache after creation
-    writeThroughCache(entity, false);
+    try (var ignored = phase("createWriteThroughCache")) {
+      writeThroughCache(entity, false);
+    }
 
     return entity;
   }
@@ -5389,19 +5500,31 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     /** Compare original and updated entities and persist update. */
     public final void update() {
-      flushUpdate(false, false);
-      reactUpdate();
+      try (var ignored = phase("entityUpdateFlush")) {
+        flushUpdate(false, false);
+      }
+      try (var ignored = phase("entityUpdateReact")) {
+        reactUpdate();
+      }
     }
 
     /** Update with optimistic locking - ensures no concurrent modifications. */
     public final void updateWithOptimisticLocking() {
-      flushUpdate(true, false);
-      reactUpdate();
+      try (var ignored = phase("entityUpdateFlushOptimistic")) {
+        flushUpdate(true, false);
+      }
+      try (var ignored = phase("entityUpdateReact")) {
+        reactUpdate();
+      }
     }
 
     public final void updateForImport() {
-      flushUpdate(false, true);
-      reactUpdate();
+      try (var ignored = phase("entityUpdateFlushImport")) {
+        flushUpdate(false, true);
+      }
+      try (var ignored = phase("entityUpdateReact")) {
+        reactUpdate();
+      }
     }
 
     /**
@@ -5410,38 +5533,78 @@ public abstract class EntityRepository<T extends EntityInterface> {
      */
     @Transaction
     private void flushUpdate(boolean useOptimisticStore, boolean importMode) {
-      boolean consolidateChanges = consolidateChanges(original, updated, operation);
-
-      if (importMode) {
-        incrementalChangeForImport();
-        if (consolidateChanges) {
-          revertForImport();
-        }
-      } else {
-        incrementalChange();
-        if (consolidateChanges) {
-          revert();
-        }
+      boolean consolidateChanges;
+      try (var ignored = phase("entityUpdateConsolidate")) {
+        consolidateChanges = consolidateChanges(original, updated, operation);
       }
 
-      // Now updated from previous/original to updated one
-      changeDescription = new ChangeDescription();
-      if (importMode) {
-        updateInternalForImport();
+      if (consolidateChanges) {
+        // Consolidation requires request-local incremental diff before reverting to previous
+        // session state.
+        if (importMode) {
+          try (var ignored = phase("entityUpdateIncrementalChangeImport")) {
+            incrementalChangeForImport();
+          }
+          try (var ignored = phase("entityUpdateRevertImport")) {
+            revertForImport();
+          }
+        } else {
+          try (var ignored = phase("entityUpdateIncrementalChange")) {
+            incrementalChange();
+          }
+          try (var ignored = phase("entityUpdateRevert")) {
+            revert();
+          }
+        }
+
+        // Now updated from previous/original to updated one
+        changeDescription = new ChangeDescription();
+        if (importMode) {
+          try (var ignored = phase("entityUpdateDiffImport")) {
+            updateInternalForImport();
+          }
+        } else {
+          try (var ignored = phase("entityUpdateDiff")) {
+            updateInternal();
+          }
+        }
       } else {
-        updateInternal();
+        // Common path: single diff pass. Derive incremental description from final diff to avoid
+        // duplicate side-effectful update traversal.
+        changeDescription = new ChangeDescription();
+        if (importMode) {
+          try (var ignored = phase("entityUpdateDiffImport")) {
+            updateInternalForImport();
+          }
+          try (var ignored = phase("entityUpdateIncrementalChangeImport")) {
+            captureIncrementalFromCurrentChange();
+          }
+        } else {
+          try (var ignored = phase("entityUpdateDiff")) {
+            updateInternal();
+          }
+          try (var ignored = phase("entityUpdateIncrementalChange")) {
+            captureIncrementalFromCurrentChange();
+          }
+        }
       }
 
       if (useOptimisticStore) {
-        storeUpdateWithOptimisticLocking();
+        try (var ignored = phase("entityUpdateStoreOptimistic")) {
+          storeUpdateWithOptimisticLocking();
+        }
       } else {
-        storeUpdate();
+        try (var ignored = phase("entityUpdateStore")) {
+          storeUpdate();
+        }
       }
     }
 
     /** React phase: post-commit side effects. */
     private void reactUpdate() {
-      postUpdate(original, updated);
+      try (var ignored = phase("entityUpdatePostUpdate")) {
+        postUpdate(original, updated);
+      }
     }
 
     /**
@@ -5455,7 +5618,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
     @Transaction
     public final void updateWithDeferredStore() {
       changeDescription = new ChangeDescription();
-      updateInternal();
+      try (var ignored = phase("entityUpdateDiffDeferred")) {
+        updateInternal();
+      }
 
       versionChanged = updateVersion(original.getVersion());
       if (!versionChanged && entityChanged) {
@@ -5497,6 +5662,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
       changeDescription = new ChangeDescription();
       updateInternalForImport(false);
       incrementalChangeDescription = changeDescription;
+      incrementalChangeDescription.setPreviousVersion(original.getVersion());
+      updated.setIncrementalChangeDescription(incrementalChangeDescription);
+    }
+
+    private void captureIncrementalFromCurrentChange() {
+      incrementalChangeDescription = JsonUtils.deepCopy(changeDescription, ChangeDescription.class);
       incrementalChangeDescription.setPreviousVersion(original.getVersion());
       updated.setIncrementalChangeDescription(incrementalChangeDescription);
     }
@@ -6621,7 +6792,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     public final void storeUpdate() {
-      boolean versionChanged = updateVersion(original.getVersion());
+      boolean versionChanged;
+      try (var ignored = phase("storeUpdateVersioning")) {
+        versionChanged = updateVersion(original.getVersion());
+      }
       LOG.info(
           "storeUpdate: versionChanged={}, entityChanged={}, entityType={}, id={}",
           versionChanged,
@@ -6630,13 +6804,19 @@ public abstract class EntityRepository<T extends EntityInterface> {
           updated.getId());
 
       if (versionChanged) { // Update changed the entity version
-        storeEntityHistory(); // Store old version for listing previous versions of the entity
-        storeNewVersion(); // Store the update version of the entity
+        try (var ignored = phase("storeUpdateHistory")) {
+          storeEntityHistory(); // Store old version for listing previous versions of the entity
+        }
+        try (var ignored = phase("storeUpdateCurrent")) {
+          storeNewVersion(); // Store the update version of the entity
+        }
       } else if (entityChanged) {
         if (updated.getVersion().equals(changeDescription.getPreviousVersion())) {
           updated.setChangeDescription(original.getChangeDescription());
         }
-        storeNewVersion();
+        try (var ignored = phase("storeUpdateCurrent")) {
+          storeNewVersion();
+        }
       } else { // Update did not change the entity version
         LOG.info("No version change and entityChanged=false, checking previous");
         updated.setChangeDescription(original.getChangeDescription());
@@ -6645,8 +6825,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
         // Remove entity history recorded when going from previous -> original (and now back to
         // previous)
         if (previous != null && previous.getVersion().equals(updated.getVersion())) {
-          storeNewVersion();
-          removeEntityHistory(updated.getVersion());
+          try (var ignored = phase("storeUpdateCurrent")) {
+            storeNewVersion();
+          }
+          try (var ignored = phase("storeUpdateHistoryCleanup")) {
+            removeEntityHistory(updated.getVersion());
+          }
         }
       }
     }
@@ -6660,22 +6844,37 @@ public abstract class EntityRepository<T extends EntityInterface> {
               && changeDescription.getPreviousVersion() != null
               && changeDescription.getPreviousVersion().equals(previous.getVersion());
 
-      if (updateVersion(original.getVersion())) { // Update changed the entity version
-        storeEntityHistory(); // Store old version for listing previous versions of the entity
+      boolean versionChanged;
+      try (var ignored = phase("storeUpdateVersioning")) {
+        versionChanged = updateVersion(original.getVersion());
+      }
+
+      if (versionChanged) { // Update changed the entity version
+        try (var ignored = phase("storeUpdateHistory")) {
+          storeEntityHistory(); // Store old version for listing previous versions of the entity
+        }
         if (isConsolidating) {
           // During consolidation, use regular store without version check
-          storeNewVersion();
+          try (var ignored = phase("storeUpdateCurrent")) {
+            storeNewVersion();
+          }
         } else {
-          storeNewVersionWithOptimisticLocking(); // Store with version check
+          try (var ignored = phase("storeUpdateCurrentOptimistic")) {
+            storeNewVersionWithOptimisticLocking(); // Store with version check
+          }
         }
       } else if (entityChanged) {
         if (updated.getVersion().equals(changeDescription.getPreviousVersion())) {
           updated.setChangeDescription(original.getChangeDescription());
         }
         if (isConsolidating) {
-          storeNewVersion();
+          try (var ignored = phase("storeUpdateCurrent")) {
+            storeNewVersion();
+          }
         } else {
-          storeNewVersionWithOptimisticLocking();
+          try (var ignored = phase("storeUpdateCurrentOptimistic")) {
+            storeNewVersionWithOptimisticLocking();
+          }
         }
       } else { // Update did not change the entity version
         updated.setChangeDescription(original.getChangeDescription());
@@ -6684,8 +6883,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
         // Remove entity history recorded when going from previous -> original (and now back to
         // previous)
         if (previous != null && previous.getVersion().equals(updated.getVersion())) {
-          storeNewVersion(); // Always use regular store for this case
-          removeEntityHistory(updated.getVersion());
+          try (var ignored = phase("storeUpdateCurrent")) {
+            storeNewVersion(); // Always use regular store for this case
+          }
+          try (var ignored = phase("storeUpdateHistoryCleanup")) {
+            removeEntityHistory(updated.getVersion());
+          }
         }
       }
     }
@@ -8407,14 +8610,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
         setInheritedFields(allUpdated, new Fields(allowedFields));
       }
 
+      List<T> changedEntities =
+          updaters.stream()
+              .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
+              .map(EntityUpdater::getUpdated)
+              .map(e -> (T) e)
+              .toList();
+      if (!changedEntities.isEmpty()) {
+        try (var ignored = phase("writeThroughCacheBulk")) {
+          writeThroughCacheMany(changedEntities, true);
+        }
+      }
+
       // Per-entity: cache write-through + events + metrics
       long batchDuration = System.nanoTime() - batchStartTime;
       long perEntityDuration = batchDuration / updaters.size();
       try (var ignored = phase("postUpdateEvents")) {
         for (var updater : updaters) {
-          if (updater.isVersionChanged() || updater.isEntityChanged()) {
-            writeThroughCache(updater.getUpdated(), true);
-          }
           postUpdate(updater.getOriginal(), updater.getUpdated());
           var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
           createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
@@ -8445,6 +8657,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
         }
       }
       if (!succeededUpdaters.isEmpty()) {
+        List<T> fallbackChanged =
+            succeededUpdaters.stream()
+                .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
+                .map(EntityUpdater::getUpdated)
+                .map(e -> (T) e)
+                .toList();
+        if (!fallbackChanged.isEmpty()) {
+          try (var ignored = phase("writeThroughCacheBulk")) {
+            writeThroughCacheMany(fallbackChanged, true);
+          }
+        }
+
         var fallbackUpdated =
             succeededUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
         setInheritedFields(fallbackUpdated, new Fields(allowedFields));
