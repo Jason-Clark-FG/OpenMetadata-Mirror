@@ -51,15 +51,26 @@ interface CustomPaginatedListProps {
   page: number;
   renderColumn: (column: Column) => React.ReactNode;
   setPage: React.Dispatch<React.SetStateAction<number>>;
+  showColumnsWithLineageOnly: boolean;
 }
 
 const CustomPaginatedList = React.memo(
-  ({ columns, page, renderColumn, setPage }: CustomPaginatedListProps) => {
+  ({
+    columns,
+    page,
+    renderColumn,
+    setPage,
+    showColumnsWithLineageOnly,
+  }: CustomPaginatedListProps) => {
     const { t } = useTranslation();
+    const { tracedColumns } = useLineageStore();
 
     const totalPages = useMemo(
-      () => calculateTotalPages(columns.length, LINEAGE_CHILD_ITEMS_PER_PAGE),
-      [columns.length]
+      () =>
+        showColumnsWithLineageOnly
+          ? 1
+          : calculateTotalPages(columns.length, LINEAGE_CHILD_ITEMS_PER_PAGE),
+      [columns.length, showColumnsWithLineageOnly]
     );
 
     const currentPageColumns = useMemo(
@@ -67,18 +78,30 @@ const CustomPaginatedList = React.memo(
       [columns, page]
     );
 
+    const otherPageColumns = useMemo(
+      () =>
+        showColumnsWithLineageOnly
+          ? []
+          : columns.slice(page * LINEAGE_CHILD_ITEMS_PER_PAGE, 1000),
+      [columns, page]
+    );
+
     const renderedItems = useMemo(
       () =>
-        currentPageColumns.map((col) => {
-          const column = col as Column;
-          const rendered = renderColumn(column);
+        (showColumnsWithLineageOnly ? columns : currentPageColumns).map(
+          (col) => {
+            const column = col as Column;
+            const rendered = renderColumn(column);
 
-          return rendered ? (
-            <div className="current-page-item" key={column.fullyQualifiedName}>
-              {rendered}
-            </div>
-          ) : null;
-        }),
+            return rendered ? (
+              <div
+                className="current-page-item"
+                key={column.fullyQualifiedName}>
+                {rendered}
+              </div>
+            ) : null;
+          }
+        ),
       [currentPageColumns, renderColumn]
     );
 
@@ -108,6 +131,23 @@ const CustomPaginatedList = React.memo(
       <Stack spacing={2}>
         <Stack className="current-page-items" spacing={1}>
           {renderedItems}
+        </Stack>
+
+        <Stack className="outside-current-page-items" spacing={1}>
+          {otherPageColumns.map((col) => {
+            const column = col as Column;
+            const rendered = renderColumn(column);
+
+            const isTraced = tracedColumns.has(column.fullyQualifiedName ?? '');
+
+            return rendered && isTraced ? (
+              <div
+                className={classNames('other-page-item')}
+                key={column.fullyQualifiedName}>
+                {rendered}
+              </div>
+            ) : null;
+          })}
         </Stack>
 
         {totalPages > 1 && (
@@ -156,8 +196,8 @@ const NodeChildren = ({
   const {
     isEditMode,
     columnsHavingLineage,
-    expandAllColumns,
     isColumnLevelLineage,
+    expandAllColumns,
     isDQEnabled,
     selectedColumn,
     isCreatingEdge,
@@ -165,7 +205,6 @@ const NodeChildren = ({
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
-  const [showAllColumns, setShowAllColumns] = useState(false);
   const [summary, setSummary] = useState<TestSummary>();
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -235,14 +274,12 @@ const NodeChildren = ({
 
       if (searchQuery.trim() === '') {
         setFilteredColumns(currentNodeColumnsToSearch);
-        setShowAllColumns(false);
       } else {
         const lowerQuery = searchQuery.toLowerCase();
         const currentNodeMatchedColumns = currentNodeColumnsToSearch.filter(
           (column) => getEntityName(column).toLowerCase().includes(lowerQuery)
         );
         setFilteredColumns(currentNodeMatchedColumns);
-        setShowAllColumns(true);
       }
     },
     [
@@ -264,43 +301,26 @@ const NodeChildren = ({
 
   const isColumnVisible = useCallback(
     (record: Column) => {
-      if (
-        expandAllColumns ||
-        isEditMode ||
-        showAllColumns ||
-        isChildrenListExpanded
-      ) {
+      if (expandAllColumns || isEditMode) {
         return true;
       }
 
       return columnsHavingLineage.has(record.fullyQualifiedName ?? '');
     },
-    [
-      isEditMode,
-      columnsHavingLineage,
-      expandAllColumns,
-      showAllColumns,
-      isChildrenListExpanded,
-    ]
+    [isEditMode, columnsHavingLineage, expandAllColumns]
   );
 
   useEffect(() => {
-    if (!isEmpty(entityChildren)) {
-      if (showColumnsWithLineageOnly) {
-        setFilteredColumns(currentNodeColumnsWithLineage);
-      } else {
-        setFilteredColumns(currentNodeAllColumns);
-      }
+    if (showColumnsWithLineageOnly) {
+      setFilteredColumns(currentNodeColumnsWithLineage);
+    } else {
+      setFilteredColumns(currentNodeAllColumns);
     }
   }, [
     currentNodeAllColumns,
     showColumnsWithLineageOnly,
     currentNodeColumnsWithLineage,
   ]);
-
-  useEffect(() => {
-    setShowAllColumns(expandAllColumns);
-  }, [expandAllColumns]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
     setIsLoading(true);
@@ -338,10 +358,6 @@ const NodeChildren = ({
       );
 
       if (!record.children || record.children.length === 0) {
-        if (!isColumnVisible(record)) {
-          return null;
-        }
-
         return headerContent;
       }
 
@@ -406,15 +422,12 @@ const NodeChildren = ({
       if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
         return renderRecord(column);
       } else {
-        if (!isColumnVisible(column)) {
-          return null;
-        }
-
         return (
           <ColumnContent
             column={column}
             isConnectable={isConnectable}
             isLoading={isLoading}
+            key={column.fullyQualifiedName}
             showDataObservabilitySummary={showDataObservabilitySummary}
             summary={columnSummary}
           />
@@ -437,42 +450,41 @@ const NodeChildren = ({
 
   if (isColumnLevelLineage || isDQEnabled) {
     return (
-      !isEmpty(entityChildren) && (
-        <div
-          className={classNames(
-            'column-container',
-            selectedColumn && 'any-column-selected',
-            isCreatingEdge && 'creating-edge'
-          )}
-          data-testid="column-container">
-          <div className="search-box">
-            <Input
-              data-testid="search-column-input"
-              placeholder={t('label.search-entity', {
-                entity: childrenHeading,
-              })}
-              suffix={<SearchOutlined color={BORDER_COLOR} />}
-              value={searchValue}
-              onChange={handleSearchChange}
-              onClick={(e) => e.stopPropagation()}
-            />
+      <div
+        className={classNames(
+          'column-container',
+          selectedColumn && 'any-column-selected',
+          isCreatingEdge && 'creating-edge'
+        )}
+        data-testid="column-container">
+        <div className="search-box">
+          <Input
+            data-testid="search-column-input"
+            placeholder={t('label.search-entity', {
+              entity: childrenHeading,
+            })}
+            suffix={<SearchOutlined color={BORDER_COLOR} />}
+            value={searchValue}
+            onChange={handleSearchChange}
+            onClick={(e) => e.stopPropagation()}
+          />
 
-            {!isEmpty(filteredColumns) && (
-              <section className="m-t-md" id="table-columns">
-                <div className="rounded-4 overflow-hidden">
-                  <CustomPaginatedList
-                    columns={filteredColumns}
-                    nodeId={node.id}
-                    page={page}
-                    renderColumn={renderColumnsData}
-                    setPage={setPage}
-                  />
-                </div>
-              </section>
-            )}
-          </div>
+          {!isEmpty(filteredColumns) && (
+            <section className="m-t-md" id="table-columns">
+              <div className="rounded-4 overflow-hidden">
+                <CustomPaginatedList
+                  columns={filteredColumns}
+                  nodeId={node.id}
+                  page={page}
+                  renderColumn={renderColumnsData}
+                  setPage={setPage}
+                  showColumnsWithLineageOnly={showColumnsWithLineageOnly}
+                />
+              </div>
+            </section>
+          )}
         </div>
-      )
+      </div>
     );
   } else {
     return null;

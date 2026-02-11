@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 
+import { isEmpty } from 'lodash';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
 import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityLineageNodeType, EntityType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
-import { LineageLayer } from '../../../generated/configuration/lineageSettings';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getEntityChildrenAndLabel } from '../../../utils/EntityLineageUtils';
 import LineageNodeRemoveButton from '../../Lineage/LineageNodeRemoveButton';
@@ -156,22 +156,23 @@ const CustomNodeV1 = (props: NodeProps) => {
   } = useLineageProvider();
 
   const {
-    activeLayer,
     isEditMode,
     tracedNodes,
     selectedNode,
     isColumnLevelLineage,
+    isDQEnabled,
+    expandAllColumns,
   } = useLineageStore();
 
+  // by default it will be enabled
   const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
-    useState(isColumnLevelLineage);
-  const [columnsExpanded, setColumnsExpanded] =
-    useState<boolean>(isColumnLevelLineage);
+    useState(true);
+
+  const [columnsExpanded, setColumnsExpanded] = useState<boolean>(false);
 
   // Expand column on ColumnLevelLineage change
   useEffect(() => {
     setColumnsExpanded(isColumnLevelLineage);
-    setShowColumnsWithLineageOnly(isColumnLevelLineage);
   }, [isColumnLevelLineage]);
 
   const {
@@ -184,6 +185,10 @@ const CustomNodeV1 = (props: NodeProps) => {
     isUpstreamNode = false,
     isDownstreamNode = false,
   } = data;
+
+  const toggleColumnsExpanded = useCallback(() => {
+    setColumnsExpanded((prev) => !prev);
+  }, []);
 
   const entityChildrenData = useMemo(
     () => getEntityChildrenAndLabel(node),
@@ -202,9 +207,9 @@ const CustomNodeV1 = (props: NodeProps) => {
 
   const showDqTracing = useMemo(
     () =>
-      activeLayer.includes(LineageLayer.DataObservability) &&
+      isDQEnabled &&
       dataQualityLineage?.nodes?.some((dqNode) => dqNode.id === id),
-    [activeLayer, dataQualityLineage, id]
+    [isDQEnabled, dataQualityLineage, id]
   );
 
   const containerClass = getNodeClassNames({
@@ -249,11 +254,11 @@ const CustomNodeV1 = (props: NodeProps) => {
           isChildrenListExpanded={columnsExpanded}
           node={node}
           showColumnsWithLineageOnly={showColumnsWithLineageOnly}
-          toggleColumnsList={() => setColumnsExpanded((prev) => !prev)}
+          toggleColumnsList={toggleColumnsExpanded}
           toggleShowColumnsWithLineageOnly={toggleShowColumnsWithLineageOnly}
         />
         {isSelected && isEditMode && !isRootNode && (
-          <LineageNodeRemoveButton onRemove={() => removeNodeHandler(props)} />
+          <LineageNodeRemoveButton onRemove={handleNodeRemove} />
         )}
       </>
     );
@@ -268,6 +273,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     isRootNode,
     handleNodeRemove,
     isEditMode,
+    toggleColumnsExpanded,
   ]);
 
   const expandCollapseProps = useMemo<ExpandCollapseHandlesProps>(
@@ -309,7 +315,12 @@ const CustomNodeV1 = (props: NodeProps) => {
       node.entityType as EntityType
     );
 
-    if (!supportColumns) {
+    if (
+      !supportColumns ||
+      !isColumnLevelLineage ||
+      isEmpty(entityChildrenData.children) ||
+      !columnsExpanded
+    ) {
       return null;
     }
 
@@ -328,7 +339,9 @@ const CustomNodeV1 = (props: NodeProps) => {
     columnsExpanded,
     isConnectable,
     node,
+    isColumnLevelLineage,
     showColumnsWithLineageOnly,
+    expandAllColumns,
   ]);
 
   return (

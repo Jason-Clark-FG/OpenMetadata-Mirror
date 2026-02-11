@@ -305,7 +305,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         edges: updatedEdges,
         incomingMap,
         outgoingMap,
-        columnsHavingLineage,
+        columnsHavingLineage: columnsLineageSet,
       } = createEdgesAndEdgeMaps(
         allNodes,
         lineageData.edges ?? [],
@@ -323,7 +323,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         isColumnLevelLineage,
         isFirstTime ? true : undefined,
         isEditMode || expandAllColumns,
-        columnsHavingLineage
+        columnsLineageSet
       );
 
       // Skip animation frame if first time
@@ -341,7 +341,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         updatedEdges,
         activeLayer.includes(LineageLayer.ColumnLevelLineage),
         isEditMode || expandAllColumns,
-        columnsHavingLineage
+        columnsLineageSet
       );
 
       const visibleNodes = positionedNodesEdges.nodes.map((node) => ({
@@ -366,7 +366,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
       setNodes(visibleNodes);
       setEdges(visibleEdges);
-      setColumnsHavingLineage(columnsHavingLineage);
+      setColumnsHavingLineage(columnsLineageSet);
     },
     [
       entityFqn,
@@ -1691,10 +1691,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     entityType,
     isLineageSettingsLoaded,
   ]);
-
-  useEffect(() => {
-    redraw();
-  }, [isColumnLevelLineage]);
 
   const activityFeedContextValues: LineageContextType = useMemo(() => {
     return {
