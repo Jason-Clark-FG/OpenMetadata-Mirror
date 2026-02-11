@@ -34,11 +34,6 @@ from metadata.profiler.interface.sqlalchemy.profiler_interface import (
     SQAProfilerInterface,
 )
 from metadata.profiler.orm.converter.base import build_orm_col
-from metadata.utils.logger import profiler_interface_registry_logger
-
-logger = profiler_interface_registry_logger()
-
-
 def _visit_column_with_struct_quoting(self, column, *args, **kwargs):
     """Compile column references, quoting each segment for struct fields.
 
