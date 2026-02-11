@@ -23,6 +23,8 @@ public class RequestLatencyContext {
 
   private static final String ENDPOINT = "endpoint";
   private static final String METHOD = "method";
+  private static final String SLOW_REQUEST_THRESHOLD_PROPERTY = "requestLatencyThresholdMs";
+  private static final long DEFAULT_SLOW_REQUEST_THRESHOLD_MS = 200L;
   private static final ThreadLocal<RequestContext> requestContext = new ThreadLocal<>();
 
   private static final ConcurrentHashMap<String, Timer> requestTimers = new ConcurrentHashMap<>();
@@ -34,6 +36,34 @@ public class RequestLatencyContext {
 
   private static final Timer DUMMY_TIMER =
       Timer.builder("dummy.timer").register(Metrics.globalRegistry);
+  private static final long slowRequestThresholdNanos = resolveSlowRequestThresholdNanos();
+
+  private static long resolveSlowRequestThresholdNanos() {
+    String configuredThreshold = System.getProperty(SLOW_REQUEST_THRESHOLD_PROPERTY);
+    if (configuredThreshold == null || configuredThreshold.isBlank()) {
+      return DEFAULT_SLOW_REQUEST_THRESHOLD_MS * 1_000_000L;
+    }
+
+    try {
+      long thresholdMs = Long.parseLong(configuredThreshold.trim());
+      if (thresholdMs < 0) {
+        LOG.warn(
+            "Ignoring negative request latency threshold '{}={}', using default {}ms",
+            SLOW_REQUEST_THRESHOLD_PROPERTY,
+            configuredThreshold,
+            DEFAULT_SLOW_REQUEST_THRESHOLD_MS);
+        return DEFAULT_SLOW_REQUEST_THRESHOLD_MS * 1_000_000L;
+      }
+      return thresholdMs * 1_000_000L;
+    } catch (NumberFormatException ex) {
+      LOG.warn(
+          "Invalid request latency threshold '{}={}', using default {}ms",
+          SLOW_REQUEST_THRESHOLD_PROPERTY,
+          configuredThreshold,
+          DEFAULT_SLOW_REQUEST_THRESHOLD_MS);
+      return DEFAULT_SLOW_REQUEST_THRESHOLD_MS * 1_000_000L;
+    }
+  }
 
   public static void startRequest(String endpoint, String method, String uriPath) {
     String normalizedMethod = method.toUpperCase();
@@ -265,7 +295,7 @@ public class RequestLatencyContext {
         serverTimer.record(serverTimeNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
       }
 
-      if (context.totalTime > 200_000_000L) {
+      if (context.totalTime > slowRequestThresholdNanos) {
         String path = context.uriPath != null ? context.uriPath : context.endpoint;
         String phaseBreakdown = formatPhaseBreakdown(context.phaseTime);
         LOG.warn(

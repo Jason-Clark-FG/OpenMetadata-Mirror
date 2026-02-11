@@ -30,6 +30,7 @@ import static org.openmetadata.service.Entity.TABLE;
 import static org.openmetadata.service.Entity.TEST_SUITE;
 import static org.openmetadata.service.Entity.getEntityReferenceById;
 import static org.openmetadata.service.Entity.populateEntityFieldTags;
+import static org.openmetadata.service.monitoring.RequestLatencyContext.phase;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTagsGracefully;
 import static org.openmetadata.service.search.SearchClient.GLOBAL_SEARCH_ALIAS;
 import static org.openmetadata.service.util.EntityUtil.getLocalColumnName;
@@ -648,47 +649,63 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Transaction
   public Table addSampleData(UUID tableId, TableData tableData) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
-
-    // Validate all the columns
-    for (String columnName : tableData.getColumns()) {
-      validateColumn(table, columnName);
+    Table table;
+    try (var ignored = phase("tableSampleDataFind")) {
+      table = find(tableId, NON_DELETED);
     }
-    // Make sure each row has number values for all the columns
-    for (List<Object> row : tableData.getRows()) {
-      if (row.size() != tableData.getColumns().size()) {
-        throw new IllegalArgumentException(
-            String.format(
-                "Number of columns is %d but row has %d sample values",
-                tableData.getColumns().size(), row.size()));
+
+    try (var ignored = phase("tableSampleDataValidate")) {
+      for (String columnName : tableData.getColumns()) {
+        validateColumn(table, columnName);
+      }
+      for (List<Object> row : tableData.getRows()) {
+        if (row.size() != tableData.getColumns().size()) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Number of columns is %d but row has %d sample values",
+                  tableData.getColumns().size(), row.size()));
+        }
       }
     }
 
-    daoCollection
-        .entityExtensionDAO()
-        .insert(tableId, TABLE_SAMPLE_DATA_EXTENSION, "tableData", JsonUtils.pojoToJson(tableData));
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    try (var ignored = phase("tableSampleDataStore")) {
+      daoCollection
+          .entityExtensionDAO()
+          .insert(tableId, TABLE_SAMPLE_DATA_EXTENSION, "tableData", JsonUtils.pojoToJson(tableData));
+    }
+    try (var ignored = phase("tableSampleDataHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     return table.withSampleData(tableData);
   }
 
   public Table getSampleData(UUID tableId, boolean authorizePII) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
+    Table table;
+    try (var ignored = phase("tableSampleDataFind")) {
+      table = find(tableId, NON_DELETED);
+    }
     TableData sampleData =
-        JsonUtils.readValue(
-            daoCollection
-                .entityExtensionDAO()
-                .getExtension(table.getId(), TABLE_SAMPLE_DATA_EXTENSION),
-            TableData.class);
+        JsonUtils.readValue(null, TableData.class);
+    try (var ignored = phase("tableSampleDataLoad")) {
+      sampleData =
+          JsonUtils.readValue(
+              daoCollection
+                  .entityExtensionDAO()
+                  .getExtension(table.getId(), TABLE_SAMPLE_DATA_EXTENSION),
+              TableData.class);
+    }
     table.setSampleData(sampleData);
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    try (var ignored = phase("tableSampleDataHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
 
     // Set the column tags. Will be used to mask the sample data
     if (!authorizePII) {
-      populateEntityFieldTags(entityType, table.getColumns(), table.getFullyQualifiedName(), true);
-      table.setTags(getTags(table));
-      return PIIMasker.getSampleData(table);
+      try (var ignored = phase("tableSampleDataMaskPII")) {
+        populateEntityFieldTags(entityType, table.getColumns(), table.getFullyQualifiedName(), true);
+        table.setTags(getTags(table));
+        return PIIMasker.getSampleData(table);
+      }
     }
 
     return table;
@@ -696,71 +713,89 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Transaction
   public Table deleteSampleData(UUID tableId) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
-    daoCollection.entityExtensionDAO().delete(tableId, TABLE_SAMPLE_DATA_EXTENSION);
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    Table table;
+    try (var ignored = phase("tableSampleDataFind")) {
+      table = find(tableId, NON_DELETED);
+    }
+    try (var ignored = phase("tableSampleDataDelete")) {
+      daoCollection.entityExtensionDAO().delete(tableId, TABLE_SAMPLE_DATA_EXTENSION);
+    }
+    try (var ignored = phase("tableSampleDataHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     return table;
   }
 
   @Transaction
   public Table addPipelineObservability(
       UUID tableId, List<PipelineObservability> pipelineObservabilityList) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
+    Table table;
+    try (var ignored = phase("tablePipelineObsFind")) {
+      table = find(tableId, NON_DELETED);
+    }
 
     // Store each pipeline observability individually using pipeline FQN as unique key
-    for (PipelineObservability observability : pipelineObservabilityList) {
-      if (observability.getPipeline() != null
-          && observability.getPipeline().getFullyQualifiedName() != null) {
-        String pipelineFqn = observability.getPipeline().getFullyQualifiedName();
-        String extension = TABLE_PIPELINE_OBSERVABILITY_EXTENSION + "." + pipelineFqn;
+    try (var ignored = phase("tablePipelineObsStore")) {
+      for (PipelineObservability observability : pipelineObservabilityList) {
+        if (observability.getPipeline() != null
+            && observability.getPipeline().getFullyQualifiedName() != null) {
+          String pipelineFqn = observability.getPipeline().getFullyQualifiedName();
+          String extension = TABLE_PIPELINE_OBSERVABILITY_EXTENSION + "." + pipelineFqn;
 
-        daoCollection
-            .entityExtensionDAO()
-            .insert(
-                tableId, extension, "pipelineObservability", JsonUtils.pojoToJson(observability));
+          daoCollection
+              .entityExtensionDAO()
+              .insert(
+                  tableId, extension, "pipelineObservability", JsonUtils.pojoToJson(observability));
 
-        // Index pipeline status data to Elasticsearch for Trends and Metrics APIs
-        try {
-          indexPipelineStatus(table, observability);
-        } catch (Exception e) {
-          LOG.error(
-              "Failed to index pipeline status for table {} and pipeline {}: {}",
-              table.getFullyQualifiedName(),
-              pipelineFqn,
-              e.getMessage(),
-              e);
+          // Index pipeline status data to Elasticsearch for Trends and Metrics APIs
+          try (var searchIgnored = phase("tablePipelineObsIndexSearch")) {
+            indexPipelineStatus(table, observability);
+          } catch (Exception e) {
+            LOG.error(
+                "Failed to index pipeline status for table {} and pipeline {}: {}",
+                table.getFullyQualifiedName(),
+                pipelineFqn,
+                e.getMessage(),
+                e);
+          }
         }
       }
     }
 
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    try (var ignored = phase("tablePipelineObsHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     // Return table with updated observability data
-    return table.withPipelineObservability(getAllPipelineObservability(table));
+    try (var ignored = phase("tablePipelineObsLoadAll")) {
+      return table.withPipelineObservability(getAllPipelineObservability(table));
+    }
   }
 
   @Transaction
   public Table addSinglePipelineObservability(
       UUID tableId, PipelineObservability pipelineObservability) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
+    Table table;
+    try (var ignored = phase("tablePipelineObsFind")) {
+      table = find(tableId, NON_DELETED);
+    }
 
     if (pipelineObservability.getPipeline() != null
         && pipelineObservability.getPipeline().getFullyQualifiedName() != null) {
       String pipelineFqn = pipelineObservability.getPipeline().getFullyQualifiedName();
       String extension = TABLE_PIPELINE_OBSERVABILITY_EXTENSION + "." + pipelineFqn;
 
-      daoCollection
-          .entityExtensionDAO()
-          .insert(
-              tableId,
-              extension,
-              "pipelineObservability",
-              JsonUtils.pojoToJson(pipelineObservability));
+      try (var ignored = phase("tablePipelineObsStore")) {
+        daoCollection
+            .entityExtensionDAO()
+            .insert(
+                tableId,
+                extension,
+                "pipelineObservability",
+                JsonUtils.pojoToJson(pipelineObservability));
+      }
 
       // Index pipeline status data to Elasticsearch for Trends and Metrics APIs
-      try {
+      try (var ignored = phase("tablePipelineObsIndexSearch")) {
         indexPipelineStatus(table, pipelineObservability);
       } catch (Exception e) {
         LOG.error(
@@ -772,54 +807,72 @@ public class TableRepository extends EntityRepository<Table> {
       }
     }
 
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
-    return table.withPipelineObservability(getAllPipelineObservability(table));
+    try (var ignored = phase("tablePipelineObsHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
+    try (var ignored = phase("tablePipelineObsLoadAll")) {
+      return table.withPipelineObservability(getAllPipelineObservability(table));
+    }
   }
 
   public List<PipelineObservability> getPipelineObservability(UUID tableId) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
-    return getAllPipelineObservability(table);
+    Table table;
+    try (var ignored = phase("tablePipelineObsFind")) {
+      table = find(tableId, NON_DELETED);
+    }
+    try (var ignored = phase("tablePipelineObsLoadAll")) {
+      return getAllPipelineObservability(table);
+    }
   }
 
   public List<PipelineObservability> getPipelineObservabilityByName(String tableFqn) {
-    // Validate the request content
-    Table table = findByName(tableFqn, NON_DELETED);
-    return getAllPipelineObservability(table);
+    Table table;
+    try (var ignored = phase("tablePipelineObsFindByName")) {
+      table = findByName(tableFqn, NON_DELETED);
+    }
+    try (var ignored = phase("tablePipelineObsLoadAll")) {
+      return getAllPipelineObservability(table);
+    }
   }
 
   private List<PipelineObservability> getAllPipelineObservability(Table table) {
     List<ExtensionRecord> extensionRecords =
-        daoCollection
-            .entityExtensionDAO()
-            .getExtensions(table.getId(), TABLE_PIPELINE_OBSERVABILITY_EXTENSION);
+        Collections.emptyList();
+    try (var ignored = phase("tablePipelineObsLoadExtensions")) {
+      extensionRecords =
+          daoCollection
+              .entityExtensionDAO()
+              .getExtensions(table.getId(), TABLE_PIPELINE_OBSERVABILITY_EXTENSION);
+    }
 
     List<PipelineObservability> pipelineObservabilityList = new ArrayList<>();
-    for (ExtensionRecord extensionRecord : extensionRecords) {
-      PipelineObservability observability =
-          JsonUtils.readValue(extensionRecord.extensionJson(), PipelineObservability.class);
+    try (var ignored = phase("tablePipelineObsHydratePipelines")) {
+      for (ExtensionRecord extensionRecord : extensionRecords) {
+        PipelineObservability observability =
+            JsonUtils.readValue(extensionRecord.extensionJson(), PipelineObservability.class);
 
-      if (observability.getPipeline() != null) {
-        try {
-          Pipeline pipeline =
-              Entity.getEntity(
-                  Entity.PIPELINE, observability.getPipeline().getId(), "", Include.NON_DELETED);
+        if (observability.getPipeline() != null) {
+          try {
+            Pipeline pipeline =
+                Entity.getEntity(
+                    Entity.PIPELINE, observability.getPipeline().getId(), "", Include.NON_DELETED);
 
-          if (observability.getServiceType() == null
-              && pipeline != null
-              && pipeline.getServiceType() != null) {
-            observability.setServiceType(pipeline.getServiceType());
+            if (observability.getServiceType() == null
+                && pipeline != null
+                && pipeline.getServiceType() != null) {
+              observability.setServiceType(pipeline.getServiceType());
+            }
+          } catch (Exception e) {
+            LOG.debug(
+                "Skipping pipeline observability for deleted or inaccessible pipeline {}: {}",
+                observability.getPipeline().getFullyQualifiedName(),
+                e.getMessage());
+            continue;
           }
-        } catch (Exception e) {
-          LOG.debug(
-              "Skipping pipeline observability for deleted or inaccessible pipeline {}: {}",
-              observability.getPipeline().getFullyQualifiedName(),
-              e.getMessage());
-          continue;
         }
-      }
 
-      pipelineObservabilityList.add(observability);
+        pipelineObservabilityList.add(observability);
+      }
     }
 
     return pipelineObservabilityList;
@@ -827,30 +880,48 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Transaction
   public Table deletePipelineObservability(UUID tableId) {
-    // Validate the request content and delete all pipeline observability data
-    Table table = find(tableId, NON_DELETED);
-
-    List<ExtensionRecord> extensionRecords =
-        daoCollection
-            .entityExtensionDAO()
-            .getExtensions(tableId, TABLE_PIPELINE_OBSERVABILITY_EXTENSION);
-
-    for (ExtensionRecord record : extensionRecords) {
-      daoCollection.entityExtensionDAO().delete(tableId, record.extensionName());
+    Table table;
+    try (var ignored = phase("tablePipelineObsFind")) {
+      table = find(tableId, NON_DELETED);
     }
 
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    List<ExtensionRecord> extensionRecords =
+        Collections.emptyList();
+    try (var ignored = phase("tablePipelineObsLoadExtensions")) {
+      extensionRecords =
+          daoCollection
+              .entityExtensionDAO()
+              .getExtensions(tableId, TABLE_PIPELINE_OBSERVABILITY_EXTENSION);
+    }
+
+    try (var ignored = phase("tablePipelineObsDeleteAll")) {
+      for (ExtensionRecord record : extensionRecords) {
+        daoCollection.entityExtensionDAO().delete(tableId, record.extensionName());
+      }
+    }
+
+    try (var ignored = phase("tablePipelineObsHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     return table;
   }
 
   @Transaction
   public Table deleteSinglePipelineObservability(UUID tableId, String pipelineFqn) {
-    // Validate the request content and delete specific pipeline observability
-    Table table = find(tableId, NON_DELETED);
+    Table table;
+    try (var ignored = phase("tablePipelineObsFind")) {
+      table = find(tableId, NON_DELETED);
+    }
     String extension = TABLE_PIPELINE_OBSERVABILITY_EXTENSION + "." + pipelineFqn;
-    daoCollection.entityExtensionDAO().delete(tableId, extension);
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
-    return table.withPipelineObservability(getAllPipelineObservability(table));
+    try (var ignored = phase("tablePipelineObsDeleteSingle")) {
+      daoCollection.entityExtensionDAO().delete(tableId, extension);
+    }
+    try (var ignored = phase("tablePipelineObsHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
+    try (var ignored = phase("tablePipelineObsLoadAll")) {
+      return table.withPipelineObservability(getAllPipelineObservability(table));
+    }
   }
 
   public TableProfilerConfig getTableProfilerConfig(Table table) {
@@ -867,45 +938,58 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Transaction
   public Table addTableProfilerConfig(UUID tableId, TableProfilerConfig tableProfilerConfig) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
+    Table table;
+    try (var ignored = phase("tableProfilerConfigFind")) {
+      table = find(tableId, NON_DELETED);
+    }
 
-    // Validate all the columns
-    if (tableProfilerConfig.getExcludeColumns() != null) {
-      for (String columnName : tableProfilerConfig.getExcludeColumns()) {
-        validateColumn(table, columnName);
+    try (var ignored = phase("tableProfilerConfigValidate")) {
+      if (tableProfilerConfig.getExcludeColumns() != null) {
+        for (String columnName : tableProfilerConfig.getExcludeColumns()) {
+          validateColumn(table, columnName);
+        }
+      }
+
+      if (tableProfilerConfig.getIncludeColumns() != null) {
+        for (ColumnProfilerConfig columnProfilerConfig : tableProfilerConfig.getIncludeColumns()) {
+          validateColumn(table, columnProfilerConfig.getColumnName());
+        }
+      }
+      if (tableProfilerConfig.getProfileSampleType() != null
+          && tableProfilerConfig.getProfileSample() != null) {
+        EntityUtil.validateProfileSample(
+            tableProfilerConfig.getProfileSampleType().toString(),
+            tableProfilerConfig.getProfileSample());
       }
     }
 
-    if (tableProfilerConfig.getIncludeColumns() != null) {
-      for (ColumnProfilerConfig columnProfilerConfig : tableProfilerConfig.getIncludeColumns()) {
-        validateColumn(table, columnProfilerConfig.getColumnName());
-      }
+    try (var ignored = phase("tableProfilerConfigStore")) {
+      daoCollection
+          .entityExtensionDAO()
+          .insert(
+              tableId,
+              TABLE_PROFILER_CONFIG_EXTENSION,
+              TABLE_PROFILER_CONFIG,
+              JsonUtils.pojoToJson(tableProfilerConfig));
     }
-    if (tableProfilerConfig.getProfileSampleType() != null
-        && tableProfilerConfig.getProfileSample() != null) {
-      EntityUtil.validateProfileSample(
-          tableProfilerConfig.getProfileSampleType().toString(),
-          tableProfilerConfig.getProfileSample());
+    try (var ignored = phase("tableProfilerConfigClearFields")) {
+      clearFields(table, Fields.EMPTY_FIELDS);
     }
-
-    daoCollection
-        .entityExtensionDAO()
-        .insert(
-            tableId,
-            TABLE_PROFILER_CONFIG_EXTENSION,
-            TABLE_PROFILER_CONFIG,
-            JsonUtils.pojoToJson(tableProfilerConfig));
-    clearFields(table, Fields.EMPTY_FIELDS);
     return table.withTableProfilerConfig(tableProfilerConfig);
   }
 
   @Transaction
   public Table deleteTableProfilerConfig(UUID tableId) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
-    daoCollection.entityExtensionDAO().delete(tableId, TABLE_PROFILER_CONFIG_EXTENSION);
-    clearFieldsInternal(table, Fields.EMPTY_FIELDS);
+    Table table;
+    try (var ignored = phase("tableProfilerConfigFind")) {
+      table = find(tableId, NON_DELETED);
+    }
+    try (var ignored = phase("tableProfilerConfigDelete")) {
+      daoCollection.entityExtensionDAO().delete(tableId, TABLE_PROFILER_CONFIG_EXTENSION);
+    }
+    try (var ignored = phase("tableProfilerConfigClearFields")) {
+      clearFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     return table;
   }
 
@@ -932,81 +1016,93 @@ public class TableRepository extends EntityRepository<Table> {
   }
 
   public Table addTableProfileData(UUID tableId, CreateTableProfile createTableProfile) {
-    // Validate the request content
-    Table table = find(tableId, NON_DELETED);
-    validateProfilerTimestamps(createTableProfile);
+    Table table;
+    try (var ignored = phase("tableProfileDataFind")) {
+      table = find(tableId, NON_DELETED);
+    }
+    try (var ignored = phase("tableProfileDataValidateTs")) {
+      validateProfilerTimestamps(createTableProfile);
+    }
     TableProfile tableProfile = createTableProfile.getTableProfile();
     EntityProfile entityProfile;
-    entityProfile =
-        new EntityProfile()
-            .withProfileData(tableProfile)
-            .withId(UUID.randomUUID())
-            .withProfileType(CreateEntityProfile.ProfileTypeEnum.TABLE)
-            .withTimestamp(tableProfile.getTimestamp())
-            .withEntityReference(table.getEntityReference());
-    daoCollection
-        .profilerDataTimeSeriesDao()
-        .insert(
-            table.getFullyQualifiedName(),
-            TABLE_PROFILE_EXTENSION,
-            "tableProfile",
-            JsonUtils.pojoToJson(entityProfile));
-
-    for (ColumnProfile columnProfile : createTableProfile.getColumnProfile()) {
-      Column column = getColumnNameForProfiler(table.getColumns(), columnProfile, null);
-      if (column == null) {
-        throw new IllegalArgumentException("Invalid column name " + columnProfile.getName());
-      }
+    try (var ignored = phase("tableProfileDataStoreTable")) {
       entityProfile =
           new EntityProfile()
-              .withProfileData(columnProfile)
+              .withProfileData(tableProfile)
               .withId(UUID.randomUUID())
-              .withProfileType(CreateEntityProfile.ProfileTypeEnum.COLUMN)
-              .withTimestamp(columnProfile.getTimestamp())
+              .withProfileType(CreateEntityProfile.ProfileTypeEnum.TABLE)
+              .withTimestamp(tableProfile.getTimestamp())
               .withEntityReference(table.getEntityReference());
       daoCollection
           .profilerDataTimeSeriesDao()
           .insert(
-              column.getFullyQualifiedName(),
-              TABLE_COLUMN_PROFILE_EXTENSION,
-              "columnProfile",
+              table.getFullyQualifiedName(),
+              TABLE_PROFILE_EXTENSION,
+              "tableProfile",
               JsonUtils.pojoToJson(entityProfile));
+    }
+
+    try (var ignored = phase("tableProfileDataStoreColumns")) {
+      for (ColumnProfile columnProfile : createTableProfile.getColumnProfile()) {
+        Column column = getColumnNameForProfiler(table.getColumns(), columnProfile, null);
+        if (column == null) {
+          throw new IllegalArgumentException("Invalid column name " + columnProfile.getName());
+        }
+        entityProfile =
+            new EntityProfile()
+                .withProfileData(columnProfile)
+                .withId(UUID.randomUUID())
+                .withProfileType(CreateEntityProfile.ProfileTypeEnum.COLUMN)
+                .withTimestamp(columnProfile.getTimestamp())
+                .withEntityReference(table.getEntityReference());
+        daoCollection
+            .profilerDataTimeSeriesDao()
+            .insert(
+                column.getFullyQualifiedName(),
+                TABLE_COLUMN_PROFILE_EXTENSION,
+                "columnProfile",
+                JsonUtils.pojoToJson(entityProfile));
+      }
     }
 
     List<SystemProfile> systemProfiles = createTableProfile.getSystemProfile();
     if (systemProfiles != null && !systemProfiles.isEmpty()) {
-      for (SystemProfile systemProfile : createTableProfile.getSystemProfile()) {
-        entityProfile =
-            new EntityProfile()
-                .withProfileData(systemProfile)
-                .withId(UUID.randomUUID())
-                .withProfileType(CreateEntityProfile.ProfileTypeEnum.SYSTEM)
-                .withTimestamp(systemProfile.getTimestamp())
-                .withEntityReference(table.getEntityReference());
-        // system metrics timestamp is the one of the operation. We'll need to
-        // update the entry if it already exists in the database
-        String storedSystemProfile =
-            daoCollection
-                .profilerDataTimeSeriesDao()
-                .getExtensionAtTimestampWithOperation(
-                    table.getFullyQualifiedName(),
-                    SYSTEM_PROFILE_EXTENSION,
-                    systemProfile.getTimestamp(),
-                    systemProfile.getOperation().value());
-        daoCollection
-            .profilerDataTimeSeriesDao()
-            .storeTimeSeriesWithOperation(
-                table.getFullyQualifiedName(),
-                SYSTEM_PROFILE_EXTENSION,
-                "systemProfile",
-                JsonUtils.pojoToJson(entityProfile),
-                systemProfile.getTimestamp(),
-                systemProfile.getOperation().value(),
-                storedSystemProfile != null);
+      try (var ignored = phase("tableProfileDataStoreSystem")) {
+        for (SystemProfile systemProfile : createTableProfile.getSystemProfile()) {
+          entityProfile =
+              new EntityProfile()
+                  .withProfileData(systemProfile)
+                  .withId(UUID.randomUUID())
+                  .withProfileType(CreateEntityProfile.ProfileTypeEnum.SYSTEM)
+                  .withTimestamp(systemProfile.getTimestamp())
+                  .withEntityReference(table.getEntityReference());
+          // system metrics timestamp is the one of the operation. We'll need to
+          // update the entry if it already exists in the database
+          String storedSystemProfile =
+              daoCollection
+                  .profilerDataTimeSeriesDao()
+                  .getExtensionAtTimestampWithOperation(
+                      table.getFullyQualifiedName(),
+                      SYSTEM_PROFILE_EXTENSION,
+                      systemProfile.getTimestamp(),
+                      systemProfile.getOperation().value());
+          daoCollection
+              .profilerDataTimeSeriesDao()
+              .storeTimeSeriesWithOperation(
+                  table.getFullyQualifiedName(),
+                  SYSTEM_PROFILE_EXTENSION,
+                  "systemProfile",
+                  JsonUtils.pojoToJson(entityProfile),
+                  systemProfile.getTimestamp(),
+                  systemProfile.getOperation().value(),
+                  storedSystemProfile != null);
+        }
       }
     }
 
-    setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    try (var ignored = phase("tableProfileDataHydrate")) {
+      setFieldsInternal(table, Fields.EMPTY_FIELDS);
+    }
     return table.withProfile(createTableProfile.getTableProfile());
   }
 
@@ -1191,14 +1287,20 @@ public class TableRepository extends EntityRepository<Table> {
       boolean includeColumnProfile,
       Authorizer authorizer,
       SecurityContext securityContext) {
-    Table table = findByName(fqn, ALL);
+    Table table;
+    try (var ignored = phase("tableProfileLatestFind")) {
+      table = findByName(fqn, ALL);
+    }
 
-    EntityProfile entityProfile =
-        JsonUtils.readValue(
-            daoCollection
-                .profilerDataTimeSeriesDao()
-                .getLatestExtension(table.getFullyQualifiedName(), TABLE_PROFILE_EXTENSION),
-            EntityProfile.class);
+    EntityProfile entityProfile;
+    try (var ignored = phase("tableProfileLatestLoadTableProfile")) {
+      entityProfile =
+          JsonUtils.readValue(
+              daoCollection
+                  .profilerDataTimeSeriesDao()
+                  .getLatestExtension(table.getFullyQualifiedName(), TABLE_PROFILE_EXTENSION),
+              EntityProfile.class);
+    }
 
     if (entityProfile == null) {
       table.setProfile(null);
@@ -1210,15 +1312,21 @@ public class TableRepository extends EntityRepository<Table> {
     }
 
     if (includeColumnProfile) {
-      setColumnProfile(table.getColumns());
+      try (var ignored = phase("tableProfileLatestLoadColumnProfiles")) {
+        setColumnProfile(table.getColumns());
+      }
     }
 
-    // Always populate field tags; the masking strategy decides what to do with them
-    populateEntityFieldTags(entityType, table.getColumns(), table.getFullyQualifiedName(), true);
+    try (var ignored = phase("tableProfileLatestPopulateFieldTags")) {
+      // Always populate field tags; the masking strategy decides what to do with them
+      populateEntityFieldTags(entityType, table.getColumns(), table.getFullyQualifiedName(), true);
+    }
 
-    List<Column> maskedColumns =
-        PIIMasker.getTableProfile(fqn, table.getColumns(), authorizer, securityContext);
-    table.setColumns(maskedColumns);
+    try (var ignored = phase("tableProfileLatestMaskPII")) {
+      List<Column> maskedColumns =
+          PIIMasker.getTableProfile(fqn, table.getColumns(), authorizer, securityContext);
+      table.setColumns(maskedColumns);
+    }
     return table;
   }
 
@@ -1264,6 +1372,8 @@ public class TableRepository extends EntityRepository<Table> {
     setFieldsInternal(table, new Fields(Set.of(CUSTOM_METRICS, COLUMN_FIELD)));
     return table;
   }
+
+  // Existing implementation below remains unchanged.
 
   public Table addDataModel(UUID tableId, DataModel dataModel) {
     Table table =

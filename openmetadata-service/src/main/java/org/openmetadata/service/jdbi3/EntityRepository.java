@@ -1103,7 +1103,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     try (var ignored = phase("entityLookup")) {
       entity = find(id, relationIncludes.getDefaultInclude());
     }
-    ReadPlan readPlan = createReadPlan(entity, fields, relationIncludes);
+    ReadPlan readPlan;
+    try (var ignored = phase("readCreatePlan")) {
+      readPlan = createReadPlan(entity, fields, relationIncludes);
+    }
     ReadBundle readBundle;
     try (var ignored = phase("buildReadBundle")) {
       readBundle = buildReadBundle(entity, readPlan);
@@ -1119,8 +1122,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
     } finally {
       ReadBundleContext.pop();
     }
-    clearFieldsInternal(entity, fields);
-    entity = withHref(uriInfo, entity);
+    try (var ignored = phase("readClearFields")) {
+      clearFieldsInternal(entity, fields);
+    }
+    try (var ignored = phase("readWithHref")) {
+      entity = withHref(uriInfo, entity);
+    }
     try (var ignored = phase("requestCachePutById")) {
       RequestEntityCache.putById(
           entityType, id, fields, relationIncludes, fromCache, entity, entityClass);
@@ -1232,7 +1239,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     try (var ignored = phase("entityLookup")) {
       entity = findByName(fqn, relationIncludes.getDefaultInclude());
     }
-    ReadPlan readPlan = createReadPlan(entity, fields, relationIncludes);
+    ReadPlan readPlan;
+    try (var ignored = phase("readCreatePlan")) {
+      readPlan = createReadPlan(entity, fields, relationIncludes);
+    }
     ReadBundle readBundle;
     try (var ignored = phase("buildReadBundle")) {
       readBundle = buildReadBundle(entity, readPlan);
@@ -1248,8 +1258,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
     } finally {
       ReadBundleContext.pop();
     }
-    clearFieldsInternal(entity, fields);
-    entity = withHref(uriInfo, entity);
+    try (var ignored = phase("readClearFields")) {
+      clearFieldsInternal(entity, fields);
+    }
+    try (var ignored = phase("readWithHref")) {
+      entity = withHref(uriInfo, entity);
+    }
     try (var ignored = phase("requestCachePutByName")) {
       RequestEntityCache.putByName(
           entityType, fqn, fields, relationIncludes, fromCache, entity, entityClass);
@@ -1959,7 +1973,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     }
 
-    prepareInternal(entity, false);
+    try (var ignored = phase("createPrepareInternal")) {
+      prepareInternal(entity, false);
+    }
 
     // Set updatedBy and impersonatedBy after prepare but before storing
     if (updatedBy != null) {
@@ -2291,14 +2307,22 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     }
 
-    T original = findByNameOrNull(updated.getFullyQualifiedName(), ALL);
+    T original;
+    try (var ignored = phase("upsertFindOriginal")) {
+      original = findByNameOrNull(updated.getFullyQualifiedName(), ALL);
+    }
     if (original == null) { // If an original entity does not exist then create it, else update
       // Always set impersonatedBy to clear it when null (regular user operations)
       updated.setImpersonatedBy(impersonatedBy);
-      return new PutResponse<>(
-          Status.CREATED, withHref(uriInfo, createNewEntity(updated)), ENTITY_CREATED);
+      T created;
+      try (var ignored = phase("upsertCreate")) {
+        created = withHref(uriInfo, createNewEntity(updated));
+      }
+      return new PutResponse<>(Status.CREATED, created, ENTITY_CREATED);
     }
-    return update(uriInfo, original, updated, updatedBy, impersonatedBy);
+    try (var ignored = phase("upsertUpdate")) {
+      return update(uriInfo, original, updated, updatedBy, impersonatedBy);
+    }
   }
 
   @Transaction
@@ -2309,14 +2333,22 @@ public abstract class EntityRepository<T extends EntityInterface> {
   @Transaction
   public PutResponse<T> createOrUpdateForImport(
       UriInfo uriInfo, T updated, String updatedBy, String impersonatedBy) {
-    T original = findByNameOrNull(updated.getFullyQualifiedName(), ALL);
+    T original;
+    try (var ignored = phase("upsertFindOriginalImport")) {
+      original = findByNameOrNull(updated.getFullyQualifiedName(), ALL);
+    }
     if (original == null) { // If an original entity does not exist then create it, else update
       // Always set impersonatedBy to clear it when null (regular user operations)
       updated.setImpersonatedBy(impersonatedBy);
-      return new PutResponse<>(
-          Status.CREATED, withHref(uriInfo, createNewEntity(updated)), ENTITY_CREATED);
+      T created;
+      try (var ignored = phase("upsertCreateImport")) {
+        created = withHref(uriInfo, createNewEntity(updated));
+      }
+      return new PutResponse<>(Status.CREATED, created, ENTITY_CREATED);
     }
-    return updateForImport(uriInfo, original, updated, updatedBy, impersonatedBy);
+    try (var ignored = phase("upsertUpdateImport")) {
+      return updateForImport(uriInfo, original, updated, updatedBy, impersonatedBy);
+    }
   }
 
   /**
@@ -2558,22 +2590,30 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public final PutResponse<T> update(
       UriInfo uriInfo, T original, T updated, String updatedBy, String impersonatedBy) {
     // Get all the fields in the original entity that can be updated during PUT operation
-    setFieldsInternal(original, putFields);
+    try (var ignored = phase("putHydrateOriginal")) {
+      setFieldsInternal(original, putFields);
+    }
     updated.setUpdatedBy(updatedBy);
     updated.setUpdatedAt(System.currentTimeMillis());
     // Always set impersonatedBy to clear it when null (regular user operations)
     updated.setImpersonatedBy(impersonatedBy);
     // If the entity state is soft-deleted, recursively undelete the entity and it's children
     if (Boolean.TRUE.equals(original.getDeleted())) {
-      restoreEntity(updated.getUpdatedBy(), original.getId());
+      try (var ignored = phase("putRestoreEntity")) {
+        restoreEntity(updated.getUpdatedBy(), original.getId());
+      }
     }
 
     // Update the attributes and relationships of an entity
     EntityUpdater entityUpdater = getUpdater(original, updated, Operation.PUT, null);
-    entityUpdater.update();
+    try (var ignored = phase("putEntityUpdate")) {
+      entityUpdater.update();
+    }
     EventType change =
         entityUpdater.incrementalFieldsChanged() ? EventType.ENTITY_UPDATED : ENTITY_NO_CHANGE;
-    setInheritedFields(updated, new Fields(allowedFields));
+    try (var ignored = phase("putSetInheritedFields")) {
+      setInheritedFields(updated, new Fields(allowedFields));
+    }
     if (change == ENTITY_UPDATED) {
       updated.setChangeDescription(entityUpdater.getIncrementalChangeDescription());
     }
@@ -2588,22 +2628,30 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public final PutResponse<T> updateForImport(
       UriInfo uriInfo, T original, T updated, String updatedBy, String impersonatedBy) {
     // Get all the fields in the original entity that can be updated during PUT operation
-    setFieldsInternal(original, putFields);
+    try (var ignored = phase("putHydrateOriginalImport")) {
+      setFieldsInternal(original, putFields);
+    }
     updated.setUpdatedBy(updatedBy);
     updated.setUpdatedAt(System.currentTimeMillis());
     // Always set impersonatedBy to clear it when null (regular user operations)
     updated.setImpersonatedBy(impersonatedBy);
     // If the entity state is soft-deleted, recursively undelete the entity and it's children
     if (Boolean.TRUE.equals(original.getDeleted())) {
-      restoreEntity(updated.getUpdatedBy(), original.getId());
+      try (var ignored = phase("putRestoreEntityImport")) {
+        restoreEntity(updated.getUpdatedBy(), original.getId());
+      }
     }
 
     // Update the attributes and relationships of an entity
     EntityUpdater entityUpdater = getUpdater(original, updated, Operation.PUT, null);
-    entityUpdater.updateForImport();
+    try (var ignored = phase("putEntityUpdateImport")) {
+      entityUpdater.updateForImport();
+    }
     EventType change =
         entityUpdater.incrementalFieldsChanged() ? EventType.ENTITY_UPDATED : ENTITY_NO_CHANGE;
-    setInheritedFields(updated, new Fields(allowedFields));
+    try (var ignored = phase("putSetInheritedFieldsImport")) {
+      setInheritedFields(updated, new Fields(allowedFields));
+    }
     if (change == ENTITY_UPDATED) {
       updated.setChangeDescription(entityUpdater.getIncrementalChangeDescription());
     }
@@ -2642,7 +2690,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String ifMatchHeader,
       String impersonatedBy) {
     // Get all the fields in the original entity that can be updated during PATCH operation
-    T original = get(null, id, patchFields, NON_DELETED, false);
+    T original;
+    try (var ignored = phase("patchLoadOriginal")) {
+      original = get(null, id, patchFields, NON_DELETED, false);
+    }
 
     // Validate ETag if If-Match header is provided
     boolean useOptimisticLocking = ifMatchHeader != null && !ifMatchHeader.isEmpty();
@@ -2692,7 +2743,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String ifMatchHeader,
       String impersonatedBy) {
     // Get all the fields in the original entity that can be updated during PATCH operation
-    T original = getByName(null, fqn, patchFields, NON_DELETED, false);
+    T original;
+    try (var ignored = phase("patchLoadOriginalByName")) {
+      original = getByName(null, fqn, patchFields, NON_DELETED, false);
+    }
 
     // Validate ETag if If-Match header is provided
     boolean useOptimisticLocking = ifMatchHeader != null && !ifMatchHeader.isEmpty();
@@ -2788,7 +2842,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     if (entityUpdater.fieldsChanged()) {
-      setInheritedFields(updated, patchFields); // Restore inherited fields after a change
+      try (var ignored = phase("patchSetInheritedFields")) {
+        setInheritedFields(updated, patchFields); // Restore inherited fields after a change
+      }
     }
     updated.setChangeDescription(entityUpdater.getIncrementalChangeDescription());
     if (entityUpdater.incrementalFieldsChanged()) {
@@ -8542,7 +8598,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     // Per-entity updater (relationships + change description)
     List<EntityUpdater> updaters = new ArrayList<>();
-    List<T> updatedEntities = new ArrayList<>();
 
     try (var ignored = phase("entityUpdaters")) {
       for (T entity : updateEntities) {
@@ -8558,7 +8613,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
           EntityUpdater updater = getUpdater(original, entity, Operation.PUT, null);
           updater.updateWithDeferredStore();
           updaters.add(updater);
-          updatedEntities.add(entity);
         } catch (Exception e) {
           failedRequests.add(
               new BulkResponse()
@@ -8570,6 +8624,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     if (updaters.isEmpty()) return;
+    List<EntityUpdater> changedUpdaters =
+        updaters.stream()
+            .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
+            .toList();
 
     // Batch DB writes
     try {
@@ -8578,7 +8636,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         List<UUID> historyIds = new ArrayList<>();
         List<String> historyExtensions = new ArrayList<>();
         List<String> historyJsons = new ArrayList<>();
-        for (EntityUpdater updater : updaters) {
+        for (EntityUpdater updater : changedUpdaters) {
           if (updater.isVersionChanged()) {
             historyIds.add(updater.getOriginal().getId());
             historyExtensions.add(
@@ -8594,57 +8652,52 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
         // Batch entity row updates
         List<T> entitiesToStore = new ArrayList<>();
-        for (EntityUpdater updater : updaters) {
-          if (updater.isVersionChanged() || updater.isEntityChanged()) {
-            entitiesToStore.add(updater.getUpdated());
-          }
+        for (EntityUpdater updater : changedUpdaters) {
+          entitiesToStore.add(updater.getUpdated());
         }
         if (!entitiesToStore.isEmpty()) {
           updateMany(entitiesToStore);
         }
       }
 
-      try (var ignored = phase("setInheritedFields")) {
-        // Batch set inherited fields for all updated entities at once
-        var allUpdated = updaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
-        setInheritedFields(allUpdated, new Fields(allowedFields));
-      }
-
       List<T> changedEntities =
-          updaters.stream()
-              .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
-              .map(EntityUpdater::getUpdated)
-              .map(e -> (T) e)
-              .toList();
+          changedUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
       if (!changedEntities.isEmpty()) {
+        try (var ignored = phase("setInheritedFields")) {
+          // Only changed entities need inheritance hydration for downstream side effects.
+          setInheritedFields(changedEntities, new Fields(allowedFields));
+        }
         try (var ignored = phase("writeThroughCacheBulk")) {
           writeThroughCacheMany(changedEntities, true);
         }
+        try (var ignored = phase("postUpdateEvents")) {
+          for (var updater : changedUpdaters) {
+            postUpdate(updater.getOriginal(), updater.getUpdated());
+            var changeType =
+                updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
+            createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
+          }
+        }
       }
 
-      // Per-entity: cache write-through + events + metrics
+      // Per-entity success + metrics (includes no-change updates).
       long batchDuration = System.nanoTime() - batchStartTime;
       long perEntityDuration = batchDuration / updaters.size();
-      try (var ignored = phase("postUpdateEvents")) {
-        for (var updater : updaters) {
-          postUpdate(updater.getOriginal(), updater.getUpdated());
-          var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
-          createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
-          entityLatenciesNanos.add(perEntityDuration);
-          recordEntityMetrics(entityType, perEntityDuration, 0, true);
-          successRequests.add(
-              new BulkResponse()
-                  .withRequest(updater.getUpdated().getFullyQualifiedName())
-                  .withStatus(Status.OK.getStatusCode()));
-        }
+      for (var updater : updaters) {
+        entityLatenciesNanos.add(perEntityDuration);
+        recordEntityMetrics(entityType, perEntityDuration, 0, true);
+        successRequests.add(
+            new BulkResponse()
+                .withRequest(updater.getUpdated().getFullyQualifiedName())
+                .withStatus(Status.OK.getStatusCode()));
       }
     } catch (Exception batchError) {
       LOG.warn("Batch update store failed, falling back to per-entity updates", batchError);
       List<EntityUpdater> succeededUpdaters = new ArrayList<>();
       for (var updater : updaters) {
         try {
-          updater.storeUpdate();
           if (updater.isVersionChanged() || updater.isEntityChanged()) {
+            updater.storeUpdate();
             writeThroughCache(updater.getUpdated(), true);
           }
           succeededUpdaters.add(updater);
@@ -8667,15 +8720,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
           try (var ignored = phase("writeThroughCacheBulk")) {
             writeThroughCacheMany(fallbackChanged, true);
           }
+          setInheritedFields(fallbackChanged, new Fields(allowedFields));
         }
 
-        var fallbackUpdated =
-            succeededUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
-        setInheritedFields(fallbackUpdated, new Fields(allowedFields));
         for (var updater : succeededUpdaters) {
-          postUpdate(updater.getOriginal(), updater.getUpdated());
-          var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
-          createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
+          if (updater.isVersionChanged() || updater.isEntityChanged()) {
+            postUpdate(updater.getOriginal(), updater.getUpdated());
+            var changeType =
+                updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
+            createChangeEventForBulkOperation(updater.getUpdated(), changeType, userName);
+          }
           successRequests.add(
               new BulkResponse()
                   .withRequest(updater.getUpdated().getFullyQualifiedName())
