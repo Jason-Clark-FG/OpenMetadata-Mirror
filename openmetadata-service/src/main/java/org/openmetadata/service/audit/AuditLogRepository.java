@@ -34,8 +34,8 @@ public class AuditLogRepository {
           EventType.ENTITY_SOFT_DELETED,
           EventType.ENTITY_DELETED,
           EventType.ENTITY_RESTORED,
-          EventType.USER_LOGGED_IN,
-          EventType.USER_LOGGED_OUT);
+          EventType.USER_LOGIN,
+          EventType.USER_LOGOUT);
 
   private static final Set<String> AGENT_INDICATORS =
       Set.of("agent", "documentation", "classification", "automator");
@@ -113,8 +113,8 @@ public class AuditLogRepository {
     }
   }
 
-  public static final EventType AUTH_EVENT_LOGIN = EventType.USER_LOGGED_IN;
-  public static final EventType AUTH_EVENT_LOGOUT = EventType.USER_LOGGED_OUT;
+  public static final EventType AUTH_EVENT_LOGIN = EventType.USER_LOGIN;
+  public static final EventType AUTH_EVENT_LOGOUT = EventType.USER_LOGOUT;
 
   /**
    * Write an authentication event (login/logout) to the audit log. Constructs a proper
@@ -489,9 +489,9 @@ public class AuditLogRepository {
       case ENTITY_UPDATED:
       case ENTITY_FIELDS_CHANGED:
         return formatChangeDescription(changeEvent.getChangeDescription());
-      case USER_LOGGED_IN:
+      case USER_LOGIN:
         return "User logged in";
-      case USER_LOGGED_OUT:
+      case USER_LOGOUT:
         return "User logged out";
       default:
         return eventType.value();
