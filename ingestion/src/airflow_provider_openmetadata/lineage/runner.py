@@ -16,6 +16,7 @@ import logging
 import os
 from itertools import groupby
 from typing import List, Optional
+from urllib.parse import quote
 
 from airflow.configuration import conf
 from pydantic import BaseModel
@@ -166,7 +167,7 @@ class AirflowLineageRunner:
     def get_task_url(self, task: "Operator"):
         return (
             f"{clean_uri(self.host_port)}/taskinstance/list/"
-            f"?flt1_dag_id_equals={self.dag.dag_id}&_flt_3_task_id={task.task_id}"
+            f"?_flt_3_dag_id={quote(self.dag.dag_id)}&_flt_3_task_id={quote(task.task_id)}"
         )
 
     def get_om_tasks(self) -> List[Task]:

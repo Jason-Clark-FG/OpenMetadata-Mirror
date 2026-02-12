@@ -13,6 +13,7 @@ Test Airflow processing
 """
 from unittest import TestCase
 from unittest.mock import patch
+from urllib.parse import quote
 
 import pytest
 
@@ -860,3 +861,73 @@ class TestAirflow(TestCase):
 
         # Verify fallback
         self.assertEqual(column, "execution_date")
+
+    def test_task_source_url_format(self):
+        """Test that task source URLs use correct filter parameters"""
+        dag_id = "test_dag"
+        host_port = "http://localhost:8080"
+
+        data = SERIALIZED_DAG["dag"]
+        dag = AirflowDagDetails(
+            dag_id=dag_id,
+            fileloc="/path/to/dag.py",
+            data=AirflowDag.model_validate(SERIALIZED_DAG),
+            max_active_runs=data.get("max_active_runs", None),
+            description=data.get("_description", None),
+            start_date=data.get("start_date", None),
+            tasks=data.get("tasks", []),
+            schedule_interval=None,
+            owner=None,
+        )
+
+        tasks = self.airflow.get_tasks_from_dag(dag, host_port)
+
+        assert len(tasks) > 0
+        for task in tasks:
+            url = task.sourceUrl.root
+            assert "_flt_3_dag_id=" in url
+            assert "_flt_3_task_id=" in url
+            assert "flt1_dag_id_equals" not in url
+
+    def test_task_source_url_with_special_characters(self):
+        """Test URL encoding for DAG and task IDs with special characters"""
+        dag_id = "timescale_loader_v7"
+        task_id_with_dots = "loader_group.load_measurement"
+        host_port = "http://localhost:8080"
+
+        serialized_dag_with_dots = {
+            "__version": 1,
+            "dag": {
+                "_dag_id": dag_id,
+                "fileloc": "/path/to/dag.py",
+                "tasks": [
+                    {
+                        "task_id": task_id_with_dots,
+                        "_task_type": "EmptyOperator",
+                        "downstream_task_ids": [],
+                    }
+                ],
+            },
+        }
+
+        data = serialized_dag_with_dots["dag"]
+        dag = AirflowDagDetails(
+            dag_id=dag_id,
+            fileloc="/path/to/dag.py",
+            data=AirflowDag.model_validate(serialized_dag_with_dots),
+            max_active_runs=data.get("max_active_runs", None),
+            description=data.get("_description", None),
+            start_date=data.get("start_date", None),
+            tasks=data.get("tasks", []),
+            schedule_interval=None,
+            owner=None,
+        )
+
+        tasks = self.airflow.get_tasks_from_dag(dag, host_port)
+
+        assert len(tasks) == 1
+        task_url = tasks[0].sourceUrl.root
+        assert f"_flt_3_dag_id={quote(dag_id)}" in task_url
+        assert f"_flt_3_task_id={quote(task_id_with_dots)}" in task_url
+        assert dag_id in task_url
+        assert task_id_with_dots in task_url

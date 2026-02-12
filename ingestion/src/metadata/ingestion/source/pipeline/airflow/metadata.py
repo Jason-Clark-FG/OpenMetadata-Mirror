@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
+from urllib.parse import quote
 
 from airflow.models import BaseOperator, DagRun, DagTag, TaskInstance
 from airflow.models.dag import DagModel
@@ -621,7 +622,7 @@ class AirflowSource(PipelineServiceSource):
                 description=task.doc_md,
                 sourceUrl=SourceUrl(
                     f"{clean_uri(host_port)}/taskinstance/list/"
-                    f"?flt1_dag_id_equals={dag.dag_id}&_flt_3_task_id={task.task_id}"
+                    f"?_flt_3_dag_id={quote(dag.dag_id)}&_flt_3_task_id={quote(task.task_id)}"
                 ),
                 downstreamTasks=list(task.downstream_task_ids)
                 if task.downstream_task_ids
