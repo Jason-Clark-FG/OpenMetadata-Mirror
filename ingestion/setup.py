@@ -433,6 +433,7 @@ test = {
     "pytest==7.0.1",
     "pytest-cov",
     "pytest-order",
+    "pytest-xdist",
     "dirty-equals",
     # install dbt dependency
     "collate-dbt-artifacts-parser",

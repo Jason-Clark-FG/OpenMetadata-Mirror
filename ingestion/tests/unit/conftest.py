@@ -27,6 +27,18 @@ _mock_health = patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.health_che
 _mock_health.start()
 
 
+@fixture(scope="session")
+def worker_id(request):
+    """Fallback worker_id fixture for when pytest-xdist is not installed.
+
+    When xdist is active, request.config.workerinput contains the worker id.
+    Otherwise, return "master" (single-process mode).
+    """
+    if hasattr(request.config, "workerinput"):
+        return request.config.workerinput["workerid"]
+    return "master"
+
+
 @fixture(scope="session", autouse=True)
 def register_sqlite_math_functions():
     """
