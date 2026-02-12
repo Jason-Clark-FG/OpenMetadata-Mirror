@@ -635,7 +635,6 @@ class TestSDKIntegration(unittest.TestCase):
         finally:
             om.Tables.delete(str(table.id.root), hard_delete=True)
 
-
     # ------------------------------------------------------------------ #
     #  Search with friendly dict filters
     # ------------------------------------------------------------------ #
