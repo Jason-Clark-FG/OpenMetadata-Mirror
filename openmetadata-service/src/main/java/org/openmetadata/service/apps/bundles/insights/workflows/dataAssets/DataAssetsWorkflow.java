@@ -198,7 +198,9 @@ public class DataAssetsWorkflow {
         return Math.max(4, Math.min(cpuBudget, poolSize / 2));
       }
     } catch (Exception e) {
-      LOG.debug("Could not determine database pool size, using default concurrency budget");
+      LOG.warn(
+          "Could not determine database pool size, using default concurrency budget: {}",
+          e.getMessage());
     }
     return Math.max(4, cpuBudget);
   }
@@ -234,10 +236,16 @@ public class DataAssetsWorkflow {
           searchInterface.getEntityAttributeFields(
               dataInsightsSearchConfiguration, source.getEntityType()));
 
-      processSource(source, contextData, budget);
+      processSource(source, Collections.unmodifiableMap(new HashMap<>(contextData)), budget);
     }
   }
 
+  /**
+   * Processes entities from {@code source} in parallel using virtual threads. Concurrency is
+   * bounded by a semaphore with {@code budget} permits. Bulk operations produced by each thread are
+   * collected in a concurrent queue and flushed to the search index after each batch. The method
+   * blocks until all entities in a batch complete before reading the next one.
+   */
   private void processSource(
       PaginatedEntitiesSource source, Map<String, Object> contextData, int budget)
       throws SearchIndexException {
@@ -257,34 +265,40 @@ public class DataAssetsWorkflow {
             continue;
           }
 
-          List<Future<Void>> futures = new ArrayList<>();
+          record EntityFuture(EntityInterface entity, Future<Void> future) {}
+          List<EntityFuture> entityFutures = new ArrayList<>();
           for (EntityInterface entity : batch.getData()) {
-            futures.add(
-                sourceExecutor.submit(
-                    () -> {
-                      concurrencyLimit.acquire();
-                      try {
-                        List<Map<String, Object>> enriched =
-                            entityEnricher.enrichSingle(entity, contextData);
-                        List<?> bulkOps = (List<?>) entityProcessor.process(enriched, contextData);
-                        operationsQueue.addAll(bulkOps);
-                      } finally {
-                        concurrencyLimit.release();
-                      }
-                      return null;
-                    }));
+            entityFutures.add(
+                new EntityFuture(
+                    entity,
+                    sourceExecutor.submit(
+                        () -> {
+                          concurrencyLimit.acquire();
+                          try {
+                            List<Map<String, Object>> enriched =
+                                entityEnricher.enrichSingle(entity, contextData);
+                            List<?> bulkOps =
+                                (List<?>) entityProcessor.process(enriched, contextData);
+                            operationsQueue.addAll(bulkOps);
+                          } finally {
+                            concurrencyLimit.release();
+                          }
+                          return null;
+                        })));
           }
 
           int batchSuccess = 0;
           int batchFailed = 0;
-          for (Future<Void> future : futures) {
+          for (EntityFuture ef : entityFutures) {
             try {
-              future.get();
+              ef.future().get();
               batchSuccess++;
             } catch (ExecutionException e) {
               batchFailed++;
               LOG.debug(
-                  "[DataAssetsWorkflow] Failed to process entity: {}",
+                  "[DataAssetsWorkflow] Failed to process entity '{}' (type={}): {}",
+                  ef.entity().getFullyQualifiedName(),
+                  source.getEntityType(),
                   e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
             }
           }
@@ -302,15 +316,14 @@ public class DataAssetsWorkflow {
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();
           break;
-        } finally {
-          updateWorkflowStats(source.getName(), source.getStats());
         }
       }
+
+      this.executor = null;
     }
 
     drainAndFlush(operationsQueue, contextData);
     updateWorkflowStats(source.getName(), source.getStats());
-    this.executor = null;
   }
 
   @SuppressWarnings("unchecked")
