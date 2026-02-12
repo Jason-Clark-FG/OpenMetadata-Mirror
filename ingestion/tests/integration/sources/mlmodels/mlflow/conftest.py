@@ -72,7 +72,7 @@ class MlflowTestConfiguration:
 # ------------------------------------------------------------
 # Fixture to setup the environment
 # ------------------------------------------------------------
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def mlflow_environment():
     unique_id = str(uuid.uuid4())[:8]
 
@@ -88,7 +88,9 @@ def mlflow_environment():
 
     minio_container = get_minio_container(config.minio_configs)
     mysql_container = get_mysql_container(config.mysql_configs)
-    mlflow_container = build_and_get_mlflow_container(config.mlflow_configs, unique_id)
+    mlflow_container = build_and_get_mlflow_container(
+        config.mlflow_configs, config.minio_configs, unique_id
+    )
 
     with docker_network:
         minio_container.with_network(docker_network)
@@ -138,7 +140,9 @@ def mlflow_environment():
 
 
 def build_and_get_mlflow_container(
-    mlflow_config: MlflowContainerConfigs, unique_id: str
+    mlflow_config: MlflowContainerConfigs,
+    minio_config: MinioContainerConfigs,
+    unique_id: str,
 ):
     docker_client = DockerClient()
 
@@ -154,9 +158,18 @@ def build_and_get_mlflow_container(
     docker_client.client.images.build(fileobj=dockerfile, tag=image_tag)
 
     container = DockerContainer(image_tag)
-    container.with_bind_ports(mlflow_config.port, 8778)
+    container.with_exposed_ports(mlflow_config.port)
+    container.with_env("AWS_ACCESS_KEY_ID", minio_config.access_key)
+    container.with_env("AWS_SECRET_ACCESS_KEY", minio_config.secret_key)
+    container.with_env(
+        "MLFLOW_S3_ENDPOINT_URL",
+        f"http://{minio_config.container_name}:{minio_config.port}",
+    )
+    container.with_env("MLFLOW_BOTO_CLIENT_ADDRESSING_STYLE", "path")
     container.with_command(
-        f"mlflow server --backend-store-uri {mlflow_config.backend_uri} --default-artifact-root s3://{mlflow_config.artifact_bucket} --host 0.0.0.0 --port {mlflow_config.port}"
+        f"mlflow server --backend-store-uri {mlflow_config.backend_uri}"
+        f" --default-artifact-root s3://{mlflow_config.artifact_bucket}"
+        f" --host 0.0.0.0 --port {mlflow_config.port}"
     )
 
     return container

@@ -101,7 +101,7 @@ jobs:
           path: ingestion/.coverage
 
   py-integration-tests:
-    name: Integration Tests
+    name: "Integration Tests (${{ matrix.shard.name }})"
     timeout-minutes: 180
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
@@ -109,6 +109,23 @@ jobs:
       fail-fast: false
       matrix:
         py-version: ["3.10", "3.11"] # , "3.12"]
+        shard:
+          - name: "shard-1"
+            nox-args: >-
+              tests/integration/ometa
+              tests/integration/postgres
+              tests/integration/mysql
+              tests/integration/trino
+              tests/integration/profiler
+              tests/integration/data_quality
+          - name: "shard-2"
+            nox-args: >-
+              --ignore=tests/integration/ometa
+              --ignore=tests/integration/postgres
+              --ignore=tests/integration/mysql
+              --ignore=tests/integration/trino
+              --ignore=tests/integration/profiler
+              --ignore=tests/integration/data_quality
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -155,7 +172,7 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s integration-tests -- --standalone
+          nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.shard.nox-args }}
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
         shell: bash
@@ -164,7 +181,7 @@ jobs:
         if: ${{ matrix.py-version == env.MAIN_PYTHON_VERSION && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-integration
+          name: coverage-integration-${{ matrix.shard.name }}
           path: ingestion/.coverage
 
       - name: Clean Up
@@ -210,8 +227,11 @@ jobs:
       - name: Prepare coverage files
         run: |
           cd ingestion
-          mv coverage-data/coverage-unit/.coverage .coverage.unit
-          mv coverage-data/coverage-integration/.coverage .coverage.integration
+          [ -f coverage-data/coverage-unit/.coverage ] && mv coverage-data/coverage-unit/.coverage .coverage.unit
+          for dir in coverage-data/coverage-integration-*/; do
+            shard=$(basename "$dir" | sed 's/coverage-integration-//')
+            [ -f "$dir/.coverage" ] && mv "$dir/.coverage" ".coverage.integration-$shard"
+          done
         shell: bash
 
       - name: Combine coverage

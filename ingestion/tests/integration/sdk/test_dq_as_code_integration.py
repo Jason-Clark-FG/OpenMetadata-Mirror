@@ -320,9 +320,7 @@ def test_multiple_tests_in_single_runner(
         if r.testCase
         == HasAttributes(
             testDefinition=HasAttributes(name=tests[2].test_definition_name),
-            entityLink=EntityLink(
-                root="<#E::table::dq_test_service_dq0.dq_test_db.public.users::columns::username>"
-            ),
+            entityLink=EntityLink(root=f"<#E::table::{table_fqn}::columns::username>"),
         )
     )
     assert (
@@ -336,9 +334,7 @@ def test_multiple_tests_in_single_runner(
         if r.testCase
         == HasAttributes(
             testDefinition=HasAttributes(name=tests[3].test_definition_name),
-            entityLink=EntityLink(
-                root="<#E::table::dq_test_service_dq0.dq_test_db.public.users::columns::username>"
-            ),
+            entityLink=EntityLink(root=f"<#E::table::{table_fqn}::columns::username>"),
         )
     )
     assert (

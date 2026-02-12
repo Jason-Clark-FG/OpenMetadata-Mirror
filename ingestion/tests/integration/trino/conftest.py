@@ -1,5 +1,6 @@
 import os.path
 import random
+import uuid
 from pathlib import Path
 from time import sleep
 
@@ -117,13 +118,13 @@ class HiveMetaStoreContainer(DockerContainer):
         )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def docker_network():
     with testcontainers.core.network.Network() as network:
         yield network
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def trino_container(hive_metastore_container, minio_container, docker_network):
     container = (
         TrinoContainer(image="trinodb/trino:418")
@@ -141,7 +142,7 @@ def trino_container(hive_metastore_container, minio_container, docker_network):
         yield trino
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def mysql_container(docker_network):
     container = (
         MySqlContainer(
@@ -154,7 +155,7 @@ def mysql_container(docker_network):
         yield mysql
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def hive_metastore_container(mysql_container, minio_container, docker_network):
     with HiveMetaStoreContainer("bitsondatadev/hive-metastore:latest").with_network(
         docker_network
@@ -172,7 +173,7 @@ def hive_metastore_container(mysql_container, minio_container, docker_network):
         yield hive
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def minio_container(docker_network):
     container = (
         MinioContainer().with_network(docker_network).with_network_aliases("minio")
@@ -183,7 +184,7 @@ def minio_container(docker_network):
         yield minio
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def create_test_data(trino_container):
     engine = create_engine(
         make_url(trino_container.get_connection_url()).set(database="minio")
@@ -267,9 +268,9 @@ def custom_insert(self, conn, keys: list[str], data_iter):
 
 
 @pytest.fixture(scope="module")
-def create_service_request(trino_container, tmp_path_factory):
+def create_service_request(trino_container):
     return CreateDatabaseServiceRequest(
-        name="docker_test_" + tmp_path_factory.mktemp("trino").name,
+        name=f"docker_test_trino_{uuid.uuid4().hex[:8]}",
         serviceType=DatabaseServiceType.Trino,
         connection=DatabaseConnection(
             config=TrinoConnection(

@@ -15,7 +15,7 @@ from metadata.generated.schema.entity.services.databaseService import (
 )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def mysql_container(tmp_path_factory):
     """Start a PostgreSQL container with the dvdrental database."""
     test_db_tar_path = os.path.join(

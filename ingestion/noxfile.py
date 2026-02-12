@@ -12,6 +12,7 @@
 Nox sessions for testing and formatting checks.
 """
 import os
+
 import nox
 from nox.virtualenv import PassthroughEnv
 
@@ -138,6 +139,7 @@ def static_checks(session):
 )
 def unit_tests(session):
     """Run Python unit tests with coverage and parallel execution."""
+    install(session, ".[dev]")
     install(session, ".[all]")
     install(session, ".[test]")
     session.run(
@@ -150,6 +152,8 @@ def unit_tests(session):
         "--junitxml=junit/test-results-unit.xml",
         "-n",
         "auto",
+        "--dist",
+        "loadfile",
         "tests/unit/",
     )
 
@@ -187,6 +191,10 @@ def integration_tests(session):
         workers = args[idx + 1]
         args = args[:idx] + args[idx + 2 :]
 
+    # Separate test paths from pytest flags in posargs
+    test_paths = [a for a in args if not a.startswith("-")]
+    extra_flags = [a for a in args if a.startswith("-")]
+
     pytest_args = [
         "-c",
         "pyproject.toml",
@@ -200,9 +208,9 @@ def integration_tests(session):
         pytest_args.append("--cov-append")
     if int(workers) > 0:
         pytest_args.extend([f"-n{workers}", "--dist=loadgroup"])
-    pytest_args.append("tests/integration/")
 
-    pytest_args.extend(args)
+    pytest_args.extend(test_paths or ["tests/integration/"])
+    pytest_args.extend(extra_flags)
 
     session.run("pytest", *pytest_args)
 

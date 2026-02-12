@@ -146,18 +146,18 @@ DATA_QUALITY_CONFIG = {
 }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def datalake_service_name():
     """Generate unique service name for test isolation in parallel execution."""
     return generate_name().root
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def ingestion_fqn(datalake_service_name):
     return f'{datalake_service_name}.default.{BUCKET_NAME}."users/users.csv".testSuite.uuid'
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def minio_container():
     with get_minio_container(MinioContainerConfigs()) as container:
         yield container

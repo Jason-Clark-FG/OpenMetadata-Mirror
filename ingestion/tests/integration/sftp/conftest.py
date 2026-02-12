@@ -668,7 +668,7 @@ def service_name():
     return f"sftp_test_{uuid.uuid4().hex[:8]}"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def sftp_container():
     """Create and start SFTP container"""
     config = SftpContainerConfig(

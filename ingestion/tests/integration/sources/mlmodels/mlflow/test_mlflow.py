@@ -70,22 +70,37 @@ def create_data(mlflow_environment):
     mlflow_uri = f"http://localhost:{mlflow_environment.mlflow_configs.exposed_port}"
     mlflow.set_tracking_uri(mlflow_uri)
 
-    os.environ["AWS_ACCESS_KEY_ID"] = "minio"
-    os.environ["AWS_SECRET_ACCESS_KEY"] = "password"
-    os.environ[
-        "MLFLOW_S3_ENDPOINT_URL"
-    ] = f"http://localhost:{mlflow_environment.minio_configs.exposed_port}"
+    minio_endpoint = f"http://localhost:{mlflow_environment.minio_configs.exposed_port}"
+    os.environ["AWS_ACCESS_KEY_ID"] = mlflow_environment.minio_configs.access_key
+    os.environ["AWS_SECRET_ACCESS_KEY"] = mlflow_environment.minio_configs.secret_key
+    os.environ["MLFLOW_S3_ENDPOINT_URL"] = minio_endpoint
+    os.environ["MLFLOW_BOTO_CLIENT_ADDRESSING_STYLE"] = "path"
+
+    # Reset boto3's cached default session so it picks up the MinIO env vars above.
+    # Earlier tests (e.g. test_ometa_secrets_manager) may have created DEFAULT_SESSION
+    # which caches credentials from ~/.aws/credentials — sending real AWS creds to MinIO
+    # instead of "minio"/"password", causing InvalidAccessKeyId.
+    import boto3
+
+    boto3.DEFAULT_SESSION = None
+
+    # Verify MinIO is reachable before proceeding (may be slow under Docker load)
+    import requests
+
+    for _ in range(15):
+        try:
+            requests.get(f"{minio_endpoint}/minio/health/live", timeout=5)
+            break
+        except Exception:
+            time.sleep(2)
 
     np.random.seed(40)
 
-    # Read the wine-quality csv file from the URL
     csv_url = "https://raw.githubusercontent.com/open-metadata/openmetadata-demo/main/resources/winequality-red.csv"
     data = pd.read_csv(csv_url, sep=";")
 
-    # Split the data into training and test sets. (0.75, 0.25) split.
     train, test = train_test_split(data)
 
-    # The predicted column is "quality" which is a scalar from [3, 9]
     train_x = train.drop(["quality"], axis=1)
     test_x = test.drop(["quality"], axis=1)
     train_y = train[["quality"]]
@@ -112,9 +127,7 @@ def create_data(mlflow_environment):
 
         tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
-        # Model registry does not work with file store
-        # Retry S3 upload since minio can be transiently unavailable under parallel load
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 if tracking_url_type_store != "file":
                     mlflow.sklearn.log_model(
@@ -127,11 +140,11 @@ def create_data(mlflow_environment):
                     mlflow.sklearn.log_model(lr, "model")
                 break
             except Exception:
-                if attempt < 2:
+                if attempt < 4:
                     logging.getLogger(__name__).warning(
-                        "Retry %d/3: S3 upload failed, retrying...", attempt + 1
+                        "Retry %d/5: S3 upload failed, retrying...", attempt + 1
                     )
-                    time.sleep(3 * (attempt + 1))
+                    time.sleep(5 * (attempt + 1))
                 else:
                     raise
 
