@@ -102,7 +102,7 @@ jobs:
           include-hidden-files: true
 
   py-integration-tests:
-    name: "Integration Tests (${{ matrix.shard.name }})"
+    name: "Integration Tests (${{ matrix.shard.name }}, ${{ matrix.py-version }})"
     timeout-minutes: 180
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}

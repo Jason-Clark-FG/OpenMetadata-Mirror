@@ -156,8 +156,6 @@ def unit_tests(session):
         "loadfile",
         "tests/unit/",
     )
-    # xdist workers write parallel .coverage.<id> files; combine into one
-    session.run("coverage", "combine")
 
 
 # ---------------------------------------------------------------------------
@@ -216,9 +214,6 @@ def integration_tests(session):
     pytest_args.extend(extra_flags)
 
     session.run("pytest", *pytest_args)
-    if use_xdist:
-        # xdist workers write parallel .coverage.<id> files; combine into one
-        session.run("coverage", "combine")
 
 
 # ---------------------------------------------------------------------------
