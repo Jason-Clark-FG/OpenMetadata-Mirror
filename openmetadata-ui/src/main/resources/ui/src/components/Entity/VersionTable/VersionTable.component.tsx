@@ -252,7 +252,9 @@ function VersionTable<T extends Column | SearchIndexField>({
   }, []);
 
   useEffect(() => {
-    setExpandedRowKeys(getAllRowKeysByKeyName<T>(columns ?? [], 'name'));
+    setExpandedRowKeys(
+      getAllRowKeysByKeyName<T>(columns ?? [], 'fullyQualifiedName')
+    );
   }, [columns]);
 
   return (
@@ -273,7 +275,7 @@ function VersionTable<T extends Column | SearchIndexField>({
         emptyText: <FilterTablePlaceHolder />,
       }}
       pagination={false}
-      rowKey="name"
+      rowKey="fullyQualifiedName"
       scroll={TABLE_SCROLL_VALUE}
       searchProps={searchProps}
       size="small"

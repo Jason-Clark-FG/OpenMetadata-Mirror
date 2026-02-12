@@ -1521,7 +1521,7 @@ export const getExpandAllKeysToDepth = <
 };
 
 export const getSafeExpandAllKeys = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   isLargeSchema: boolean,

@@ -437,7 +437,7 @@ const ColumnProfileTable = () => {
             emptyText: <FilterTablePlaceHolder />,
           }}
           pagination={false}
-          rowKey="name"
+          rowKey="fullyQualifiedName"
           scroll={{ x: true, y: 500 }}
           searchProps={searchProps}
         />

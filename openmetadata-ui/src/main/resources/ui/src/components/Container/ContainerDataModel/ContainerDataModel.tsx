@@ -85,9 +85,10 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
     useState<Column>();
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
-  const schema = useMemo(() => pruneEmptyChildren(dataModel?.columns ?? []), [
-    dataModel?.columns,
-  ]);
+  const schema = useMemo(
+    () => pruneEmptyChildren(dataModel?.columns ?? []),
+    [dataModel?.columns]
+  );
 
   // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
   useEffect(() => {
@@ -327,7 +328,7 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
         }}
         pagination={false}
         rowClassName={getRowClassName}
-        rowKey="name"
+        rowKey="fullyQualifiedName"
         scroll={TABLE_SCROLL_VALUE}
         size="small"
         staticVisibleColumns={COMMON_STATIC_TABLE_VISIBLE_COLUMNS}
