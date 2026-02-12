@@ -23,19 +23,27 @@ interface QuickFiltersWithComponentConfig {
   aggregations?: Aggregations;
   parsedFilters?: ExploreQuickFilterField[];
   searchIndex: SearchIndex | SearchIndex[];
-  assetType: AssetsOfEntity;
+  assetType?: AssetsOfEntity;
   onFilterChange: (filters: ExploreQuickFilterField[]) => void;
+  mode?: 'single' | 'multi';
+}
+
+interface UseQuickFiltersWithComponentReturn {
+  quickFilters: JSX.Element;
+  selectedFilters: ExploreQuickFilterField[];
 }
 
 export const useQuickFiltersWithComponent = (
   config: QuickFiltersWithComponentConfig
-) => {
+): UseQuickFiltersWithComponentReturn => {
   const [selectedQuickFilters, setSelectedQuickFilters] = useState<
     ExploreQuickFilterField[]
   >([]);
 
   useEffect(() => {
     // Use parsedFilters if available (from URL), otherwise use defaultFilters
+    const isSingleSelect = config.mode === 'single';
+
     if (config.parsedFilters && config.parsedFilters.length > 0) {
       // Merge parsedFilters with defaultFilters to maintain structure
       const mergedFilters = config.defaultFilters.map((defaultFilter) => {
@@ -43,13 +51,22 @@ export const useQuickFiltersWithComponent = (
           (pf) => pf.key === defaultFilter.key
         );
 
-        return parsedFilter || defaultFilter;
+        return {
+          ...defaultFilter,
+          value: parsedFilter?.value || defaultFilter.value,
+          singleSelect: isSingleSelect,
+        };
       });
       setSelectedQuickFilters(mergedFilters);
     } else {
-      setSelectedQuickFilters(config.defaultFilters);
+      setSelectedQuickFilters(
+        config.defaultFilters.map((filter) => ({
+          ...filter,
+          singleSelect: isSingleSelect,
+        }))
+      );
     }
-  }, [config.defaultFilters, config.parsedFilters]);
+  }, [config.defaultFilters, config.parsedFilters, config.mode]);
 
   const handleQuickFiltersChange = useCallback(
     (data: ExploreQuickFilterField[]) => {

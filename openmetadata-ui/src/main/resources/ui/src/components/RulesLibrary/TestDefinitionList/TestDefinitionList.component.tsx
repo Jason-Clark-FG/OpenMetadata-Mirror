@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Box } from '@mui/material';
 import {
   Button,
   Card,
@@ -25,23 +26,34 @@ import {
 import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
+import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconEdit } from '../../../assets/svg/edit-new.svg';
 import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
+import {
+  TEST_DEFINITION_DEFAULT_QUICK_FILTERS,
+  TEST_DEFINITION_FILTERS,
+} from '../../../constants/TestDefinition.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
   ResourceEntity,
 } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { SearchIndex } from '../../../enums/search.enum';
 import { ProviderType } from '../../../generated/entity/bot';
 import { Operation } from '../../../generated/entity/policies/policy';
-import { TestDefinition } from '../../../generated/tests/testDefinition';
+import {
+  EntityType,
+  TestDefinition,
+  TestPlatform,
+} from '../../../generated/tests/testDefinition';
 import { Paging } from '../../../generated/type/paging';
 import { usePaging } from '../../../hooks/paging/usePaging';
+import { useTableFilters } from '../../../hooks/useTableFilters';
 import {
   deleteTestDefinitionByFqn,
   getListTestDefinitions,
@@ -54,10 +66,13 @@ import {
 } from '../../../utils/PermissionsUtils';
 import { isExternalTestDefinition } from '../../../utils/TestDefinitionUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { useFilterSelection } from '../../common/atoms/filters/useFilterSelection';
+import { useQuickFiltersWithComponent } from '../../common/atoms/filters/useQuickFiltersWithComponent';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PagingHandlerParams } from '../../common/NextPrevious/NextPrevious.interface';
 import RichTextEditorPreviewerNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../common/Table/Table';
+import { ExploreQuickFilterField } from '../../Explore/ExplorePage.interface';
 import { LearningIcon } from '../../Learning/LearningIcon/LearningIcon.component';
 import EntityDeleteModal from '../../Modals/EntityDeleteModal/EntityDeleteModal';
 import TestDefinitionForm from '../TestDefinitionForm/TestDefinitionForm.component';
@@ -65,6 +80,13 @@ import TestDefinitionForm from '../TestDefinitionForm/TestDefinitionForm.compone
 const TestDefinitionList = () => {
   const { t } = useTranslation();
   const { permissions, getEntityPermissionByFqn } = usePermissionProvider();
+
+  // Use useTableFilters for filter state management
+  const { filters: urlParams, setFilters: updateUrlParams } = useTableFilters({
+    entityType: undefined as string | undefined,
+    testPlatforms: undefined as string | undefined,
+  });
+
   const {
     currentPage,
     paging,
@@ -90,6 +112,86 @@ const TestDefinitionList = () => {
     Record<string, OperationPermission>
   >({});
   const [permissionLoading, setPermissionLoading] = useState(true);
+
+  const entityTypeParam = urlParams.entityType || '';
+  const testPlatformsParam = urlParams.testPlatforms || '';
+
+  // Parse filters from URL dynamically
+  const urlFilters = useMemo(() => {
+    const filters: Record<string, string[]> = {};
+
+    TEST_DEFINITION_DEFAULT_QUICK_FILTERS.forEach((key) => {
+      const paramValue = urlParams[key as keyof typeof urlParams];
+      if (paramValue) {
+        filters[key] = String(paramValue).split(',').filter(Boolean);
+      }
+    });
+
+    return filters;
+  }, [entityTypeParam, testPlatformsParam]);
+
+  // Create parsedFilters from URL for filter hooks
+  const parsedFilters = useMemo<ExploreQuickFilterField[]>(() => {
+    return TEST_DEFINITION_FILTERS.map((filter) => ({
+      ...filter,
+      value: urlFilters[filter.key]?.map((v) => ({ key: v, label: v })) || [],
+    }));
+  }, [urlFilters]);
+
+  // Handle filter changes
+  const handleFilterChange = useCallback(
+    (filters: ExploreQuickFilterField[]) => {
+      const filterUpdates: Record<string, string | null> = {};
+
+      // Clear all filter keys
+      TEST_DEFINITION_DEFAULT_QUICK_FILTERS.forEach((key) => {
+        filterUpdates[key] = null;
+      });
+
+      // Set new filter values
+      filters.forEach((filter) => {
+        const values = filter.value?.map((v) => v.key) || [];
+        if (values.length > 0) {
+          filterUpdates[filter.key] = values.join(',');
+        }
+      });
+
+      // Update filter URL params
+      updateUrlParams(filterUpdates);
+
+      // Reset pagination through usePaging to update both URL and internal state
+      handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
+    },
+    [updateUrlParams, handlePageChange]
+  );
+
+  // Use filter hooks
+  const { quickFilters } = useQuickFiltersWithComponent({
+    defaultFilters: TEST_DEFINITION_FILTERS.map((f) => ({
+      ...f,
+      value: [],
+      hideCounts: true,
+    })),
+    parsedFilters,
+    searchIndex: SearchIndex.ALL,
+    onFilterChange: handleFilterChange,
+    mode: 'single',
+  });
+
+  const { filterSelectionDisplay } = useFilterSelection({
+    urlState: {
+      filters: urlFilters,
+      searchQuery: '',
+      currentPage,
+      pageSize,
+    },
+    filterConfigs: TEST_DEFINITION_FILTERS,
+    parsedFilters,
+    onFilterChange: handleFilterChange,
+  });
 
   const createPermission = useMemo(
     () =>
@@ -166,10 +268,20 @@ const TestDefinitionList = () => {
     async (pagingOffset?: Partial<Paging>) => {
       setIsLoading(true);
       try {
+        // Extract filter values for API
+        const entityTypeFilter = urlFilters.entityType?.[0] as
+          | EntityType
+          | undefined;
+        const testPlatformFilter = urlFilters.testPlatforms?.[0] as
+          | TestPlatform
+          | undefined;
+
         const { data, paging: responsePaging } = await getListTestDefinitions({
           after: pagingOffset?.after,
           before: pagingOffset?.before,
           limit: pageSize,
+          entityType: entityTypeFilter,
+          testPlatform: testPlatformFilter,
         });
         setTestDefinitions(data);
         handlePagingChange(responsePaging);
@@ -181,7 +293,7 @@ const TestDefinitionList = () => {
         setIsLoading(false);
       }
     },
-    [pageSize, handlePagingChange, fetchTestDefinitionPermissions]
+    [pageSize, handlePagingChange, fetchTestDefinitionPermissions, urlFilters]
   );
 
   useEffect(() => {
@@ -192,7 +304,7 @@ const TestDefinitionList = () => {
     } else {
       fetchTestDefinitions();
     }
-  }, [pageSize, pagingCursor]);
+  }, [pageSize, pagingCursor, entityTypeParam, testPlatformsParam]);
 
   const handleEnableToggle = async (
     record: TestDefinition,
@@ -474,6 +586,7 @@ const TestDefinitionList = () => {
 
   return (
     <>
+      {/* Header Section - Separate from table */}
       <Row className="p-b-md" gutter={[16, 16]}>
         <Col span={24}>
           <Card>
@@ -507,27 +620,48 @@ const TestDefinitionList = () => {
             </Row>
           </Card>
         </Col>
+
         <Col span={24}>
-          <Table
-            bordered
-            columns={columns}
-            customPaginationProps={customPaginationProps}
-            data-testid="test-definition-table"
-            dataSource={testDefinitions}
-            loading={isLoading}
-            locale={{
-              emptyText: !isLoading && (
-                <ErrorPlaceHolder
-                  className="p-y-lg"
-                  type={ERROR_PLACEHOLDER_TYPE.NO_DATA}
-                />
-              ),
-            }}
-            pagination={false}
-            rowKey="id"
-            scroll={{ x: 1200 }}
-            size="small"
-          />
+          <Card
+            bodyStyle={{
+              padding: 0,
+            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                p: 4,
+              }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                {quickFilters}
+              </Box>
+              {!isEmpty(urlFilters) && <Box>{filterSelectionDisplay}</Box>}
+            </Box>
+
+            {/* Table */}
+            <Table
+              bordered
+              columns={columns}
+              containerClassName="custom-card-with-table"
+              customPaginationProps={customPaginationProps}
+              data-testid="test-definition-table"
+              dataSource={testDefinitions}
+              loading={isLoading}
+              locale={{
+                emptyText: !isLoading && (
+                  <ErrorPlaceHolder
+                    className="p-y-lg"
+                    type={ERROR_PLACEHOLDER_TYPE.NO_DATA}
+                  />
+                ),
+              }}
+              pagination={false}
+              rowKey="id"
+              scroll={{ x: 1200 }}
+              size="small"
+            />
+          </Card>
         </Col>
       </Row>
 

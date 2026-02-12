@@ -162,14 +162,15 @@ export const generateSearchDropdownLabel = (
   checked: boolean,
   searchKey: string,
   showProfilePicture: boolean,
-  hideCounts = false
+  hideCounts = false,
+  singleSelect = false
 ) => {
   return (
     <div className="d-flex justify-between">
       <Space align="start" className="m-x-sm" data-testid={option.key} size={8}>
         <Checkbox
           checked={checked}
-          data-testid={`${option.key}-checkbox`}
+          data-testid={`${option.key}-${singleSelect ? 'radio' : 'checkbox'}`}
           style={option.description ? { marginTop: 4 } : undefined}
         />
         {showProfilePicture && (
@@ -210,7 +211,8 @@ export const getSearchDropdownLabels = (
   checked: boolean,
   searchKey = '',
   showProfilePicture = false,
-  hideCounts = false
+  hideCounts = false,
+  singleSelect = false
 ): MenuProps['items'] => {
   if (isArray(optionsArray)) {
     const sortedOptions = optionsArray.sort(
@@ -224,7 +226,8 @@ export const getSearchDropdownLabels = (
         checked,
         searchKey,
         showProfilePicture,
-        hideCounts
+        hideCounts,
+        singleSelect
       ),
     }));
   } else {
