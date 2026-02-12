@@ -29,6 +29,8 @@ from metadata.generated.schema.type.recognizer import Recognizer
 from metadata.generated.schema.type.recognizers.regexFlags import RegexFlags
 from metadata.pii.algorithms.presidio_utils import (
     apply_confidence_threshold,
+    decorate_recognizer,
+    enhance_using_context,
     recognizer_factories,
 )
 from metadata.utils.logger import pii_logger
@@ -84,9 +86,15 @@ class PresidioRecognizerFactory:
             logger.warning(f"Unknown recognizer type for {recognizer_config.name}")
             return None
 
-        if recognizer and (threshold := recognizer_config.confidenceThreshold):
-            patch_analyze = apply_confidence_threshold(threshold)
-            recognizer = patch_analyze(recognizer)
+        decorators: List[Callable[[EntityRecognizer], EntityRecognizer]] = [
+            enhance_using_context,
+        ]
+
+        if threshold := recognizer_config.confidenceThreshold:
+            decorators.append(apply_confidence_threshold(threshold))
+
+        if recognizer:
+            recognizer = decorate_recognizer(*decorators)(recognizer)
 
         return recognizer
 

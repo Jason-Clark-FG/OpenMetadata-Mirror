@@ -13,7 +13,7 @@ Utilities for working with the Presidio Library.
 """
 import inspect
 import logging
-from functools import cache
+from functools import cache, wraps
 from itertools import groupby
 from typing import (
     Any,
@@ -328,6 +328,73 @@ def apply_confidence_threshold(
         return recognizer
 
     return decorate_entity_recognizer
+
+
+def enhance_using_context(recognizer: EntityRecognizer) -> EntityRecognizer:
+    old_enhancing_function = recognizer.enhance_using_context
+
+    @wraps(old_enhancing_function)
+    def wrapped(
+        rec: EntityRecognizer,
+        text: str,
+        raw_recognizer_results: List[RecognizerResult],
+        other_raw_recognizer_results: List[RecognizerResult],
+        nlp_artifacts: NlpArtifacts,
+        context: Optional[List[str]] = None,
+    ) -> List[RecognizerResult]:
+        results = old_enhancing_function(
+            text,
+            raw_recognizer_results,
+            other_raw_recognizer_results,
+            nlp_artifacts,
+            context,
+        )
+
+        if not rec.context or not context:
+            # If no context is given or the recognizer does not support it,
+            # then ignore this
+            return results
+
+        context_lower = " ".join(context).lower()
+
+        for result in results:
+            # if previously enhanced, then ignore
+            if result.recognition_metadata.get(
+                RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
+            ):
+                continue
+
+            if any(ctx_word.lower() in context_lower for ctx_word in context):
+                original_score = result.score
+                result.score = rec.MAX_SCORE
+
+                result.recognition_metadata[
+                    RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
+                ] = True
+
+                logger.info(
+                    f"Enhanced {result.entity_type} score: "
+                    f"{original_score:.2f} → {result.score:.2f} "
+                    f"(context: {rec.context})"
+                )
+
+        return results
+
+    recognizer.enhance_using_context = wrapped
+
+    return recognizer
+
+
+def decorate_recognizer(
+    *decorators: Callable[[EntityRecognizer], EntityRecognizer]
+) -> Callable[[EntityRecognizer], EntityRecognizer]:
+    def decorator(recognizer: EntityRecognizer) -> EntityRecognizer:
+        decorated = recognizer
+        for dec in decorators:
+            decorated = dec(decorated)
+        return decorated
+
+    return decorator
 
 
 def explain_recognition_results(results: List[RecognizerResult]) -> str:
