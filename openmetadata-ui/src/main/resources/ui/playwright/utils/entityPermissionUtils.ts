@@ -15,6 +15,7 @@ import { expect, Page } from '@playwright/test';
 import { ContainerClass } from '../support/entity/ContainerClass';
 import { DashboardClass } from '../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../support/entity/DashboardDataModelClass';
+import { DatabaseClass } from '../support/entity/DatabaseClass';
 import { DirectoryClass } from '../support/entity/DirectoryClass';
 import { EntityClass } from '../support/entity/EntityClass';
 import { FileClass } from '../support/entity/FileClass';
@@ -431,6 +432,29 @@ export const testStoredProcedureSpecificOperations = async (
   );
 };
 
+export const testDatabaseSpecificOperations = async (
+  testUserPage: Page,
+  entity: DatabaseClass,
+  effect: 'allow' | 'deny'
+) => {
+  await redirectToHomePage(testUserPage);
+  await entity.visitEntityPage(testUserPage);
+
+  await expect(
+    testUserPage.getByTestId('database-databaseSchemas')
+  ).toBeVisible();
+
+  await testUserPage.waitForSelector('[data-testid="loader"]', {
+    state: 'detached',
+  });
+
+  await checkElementVisibility(
+    testUserPage,
+    { testId: 'Usage', type: 'label' },
+    effect
+  );
+};
+
 export const testDashboardDataModelSpecificOperations = async (
   testUserPage: Page,
   entity: DashboardDataModelClass,
@@ -558,6 +582,10 @@ export const entityConfig = {
   Worksheet: {
     class: WorksheetClass,
   },
+  Database: {
+    class: DatabaseClass,
+    specificTest: testDatabaseSpecificOperations,
+  },
 } as const;
 
 // Function to create custom properties for different entity types
@@ -583,6 +611,7 @@ export const createCustomPropertyForEntity = async (
     Metric: 'metrics',
     Database: 'databases',
     DatabaseSchema: 'databaseSchemas',
+    'Database Schema': 'databaseSchemas',
     StoredProcedure: 'storedProcedures',
     GlossaryTerm: 'glossaryTerm',
     Domain: 'domains',

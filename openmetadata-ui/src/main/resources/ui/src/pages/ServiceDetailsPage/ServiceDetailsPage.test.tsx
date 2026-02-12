@@ -308,6 +308,11 @@ jest.mock('../../context/PermissionProvider/PermissionProvider', () => ({
       .mockImplementation(() =>
         Promise.resolve({ ViewAll: true, EditAll: true, Create: true })
       ),
+    permissions: {
+      database: { ViewAll: true, EditAll: true },
+      dashboard: { ViewAll: true, EditAll: true },
+      pipeline: { ViewAll: true, EditAll: true },
+    },
   })),
 }));
 
@@ -546,6 +551,7 @@ jest.mock('../../utils/date-time/DateTimeUtils', () => ({
 
 jest.mock('../../utils/PermissionsUtils', () => ({
   DEFAULT_ENTITY_PERMISSION: { ViewAll: false, EditAll: false },
+  getPrioritizedViewPermission: jest.fn().mockReturnValue(true),
 }));
 
 // Additional utility mocks
@@ -667,6 +673,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: { ViewAll: true, EditAll: true },
+          dashboard: { ViewAll: true, EditAll: true },
+          pipeline: { ViewAll: true, EditAll: true },
+        },
       }));
 
       await renderComponent();
@@ -1366,6 +1377,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: {},
+          dashboard: {},
+          pipeline: {},
+        },
       }));
 
       await renderComponent();
