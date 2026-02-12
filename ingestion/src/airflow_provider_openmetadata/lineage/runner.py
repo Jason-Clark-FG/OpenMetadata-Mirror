@@ -165,6 +165,8 @@ class AirflowLineageRunner:
         return pipeline_service
 
     def get_task_url(self, task: "Operator"):
+        if IS_AIRFLOW_3_OR_HIGHER:
+            return f"{clean_uri(self.host_port)}/dags/{quote(self.dag.dag_id)}/tasks/{quote(task.task_id)}"
         return (
             f"{clean_uri(self.host_port)}/taskinstance/list/"
             f"?_flt_3_dag_id={quote(self.dag.dag_id)}&_flt_3_task_id={quote(task.task_id)}"
