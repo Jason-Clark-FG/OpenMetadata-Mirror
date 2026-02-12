@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from metadata.generated.schema.type.basic import Timestamp
-from metadata.utils.time_utils import timedelta_to_string, timestamp_to_datetime
+from metadata.utils.time_utils import (
+    datetime_to_timestamp,
+    timedelta_to_string,
+    timestamp_to_datetime,
+)
 
 
 @pytest.mark.parametrize(
@@ -42,13 +46,6 @@ def test_timedelta_to_string(parameter, expected):
 )
 def test_timestamp_to_datetime(timestamp, expected_datetime):
     assert timestamp_to_datetime(timestamp) == expected_datetime
-
-
-from datetime import datetime, timedelta, timezone
-
-import pytest
-
-from metadata.utils.time_utils import datetime_to_timestamp
 
 
 @pytest.mark.parametrize(
