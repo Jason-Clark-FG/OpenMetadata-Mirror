@@ -92,12 +92,11 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
   };
 
   const labelStyle = {
-    pl: 2,
     gap: 2,
     minWidth: 0,
     display: 'flex',
-    flex: '0 0 46%',
-    maxWidth: '46%',
+    flex: '0 0 32%',
+    maxWidth: '32%',
     alignItems: 'center',
     color: theme.palette.grey[700],
   };
