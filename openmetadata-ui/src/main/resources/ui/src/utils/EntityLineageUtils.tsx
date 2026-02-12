@@ -859,16 +859,13 @@ export const createNodes = (
   });
 };
 
-export const createEdgesAndEdgeMaps = (
+export const createEntityEdgesAndMaps = (
   nodes: EntityReference[],
   edges: EdgeDetails[],
   entityFqn: string,
-  isColumnLayerActive: boolean,
   hidden?: boolean
 ) => {
-  const lineageEdgesV1: Edge[] = [];
-  const edgeIds = new Set<string>();
-  const columnsHavingLineage = new Set<string>();
+  const entityEdges: Edge[] = [];
   const incomingMap = new Map<string, number>();
   const outgoingMap = new Map<string, number>();
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -884,11 +881,59 @@ export const createEdgesAndEdgeMaps = (
       return;
     }
 
-    // Update edge maps for fast lookup
     outgoingMap.set(sourceId, (outgoingMap.get(sourceId) ?? 0) + 1);
     incomingMap.set(targetId, (incomingMap.get(targetId) ?? 0) + 1);
 
-    if (!isUndefined(edge.columns) && isColumnLayerActive) {
+    const edgeId = `edge-${sourceId}-${targetId}`;
+    entityEdges.push({
+      id: edgeId,
+      source: sourceId,
+      target: targetId,
+      type: 'buttonedge',
+      animated: !isNil(edge.pipeline),
+      style: { strokeWidth: '2px' },
+      markerEnd: { type: MarkerType.ArrowClosed },
+      data: {
+        edge,
+        isColumnLineage: false,
+        isPipelineRootNode: !isNil(edge.pipeline)
+          ? entityFqn === edge.pipeline?.fullyQualifiedName
+          : false,
+        dataTestId: `edge-${edge.fromEntity.fullyQualifiedName}-${edge.toEntity.fullyQualifiedName}`,
+      },
+      ...(hidden && { hidden }),
+    });
+  });
+
+  return {
+    entityEdges,
+    incomingMap,
+    outgoingMap,
+  };
+};
+
+export const createColumnEdges = (
+  nodes: EntityReference[],
+  edges: EdgeDetails[],
+  hidden?: boolean
+) => {
+  const columnEdges: Edge[] = [];
+  const edgeIds = new Set<string>();
+  const columnsHavingLineage = new Set<string>();
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+  edges.forEach((edge) => {
+    const sourceId = edge.fromEntity.id;
+    const targetId = edge.toEntity.id;
+
+    const sourceType = nodeById.get(sourceId);
+    const targetType = nodeById.get(targetId);
+
+    if (isUndefined(sourceType) || isUndefined(targetType)) {
+      return;
+    }
+
+    if (!isUndefined(edge.columns)) {
       edge.columns?.forEach((e) => {
         const toColumn = e.toColumn ?? '';
         if (toColumn && e.fromColumns?.length) {
@@ -902,7 +947,7 @@ export const createEdgesAndEdgeMaps = (
 
             if (!edgeIds.has(edgeId)) {
               edgeIds.add(edgeId);
-              lineageEdgesV1.push({
+              columnEdges.push({
                 id: edgeId,
                 source: sourceId,
                 target: targetId,
@@ -925,33 +970,46 @@ export const createEdgesAndEdgeMaps = (
         }
       });
     }
-
-    const edgeId = `edge-${sourceId}-${targetId}`;
-    if (!edgeIds.has(edgeId)) {
-      edgeIds.add(edgeId);
-      lineageEdgesV1.push({
-        id: edgeId,
-        source: sourceId,
-        target: targetId,
-        type: 'buttonedge',
-        animated: !isNil(edge.pipeline),
-        style: { strokeWidth: '2px' },
-        markerEnd: { type: MarkerType.ArrowClosed },
-        data: {
-          edge,
-          isColumnLineage: false,
-          isPipelineRootNode: !isNil(edge.pipeline)
-            ? entityFqn === edge.pipeline?.fullyQualifiedName
-            : false,
-          dataTestId: `edge-${edge.fromEntity.fullyQualifiedName}-${edge.toEntity.fullyQualifiedName}`,
-        },
-      });
-    }
   });
 
   return {
-    edges: lineageEdgesV1,
+    columnEdges,
     columnsHavingLineage,
+  };
+};
+
+export const createEdgesAndEdgeMaps = (
+  nodes: EntityReference[],
+  edges: EdgeDetails[],
+  entityFqn: string,
+  isColumnLayerActive: boolean,
+  hidden?: boolean
+) => {
+  const { entityEdges, incomingMap, outgoingMap } = createEntityEdgesAndMaps(
+    nodes,
+    edges,
+    entityFqn,
+    hidden
+  );
+
+  if (isColumnLayerActive) {
+    const { columnEdges, columnsHavingLineage } = createColumnEdges(
+      nodes,
+      edges,
+      hidden
+    );
+
+    return {
+      edges: [...entityEdges, ...columnEdges],
+      columnsHavingLineage,
+      incomingMap,
+      outgoingMap,
+    };
+  }
+
+  return {
+    edges: entityEdges,
+    columnsHavingLineage: new Set<string>(),
     incomingMap,
     outgoingMap,
   };

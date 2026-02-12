@@ -353,7 +353,16 @@ const NodeChildren = ({
   }, [node, showDataObservabilitySummary, summary]);
 
   const renderRecord = useCallback(
-    (record: Column) => {
+    (record: Column, visitedFqns = new Set<string>()) => {
+      const recordFqn = record.fullyQualifiedName ?? '';
+
+      if (visitedFqns.has(recordFqn)) {
+        return null;
+      }
+
+      const newVisitedFqns = new Set(visitedFqns);
+      newVisitedFqns.add(recordFqn);
+
       const columnSummary = getColumnSummary(record);
 
       const headerContent = (
@@ -370,34 +379,34 @@ const NodeChildren = ({
         return headerContent;
       }
 
-      const childRecords = record?.children?.map((child) => {
-        const { fullyQualifiedName, dataType } = child;
+      const childRecords = record.children
+        .map((child) => {
+          const { fullyQualifiedName, dataType } = child;
 
-        const columnSummary = getColumnSummary(child);
+          const columnSummary = getColumnSummary(child);
 
-        if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
-          return renderRecord(child);
-        } else {
-          if (!isColumnVisible(child)) {
-            return null;
+          if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
+            return renderRecord(child, newVisitedFqns);
+          } else {
+            if (!isColumnVisible(child)) {
+              return null;
+            }
+
+            return (
+              <ColumnContent
+                column={child}
+                isConnectable={isConnectable}
+                isLoading={isLoading}
+                key={fullyQualifiedName}
+                showDataObservabilitySummary={showDataObservabilitySummary}
+                summary={columnSummary}
+              />
+            );
           }
+        })
+        .filter((child) => child !== null);
 
-          return (
-            <ColumnContent
-              column={child}
-              isConnectable={isConnectable}
-              isLoading={isLoading}
-              key={fullyQualifiedName}
-              showDataObservabilitySummary={showDataObservabilitySummary}
-              summary={columnSummary}
-            />
-          );
-        }
-      });
-
-      const result = childRecords.filter((child) => child !== null);
-
-      if (result.length === 0) {
+      if (childRecords.length === 0) {
         return null;
       }
 
@@ -405,11 +414,11 @@ const NodeChildren = ({
         <Collapse
           destroyInactivePanel
           className="lineage-collapse-column"
-          defaultActiveKey={record.fullyQualifiedName}
+          defaultActiveKey={expandAllColumns ? recordFqn : undefined}
           expandIcon={() => null}
-          key={record.fullyQualifiedName}>
-          <Panel header={headerContent} key={record.fullyQualifiedName ?? ''}>
-            {result}
+          key={recordFqn}>
+          <Panel header={headerContent} key={recordFqn}>
+            {childRecords}
           </Panel>
         </Collapse>
       );
@@ -421,6 +430,7 @@ const NodeChildren = ({
       isLoading,
       Panel,
       isColumnVisible,
+      expandAllColumns,
     ]
   );
 
@@ -430,7 +440,7 @@ const NodeChildren = ({
       const columnSummary = getColumnSummary(column);
 
       if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
-        return []; // renderRecord(column);
+        return renderRecord(column);
       } else {
         return (
           <ColumnContent
@@ -447,7 +457,6 @@ const NodeChildren = ({
     [
       getColumnSummary,
       renderRecord,
-      isColumnVisible,
       isConnectable,
       showDataObservabilitySummary,
       isLoading,

@@ -208,12 +208,22 @@ export const useMapBasedNodesEdges = (
               next.set(change.id, {
                 ...node,
                 ...(change.type === 'position' && change.position
-                  ? { position: change.position }
+                  ? {
+                      position: change.position,
+                      dragging: change.dragging,
+                      ...(change.positionAbsolute
+                        ? { positionAbsolute: change.positionAbsolute }
+                        : {}),
+                    }
                   : {}),
                 ...(change.type === 'dimensions' && change.dimensions
                   ? {
                       width: change.dimensions.width,
                       height: change.dimensions.height,
+                      resizing: change.resizing,
+                      ...(change.updateStyle !== undefined
+                        ? { style: { ...node.style, ...change.updateStyle } }
+                        : {}),
                     }
                   : {}),
                 ...(change.type === 'select'

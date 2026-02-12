@@ -13,7 +13,7 @@
 import { Dataflow01, Plus } from '@untitledui/icons';
 import { Button, Col, Row, Skeleton, Typography } from 'antd';
 import classNames from 'classnames';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, memo, useCallback, useState } from 'react';
 import { Handle, HandleProps, HandleType, Position } from 'reactflow';
 import { ReactComponent as MinusIcon } from '../../../assets/svg/control-minus.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
@@ -201,94 +201,109 @@ interface ColumnContentProps {
   summary?: ColumnTestSummaryDefinition;
 }
 
-export const ColumnContent = ({
-  column,
-  isConnectable,
-  showDataObservabilitySummary,
-  isLoading,
-  summary,
-}: ColumnContentProps) => {
-  const { onColumnMouseEnter } = useLineageProvider();
+export const ColumnContent = memo(
+  ({
+    column,
+    isConnectable,
+    showDataObservabilitySummary,
+    isLoading,
+    summary,
+  }: ColumnContentProps) => {
+    const { onColumnMouseEnter } = useLineageProvider();
 
-  const { selectedColumn, setSelectedColumn, tracedColumns, setTracedColumns } =
-    useLineageStore();
+    const {
+      selectedColumn,
+      setSelectedColumn,
+      tracedColumns,
+      setTracedColumns,
+    } = useLineageStore();
 
-  const isColumnTraced = tracedColumns.has(column.fullyQualifiedName ?? '');
+    const isColumnTraced = tracedColumns.has(column.fullyQualifiedName ?? '');
 
-  const { fullyQualifiedName } = column;
+    const { fullyQualifiedName } = column;
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setSelectedColumn(fullyQualifiedName ?? '');
-    },
-    [fullyQualifiedName, setSelectedColumn]
-  );
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedColumn(fullyQualifiedName ?? '');
+      },
+      [fullyQualifiedName, setSelectedColumn]
+    );
 
-  const handleMouseEnter = useCallback(() => {
-    if (selectedColumn) {
-      return;
-    }
-    onColumnMouseEnter(fullyQualifiedName ?? '');
-  }, [selectedColumn, fullyQualifiedName, onColumnMouseEnter]);
+    const handleMouseEnter = useCallback(() => {
+      if (selectedColumn) {
+        return;
+      }
+      onColumnMouseEnter(fullyQualifiedName ?? '');
+    }, [selectedColumn, fullyQualifiedName, onColumnMouseEnter]);
 
-  const handleMouseLeave = useCallback(() => {
-    if (selectedColumn) {
-      return;
-    }
-    setTracedColumns(new Set());
-  }, [selectedColumn, setTracedColumns]);
+    const handleMouseLeave = useCallback(() => {
+      if (selectedColumn) {
+        return;
+      }
+      setTracedColumns(new Set());
+    }, [selectedColumn, setTracedColumns]);
 
-  const columnNameContentRender = getColumnNameContent(column, isLoading);
+    const columnNameContentRender = getColumnNameContent(column, isLoading);
 
-  return (
-    <div
-      className={classNames(
-        'custom-node-column-container',
-        isColumnTraced && 'custom-node-header-column-tracing'
-      )}
-      data-testid={`column-${fullyQualifiedName}`}
-      key={fullyQualifiedName}
-      onClick={handleClick}
-      onMouseDown={handleClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}>
-      {getColumnHandle(
-        EntityLineageNodeType.DEFAULT,
-        isConnectable,
-        'lineage-column-node-handle',
-        encodeLineageHandles(fullyQualifiedName ?? '')
-      )}
-      <Row className="items-center" gutter={12}>
-        <Col className="custom-node-name-container" flex="1">
-          {/* Use isLoading to show skeleton, to avoid flickering and typography truncation issue, 
-          due to showDataObservabilitySummary conditional rendering */}
-          {columnNameContentRender}
-        </Col>
-
-        {column.constraint && (
-          <Col
-            className={classNames(
-              'custom-node-constraint',
-              showDataObservabilitySummary ? 'text-left' : 'text-right'
-            )}
-            flex="80px">
-            {column.constraint}
-          </Col>
+    return (
+      <div
+        className={classNames(
+          'custom-node-column-container',
+          isColumnTraced && 'custom-node-header-column-tracing'
         )}
-        {showDataObservabilitySummary && (
-          <Col flex="80px">
-            <TestSuiteSummaryWidget
-              isLoading={isLoading}
-              size="small"
-              summary={summary}
-            />
-          </Col>
+        data-testid={`column-${fullyQualifiedName}`}
+        key={fullyQualifiedName}
+        onClick={handleClick}
+        onMouseDown={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}>
+        {getColumnHandle(
+          EntityLineageNodeType.DEFAULT,
+          isConnectable,
+          'lineage-column-node-handle',
+          encodeLineageHandles(fullyQualifiedName ?? '')
         )}
-      </Row>
-    </div>
-  );
-};
+        <Row className="items-center" gutter={12}>
+          <Col className="custom-node-name-container" flex="1">
+            {columnNameContentRender}
+          </Col>
+
+          {column.constraint && (
+            <Col
+              className={classNames(
+                'custom-node-constraint',
+                showDataObservabilitySummary ? 'text-left' : 'text-right'
+              )}
+              flex="80px">
+              {column.constraint}
+            </Col>
+          )}
+          {showDataObservabilitySummary && (
+            <Col flex="80px">
+              <TestSuiteSummaryWidget
+                isLoading={isLoading}
+                size="small"
+                summary={summary}
+              />
+            </Col>
+          )}
+        </Row>
+      </div>
+    );
+  },
+  (prevProps, nextProps) => {
+    return (
+      prevProps.column.fullyQualifiedName ===
+        nextProps.column.fullyQualifiedName &&
+      prevProps.isConnectable === nextProps.isConnectable &&
+      prevProps.showDataObservabilitySummary ===
+        nextProps.showDataObservabilitySummary &&
+      prevProps.isLoading === nextProps.isLoading &&
+      prevProps.summary === nextProps.summary
+    );
+  }
+);
 
 export function getNodeClassNames({
   isSelected,

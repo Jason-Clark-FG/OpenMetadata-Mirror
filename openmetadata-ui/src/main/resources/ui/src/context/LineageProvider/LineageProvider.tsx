@@ -97,7 +97,9 @@ import { getCurrentISODate } from '../../utils/date-time/DateTimeUtils';
 import {
   addLineageHandler,
   centerNodePosition,
+  createColumnEdges,
   createEdgesAndEdgeMaps,
+  createEntityEdgesAndMaps,
   createNewEdge,
   createNodes,
   decodeLineageHandles,
@@ -258,6 +260,85 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     return searchData.layers as LineageLayer[] | undefined;
   }, [location.search]);
 
+  const cachedEntityEdgesAndMaps = useMemo(() => {
+    const seen = new Set<string>();
+    const allNodes = [
+      ...(entityLineage.nodes ?? []),
+      ...(entityLineage.entity ? [entityLineage.entity] : []),
+    ].filter((n) => {
+      if (seen.has(n.id)) {
+        return false;
+      }
+      seen.add(n.id);
+
+      return true;
+    });
+
+    return {
+      allNodes,
+      ...createEntityEdgesAndMaps(
+        allNodes,
+        entityLineage.edges ?? [],
+        entityFqn
+      ),
+    };
+  }, [entityLineage, entityFqn]);
+
+  const cachedColumnEdges = useMemo(() => {
+    if (!isColumnLevelLineage) {
+      return {
+        columnEdges: [],
+        columnsHavingLineage: new Set<string>(),
+      };
+    }
+
+    return createColumnEdges(
+      cachedEntityEdgesAndMaps.allNodes,
+      entityLineage.edges ?? []
+    );
+  }, [
+    cachedEntityEdgesAndMaps.allNodes,
+    entityLineage.edges,
+    isColumnLevelLineage,
+  ]);
+
+  const cachedEdgesAndMaps = useMemo(() => {
+    return {
+      allNodes: cachedEntityEdgesAndMaps.allNodes,
+      edges: [
+        ...cachedEntityEdgesAndMaps.entityEdges,
+        ...cachedColumnEdges.columnEdges,
+      ],
+      incomingMap: cachedEntityEdgesAndMaps.incomingMap,
+      outgoingMap: cachedEntityEdgesAndMaps.outgoingMap,
+      columnsHavingLineage: cachedColumnEdges.columnsHavingLineage,
+    };
+  }, [cachedEntityEdgesAndMaps, cachedColumnEdges]);
+
+  const cachedNodes = useMemo(() => {
+    const { allNodes, incomingMap, outgoingMap, columnsHavingLineage } =
+      cachedEdgesAndMaps;
+
+    return createNodes(
+      allNodes,
+      entityLineage.edges ?? [],
+      entityFqn,
+      incomingMap,
+      outgoingMap,
+      isColumnLevelLineage,
+      undefined,
+      isEditMode || expandAllColumns,
+      columnsHavingLineage
+    );
+  }, [
+    cachedEdgesAndMaps,
+    entityLineage.edges,
+    entityFqn,
+    isColumnLevelLineage,
+    isEditMode,
+    expandAllColumns,
+  ]);
+
   const fetchDataQualityLineage = async (
     fqn: string,
     config?: LineageConfig
@@ -283,7 +364,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       recenter = true,
       isFirstTime = false
     ) => {
-      // Wait for reactFlowInstance to be available
       if (!reactFlowInstance?.viewportInitialized) {
         return;
       }
@@ -301,41 +381,62 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         return true;
       });
 
-      const {
-        edges: updatedEdges,
-        incomingMap,
-        outgoingMap,
-        columnsHavingLineage: columnsLineageSet,
-      } = createEdgesAndEdgeMaps(
-        allNodes,
-        lineageData.edges ?? [],
-        entityFqn,
-        isColumnLevelLineage,
-        isFirstTime ? true : undefined
-      );
+      const isSameLineageData =
+        lineageData === entityLineage &&
+        allNodes.length === cachedEdgesAndMaps.allNodes.length;
 
-      const initialNodes = createNodes(
-        allNodes,
-        lineageData.edges ?? [],
-        entityFqn,
-        incomingMap,
-        outgoingMap,
-        isColumnLevelLineage,
-        isFirstTime ? true : undefined,
-        isEditMode || expandAllColumns,
-        columnsLineageSet
-      );
+      let updatedEdges: Edge[];
+      let initialNodes: Node[];
+      let columnsLineageSet: Set<string>;
 
-      // Skip animation frame if first time
+      if (isSameLineageData) {
+        updatedEdges = isFirstTime
+          ? cachedEdgesAndMaps.edges.map((edge) => ({
+              ...edge,
+              hidden: true,
+            }))
+          : cachedEdgesAndMaps.edges;
+
+        initialNodes = isFirstTime
+          ? cachedNodes.map((node) => ({
+              ...node,
+              hidden: true,
+            }))
+          : cachedNodes;
+
+        columnsLineageSet = cachedEdgesAndMaps.columnsHavingLineage;
+      } else {
+        const edgesAndMaps = createEdgesAndEdgeMaps(
+          allNodes,
+          lineageData.edges ?? [],
+          entityFqn,
+          isColumnLevelLineage,
+          isFirstTime ? true : undefined
+        );
+
+        updatedEdges = edgesAndMaps.edges;
+        columnsLineageSet = edgesAndMaps.columnsHavingLineage;
+
+        initialNodes = createNodes(
+          allNodes,
+          lineageData.edges ?? [],
+          entityFqn,
+          edgesAndMaps.incomingMap,
+          edgesAndMaps.outgoingMap,
+          isColumnLevelLineage,
+          isFirstTime ? true : undefined,
+          isEditMode || expandAllColumns,
+          columnsLineageSet
+        );
+      }
+
       if (isFirstTime) {
-        // Set initial nodes and edges
         setNodes(initialNodes);
         setEdges(updatedEdges);
 
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
 
-      // Position nodes with actual dimensions
       const positionedNodesEdges = await positionNodesUsingElk(
         initialNodes,
         updatedEdges,
@@ -354,7 +455,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         ...(isFirstTime && { hidden: undefined }),
       }));
 
-      // Center on root node if requested
       if (recenter) {
         const rootNode = visibleNodes.find((n) => n.data.isRootNode);
         if (rootNode) {
@@ -376,6 +476,9 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       zoomValue,
       expandAllColumns,
       isColumnLevelLineage,
+      entityLineage,
+      cachedEdgesAndMaps,
+      cachedNodes,
     ]
   );
 
@@ -1524,51 +1627,15 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     [nodes, edges, entityLineage]
   );
 
-  //   const _repositionLayout = useCallback(async () => {
-  //     if (nodes.length === 0 || !reactFlowInstance) {
-  //       return;
-  //     }
-
-  //     const { nodes: layoutedNodes, edges: layoutedEdges } =
-  //       await getELKLayoutedElements(
-  //         nodes,
-  //         edges,
-  //         isColumnLevelLineage,
-  //         isEditMode || expandAllColumns,
-  //         columnsHavingLineage
-  //       );
-
-  //     setNodes(layoutedNodes);
-  //     setEdges(layoutedEdges);
-
-  //     const rootNode = layoutedNodes.find((n) => n.data.isRootNode);
-  //     if (!rootNode) {
-  //       if (reactFlowInstance) {
-  //         onLoad(reactFlowInstance); // Call fitview in case of pipeline
-  //       }
-
-  //       return;
-  //     }
-
-  //     // Center the root node in the view
-  //     centerNodePosition(rootNode, reactFlowInstance, zoomValue);
-  //   }, [
-  //     zoomValue,
-  //     reactFlowInstance,
-  //     isColumnLevelLineage,
-  //     nodes,
-  //     edges,
-  //     onNodeClick,
-  //     columnsHavingLineage,
-  //     expandAllColumns,
-  //     isEditMode,
-  //   ]);
-
   const redraw = useCallback(async () => {
     if (entityLineage) {
       await redrawLineage(entityLineage, true);
     }
   }, [entityLineage, redrawLineage]);
+
+  useEffect(() => {
+    redraw();
+  }, [isColumnLevelLineage]);
 
   const onPlatformViewUpdate = useCallback(() => {
     if (entity && entityFqn && entityType) {
