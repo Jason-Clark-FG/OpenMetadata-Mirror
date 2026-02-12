@@ -156,6 +156,8 @@ def unit_tests(session):
         "loadfile",
         "tests/unit/",
     )
+    # xdist workers write parallel .coverage.<id> files; combine into one
+    session.run("coverage", "combine")
 
 
 # ---------------------------------------------------------------------------
@@ -206,13 +208,17 @@ def integration_tests(session):
 
     if not standalone:
         pytest_args.append("--cov-append")
-    if int(workers) > 0:
+    use_xdist = int(workers) > 0
+    if use_xdist:
         pytest_args.extend([f"-n{workers}", "--dist=loadgroup"])
 
     pytest_args.extend(test_paths or ["tests/integration/"])
     pytest_args.extend(extra_flags)
 
     session.run("pytest", *pytest_args)
+    if use_xdist:
+        # xdist workers write parallel .coverage.<id> files; combine into one
+        session.run("coverage", "combine")
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +234,10 @@ def combine_coverage(session):
 
     Used in CI to merge coverage artifacts from separate unit and
     integration jobs. Expects .coverage files under coverage-data/.
+
+    NOTE: The ``sed -i`` step uses GNU sed syntax and only works on Linux
+    (CI runners).  On macOS, BSD sed requires a backup-extension argument
+    (``sed -i ''``), so running this session locally will fail at that step.
 
     Example:
         nox -s combine-coverage
