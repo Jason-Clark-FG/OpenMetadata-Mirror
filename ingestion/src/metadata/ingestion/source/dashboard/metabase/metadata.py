@@ -280,11 +280,14 @@ class MetabaseSource(DashboardServiceSource):
                         service=self.context.get().dashboard_service,
                     )
                 )
+            except KeyError:
+                logger.debug(f"Chart {chart_id} not found in charts_dict")
+                continue
             except Exception as exc:  # pylint: disable=broad-except
                 yield Either(
                     left=StackTraceError(
                         name="Chart",
-                        error=f"Error creating chart [{self.charts_dict[chart_id]}]: {exc}",
+                        error=f"Error creating chart [{chart_id}]: {exc}",
                         stackTrace=traceback.format_exc(),
                     )
                 )
@@ -305,7 +308,10 @@ class MetabaseSource(DashboardServiceSource):
         )
         for chart_id in chart_ids:
             try:
-                chart_details = self.charts_dict[chart_id]
+                chart_details = self.charts_dict.get(chart_id)
+                if chart_details is None:
+                    logger.debug(f"Chart {chart_id} not found in charts_dict")
+                    continue
                 if (
                     chart_details.dataset_query is None
                     or chart_details.dataset_query.type is None
