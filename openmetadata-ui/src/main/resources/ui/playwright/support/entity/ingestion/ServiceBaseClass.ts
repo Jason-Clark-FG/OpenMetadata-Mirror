@@ -76,7 +76,13 @@ class ServiceBaseClass {
     // Handle visit service here
   }
 
-  async createService(page: Page) {
+  async createService(
+    page: Page,
+    runnerDetails = {
+      name: 'CollateSaaS',
+      displayName: 'Collate SaaS',
+    }
+  ) {
     // Handle create service here
     // intercept the service requirement md file fetch request
     await page.route('**/en-US/*/' + this.serviceType + '.md', (route) => {
@@ -113,21 +119,23 @@ class ServiceBaseClass {
       });
 
       // Search for the runner using the search input
-      await runnerSelector.locator('input').fill('Collate SaaS');
+      await runnerSelector.locator('input').fill(runnerDetails.name);
 
+      // Using data-key which relies on `name` which is more reliable data in AUTs
+      // instead of data-testid which depends on the `displayName` which can change
       await page.waitForSelector(
-        '.ant-select-dropdown:visible [data-testid="select-option-Collate SaaS Runner"]',
+        `.ant-select-dropdown:visible [data-key="${runnerDetails.name}"]`,
         { state: 'visible' }
       );
       await page
         .locator(
-          '.ant-select-dropdown:visible [data-testid="select-option-Collate SaaS Runner"]'
+          `.ant-select-dropdown:visible [data-key="${runnerDetails.name}"]`
         )
         .click();
 
       await expect(
         page.getByTestId('select-widget-root/ingestionRunner')
-      ).toContainText('Collate SaaS Runner');
+      ).toContainText(runnerDetails.displayName);
     }
 
     if (this.shouldTestConnection) {
