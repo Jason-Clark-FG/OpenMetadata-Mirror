@@ -88,6 +88,7 @@ export default defineConfig({
         '**/DataAssetRulesDisabled.spec.ts',
         '**/SystemCertificationTags.spec.ts',
       ],
+      fullyParallel: true,
     },
     {
       name: 'entity-data-teardown',
