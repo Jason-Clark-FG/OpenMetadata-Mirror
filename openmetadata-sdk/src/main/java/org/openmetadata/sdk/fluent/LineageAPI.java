@@ -282,44 +282,38 @@ public final class LineageAPI {
   public static class LineageExporter {
     private final OpenMetadataClient client;
     private String entityType;
-    private String entityId;
-    private ExportFormat format = ExportFormat.JSON;
-    private boolean includeUpstream = true;
-    private boolean includeDownstream = true;
-    private int maxDepth = 3;
+    private String fqn;
+    private int upstreamDepth = 1;
+    private int downstreamDepth = 1;
 
     LineageExporter(OpenMetadataClient client) {
       this.client = client;
     }
 
-    public LineageExporter entity(String entityType, String entityId) {
+    public LineageExporter entity(String entityType, String fqn) {
       this.entityType = entityType;
-      this.entityId = entityId;
+      this.fqn = fqn;
       return this;
     }
 
-    public LineageExporter format(ExportFormat format) {
-      this.format = format;
+    public LineageExporter upstream(int depth) {
+      this.upstreamDepth = depth;
       return this;
     }
 
-    public LineageExporter includeUpstream(boolean include) {
-      this.includeUpstream = include;
-      return this;
-    }
-
-    public LineageExporter includeDownstream(boolean include) {
-      this.includeDownstream = include;
-      return this;
-    }
-
-    public LineageExporter maxDepth(int depth) {
-      this.maxDepth = depth;
+    public LineageExporter downstream(int depth) {
+      this.downstreamDepth = depth;
       return this;
     }
 
     public String execute() {
-      return client.lineage().exportLineage(entityType, entityId);
+      return client
+          .lineage()
+          .exportLineage(
+              fqn,
+              entityType,
+              String.valueOf(upstreamDepth),
+              String.valueOf(downstreamDepth));
     }
   }
 

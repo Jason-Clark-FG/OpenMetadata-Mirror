@@ -5,8 +5,10 @@ import java.util.List;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
+import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.sdk.fluent.Tables;
 import org.openmetadata.sdk.fluent.builders.ColumnBuilder;
 
 /**
@@ -188,6 +190,59 @@ public class FluentTable {
               });
     }
     return this;
+  }
+
+  /**
+   * Get the underlying table entity (alias for get()).
+   */
+  public Table getTable() {
+    return table;
+  }
+
+  /**
+   * Set owners on the table.
+   */
+  public FluentTable withOwners(List<EntityReference> owners) {
+    table.setOwners(owners);
+    modified = true;
+    return this;
+  }
+
+  /**
+   * Set domains on the table.
+   */
+  public FluentTable withDomains(List<EntityReference> domains) {
+    table.setDomains(domains);
+    modified = true;
+    return this;
+  }
+
+  /**
+   * Set data products on the table.
+   */
+  public FluentTable withDataProducts(List<EntityReference> dataProducts) {
+    table.setDataProducts(dataProducts);
+    modified = true;
+    return this;
+  }
+
+  /**
+   * Replace all columns on the table.
+   */
+  public FluentTable withColumns(List<Column> columns) {
+    table.setColumns(columns);
+    modified = true;
+    return this;
+  }
+
+  /**
+   * Delete this table.
+   */
+  public Tables.TableDeleter delete() {
+    if (table.getId() == null) {
+      throw new IllegalStateException("Table must have an ID to delete");
+    }
+    return new Tables.TableDeleter(client, table.getId().toString());
   }
 
   /**
