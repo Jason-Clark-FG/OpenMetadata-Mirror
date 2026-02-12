@@ -12,7 +12,7 @@
 """
 Source connection handler
 """
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from metadata.generated.schema.entity.automations.workflow import (
     Workflow as AutomationWorkflow,
@@ -37,15 +37,6 @@ from metadata.ingestion.connections.test_connections import test_connection_step
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.database.datalake.clients.base import DatalakeBaseClient
 from metadata.utils.constants import THREE_MIN
-
-if TYPE_CHECKING:
-    from metadata.ingestion.source.database.datalake.clients.azure_blob import (
-        DatalakeAzureBlobClient,
-    )
-    from metadata.ingestion.source.database.datalake.clients.gcs import (
-        DatalakeGcsClient,
-    )
-    from metadata.ingestion.source.database.datalake.clients.s3 import DatalakeS3Client
 
 
 class DatalakeConnection(BaseConnection[DatalakeConnectionConfig, DatalakeBaseClient]):
