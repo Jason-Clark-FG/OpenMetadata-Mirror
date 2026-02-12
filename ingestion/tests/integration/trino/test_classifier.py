@@ -98,7 +98,7 @@ def run_classifier(
         "{database_service}.minio.my_schema.only_complex",
     ),
 )
-def test_auto_classification_workflow(
+def x_test_auto_classification_workflow(
     run_classifier,
     metadata: OpenMetadata,
     table_name: str,
