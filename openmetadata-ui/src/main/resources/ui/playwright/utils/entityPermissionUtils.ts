@@ -27,6 +27,8 @@ import { SpreadsheetClass } from '../support/entity/SpreadsheetClass';
 import { TableClass } from '../support/entity/TableClass';
 import { TopicClass } from '../support/entity/TopicClass';
 import { WorksheetClass } from '../support/entity/WorksheetClass';
+import { DashboardServiceClass } from '../support/entity/service/DashboardServiceClass';
+import { DatabaseServiceClass } from '../support/entity/service/DatabaseServiceClass';
 import { UserClass } from '../support/user/UserClass';
 import { redirectToHomePage } from './common';
 import { addCustomPropertiesForEntity } from './customProperty';
@@ -585,6 +587,55 @@ export const entityConfig = {
   Database: {
     class: DatabaseClass,
     specificTest: testDatabaseSpecificOperations,
+  },
+} as const;
+
+export const testDatabaseServiceSpecificOperations = async (
+  testUserPage: Page,
+  entity: DatabaseServiceClass,
+  _effect: 'allow' | 'deny'
+) => {
+  const databasesResponsePromise = testUserPage.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/databases') &&
+      response.request().method() === 'GET'
+  );
+
+  await redirectToHomePage(testUserPage);
+  await entity.visitEntityPage(testUserPage);
+
+  const databasesResponse = await databasesResponsePromise;
+
+  expect(databasesResponse.status()).toBe(200);
+};
+
+export const testDashboardServiceSpecificOperations = async (
+  testUserPage: Page,
+  entity: DashboardServiceClass,
+  _effect: 'allow' | 'deny'
+) => {
+  const dashboardsResponsePromise = testUserPage.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/dashboards') &&
+      response.request().method() === 'GET'
+  );
+
+  await redirectToHomePage(testUserPage);
+  await entity.visitEntityPage(testUserPage);
+
+  const dashboardsResponse = await dashboardsResponsePromise;
+
+  expect(dashboardsResponse.status()).toBe(200);
+};
+
+export const serviceEntityConfig = {
+  'Database Service': {
+    class: DatabaseServiceClass,
+    specificTest: testDatabaseServiceSpecificOperations,
+  },
+  'Dashboard Service': {
+    class: DashboardServiceClass,
+    specificTest: testDashboardServiceSpecificOperations,
   },
 } as const;
 
