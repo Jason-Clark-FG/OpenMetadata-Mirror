@@ -12,8 +12,8 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
-import { redirectToHomePage } from '../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { redirectToHomePage } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -87,16 +87,18 @@ test.describe(
             response.url().includes('entityType=TABLE')
         );
 
-        await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.TABLE);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.ENTITY_TYPE,
+          ENTITY_TYPE_OPTIONS.TABLE
+        );
 
         const response = await apiResponsePromise;
         expect(response.status()).toBe(200);
 
         expect(page.url()).toContain('entityType=TABLE');
 
-        await expect(
-          page.getByTestId('test-definition-table')
-        ).toBeVisible();
+        await expect(page.getByTestId('test-definition-table')).toBeVisible();
       });
 
       await test.step('Verify radio button is checked', async () => {
@@ -197,24 +199,25 @@ test.describe(
         await page.keyboard.press('Escape');
       });
 
-      await test.step('Verify persistence through browser navigation', async () => {
-        await page.goBack();
-        await waitForAllLoadersToDisappear(page);
+      await test.step(
+        'Verify persistence through browser navigation',
+        async () => {
+          await page.goBack();
+          await waitForAllLoadersToDisappear(page);
 
-        expect(page.url()).not.toContain('entityType');
-        expect(page.url()).not.toContain('testPlatforms');
+          expect(page.url()).not.toContain('entityType');
+          expect(page.url()).not.toContain('testPlatforms');
 
-        await page.goForward();
-        await waitForAllLoadersToDisappear(page);
+          await page.goForward();
+          await waitForAllLoadersToDisappear(page);
 
-        expect(page.url()).toContain('entityType=TABLE');
-        expect(page.url()).toContain('testPlatforms=OpenMetadata');
-      });
+          expect(page.url()).toContain('entityType=TABLE');
+          expect(page.url()).toContain('testPlatforms=OpenMetadata');
+        }
+      );
     });
 
-    test('should handle filter UI interactions correctly', async ({
-      page,
-    }) => {
+    test('should handle filter UI interactions correctly', async ({ page }) => {
       await test.step('Verify radio button rendering', async () => {
         await page.click(
           `[data-testid="search-dropdown-${FILTER_LABELS.ENTITY_TYPE}"]`
@@ -287,45 +290,64 @@ test.describe(
         expect(page.url()).toContain('entityType=TABLE');
       });
 
-      await test.step('Verify no clear all button in single-select mode', async () => {
-        await page.click(
-          `[data-testid="search-dropdown-${FILTER_LABELS.ENTITY_TYPE}"]`
-        );
-        await page.waitForSelector('[data-testid="drop-down-menu"]', {
-          state: 'visible',
-        });
+      await test.step(
+        'Verify no clear all button in single-select mode',
+        async () => {
+          await page.click(
+            `[data-testid="search-dropdown-${FILTER_LABELS.ENTITY_TYPE}"]`
+          );
+          await page.waitForSelector('[data-testid="drop-down-menu"]', {
+            state: 'visible',
+          });
 
-        const clearButton = page.getByTestId('clear-button');
-        await expect(clearButton).not.toBeVisible();
+          const clearButton = page.getByTestId('clear-button');
+          await expect(clearButton).not.toBeVisible();
 
-        await page.keyboard.press('Escape');
-      });
+          await page.keyboard.press('Escape');
+        }
+      );
     });
 
     test('should handle multiple filter operations', async ({ page }) => {
       test.slow();
 
       await test.step('Apply first filter', async () => {
-        await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.COLUMN);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.ENTITY_TYPE,
+          ENTITY_TYPE_OPTIONS.COLUMN
+        );
         expect(page.url()).toContain('entityType=COLUMN');
       });
 
       await test.step('Apply second filter', async () => {
-        await toggleFilter(page, FILTER_LABELS.TEST_PLATFORMS, TEST_PLATFORM_OPTIONS.OPENMETADATA);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.TEST_PLATFORMS,
+          TEST_PLATFORM_OPTIONS.OPENMETADATA
+        );
 
         expect(page.url()).toContain('entityType=COLUMN');
         expect(page.url()).toContain('testPlatforms=OpenMetadata');
       });
 
       await test.step('Remove first filter', async () => {
-        await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.COLUMN);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.ENTITY_TYPE,
+          ENTITY_TYPE_OPTIONS.COLUMN
+        );
 
         expect(page.url()).not.toContain('entityType=COLUMN');
         expect(page.url()).toContain('testPlatforms=OpenMetadata');
       });
 
       await test.step('Remove second filter', async () => {
-        await toggleFilter(page, FILTER_LABELS.TEST_PLATFORMS, TEST_PLATFORM_OPTIONS.OPENMETADATA);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.TEST_PLATFORMS,
+          TEST_PLATFORM_OPTIONS.OPENMETADATA
+        );
 
         expect(page.url()).not.toContain('entityType');
         expect(page.url()).not.toContain('testPlatforms');
@@ -342,7 +364,11 @@ test.describe(
             response.url().includes('entityType=TABLE')
         );
 
-        await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.TABLE);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.ENTITY_TYPE,
+          ENTITY_TYPE_OPTIONS.TABLE
+        );
 
         const response = await apiResponsePromise;
         expect(response.status()).toBe(200);
@@ -358,9 +384,7 @@ test.describe(
       });
 
       await test.step('Verify filtered results in UI', async () => {
-        await expect(
-          page.getByTestId('test-definition-table')
-        ).toBeVisible();
+        await expect(page.getByTestId('test-definition-table')).toBeVisible();
 
         const rows = await page.locator('table tbody tr').count();
         expect(rows).toBeGreaterThan(0);
@@ -371,7 +395,11 @@ test.describe(
       test.slow();
 
       await test.step('Apply initial filter', async () => {
-        await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.TABLE);
+        await toggleFilter(
+          page,
+          FILTER_LABELS.ENTITY_TYPE,
+          ENTITY_TYPE_OPTIONS.TABLE
+        );
       });
 
       await test.step('Navigate to page 2 if pagination exists', async () => {
@@ -389,12 +417,19 @@ test.describe(
 
             expect(page.url()).toMatch(/page=2/);
 
-            await test.step('Change filter and verify pagination reset', async () => {
-              await toggleFilter(page, FILTER_LABELS.ENTITY_TYPE, ENTITY_TYPE_OPTIONS.COLUMN);
+            await test.step(
+              'Change filter and verify pagination reset',
+              async () => {
+                await toggleFilter(
+                  page,
+                  FILTER_LABELS.ENTITY_TYPE,
+                  ENTITY_TYPE_OPTIONS.COLUMN
+                );
 
-              expect(page.url()).not.toContain('page=2');
-              expect(page.url()).toContain('entityType=COLUMN');
-            });
+                expect(page.url()).not.toContain('page=2');
+                expect(page.url()).toContain('entityType=COLUMN');
+              }
+            );
           }
         }
       });
