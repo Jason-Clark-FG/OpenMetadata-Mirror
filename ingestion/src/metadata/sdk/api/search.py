@@ -168,7 +168,9 @@ class Search:
             Search results as JSON dict
         """
         client = cls._get_client()
-        resolved_filters = _build_query_filter(filters) if filters else {}
+        resolved_filters: Mapping[str, Any] = (
+            _build_query_filter(filters) if filters else {}
+        )
         params: JsonDict = {
             "query_string": query,
             "index": index,
