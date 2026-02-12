@@ -478,6 +478,15 @@ export const testDashboardDataModelSpecificOperations = async (
   }
 };
 
+// Regression test for updateVote dropping usageSummary from the re-fetch.
+// Only called for the 'allow' effect: verifies Usage label is still visible
+// after a vote action triggers the re-fetch of entity details.
+const testVotePreservesUsage = async (testUserPage: Page) => {
+  await testUserPage.locator('[data-testid="up-vote-btn"]').click();
+  await testUserPage.waitForLoadState('networkidle');
+  await expect(testUserPage.getByText('Usage').first()).toBeVisible();
+};
+
 export const testDashboardSpecificOperations = async (
   testUserPage: Page,
   entity: DashboardClass,
@@ -494,6 +503,10 @@ export const testDashboardSpecificOperations = async (
     },
     effect
   );
+
+  if (effect === 'allow') {
+    await testVotePreservesUsage(testUserPage);
+  }
 };
 
 export const testMlModelSpecificOperations = async (
@@ -512,6 +525,10 @@ export const testMlModelSpecificOperations = async (
     },
     effect
   );
+
+  if (effect === 'allow') {
+    await testVotePreservesUsage(testUserPage);
+  }
 };
 
 // Helper function to run common permission tests

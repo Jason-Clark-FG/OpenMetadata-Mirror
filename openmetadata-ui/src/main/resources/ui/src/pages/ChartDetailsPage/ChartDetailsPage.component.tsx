@@ -221,9 +221,11 @@ const ChartDetailsPage = () => {
   const updateVote = async (data: QueryVote, id: string) => {
     try {
       await updateChartVotes(id, data);
-      const details = await getChartByFqn(chartFQN, {
-        fields: defaultFields,
-      });
+      let fields = defaultFields;
+      if (viewUsagePermission) {
+        fields += `,${TabSpecificField.USAGE_SUMMARY}`;
+      }
+      const details = await getChartByFqn(chartFQN, { fields });
       setChartDetails(details);
     } catch (error) {
       showErrorToast(error as AxiosError);
