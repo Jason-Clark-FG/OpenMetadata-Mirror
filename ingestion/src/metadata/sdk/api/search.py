@@ -76,7 +76,7 @@ class RestClientProtocol(Protocol):
         self,
         path: str,
         data: Mapping[str, Any] | None = None,
-        json: JsonDict | None = None,
+        json: JsonDict | None = None,  # pylint: disable=redefined-outer-name
     ) -> RestReturn:
         ...
 
