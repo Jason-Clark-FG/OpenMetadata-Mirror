@@ -114,6 +114,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -3294,11 +3295,41 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void applyColumnTags(List<Column> columns) {
-    // Add column level tags by adding tag to column relationship
+    if (columns == null || columns.isEmpty()) {
+      return;
+    }
+    Map<String, List<TagLabel>> tagsByTarget = new LinkedHashMap<>();
+    collectColumnTags(columns, tagsByTarget);
+    applyTagsBatchWithRdf(tagsByTarget);
+  }
+
+  protected void applyTagsBatchWithRdf(Map<String, List<TagLabel>> tagsByTarget) {
+    if (tagsByTarget == null || tagsByTarget.isEmpty()) {
+      return;
+    }
+    daoCollection.tagUsageDAO().applyTagsBatchMultiTarget(tagsByTarget);
+
+    for (Map.Entry<String, List<TagLabel>> entry : tagsByTarget.entrySet()) {
+      String targetFQN = entry.getKey();
+      for (TagLabel tagLabel : entry.getValue()) {
+        if (!tagLabel.getLabelType().equals(TagLabel.LabelType.DERIVED)) {
+          org.openmetadata.service.rdf.RdfTagUpdater.applyTag(tagLabel, targetFQN);
+        }
+      }
+    }
+  }
+
+  protected void collectColumnTags(List<Column> columns, Map<String, List<TagLabel>> tagsByTarget) {
+    if (columns == null || columns.isEmpty()) {
+      return;
+    }
     for (Column column : columns) {
-      applyTags(column.getTags(), column.getFullyQualifiedName());
+      List<TagLabel> tags = column.getTags();
+      if (tags != null && !tags.isEmpty()) {
+        tagsByTarget.put(column.getFullyQualifiedName(), new ArrayList<>(tags));
+      }
       if (column.getChildren() != null) {
-        applyColumnTags(column.getChildren());
+        collectColumnTags(column.getChildren(), tagsByTarget);
       }
     }
   }
@@ -7303,7 +7334,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   @Transaction
   public void createChangeEventForBulkOperation(
-          T original, CsvImportResult result, String updatedBy) {
+      T original, CsvImportResult result, String updatedBy) {
     // Get a complete view of the entity for history
     original = find(original.getId(), NON_DELETED, false);
     setFieldsInternal(original, getPutFields());
@@ -7326,8 +7357,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     // Store history of the previous version
     String extensionName = EntityUtil.getVersionExtension(entityType, original.getVersion());
     daoCollection
-            .entityExtensionDAO()
-            .insert(original.getId(), extensionName, entityType, JsonUtils.pojoToJson(original));
+        .entityExtensionDAO()
+        .insert(original.getId(), extensionName, entityType, JsonUtils.pojoToJson(original));
 
     // Directly update the entity in the database without calling other versioning methods
     dao.update(updated.getId(), updated.getFullyQualifiedName(), JsonUtils.pojoToJson(updated));
@@ -7335,19 +7366,19 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     // Create a ChangeEvent for the feed
     ChangeEvent changeEvent =
-            getChangeEvent(updated, change, entityType, change.getPreviousVersion());
+        getChangeEvent(updated, change, entityType, change.getPreviousVersion());
     daoCollection.changeEventDAO().insert(JsonUtils.pojoToJson(changeEvent));
   }
 
   private CsvImportResult createLeanCsvImportResult(CsvImportResult fullResult) {
     CsvImportResult leanResult =
-            new CsvImportResult()
-                    .withDryRun(fullResult.getDryRun())
-                    .withStatus(fullResult.getStatus())
-                    .withNumberOfRowsProcessed(fullResult.getNumberOfRowsProcessed())
-                    .withNumberOfRowsPassed(fullResult.getNumberOfRowsPassed())
-                    .withNumberOfRowsFailed(fullResult.getNumberOfRowsFailed())
-                    .withAbortReason(fullResult.getAbortReason());
+        new CsvImportResult()
+            .withDryRun(fullResult.getDryRun())
+            .withStatus(fullResult.getStatus())
+            .withNumberOfRowsProcessed(fullResult.getNumberOfRowsProcessed())
+            .withNumberOfRowsPassed(fullResult.getNumberOfRowsPassed())
+            .withNumberOfRowsFailed(fullResult.getNumberOfRowsFailed())
+            .withAbortReason(fullResult.getAbortReason());
 
     if (nullOrEmpty(fullResult.getImportResultsCsv())) {
       return leanResult;
@@ -7355,8 +7386,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     StringWriter stringWriter = new StringWriter();
     try (CSVParser parser =
-                 CSVParser.parse(
-                         fullResult.getImportResultsCsv(), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+        CSVParser.parse(
+            fullResult.getImportResultsCsv(), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
       int nameIndex = -1;
       List<String> headerNames = parser.getHeaderNames();
       for (int i = 0; i < headerNames.size(); i++) {
@@ -7368,7 +7399,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
       String[] leanHeaders = {"status", "details", "name"};
       try (CSVPrinter printer =
-                   new CSVPrinter(stringWriter, CSVFormat.DEFAULT.withHeader(leanHeaders))) {
+          new CSVPrinter(stringWriter, CSVFormat.DEFAULT.withHeader(leanHeaders))) {
         for (CSVRecord record : parser) {
           String name = (nameIndex != -1 && nameIndex < record.size()) ? record.get(nameIndex) : "";
           printer.printRecord(record.get("status"), record.get("details"), name);
