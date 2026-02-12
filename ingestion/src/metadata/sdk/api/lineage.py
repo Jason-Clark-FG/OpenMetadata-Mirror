@@ -168,11 +168,26 @@ class Lineage:
             fromEntity=EntityReference(
                 id=_ensure_uuid(from_entity),
                 type=from_entity_type,
+                name=None,
+                fullyQualifiedName=None,
+                description=None,
+                displayName=None,
+                deleted=None,
+                inherited=None,
+                href=None,
             ),
             toEntity=EntityReference(
                 id=_ensure_uuid(to_entity),
                 type=to_entity_type,
+                name=None,
+                fullyQualifiedName=None,
+                description=None,
+                displayName=None,
+                deleted=None,
+                inherited=None,
+                href=None,
             ),
+            lineageDetails=None,
         )
         client.delete_lineage_edge(edge)
 
