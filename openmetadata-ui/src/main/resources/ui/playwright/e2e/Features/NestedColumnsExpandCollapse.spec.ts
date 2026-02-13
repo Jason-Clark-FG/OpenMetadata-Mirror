@@ -45,28 +45,25 @@ const entityCreators: Record<
 };
 
 for (const [entityType, createEntity] of Object.entries(entityCreators)) {
-  test.describe.serial(
-    `${entityType} - Nested columns with duplicate names`,
-    () => {
-      let entityData: EntityTestData;
+  test.describe(`${entityType} - Nested columns with duplicate names`, () => {
+    let entityData: EntityTestData;
 
-      test.beforeAll(async ({ browser }) => {
-        const { apiContext, afterAction } = await createNewPage(browser);
-        entityData = await createEntity(apiContext);
-        await afterAction();
-      });
+    test.beforeAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      entityData = await createEntity(apiContext);
+      await afterAction();
+    });
 
-      test('should not duplicate rows when expanding and collapsing nested columns with same names', async ({
-        page,
-      }) => {
-        await redirectToHomePage(page);
-        await entityData.visitPage(page);
+    test('should not duplicate rows when expanding and collapsing nested columns with same names', async ({
+      page,
+    }) => {
+      await redirectToHomePage(page);
+      await entityData.visitPage(page);
 
-        await waitForAllLoadersToDisappear(page);
-        await verifyExpandCollapseNoDuplication(page, entityData.keys);
-      });
-    }
-  );
+      await waitForAllLoadersToDisappear(page);
+      await verifyExpandCollapseNoDuplication(page, entityData.keys);
+    });
+  });
 }
 
 test.describe(
@@ -88,6 +85,33 @@ test.describe(
       await page.getByTestId('version-button').click();
       await waitForAllLoadersToDisappear(page);
       await verifyExpandCollapseNoDuplication(page, entityData.keys);
+    });
+  }
+);
+
+test.describe(
+  'Table Profiler Tab - Nested columns with duplicate names',
+  () => {
+    let entityData: Awaited<ReturnType<typeof createTableEntity>>;
+
+    test.beforeAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      entityData = await createTableEntity(apiContext);
+      await afterAction();
+    });
+
+    test('should not duplicate rows when expanding and collapsing nested columns with same names in Profiler Tab', async ({
+      page,
+    }) => {
+      await redirectToHomePage(page);
+      await entityData.visitPage(page);
+      await page.getByTestId('profiler').click();
+      await page.getByRole('tab', { name: 'Column Profile' }).click();
+      await waitForAllLoadersToDisappear(page);
+      await verifyExpandCollapseNoDuplication(page, {
+        ...entityData.keys,
+        expandLevel0: true,
+      });
     });
   }
 );
