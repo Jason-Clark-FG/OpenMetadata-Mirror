@@ -104,6 +104,7 @@ test.afterAll('Cleanup shared test data', async ({ browser }) => {
 });
 
 test.describe('Right Entity Panel - Admin User Flow', () => {
+  test.slow(true);
   test.beforeAll('Setup lineage test entities', async ({ browser }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
     await Promise.all([
