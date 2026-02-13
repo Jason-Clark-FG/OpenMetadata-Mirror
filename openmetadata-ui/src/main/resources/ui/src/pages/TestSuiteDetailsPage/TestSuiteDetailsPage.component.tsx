@@ -626,6 +626,7 @@ const TestSuiteDetailsPage = () => {
                 entityId={testSuite?.id}
                 entityName={testSuite?.fullyQualifiedName as string}
                 entityType={EntityType.TEST_SUITE}
+                extraDropdownContent={extraDropdownContent}
                 onEditDisplayName={handleDisplayNameChange}
               />
             </Box>
@@ -669,97 +670,6 @@ const TestSuiteDetailsPage = () => {
               }}
               owners={testOwners}
               onUpdate={onUpdateOwner}
-            </Col>
-            <Col className="d-flex justify-end" span={6}>
-              <Space>
-                {(testSuitePermissions.EditAll ||
-                  testSuitePermissions.EditTests) && (
-                  <Button
-                    data-testid="add-test-case-btn"
-                    type="primary"
-                    onClick={() => setIsTestCaseModalOpen(true)}>
-                    {t('label.add-entity', {
-                      entity: t('label.test-case-plural'),
-                    })}
-                  </Button>
-                )}
-                <ManageButton
-                  isRecursiveDelete
-                  afterDeleteAction={afterDeleteAction}
-                  allowSoftDelete={false}
-                  canDelete={permissions.hasDeletePermission}
-                  deleted={testSuite?.deleted}
-                  displayName={getEntityName(testSuite)}
-                  editDisplayNamePermission={
-                    testSuitePermissions.EditAll ||
-                    testSuitePermissions.EditDisplayName
-                  }
-                  entityId={testSuite?.id}
-                  entityName={testSuite?.fullyQualifiedName as string}
-                  entityType={EntityType.TEST_SUITE}
-                  extraDropdownContent={extraDropdownContent}
-                  onEditDisplayName={handleDisplayNameChange}
-                />
-              </Space>
-            </Col>
-
-            <Col span={24}>
-              <div className="d-flex flex-wrap gap-2">
-                <DomainLabel
-                  domains={testSuite?.domains}
-                  entityFqn={testSuite?.fullyQualifiedName ?? ''}
-                  entityId={testSuite?.id ?? ''}
-                  entityType={EntityType.TEST_SUITE}
-                  hasPermission={testSuitePermissions.EditAll}
-                  multiple={entityRules.canAddMultipleDomains}
-                  onUpdate={handleDomainUpdate}
-                />
-                <Divider className="self-center" type="vertical" />
-                <OwnerLabel
-                  hasPermission={permissions.hasEditOwnerPermission}
-                  multiple={{
-                    user: entityRules.canAddMultipleUserOwners,
-                    team: entityRules.canAddMultipleTeamOwner,
-                  }}
-                  owners={testOwners}
-                  onUpdate={onUpdateOwner}
-                />
-              </div>
-            </Col>
-          </Row>
-        </Col>
-
-        <Col span={24}>
-          <DescriptionV1
-            className="test-suite-description"
-            description={testSuiteDescription}
-            entityName={getEntityName(testSuite)}
-            entityType={EntityType.TEST_SUITE}
-            hasEditAccess={permissions.hasEditDescriptionPermission}
-            showCommentsIcon={false}
-            onDescriptionUpdate={onDescriptionUpdate}
-          />
-        </Col>
-
-        <Col span={24}>
-          <Tabs className="tabs-new" items={tabs} />
-        </Col>
-        <Col span={24}>
-          <Modal
-            centered
-            destroyOnClose
-            closable={false}
-            footer={null}
-            open={isTestCaseModalOpen}
-            title={t('label.add-entity', {
-              entity: t('label.test-case-plural'),
-            })}
-            width={750}>
-            <AddTestCaseList
-              existingTest={testSuite?.tests ?? []}
-              selectedTest={selectedTestCases}
-              onCancel={() => setIsTestCaseModalOpen(false)}
-              onSubmit={handleAddTestCaseSubmit}
             />
           </Box>
         </Box>
