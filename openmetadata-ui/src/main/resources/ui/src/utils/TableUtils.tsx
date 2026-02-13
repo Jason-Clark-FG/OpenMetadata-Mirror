@@ -932,18 +932,18 @@ export const getTableDetailPageBaseTabs = ({
         />
       ),
       key: EntityTabs.TABLE_QUERIES,
-      children: !viewQueriesPermission ? (
+      children: viewQueriesPermission ? (
+        <TableQueries
+          isTableDeleted={deleted}
+          tableId={tableDetails?.id ?? ''}
+        />
+      ) : (
         <ErrorPlaceHolder
           className="border-none"
           permissionValue={t('label.view-entity', {
             entity: t('label.query-plural'),
           })}
           type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
-        />
-      ) : (
-        <TableQueries
-          isTableDeleted={deleted}
-          tableId={tableDetails?.id ?? ''}
         />
       ),
     },
@@ -1169,7 +1169,7 @@ export const createTableConstraintObject = (
   constraints: string[],
   type: ConstraintType
 ) =>
-  !isEmpty(constraints) ? [{ columns: constraints, constraintType: type }] : [];
+  isEmpty(constraints) ? [] : [{ columns: constraints, constraintType: type }];
 
 export const tableConstraintRendererBasedOnType = (
   constraintType: ConstraintType,
