@@ -624,6 +624,10 @@ export const testDatabaseServiceSpecificOperations = async (
   const databasesResponse = await databasesResponsePromise;
 
   expect(databasesResponse.status()).toBe(200);
+
+  await expect(
+    testUserPage.locator('[data-testid="service-children-table"]')
+  ).toBeVisible();
 };
 
 export const testDashboardServiceSpecificOperations = async (
@@ -643,6 +647,10 @@ export const testDashboardServiceSpecificOperations = async (
   const dashboardsResponse = await dashboardsResponsePromise;
 
   expect(dashboardsResponse.status()).toBe(200);
+
+  await expect(
+    testUserPage.locator('[data-testid="service-children-table"]')
+  ).toBeVisible();
 };
 
 export const serviceEntityConfig = {

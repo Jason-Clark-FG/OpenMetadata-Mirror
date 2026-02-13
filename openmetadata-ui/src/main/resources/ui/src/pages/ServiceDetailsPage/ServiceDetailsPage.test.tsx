@@ -55,6 +55,7 @@ import {
 } from '../../rest/workflowAPI';
 import serviceUtilClassBase from '../../utils/ServiceUtilClassBase';
 import { getCountLabel, shouldTestConnection } from '../../utils/ServiceUtils';
+import { getPrioritizedViewPermission } from '../../utils/PermissionsUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import ServiceDetailsPage from './ServiceDetailsPage';
@@ -860,6 +861,42 @@ describe('ServiceDetailsPage', () => {
       await waitFor(() => {
         expect(getDatabases).toHaveBeenCalled();
       });
+    });
+
+    it('should include usageSummary in database fields when ViewUsage is allowed', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(true);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).toContain('usageSummary');
+    });
+
+    it('should exclude usageSummary from database fields when ViewUsage is denied', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(false);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).not.toContain('usageSummary');
     });
 
     it('should fetch topics for messaging service', async () => {
