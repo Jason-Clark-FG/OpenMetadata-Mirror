@@ -1183,7 +1183,7 @@ public class WorkflowHandler {
 
     // Check if all are already active
     if (processDefinitions.stream().noneMatch(ProcessDefinition::isSuspended)) {
-      LOG.debug(String.format("Workflow '%s' is already active.", workflowName));
+      LOG.debug("Workflow '{}' is already active.", workflowName);
       return;
     }
 
