@@ -86,8 +86,8 @@ const TestDefinitionList = () => {
 
   // Use useTableFilters for filter state management
   const { filters: urlParams, setFilters: updateUrlParams } = useTableFilters({
-    entityType: undefined as string | undefined,
-    testPlatforms: undefined as string | undefined,
+    entityType: undefined,
+    testPlatforms: undefined,
   });
 
   const {
@@ -116,8 +116,8 @@ const TestDefinitionList = () => {
   >({});
   const [permissionLoading, setPermissionLoading] = useState(true);
 
-  const entityTypeParam = urlParams.entityType || '';
-  const testPlatformsParam = urlParams.testPlatforms || '';
+  const entityTypeParam = urlParams.entityType ?? '';
+  const testPlatformsParam = urlParams.testPlatforms ?? '';
 
   // Parse filters from URL dynamically
   const urlFilters = useMemo(() => {
