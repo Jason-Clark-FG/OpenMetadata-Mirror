@@ -201,7 +201,9 @@ class DagsterSource(PipelineServiceSource):
                 executionStatus=STATUS_MAP.get(
                     run.status.lower(), StatusType.Pending.value
                 ),
-                timestamp=Timestamp(int(run.startTime * 1000)),
+                timestamp=Timestamp(int(run.startTime * 1000))
+                if run.startTime
+                else None,
             )
             pipeline_fqn = fqn.build(
                 metadata=self.metadata,
