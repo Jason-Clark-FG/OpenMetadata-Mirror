@@ -17,9 +17,11 @@ import {
   createApiEndpointEntity,
   createContainerEntity,
   createDataModelEntity,
+  createFileEntity,
   createSearchIndexEntity,
   createTableEntity,
   createTopicEntity,
+  createWorksheetEntity,
   verifyExpandCollapseForSummaryPanel,
   verifyExpandCollapseNoDuplication,
 } from '../../utils/nestedColumnUpdatesUtils';
@@ -38,6 +40,8 @@ const entityCreators: Record<
   'Data Model': createDataModelEntity,
   Container: createContainerEntity,
   'Search Index': createSearchIndexEntity,
+  Worksheet: createWorksheetEntity,
+  File: createFileEntity,
 };
 
 for (const [entityType, createEntity] of Object.entries(entityCreators)) {

@@ -186,7 +186,9 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
           'data-testid': 'column-name-cell',
         }),
         render: (_, record: Column) => (
-          <div className="d-inline-flex items-center gap-2 hover-icon-group w-max-90">
+          <div
+            className="d-inline-flex items-start gap-1 hover-icon-group flex-column"
+            style={{ maxWidth: '80%' }}>
             <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
               <Typography.Text className="text-link-color">
                 {getEntityName(record)}

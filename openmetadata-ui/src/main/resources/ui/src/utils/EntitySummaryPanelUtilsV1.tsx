@@ -903,7 +903,7 @@ const APIEndpointSchemaV1: React.FC<{
       key: 'name',
       width: 200,
       render: (name: string, record: Record<string, any>) => (
-        <div className="d-inline-flex w-max-90">
+        <div className="d-inline-flex" style={{ maxWidth: '68%' }}>
           <span className="break-word">{record.displayName || name}</span>
         </div>
       ),

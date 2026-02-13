@@ -11,6 +11,8 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
+import { FileClass } from '../support/entity/FileClass';
+import { WorksheetClass } from '../support/entity/WorksheetClass';
 import { uuid } from './common';
 import { visitEntityPage } from './entity';
 
@@ -808,6 +810,145 @@ export const createSearchIndexEntity = async (
         searchTerm: fqn,
         dataTestId: `${service.name}-${entity.name}`,
       });
+    },
+    keys: {
+      level0Key: `${fqn}.details`,
+      level1Key: `${fqn}.details.${DUPLICATE_NAME}`,
+      level2Key: `${fqn}.details.${DUPLICATE_NAME}.${DUPLICATE_NAME}`,
+      expandLevel0: true,
+    },
+  };
+};
+
+export const createWorksheetEntity = async (apiContext: APIRequestContext) => {
+  const worksheetClass = new WorksheetClass();
+  const columns = [
+    {
+      name: DUPLICATE_NAME,
+      displayName: '',
+      dataType: 'STRING',
+      dataTypeDisplay: 'string',
+      description: 'Top-level column.',
+    },
+    {
+      name: 'details',
+      displayName: 'details',
+      dataType: 'STRUCT',
+      dataTypeDisplay: 'struct',
+      description: 'Details struct.',
+      children: [
+        {
+          name: DUPLICATE_NAME,
+          displayName: '',
+          dataType: 'STRUCT',
+          dataTypeDisplay: 'struct',
+          description: 'Nested name struct.',
+          children: [
+            {
+              name: 'first_name',
+              displayName: 'first_name',
+              dataType: 'STRING',
+              dataTypeDisplay: 'string',
+              description: 'First name.',
+            },
+            {
+              name: DUPLICATE_NAME,
+              displayName: '',
+              dataType: 'STRING',
+              dataTypeDisplay: 'string',
+              description: 'Duplicate name field.',
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  worksheetClass.entity.columns = columns;
+
+  await worksheetClass.create(apiContext);
+  const data = worksheetClass.get();
+  const entity = data.entity;
+  const service = data.service;
+  const fqn = entity.fullyQualifiedName;
+
+  return {
+    entity,
+    service,
+    deleteService: () =>
+      worksheetClass.delete(apiContext).then(() => ({} as any)),
+    visitPage: async (page: Page) => {
+      await worksheetClass.visitEntityPage(page);
+    },
+    keys: {
+      level0Key: `${fqn}.details`,
+      level1Key: `${fqn}.details.${DUPLICATE_NAME}`,
+      level2Key: `${fqn}.details.${DUPLICATE_NAME}.${DUPLICATE_NAME}`,
+      expandLevel0: true,
+    },
+  };
+};
+
+export const createFileEntity = async (apiContext: APIRequestContext) => {
+  const fileClass = new FileClass();
+  const columns = [
+    {
+      name: DUPLICATE_NAME,
+      displayName: '',
+      dataType: 'STRING',
+      dataTypeDisplay: 'string',
+      description: 'Top-level column.',
+    },
+    {
+      name: 'details',
+      displayName: 'details',
+      dataType: 'STRUCT',
+      dataTypeDisplay: 'struct',
+      description: 'Details struct.',
+      children: [
+        {
+          name: DUPLICATE_NAME,
+          displayName: '',
+          dataType: 'STRUCT',
+          dataTypeDisplay: 'struct',
+          description: 'Nested name struct.',
+          children: [
+            {
+              name: 'first_name',
+              displayName: 'first_name',
+              dataType: 'STRING',
+              dataTypeDisplay: 'string',
+              description: 'First name.',
+            },
+            {
+              name: DUPLICATE_NAME,
+              displayName: '',
+              dataType: 'STRING',
+              dataTypeDisplay: 'string',
+              description: 'Duplicate name field.',
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  fileClass.entity.columns = columns;
+
+  await fileClass.create(apiContext);
+  const data = fileClass.get();
+  const entity = data.entity;
+  const service = data.service;
+  const fqn = entity.fullyQualifiedName;
+
+  return {
+    entity,
+    service,
+    deleteService: () => fileClass.delete(apiContext).then(() => ({} as any)),
+    visitPage: async (page: Page) => {
+      await fileClass.visitEntityPage(page);
+      await page.getByTestId('schema').click();
+      await page.waitForLoadState('domcontentloaded');
     },
     keys: {
       level0Key: `${fqn}.details`,

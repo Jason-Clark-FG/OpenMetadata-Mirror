@@ -32,6 +32,7 @@ export interface FileChildrenDetails {
 
 export class FileClass extends EntityClass {
   private fileName = `pw-file-${uuid()}`;
+  private directoryName = `pw-directory-${uuid()}`;
   private serviceName = `pw-directory-service-${uuid()}`;
 
   service = {
@@ -72,6 +73,8 @@ export class FileClass extends EntityClass {
   };
 
   serviceResponseData: ResponseDataType = {} as ResponseDataType;
+  directoryResponseData: ResponseDataWithServiceType =
+    {} as ResponseDataWithServiceType;
   entityResponseData: ResponseDataWithServiceType =
     {} as ResponseDataWithServiceType;
 
@@ -130,18 +133,34 @@ export class FileClass extends EntityClass {
     );
     this.serviceResponseData = await serviceResponse.json();
 
-    // Create directories
+    // Create directory
+    const directoryResponse = await apiContext.post(
+      '/api/v1/drives/directories',
+      {
+        data: {
+          name: this.directoryName,
+          service: this.serviceResponseData.fullyQualifiedName,
+        },
+      }
+    );
+    this.directoryResponseData = await directoryResponse.json();
+
+    // Create file in directory
     const entityResponse = await apiContext.post(
       `/api/v1/${EntityTypeEndpoint.File}`,
       {
-        data: this.entity,
+        data: {
+          ...this.entity,
+          directory: this.directoryResponseData.fullyQualifiedName,
+        },
       }
     );
     this.entityResponseData = await entityResponse.json();
 
     return {
-      service: serviceResponse.body,
-      entity: entityResponse.body,
+      service: this.serviceResponseData,
+      directory: this.directoryResponseData,
+      entity: this.entityResponseData,
     };
   }
 
@@ -172,6 +191,7 @@ export class FileClass extends EntityClass {
   get() {
     return {
       service: this.serviceResponseData,
+      directory: this.directoryResponseData,
       entity: this.entityResponseData,
     };
   }
@@ -179,9 +199,11 @@ export class FileClass extends EntityClass {
   public set(data: {
     entity: ResponseDataWithServiceType;
     service: ResponseDataType;
+    directory: ResponseDataWithServiceType;
   }): void {
     this.entityResponseData = data.entity;
     this.serviceResponseData = data.service;
+    this.directoryResponseData = data.directory;
   }
 
   async visitEntityPage(page: Page) {
