@@ -46,10 +46,13 @@ import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/Ti
 import DataQualityTab from '../../components/Database/Profiler/DataQualityTab/DataQualityTab';
 import { AddTestCaseList } from '../../components/DataQuality/AddTestCaseList/AddTestCaseList.component';
 import TestSuitePipelineTab from '../../components/DataQuality/TestSuite/TestSuitePipelineTab/TestSuitePipelineTab.component';
+import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import EntityHeaderTitle from '../../components/Entity/EntityHeaderTitle/EntityHeaderTitle.component';
+import { LearningIcon } from '../../components/Learning/LearningIcon/LearningIcon.component';
 import { EntityName } from '../../components/Modals/EntityNameModal/EntityNameModal.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { INITIAL_PAGING_VALUE } from '../../constants/constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { DEFAULT_SORT_ORDER } from '../../constants/profiler.constant';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import {
@@ -62,6 +65,7 @@ import {
   EntityType,
   TabSpecificField,
 } from '../../enums/entity.enum';
+import { Operation } from '../../generated/entity/policies/policy';
 import { PipelineType } from '../../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { TestCase } from '../../generated/tests/testCase';
 import { EntityReference, TestSuite } from '../../generated/tests/testSuite';
@@ -82,21 +86,27 @@ import {
   updateTestSuiteById,
 } from '../../rest/testAPI';
 import { getEntityName } from '../../utils/EntityUtils';
-import { DEFAULT_ENTITY_PERMISSION } from '../../utils/PermissionsUtils';
+import {
+  checkPermission,
+  DEFAULT_ENTITY_PERMISSION,
+} from '../../utils/PermissionsUtils';
 import {
   getDataQualityPagePath,
   getTestSuitePath,
 } from '../../utils/RouterUtils';
+import { ExtraTestCaseDropdownOptions } from '../../utils/TestCaseUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 
 const TestSuiteDetailsPage = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { entityRules } = useEntityRules(EntityType.TEST_SUITE);
-  const { getEntityPermissionByFqn } = usePermissionProvider();
+  const { getEntityPermissionByFqn, permissions: globalPermissions } =
+    usePermissionProvider();
   const { fqn: testSuiteFQN } = useFqn();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>(EntityTabs.TEST_CASES);
+  const { showModal } = useEntityExportModalProvider();
 
   const afterDeleteAction = () => {
     navigate(getDataQualityPagePath(DataQualityPageTabs.TEST_SUITES));
@@ -149,6 +159,32 @@ const TestSuiteDetailsPage = () => {
       hasDeletePermission: testSuitePermissions?.Delete,
     };
   }, [testSuitePermissions]);
+
+  const extraDropdownContent = useMemo(() => {
+    const bulkImportExportTestCasePermission = {
+      ViewAll:
+        checkPermission(
+          Operation.ViewAll,
+          ResourceEntity.TEST_CASE,
+          globalPermissions
+        ) ?? false,
+      EditAll:
+        checkPermission(
+          Operation.EditAll,
+          ResourceEntity.TEST_CASE,
+          globalPermissions
+        ) ?? false,
+    };
+
+    return ExtraTestCaseDropdownOptions(
+      testSuite?.fullyQualifiedName ?? '',
+      bulkImportExportTestCasePermission,
+      testSuite?.deleted ?? false,
+      navigate,
+      showModal,
+      EntityType.TEST_SUITE
+    );
+  }, [globalPermissions, testSuite, navigate, showModal]);
 
   const incidentUrlState = useMemo(() => {
     return [
@@ -561,6 +597,7 @@ const TestSuiteDetailsPage = () => {
                 icon={<TestSuiteIcon className="h-9" />}
                 name={testSuite?.name ?? ''}
                 serviceName="testSuite"
+                suffix={<LearningIcon pageId={LEARNING_PAGE_IDS.TEST_SUITE} />}
               />
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -632,6 +669,97 @@ const TestSuiteDetailsPage = () => {
               }}
               owners={testOwners}
               onUpdate={onUpdateOwner}
+            </Col>
+            <Col className="d-flex justify-end" span={6}>
+              <Space>
+                {(testSuitePermissions.EditAll ||
+                  testSuitePermissions.EditTests) && (
+                  <Button
+                    data-testid="add-test-case-btn"
+                    type="primary"
+                    onClick={() => setIsTestCaseModalOpen(true)}>
+                    {t('label.add-entity', {
+                      entity: t('label.test-case-plural'),
+                    })}
+                  </Button>
+                )}
+                <ManageButton
+                  isRecursiveDelete
+                  afterDeleteAction={afterDeleteAction}
+                  allowSoftDelete={false}
+                  canDelete={permissions.hasDeletePermission}
+                  deleted={testSuite?.deleted}
+                  displayName={getEntityName(testSuite)}
+                  editDisplayNamePermission={
+                    testSuitePermissions.EditAll ||
+                    testSuitePermissions.EditDisplayName
+                  }
+                  entityId={testSuite?.id}
+                  entityName={testSuite?.fullyQualifiedName as string}
+                  entityType={EntityType.TEST_SUITE}
+                  extraDropdownContent={extraDropdownContent}
+                  onEditDisplayName={handleDisplayNameChange}
+                />
+              </Space>
+            </Col>
+
+            <Col span={24}>
+              <div className="d-flex flex-wrap gap-2">
+                <DomainLabel
+                  domains={testSuite?.domains}
+                  entityFqn={testSuite?.fullyQualifiedName ?? ''}
+                  entityId={testSuite?.id ?? ''}
+                  entityType={EntityType.TEST_SUITE}
+                  hasPermission={testSuitePermissions.EditAll}
+                  multiple={entityRules.canAddMultipleDomains}
+                  onUpdate={handleDomainUpdate}
+                />
+                <Divider className="self-center" type="vertical" />
+                <OwnerLabel
+                  hasPermission={permissions.hasEditOwnerPermission}
+                  multiple={{
+                    user: entityRules.canAddMultipleUserOwners,
+                    team: entityRules.canAddMultipleTeamOwner,
+                  }}
+                  owners={testOwners}
+                  onUpdate={onUpdateOwner}
+                />
+              </div>
+            </Col>
+          </Row>
+        </Col>
+
+        <Col span={24}>
+          <DescriptionV1
+            className="test-suite-description"
+            description={testSuiteDescription}
+            entityName={getEntityName(testSuite)}
+            entityType={EntityType.TEST_SUITE}
+            hasEditAccess={permissions.hasEditDescriptionPermission}
+            showCommentsIcon={false}
+            onDescriptionUpdate={onDescriptionUpdate}
+          />
+        </Col>
+
+        <Col span={24}>
+          <Tabs className="tabs-new" items={tabs} />
+        </Col>
+        <Col span={24}>
+          <Modal
+            centered
+            destroyOnClose
+            closable={false}
+            footer={null}
+            open={isTestCaseModalOpen}
+            title={t('label.add-entity', {
+              entity: t('label.test-case-plural'),
+            })}
+            width={750}>
+            <AddTestCaseList
+              existingTest={testSuite?.tests ?? []}
+              selectedTest={selectedTestCases}
+              onCancel={() => setIsTestCaseModalOpen(false)}
+              onSubmit={handleAddTestCaseSubmit}
             />
           </Box>
         </Box>

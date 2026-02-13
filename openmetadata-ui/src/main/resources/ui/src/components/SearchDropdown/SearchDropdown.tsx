@@ -53,6 +53,7 @@ import {
 } from './SearchDropdown.interface';
 
 const SearchDropdown: FC<SearchDropdownProps> = ({
+  dropdownClassName,
   isSuggestionsLoading,
   label,
   options,
@@ -70,6 +71,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
   hasNullOption = false,
   showSelectedCounts = false,
   triggerButtonSize = 'small',
+  hideSearchBar = false,
 }) => {
   const tabsInfo = searchClassBase.getTabsInfo();
   const { t } = useTranslation();
@@ -206,7 +208,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
   const getDropdownBody = useCallback(
     (menuNode: ReactNode) => {
       const entityLabel = index && tabsInfo[index]?.label;
-      const isDomainKey = searchKey.startsWith('domain');
+      const isDomainKey = searchKey?.startsWith('domain') ?? false;
       if (isSuggestionsLoading) {
         return (
           <Row align="middle" className="p-y-sm" justify="center">
@@ -240,22 +242,24 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
     (menuNode: ReactNode) => (
       <Card
         bodyStyle={{ padding: 0 }}
-        className="custom-dropdown-render"
+        className={classNames('custom-dropdown-render', dropdownClassName)}
         data-testid="drop-down-menu">
         <Space className="w-full" direction="vertical" size={0}>
-          <div className="p-t-sm p-x-sm">
-            <Input
-              autoFocus
-              data-testid="search-input"
-              placeholder={`${t('label.search-entity', {
-                entity: label,
-              })}...`}
-              onChange={(e) => {
-                const { value } = e.target;
-                debouncedOnSearch(value);
-              }}
-            />
-          </div>
+          {!hideSearchBar && (
+            <div className="p-t-sm p-x-sm">
+              <Input
+                autoFocus
+                data-testid="search-input"
+                placeholder={`${t('label.search-entity', {
+                  entity: label,
+                })}...`}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  debouncedOnSearch(value);
+                }}
+              />
+            </div>
+          )}
           {showClearAllBtn && (
             <>
               <Divider className="m-t-xs m-b-0" />
@@ -270,9 +274,12 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
               </Button>
             </>
           )}
-          <Divider
-            className={classNames(showClearAllBtn ? 'm-y-0' : 'm-t-xs m-b-0')}
-          />
+          {!hideSearchBar && (
+            <Divider
+              className={classNames(showClearAllBtn ? 'm-y-0' : 'm-t-xs m-b-0')}
+            />
+          )}
+
           {hasNullOption && (
             <>
               <div className="d-flex items-center m-x-sm m-y-xs gap-2">
@@ -312,6 +319,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
     [
       label,
       debouncedOnSearch,
+      dropdownClassName,
       hasNullOption,
       showClearAllBtn,
       nullOptionSelected,
@@ -319,6 +327,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
       getDropdownBody,
       handleUpdate,
       handleDropdownClose,
+      hideSearchBar,
     ]
   );
 

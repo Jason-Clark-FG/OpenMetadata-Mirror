@@ -6,6 +6,7 @@ import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.service.Entity.getEntityReferenceById;
 import static org.openmetadata.service.util.UserUtil.getUser;
 
+import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.resources.apps.AppResource;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 
 @Slf4j
 public class AppRepository extends EntityRepository<App> {
@@ -56,7 +58,7 @@ public class AppRepository extends EntityRepository<App> {
   }
 
   @Override
-  public void setFields(App entity, EntityUtil.Fields fields) {
+  public void setFields(App entity, EntityUtil.Fields fields, RelationIncludes relationIncludes) {
     entity.setPipelines(
         fields.contains("pipelines") ? getIngestionPipelines(entity) : entity.getPipelines());
     entity.withBot(getBotUser(entity));
@@ -177,6 +179,21 @@ public class AppRepository extends EntityRepository<App> {
     entity.setBot(bot);
   }
 
+  @Override
+  public void storeEntities(List<App> entities) {
+    List<App> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+    for (App entity : entities) {
+      List<EntityReference> ownerRefs = entity.getOwners();
+      EntityReference bot = entity.getBot();
+      String jsonCopy = gson.toJson(entity.withOwners(null).withBot(null));
+      entitiesToStore.add(gson.fromJson(jsonCopy, App.class));
+      entity.withOwners(ownerRefs);
+      entity.setBot(bot);
+    }
+    storeMany(entitiesToStore);
+  }
+
   public EntityReference getBotUser(App application) {
     return application.getBot() != null
         ? application.getBot()
@@ -211,6 +228,13 @@ public class AppRepository extends EntityRepository<App> {
         });
 
     return botsMap;
+  }
+
+  @Override
+  protected void clearEntitySpecificRelationshipsForMany(List<App> entities) {
+    if (entities.isEmpty()) return;
+    List<UUID> ids = entities.stream().map(App::getId).toList();
+    deleteFromMany(ids, Entity.APPLICATION, Relationship.CONTAINS, Entity.BOT);
   }
 
   @Override

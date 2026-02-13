@@ -15,8 +15,9 @@ install:  ## Install the ingestion module to the current environment
 
 .PHONY: install_dev_env
 install_dev_env:  ## Install all dependencies for development (in edit mode)
-	pip install --upgrade pip
+	pip install --upgrade pip "setuptools<81"
 	pip install nox
+	pip install --no-build-isolation "cx_Oracle>=8.3.0,<9"
 	python -m pip install -e "$(INGESTION_DIR)[all-dev-env, dev, test-unit]"
 
 .PHONY: install_dev
@@ -25,10 +26,14 @@ install_dev:  ## Install the ingestion module with dev dependencies
 
 .PHONY: install_test
 install_test:  ## Install the ingestion module with test dependencies
+	python -m pip install --upgrade pip "setuptools<81"
+	python -m pip install --no-build-isolation "cx_Oracle>=8.3.0,<9"
 	python -m pip install "$(INGESTION_DIR)[test]/"
 
 .PHONY: install_all
 install_all:  ## Install the ingestion module with all dependencies
+	python -m pip install --upgrade pip "setuptools<81"
+	python -m pip install --no-build-isolation "cx_Oracle>=8.3.0,<9"
 	python -m pip install "$(INGESTION_DIR)[all]/"
 
 .PHONY: install_apis
@@ -125,7 +130,7 @@ coverage_apis:  ## Run the python tests on openmetadata-airflow-apis
 coverage:  ## Run all Python tests and generate the coverage XML report
 	$(MAKE) run_python_tests
 	coverage xml --rcfile $(INGESTION_DIR)/pyproject.toml -o $(INGESTION_DIR)/coverage.xml || true
-	sed -e "s/$(shell python -c "import site; import os; from pathlib import Path; print(os.path.relpath(site.getsitepackages()[0], str(Path.cwd())).replace('/','\/'))")/src/g" $(INGESTION_DIR)/coverage.xml >> $(INGESTION_DIR)/ci-coverage.xml
+	sed 's|filename="[^"]*\(/metadata/[^"]*"\)|filename="src\1|g' $(INGESTION_DIR)/coverage.xml > $(INGESTION_DIR)/ci-coverage.xml
 
 .PHONY: clean-nox
 clean-nox:

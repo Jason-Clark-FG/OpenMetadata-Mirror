@@ -23,6 +23,14 @@ import {
 } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
+export interface ApiEndpointChildren {
+  name: string;
+  dataType: string;
+  description?: string;
+  fullyQualifiedName: string;
+  tags: unknown[];
+  children?: ApiEndpointChildren[];
+}
 export class ApiEndpointClass extends EntityClass {
   private serviceName: string;
   private apiCollectionName: string;
@@ -47,26 +55,7 @@ export class ApiEndpointClass extends EntityClass {
   private apiEndpointName: string;
   private fqn: string;
 
-  children: Array<{
-    name: string;
-    dataType: string;
-    fullyQualifiedName: string;
-    tags: unknown[];
-    children: Array<{
-      name: string;
-      dataType: string;
-      fullyQualifiedName: string;
-      tags: unknown[];
-      description?: string;
-      children?: Array<{
-        name: string;
-        dataType: string;
-        fullyQualifiedName: string;
-        tags: unknown[];
-        description?: string;
-      }>;
-    }>;
-  }>;
+  children: ApiEndpointChildren[];
 
   entity: {
     name: string;
@@ -90,7 +79,7 @@ export class ApiEndpointClass extends EntityClass {
   entityResponseData: ResponseDataWithServiceType =
     {} as ResponseDataWithServiceType;
 
-  constructor(name?: string) {
+  constructor(name?: string, apiEndpointName?: string) {
     super(EntityTypeEndpoint.API_ENDPOINT);
 
     this.serviceName = name ?? `pw-api-service-${uuid()}`;
@@ -115,7 +104,7 @@ export class ApiEndpointClass extends EntityClass {
       service: this.service.name,
     };
 
-    this.apiEndpointName = `pw-api-endpoint-${uuid()}`;
+    this.apiEndpointName = apiEndpointName ?? `pw-api-endpoint-${uuid()}`;
     this.fqn = `${this.service.name}.${this.apiCollection.name}.${this.apiEndpointName}.requestSchema`;
 
     this.children = [

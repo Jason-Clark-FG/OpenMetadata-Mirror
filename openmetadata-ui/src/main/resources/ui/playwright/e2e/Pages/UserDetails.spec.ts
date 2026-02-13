@@ -23,6 +23,7 @@ import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { visitUserProfilePage } from '../../utils/user';
 import { redirectToUserPage } from '../../utils/userDetails';
 import { TableClass } from '../../support/entity/TableClass';
+import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 
 const user1 = new UserClass();
 const user2 = new UserClass();
@@ -81,7 +82,7 @@ test.describe('User with different Roles', () => {
     await afterAction();
   });
 
-  test('Admin user can get all the teams hierarchy and edit teams', async ({
+  test('Admin user can get all the teams hierarchy and edit teams', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, async ({
     adminPage,
   }) => {
     await redirectToUserPage(adminPage);
@@ -92,8 +93,6 @@ test.describe('User with different Roles', () => {
     await adminPage.getByTestId('edit-teams-button').click();
 
     await expect(adminPage.getByTestId('team-select')).toBeVisible();
-
-    await adminPage.getByTestId('team-select').click();
 
     await adminPage.waitForSelector('.ant-tree-select-dropdown', {
       state: 'visible',
@@ -123,8 +122,6 @@ test.describe('User with different Roles', () => {
     await adminPage.getByTestId('edit-teams-button').click();
 
     await expect(adminPage.getByTestId('team-select')).toBeVisible();
-
-    await adminPage.getByTestId('team-select').click();
 
     await adminPage.waitForSelector('.ant-tree-select-dropdown', {
       state: 'visible',
@@ -221,7 +218,6 @@ test.describe('User with different Roles', () => {
     await adminPage.getByTestId('edit-teams-button').click();
 
     await teamsListResponse;
-    await adminPage.getByTestId('team-select').click();
 
     await adminPage.waitForSelector('.ant-tree-select-dropdown', {
       state: 'visible',
@@ -503,8 +499,6 @@ test.describe('User with different Roles', () => {
     await expect(
       adminPage.getByTestId('profile-edit-roles-select')
     ).toBeVisible();
-
-    await adminPage.getByTestId('profile-edit-roles-select').click();
 
     await adminPage.waitForSelector('.ant-select-dropdown', {
       state: 'visible',

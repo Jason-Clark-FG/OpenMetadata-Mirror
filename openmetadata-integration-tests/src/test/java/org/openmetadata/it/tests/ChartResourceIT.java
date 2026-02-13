@@ -24,6 +24,7 @@ import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.type.ChartType;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -38,6 +39,12 @@ import org.openmetadata.sdk.models.ListResponse;
  */
 @Execution(ExecutionMode.CONCURRENT)
 public class ChartResourceIT extends BaseEntityIT<Chart, CreateChart> {
+
+  {
+    supportsLifeCycle = true;
+    supportsListHistoryByTimestamp = true;
+    supportsBulkAPI = true;
+  }
 
   // ===================================================================
   // ABSTRACT METHOD IMPLEMENTATIONS (Required by BaseEntityIT)
@@ -757,12 +764,14 @@ public class ChartResourceIT extends BaseEntityIT<Chart, CreateChart> {
     // Delete chart
     deleteEntity(chart.getId().toString());
 
-    // Verify dashboard still has the deleted chart reference (soft delete behavior)
+    // Verify dashboard no longer shows the deleted chart (default behavior filters deleted
+    // entities)
     Dashboard afterDelete = client.dashboards().get(dashboard.getId().toString(), "charts");
-    assertTrue(
+    assertFalse(
         afterDelete.getCharts().stream()
             .map(EntityReference::getId)
-            .anyMatch(chart.getId()::equals));
+            .anyMatch(chart.getId()::equals),
+        "Deleted charts should not appear in dashboard.charts by default");
   }
 
   @Test
@@ -900,5 +909,26 @@ public class ChartResourceIT extends BaseEntityIT<Chart, CreateChart> {
         getEntityByNameWithFields(chart.getFullyQualifiedName(), "owners,dashboards");
     assertNotNull(byNameWithFields.getService());
     assertNotNull(byNameWithFields.getOwners());
+  }
+
+  // ===================================================================
+  // BULK API SUPPORT
+  // ===================================================================
+
+  @Override
+  protected BulkOperationResult executeBulkCreate(List<CreateChart> createRequests) {
+    return SdkClients.adminClient().charts().bulkCreateOrUpdate(createRequests);
+  }
+
+  @Override
+  protected BulkOperationResult executeBulkCreateAsync(List<CreateChart> createRequests) {
+    return SdkClients.adminClient().charts().bulkCreateOrUpdateAsync(createRequests);
+  }
+
+  @Override
+  protected CreateChart createInvalidRequestForBulk(TestNamespace ns) {
+    CreateChart request = new CreateChart();
+    request.setName(ns.prefix("invalid_chart"));
+    return request;
   }
 }
