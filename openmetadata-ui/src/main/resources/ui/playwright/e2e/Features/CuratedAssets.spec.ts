@@ -10,7 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page, test as base } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
+import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { UserClass } from '../../support/user/UserClass';
@@ -105,7 +106,7 @@ base.afterAll('Cleanup', async ({ browser }) => {
   await afterAction();
 });
 
-test.describe('Curated Assets Widget', () => {
+test.describe('Curated Assets Widget', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test.beforeAll(async ({ page }) => {
     test.slow(true);
 
