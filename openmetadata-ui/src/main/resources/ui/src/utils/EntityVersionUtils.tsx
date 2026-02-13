@@ -335,14 +335,15 @@ const getGlossaryTermApprovalText = (fieldsChanged: FieldChange[]) => {
   let approvalText = '';
 
   if (statusFieldDiff) {
-    approvalText = t('message.glossary-term-status', {
-      status:
-        statusFieldDiff.newValue === 'Approved'
-          ? t('label.approved')
-          : statusFieldDiff.newValue === 'In Review'
-          ? t('label.in-review')
-          : t('label.rejected'),
-    });
+    let statusLabel: string;
+    if (statusFieldDiff.newValue === 'Approved') {
+      statusLabel = t('label.approved');
+    } else if (statusFieldDiff.newValue === 'In Review') {
+      statusLabel = t('label.in-review');
+    } else {
+      statusLabel = t('label.rejected');
+    }
+    approvalText = t('message.glossary-term-status', { status: statusLabel });
   }
 
   return approvalText;
@@ -369,15 +370,14 @@ const getSummaryText = ({
   let summaryText = '';
 
   if (!isEmpty(filteredFieldsChanged)) {
+    const suffix = isPrefix
+      ? ''
+      : t('label.has-been-action-type-lowercase', {
+          actionType: actionText,
+        });
     summaryText = `${prefix} ${filteredFieldsChanged
       .map(summaryFormatter)
-      .join(', ')} ${
-      !isPrefix
-        ? t('label.has-been-action-type-lowercase', {
-            actionType: actionText,
-          })
-        : ''
-    } `;
+      .join(', ')} ${suffix} `;
   }
 
   const isGlossaryTermStatusUpdated = fieldsChanged.some(
@@ -400,11 +400,12 @@ const getBulkImportSummary = (fieldsUpdated: FieldChange[]) => {
     return null;
   }
 
-  const newValue = isObject(bulkImportField.newValue)
-    ? bulkImportField.newValue
-    : isValidJSONString(bulkImportField.newValue)
-    ? JSON.parse(bulkImportField.newValue)
-    : null;
+  let newValue: unknown = null;
+  if (isObject(bulkImportField.newValue)) {
+    newValue = bulkImportField.newValue;
+  } else if (isValidJSONString(bulkImportField.newValue)) {
+    newValue = JSON.parse(bulkImportField.newValue);
+  }
 
   if (!newValue) {
     return null;
@@ -1145,9 +1146,9 @@ export const getChangedEntityStatus = (
   newValue?: string
 ) => {
   if (oldValue && newValue) {
-    return oldValue !== newValue
-      ? EntityChangeOperations.UPDATED
-      : EntityChangeOperations.NORMAL;
+    return oldValue === newValue
+      ? EntityChangeOperations.NORMAL
+      : EntityChangeOperations.UPDATED;
   } else if (oldValue && !newValue) {
     return EntityChangeOperations.DELETED;
   } else if (!oldValue && newValue) {
@@ -1209,21 +1210,15 @@ export const getParameterValuesDiff = (
     const newParam = newValues.find((p) => p.name === name);
 
     if (oldParam && newParam) {
-      if (oldParam.value !== newParam.value) {
-        result.push({
-          name: String(name),
-          oldValue: String(oldParam.value),
-          newValue: String(newParam.value),
-          status: EntityChangeOperations.UPDATED,
-        });
-      } else {
-        result.push({
-          name: String(name),
-          oldValue: String(oldParam.value),
-          newValue: String(newParam.value),
-          status: EntityChangeOperations.NORMAL,
-        });
-      }
+      result.push({
+        name: String(name),
+        oldValue: String(oldParam.value),
+        newValue: String(newParam.value),
+        status:
+          oldParam.value === newParam.value
+            ? EntityChangeOperations.NORMAL
+            : EntityChangeOperations.UPDATED,
+      });
     } else if (!oldParam && newParam) {
       result.push({
         name: String(name),

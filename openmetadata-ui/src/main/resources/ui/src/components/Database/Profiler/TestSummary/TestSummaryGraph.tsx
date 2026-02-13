@@ -63,7 +63,8 @@ import {
 import { prepareChartData } from '../../../../utils/DataQuality/TestSummaryGraphUtils';
 import {
   convertSecondsToHumanReadableFormat,
-  formatDateTime,
+  DATE_TIME_12_HOUR_FORMAT,
+  formatDateTimeLong,
 } from '../../../../utils/date-time/DateTimeUtils';
 import { useActivityFeedProvider } from '../../../ActivityFeed/ActivityFeedProvider/ActivityFeedProvider';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
@@ -270,7 +271,9 @@ function TestSummaryGraph({
           scale="time"
           textAnchor="end"
           tick={{ fontSize: 12 }}
-          tickFormatter={formatDateTime}
+          tickFormatter={(date) =>
+            formatDateTimeLong(date, DATE_TIME_12_HOUR_FORMAT)
+          }
           type="number"
         />
         <YAxis
