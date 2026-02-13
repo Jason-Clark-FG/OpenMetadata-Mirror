@@ -83,6 +83,8 @@
     "@tiptap/suggestion": "^2.3.0",
     "@toast-ui/react-editor": "^3.1.8",
     "@untitledui/icons": "^0.0.19",
+    "react-aria-components": "^1.15.0",
+    "tailwind-merge": "^3.4.0",
     "@windmillcode/quill-emoji": "2.0.3000",
     "analytics": "^0.8.1",
     "antd": "4.24.16",

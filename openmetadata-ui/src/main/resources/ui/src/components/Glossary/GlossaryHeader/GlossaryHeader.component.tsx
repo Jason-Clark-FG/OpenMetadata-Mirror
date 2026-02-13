@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import Icon, { DownOutlined } from '@ant-design/icons';
+import { Button as UTButton } from '@openmetadata/ui-core-components';
 import { Button, Dropdown, Space, Tooltip, Typography } from 'antd';
 import ButtonGroup from 'antd/lib/button/button-group';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
@@ -443,14 +444,14 @@ const GlossaryHeader = ({
   const createButtons = useMemo(() => {
     if (permissions.Create || createGlossaryTermPermission) {
       return isGlossary ? (
-        <Button
+        <UTButton
           className="m-l-xs"
+          color="primary"
           data-testid="add-new-tag-button-header"
-          size="middle"
-          type="primary"
+          size="md"
           onClick={handleAddGlossaryTermClick}>
           {t('label.add-entity', { entity: t('label.term-lowercase') })}
-        </Button>
+        </UTButton>
       ) : (
         <>
           {glossaryTermStatus && glossaryTermStatus === EntityStatus.Approved && (

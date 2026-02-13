@@ -12,9 +12,44 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { ReactComponent as TaskIcon } from '../../../../../assets/svg/ic-task.svg';
 import WidgetHeader from './WidgetHeader';
+
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Button: ({
+    children,
+    ...props
+  }: React.PropsWithChildren<Record<string, unknown>>) => (
+    <button {...props}>{children}</button>
+  ),
+  Dropdown: {
+    Root: ({ children }: React.PropsWithChildren<Record<string, unknown>>) => (
+      <div>{children}</div>
+    ),
+    Popover: ({
+      children,
+    }: React.PropsWithChildren<Record<string, unknown>>) => (
+      <div>{children}</div>
+    ),
+    Menu: ({
+      children,
+      onAction,
+    }: React.PropsWithChildren<{ onAction?: (key: string) => void }>) => (
+      <div data-testid="dropdown-menu" onClick={() => onAction?.('')}>
+        {children}
+      </div>
+    ),
+    Item: ({ children, id }: React.PropsWithChildren<{ id: string }>) => (
+      <div data-testid={`dropdown-item-${id}`}>{children}</div>
+    ),
+  },
+}));
+
+jest.mock('@untitledui/icons', () => ({
+  ChevronDown: () => <span data-testid="chevron-down-icon" />,
+}));
 
 const mockProps = {
   title: 'Test Widget',
@@ -58,7 +93,7 @@ describe('WidgetHeader', () => {
     renderWidgetHeader();
 
     expect(screen.getByTestId('widget-sort-by-dropdown')).toBeInTheDocument();
-    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getAllByText('Name').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders edit controls when in edit view', () => {

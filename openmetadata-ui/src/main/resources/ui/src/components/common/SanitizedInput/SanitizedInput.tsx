@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Collate.
+ *  Copyright 2025 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -10,22 +10,38 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Input, InputProps } from 'antd';
+import { Input, InputProps } from '@openmetadata/ui-core-components';
 import { ChangeEvent, FC, memo, useCallback } from 'react';
 import { getSanitizeContent } from '../../../utils/sanitize.utils';
 
-const SanitizedInput: FC<InputProps> = ({ value, onChange, ...props }) => {
+const SanitizedInput: FC<
+  InputProps & {
+    onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
+    label?: React.ReactNode;
+    hint?: React.ReactNode;
+    disabled?: boolean;
+  }
+> = ({ value, onChange, disabled, ...props }) => {
   const handleChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const sanitizedValue = getSanitizeContent(e.target.value);
+    (newValue: string) => {
+      const sanitizedValue = getSanitizeContent(newValue);
       if (onChange) {
-        onChange({ ...e, target: { ...e.target, value: sanitizedValue } });
+        onChange({
+          target: { value: sanitizedValue },
+        } as ChangeEvent<HTMLInputElement>);
       }
     },
     [onChange]
   );
 
-  return <Input value={value} onChange={handleChange} {...props} />;
+  return (
+    <Input
+      {...(props as any)}
+      isDisabled={disabled || props.isDisabled}
+      value={(value ?? '') as string}
+      onChange={handleChange}
+    />
+  );
 };
 
 export default memo(SanitizedInput);

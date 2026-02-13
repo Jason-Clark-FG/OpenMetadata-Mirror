@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
   const devServerTarget =
     env.VITE_DEV_SERVER_TARGET ||
     env.DEV_SERVER_TARGET ||
-    'http://localhost:8585/';
+    'https://devrel.getcollate.io/';
 
   // Use empty base so dynamic imports use relative paths
   // The actual BASE_PATH is injected at runtime by the Java backend via ${basePath} replacement

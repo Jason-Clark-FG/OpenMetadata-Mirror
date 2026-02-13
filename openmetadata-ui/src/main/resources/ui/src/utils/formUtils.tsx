@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { TooltipProps as MUITooltipProps } from '@mui/material/Tooltip';
+import { Input as UTInput } from '@openmetadata/ui-core-components';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
   Alert,
@@ -56,7 +57,6 @@ import MUIUserTeamSelect, {
 } from '../components/common/MUIUserTeamSelect/MUIUserTeamSelect';
 import RichTextEditor from '../components/common/RichTextEditor/RichTextEditor';
 import { RichTextEditorProp } from '../components/common/RichTextEditor/RichTextEditor.interface';
-import SanitizedInput from '../components/common/SanitizedInput/SanitizedInput';
 import SliderWithInput from '../components/common/SliderWithInput/SliderWithInput';
 import { SliderWithInputProps } from '../components/common/SliderWithInput/SliderWithInput.interface';
 import { UserSelectableList } from '../components/common/UserSelectableList/UserSelectableList.component';
@@ -142,9 +142,7 @@ export const getField = (field: FieldProp) => {
 
   switch (type) {
     case FieldTypes.TEXT:
-      fieldElement = (
-        <SanitizedInput {...props} id={id} placeholder={placeholder} />
-      );
+      fieldElement = <UTInput id={id} placeholder={placeholder} {...props} />;
 
       break;
 
