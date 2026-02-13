@@ -48,6 +48,7 @@ const ExploreQuickFilters: FC<ExploreQuickFiltersProps> = ({
   defaultQueryFilter,
   showSelectedCounts = false,
   optionPageSize,
+  additionalActions,
 }) => {
   const location = useCustomLocation();
   const [options, setOptions] = useState<SearchDropdownOption[]>();
@@ -283,6 +284,7 @@ const ExploreQuickFilters: FC<ExploreQuickFiltersProps> = ({
           />
         );
       })}
+      {additionalActions}
     </Space>
   );
 };
