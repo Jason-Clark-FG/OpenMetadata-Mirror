@@ -20,7 +20,8 @@ import org.openmetadata.sdk.fluent.builders.ColumnBuilder;
  *     .withDescription("Updated description")
  *     .addTags("PII", "Critical")
  *     .addColumn("new_column", "VARCHAR(100)")
- *     .save();
+ *     .save()
+ *     .get();
  * </pre>
  */
 public class FluentTable {
@@ -88,13 +89,22 @@ public class FluentTable {
   }
 
   /**
-   * Set all tags (replaces existing).
+   * Set all tags (replaces existing) from tag FQN strings.
    */
   public FluentTable withTags(String... tagFQNs) {
     List<TagLabel> tags = new ArrayList<>();
     for (String tagFQN : tagFQNs) {
       tags.add(new TagLabel().withTagFQN(tagFQN).withSource(TagLabel.TagSource.CLASSIFICATION));
     }
+    table.setTags(tags);
+    modified = true;
+    return this;
+  }
+
+  /**
+   * Set all tags (replaces existing) from TagLabel list.
+   */
+  public FluentTable withTags(List<TagLabel> tags) {
     table.setTags(tags);
     modified = true;
     return this;
@@ -257,16 +267,18 @@ public class FluentTable {
   /**
    * Save the changes to the server.
    */
-  public Table save() {
+  public FluentTable save() {
     if (!modified) {
-      return table; // No changes to save
+      return this;
     }
 
     if (table.getId() == null) {
       throw new IllegalStateException("Table must have an ID to update");
     }
 
-    return client.tables().update(table.getId().toString(), table);
+    client.tables().update(table.getId().toString(), table);
+    modified = false;
+    return this;
   }
 
   /**

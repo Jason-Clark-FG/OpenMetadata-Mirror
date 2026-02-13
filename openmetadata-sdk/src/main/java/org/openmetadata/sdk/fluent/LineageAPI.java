@@ -310,10 +310,7 @@ public final class LineageAPI {
       return client
           .lineage()
           .exportLineage(
-              fqn,
-              entityType,
-              String.valueOf(upstreamDepth),
-              String.valueOf(downstreamDepth));
+              fqn, entityType, String.valueOf(upstreamDepth), String.valueOf(downstreamDepth));
     }
   }
 

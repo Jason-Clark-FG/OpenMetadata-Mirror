@@ -68,8 +68,7 @@ public class LineageAPI {
         optionsBuilder.build());
   }
 
-  public String exportLineage(
-      String fqn, String type, String upstreamDepth, String downstreamDepth)
+  public String exportLineage(String fqn, String type, String upstreamDepth, String downstreamDepth)
       throws OpenMetadataException {
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     optionsBuilder.queryParam("fqn", fqn);

@@ -241,12 +241,7 @@ public class LineageFluentAPITest {
         .thenReturn(expectedCsv);
 
     // Act
-    String result =
-        Lineage.export()
-            .entity(entityType, fqn)
-            .upstream(3)
-            .downstream(2)
-            .execute();
+    String result = Lineage.export().entity(entityType, fqn).upstream(3).downstream(2).execute();
 
     // Assert
     assertNotNull(result);

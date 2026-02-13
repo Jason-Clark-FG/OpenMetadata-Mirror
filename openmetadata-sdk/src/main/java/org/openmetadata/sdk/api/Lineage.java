@@ -233,7 +233,10 @@ public final class Lineage {
 
       // Build lineageDetails when column mappings, pipeline, or sqlQuery are present
       boolean hasDetails =
-          !fromColumns.isEmpty() || !toColumns.isEmpty() || pipelineEntity != null || sqlQuery != null;
+          !fromColumns.isEmpty()
+              || !toColumns.isEmpty()
+              || pipelineEntity != null
+              || sqlQuery != null;
 
       if (hasDetails) {
         Map<String, Object> lineageDetails = new HashMap<>();
@@ -328,10 +331,7 @@ public final class Lineage {
       return client
           .lineage()
           .exportLineage(
-              fqn,
-              entityType,
-              String.valueOf(upstreamDepth),
-              String.valueOf(downstreamDepth));
+              fqn, entityType, String.valueOf(upstreamDepth), String.valueOf(downstreamDepth));
     }
   }
 
