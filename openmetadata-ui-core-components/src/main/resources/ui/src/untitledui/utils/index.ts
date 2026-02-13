@@ -11,26 +11,10 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
-
-// Theme system
-export * from './theme';
-
-// Color system  
-export * from './colors';
-
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+export { cx, sortCx } from './cx';
+export {
+    isFunctionComponent,
+    isClassComponent,
+    isForwardRefComponent,
+    isReactComponent,
+} from './is-react-component';

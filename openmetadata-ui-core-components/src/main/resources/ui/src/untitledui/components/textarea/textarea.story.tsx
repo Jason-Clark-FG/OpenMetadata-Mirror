@@ -11,26 +11,18 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
+import type { FC } from "react";
+import * as TextAreas from "../textarea/textarea.demo";
 
-// Theme system
-export * from './theme';
+export default {
+    title: "Base components/Inputs/Textarea",
+    decorators: [
+        (Story: FC) => (
+            <div className="flex min-h-screen w-full bg-primary p-4">
+                <Story />
+            </div>
+        ),
+    ],
+};
 
-// Color system  
-export * from './colors';
-
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+export const Textarea = () => <TextAreas.Textarea />;

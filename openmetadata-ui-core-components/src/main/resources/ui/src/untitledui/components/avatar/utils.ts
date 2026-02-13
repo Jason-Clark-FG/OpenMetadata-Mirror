@@ -11,26 +11,15 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
-
-// Theme system
-export * from './theme';
-
-// Color system  
-export * from './colors';
-
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+/**
+ * Extracts the initials from a full name.
+ *
+ * @param name - The full name from which to extract initials.
+ * @returns The initials of the provided name. If the name contains only one word,
+ *          it returns the first character of that word. If the name contains two words,
+ *          it returns the first character of each word.
+ */
+export const getInitials = (name: string) => {
+    const [firstName, lastName] = name.split(" ");
+    return firstName.charAt(0) + (lastName ? lastName.charAt(0) : "");
+};

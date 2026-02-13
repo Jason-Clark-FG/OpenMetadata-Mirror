@@ -11,26 +11,22 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
+"use client";
 
-// Theme system
-export * from './theme';
+import { Slider } from "../slider/slider";
 
-// Color system  
-export * from './colors';
+export const Default = () => {
+    return <Slider defaultValue={[0, 25]} />;
+};
 
-// Components
-export * from './components';
+export const BottomLabel = () => {
+    return <Slider defaultValue={[0, 25]} labelPosition="bottom" />;
+};
 
-// Utilities
-export * from './utils';
+export const TopFloating = () => {
+    return <Slider defaultValue={[0, 25]} labelPosition="top-floating" />;
+};
 
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+export const SingleThumb = () => {
+    return <Slider defaultValue={50} labelPosition="top-floating" />;
+};

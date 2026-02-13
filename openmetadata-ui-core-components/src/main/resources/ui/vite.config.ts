@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import dts from 'vite-plugin-dts'
 import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
     react(),
-    dts({ 
-      include: ['src'], 
+    tailwindcss(),
+    dts({
+      include: ['src'],
       outDir: 'dist/types',
       exclude: ['**/*.test.ts', '**/*.test.tsx', '**/*.stories.ts', '**/*.stories.tsx', '**/vite.config.ts']
     })
@@ -33,7 +35,9 @@ export default defineConfig({
         '@emotion/react',
         '@emotion/styled',
         '@material/material-color-utilities',
-        'notistack'
+        'notistack',
+        'react-aria-components',
+        'tailwind-merge'
       ],
       output: {
         globals: {
@@ -43,13 +47,16 @@ export default defineConfig({
           '@mui/system': 'MUISystem',
           '@emotion/react': 'EmotionReact',
           '@emotion/styled': 'EmotionStyled',
-          'notistack': 'notistack'
+          'notistack': 'notistack',
+          'react-aria-components': 'ReactAriaComponents',
+          'tailwind-merge': 'TailwindMerge'
         }
       }
     },
     sourcemap: false,
     minify: 'esbuild',
-    target: 'es2020'
+    target: 'es2020',
+    cssMinify: true
   },
   resolve: {
     alias: {

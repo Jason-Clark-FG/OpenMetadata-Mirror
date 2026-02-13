@@ -11,26 +11,22 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
+import type { FC } from "react";
+import * as Radio from "../radio-buttons/radio-buttons.demo";
 
-// Theme system
-export * from './theme';
+export default {
+    title: "Base components/Radio buttons",
+    decorators: [
+        (Story: FC) => (
+            <div className="flex min-h-screen w-full bg-primary p-4">
+                <Story />
+            </div>
+        ),
+    ],
+};
 
-// Color system  
-export * from './colors';
+export const RadioButtons = () => <Radio.RadioButtons />;
+RadioButtons.storyName = "Radio buttons";
 
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+export const RadioButtonsBase = () => <Radio.RadioButtonsBase />;
+RadioButtonsBase.storyName = "Radio buttons base";

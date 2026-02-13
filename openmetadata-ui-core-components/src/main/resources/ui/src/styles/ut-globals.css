@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "tailwindcss/theme" layer(ut-theme);
+@import "tailwindcss/utilities" source(none);
+@import "./ut-theme.css";
+
+@source "../untitledui/**/*.{ts,tsx}";
+
+@plugin "tailwindcss-react-aria-components";
+@plugin "tailwindcss-animate";
+
+@utility transition-inherit-all {
+  transition-property: inherit;
+  transition-duration: inherit;
+  transition-timing-function: inherit;
+}

@@ -11,26 +11,13 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
+"use client";
 
-// Theme system
-export * from './theme';
+import type { ComponentPropsWithRef } from "react";
+import { Form as AriaForm } from "react-aria-components";
 
-// Color system  
-export * from './colors';
+export const Form = (props: ComponentPropsWithRef<typeof AriaForm>) => {
+    return <AriaForm {...props} />;
+};
 
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+Form.displayName = "Form";

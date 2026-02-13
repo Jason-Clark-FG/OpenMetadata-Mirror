@@ -11,26 +11,18 @@
  *  limitations under the License.
  */
 
-// Main entry point for OpenMetadata UI Core Components
-// Re-export everything from organized modules
+import { extendTailwindMerge } from "tailwind-merge";
 
-// Theme system
-export * from './theme';
+const twMerge = extendTailwindMerge({
+    extend: {
+        theme: {
+            text: ["display-xs", "display-sm", "display-md", "display-lg", "display-xl", "display-2xl"],
+        },
+    },
+});
 
-// Color system  
-export * from './colors';
+export const cx = twMerge;
 
-// Components
-export * from './components';
-
-// Utilities
-export * from './utils';
-
-// Types (kept at root for convenience)
-export * from './types';
-
-// UntitledUI components and utilities
-export * from './untitledui';
-
-// UntitledUI styles (Tailwind CSS with 'ut' prefix)
-import './styles/ut-globals.css';
+export function sortCx<T extends Record<string, string | number | Record<string, string | number | Record<string, string | number>>>>(classes: T): T {
+    return classes;
+}
