@@ -41,6 +41,7 @@ import { DraggableBodyRowProps } from '../../../common/Draggable/DraggableBodyRo
 import FilterTablePlaceHolder from '../../../common/ErrorWithPlaceholder/FilterTablePlaceHolder';
 import Table from '../../../common/Table/Table';
 import { MovedTeamProps, TeamHierarchyProps } from './team.interface';
+import { TeamAssetCount } from './TeamAssetCount.component';
 import './teams.less';
 
 const TeamHierarchy: FC<TeamHierarchyProps> = ({
@@ -136,14 +137,14 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         dataIndex: 'owns',
         width: 120,
         key: 'owns',
-        render: (owns: Team['owns']) =>
+        render: (_, record) =>
           isFetchingAllTeamAdvancedDetails ? (
             <Skeleton
               active={isFetchingAllTeamAdvancedDetails}
               paragraph={{ rows: 0 }}
             />
           ) : (
-            owns?.length ?? 0
+            <TeamAssetCount team={record} />
           ),
       },
       ...descriptionTableObject<Team>({ width: 300 }),
@@ -218,18 +219,18 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   };
 
   const onTableRow = (record: Team, index?: number) =>
-    ({
-      index,
-      handleMoveRow,
-      handleTableHover,
-      record,
-    } as DraggableBodyRowProps<Team>);
+  ({
+    index,
+    handleMoveRow,
+    handleTableHover,
+    record,
+  } as DraggableBodyRowProps<Team>);
 
   const onTableHeader: TableProps<Team>['onHeaderRow'] = () =>
-    ({
-      handleMoveRow,
-      handleTableHover,
-    } as DraggableBodyRowProps<Team>);
+  ({
+    handleMoveRow,
+    handleTableHover,
+  } as DraggableBodyRowProps<Team>);
 
   const onDragConfirmationModalClose = useCallback(() => {
     setIsModalOpen(false);

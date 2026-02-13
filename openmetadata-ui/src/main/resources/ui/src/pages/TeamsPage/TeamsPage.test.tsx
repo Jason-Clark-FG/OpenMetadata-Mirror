@@ -253,7 +253,7 @@ describe('Test Teams Page', () => {
     });
   });
 
-  it('should not fetchAssetCount on page load if TeamType is not Group', async () => {
+  it('should fetchAssetCount on page load even if TeamType is not Group', async () => {
     (usePermissionProvider as jest.Mock).mockImplementationOnce(() => ({
       getEntityPermissionByFqn: jest.fn().mockImplementationOnce(() => ({
         ViewBasic: true,
@@ -261,14 +261,56 @@ describe('Test Teams Page', () => {
     }));
 
     (getTeamByName as jest.Mock).mockImplementation(() =>
-      Promise.resolve({ ...MOCK_CURRENT_TEAM, teamType: TeamType.BusinessUnit })
+      Promise.resolve({
+        ...MOCK_CURRENT_TEAM,
+        teamType: TeamType.BusinessUnit,
+        childrenCount: 1,
+      })
+    );
+
+    // Mock getTeams to return child teams for hierarchical aggregation
+    (getTeams as jest.Mock).mockImplementation(() =>
+      Promise.resolve({
+        data: [
+          {
+            id: 'child-team-id',
+            name: 'Child Team',
+            childrenCount: 0,
+          },
+        ],
+      })
     );
 
     await act(async () => {
       render(<TeamsPage />);
     });
 
-    expect(searchQuery).not.toHaveBeenCalled();
+    // Should query with 'should' (OR) for both parent and child team IDs
+    expect(searchQuery).toHaveBeenCalledWith({
+      query: '',
+      pageNumber: 0,
+      pageSize: 0,
+      queryFilter: {
+        query: {
+          bool: {
+            should: [
+              {
+                term: {
+                  'owners.id': 'f9578f16-363a-4788-80fb-d05816c9e169',
+                },
+              },
+              {
+                term: {
+                  'owners.id': 'child-team-id',
+                },
+              },
+            ],
+            minimum_should_match: 1,
+          },
+        },
+      },
+      searchIndex: 'all',
+    });
 
     (getTeamByName as jest.Mock).mockReset();
   });

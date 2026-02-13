@@ -21,6 +21,7 @@ import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/Error
 import Loader from '../../components/common/Loader/Loader';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import TeamDetailsV1 from '../../components/Settings/Team/TeamDetails/TeamDetailsV1';
+import { collectAllTeamIds } from '../../components/Settings/Team/TeamDetails/TeamDetailsV1.utils';
 import { HTTP_STATUS_CODE } from '../../constants/Auth.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import {
@@ -194,14 +195,20 @@ const TeamsPage = () => {
     }
   };
 
+
+
   const fetchAssets = async (selectedTeam: Team) => {
-    if (selectedTeam.id && selectedTeam.teamType === TeamType.Group) {
+    if (selectedTeam.id) {
       try {
+        // Collect all team IDs (current team + all descendants)
+        const allTeamIds = await collectAllTeamIds(selectedTeam);
+
+        // Query assets owned by any of these teams using 'should' (OR)
         const res = await searchQuery({
           query: '',
           pageNumber: 0,
           pageSize: 0,
-          queryFilter: getTermQuery({ 'owners.id': selectedTeam.id }),
+          queryFilter: getTermQuery({ 'owners.id': allTeamIds }, 'should', 1),
           searchIndex: SearchIndex.ALL,
         });
         const total = res?.hits?.total.value ?? 0;
