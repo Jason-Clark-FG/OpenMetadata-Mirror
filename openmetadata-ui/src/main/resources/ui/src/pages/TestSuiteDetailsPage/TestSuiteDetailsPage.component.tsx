@@ -452,6 +452,7 @@ const TestSuiteDetailsPage = () => {
         <DescriptionV1
           wrapInCard
           description={testSuiteDescription}
+          entityName={getEntityName(testSuite)}
           entityType={EntityType.TEST_SUITE}
           hasEditAccess={permissions.hasEditDescriptionPermission}
           showCommentsIcon={false}
@@ -472,7 +473,6 @@ const TestSuiteDetailsPage = () => {
         key: EntityTabs.TEST_CASES,
         children: (
           <Stack
-            className="p-md"
             spacing={4}
             sx={{
               border: `1px solid ${theme.palette.grey[200]}`,
@@ -509,13 +509,12 @@ const TestSuiteDetailsPage = () => {
         key: EntityTabs.PIPELINE,
         children: (
           <Stack
-            className="p-md"
-            spacing={2.5}
+            spacing={4}
             sx={{
               border: `1px solid ${theme.palette.grey[200]}`,
-              borderRadius: 1,
+              borderRadius: 1.25,
               background: theme.palette.background.paper,
-              p: 2,
+              p: 4,
             }}>
             {renderDescription()}
             <Box sx={{ width: '100%' }}>
@@ -549,6 +548,13 @@ const TestSuiteDetailsPage = () => {
     return testCaseResult.map((test) => test.name);
   }, [testCaseResult]);
 
+  const handleTabChange = useCallback(
+    (_event: React.SyntheticEvent, newValue: string) => {
+      setActiveTab(newValue);
+    },
+    []
+  );
+
   if (isLoading) {
     return <Loader />;
   }
@@ -564,10 +570,6 @@ const TestSuiteDetailsPage = () => {
       />
     );
   }
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
-    setActiveTab(newValue);
-  };
 
   return (
     <PageLayoutV1
