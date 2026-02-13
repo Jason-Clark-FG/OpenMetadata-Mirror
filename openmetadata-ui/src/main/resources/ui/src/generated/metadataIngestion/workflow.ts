@@ -1455,9 +1455,10 @@ export interface ConfigObject {
      */
     securityToken?: string;
     /**
-     * Salesforce Object Name.
+     * List of Salesforce Object Names to ingest. If specified, only these objects will be
+     * fetched. Leave empty to fetch all objects (subject to tableFilterPattern).
      */
-    sobjectName?: string;
+    sobjectNames?: string[];
     /**
      * If the Snowflake URL is https://xyz1234.us-east-1.gcp.snowflakecomputing.com, then the
      * account is xyz1234.us-east-1.gcp
@@ -5111,6 +5112,11 @@ export interface Pipeline {
      * Regex exclude pipelines.
      */
     pipelineFilterPattern?: FilterPattern;
+    /**
+     * Number of days of pipeline run status history to ingest. Only runs within the last N days
+     * will be fetched.
+     */
+    statusLookbackDays?: number;
     /**
      * Optional configuration to soft delete MlModels in OpenMetadata if the source MlModels are
      * deleted. Also, if the MlModel is deleted, all the associated entities like lineage, etc.,
