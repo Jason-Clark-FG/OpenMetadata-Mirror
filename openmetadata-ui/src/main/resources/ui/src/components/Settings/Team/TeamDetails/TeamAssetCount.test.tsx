@@ -11,10 +11,19 @@
  *  limitations under the License.
  */
 import { render, screen } from '@testing-library/react';
+import { SearchIndex } from '../../../../enums/search.enum';
 import { Team } from '../../../../generated/entity/teams/team';
 
 jest.mock('./TeamDetailsV1.utils', () => ({
-  getAggregatedAssetCount: jest.fn(),
+  collectAllTeamIds: jest.fn(),
+}));
+
+jest.mock('../../../../utils/SearchUtils', () => ({
+  getTermQuery: jest.fn(),
+}));
+
+jest.mock('../../../../rest/searchAPI', () => ({
+  searchQuery: jest.fn(),
 }));
 
 jest.mock('antd', () => ({
@@ -28,7 +37,9 @@ jest.mock('antd', () => ({
   },
 }));
 
-import { getAggregatedAssetCount } from './TeamDetailsV1.utils';
+import { collectAllTeamIds } from './TeamDetailsV1.utils';
+import { getTermQuery } from '../../../../utils/SearchUtils';
+import { searchQuery } from '../../../../rest/searchAPI';
 import { TeamAssetCount } from './TeamAssetCount.component';
 
 const mockTeamLeaf = {
@@ -50,26 +61,46 @@ const mockTeamParent = {
 } as Team;
 
 describe('TeamAssetCount', () => {
-  it('should render local count for Group team', async () => {
-    render(<TeamAssetCount team={mockTeamLeaf} />);
-
-    expect(await screen.findByText('2')).toBeInTheDocument();
-    expect(getAggregatedAssetCount).not.toHaveBeenCalled();
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('should fetch aggregated count for non-Group team', async () => {
-    (getAggregatedAssetCount as jest.Mock).mockResolvedValue(10);
+  it('should query search API for leaf team (no collectAllTeamIds call)', async () => {
+    (getTermQuery as jest.Mock).mockReturnValue({ query: 'mock' });
+    (searchQuery as jest.Mock).mockResolvedValue({
+      hits: { total: { value: 5 } },
+    });
+
+    render(<TeamAssetCount team={mockTeamLeaf} />);
+
+    expect(await screen.findByText('5')).toBeInTheDocument();
+    // Leaf teams should NOT call collectAllTeamIds
+    expect(collectAllTeamIds).not.toHaveBeenCalled();
+    expect(searchQuery).toHaveBeenCalledWith({
+      query: '',
+      pageNumber: 0,
+      pageSize: 0,
+      queryFilter: { query: 'mock' },
+      searchIndex: SearchIndex.ALL,
+    });
+  });
+
+  it('should fetch aggregated count for parent team using collectAllTeamIds', async () => {
+    const mockIds = ['parent-id', 'child-id'];
+    (collectAllTeamIds as jest.Mock).mockResolvedValue(mockIds);
+    (getTermQuery as jest.Mock).mockReturnValue({ query: 'mock' });
+    (searchQuery as jest.Mock).mockResolvedValue({
+      hits: { total: { value: 10 } },
+    });
 
     render(<TeamAssetCount team={mockTeamParent} />);
 
     expect(await screen.findByText('10')).toBeInTheDocument();
-    expect(getAggregatedAssetCount).toHaveBeenCalledWith(mockTeamParent);
+    expect(collectAllTeamIds).toHaveBeenCalledWith(mockTeamParent);
   });
 
-  it('should handle API error gracefully by showing 0 (or owns length)', async () => {
-    (getAggregatedAssetCount as jest.Mock).mockRejectedValue(
-      new Error('Failed')
-    );
+  it('should handle API error gracefully by showing owns length', async () => {
+    (collectAllTeamIds as jest.Mock).mockRejectedValue(new Error('Failed'));
 
     render(<TeamAssetCount team={mockTeamParent} />);
 

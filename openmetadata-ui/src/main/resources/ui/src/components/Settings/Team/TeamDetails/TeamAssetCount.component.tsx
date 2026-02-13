@@ -27,19 +27,15 @@ export const TeamAssetCount = ({ team }: TeamAssetCountProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // If team has no children, just use the local 'owns' count which is accurate for leaf nodes
-    // and avoids an API call.
-    if (!team.childrenCount || team.childrenCount === 0) {
-      setCount(team.owns?.length ?? 0);
-
-      return;
-    }
-
     const fetchAggregatedCount = async () => {
       setIsLoading(true);
       try {
-        // Collect all team IDs (current team + all descendants)
-        const teamIds = await collectAllTeamIds(team);
+        // For teams with children, collect all descendant IDs.
+        // For leaf teams, just use the team's own ID.
+        const teamIds =
+          team.childrenCount && team.childrenCount > 0
+            ? await collectAllTeamIds(team)
+            : [team.id];
 
         // Query assets owned by any of these teams using 'should' (OR)
         const queryFilter = getTermQuery({ 'owners.id': teamIds }, 'should', 1);
