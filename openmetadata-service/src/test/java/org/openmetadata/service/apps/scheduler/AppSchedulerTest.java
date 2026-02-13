@@ -13,7 +13,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,9 +25,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openmetadata.schema.entity.app.ScheduledExecutionContext;
 import org.openmetadata.schema.entity.app.App;
 import org.openmetadata.schema.entity.app.AppRunRecord;
+import org.openmetadata.schema.entity.app.ScheduledExecutionContext;
 import org.openmetadata.service.exception.UnhandledServerException;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
@@ -231,9 +230,7 @@ class AppSchedulerTest {
 
     String jobIdentity = String.format("SearchIndexApp-%s", AppScheduler.ON_DEMAND_JOB);
     JobDetail mockJobDetail =
-        JobBuilder.newJob(Job.class)
-            .withIdentity(jobIdentity, AppScheduler.APPS_JOB_GROUP)
-            .build();
+        JobBuilder.newJob(Job.class).withIdentity(jobIdentity, AppScheduler.APPS_JOB_GROUP).build();
 
     when(mockScheduler.getJobDetail(new JobKey("SearchIndexApp", AppScheduler.APPS_JOB_GROUP)))
         .thenReturn(null);

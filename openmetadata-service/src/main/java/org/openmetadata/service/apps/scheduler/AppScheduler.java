@@ -275,10 +275,8 @@ public class AppScheduler {
       String uniqueId = getUniqueJobIdentifier(config);
       if (allowConcurrent && uniqueId != null) {
         // For apps that allow concurrent execution, use a unique identifier per job
-        jobIdentity =
-            String.format("%s-%s-%s", application.getName(), ON_DEMAND_JOB, uniqueId);
-        triggerIdentity =
-            String.format("%s-%s-%s", application.getName(), ON_DEMAND_JOB, uniqueId);
+        jobIdentity = String.format("%s-%s-%s", application.getName(), ON_DEMAND_JOB, uniqueId);
+        triggerIdentity = String.format("%s-%s-%s", application.getName(), ON_DEMAND_JOB, uniqueId);
         LOG.info(
             "Triggering app {} with concurrent execution support. Unique identity: {}",
             application.getName(),
