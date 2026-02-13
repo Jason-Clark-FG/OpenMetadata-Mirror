@@ -555,13 +555,9 @@ describe('Search DropDown Component', () => {
         fireEvent.click(updateButton);
       });
 
-      // Note: Current implementation adds null option to existing selections
-      // In single-select mode, user would need to manually deselect other options
+      // In single-select mode, selecting null option clears regular selections
       expect(mockOnChange).toHaveBeenCalledWith(
-        [
-          { key: 'OM_NULL_FIELD', label: 'label.no-entity' },
-          { key: 'User 1', label: 'User 1' },
-        ],
+        [{ key: 'OM_NULL_FIELD', label: 'label.no-entity' }],
         'owner.displayName'
       );
     });
