@@ -94,7 +94,9 @@ class DagsterSource(PipelineServiceSource):
 
     def __init__(self, config: WorkflowSource, metadata: OpenMetadata):
         super().__init__(config, metadata)
-        self.strip_asset_key_prefix = self.service_connection.stripAssetKeyPrefix or 0
+        self.strip_asset_key_prefix_length = (
+            self.service_connection.stripAssetKeyPrefixLength or 0
+        )
 
     def _get_downstream_tasks(self, job: SolidHandle) -> Optional[List[str]]:
         """Method to get downstream tasks"""
@@ -309,7 +311,7 @@ class DagsterSource(PipelineServiceSource):
 
                 if not to_result.is_resolved:
                     normalized_key = asset.assetKey.normalize(
-                        self.strip_asset_key_prefix
+                        self.strip_asset_key_prefix_length
                     ).to_string()
                     logger.debug(
                         f"Could not resolve table for asset: {asset.assetKey.to_string()} "
@@ -424,7 +426,9 @@ class DagsterSource(PipelineServiceSource):
 
         Returns: TableResolutionResult with table_fqn and table_entity (or None if not found)
         """
-        normalized_asset_key = asset.assetKey.normalize(self.strip_asset_key_prefix)
+        normalized_asset_key = asset.assetKey.normalize(
+            self.strip_asset_key_prefix_length
+        )
         asset_key_str = normalized_asset_key.to_string()
 
         parts = normalized_asset_key.path
@@ -440,7 +444,7 @@ class DagsterSource(PipelineServiceSource):
         else:
             logger.debug(
                 f"Unexpected asset key format after normalization: {asset_key_str} "
-                f"(original: {asset.assetKey.to_string()}, stripped {self.strip_asset_key_prefix} segments)"
+                f"(original: {asset.assetKey.to_string()}, stripped {self.strip_asset_key_prefix_length} segments)"
             )
             return TableResolutionResult()
 

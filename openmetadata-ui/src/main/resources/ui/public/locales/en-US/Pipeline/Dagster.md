@@ -38,7 +38,7 @@ Connection Time Limit between OpenMetadata and Dagster Graphql API in seconds.
 $$
 
 $$section
-### Strip Asset Key Prefix $(id="stripAssetKeyPrefix")
+### Strip Asset Key Prefix Length $(id="stripAssetKeyPrefixLength")
 
 Number of leading segments to remove from asset key paths before resolving to tables.
 

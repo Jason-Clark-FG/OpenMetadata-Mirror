@@ -665,7 +665,7 @@ class TestDagsterSourceWithStripping(TestCase):
     )
     @patch("dagster_graphql.DagsterGraphQLClient")
     def test_dagster_source_with_strip_prefix(self, graphql_client, test_connection):
-        """Test DagsterSource correctly loads stripAssetKeyPrefix config"""
+        """Test DagsterSource correctly loads stripAssetKeyPrefixLength config"""
         test_connection.return_value = False
         graphql_client.return_value = False
 
@@ -677,7 +677,7 @@ class TestDagsterSourceWithStripping(TestCase):
                     "config": {
                         "type": "Dagster",
                         "host": "http://localhost:3000",
-                        "stripAssetKeyPrefix": 2,
+                        "stripAssetKeyPrefixLength": 2,
                     }
                 },
                 "sourceConfig": {"config": {"type": "PipelineMetadata"}},
@@ -698,4 +698,4 @@ class TestDagsterSourceWithStripping(TestCase):
             workflow_config.workflowConfig.openMetadataServerConfig,
         )
 
-        assert dagster_source.strip_asset_key_prefix == 2
+        assert dagster_source.strip_asset_key_prefix_length == 2
