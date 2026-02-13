@@ -463,23 +463,6 @@ export const TaskTabNew = ({
       });
   };
 
-  const handleMenuItemClick: MenuProps['onClick'] = (info) => {
-    if (info.key === TaskActionMode.EDIT) {
-      setShowEditTaskModel(true);
-    } else if (info.key === TaskActionMode.CLOSE) {
-      onTaskReject();
-    } else {
-      onTaskResolve();
-    }
-    setTaskAction(
-      [
-        ...TASK_ACTION_LIST,
-        ...GLOSSARY_TASK_ACTION_LIST,
-        ...INCIDENT_TASK_ACTION_LIST,
-      ].find((action) => action.key === info.key) ?? TASK_ACTION_LIST[0]
-    );
-  };
-
   const onTaskReject = () => {
     if (
       !isTaskGlossaryApproval &&
@@ -504,6 +487,23 @@ export const TaskTabNew = ({
         rest.onUpdateEntityDetails?.();
       })
       .catch((err: AxiosError) => showErrorToast(err));
+  };
+
+  const handleMenuItemClick: MenuProps['onClick'] = (info) => {
+    if (info.key === TaskActionMode.EDIT) {
+      setShowEditTaskModel(true);
+    } else if (info.key === TaskActionMode.CLOSE) {
+      onTaskReject();
+    } else {
+      onTaskResolve();
+    }
+    setTaskAction(
+      [
+        ...TASK_ACTION_LIST,
+        ...GLOSSARY_TASK_ACTION_LIST,
+        ...INCIDENT_TASK_ACTION_LIST,
+      ].find((action) => action.key === info.key) ?? TASK_ACTION_LIST[0]
+    );
   };
 
   const onTestCaseIncidentAssigneeUpdate = async () => {
@@ -662,9 +662,9 @@ export const TaskTabNew = ({
         size="small">
         <Tooltip
           title={
-            !hasApprovalAccess
-              ? t('message.only-reviewers-can-approve-or-reject')
-              : ''
+            hasApprovalAccess
+              ? ''
+              : t('message.only-reviewers-can-approve-or-reject')
           }>
           <Dropdown.Button
             className="task-action-button"
