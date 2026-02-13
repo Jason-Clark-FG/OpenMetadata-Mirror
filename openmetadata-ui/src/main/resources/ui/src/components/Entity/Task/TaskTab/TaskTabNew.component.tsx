@@ -901,7 +901,7 @@ export const TaskTabNew = ({
       <div className="d-flex gap-2" data-testid="task-assignees">
         <Row className="m-l-0" gutter={[16, 16]}>
           <Col
-            className="flex items-center gap-2 text-grey-muted pl-0"
+            className="flex items-center gap-2 text-grey-muted"
             span={8}
             style={{ paddingLeft: 0 }}>
             <UserIcon height={16} />
