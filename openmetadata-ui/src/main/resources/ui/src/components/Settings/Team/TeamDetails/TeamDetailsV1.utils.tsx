@@ -13,12 +13,9 @@
 
 import { AxiosError } from 'axios';
 import { TabSpecificField } from '../../../../enums/entity.enum';
-import { SearchIndex } from '../../../../enums/search.enum';
 import { Team } from '../../../../generated/entity/teams/team';
 import { Include } from '../../../../generated/type/include';
-import { searchQuery } from '../../../../rest/searchAPI';
 import { getTeams } from '../../../../rest/teamsAPI';
-import { getTermQuery } from '../../../../utils/SearchUtils';
 import i18n from '../../../../utils/i18next/LocalUtil';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import { TeamsPageTab, TeamTab } from './team.interface';
@@ -74,52 +71,6 @@ export const getTabs = (
 };
 
 /**
- * Recursively counts assets owned by a team and all its descendants.
- * Makes one small search query per team to avoid 414 URI Too Long errors.
- *
- * @param team - Team to count assets for
- * @returns Total number of assets owned by the team and all its descendants
- */
-export const getAggregatedAssetCount = async (team: Team): Promise<number> => {
-  // Count assets owned directly by this team
-  const queryFilter = getTermQuery({ 'owners.id': [team.id] }, 'should', 1);
-
-  const res = await searchQuery({
-    query: '',
-    pageNumber: 0,
-    pageSize: 0,
-    queryFilter,
-    searchIndex: SearchIndex.ALL,
-  });
-
-  let total = res.hits.total.value;
-
-  // Recursively count children
-  if (team.childrenCount && team.childrenCount > 0) {
-    try {
-      const { data: childTeams } = await getTeams({
-        parentTeam: team.name,
-        include: Include.NonDeleted,
-        fields: [TabSpecificField.CHILDREN_COUNT],
-      });
-
-      for (const child of childTeams) {
-        total += await getAggregatedAssetCount(child);
-      }
-    } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        i18n.t('server.entity-fetch-error', {
-          entity: i18n.t('label.team-plural-lowercase'),
-        })
-      );
-    }
-  }
-
-  return total;
-};
-
-/**
  * Recursively collect all descendant team IDs from a team.
  * Used by the Assets tab to build a query filter for displaying assets.
  *
@@ -137,10 +88,10 @@ export const collectAllTeamIds = async (team: Team): Promise<string[]> => {
         fields: [TabSpecificField.CHILDREN_COUNT],
       });
 
-      for (const child of childTeams) {
-        const childIds = await collectAllTeamIds(child);
-        teamIds.push(...childIds);
-      }
+      const childResults = await Promise.all(
+        childTeams.map((child) => collectAllTeamIds(child))
+      );
+      childResults.forEach((ids) => teamIds.push(...ids));
     } catch (error) {
       showErrorToast(
         error as AxiosError,

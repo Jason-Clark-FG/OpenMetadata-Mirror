@@ -21,7 +21,10 @@ import { mockUserData } from '../../mocks/MyDataPage.mock';
 import { MOCK_CURRENT_TEAM, MOCK_TABLE_DATA } from '../../mocks/Teams.mock';
 import { searchQuery } from '../../rest/searchAPI';
 import { getTeamByName, getTeams } from '../../rest/teamsAPI';
+
 import { DEFAULT_ENTITY_PERMISSION } from '../../utils/PermissionsUtils';
+import { collectAllTeamIds } from '../../components/Settings/Team/TeamDetails/TeamDetailsV1.utils';
+
 import TeamsPage from './TeamsPage';
 
 jest.mock('react-router-dom', () => ({
@@ -41,6 +44,10 @@ jest.mock('../../components/Tag/TagsContainerV2/TagsContainerV2', () => {
 });
 
 const mockOnShowDeletedTeamChange = jest.fn();
+
+jest.mock('../../components/Settings/Team/TeamDetails/TeamDetailsV1.utils', () => ({
+  collectAllTeamIds: jest.fn().mockReturnValue(['f9578f16-363a-4788-80fb-d05816c9e169']),
+}));
 
 jest.mock('../../components/Settings/Team/TeamDetails/TeamDetailsV1', () => {
   return jest.fn().mockImplementation(({ onShowDeletedTeamChange }) => {
@@ -239,13 +246,14 @@ describe('Test Teams Page', () => {
       queryFilter: {
         query: {
           bool: {
-            must: [
+            should: [
               {
                 term: {
                   'owners.id': 'f9578f16-363a-4788-80fb-d05816c9e169',
                 },
               },
             ],
+            minimum_should_match: 1,
           },
         },
       },
@@ -280,6 +288,11 @@ describe('Test Teams Page', () => {
         ],
       })
     );
+
+    (collectAllTeamIds as jest.Mock).mockReturnValue([
+      'f9578f16-363a-4788-80fb-d05816c9e169',
+      'child-team-id',
+    ]);
 
     await act(async () => {
       render(<TeamsPage />);

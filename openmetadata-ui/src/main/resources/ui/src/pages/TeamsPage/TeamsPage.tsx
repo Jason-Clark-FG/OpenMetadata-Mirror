@@ -73,6 +73,7 @@ const TeamsPage = () => {
   const [isAddingTeam, setIsAddingTeam] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [assets, setAssets] = useState<number>(0);
+  const [allTeamIds, setAllTeamIds] = useState<string[]>([]);
   const [parentTeams, setParentTeams] = useState<Team[]>([]);
   const { updateCurrentUser } = useApplicationStore();
 
@@ -201,17 +202,18 @@ const TeamsPage = () => {
     if (selectedTeam.id) {
       try {
         // Collect all team IDs (current team + all descendants)
-        const allTeamIds = await collectAllTeamIds(selectedTeam);
+        const teamIds = await collectAllTeamIds(selectedTeam);
 
         // Query assets owned by any of these teams using 'should' (OR)
         const res = await searchQuery({
           query: '',
           pageNumber: 0,
           pageSize: 0,
-          queryFilter: getTermQuery({ 'owners.id': allTeamIds }, 'should', 1),
+          queryFilter: getTermQuery({ 'owners.id': teamIds }, 'should', 1),
           searchIndex: SearchIndex.ALL,
         });
         const total = res?.hits?.total.value ?? 0;
+        setAllTeamIds(teamIds);
         setAssets(total);
       } catch {
         // Error
@@ -535,6 +537,7 @@ const TeamsPage = () => {
     <PageLayoutV1 pageTitle={t('label.team-plural')}>
       <TeamDetailsV1
         afterDeleteAction={afterDeleteAction}
+        allTeamIds={allTeamIds}
         assetsCount={assets}
         childTeams={childTeams}
         currentTeam={selectedTeam}

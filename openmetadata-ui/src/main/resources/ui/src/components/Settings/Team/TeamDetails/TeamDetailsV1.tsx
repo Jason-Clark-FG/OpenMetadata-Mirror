@@ -99,10 +99,7 @@ import {
   PlaceholderProps,
   TeamDetailsProp,
 } from './TeamDetailsV1.interface';
-import {
-  collectAllTeamIds,
-  getTabs,
-} from './TeamDetailsV1.utils';
+import { getTabs } from './TeamDetailsV1.utils';
 import TeamHierarchy from './TeamHierarchy';
 import './teams.less';
 import TeamsHeadingLabel from './TeamsHeaderSection/TeamsHeadingLabel.component';
@@ -110,6 +107,7 @@ import TeamsInfo from './TeamsHeaderSection/TeamsInfo.component';
 import { UserTab } from './UserTab/UserTab.component';
 
 const TeamDetailsV1 = ({
+  allTeamIds,
   assetsCount,
   currentTeam,
   isTeamMemberLoading,
@@ -165,15 +163,6 @@ const TeamDetailsV1 = ({
     state: boolean;
     leave: boolean;
   }>(DELETE_USER_INITIAL_STATE);
-  const [allTeamIds, setAllTeamIds] = useState<string[]>([currentTeam.id]);
-
-  useEffect(() => {
-    const fetchTeamIds = async () => {
-      const ids = await collectAllTeamIds(currentTeam);
-      setAllTeamIds(ids);
-    };
-    fetchTeamIds();
-  }, [currentTeam]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [childTeamList, setChildTeamList] = useState<Team[]>([]);
