@@ -1,0 +1,37 @@
+{
+  "tableName": "partitioned_test",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "timeColumnName": "event_time",
+    "timeType": "MILLISECONDS",
+    "replication": "1",
+    "schemaName": "partitioned_test",
+    "segmentPushType": "APPEND",
+    "segmentAssignmentStrategy": "BalanceNumSegmentAssignmentStrategy"
+  },
+  "tenants": {},
+  "tableIndexConfig": {
+    "loadMode": "MMAP",
+    "segmentPartitionConfig": {
+      "columnPartitionMap": {
+        "region": {
+          "functionName": "Murmur",
+          "numPartitions": 4
+        }
+      }
+    }
+  },
+  "metadata": {
+    "customConfigs": {}
+  },
+  "ingestionConfig": {
+    "batchIngestionConfig": {
+      "segmentIngestionType": "APPEND",
+      "segmentIngestionFrequency": "DAILY"
+    },
+    "transformConfigs": []
+  },
+  "routing": {
+    "segmentPrunerTypes": ["partition"]
+  }
+}

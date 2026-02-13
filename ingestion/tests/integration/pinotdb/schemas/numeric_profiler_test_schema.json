@@ -1,0 +1,47 @@
+{
+  "schemaName": "numeric_profiler_test",
+  "dimensionFieldSpecs": [
+    {
+      "name": "product_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "category",
+      "dataType": "STRING"
+    },
+    {
+      "name": "product_name",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "price",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "quantity",
+      "dataType": "INT"
+    },
+    {
+      "name": "rating",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "views",
+      "dataType": "LONG"
+    },
+    {
+      "name": "revenue",
+      "dataType": "DOUBLE"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "timestamp",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}

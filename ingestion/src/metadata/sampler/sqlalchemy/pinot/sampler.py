@@ -113,13 +113,14 @@ class PinotDBSampler(SQASampler):
                     columns = constraint.columns
                     break
 
-            for constraint in self.entity.tableConstraints:
-                if constraint.constraintType == ConstraintType.UNIQUE:
-                    logger.debug(
-                        f"Using UNIQUE constraint columns for sampling: {constraint.columns}"
-                    )
-                    columns = constraint.columns
-                    break
+            if not columns:
+                for constraint in self.entity.tableConstraints:
+                    if constraint.constraintType == ConstraintType.UNIQUE:
+                        logger.debug(
+                            f"Using UNIQUE constraint columns for sampling: {constraint.columns}"
+                        )
+                        columns = constraint.columns
+                        break
         else:
             for column in self.entity.columns:
                 if column.constraint == Constraint.PRIMARY_KEY:

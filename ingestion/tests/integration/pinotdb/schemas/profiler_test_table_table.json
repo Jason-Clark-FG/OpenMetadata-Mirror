@@ -1,0 +1,23 @@
+{
+  "tableName": "profiler_test_table",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "timeColumnName": "created_at",
+    "timeType": "MILLISECONDS",
+    "replication": "1",
+    "schemaName": "profiler_test_table"
+  },
+  "tenants": {},
+  "tableIndexConfig": {
+    "loadMode": "MMAP"
+  },
+  "metadata": {
+    "customConfigs": {}
+  },
+  "ingestionConfig": {
+    "batchIngestionConfig": {
+      "segmentIngestionType": "APPEND",
+      "segmentIngestionFrequency": "DAILY"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "tableName": "financial_transactions",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "timeColumnName": "transaction_time",
+    "timeType": "MILLISECONDS",
+    "replication": "1",
+    "schemaName": "financial_transactions"
+  },
+  "tenants": {},
+  "tableIndexConfig": {
+    "loadMode": "MMAP"
+  },
+  "metadata": {
+    "customConfigs": {}
+  },
+  "ingestionConfig": {
+    "batchIngestionConfig": {
+      "segmentIngestionType": "APPEND",
+      "segmentIngestionFrequency": "DAILY"
+    }
+  }
+}

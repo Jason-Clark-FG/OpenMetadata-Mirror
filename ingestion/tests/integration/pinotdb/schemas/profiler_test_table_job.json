@@ -1,0 +1,32 @@
+{
+  "tableName": "profiler_test_table",
+  "inputDirURI": "/data",
+  "includeFileNamePattern": "glob:**/profiler_test_table.csv",
+  "outputDirURI": "/tmp/pinot/profiler_test_table/",
+  "overwriteOutput": true,
+  "segmentName": "profiler_test_table",
+  "pinotClusterSpecs": [
+    {
+      "controllerURI": "http://pinot-controller:9000"
+    }
+  ],
+  "recordReaderSpec": {
+    "dataFormat": "csv",
+    "className": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReader",
+    "configClassName": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReaderConfig",
+    "configs": {
+      "header": "user_id,username,email,status,country,nullable_field,is_active,age,score,balance,login_count,created_at",
+      "delimiter": ","
+    }
+  },
+  "tableSpec": {
+    "tableName": "profiler_test_table",
+    "schemaURI": "http://pinot-controller:9000/schemas/profiler_test_table",
+    "tableConfigURI": "http://pinot-controller:9000/tables/profiler_test_table"
+  },
+  "executionFrameworkSpec": {
+    "name": "standalone",
+    "segmentGenerationJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentGenerationJobRunner",
+    "segmentTarPushJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentTarPushJobRunner"
+  }
+}

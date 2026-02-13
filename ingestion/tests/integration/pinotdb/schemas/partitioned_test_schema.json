@@ -1,0 +1,43 @@
+{
+  "schemaName": "partitioned_test",
+  "dimensionFieldSpecs": [
+    {
+      "name": "user_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "event_type",
+      "dataType": "STRING"
+    },
+    {
+      "name": "device",
+      "dataType": "STRING"
+    },
+    {
+      "name": "region",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "duration_ms",
+      "dataType": "LONG"
+    },
+    {
+      "name": "bytes_transferred",
+      "dataType": "LONG"
+    },
+    {
+      "name": "error_count",
+      "dataType": "INT"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "event_time",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}

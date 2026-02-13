@@ -13,9 +13,19 @@
 Histogram Metric definition
 """
 import math
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+)
 
-from sqlalchemy import and_, case, column, func
+from sqlalchemy import Column, and_, case, column, func, literal
 from sqlalchemy.orm import DeclarativeMeta, Session
 
 if TYPE_CHECKING:
@@ -37,6 +47,11 @@ from metadata.utils.helpers import format_large_string_numbers
 from metadata.utils.logger import profiler_logger
 
 logger = profiler_logger()
+
+
+class HistogramResult(TypedDict):
+    boundaries: List[float]
+    frequencies: List[int]
 
 
 # pylint: disable=too-many-locals
@@ -108,7 +123,7 @@ class Histogram(HybridMetric):
 
     def _get_bins(
         self, res_iqr: float, res_row_count: float, res_min: float, res_max: float
-    ):
+    ) -> Tuple[int, float]:
         """Get the number of bins and the width of each bin.
         We'll first use the Freedman-Diaconis rule to compute the number of bins.
         If the number of bins is greater than 100, we'll fall back to Sturge's rule. If the number of bins
@@ -138,6 +153,47 @@ class Histogram(HybridMetric):
             bin_width = (res_max - res_min) / num_bins
 
         return num_bins, bin_width
+
+    def get_sqlalchemy_histogram(
+        self,
+        col: Column,
+        num_bins: int,
+        starting_bin_bound: float,
+        ending_bin_bound: float,
+        bin_width: float,
+        session: Session,
+        sample: DeclarativeMeta,
+    ) -> Optional[HistogramResult]:
+        case_stmts = []
+        for bin_num in range(num_bins):
+            if bin_num < num_bins - 1:
+                condition = and_(col >= starting_bin_bound, col < ending_bin_bound)
+            else:
+                # for the last bin we won't add the upper bound
+                condition = and_(col >= starting_bin_bound)
+                case_stmts.append(
+                    func.sum(case([(condition, literal(1))], else_=literal(0))).label(
+                        self._format_bin_labels(starting_bin_bound)
+                    )
+                )
+                continue
+
+            case_stmts.append(
+                func.sum(case([(condition, literal(1))], else_=literal(0))).label(
+                    self._format_bin_labels(
+                        starting_bin_bound,
+                        ending_bin_bound,
+                    )
+                )
+            )
+            starting_bin_bound = ending_bin_bound
+            ending_bin_bound += bin_width
+
+        rows = session.query(*case_stmts).select_from(sample).first()
+
+        if rows:
+            return HistogramResult(boundaries=list(rows.keys()), frequencies=list(rows))
+        return None
 
     def fn(
         self,
@@ -181,36 +237,15 @@ class Histogram(HybridMetric):
         else:
             col = column(self.col.name, self.col.type)  # type: ignore
 
-        case_stmts = []
-        for bin_num in range(num_bins):
-            if bin_num < num_bins - 1:
-                condition = and_(col >= starting_bin_bound, col < ending_bin_bound)
-            else:
-                # for the last bin we won't add the upper bound
-                condition = and_(col >= starting_bin_bound)
-                case_stmts.append(
-                    func.count(case([(condition, col)])).label(
-                        self._format_bin_labels(starting_bin_bound)
-                    )
-                )
-                continue
-
-            case_stmts.append(
-                func.count(case([(condition, col)])).label(
-                    self._format_bin_labels(
-                        starting_bin_bound,
-                        ending_bin_bound,
-                    )
-                )
-            )
-            starting_bin_bound = ending_bin_bound
-            ending_bin_bound += bin_width
-
-        rows = session.query(*case_stmts).select_from(sample).first()
-
-        if rows:
-            return {"boundaries": list(rows.keys()), "frequencies": list(rows)}
-        return None
+        return self.get_sqlalchemy_histogram(
+            col,
+            num_bins,
+            starting_bin_bound,
+            ending_bin_bound,
+            bin_width,
+            session,
+            sample,
+        )
 
     def df_fn(
         self,

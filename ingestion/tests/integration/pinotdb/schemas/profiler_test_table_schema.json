@@ -1,0 +1,60 @@
+{
+  "schemaName": "profiler_test_table",
+  "dimensionFieldSpecs": [
+    {
+      "name": "user_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "username",
+      "dataType": "STRING"
+    },
+    {
+      "name": "email",
+      "dataType": "STRING"
+    },
+    {
+      "name": "status",
+      "dataType": "STRING"
+    },
+    {
+      "name": "country",
+      "dataType": "STRING"
+    },
+    {
+      "name": "nullable_field",
+      "dataType": "STRING",
+      "defaultNullValue": "null"
+    },
+    {
+      "name": "is_active",
+      "dataType": "BOOLEAN"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "age",
+      "dataType": "INT"
+    },
+    {
+      "name": "score",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "balance",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "login_count",
+      "dataType": "LONG"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "created_at",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}

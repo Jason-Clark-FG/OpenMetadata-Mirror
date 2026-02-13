@@ -1,0 +1,32 @@
+{
+  "tableName": "numeric_profiler_test",
+  "inputDirURI": "/data",
+  "includeFileNamePattern": "glob:**/numeric_profiler_test.csv",
+  "outputDirURI": "/tmp/pinot/numeric_profiler_test/",
+  "overwriteOutput": true,
+  "segmentName": "numeric_profiler_test",
+  "pinotClusterSpecs": [
+    {
+      "controllerURI": "http://pinot-controller:9000"
+    }
+  ],
+  "recordReaderSpec": {
+    "dataFormat": "csv",
+    "className": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReader",
+    "configClassName": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReaderConfig",
+    "configs": {
+      "header": "product_id,category,product_name,price,quantity,rating,views,revenue,timestamp",
+      "delimiter": ","
+    }
+  },
+  "tableSpec": {
+    "tableName": "numeric_profiler_test",
+    "schemaURI": "http://pinot-controller:9000/schemas/numeric_profiler_test",
+    "tableConfigURI": "http://pinot-controller:9000/tables/numeric_profiler_test"
+  },
+  "executionFrameworkSpec": {
+    "name": "standalone",
+    "segmentGenerationJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentGenerationJobRunner",
+    "segmentTarPushJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentTarPushJobRunner"
+  }
+}

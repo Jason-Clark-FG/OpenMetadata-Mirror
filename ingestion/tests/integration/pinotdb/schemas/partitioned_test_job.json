@@ -1,0 +1,33 @@
+{
+  "tableName": "partitioned_test",
+  "inputDirURI": "/data",
+  "includeFileNamePattern": "glob:**/partitioned_test.csv",
+  "outputDirURI": "/tmp/pinot/partitioned_test/",
+  "overwriteOutput": true,
+  "segmentName": "partitioned_test",
+  "pinotClusterSpecs": [
+    {
+      "controllerURI": "http://pinot-controller:9000"
+    }
+  ],
+  "recordReaderSpec": {
+    "dataFormat": "csv",
+    "className": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReader",
+    "configClassName": "org.apache.pinot.plugin.inputformat.csv.CSVRecordReaderConfig",
+    "configs": {
+      "header": "user_id,event_type,device,region,duration_ms,bytes_transferred,error_count,event_time",
+      "delimiter": ","
+    }
+  },
+  "tableSpec": {
+    "tableName": "partitioned_test",
+    "schemaURI": "http://pinot-controller:9000/schemas/partitioned_test",
+    "tableConfigURI": "http://pinot-controller:9000/tables/partitioned_test"
+  },
+  "executionFrameworkSpec": {
+    "name": "standalone",
+    "segmentGenerationJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentGenerationJobRunner",
+    "segmentTarPushJobRunnerClassName": "org.apache.pinot.plugin.ingestion.batch.standalone.SegmentTarPushJobRunner",
+    "segmentUriPrefix": "file:///tmp/pinot/partitioned_test/"
+  }
+}
