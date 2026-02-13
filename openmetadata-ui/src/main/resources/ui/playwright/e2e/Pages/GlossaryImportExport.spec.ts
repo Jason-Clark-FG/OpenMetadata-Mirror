@@ -294,12 +294,15 @@ test.describe('Glossary Bulk Import Export', () => {
     await test.step('should have term in review state', async () => {
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary1.data.displayName);
-      await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        additionalGlossaryTerm.displayName
+      );
 
       await verifyTaskCreated(
         page,
-        glossary1.data.fullyQualifiedName,
-        glossaryTerm1.data.name
+        glossary1.responseData.fullyQualifiedName,
+        additionalGlossaryTerm.name
       );
 
       const statusBadge = page.locator('.status-badge');
