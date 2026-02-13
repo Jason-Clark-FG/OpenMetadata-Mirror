@@ -139,7 +139,17 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
 
       return [...selectedOptionKeys, ...otherOptions];
     }
-  }, [options, selectedOptions, fixedOrderOptions, independent]);
+  }, [
+    options,
+    selectedOptions,
+    fixedOrderOptions,
+    independent,
+    searchText,
+    hideCounts,
+    singleSelect,
+    showProfilePicture,
+    highlight,
+  ]);
 
   // handle menu item click
   const handleMenuItemClick: MenuItemProps['onClick'] = (info) => {
@@ -152,6 +162,9 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
       );
       const updatedValues = isAlreadySelected ? [] : option ? [option] : [];
       setSelectedOptions(updatedValues);
+      if (!isAlreadySelected && option) {
+        setNullOptionSelected(false);
+      }
     } else {
       const selectedKey = selectedOptions.find(
         (option) => option.key === currentKey
@@ -181,12 +194,25 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
     setIsDropDownOpen(false);
   };
 
+  // Handle null option change
+  const handleNullOptionChange = (checked: boolean) => {
+    setNullOptionSelected(checked);
+    if (singleSelect && checked) {
+      setSelectedOptions([]);
+    }
+  };
+
   // Handle update button click
   const handleUpdate = () => {
     // call on change with updated value
     if (nullOptionSelected) {
       onChange(
-        [{ key: NULL_OPTION_KEY, label: nullLabelText }, ...selectedOptions],
+        singleSelect
+          ? [{ key: NULL_OPTION_KEY, label: nullLabelText }]
+          : [
+              { key: NULL_OPTION_KEY, label: nullLabelText },
+              ...selectedOptions,
+            ],
         searchKey
       );
     } else {
@@ -296,7 +322,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
                     checked={nullOptionSelected}
                     className="d-flex flex-1"
                     data-testid="no-option-radio"
-                    onChange={(e) => setNullOptionSelected(e.target.checked)}>
+                    onChange={(e) => handleNullOptionChange(e.target.checked)}>
                     {nullLabelText}
                   </Radio>
                 ) : (
@@ -304,7 +330,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
                     checked={nullOptionSelected}
                     className="d-flex flex-1"
                     data-testid="no-option-checkbox"
-                    onChange={(e) => setNullOptionSelected(e.target.checked)}>
+                    onChange={(e) => handleNullOptionChange(e.target.checked)}>
                     {nullLabelText}
                   </Checkbox>
                 )}

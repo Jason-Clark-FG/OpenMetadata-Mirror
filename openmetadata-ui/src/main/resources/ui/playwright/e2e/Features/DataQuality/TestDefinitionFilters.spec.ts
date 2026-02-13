@@ -12,6 +12,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
+import { DOMAIN_TAGS } from '../../../constant/config';
 import { redirectToHomePage } from '../../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
@@ -36,7 +37,13 @@ const TEST_PLATFORM_OPTIONS = {
 
 const navigateToRulesLibrary = async (page: Page) => {
   await redirectToHomePage(page);
+  const testDefinitionResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/dataQuality/testDefinitions') &&
+      response.request().method() === 'GET'
+  );
   await page.goto('/rules-library');
+  await testDefinitionResponse;
   await waitForAllLoadersToDisappear(page);
 };
 
@@ -55,7 +62,7 @@ const toggleFilter = async (
   await option.click();
 
   const updateResponse = page.waitForResponse((response) =>
-    response.url().includes('/api/v1/testDefinition')
+    response.url().includes('/api/v1/dataQuality/testDefinitions')
   );
 
   const updateBtn = page.getByTestId('update-btn');
@@ -69,7 +76,7 @@ const toggleFilter = async (
 
 test.describe(
   'Test Definition Filters',
-  { tag: ['@Observability', '@DataQuality'] },
+  { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Rules_Library` },
   () => {
     test.beforeEach(async ({ page }) => {
       await navigateToRulesLibrary(page);
@@ -79,11 +86,10 @@ test.describe(
       page,
     }) => {
       test.slow();
-
       await test.step('Select entity type filter', async () => {
         const apiResponsePromise = page.waitForResponse(
           (response) =>
-            response.url().includes('/api/v1/testDefinition') &&
+            response.url().includes('/api/v1/dataQuality/testDefinitions') &&
             response.url().includes('entityType=TABLE')
         );
 
@@ -150,7 +156,7 @@ test.describe(
           state: 'visible',
         });
 
-        const tableRadioAfterChange = page.getByTestId('table-radio');
+        const tableRadioAfterChange = page.getByTestId('TABLE-radio');
         await expect(tableRadioAfterChange).not.toBeChecked();
 
         const columnRadio = page.getByTestId('COLUMN-radio');
@@ -162,7 +168,6 @@ test.describe(
 
     test('should restore and persist filters from URL', async ({ page }) => {
       test.slow();
-
       await test.step('Load page with URL parameters', async () => {
         await page.goto(
           '/rules-library?entityType=TABLE&testPlatforms=OpenMetadata'
@@ -248,12 +253,12 @@ test.describe(
         await expect(tableOption).toBeVisible();
         await tableOption.click();
 
-        const tableRadioAfterClick = page.getByTestId('table-radio');
+        const tableRadioAfterClick = page.getByTestId('TABLE-radio');
         await expect(tableRadioAfterClick).toBeChecked();
 
         await tableOption.click();
 
-        const tableRadioAfterDeselect = page.getByTestId('table-radio');
+        const tableRadioAfterDeselect = page.getByTestId('TABLE-radio');
         await expect(tableRadioAfterDeselect).not.toBeChecked();
 
         await page.keyboard.press('Escape');
@@ -275,7 +280,7 @@ test.describe(
         await expect(updateBtn).toBeEnabled();
 
         const updateResponse = page.waitForResponse((response) =>
-          response.url().includes('/api/v1/testDefinition')
+          response.url().includes('/api/v1/dataQuality/testDefinitions')
         );
 
         await updateBtn.click();
@@ -309,8 +314,6 @@ test.describe(
     });
 
     test('should handle multiple filter operations', async ({ page }) => {
-      test.slow();
-
       await test.step('Apply first filter', async () => {
         await toggleFilter(
           page,
@@ -360,7 +363,7 @@ test.describe(
       await test.step('Apply filter and validate API', async () => {
         const apiResponsePromise = page.waitForResponse(
           (response) =>
-            response.url().includes('/api/v1/testDefinition') &&
+            response.url().includes('/api/v1/dataQuality/testDefinitions') &&
             response.url().includes('entityType=TABLE')
         );
 
@@ -377,7 +380,8 @@ test.describe(
         expect(responseData.data).toBeDefined();
 
         const tableTestDefinitions = responseData.data.filter(
-          (def: { entityType: string }) => def.entityType === 'Table'
+          (def: { entityType: string }) =>
+            def.entityType === ENTITY_TYPE_OPTIONS.TABLE
         );
 
         expect(tableTestDefinitions.length).toBeGreaterThan(0);
@@ -392,8 +396,6 @@ test.describe(
     });
 
     test('should reset pagination when filters change', async ({ page }) => {
-      test.slow();
-
       await test.step('Apply initial filter', async () => {
         await toggleFilter(
           page,
@@ -405,8 +407,7 @@ test.describe(
       await test.step('Navigate to page 2 if pagination exists', async () => {
         const paginationExists = await page
           .locator('.ant-pagination')
-          .isVisible()
-          .catch(() => false);
+          .isVisible();
 
         if (paginationExists) {
           const nextButton = page.locator('.ant-pagination-next');

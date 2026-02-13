@@ -64,7 +64,10 @@ import {
   checkPermission,
   DEFAULT_ENTITY_PERMISSION,
 } from '../../../utils/PermissionsUtils';
-import { isExternalTestDefinition } from '../../../utils/TestDefinitionUtils';
+import {
+  isExternalTestDefinition,
+  mapUrlValueToOption,
+} from '../../../utils/TestDefinitionUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useFilterSelection } from '../../common/atoms/filters/useFilterSelection';
 import { useQuickFiltersWithComponent } from '../../common/atoms/filters/useQuickFiltersWithComponent';
@@ -134,7 +137,10 @@ const TestDefinitionList = () => {
   const parsedFilters = useMemo<ExploreQuickFilterField[]>(() => {
     return TEST_DEFINITION_FILTERS.map((filter) => ({
       ...filter,
-      value: urlFilters[filter.key]?.map((v) => ({ key: v, label: v })) || [],
+      value:
+        urlFilters[filter.key]?.map((v) =>
+          mapUrlValueToOption(v, filter.options)
+        ) || [],
     }));
   }, [urlFilters]);
 

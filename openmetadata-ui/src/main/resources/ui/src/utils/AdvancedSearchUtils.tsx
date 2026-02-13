@@ -22,7 +22,7 @@ import {
   Utils as QbUtils,
   ValueSource,
 } from '@react-awesome-query-builder/antd';
-import { Button, Checkbox, MenuProps, Space, Typography } from 'antd';
+import { Button, Checkbox, MenuProps, Radio, Space, Typography } from 'antd';
 import { isArray, isEmpty, toLower } from 'lodash';
 import { Bucket } from 'Models';
 import React from 'react';
@@ -165,10 +165,12 @@ export const generateSearchDropdownLabel = (
   hideCounts = false,
   singleSelect = false
 ) => {
+  const InputComponent = singleSelect ? Radio : Checkbox;
+
   return (
     <div className="d-flex justify-between">
       <Space align="start" className="m-x-sm" data-testid={option.key} size={8}>
-        <Checkbox
+        <InputComponent
           checked={checked}
           data-testid={`${option.key}-${singleSelect ? 'radio' : 'checkbox'}`}
           style={option.description ? { marginTop: 4 } : undefined}
