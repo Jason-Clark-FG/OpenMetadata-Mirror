@@ -210,11 +210,13 @@ public class Auth0Validator {
           String error = errorResponse.path("error").asText();
           String errorDescription = errorResponse.path("error_description").asText();
 
-          if ("invalid_client".equals(error)
-              || "unauthorized_client".equals(error)
-              || "access_denied".equals(error)) {
+          if ("invalid_client".equals(error) || "unauthorized_client".equals(error)) {
             return ValidationErrorBuilder.createFieldError(
                 ValidationErrorBuilder.FieldPaths.OIDC_CLIENT_SECRET, "Invalid client secret");
+          } else if ("access_denied".equals(error)) {
+            return ValidationErrorBuilder.createFieldError(
+                ValidationErrorBuilder.FieldPaths.OIDC_DISCOVERY_URI,
+                "Access denied: " + errorDescription);
           } else {
             return ValidationErrorBuilder.createFieldError(
                 ValidationErrorBuilder.FieldPaths.OIDC_CLIENT_SECRET,
