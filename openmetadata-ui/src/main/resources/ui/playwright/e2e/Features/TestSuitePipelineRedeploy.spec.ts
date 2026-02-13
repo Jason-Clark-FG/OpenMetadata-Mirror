@@ -78,7 +78,7 @@ test.describe('Bulk Re-Deploy pipelines ', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     await redeployResponse;
 
     await expect(
-      page.getByText('Pipelines Re Deploy Successfully')
+      page.getByText(/Pipelines Re Deploy Successfully/i)
     ).toBeVisible();
   });
 
