@@ -5012,7 +5012,7 @@ export interface ConfigObject {
      * example, if your asset keys follow the pattern 'project/environment/schema/table' but you
      * only need 'schema/table', set this to 2.
      */
-    stripAssetKeyPrefix?: number;
+    stripAssetKeyPrefixLength?: number;
     /**
      * Connection Time Limit Between OM and Dagster Graphql API in second
      */
