@@ -16,7 +16,6 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -142,13 +141,13 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
 
   @Override
   public void storeEntities(List<LearningResource> entities) {
-    List<LearningResource> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (LearningResource entity : entities) {
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, LearningResource.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -301,12 +300,17 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("categories", original.getCategories(), updated.getCategories());
-      recordChange("contexts", original.getContexts(), updated.getContexts(), true);
-      recordChange("difficulty", original.getDifficulty(), updated.getDifficulty());
-      recordChange("source", original.getSource(), updated.getSource(), true);
-      recordChange(
-          "estimatedDuration", original.getEstimatedDuration(), updated.getEstimatedDuration());
+      if (shouldCompare("categories"))
+        recordChange("categories", original.getCategories(), updated.getCategories());
+      if (shouldCompare("contexts"))
+        recordChange("contexts", original.getContexts(), updated.getContexts(), true);
+      if (shouldCompare("difficulty"))
+        recordChange("difficulty", original.getDifficulty(), updated.getDifficulty());
+      if (shouldCompare("source"))
+        recordChange("source", original.getSource(), updated.getSource(), true);
+      if (shouldCompare("estimatedDuration"))
+        recordChange(
+            "estimatedDuration", original.getEstimatedDuration(), updated.getEstimatedDuration());
     }
   }
 }

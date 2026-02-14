@@ -15,7 +15,6 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -88,8 +87,8 @@ public class ChartRepository extends EntityRepository<Chart> {
 
   @Override
   public void storeEntities(List<Chart> charts) {
-    List<Chart> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(charts.size());
+    List<String> jsons = new ArrayList<>(charts.size());
 
     for (Chart chart : charts) {
       EntityReference service = chart.getService();
@@ -97,13 +96,13 @@ public class ChartRepository extends EntityRepository<Chart> {
 
       chart.withService(null).withDashboards(null);
 
-      String jsonCopy = gson.toJson(chart);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Chart.class));
+      fqns.add(chart.getFullyQualifiedName());
+      jsons.add(serializeForStorage(chart));
 
       chart.withService(service).withDashboards(dashboards);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -242,20 +241,24 @@ public class ChartRepository extends EntityRepository<Chart> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("chartType", original.getChartType(), updated.getChartType());
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
-      update(
-          Entity.DASHBOARD,
-          "dashboards",
-          listOrEmpty(updated.getDashboards()),
-          listOrEmpty(original.getDashboards()));
+      if (shouldCompare("chartType"))
+        recordChange("chartType", original.getChartType(), updated.getChartType());
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
+      if (shouldCompare("dashboards"))
+        update(
+            Entity.DASHBOARD,
+            "dashboards",
+            listOrEmpty(updated.getDashboards()),
+            listOrEmpty(original.getDashboards()));
     }
 
     private void update(

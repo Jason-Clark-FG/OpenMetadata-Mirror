@@ -24,7 +24,6 @@ import static org.openmetadata.service.Entity.DATABASE_SCHEMA;
 import static org.openmetadata.service.Entity.STORED_PROCEDURE;
 import static org.openmetadata.service.Entity.TABLE;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -116,25 +115,21 @@ public class DatabaseRepository extends EntityRepository<Database> {
 
   @Override
   public void storeEntities(List<Database> databases) {
-    List<Database> databasesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(databases.size());
+    List<String> jsons = new ArrayList<>(databases.size());
 
     for (Database database : databases) {
-      // Save entity-specific relationships
       EntityReference service = database.getService();
 
-      // Nullify for storage (same as storeEntity)
       database.withService(null);
 
-      // Clone for storage
-      String jsonCopy = gson.toJson(database);
-      databasesToStore.add(gson.fromJson(jsonCopy, Database.class));
+      fqns.add(database.getFullyQualifiedName());
+      jsons.add(serializeForStorage(database));
 
-      // Restore in original
       database.withService(service);
     }
 
-    storeMany(databasesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -548,15 +543,19 @@ public class DatabaseRepository extends EntityRepository<Database> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("retentionPeriod"))
+        recordChange(
+            "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
   }
 

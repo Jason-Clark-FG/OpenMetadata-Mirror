@@ -25,7 +25,6 @@ import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.FIELD_TAGS;
 import static org.openmetadata.service.Entity.FILE;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -137,26 +136,23 @@ public class FileRepository extends EntityRepository<File> {
 
   @Override
   public void storeEntities(List<File> files) {
-    List<File> filesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(files.size());
+    List<String> jsons = new ArrayList<>(files.size());
 
     for (File file : files) {
-      // Don't store column tags as JSON but build it on the fly based on relationships
       List<Column> columnsWithTags = file.getColumns();
       file.setColumns(ColumnUtil.cloneWithoutTags(columnsWithTags));
       if (file.getColumns() != null) {
         file.getColumns().forEach(column -> column.setTags(null));
       }
 
-      // Clone for storage
-      String jsonCopy = gson.toJson(file);
-      filesToStore.add(gson.fromJson(jsonCopy, File.class));
+      fqns.add(file.getFullyQualifiedName());
+      jsons.add(serializeForStorage(file));
 
-      // Restore columns with tags in original
       file.withColumns(columnsWithTags);
     }
 
-    storeMany(filesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -483,19 +479,27 @@ public class FileRepository extends EntityRepository<File> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("fileType", original.getFileType(), updated.getFileType());
-      recordChange("mimeType", original.getMimeType(), updated.getMimeType());
-      recordChange("fileExtension", original.getFileExtension(), updated.getFileExtension());
-      recordChange("path", original.getPath(), updated.getPath());
-      recordChange("size", original.getSize(), updated.getSize());
-      recordChange("checksum", original.getChecksum(), updated.getChecksum());
-      recordChange("webViewLink", original.getWebViewLink(), updated.getWebViewLink());
-      recordChange("downloadLink", original.getDownloadLink(), updated.getDownloadLink());
-      recordChange("isShared", original.getIsShared(), updated.getIsShared());
-      recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
-      // Handle columns with proper column handling including tags
-      updateColumns(
-          COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+      if (shouldCompare("fileType"))
+        recordChange("fileType", original.getFileType(), updated.getFileType());
+      if (shouldCompare("mimeType"))
+        recordChange("mimeType", original.getMimeType(), updated.getMimeType());
+      if (shouldCompare("fileExtension"))
+        recordChange("fileExtension", original.getFileExtension(), updated.getFileExtension());
+      if (shouldCompare("path")) recordChange("path", original.getPath(), updated.getPath());
+      if (shouldCompare("size")) recordChange("size", original.getSize(), updated.getSize());
+      if (shouldCompare("checksum"))
+        recordChange("checksum", original.getChecksum(), updated.getChecksum());
+      if (shouldCompare("webViewLink"))
+        recordChange("webViewLink", original.getWebViewLink(), updated.getWebViewLink());
+      if (shouldCompare("downloadLink"))
+        recordChange("downloadLink", original.getDownloadLink(), updated.getDownloadLink());
+      if (shouldCompare("isShared"))
+        recordChange("isShared", original.getIsShared(), updated.getIsShared());
+      if (shouldCompare("fileVersion"))
+        recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
+      if (shouldCompare("columns"))
+        updateColumns(
+            COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
     }
   }
 }

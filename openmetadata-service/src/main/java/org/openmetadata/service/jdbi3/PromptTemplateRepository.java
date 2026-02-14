@@ -13,7 +13,6 @@
 
 package org.openmetadata.service.jdbi3;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -64,13 +63,13 @@ public class PromptTemplateRepository extends EntityRepository<PromptTemplate> {
 
   @Override
   public void storeEntities(List<PromptTemplate> entities) {
-    List<PromptTemplate> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (PromptTemplate entity : entities) {
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, PromptTemplate.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -95,12 +94,20 @@ public class PromptTemplateRepository extends EntityRepository<PromptTemplate> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("templateContent", original.getTemplateContent(), updated.getTemplateContent());
-      recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
-      recordChange("variables", original.getVariables(), updated.getVariables(), true);
-      recordChange("examples", original.getExamples(), updated.getExamples(), true);
-      recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
-      recordChange("templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
+      if (shouldCompare("templateContent"))
+        recordChange(
+            "templateContent", original.getTemplateContent(), updated.getTemplateContent());
+      if (shouldCompare("systemPrompt"))
+        recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
+      if (shouldCompare("variables"))
+        recordChange("variables", original.getVariables(), updated.getVariables(), true);
+      if (shouldCompare("examples"))
+        recordChange("examples", original.getExamples(), updated.getExamples(), true);
+      if (shouldCompare("templateType"))
+        recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
+      if (shouldCompare("templateVersion"))
+        recordChange(
+            "templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
     }
   }
 }

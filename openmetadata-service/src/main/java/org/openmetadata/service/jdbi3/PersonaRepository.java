@@ -17,7 +17,6 @@ import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.service.Entity.PERSONA;
 import static org.openmetadata.service.Entity.USER;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -85,21 +84,21 @@ public class PersonaRepository extends EntityRepository<Persona> {
 
   @Override
   public void storeEntities(List<Persona> entities) {
-    List<Persona> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Persona persona : entities) {
       List<EntityReference> users = persona.getUsers();
 
       persona.withUsers(null);
 
-      String jsonCopy = gson.toJson(persona);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Persona.class));
+      fqns.add(persona.getFullyQualifiedName());
+      jsons.add(serializeForStorage(persona));
 
       persona.withUsers(users);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -164,8 +163,8 @@ public class PersonaRepository extends EntityRepository<Persona> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateUsers(original, updated);
-      updateDefault(original, updated);
+      if (shouldCompare("users")) updateUsers(original, updated);
+      if (shouldCompare("default")) updateDefault(original, updated);
     }
 
     @Transaction

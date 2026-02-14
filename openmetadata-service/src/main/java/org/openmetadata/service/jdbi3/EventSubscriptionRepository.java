@@ -197,10 +197,14 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
 
   @Override
   public void storeEntities(List<EventSubscription> entities) {
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (EventSubscription entity : entities) {
       ensureDestinationIds(entity);
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
     }
-    storeMany(entities);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -240,23 +244,30 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateTemplateRelationship();
+      if (shouldCompare("notificationTemplate")) updateTemplateRelationship();
 
-      recordChange("input", original.getInput(), updated.getInput(), true);
-      recordChange("batchSize", original.getBatchSize(), updated.getBatchSize());
+      if (shouldCompare("input"))
+        recordChange("input", original.getInput(), updated.getInput(), true);
+      if (shouldCompare("batchSize"))
+        recordChange("batchSize", original.getBatchSize(), updated.getBatchSize());
       if (!original.getAlertType().equals(CreateEventSubscription.AlertType.ACTIVITY_FEED)) {
-        recordChange(
-            "filteringRules", original.getFilteringRules(), updated.getFilteringRules(), true);
-        recordChange("enabled", original.getEnabled(), updated.getEnabled());
-        recordChange(
-            "destinations",
-            original.getDestinations(),
-            encryptWebhookSecretKey(updated.getDestinations()),
-            true,
-            objectMatch,
-            false);
-        recordChange("trigger", original.getTrigger(), updated.getTrigger(), true);
-        recordChange("config", original.getConfig(), updated.getConfig(), true);
+        if (shouldCompare("filteringRules"))
+          recordChange(
+              "filteringRules", original.getFilteringRules(), updated.getFilteringRules(), true);
+        if (shouldCompare("enabled"))
+          recordChange("enabled", original.getEnabled(), updated.getEnabled());
+        if (shouldCompare("destinations"))
+          recordChange(
+              "destinations",
+              original.getDestinations(),
+              encryptWebhookSecretKey(updated.getDestinations()),
+              true,
+              objectMatch,
+              false);
+        if (shouldCompare("trigger"))
+          recordChange("trigger", original.getTrigger(), updated.getTrigger(), true);
+        if (shouldCompare("config"))
+          recordChange("config", original.getConfig(), updated.getConfig(), true);
       }
     }
 

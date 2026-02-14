@@ -24,7 +24,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.notRevi
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -1408,15 +1407,20 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("latestResult", original.getLatestResult(), updated.getLatestResult());
-      recordChange("status", original.getEntityStatus(), updated.getEntityStatus());
-      recordChange("testSuite", original.getTestSuite(), updated.getTestSuite());
-      recordChange("termsOfUse", original.getTermsOfUse(), updated.getTermsOfUse());
-      recordChange("security", original.getSecurity(), updated.getSecurity());
-      recordChange("sla", original.getSla(), updated.getSla());
-      updateSchema(original, updated);
-      updateQualityExpectations(original, updated);
-      updateSemantics(original, updated);
+      if (shouldCompare("latestResult"))
+        recordChange("latestResult", original.getLatestResult(), updated.getLatestResult());
+      if (shouldCompare("status"))
+        recordChange("status", original.getEntityStatus(), updated.getEntityStatus());
+      if (shouldCompare("testSuite"))
+        recordChange("testSuite", original.getTestSuite(), updated.getTestSuite());
+      if (shouldCompare("termsOfUse"))
+        recordChange("termsOfUse", original.getTermsOfUse(), updated.getTermsOfUse());
+      if (shouldCompare("security"))
+        recordChange("security", original.getSecurity(), updated.getSecurity());
+      if (shouldCompare("sla")) recordChange("sla", original.getSla(), updated.getSla());
+      if (shouldCompare("schema")) updateSchema(original, updated);
+      if (shouldCompare("qualityExpectations")) updateQualityExpectations(original, updated);
+      if (shouldCompare("semantics")) updateSemantics(original, updated);
       // Preserve immutable creation fields
       updated.setCreatedAt(original.getCreatedAt());
       updated.setCreatedBy(original.getCreatedBy());
@@ -1664,13 +1668,13 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
   @Override
   public void storeEntities(List<DataContract> entities) {
-    List<DataContract> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (DataContract entity : entities) {
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, DataContract.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override

@@ -2,7 +2,6 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.service.Entity.WORKFLOW;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
@@ -68,8 +67,8 @@ public class WorkflowRepository extends EntityRepository<Workflow> {
   }
 
   public void storeEntities(List<Workflow> workflows) {
-    List<Workflow> workflowsToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(workflows.size());
+    List<String> jsons = new ArrayList<>(workflows.size());
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
 
     for (Workflow workflow : workflows) {
@@ -81,13 +80,13 @@ public class WorkflowRepository extends EntityRepository<Workflow> {
 
       workflow.withOpenMetadataServerConnection(null);
 
-      String jsonCopy = gson.toJson(workflow);
-      workflowsToStore.add(gson.fromJson(jsonCopy, Workflow.class));
+      fqns.add(workflow.getFullyQualifiedName());
+      jsons.add(serializeForStorage(workflow));
 
       workflow.withOpenMetadataServerConnection(openmetadataConnection);
     }
 
-    storeMany(workflowsToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   /** Remove the secrets from the secret manager */
@@ -116,8 +115,10 @@ public class WorkflowRepository extends EntityRepository<Workflow> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("status", original.getStatus(), updated.getStatus());
-      recordChange("response", original.getResponse(), updated.getResponse(), true);
+      if (shouldCompare("status"))
+        recordChange("status", original.getStatus(), updated.getStatus());
+      if (shouldCompare("response"))
+        recordChange("response", original.getResponse(), updated.getResponse(), true);
     }
   }
 }

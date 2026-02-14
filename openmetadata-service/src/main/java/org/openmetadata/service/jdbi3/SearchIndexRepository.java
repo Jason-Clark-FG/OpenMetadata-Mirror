@@ -26,7 +26,6 @@ import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTag
 import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusive;
 import static org.openmetadata.service.util.EntityUtil.getSearchIndexField;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -121,8 +120,8 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
 
   @Override
   public void storeEntities(List<SearchIndex> searchIndexes) {
-    List<SearchIndex> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(searchIndexes.size());
+    List<String> jsons = new ArrayList<>(searchIndexes.size());
 
     for (SearchIndex searchIndex : searchIndexes) {
       EntityReference service = searchIndex.getService();
@@ -135,8 +134,8 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
 
       searchIndex.withService(null);
 
-      String jsonCopy = gson.toJson(searchIndex);
-      entitiesToStore.add(gson.fromJson(jsonCopy, SearchIndex.class));
+      fqns.add(searchIndex.getFullyQualifiedName());
+      jsons.add(serializeForStorage(searchIndex));
 
       if (fieldsWithTags != null) {
         searchIndex.setFields(fieldsWithTags);
@@ -144,7 +143,7 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
       searchIndex.withService(service);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -569,25 +568,30 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (updated.getFields() != null) {
-        updateSearchIndexFields(
-            "fields",
-            original.getFields() == null ? null : original.getFields(),
-            updated.getFields(),
-            EntityUtil.searchIndexFieldMatch);
+      if (shouldCompare("fields")) {
+        if (updated.getFields() != null) {
+          updateSearchIndexFields(
+              "fields",
+              original.getFields() == null ? null : original.getFields(),
+              updated.getFields(),
+              EntityUtil.searchIndexFieldMatch);
+        }
       }
-      recordChange(
-          "searchIndexSettings",
-          original.getSearchIndexSettings(),
-          updated.getSearchIndexSettings());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
-      recordChange("indexType", original.getIndexType(), updated.getIndexType());
+      if (shouldCompare("searchIndexSettings"))
+        recordChange(
+            "searchIndexSettings",
+            original.getSearchIndexSettings(),
+            updated.getSearchIndexSettings());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
+      if (shouldCompare("indexType"))
+        recordChange("indexType", original.getIndexType(), updated.getIndexType());
     }
 
     private void updateSearchIndexFields(

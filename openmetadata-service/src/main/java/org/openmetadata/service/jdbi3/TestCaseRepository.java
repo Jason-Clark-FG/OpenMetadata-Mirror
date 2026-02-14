@@ -27,7 +27,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARI
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.security.mask.PIIMasker.maskSampleData;
 
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -752,31 +751,29 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
 
   @Override
   public void storeEntities(List<TestCase> testCases) {
-    List<TestCase> testCasesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(testCases.size());
+    List<String> jsons = new ArrayList<>(testCases.size());
     for (TestCase testCase : testCases) {
       EntityReference testSuite = testCase.getTestSuite();
       EntityReference testDefinition = testCase.getTestDefinition();
       TestCaseResult testCaseResult = testCase.getTestCaseResult();
       List<TestSuite> testSuites = testCase.getTestSuites();
 
-      String jsonCopy =
-          gson.toJson(
-              testCase
-                  .withTestSuite(null)
-                  .withTestSuites(null)
-                  .withTestDefinition(null)
-                  .withTestCaseResult(null));
-      testCasesToStore.add(gson.fromJson(jsonCopy, TestCase.class));
+      testCase
+          .withTestSuite(null)
+          .withTestSuites(null)
+          .withTestDefinition(null)
+          .withTestCaseResult(null);
+      fqns.add(testCase.getFullyQualifiedName());
+      jsons.add(serializeForStorage(testCase));
 
-      // restore the relationships
       testCase
           .withTestSuite(testSuite)
           .withTestSuites(testSuites)
           .withTestDefinition(testDefinition)
           .withTestCaseResult(testCaseResult);
     }
-    storeMany(testCasesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -1237,50 +1234,63 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      EntityLink origEntityLink = EntityLink.parse(original.getEntityLink());
-      EntityReference origTableRef = EntityUtil.validateEntityLink(origEntityLink);
+      if (shouldCompare("entity")) {
+        EntityLink origEntityLink = EntityLink.parse(original.getEntityLink());
+        EntityReference origTableRef = EntityUtil.validateEntityLink(origEntityLink);
 
-      EntityLink updatedEntityLink = EntityLink.parse(updated.getEntityLink());
-      EntityReference updatedTableRef = EntityUtil.validateEntityLink(updatedEntityLink);
+        EntityLink updatedEntityLink = EntityLink.parse(updated.getEntityLink());
+        EntityReference updatedTableRef = EntityUtil.validateEntityLink(updatedEntityLink);
 
-      updateFromRelationship(
-          "entity",
-          updatedTableRef.getType(),
-          origTableRef,
-          updatedTableRef,
-          Relationship.CONTAINS,
-          TEST_CASE,
-          updated.getId());
-      updateFromRelationship(
-          TEST_SUITE_FIELD,
-          TEST_SUITE,
-          original.getTestSuite(),
-          updated.getTestSuite(),
-          Relationship.HAS,
-          TEST_CASE,
-          updated.getId());
-      updateFromRelationship(
-          TEST_DEFINITION,
-          TEST_DEFINITION,
-          original.getTestDefinition(),
-          updated.getTestDefinition(),
-          Relationship.CONTAINS,
-          TEST_CASE,
-          updated.getId());
-      recordChange("parameterValues", original.getParameterValues(), updated.getParameterValues());
-      recordChange("inspectionQuery", original.getInspectionQuery(), updated.getInspectionQuery());
-      recordChange(
-          "computePassedFailedRowCount",
-          original.getComputePassedFailedRowCount(),
-          updated.getComputePassedFailedRowCount());
-      recordChange(
-          "useDynamicAssertion",
-          original.getUseDynamicAssertion(),
-          updated.getUseDynamicAssertion());
-      recordChange(
-          "dimensionColumns", original.getDimensionColumns(), updated.getDimensionColumns());
-      recordChange("testCaseStatus", original.getTestCaseStatus(), updated.getTestCaseStatus());
-      recordChange("testCaseResult", original.getTestCaseResult(), updated.getTestCaseResult());
+        updateFromRelationship(
+            "entity",
+            updatedTableRef.getType(),
+            origTableRef,
+            updatedTableRef,
+            Relationship.CONTAINS,
+            TEST_CASE,
+            updated.getId());
+      }
+      if (shouldCompare(TEST_SUITE_FIELD))
+        updateFromRelationship(
+            TEST_SUITE_FIELD,
+            TEST_SUITE,
+            original.getTestSuite(),
+            updated.getTestSuite(),
+            Relationship.HAS,
+            TEST_CASE,
+            updated.getId());
+      if (shouldCompare(TEST_DEFINITION))
+        updateFromRelationship(
+            TEST_DEFINITION,
+            TEST_DEFINITION,
+            original.getTestDefinition(),
+            updated.getTestDefinition(),
+            Relationship.CONTAINS,
+            TEST_CASE,
+            updated.getId());
+      if (shouldCompare("parameterValues"))
+        recordChange(
+            "parameterValues", original.getParameterValues(), updated.getParameterValues());
+      if (shouldCompare("inspectionQuery"))
+        recordChange(
+            "inspectionQuery", original.getInspectionQuery(), updated.getInspectionQuery());
+      if (shouldCompare("computePassedFailedRowCount"))
+        recordChange(
+            "computePassedFailedRowCount",
+            original.getComputePassedFailedRowCount(),
+            updated.getComputePassedFailedRowCount());
+      if (shouldCompare("useDynamicAssertion"))
+        recordChange(
+            "useDynamicAssertion",
+            original.getUseDynamicAssertion(),
+            updated.getUseDynamicAssertion());
+      if (shouldCompare("dimensionColumns"))
+        recordChange(
+            "dimensionColumns", original.getDimensionColumns(), updated.getDimensionColumns());
+      if (shouldCompare("testCaseStatus"))
+        recordChange("testCaseStatus", original.getTestCaseStatus(), updated.getTestCaseStatus());
+      if (shouldCompare("testCaseResult"))
+        recordChange("testCaseResult", original.getTestCaseResult(), updated.getTestCaseResult());
     }
   }
 

@@ -13,7 +13,6 @@
 
 package org.openmetadata.service.jdbi3;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -73,21 +72,21 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
 
   @Override
   public void storeEntities(List<APICollection> entities) {
-    List<APICollection> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (APICollection apiCollection : entities) {
       EntityReference service = apiCollection.getService();
 
       apiCollection.withService(null);
 
-      String jsonCopy = gson.toJson(apiCollection);
-      entitiesToStore.add(gson.fromJson(jsonCopy, APICollection.class));
+      fqns.add(apiCollection.getFullyQualifiedName());
+      jsons.add(serializeForStorage(apiCollection));
 
       apiCollection.withService(service);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -270,13 +269,14 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
   }
 }

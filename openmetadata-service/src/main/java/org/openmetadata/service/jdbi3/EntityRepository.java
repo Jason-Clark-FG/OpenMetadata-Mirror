@@ -140,6 +140,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.csv.CSVFormat;
@@ -2843,10 +2844,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
       ChangeSource changeSource,
       String ifMatchHeader,
       String impersonatedBy) {
-    // Get all the fields in the original entity that can be updated during PATCH operation
+    Set<String> patchedFieldNames = JsonUtils.extractPatchedFields(patch);
+    Fields optimizedFields = planFieldsForPatch(patchedFieldNames);
+
+    // Get only the fields relevant to this patch operation
     T original;
     try (var ignored = phase("patchLoadOriginal")) {
-      original = get(null, id, patchFields, NON_DELETED, false);
+      original = get(null, id, optimizedFields, NON_DELETED, false);
     }
 
     // Validate ETag if If-Match header is provided
@@ -2863,7 +2867,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     // Apply JSON patch to the original entity to get the updated entity
     return patchCommonWithOptimisticLocking(
-        original, patch, user, uriInfo, changeSource, useOptimisticLocking, impersonatedBy);
+        original,
+        patch,
+        patchedFieldNames,
+        user,
+        uriInfo,
+        changeSource,
+        useOptimisticLocking,
+        impersonatedBy);
   }
 
   /**
@@ -2896,10 +2907,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
       ChangeSource changeSource,
       String ifMatchHeader,
       String impersonatedBy) {
-    // Get all the fields in the original entity that can be updated during PATCH operation
+    Set<String> patchedFieldNames = JsonUtils.extractPatchedFields(patch);
+    Fields optimizedFields = planFieldsForPatch(patchedFieldNames);
+
+    // Get only the fields relevant to this patch operation
     T original;
     try (var ignored = phase("patchLoadOriginalByName")) {
-      original = getByName(null, fqn, patchFields, NON_DELETED, false);
+      original = getByName(null, fqn, optimizedFields, NON_DELETED, false);
     }
 
     // Validate ETag if If-Match header is provided
@@ -2916,29 +2930,26 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     // Apply JSON patch to the original entity to get the updated entity
     return patchCommonWithOptimisticLocking(
-        original, patch, user, uriInfo, changeSource, useOptimisticLocking, impersonatedBy);
+        original,
+        patch,
+        patchedFieldNames,
+        user,
+        uriInfo,
+        changeSource,
+        useOptimisticLocking,
+        impersonatedBy);
   }
 
-  private PatchResponse<T> patchCommon(
-      T original, JsonPatch patch, String user, UriInfo uriInfo, ChangeSource changeSource) {
-    return patchCommonWithOptimisticLocking(
-        original, patch, user, uriInfo, changeSource, false, null);
-  }
-
-  private PatchResponse<T> patchCommonWithOptimisticLocking(
-      T original,
-      JsonPatch patch,
-      String user,
-      UriInfo uriInfo,
-      ChangeSource changeSource,
-      boolean useOptimisticLocking) {
-    return patchCommonWithOptimisticLocking(
-        original, patch, user, uriInfo, changeSource, useOptimisticLocking, null);
+  private Fields planFieldsForPatch(Set<String> patchedFieldNames) {
+    // Always load all patchFields — prepare() depends on relationship fields being present.
+    // The optimization is in shouldCompare() which skips field comparisons in updateInternal().
+    return patchFields;
   }
 
   private PatchResponse<T> patchCommonWithOptimisticLocking(
       T original,
       JsonPatch patch,
+      Set<String> patchedFieldNames,
       String user,
       UriInfo uriInfo,
       ChangeSource changeSource,
@@ -2984,20 +2995,20 @@ public abstract class EntityRepository<T extends EntityInterface> {
     EntityUpdater entityUpdater;
     try (var ignored = phase("patchEntityUpdate")) {
       if (useOptimisticLocking) {
-        // Use the 5-parameter version for optimistic locking
         entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource, true);
+        entityUpdater.setPatchedFields(patchedFieldNames);
         entityUpdater.updateWithOptimisticLocking();
       } else {
-        // Use the 4-parameter version to maintain backward compatibility with concrete repository
-        // implementations
         entityUpdater = getUpdater(original, updated, Operation.PATCH, changeSource);
+        entityUpdater.setPatchedFields(patchedFieldNames);
         entityUpdater.update();
       }
     }
 
+    Fields optimizedInheritedFields = planFieldsForPatch(patchedFieldNames);
     if (entityUpdater.fieldsChanged()) {
       try (var ignored = phase("patchSetInheritedFields")) {
-        setInheritedFields(updated, patchFields); // Restore inherited fields after a change
+        setInheritedFields(updated, optimizedInheritedFields);
       }
     }
     updated.setChangeDescription(entityUpdater.getIncrementalChangeDescription());
@@ -3604,14 +3615,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     entity.setExperts(null);
   }
 
-  @Transaction
-  protected void store(T entity, boolean update) {
-    store(entity, update, null);
-  }
-
-  protected void store(T entity, boolean update, Double expectedVersion) {
-    // Don't store owner, database, href and tags as JSON. Build it on the fly based on
-    // relationships
+  protected String serializeForStorage(T entity) {
     List<EntityReference> owners = entity.getOwners();
     List<EntityReference> children = entity.getChildren();
     List<TagLabel> tags = entity.getTags();
@@ -3621,20 +3625,38 @@ public abstract class EntityRepository<T extends EntityInterface> {
     List<EntityReference> experts = entity.getExperts();
     nullifyEntityFields(entity);
 
+    String json = JsonUtils.pojoToJson(entity);
+
+    entity.setOwners(owners);
+    entity.setChildren(children);
+    entity.setTags(tags);
+    entity.setDomains(domains);
+    entity.setDataProducts(dataProducts);
+    entity.setFollowers(followers);
+    entity.setExperts(experts);
+    return json;
+  }
+
+  @Transaction
+  protected void store(T entity, boolean update) {
+    store(entity, update, null);
+  }
+
+  protected void store(T entity, boolean update, Double expectedVersion) {
+    String json = serializeForStorage(entity);
+
     if (update) {
       if (expectedVersion != null) {
-        // Use optimistic locking with version check
         int rowsUpdated =
             dao.updateWithVersion(
                 dao.getTableName(),
                 dao.getNameHashColumn(),
                 entity.getFullyQualifiedName(),
                 entity.getId().toString(),
-                JsonUtils.pojoToJson(entity),
+                json,
                 expectedVersion.toString());
 
         if (rowsUpdated == 0) {
-          // Version mismatch - the entity was modified by another process
           throw new PreconditionFailedException(
               "The entity has been modified by another user. Please refresh and retry.");
         }
@@ -3646,51 +3668,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
             expectedVersion,
             entity.getVersion());
       } else {
-        // Regular update without version check (backward compatibility)
-        dao.update(entity.getId(), entity.getFullyQualifiedName(), JsonUtils.pojoToJson(entity));
+        dao.update(entity.getId(), entity.getFullyQualifiedName(), json);
         LOG.info("Updated {}:{}:{}", entityType, entity.getId(), entity.getFullyQualifiedName());
       }
       invalidate(entity);
     } else {
-      dao.insert(entity, entity.getFullyQualifiedName());
+      dao.insert(dao.getTableName(), dao.getNameHashColumn(), entity.getFullyQualifiedName(), json);
       LOG.info("Created {}:{}:{}", entityType, entity.getId(), entity.getFullyQualifiedName());
     }
-
-    // Restore the relationships
-    entity.setOwners(owners);
-    entity.setChildren(children);
-    entity.setTags(tags);
-    entity.setDomains(domains);
-    entity.setDataProducts(dataProducts);
-    entity.setFollowers(followers);
-    entity.setExperts(experts);
   }
 
   protected void storeMany(List<T> entities) {
     List<String> fqns = new ArrayList<>(entities.size());
     List<String> jsons = new ArrayList<>(entities.size());
     for (T entity : entities) {
-      List<EntityReference> owners = entity.getOwners();
-      List<EntityReference> children = entity.getChildren();
-      List<TagLabel> tags = entity.getTags();
-      List<EntityReference> domains = entity.getDomains();
-      List<EntityReference> dataProducts = entity.getDataProducts();
-      List<EntityReference> followers = entity.getFollowers();
-      List<EntityReference> experts = entity.getExperts();
-      nullifyEntityFields(entity);
-
       fqns.add(entity.getFullyQualifiedName());
-      jsons.add(JsonUtils.pojoToJson(entity));
-
-      entity.setOwners(owners);
-      entity.setChildren(children);
-      entity.setTags(tags);
-      entity.setDomains(domains);
-      entity.setDataProducts(dataProducts);
-      entity.setFollowers(followers);
-      entity.setExperts(experts);
+      jsons.add(serializeForStorage(entity));
     }
-
     dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
@@ -3699,28 +3693,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     List<UUID> ids = new ArrayList<>(entities.size());
     List<String> jsons = new ArrayList<>(entities.size());
     for (T entity : entities) {
-      List<EntityReference> owners = entity.getOwners();
-      List<EntityReference> children = entity.getChildren();
-      List<TagLabel> tags = entity.getTags();
-      List<EntityReference> domains = entity.getDomains();
-      List<EntityReference> dataProducts = entity.getDataProducts();
-      List<EntityReference> followers = entity.getFollowers();
-      List<EntityReference> experts = entity.getExperts();
-      nullifyEntityFields(entity);
-
       fqns.add(entity.getFullyQualifiedName());
       ids.add(entity.getId());
-      jsons.add(JsonUtils.pojoToJson(entity));
-
-      entity.setOwners(owners);
-      entity.setChildren(children);
-      entity.setTags(tags);
-      entity.setDomains(domains);
-      entity.setDataProducts(dataProducts);
-      entity.setFollowers(followers);
-      entity.setExperts(experts);
+      jsons.add(serializeForStorage(entity));
     }
-
     dao.updateMany(dao.getTableName(), dao.getNameHashColumn(), fqns, ids, jsons);
   }
 
@@ -5678,12 +5654,17 @@ public abstract class EntityRepository<T extends EntityInterface> {
     @Getter protected ChangeDescription incrementalChangeDescription = null;
     private ChangeSource changeSource;
     private final boolean useOptimisticLocking;
+    @Setter private Set<String> patchedFields;
 
     // Store the original FQN at construction time, before any modifications or revert.
     // This is needed because during change consolidation, revert() reassigns 'original' to
     // 'previous',
     // which would cause original.getFullyQualifiedName() to return an outdated value.
     @Getter private final String originalFqn;
+
+    protected boolean shouldCompare(String fieldName) {
+      return patchedFields == null || patchedFields.contains(fieldName);
+    }
 
     public EntityUpdater(T original, T updated, Operation operation) {
       this(original, updated, operation, null);
@@ -5776,6 +5757,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
           }
         }
 
+        // Consolidation compares previous (pre-session) to updated — must compare all fields
+        patchedFields = null;
         // Now updated from previous/original to updated one
         changeDescription = new ChangeDescription();
         if (importMode) {
@@ -6012,20 +5995,21 @@ public abstract class EntityRepository<T extends EntityInterface> {
       } else { // PUT or PATCH operations
         updated.setId(original.getId());
         updateDeleted();
-        updateDescription();
-        updateDisplayName();
-        updateEntityStatus(consolidatingChanges);
-        updateOwners();
-        updateExtension(consolidatingChanges);
-        updateTags(
-            updated.getFullyQualifiedName(), FIELD_TAGS, original.getTags(), updated.getTags());
-        updateDomains();
-        updateDataProducts();
-        updateExperts();
-        updateReviewers();
-        updateStyle();
-        updateLifeCycle();
-        updateCertification();
+        if (shouldCompare("description")) updateDescription();
+        if (shouldCompare("displayName")) updateDisplayName();
+        if (shouldCompare("entityStatus")) updateEntityStatus(consolidatingChanges);
+        if (shouldCompare("owners")) updateOwners();
+        if (shouldCompare("extension")) updateExtension(consolidatingChanges);
+        if (shouldCompare("tags"))
+          updateTags(
+              updated.getFullyQualifiedName(), FIELD_TAGS, original.getTags(), updated.getTags());
+        if (shouldCompare("domains")) updateDomains();
+        if (shouldCompare("dataProducts")) updateDataProducts();
+        if (shouldCompare("experts")) updateExperts();
+        if (shouldCompare("reviewers")) updateReviewers();
+        if (shouldCompare("style")) updateStyle();
+        if (shouldCompare("lifeCycle")) updateLifeCycle();
+        if (shouldCompare("certification")) updateCertification();
         entitySpecificUpdate(consolidatingChanges);
         updateChangeSummary();
       }

@@ -30,7 +30,6 @@ import static org.openmetadata.service.Entity.GLOSSARY_TERM;
 import static org.openmetadata.service.search.SearchClient.GLOSSARY_TERM_SEARCH_INDEX;
 import static org.openmetadata.service.util.EntityUtil.compareTagLabel;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -174,21 +173,21 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
 
   @Override
   public void storeEntities(List<Glossary> entities) {
-    List<Glossary> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Glossary glossary : entities) {
       List<EntityReference> reviewers = glossary.getReviewers();
 
       glossary.withReviewers(null);
 
-      String jsonCopy = gson.toJson(glossary);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Glossary.class));
+      fqns.add(glossary.getFullyQualifiedName());
+      jsons.add(serializeForStorage(glossary));
 
       glossary.withReviewers(reviewers);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -531,7 +530,7 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateName(updated);
+      if (shouldCompare("name")) updateName(updated);
       // Mutually exclusive cannot be updated
       updated.setMutuallyExclusive(original.getMutuallyExclusive());
     }

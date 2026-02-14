@@ -26,7 +26,6 @@ import static org.openmetadata.service.Entity.FIELD_TAGS;
 import static org.openmetadata.service.Entity.SPREADSHEET;
 import static org.openmetadata.service.Entity.WORKSHEET;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -149,31 +148,27 @@ public class WorksheetRepository extends EntityRepository<Worksheet> {
 
   @Override
   public void storeEntities(List<Worksheet> worksheets) {
-    List<Worksheet> worksheetsToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(worksheets.size());
+    List<String> jsons = new ArrayList<>(worksheets.size());
 
     for (Worksheet worksheet : worksheets) {
-      // Save entity-specific relationships
       EntityReference service = worksheet.getService();
       EntityReference spreadsheet = worksheet.getSpreadsheet();
       List<Column> columnWithTags = worksheet.getColumns();
 
-      // Nullify for storage (same as storeEntity)
       worksheet.withService(null).withSpreadsheet(null);
       worksheet.setColumns(ColumnUtil.cloneWithoutTags(columnWithTags));
       if (worksheet.getColumns() != null) {
         worksheet.getColumns().forEach(column -> column.setTags(null));
       }
 
-      // Clone for storage
-      String jsonCopy = gson.toJson(worksheet);
-      worksheetsToStore.add(gson.fromJson(jsonCopy, Worksheet.class));
+      fqns.add(worksheet.getFullyQualifiedName());
+      jsons.add(serializeForStorage(worksheet));
 
-      // Restore in original
       worksheet.withColumns(columnWithTags).withService(service).withSpreadsheet(spreadsheet);
     }
 
-    storeMany(worksheetsToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -535,19 +530,26 @@ public class WorksheetRepository extends EntityRepository<Worksheet> {
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       LOG.info("WorksheetUpdater.entitySpecificUpdate called");
-      recordChange("worksheetId", original.getWorksheetId(), updated.getWorksheetId());
-      recordChange("index", original.getIndex(), updated.getIndex());
-      recordChange("rowCount", original.getRowCount(), updated.getRowCount());
-      recordChange("columnCount", original.getColumnCount(), updated.getColumnCount());
-      // Use updateColumns for proper column handling including tags
-      LOG.info(
-          "Calling updateColumns with original columns: {} and updated columns: {}",
-          original.getColumns() != null ? original.getColumns().size() : "null",
-          updated.getColumns() != null ? updated.getColumns().size() : "null");
-      updateColumns(
-          COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      recordChange("isHidden", original.getIsHidden(), updated.getIsHidden());
-      recordChange("sampleData", original.getSampleData(), updated.getSampleData());
+      if (shouldCompare("worksheetId"))
+        recordChange("worksheetId", original.getWorksheetId(), updated.getWorksheetId());
+      if (shouldCompare("index")) recordChange("index", original.getIndex(), updated.getIndex());
+      if (shouldCompare("rowCount"))
+        recordChange("rowCount", original.getRowCount(), updated.getRowCount());
+      if (shouldCompare("columnCount"))
+        recordChange("columnCount", original.getColumnCount(), updated.getColumnCount());
+      if (shouldCompare("columns")) {
+        // Use updateColumns for proper column handling including tags
+        LOG.info(
+            "Calling updateColumns with original columns: {} and updated columns: {}",
+            original.getColumns() != null ? original.getColumns().size() : "null",
+            updated.getColumns() != null ? updated.getColumns().size() : "null");
+        updateColumns(
+            COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+      }
+      if (shouldCompare("isHidden"))
+        recordChange("isHidden", original.getIsHidden(), updated.getIsHidden());
+      if (shouldCompare("sampleData"))
+        recordChange("sampleData", original.getSampleData(), updated.getSampleData());
     }
   }
 }

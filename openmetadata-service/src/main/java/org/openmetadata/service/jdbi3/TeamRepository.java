@@ -43,7 +43,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.invalid
 import static org.openmetadata.service.exception.CatalogExceptionMessage.invalidParentCount;
 import static org.openmetadata.service.util.EntityUtil.*;
 
-import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -500,8 +499,8 @@ public class TeamRepository extends EntityRepository<Team> {
 
   @Override
   public void storeEntities(List<Team> entities) {
-    List<Team> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Team team : entities) {
       List<EntityReference> users = team.getUsers();
@@ -515,8 +514,8 @@ public class TeamRepository extends EntityRepository<Team> {
           .withPolicies(null)
           .withInheritedRoles(null);
 
-      String jsonCopy = gson.toJson(team);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Team.class));
+      fqns.add(team.getFullyQualifiedName());
+      jsons.add(serializeForStorage(team));
 
       team.withUsers(users)
           .withDefaultRoles(defaultRoles)
@@ -524,7 +523,7 @@ public class TeamRepository extends EntityRepository<Team> {
           .withPolicies(policies);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   /**
@@ -1237,19 +1236,22 @@ public class TeamRepository extends EntityRepository<Team> {
           throw new IllegalArgumentException(INVALID_GROUP_TEAM_CHILDREN_UPDATE);
         }
       }
-      recordChange("profile", original.getProfile(), updated.getProfile(), true);
-      recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable());
-      recordChange("teamType", original.getTeamType(), updated.getTeamType());
+      if (shouldCompare("profile"))
+        recordChange("profile", original.getProfile(), updated.getProfile(), true);
+      if (shouldCompare("isJoinable"))
+        recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable());
+      if (shouldCompare("teamType"))
+        recordChange("teamType", original.getTeamType(), updated.getTeamType());
       // If the team is empty then email should be null, not be empty
       if (CommonUtil.nullOrEmpty(updated.getEmail())) {
         updated.setEmail(null);
       }
-      recordChange("email", original.getEmail(), updated.getEmail());
-      updateUsers(original, updated);
-      updateDefaultRoles(original, updated);
-      updateParents(original, updated);
-      updateChildren(original, updated);
-      updatePolicies(original, updated);
+      if (shouldCompare("email")) recordChange("email", original.getEmail(), updated.getEmail());
+      if (shouldCompare("users")) updateUsers(original, updated);
+      if (shouldCompare("defaultRoles")) updateDefaultRoles(original, updated);
+      if (shouldCompare("parents")) updateParents(original, updated);
+      if (shouldCompare("children")) updateChildren(original, updated);
+      if (shouldCompare("policies")) updatePolicies(original, updated);
       // Invalidate policy cache when team roles/policies/hierarchy changes
       SubjectCache.invalidateAll();
     }

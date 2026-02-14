@@ -44,7 +44,6 @@ import static org.openmetadata.service.util.EntityUtil.termReferenceMatch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
@@ -437,20 +436,20 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   @Override
   public void storeEntities(List<GlossaryTerm> entities) {
-    List<GlossaryTerm> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (GlossaryTerm entity : entities) {
       EntityReference glossary = entity.getGlossary();
       EntityReference parentTerm = entity.getParent();
       List<EntityReference> reviewers = entity.getReviewers();
 
-      String jsonCopy = gson.toJson(entity.withGlossary(null).withParent(null).withReviewers(null));
-      entitiesToStore.add(gson.fromJson(jsonCopy, GlossaryTerm.class));
+      entity.withGlossary(null).withParent(null).withReviewers(null);
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
 
-      // restore the relationships
       entity.withGlossary(glossary).withParent(parentTerm).withReviewers(reviewers);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -1328,10 +1327,11 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       validateParent();
-      updateSynonyms(original, updated);
-      updateReferences(original, updated);
-      updateRelatedTerms(original, updated);
-      updateNameAndParent(updated);
+      if (shouldCompare("synonyms")) updateSynonyms(original, updated);
+      if (shouldCompare("references")) updateReferences(original, updated);
+      if (shouldCompare("relatedTerms")) updateRelatedTerms(original, updated);
+      if (shouldCompare("name") || shouldCompare("parent") || shouldCompare("glossary"))
+        updateNameAndParent(updated);
       // Mutually exclusive cannot be updated
       updated.setMutuallyExclusive(original.getMutuallyExclusive());
     }

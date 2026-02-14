@@ -17,7 +17,6 @@ import static org.openmetadata.schema.type.EventType.ENTITY_FIELDS_CHANGED;
 import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.service.Entity.INGESTION_PIPELINE;
 
-import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
@@ -382,8 +381,8 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
 
   @Override
   public void storeEntities(List<IngestionPipeline> entities) {
-    List<IngestionPipeline> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
 
     for (IngestionPipeline ingestionPipeline : entities) {
@@ -404,8 +403,8 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
           .withOpenMetadataServerConnection(null)
           .withProcessingEngine(null);
 
-      String jsonCopy = gson.toJson(ingestionPipeline);
-      entitiesToStore.add(gson.fromJson(jsonCopy, IngestionPipeline.class));
+      fqns.add(ingestionPipeline.getFullyQualifiedName());
+      jsons.add(serializeForStorage(ingestionPipeline));
 
       ingestionPipeline
           .withService(service)
@@ -413,7 +412,7 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
           .withProcessingEngine(processingEngine);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -684,15 +683,19 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateProcessingEngine(original, updated);
-      updateSourceConfig();
-      updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
-      updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
-      updateEnabled(original.getEnabled(), updated.getEnabled());
-      updateDeployed(original.getDeployed(), updated.getDeployed());
-      updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
-      updateEnableStreamableLogs(
-          original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
+      if (shouldCompare("processingEngine")) updateProcessingEngine(original, updated);
+      if (shouldCompare("sourceConfig")) updateSourceConfig();
+      if (shouldCompare("airflowConfig"))
+        updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
+      if (shouldCompare("loggerLevel"))
+        updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
+      if (shouldCompare("enabled")) updateEnabled(original.getEnabled(), updated.getEnabled());
+      if (shouldCompare("deployed")) updateDeployed(original.getDeployed(), updated.getDeployed());
+      if (shouldCompare("raiseOnError"))
+        updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
+      if (shouldCompare("enableStreamableLogs"))
+        updateEnableStreamableLogs(
+            original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
 
       deployIfRequired(original, updated);
     }

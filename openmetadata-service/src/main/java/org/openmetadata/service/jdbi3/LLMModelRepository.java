@@ -15,7 +15,6 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -142,16 +141,16 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
 
   @Override
   public void storeEntities(List<LLMModel> entities) {
-    List<LLMModel> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (LLMModel entity : entities) {
       EntityReference service = entity.getService();
       entity.withService(null);
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, LLMModel.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
       entity.withService(service);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -193,23 +192,35 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
-      recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
-      recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
-      recordChange(
-          "modelSpecifications",
-          original.getModelSpecifications(),
-          updated.getModelSpecifications(),
-          true);
-      recordChange(
-          "trainingMetadata", original.getTrainingMetadata(), updated.getTrainingMetadata(), true);
-      recordChange(
-          "modelEvaluation", original.getModelEvaluation(), updated.getModelEvaluation(), true);
-      recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
-      recordChange(
-          "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
-      recordChange(
-          "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
+      if (shouldCompare("baseModel"))
+        recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
+      if (shouldCompare("modelVersion"))
+        recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
+      if (shouldCompare("modelProvider"))
+        recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
+      if (shouldCompare("modelSpecifications"))
+        recordChange(
+            "modelSpecifications",
+            original.getModelSpecifications(),
+            updated.getModelSpecifications(),
+            true);
+      if (shouldCompare("trainingMetadata"))
+        recordChange(
+            "trainingMetadata",
+            original.getTrainingMetadata(),
+            updated.getTrainingMetadata(),
+            true);
+      if (shouldCompare("modelEvaluation"))
+        recordChange(
+            "modelEvaluation", original.getModelEvaluation(), updated.getModelEvaluation(), true);
+      if (shouldCompare("costMetrics"))
+        recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
+      if (shouldCompare("deploymentInfo"))
+        recordChange(
+            "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
+      if (shouldCompare("governanceStatus"))
+        recordChange(
+            "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
     }
   }
 }

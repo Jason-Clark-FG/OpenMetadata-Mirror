@@ -23,7 +23,6 @@ import static org.openmetadata.service.util.EntityUtil.customFieldMatch;
 import static org.openmetadata.service.util.EntityUtil.getCustomField;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.gson.Gson;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.UriInfo;
 import java.time.format.DateTimeFormatter;
@@ -105,21 +104,21 @@ public class TypeRepository extends EntityRepository<Type> {
   }
 
   public void storeEntities(List<Type> types) {
-    List<Type> typesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(types.size());
+    List<String> jsons = new ArrayList<>(types.size());
 
     for (Type type : types) {
       List<CustomProperty> customProperties = type.getCustomProperties();
 
       type.withCustomProperties(null);
 
-      String jsonCopy = gson.toJson(type);
-      typesToStore.add(gson.fromJson(jsonCopy, Type.class));
+      fqns.add(type.getFullyQualifiedName());
+      jsons.add(serializeForStorage(type));
 
       type.withCustomProperties(customProperties);
     }
 
-    storeMany(typesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
 
     for (Type type : types) {
       updateTypeMap(type);
@@ -338,7 +337,7 @@ public class TypeRepository extends EntityRepository<Type> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateCustomProperties();
+      if (shouldCompare("customProperties")) updateCustomProperties();
     }
 
     private void updateCustomProperties() {

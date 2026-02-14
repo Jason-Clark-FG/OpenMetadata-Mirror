@@ -21,7 +21,6 @@ import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.getEntityReferenceById;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.entityNameAlreadyExists;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -152,21 +151,21 @@ public class DomainRepository extends EntityRepository<Domain> {
 
   @Override
   public void storeEntities(List<Domain> entities) {
-    List<Domain> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Domain entity : entities) {
       EntityReference parent = entity.getParent();
 
       entity.withParent(null);
 
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Domain.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
 
       entity.withParent(parent);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -439,8 +438,9 @@ public class DomainRepository extends EntityRepository<Domain> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateName(updated);
-      recordChange("domainType", original.getDomainType(), updated.getDomainType());
+      if (shouldCompare("name")) updateName(updated);
+      if (shouldCompare("domainType"))
+        recordChange("domainType", original.getDomainType(), updated.getDomainType());
     }
 
     private void updateName(Domain updated) {

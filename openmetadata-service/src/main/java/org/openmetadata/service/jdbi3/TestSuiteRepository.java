@@ -17,7 +17,6 @@ import static org.openmetadata.service.search.SearchUtils.getAggregationObject;
 import static org.openmetadata.service.util.FullyQualifiedName.quoteName;
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.escapeDoubleQuotes;
 
-import com.google.gson.Gson;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonArrayBuilder;
@@ -661,16 +660,16 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
 
   @Override
   public void storeEntities(List<TestSuite> entities) {
-    List<TestSuite> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (TestSuite entity : entities) {
       List<EntityReference> tests = entity.getTests();
       entity.setTests(null);
-      String jsonCopy = gson.toJson(entity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, TestSuite.class));
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
       entity.setTests(tests);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -988,16 +987,21 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      List<EntityReference> origTests = listOrEmpty(original.getTests());
-      List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
-      List<ResultSummary> origTestCaseResultSummary =
-          listOrEmpty(original.getTestCaseResultSummary());
-      List<ResultSummary> updatedTestCaseResultSummary =
-          listOrEmpty(updated.getTestCaseResultSummary());
-      recordChange(UPDATE_FIELDS, origTests, updatedTests);
-      recordChange(
-          "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
-      recordChange("dataContract", original.getDataContract(), updated.getDataContract());
+      if (shouldCompare(UPDATE_FIELDS)) {
+        List<EntityReference> origTests = listOrEmpty(original.getTests());
+        List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
+        recordChange(UPDATE_FIELDS, origTests, updatedTests);
+      }
+      if (shouldCompare("testCaseResultSummary")) {
+        List<ResultSummary> origTestCaseResultSummary =
+            listOrEmpty(original.getTestCaseResultSummary());
+        List<ResultSummary> updatedTestCaseResultSummary =
+            listOrEmpty(updated.getTestCaseResultSummary());
+        recordChange(
+            "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
+      }
+      if (shouldCompare("dataContract"))
+        recordChange("dataContract", original.getDataContract(), updated.getDataContract());
     }
   }
 }

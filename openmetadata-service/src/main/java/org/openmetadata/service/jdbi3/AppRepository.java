@@ -6,7 +6,6 @@ import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.service.Entity.getEntityReferenceById;
 import static org.openmetadata.service.util.UserUtil.getUser;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -181,17 +180,18 @@ public class AppRepository extends EntityRepository<App> {
 
   @Override
   public void storeEntities(List<App> entities) {
-    List<App> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (App entity : entities) {
       List<EntityReference> ownerRefs = entity.getOwners();
       EntityReference bot = entity.getBot();
-      String jsonCopy = gson.toJson(entity.withOwners(null).withBot(null));
-      entitiesToStore.add(gson.fromJson(jsonCopy, App.class));
+      entity.withOwners(null).withBot(null);
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
       entity.withOwners(ownerRefs);
       entity.setBot(bot);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   public EntityReference getBotUser(App application) {
@@ -548,12 +548,17 @@ public class AppRepository extends EntityRepository<App> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange(
-          "appConfiguration", original.getAppConfiguration(), updated.getAppConfiguration());
-      recordChange("appSchedule", original.getAppSchedule(), updated.getAppSchedule());
-      recordChange("bot", original.getBot(), updated.getBot());
-      recordChange(
-          "eventSubscriptions", original.getEventSubscriptions(), updated.getEventSubscriptions());
+      if (shouldCompare("appConfiguration"))
+        recordChange(
+            "appConfiguration", original.getAppConfiguration(), updated.getAppConfiguration());
+      if (shouldCompare("appSchedule"))
+        recordChange("appSchedule", original.getAppSchedule(), updated.getAppSchedule());
+      if (shouldCompare("bot")) recordChange("bot", original.getBot(), updated.getBot());
+      if (shouldCompare("eventSubscriptions"))
+        recordChange(
+            "eventSubscriptions",
+            original.getEventSubscriptions(),
+            updated.getEventSubscriptions());
     }
   }
 }

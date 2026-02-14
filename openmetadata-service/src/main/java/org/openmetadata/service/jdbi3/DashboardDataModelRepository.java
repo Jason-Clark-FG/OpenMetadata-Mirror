@@ -19,7 +19,6 @@ import static org.openmetadata.service.Entity.FIELD_TAGS;
 import static org.openmetadata.service.Entity.populateEntityFieldTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTagsGracefully;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -158,20 +157,20 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
 
   @Override
   public void storeEntities(List<DashboardDataModel> entities) {
-    List<DashboardDataModel> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (DashboardDataModel dashboardDataModel : entities) {
       EntityReference service = dashboardDataModel.getService();
       dashboardDataModel.withService(null);
 
-      String jsonCopy = gson.toJson(dashboardDataModel);
-      entitiesToStore.add(gson.fromJson(jsonCopy, DashboardDataModel.class));
+      fqns.add(dashboardDataModel.getFullyQualifiedName());
+      jsons.add(serializeForStorage(dashboardDataModel));
 
       dashboardDataModel.withService(service);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -344,17 +343,22 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      DatabaseUtil.validateColumns(original.getColumns());
-      updateColumns("columns", original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
-      recordChange("sql", original.getSql(), updated.getSql());
+      if (shouldCompare("columns")) {
+        DatabaseUtil.validateColumns(original.getColumns());
+        updateColumns(
+            "columns", original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+      }
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
+      if (shouldCompare("sql")) recordChange("sql", original.getSql(), updated.getSql());
     }
   }
 

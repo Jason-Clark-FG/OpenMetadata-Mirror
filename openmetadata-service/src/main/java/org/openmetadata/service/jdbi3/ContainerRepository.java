@@ -14,7 +14,6 @@ import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTag
 import static org.openmetadata.service.util.EntityUtil.getEntityReferences;
 
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -330,8 +329,8 @@ public class ContainerRepository extends EntityRepository<Container> {
 
   @Override
   public void storeEntities(List<Container> containers) {
-    List<Container> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(containers.size());
+    List<String> jsons = new ArrayList<>(containers.size());
 
     for (Container container : containers) {
       EntityReference storageService = container.getService();
@@ -345,8 +344,8 @@ public class ContainerRepository extends EntityRepository<Container> {
 
       container.withService(null).withParent(null);
 
-      String jsonCopy = gson.toJson(container);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Container.class));
+      fqns.add(container.getFullyQualifiedName());
+      jsons.add(serializeForStorage(container));
 
       container.withService(storageService).withParent(parent);
       if (container.getDataModel() != null) {
@@ -354,7 +353,7 @@ public class ContainerRepository extends EntityRepository<Container> {
       }
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -565,38 +564,47 @@ public class ContainerRepository extends EntityRepository<Container> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateDataModel(original, updated);
-      recordChange("prefix", original.getPrefix(), updated.getPrefix());
-      List<ContainerFileFormat> addedItems = new ArrayList<>();
-      List<ContainerFileFormat> deletedItems = new ArrayList<>();
-      recordListChange(
-          "fileFormats",
-          original.getFileFormats(),
-          updated.getFileFormats(),
-          addedItems,
-          deletedItems,
-          EntityUtil.containerFileFormatMatch);
+      if (shouldCompare("dataModel")) updateDataModel(original, updated);
+      if (shouldCompare("prefix"))
+        recordChange("prefix", original.getPrefix(), updated.getPrefix());
+      if (shouldCompare("fileFormats")) {
+        List<ContainerFileFormat> addedItems = new ArrayList<>();
+        List<ContainerFileFormat> deletedItems = new ArrayList<>();
+        recordListChange(
+            "fileFormats",
+            original.getFileFormats(),
+            updated.getFileFormats(),
+            addedItems,
+            deletedItems,
+            EntityUtil.containerFileFormatMatch);
+      }
 
-      // record the changes for size and numOfObjects change without version update.
-      recordChange(
-          "numberOfObjects",
-          original.getNumberOfObjects(),
-          updated.getNumberOfObjects(),
-          false,
-          EntityUtil.objectMatch,
-          false);
-      recordChange(
-          "size", original.getSize(), updated.getSize(), false, EntityUtil.objectMatch, false);
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange("fullPath", original.getFullPath(), updated.getFullPath());
-      recordChange("retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("numberOfObjects"))
+        recordChange(
+            "numberOfObjects",
+            original.getNumberOfObjects(),
+            updated.getNumberOfObjects(),
+            false,
+            EntityUtil.objectMatch,
+            false);
+      if (shouldCompare("size"))
+        recordChange(
+            "size", original.getSize(), updated.getSize(), false, EntityUtil.objectMatch, false);
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("fullPath"))
+        recordChange("fullPath", original.getFullPath(), updated.getFullPath());
+      if (shouldCompare("retentionPeriod"))
+        recordChange(
+            "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void updateDataModel(Container original, Container updated) {

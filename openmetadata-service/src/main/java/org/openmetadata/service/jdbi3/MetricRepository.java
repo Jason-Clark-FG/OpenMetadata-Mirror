@@ -23,7 +23,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.notRevi
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -142,21 +141,21 @@ public class MetricRepository extends EntityRepository<Metric> {
 
   @Override
   public void storeEntities(List<Metric> entities) {
-    List<Metric> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Metric metric : entities) {
       List<EntityReference> relatedMetrics = metric.getRelatedMetrics();
 
       metric.setRelatedMetrics(null);
 
-      String jsonCopy = gson.toJson(metric);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Metric.class));
+      fqns.add(metric.getFullyQualifiedName());
+      jsons.add(serializeForStorage(metric));
 
       metric.setRelatedMetrics(relatedMetrics);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -219,19 +218,25 @@ public class MetricRepository extends EntityRepository<Metric> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("granularity", original.getGranularity(), updated.getGranularity());
-      recordChange("metricType", original.getMetricType(), updated.getMetricType());
-      recordChange(
-          "unitOfMeasurement", original.getUnitOfMeasurement(), updated.getUnitOfMeasurement());
-      recordChange(
-          "customUnitOfMeasurement",
-          original.getCustomUnitOfMeasurement(),
-          updated.getCustomUnitOfMeasurement());
-      if (updated.getMetricExpression() != null) {
+      if (shouldCompare("granularity"))
+        recordChange("granularity", original.getGranularity(), updated.getGranularity());
+      if (shouldCompare("metricType"))
+        recordChange("metricType", original.getMetricType(), updated.getMetricType());
+      if (shouldCompare("unitOfMeasurement"))
         recordChange(
-            "metricExpression", original.getMetricExpression(), updated.getMetricExpression());
+            "unitOfMeasurement", original.getUnitOfMeasurement(), updated.getUnitOfMeasurement());
+      if (shouldCompare("customUnitOfMeasurement"))
+        recordChange(
+            "customUnitOfMeasurement",
+            original.getCustomUnitOfMeasurement(),
+            updated.getCustomUnitOfMeasurement());
+      if (shouldCompare("metricExpression")) {
+        if (updated.getMetricExpression() != null) {
+          recordChange(
+              "metricExpression", original.getMetricExpression(), updated.getMetricExpression());
+        }
       }
-      updateRelatedMetrics(original, updated);
+      if (shouldCompare("relatedMetrics")) updateRelatedMetrics(original, updated);
     }
 
     private void updateRelatedMetrics(Metric original, Metric updated) {

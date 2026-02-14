@@ -13,7 +13,6 @@
 
 package org.openmetadata.service.jdbi3;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -81,15 +80,16 @@ public class BotRepository extends EntityRepository<Bot> {
 
   @Override
   public void storeEntities(List<Bot> entities) {
-    List<Bot> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (Bot entity : entities) {
       EntityReference botUser = entity.getBotUser();
-      String jsonCopy = gson.toJson(entity.withBotUser(null));
-      entitiesToStore.add(gson.fromJson(jsonCopy, Bot.class));
+      entity.withBotUser(null);
+      fqns.add(entity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(entity));
       entity.withBotUser(botUser);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -135,7 +135,7 @@ public class BotRepository extends EntityRepository<Bot> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateUser(original, updated);
+      if (shouldCompare(BOT_UPDATE_FIELDS)) updateUser(original, updated);
     }
 
     private void updateUser(Bot original, Bot updated) {

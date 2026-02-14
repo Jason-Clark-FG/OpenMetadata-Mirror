@@ -27,7 +27,6 @@ import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTag
 import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusive;
 import static org.openmetadata.service.util.EntityUtil.taskMatch;
 
-import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
@@ -618,8 +617,8 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
 
   @Override
   public void storeEntities(List<Pipeline> pipelines) {
-    List<Pipeline> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(pipelines.size());
+    List<String> jsons = new ArrayList<>(pipelines.size());
 
     for (Pipeline pipeline : pipelines) {
       EntityReference service = pipeline.getService();
@@ -628,13 +627,13 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
       pipeline.withService(null);
       pipeline.setTasks(cloneWithoutTagsAndOwners(taskWithTagsAndOwners));
 
-      String jsonCopy = gson.toJson(pipeline);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Pipeline.class));
+      fqns.add(pipeline.getFullyQualifiedName());
+      jsons.add(serializeForStorage(pipeline));
 
       pipeline.withService(service).withTasks(taskWithTagsAndOwners);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -924,19 +923,23 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateTasks(original, updated);
-      recordChange("state", original.getState(), updated.getState());
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange("concurrency", original.getConcurrency(), updated.getConcurrency());
-      recordChange(
-          "pipelineLocation", original.getPipelineLocation(), updated.getPipelineLocation());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("tasks")) updateTasks(original, updated);
+      if (shouldCompare("state")) recordChange("state", original.getState(), updated.getState());
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("concurrency"))
+        recordChange("concurrency", original.getConcurrency(), updated.getConcurrency());
+      if (shouldCompare("pipelineLocation"))
+        recordChange(
+            "pipelineLocation", original.getPipelineLocation(), updated.getPipelineLocation());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void updateTasks(Pipeline original, Pipeline updated) {

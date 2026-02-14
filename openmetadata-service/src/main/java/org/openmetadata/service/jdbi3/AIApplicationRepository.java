@@ -83,50 +83,72 @@ public class AIApplicationRepository extends EntityRepository<AIApplication> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("applicationType", original.getApplicationType(), updated.getApplicationType());
-      recordChange(
-          "developmentStage", original.getDevelopmentStage(), updated.getDevelopmentStage());
-      recordChange(
-          "modelConfigurations",
-          original.getModelConfigurations(),
-          updated.getModelConfigurations(),
-          true);
-      recordChange("primaryModel", original.getPrimaryModel(), updated.getPrimaryModel(), true);
-      recordChange(
-          "promptTemplates", original.getPromptTemplates(), updated.getPromptTemplates(), true);
-      recordChange("tools", original.getTools(), updated.getTools(), true);
-      recordChange("dataSources", original.getDataSources(), updated.getDataSources(), true);
-      recordChange(
-          "knowledgeBases", original.getKnowledgeBases(), updated.getKnowledgeBases(), true);
-      recordChange(
-          "upstreamApplications",
-          original.getUpstreamApplications(),
-          updated.getUpstreamApplications(),
-          true);
-      recordChange(
-          "downstreamApplications",
-          original.getDownstreamApplications(),
-          updated.getDownstreamApplications(),
-          true);
-      recordChange("framework", original.getFramework(), updated.getFramework(), true);
-      recordChange(
-          "governanceMetadata",
-          original.getGovernanceMetadata(),
-          updated.getGovernanceMetadata(),
-          true);
-      recordChange("biasMetrics", original.getBiasMetrics(), updated.getBiasMetrics(), true);
-      recordChange(
-          "performanceMetrics",
-          original.getPerformanceMetrics(),
-          updated.getPerformanceMetrics(),
-          true);
-      recordChange(
-          "qualityMetrics", original.getQualityMetrics(), updated.getQualityMetrics(), true);
-      recordChange("safetyMetrics", original.getSafetyMetrics(), updated.getSafetyMetrics(), true);
-      recordChange("testSuites", original.getTestSuites(), updated.getTestSuites(), true);
-      recordChange("sourceCode", original.getSourceCode(), updated.getSourceCode());
-      recordChange("deploymentUrl", original.getDeploymentUrl(), updated.getDeploymentUrl());
-      recordChange("documentation", original.getDocumentation(), updated.getDocumentation());
+      if (shouldCompare("applicationType"))
+        recordChange(
+            "applicationType", original.getApplicationType(), updated.getApplicationType());
+      if (shouldCompare("developmentStage"))
+        recordChange(
+            "developmentStage", original.getDevelopmentStage(), updated.getDevelopmentStage());
+      if (shouldCompare("modelConfigurations"))
+        recordChange(
+            "modelConfigurations",
+            original.getModelConfigurations(),
+            updated.getModelConfigurations(),
+            true);
+      if (shouldCompare("primaryModel"))
+        recordChange("primaryModel", original.getPrimaryModel(), updated.getPrimaryModel(), true);
+      if (shouldCompare("promptTemplates"))
+        recordChange(
+            "promptTemplates", original.getPromptTemplates(), updated.getPromptTemplates(), true);
+      if (shouldCompare("tools"))
+        recordChange("tools", original.getTools(), updated.getTools(), true);
+      if (shouldCompare("dataSources"))
+        recordChange("dataSources", original.getDataSources(), updated.getDataSources(), true);
+      if (shouldCompare("knowledgeBases"))
+        recordChange(
+            "knowledgeBases", original.getKnowledgeBases(), updated.getKnowledgeBases(), true);
+      if (shouldCompare("upstreamApplications"))
+        recordChange(
+            "upstreamApplications",
+            original.getUpstreamApplications(),
+            updated.getUpstreamApplications(),
+            true);
+      if (shouldCompare("downstreamApplications"))
+        recordChange(
+            "downstreamApplications",
+            original.getDownstreamApplications(),
+            updated.getDownstreamApplications(),
+            true);
+      if (shouldCompare("framework"))
+        recordChange("framework", original.getFramework(), updated.getFramework(), true);
+      if (shouldCompare("governanceMetadata"))
+        recordChange(
+            "governanceMetadata",
+            original.getGovernanceMetadata(),
+            updated.getGovernanceMetadata(),
+            true);
+      if (shouldCompare("biasMetrics"))
+        recordChange("biasMetrics", original.getBiasMetrics(), updated.getBiasMetrics(), true);
+      if (shouldCompare("performanceMetrics"))
+        recordChange(
+            "performanceMetrics",
+            original.getPerformanceMetrics(),
+            updated.getPerformanceMetrics(),
+            true);
+      if (shouldCompare("qualityMetrics"))
+        recordChange(
+            "qualityMetrics", original.getQualityMetrics(), updated.getQualityMetrics(), true);
+      if (shouldCompare("safetyMetrics"))
+        recordChange(
+            "safetyMetrics", original.getSafetyMetrics(), updated.getSafetyMetrics(), true);
+      if (shouldCompare("testSuites"))
+        recordChange("testSuites", original.getTestSuites(), updated.getTestSuites(), true);
+      if (shouldCompare("sourceCode"))
+        recordChange("sourceCode", original.getSourceCode(), updated.getSourceCode());
+      if (shouldCompare("deploymentUrl"))
+        recordChange("deploymentUrl", original.getDeploymentUrl(), updated.getDeploymentUrl());
+      if (shouldCompare("documentation"))
+        recordChange("documentation", original.getDocumentation(), updated.getDocumentation());
     }
   }
 }

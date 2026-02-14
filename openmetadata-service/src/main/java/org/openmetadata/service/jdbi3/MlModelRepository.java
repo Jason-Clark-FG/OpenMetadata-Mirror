@@ -25,7 +25,6 @@ import static org.openmetadata.service.util.EntityUtil.entityReferenceMatch;
 import static org.openmetadata.service.util.EntityUtil.mlFeatureMatch;
 import static org.openmetadata.service.util.EntityUtil.mlHyperParameterMatch;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -283,8 +282,8 @@ public class MlModelRepository extends EntityRepository<MlModel> {
 
   @Override
   public void storeEntities(List<MlModel> entities) {
-    List<MlModel> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (MlModel mlModel : entities) {
       EntityReference dashboard = mlModel.getDashboard();
@@ -292,13 +291,13 @@ public class MlModelRepository extends EntityRepository<MlModel> {
 
       mlModel.withService(null).withDashboard(null);
 
-      String jsonCopy = gson.toJson(mlModel);
-      entitiesToStore.add(gson.fromJson(jsonCopy, MlModel.class));
+      fqns.add(mlModel.getFullyQualifiedName());
+      jsons.add(serializeForStorage(mlModel));
 
       mlModel.withService(service).withDashboard(dashboard);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -493,21 +492,23 @@ public class MlModelRepository extends EntityRepository<MlModel> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateAlgorithm(original, updated);
-      updateDashboard(original, updated);
-      updateMlFeatures(original, updated);
-      updateMlHyperParameters(original, updated);
-      updateMlStore(original, updated);
-      updateServer(original, updated);
-      updateTarget(original, updated);
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("algorithm")) updateAlgorithm(original, updated);
+      if (shouldCompare("dashboard")) updateDashboard(original, updated);
+      if (shouldCompare("mlFeatures")) updateMlFeatures(original, updated);
+      if (shouldCompare("mlHyperParameters")) updateMlHyperParameters(original, updated);
+      if (shouldCompare("mlStore")) updateMlStore(original, updated);
+      if (shouldCompare("server")) updateServer(original, updated);
+      if (shouldCompare("target")) updateTarget(original, updated);
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void updateAlgorithm(MlModel origModel, MlModel updatedModel) {

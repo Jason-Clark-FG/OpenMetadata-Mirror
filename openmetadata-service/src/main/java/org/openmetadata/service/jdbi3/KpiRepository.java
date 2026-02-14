@@ -7,7 +7,6 @@ import static org.openmetadata.service.Entity.getEntity;
 import static org.openmetadata.service.Entity.getEntityByName;
 import static org.quartz.DateBuilder.MILLISECONDS_IN_DAY;
 
-import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -180,16 +179,17 @@ public class KpiRepository extends EntityRepository<Kpi> {
 
   @Override
   public void storeEntities(List<Kpi> entities) {
-    List<Kpi> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
     for (Kpi kpi : entities) {
       EntityReference dataInsightChart = kpi.getDataInsightChart();
       KpiResult kpiResults = kpi.getKpiResult();
-      String jsonCopy = gson.toJson(kpi.withDataInsightChart(null).withKpiResult(null));
-      entitiesToStore.add(gson.fromJson(jsonCopy, Kpi.class));
+      kpi.withDataInsightChart(null).withKpiResult(null);
+      fqns.add(kpi.getFullyQualifiedName());
+      jsons.add(serializeForStorage(kpi));
       kpi.withDataInsightChart(dataInsightChart).withKpiResult(kpiResults);
     }
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -267,19 +267,24 @@ public class KpiRepository extends EntityRepository<Kpi> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateToRelationship(
-          "dataInsightChart",
-          KPI,
-          original.getId(),
-          Relationship.USES,
-          DATA_INSIGHT_CHART,
-          original.getDataInsightChart(),
-          updated.getDataInsightChart(),
-          false);
-      recordChange("targetValue", original.getTargetValue(), updated.getTargetValue(), true);
-      recordChange("startDate", original.getStartDate(), updated.getStartDate());
-      recordChange("endDate", original.getEndDate(), updated.getEndDate());
-      recordChange("metricType", original.getMetricType(), updated.getMetricType());
+      if (shouldCompare("dataInsightChart"))
+        updateToRelationship(
+            "dataInsightChart",
+            KPI,
+            original.getId(),
+            Relationship.USES,
+            DATA_INSIGHT_CHART,
+            original.getDataInsightChart(),
+            updated.getDataInsightChart(),
+            false);
+      if (shouldCompare("targetValue"))
+        recordChange("targetValue", original.getTargetValue(), updated.getTargetValue(), true);
+      if (shouldCompare("startDate"))
+        recordChange("startDate", original.getStartDate(), updated.getStartDate());
+      if (shouldCompare("endDate"))
+        recordChange("endDate", original.getEndDate(), updated.getEndDate());
+      if (shouldCompare("metricType"))
+        recordChange("metricType", original.getMetricType(), updated.getMetricType());
     }
   }
 }

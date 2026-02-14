@@ -29,7 +29,6 @@ import static org.openmetadata.service.Entity.USER;
 import static org.openmetadata.service.Entity.getEntityTimeSeriesRepository;
 import static org.openmetadata.service.util.EntityUtil.objectMatch;
 
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
@@ -259,8 +258,8 @@ public class UserRepository extends EntityRepository<User> {
 
   @Override
   public void storeEntities(List<User> entities) {
-    List<User> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (User user : entities) {
       List<EntityReference> roles = user.getRoles();
@@ -275,13 +274,13 @@ public class UserRepository extends EntityRepository<User> {
             user.getName(), user.getAuthenticationMechanism());
       }
 
-      String jsonCopy = gson.toJson(user);
-      entitiesToStore.add(gson.fromJson(jsonCopy, User.class));
+      fqns.add(user.getFullyQualifiedName());
+      jsons.add(serializeForStorage(user));
 
       user.withRoles(roles).withTeams(teams).withDefaultPersona(defaultPersona);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   public void updateUserLastLoginTime(User orginalUser, long lastLoginTime) {
@@ -1214,28 +1213,37 @@ public class UserRepository extends EntityRepository<User> {
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       // LowerCase Email
       updated.setEmail(original.getEmail().toLowerCase());
-      recordChange(
-          "lastLoginTime",
-          original.getLastLoginTime(),
-          updated.getLastLoginTime(),
-          false,
-          objectMatch,
-          false);
+      if (shouldCompare("lastLoginTime"))
+        recordChange(
+            "lastLoginTime",
+            original.getLastLoginTime(),
+            updated.getLastLoginTime(),
+            false,
+            objectMatch,
+            false);
 
-      // Updates
-      updateRoles(original, updated);
-      updateTeams(original, updated);
-      updatePersonas(original, updated);
-      updateDefaultPersona(original, updated);
-      recordChange("profile", original.getProfile(), updated.getProfile(), true);
-      recordChange("timezone", original.getTimezone(), updated.getTimezone());
-      recordChange("isBot", original.getIsBot(), updated.getIsBot());
-      recordChange("isAdmin", original.getIsAdmin(), updated.getIsAdmin());
-      recordChange("isEmailVerified", original.getIsEmailVerified(), updated.getIsEmailVerified());
-      recordChange(
-          "allowImpersonation", original.getAllowImpersonation(), updated.getAllowImpersonation());
-      updatePersonaPreferences(original, updated);
-      updateAuthenticationMechanism(original, updated);
+      if (shouldCompare("roles")) updateRoles(original, updated);
+      if (shouldCompare("teams")) updateTeams(original, updated);
+      if (shouldCompare("personas")) updatePersonas(original, updated);
+      if (shouldCompare("defaultPersona")) updateDefaultPersona(original, updated);
+      if (shouldCompare("profile"))
+        recordChange("profile", original.getProfile(), updated.getProfile(), true);
+      if (shouldCompare("timezone"))
+        recordChange("timezone", original.getTimezone(), updated.getTimezone());
+      if (shouldCompare("isBot")) recordChange("isBot", original.getIsBot(), updated.getIsBot());
+      if (shouldCompare("isAdmin"))
+        recordChange("isAdmin", original.getIsAdmin(), updated.getIsAdmin());
+      if (shouldCompare("isEmailVerified"))
+        recordChange(
+            "isEmailVerified", original.getIsEmailVerified(), updated.getIsEmailVerified());
+      if (shouldCompare("allowImpersonation"))
+        recordChange(
+            "allowImpersonation",
+            original.getAllowImpersonation(),
+            updated.getAllowImpersonation());
+      if (shouldCompare("personaPreferences")) updatePersonaPreferences(original, updated);
+      if (shouldCompare("authenticationMechanism"))
+        updateAuthenticationMechanism(original, updated);
       // Invalidate policy cache for this user when roles/teams change
       SubjectCache.invalidateUser(updated.getName());
     }

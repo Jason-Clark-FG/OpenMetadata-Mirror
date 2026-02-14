@@ -21,7 +21,6 @@ import static org.openmetadata.service.Entity.DASHBOARD;
 import static org.openmetadata.service.Entity.FIELD_DESCRIPTION;
 import static org.openmetadata.service.Entity.FIELD_TAGS;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -383,8 +382,8 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
 
   @Override
   public void storeEntities(List<Dashboard> dashboards) {
-    List<Dashboard> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(dashboards.size());
+    List<String> jsons = new ArrayList<>(dashboards.size());
 
     for (Dashboard dashboard : dashboards) {
       EntityReference service = dashboard.getService();
@@ -393,13 +392,13 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
 
       dashboard.withService(null).withCharts(null).withDataModels(null);
 
-      String jsonCopy = gson.toJson(dashboard);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Dashboard.class));
+      fqns.add(dashboard.getFullyQualifiedName());
+      jsons.add(serializeForStorage(dashboard));
 
       dashboard.withService(service).withCharts(charts).withDataModels(dataModels);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -607,24 +606,27 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      update(
-          Entity.CHART,
-          "charts",
-          listOrEmpty(updated.getCharts()),
-          listOrEmpty(original.getCharts()));
-      update(
-          Entity.DASHBOARD_DATA_MODEL,
-          "dataModels",
-          listOrEmpty(updated.getDataModels()),
-          listOrEmpty(original.getDataModels()));
-      updateDashboardUrl(original, updated);
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("charts"))
+        update(
+            Entity.CHART,
+            "charts",
+            listOrEmpty(updated.getCharts()),
+            listOrEmpty(original.getCharts()));
+      if (shouldCompare("dataModels"))
+        update(
+            Entity.DASHBOARD_DATA_MODEL,
+            "dataModels",
+            listOrEmpty(updated.getDataModels()),
+            listOrEmpty(original.getDataModels()));
+      if (shouldCompare("sourceUrl")) updateDashboardUrl(original, updated);
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void update(

@@ -6,7 +6,6 @@ import static org.openmetadata.schema.type.EventType.ENTITY_FIELDS_CHANGED;
 import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.service.Entity.USER;
 
-import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
@@ -219,8 +218,8 @@ public class QueryRepository extends EntityRepository<Query> {
 
   @Override
   public void storeEntities(List<Query> entities) {
-    List<Query> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Query queryEntity : entities) {
       List<EntityReference> queryUsage = queryEntity.getQueryUsedIn();
@@ -228,13 +227,13 @@ public class QueryRepository extends EntityRepository<Query> {
 
       queryEntity.withQueryUsedIn(null).withUsers(null);
 
-      String jsonCopy = gson.toJson(queryEntity);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Query.class));
+      fqns.add(queryEntity.getFullyQualifiedName());
+      jsons.add(serializeForStorage(queryEntity));
 
       queryEntity.withQueryUsedIn(queryUsage).withUsers(queryUsers);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -395,37 +394,42 @@ public class QueryRepository extends EntityRepository<Query> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updateFromRelationships(
-          "users",
-          USER,
-          original.getUsers(),
-          updated.getUsers() == null ? new ArrayList<>() : updated.getUsers(),
-          Relationship.USES,
-          Entity.QUERY,
-          original.getId());
-      List<EntityReference> added = new ArrayList<>();
-      List<EntityReference> deleted = new ArrayList<>();
-      recordListChange(
-          "queryUsedIn",
-          original.getQueryUsedIn(),
-          updated.getQueryUsedIn(),
-          added,
-          deleted,
-          EntityUtil.entityReferenceMatch);
-      // Store processed Lineage
-      recordChange(
-          "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
-      // Store Query Used in Relation
-      recordChange("usedBy", original.getUsedBy(), updated.getUsedBy(), true);
-      storeQueryUsedIn(updated.getId(), added, deleted);
-      // Query is a required field. Cannot be removed.
-      if (updated.getQuery() != null) {
-        String originalChecksum = EntityUtil.hash(original.getQuery());
-        String updatedChecksum = EntityUtil.hash(updated.getQuery());
-        if (!originalChecksum.equals(updatedChecksum)) {
-          updated.setChecksum(updatedChecksum);
-          recordChange("query", original.getQuery(), updated.getQuery());
-          recordChange("checksum", original.getChecksum(), updated.getChecksum());
+      if (shouldCompare("users"))
+        updateFromRelationships(
+            "users",
+            USER,
+            original.getUsers(),
+            updated.getUsers() == null ? new ArrayList<>() : updated.getUsers(),
+            Relationship.USES,
+            Entity.QUERY,
+            original.getId());
+      if (shouldCompare("queryUsedIn")) {
+        List<EntityReference> added = new ArrayList<>();
+        List<EntityReference> deleted = new ArrayList<>();
+        recordListChange(
+            "queryUsedIn",
+            original.getQueryUsedIn(),
+            updated.getQueryUsedIn(),
+            added,
+            deleted,
+            EntityUtil.entityReferenceMatch);
+        storeQueryUsedIn(updated.getId(), added, deleted);
+      }
+      if (shouldCompare("processedLineage"))
+        recordChange(
+            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+      if (shouldCompare("usedBy"))
+        recordChange("usedBy", original.getUsedBy(), updated.getUsedBy(), true);
+      if (shouldCompare("query")) {
+        // Query is a required field. Cannot be removed.
+        if (updated.getQuery() != null) {
+          String originalChecksum = EntityUtil.hash(original.getQuery());
+          String updatedChecksum = EntityUtil.hash(updated.getQuery());
+          if (!originalChecksum.equals(updatedChecksum)) {
+            updated.setChecksum(updatedChecksum);
+            recordChange("query", original.getQuery(), updated.getQuery());
+            recordChange("checksum", original.getChecksum(), updated.getChecksum());
+          }
         }
       }
     }

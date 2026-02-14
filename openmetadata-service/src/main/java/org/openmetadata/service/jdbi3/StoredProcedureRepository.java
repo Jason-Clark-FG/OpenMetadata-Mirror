@@ -5,7 +5,6 @@ import static org.openmetadata.service.Entity.DATABASE_SCHEMA;
 import static org.openmetadata.service.Entity.FIELD_SERVICE;
 import static org.openmetadata.service.Entity.STORED_PROCEDURE;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,25 +70,21 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
 
   @Override
   public void storeEntities(List<StoredProcedure> storedProcedures) {
-    List<StoredProcedure> storedProceduresToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(storedProcedures.size());
+    List<String> jsons = new ArrayList<>(storedProcedures.size());
 
     for (StoredProcedure storedProcedure : storedProcedures) {
-      // Save entity-specific relationships
       EntityReference service = storedProcedure.getService();
 
-      // Nullify for storage (same as storeEntity)
       storedProcedure.withService(null);
 
-      // Clone for storage
-      String jsonCopy = gson.toJson(storedProcedure);
-      storedProceduresToStore.add(gson.fromJson(jsonCopy, StoredProcedure.class));
+      fqns.add(storedProcedure.getFullyQualifiedName());
+      jsons.add(serializeForStorage(storedProcedure));
 
-      // Restore in original
       storedProcedure.withService(service);
     }
 
-    storeMany(storedProceduresToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -256,30 +251,38 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      // storedProcedureCode is a required field. Cannot be null.
-      if (updated.getStoredProcedureCode() != null) {
-        recordChange(
-            "storedProcedureCode",
-            original.getStoredProcedureCode(),
-            updated.getStoredProcedureCode());
+      if (shouldCompare("storedProcedureCode")) {
+        // storedProcedureCode is a required field. Cannot be null.
+        if (updated.getStoredProcedureCode() != null) {
+          recordChange(
+              "storedProcedureCode",
+              original.getStoredProcedureCode(),
+              updated.getStoredProcedureCode());
+        }
       }
-      if (updated.getStoredProcedureType() != null) {
-        recordChange(
-            "storedProcedureType",
-            original.getStoredProcedureType(),
-            updated.getStoredProcedureType());
+      if (shouldCompare("storedProcedureType")) {
+        if (updated.getStoredProcedureType() != null) {
+          recordChange(
+              "storedProcedureType",
+              original.getStoredProcedureType(),
+              updated.getStoredProcedureType());
+        }
       }
-      updateProcessedLineage(original, updated);
-      recordChange(
-          "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("processedLineage")) {
+        updateProcessedLineage(original, updated);
+        recordChange(
+            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+      }
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void updateProcessedLineage(StoredProcedure origSP, StoredProcedure updatedSP) {

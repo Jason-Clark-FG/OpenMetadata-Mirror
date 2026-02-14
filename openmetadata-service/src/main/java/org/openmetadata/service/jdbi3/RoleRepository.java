@@ -18,7 +18,6 @@ import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.service.Entity.POLICIES;
 import static org.openmetadata.service.util.EntityUtil.entityReferenceMatch;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -209,20 +208,20 @@ public class RoleRepository extends EntityRepository<Role> {
 
   @Override
   public void storeEntities(List<Role> entities) {
-    List<Role> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (Role role : entities) {
       List<EntityReference> policies = role.getPolicies();
       role.withPolicies(null);
 
-      String jsonCopy = gson.toJson(role);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Role.class));
+      fqns.add(role.getFullyQualifiedName());
+      jsons.add(serializeForStorage(role));
 
       role.withPolicies(policies);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -262,7 +261,8 @@ public class RoleRepository extends EntityRepository<Role> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      updatePolicies(listOrEmpty(original.getPolicies()), listOrEmpty(updated.getPolicies()));
+      if (shouldCompare("policies"))
+        updatePolicies(listOrEmpty(original.getPolicies()), listOrEmpty(updated.getPolicies()));
       // Invalidate policy cache when role policies change
       SubjectCache.invalidateAll();
     }

@@ -26,7 +26,6 @@ import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTag
 import static org.openmetadata.service.resources.tags.TagLabelUtil.batchFetchDerivedTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusive;
 
-import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -160,8 +159,8 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
 
   @Override
   public void storeEntities(List<APIEndpoint> entities) {
-    List<APIEndpoint> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(entities.size());
+    List<String> jsons = new ArrayList<>(entities.size());
 
     for (APIEndpoint apiEndpoint : entities) {
       EntityReference apiCollection = apiEndpoint.getApiCollection();
@@ -181,8 +180,8 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
         apiEndpoint.getResponseSchema().getSchemaFields().forEach(field -> field.setTags(null));
       }
 
-      String jsonCopy = gson.toJson(apiEndpoint);
-      entitiesToStore.add(gson.fromJson(jsonCopy, APIEndpoint.class));
+      fqns.add(apiEndpoint.getFullyQualifiedName());
+      jsons.add(serializeForStorage(apiEndpoint));
 
       if (requestFieldsWithTags != null) {
         apiEndpoint.getRequestSchema().withSchemaFields(requestFieldsWithTags);
@@ -193,7 +192,7 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
       apiEndpoint.withApiCollection(apiCollection);
     }
 
-    storeMany(entitiesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -692,43 +691,50 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("endpointURL", original.getEndpointURL(), updated.getEndpointURL());
-      recordChange("requestMethod", original.getRequestMethod(), updated.getRequestMethod());
+      if (shouldCompare("endpointURL"))
+        recordChange("endpointURL", original.getEndpointURL(), updated.getEndpointURL());
+      if (shouldCompare("requestMethod"))
+        recordChange("requestMethod", original.getRequestMethod(), updated.getRequestMethod());
 
-      if (updated.getRequestSchema() != null
-          && updated.getRequestSchema().getSchemaFields() != null) {
-        updateSchemaFields(
-            "requestSchema.schemaFields",
-            original.getResponseSchema() == null
-                ? new ArrayList<>()
-                : listOrEmpty(
-                    original.getRequestSchema() != null
-                        ? original.getRequestSchema().getSchemaFields()
-                        : null),
-            listOrEmpty(updated.getRequestSchema().getSchemaFields()),
-            EntityUtil.schemaFieldMatch);
+      if (shouldCompare("requestSchema")) {
+        if (updated.getRequestSchema() != null
+            && updated.getRequestSchema().getSchemaFields() != null) {
+          updateSchemaFields(
+              "requestSchema.schemaFields",
+              original.getResponseSchema() == null
+                  ? new ArrayList<>()
+                  : listOrEmpty(
+                      original.getRequestSchema() != null
+                          ? original.getRequestSchema().getSchemaFields()
+                          : null),
+              listOrEmpty(updated.getRequestSchema().getSchemaFields()),
+              EntityUtil.schemaFieldMatch);
+        }
       }
 
-      if (updated.getResponseSchema() != null
-          && updated.getResponseSchema().getSchemaFields() != null) {
-        updateSchemaFields(
-            "responseSchema.schemaFields",
-            original.getResponseSchema() == null
-                ? new ArrayList<>()
-                : listOrEmpty(
-                    original.getResponseSchema().getSchemaFields() != null
-                        ? original.getResponseSchema().getSchemaFields()
-                        : null),
-            listOrEmpty(updated.getResponseSchema().getSchemaFields()),
-            EntityUtil.schemaFieldMatch);
+      if (shouldCompare("responseSchema")) {
+        if (updated.getResponseSchema() != null
+            && updated.getResponseSchema().getSchemaFields() != null) {
+          updateSchemaFields(
+              "responseSchema.schemaFields",
+              original.getResponseSchema() == null
+                  ? new ArrayList<>()
+                  : listOrEmpty(
+                      original.getResponseSchema().getSchemaFields() != null
+                          ? original.getResponseSchema().getSchemaFields()
+                          : null),
+              listOrEmpty(updated.getResponseSchema().getSchemaFields()),
+              EntityUtil.schemaFieldMatch);
+        }
       }
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
     }
 
     private void updateSchemaFields(

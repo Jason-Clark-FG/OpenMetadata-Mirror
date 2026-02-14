@@ -39,7 +39,6 @@ import static org.openmetadata.service.util.LambdaExceptionUtil.ignoringComparat
 import static org.openmetadata.service.util.LambdaExceptionUtil.rethrowFunction;
 
 import com.google.common.collect.Streams;
-import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.SecurityContext;
 import java.io.IOException;
@@ -1461,28 +1460,24 @@ public class TableRepository extends EntityRepository<Table> {
 
   @Override
   public void storeEntities(List<Table> tables) {
-    List<Table> tablesToStore = new ArrayList<>();
-    Gson gson = new Gson();
+    List<String> fqns = new ArrayList<>(tables.size());
+    List<String> jsons = new ArrayList<>(tables.size());
 
     for (Table table : tables) {
-      // Save entity-specific relationships
       EntityReference service = table.getService();
       List<Column> columnWithTags = table.getColumns();
 
-      // Nullify for storage (same as storeEntity)
       table.withService(null);
       table.setColumns(ColumnUtil.cloneWithoutTags(columnWithTags));
       table.getColumns().forEach(column -> column.setTags(null));
 
-      // Clone for storage
-      String jsonCopy = gson.toJson(table);
-      tablesToStore.add(gson.fromJson(jsonCopy, Table.class));
+      fqns.add(table.getFullyQualifiedName());
+      jsons.add(serializeForStorage(table));
 
-      // Restore in original
       table.withColumns(columnWithTags).withService(service);
     }
 
-    storeMany(tablesToStore);
+    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
   }
 
   @Override
@@ -2116,32 +2111,47 @@ public class TableRepository extends EntityRepository<Table> {
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       Table origTable = original;
       Table updatedTable = updated;
-      DatabaseUtil.validateColumns(updatedTable.getColumns());
-      recordChange("tableType", origTable.getTableType(), updatedTable.getTableType());
-      updateTableConstraints(origTable, updatedTable, operation);
-      updateProcessedLineage(origTable, updatedTable);
-      updateColumns(
-          COLUMN_FIELD, origTable.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      recordChange("retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-      recordChange(
-          "compressionEnabled", original.getCompressionEnabled(), updated.getCompressionEnabled());
-      recordChange(
-          "compressionCodec", original.getCompressionCodec(), updated.getCompressionCodec());
-      recordChange(
-          "compressionStrategy",
-          original.getCompressionStrategy(),
-          updated.getCompressionStrategy());
-      recordChange(
-          "sourceHash",
-          original.getSourceHash(),
-          updated.getSourceHash(),
-          false,
-          EntityUtil.objectMatch,
-          false);
-      recordChange("locationPath", original.getLocationPath(), updated.getLocationPath());
-      recordChange(
-          "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+      if (shouldCompare("columns")) {
+        DatabaseUtil.validateColumns(updatedTable.getColumns());
+        updateColumns(
+            COLUMN_FIELD, origTable.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+      }
+      if (shouldCompare("tableType"))
+        recordChange("tableType", origTable.getTableType(), updatedTable.getTableType());
+      if (shouldCompare("tableConstraints"))
+        updateTableConstraints(origTable, updatedTable, operation);
+      if (shouldCompare("processedLineage")) updateProcessedLineage(origTable, updatedTable);
+      if (shouldCompare("sourceUrl"))
+        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      if (shouldCompare("retentionPeriod"))
+        recordChange(
+            "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+      if (shouldCompare("compressionEnabled"))
+        recordChange(
+            "compressionEnabled",
+            original.getCompressionEnabled(),
+            updated.getCompressionEnabled());
+      if (shouldCompare("compressionCodec"))
+        recordChange(
+            "compressionCodec", original.getCompressionCodec(), updated.getCompressionCodec());
+      if (shouldCompare("compressionStrategy"))
+        recordChange(
+            "compressionStrategy",
+            original.getCompressionStrategy(),
+            updated.getCompressionStrategy());
+      if (shouldCompare("sourceHash"))
+        recordChange(
+            "sourceHash",
+            original.getSourceHash(),
+            updated.getSourceHash(),
+            false,
+            EntityUtil.objectMatch,
+            false);
+      if (shouldCompare("locationPath"))
+        recordChange("locationPath", original.getLocationPath(), updated.getLocationPath());
+      if (shouldCompare("processedLineage"))
+        recordChange(
+            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
     }
 
     private void updateProcessedLineage(Table origTable, Table updatedTable) {
