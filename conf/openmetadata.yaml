@@ -78,7 +78,7 @@ server:
   # Virtual Threads (Project Loom) - Recommended for Java 21+
   # Jetty 12 uses AdaptiveExecutionStrategy to route blocking tasks to virtual threads
   # while keeping non-blocking I/O on platform threads for optimal cache locality
-  enableVirtualThreads: ${SERVER_ENABLE_VIRTUAL_THREAD:-false}
+  enableVirtualThreads: ${SERVER_ENABLE_VIRTUAL_THREAD:-true}
   # Note: maxQueuedRequests removed in Dropwizard 5.0/Jetty 12
 
   # Request/Response logging (disable in production for performance)
@@ -148,6 +148,12 @@ server:
   #    supportedCipherSuites: TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
   #    allowRenegotiation: true
   #    endpointIdentificationAlgorithm: (none)
+
+qos:
+  enabled: ${QOS_ENABLED:-true}
+  maxRequestCount: ${QOS_MAX_REQUEST_COUNT:-100}
+  maxSuspendedRequestCount: ${QOS_MAX_SUSPENDED_REQUEST_COUNT:-1000}
+  maxSuspendSeconds: ${QOS_MAX_SUSPEND_SECONDS:-30}
 
 # Logging settings.
 # https://logback.qos.ch/manual/layouts.html#conversionWord

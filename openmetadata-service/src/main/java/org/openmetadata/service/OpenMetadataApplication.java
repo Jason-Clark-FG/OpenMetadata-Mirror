@@ -121,6 +121,7 @@ import org.openmetadata.service.monitoring.EventMonitorConfiguration;
 import org.openmetadata.service.monitoring.EventMonitorFactory;
 import org.openmetadata.service.monitoring.EventMonitorPublisher;
 import org.openmetadata.service.monitoring.JettyMetricsIntegration;
+import org.openmetadata.service.monitoring.JettyQoSIntegration;
 import org.openmetadata.service.monitoring.UserMetricsServlet;
 import org.openmetadata.service.rdf.RdfUpdater;
 import org.openmetadata.service.resources.CollectionRegistry;
@@ -987,6 +988,9 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
 
     // Register Jetty metrics for monitoring
     JettyMetricsIntegration.registerJettyMetrics(environment);
+
+    // Register QoS handler for request concurrency limiting
+    JettyQoSIntegration.registerQoSHandler(environment, config.getQosConfiguration());
 
     // RDF resources are now automatically registered via @Collection annotation
     if (config.getRdfConfiguration() != null

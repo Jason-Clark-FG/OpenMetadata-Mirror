@@ -3,6 +3,7 @@ swagger:
   resourcePackage: org.openmetadata.service.webservice.resources
 server:
   rootPath: '/api/*'
+  enableVirtualThreads: true
   applicationConnectors:
     - type: http
       port: 0
@@ -10,6 +11,11 @@ server:
   adminConnectors:
     - type: http
       port: 0
+qos:
+  enabled: true
+  maxRequestCount: 150
+  maxSuspendedRequestCount: 1000
+  maxSuspendSeconds: 30
 logging:
   level: INFO
   loggers:
@@ -54,12 +60,12 @@ database:
   password:
   url: jdbc:postgresql://localhost:5432/openmetadata
   # Optimized for single JVM with method-level parallelization
-  # Dynamic factor 1.0 = ~8 threads on 8-core, need sufficient connections
-  maxSize: 100
-  minSize: 20
-  initialSize: 20
+  # Dynamic factor 2.0 = ~32 threads on 16-core, need sufficient connections
+  maxSize: 150
+  minSize: 30
+  initialSize: 30
   checkConnectionWhileIdle: true
-  checkConnectionOnBorrow: true
+  checkConnectionOnBorrow: false
   evictionInterval: 30 seconds
   minIdleTime: 10 seconds
   validationQuery: "SELECT 1"
