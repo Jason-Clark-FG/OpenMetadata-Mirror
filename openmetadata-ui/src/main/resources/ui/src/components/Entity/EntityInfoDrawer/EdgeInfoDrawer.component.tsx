@@ -23,6 +23,7 @@ import SectionWithEdit from '../../../components/common/SectionWithEdit/SectionW
 import { NO_DATA_PLACEHOLDER } from '../../../constants/constants';
 import { LINEAGE_SOURCE } from '../../../constants/Lineage.constants';
 import { CSMode } from '../../../enums/codemirror.enum';
+import { EntityType } from '../../../enums/entity.enum';
 import { AddLineage } from '../../../generated/api/lineage/addLineage';
 import { Source } from '../../../generated/type/entityLineage';
 import { getNameFromFQN } from '../../../utils/CommonUtils';
@@ -168,7 +169,8 @@ const EdgeInfoDrawer = ({
           onEdit={() => {
             setSqlFunction(functionValue ?? '');
             setShowSqlFunctionModal(true);
-          }}>
+          }}
+        >
           <Typography.Text className="m-b-0" data-testid="sql-function">
             {functionValue ?? NO_DATA_PLACEHOLDER}
           </Typography.Text>
@@ -182,7 +184,8 @@ const EdgeInfoDrawer = ({
           className="summary-panel-card"
           showEditButton={hasEditAccess}
           title={t('label.sql-uppercase-query')}
-          onEdit={() => setShowSqlQueryModal(true)}>
+          onEdit={() => setShowSqlQueryModal(true)}
+        >
           {mysqlQuery ? (
             <SchemaEditor
               className="edge-drawer-sql-editor"
@@ -202,7 +205,8 @@ const EdgeInfoDrawer = ({
         <SectionWithEdit
           className="summary-panel-card"
           showEditButton={false}
-          title={t('label.lineage-source')}>
+          title={t('label.lineage-source')}
+        >
           <Typography.Text className="lineage-source-text">
             {LINEAGE_SOURCE[edgeEntity.source as keyof typeof Source]}
           </Typography.Text>
@@ -340,14 +344,16 @@ const EdgeInfoDrawer = ({
                   mouseEnterDelay={0.5}
                   placement="bottomLeft"
                   title={t('label.edge-information')}
-                  trigger="hover">
+                  trigger="hover"
+                >
                   <div className="d-flex items-center gap-2">
                     <span className="d-flex">
                       <GitMerge height={16} width={16} />
                     </span>
                     <Typography.Text
                       className="edge-info-drawer-title"
-                      data-testid="edge-header-title">
+                      data-testid="edge-header-title"
+                    >
                       {t('label.edge-information')}
                     </Typography.Text>
                   </div>
@@ -371,6 +377,8 @@ const EdgeInfoDrawer = ({
                 <div className="summary-panel-card">
                   <DescriptionSection
                     description={edgeEntity?.description ?? ''}
+                    entityFqn={edgeEntity.fromEntity.fullyQualifiedName}
+                    entityType={EntityType.LINEAGE_EDGE}
                     hasPermission={hasEditAccess}
                     showEditButton={hasEditAccess}
                     onDescriptionUpdate={onDescriptionUpdate}

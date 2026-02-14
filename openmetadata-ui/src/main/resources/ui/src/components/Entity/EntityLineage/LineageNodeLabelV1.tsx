@@ -79,7 +79,8 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
     (item: string) => (
       <Typography.Text
         className="text-grey-muted lineage-breadcrumb-item"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+      >
         {item}
       </Typography.Text>
     ),
@@ -91,7 +92,8 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
       className={classNames(
         'items-center entity-label-container',
         childrenCount > 0 ? 'with-footer' : ''
-      )}>
+      )}
+    >
       <Col className="d-flex items-center" flex="auto">
         <div className="d-flex entity-service-icon m-r-xs">
           {getServiceIcon(node)}
@@ -100,20 +102,23 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
           <Typography.Text
             className="m-b-0 d-block text-left entity-header-display-name text-md font-medium w-54"
             data-testid="entity-header-display-name"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             {getEntityName(node)}
           </Typography.Text>
 
           <Space
             className="d-flex items-center m-b-xs lineage-breadcrumbs"
-            data-testid="lineage-breadcrumbs">
+            data-testid="lineage-breadcrumbs"
+          >
             <Breadcrumbs
               separator={<span className="lineage-breadcrumb-item-separator" />}
               sx={{
                 '& ol': {
                   gap: 0,
                 },
-              }}>
+              }}
+            >
               {breadcrumbs.map((breadcrumb) =>
                 renderBreadcrumbItem(breadcrumb.name)
               )}
@@ -158,7 +163,7 @@ const TestSuiteSummaryContainer = ({ node }: LineageNodeLabelPropsExtended) => {
 
   const { showDataObservability } = useMemo(() => {
     return {
-      showDataObservability: activeLayer.includes(
+      showDataObservability: activeLayer?.includes(
         LineageLayer.DataObservability
       ),
     };
@@ -261,7 +266,8 @@ const EntityFooter = ({
           )}
           data-testid="children-info-dropdown-btn"
           variant="outlined"
-          onClick={handleClickColumnInfoDropdown}>
+          onClick={handleClickColumnInfoDropdown}
+        >
           {childrenInfoDropdownLabel}
         </Button>
       </div>
@@ -269,7 +275,8 @@ const EntityFooter = ({
         <TestSuiteSummaryContainer node={node} />
         <Tooltip
           placement="right"
-          title={t('message.only-show-columns-with-lineage')}>
+          title={t('message.only-show-columns-with-lineage')}
+        >
           <IconButton
             className={classNames(
               'only-show-columns-with-lineage-filter-button',
@@ -277,7 +284,8 @@ const EntityFooter = ({
             )}
             data-testid="lineage-filter-button"
             disabled={isEditMode}
-            onClick={handleOnlyShowColumnsWithLineage}>
+            onClick={handleOnlyShowColumnsWithLineage}
+          >
             <FilterIcon height={20} width={20} />
           </IconButton>
         </Tooltip>

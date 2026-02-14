@@ -42,6 +42,7 @@ import {
   ExportTypes,
   LINEAGE_EXPORT_SELECTOR,
 } from '../../constants/Export.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import LineageProvider from '../../context/LineageProvider/LineageProvider';
 import { LineagePlatformView } from '../../context/LineageProvider/LineageProvider.interface';
@@ -245,7 +246,8 @@ const PlatformLineage = () => {
           <Tooltip
             arrow
             placement="top"
-            title={t('label.export-as-type', { type: t('label.png') })}>
+            title={t('label.export-as-type', { type: t('label.png') })}
+          >
             <StyledIconButton size="large" onClick={handleExport}>
               <DownloadIcon />
             </StyledIconButton>
@@ -253,7 +255,8 @@ const PlatformLineage = () => {
           <StyledIconButton
             data-testid="lineage-config"
             size="large"
-            onClick={handleSettingsClick}>
+            onClick={handleSettingsClick}
+          >
             <SettingsOutlined />
           </StyledIconButton>
           <Tooltip
@@ -263,7 +266,8 @@ const PlatformLineage = () => {
               isFullScreen
                 ? t('label.exit-full-screen')
                 : t('label.full-screen-view')
-            }>
+            }
+          >
             <StyledIconButton
               size="large"
               onClick={() =>
@@ -273,7 +277,8 @@ const PlatformLineage = () => {
                     [FULLSCREEN_QUERY_PARAM_KEY]: !isFullScreen,
                   }),
                 })
-              }>
+              }
+            >
               {isFullScreen ? <Minimize02 /> : <Expand05 />}
             </StyledIconButton>
           </Tooltip>
@@ -343,6 +348,8 @@ const PlatformLineage = () => {
                     }),
                     subHeader: t(PAGE_HEADERS.PLATFORM_LINEAGE.subHeader),
                   }}
+                  learningPageId={LEARNING_PAGE_IDS.LINEAGE}
+                  title={t('label.lineage')}
                 />
               </Card>
             </Grid>

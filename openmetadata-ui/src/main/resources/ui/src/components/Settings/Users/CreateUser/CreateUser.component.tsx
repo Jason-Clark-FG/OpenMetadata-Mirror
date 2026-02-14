@@ -29,7 +29,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { ReactComponent as IconSync } from '../../../../assets/svg/ic-sync.svg';
-import { VALIDATION_MESSAGES } from '../../../../constants/constants';
+import {
+  AGGREGATE_PAGE_SIZE_LARGE,
+  VALIDATION_MESSAGES,
+} from '../../../../constants/constants';
 import {
   EMAIL_REG_EX,
   passwordRegex,
@@ -51,11 +54,16 @@ import {
   FormItemLayout,
 } from '../../../../interface/FormUtils.interface';
 import { generateRandomPwd } from '../../../../rest/auth-API';
+import { getAllPersonas } from '../../../../rest/PersonaAPI';
 import { getJWTTokenExpiryOptions } from '../../../../utils/BotsUtils';
 import { handleSearchFilterOption } from '../../../../utils/CommonUtils';
-import { getEntityName } from '../../../../utils/EntityUtils';
+import {
+  getEntityName,
+  getEntityReferenceListFromEntities,
+} from '../../../../utils/EntityUtils';
 import { getField } from '../../../../utils/formUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
+import { AsyncSelect } from '../../../common/AsyncSelect/AsyncSelect';
 import CopyToClipboardButton from '../../../common/CopyToClipboardButton/CopyToClipboardButton';
 import { DomainLabel } from '../../../common/DomainLabel/DomainLabel.component';
 import InlineAlert from '../../../common/InlineAlert/InlineAlert';
@@ -125,6 +133,7 @@ const CreateUser = ({
   );
 
   const selectedRoles = Form.useWatch('roles', form);
+  const selectedPersonas = Form.useWatch('personas', form);
 
   const roleOptions = useMemo(() => {
     return map(roles, (role) => ({
@@ -132,6 +141,40 @@ const CreateUser = ({
       value: role.id,
     }));
   }, [roles]);
+
+  const fetchPersonaOptions = async (_searchText: string, page?: number) => {
+    try {
+      const params: Record<string, unknown> = {
+        limit: AGGREGATE_PAGE_SIZE_LARGE,
+      };
+
+      if (page && page > 1) {
+        params.after = String((page - 1) * AGGREGATE_PAGE_SIZE_LARGE);
+      }
+
+      const response = await getAllPersonas(params);
+      const personaRefs = getEntityReferenceListFromEntities(
+        response.data,
+        EntityType.PERSONA
+      );
+
+      return {
+        data: personaRefs.map((persona) => ({
+          label: getEntityName(persona),
+          value: persona.id,
+          data: persona,
+        })),
+        paging: response.paging,
+      };
+    } catch (error) {
+      showErrorToast(
+        error as AxiosError,
+        t('server.entity-fetch-error', { entity: t('label.persona-plural') })
+      );
+
+      return { data: [], paging: {} };
+    }
+  };
 
   const generatedPassword = Form.useWatch('generatedPassword', form);
   const passwordGenerator = Form.useWatch('passwordGenerator', form);
@@ -158,6 +201,13 @@ const CreateUser = ({
     const isPasswordGenerated =
       passwordGenerator === CreatePasswordGenerator.AutomaticGenerate;
     const validTeam = compact(selectedTeams).map((team) => team.id);
+    const validPersonas = selectedPersonas?.map(
+      (personaId: string) =>
+        ({
+          id: personaId,
+          type: EntityType.PERSONA,
+        } as EntityReference)
+    );
 
     const { email, displayName, tokenExpiry, confirmPassword, description } =
       values;
@@ -168,6 +218,7 @@ const CreateUser = ({
       displayName: trim(displayName),
       roles: selectedRoles,
       teams: validTeam.length ? validTeam : undefined,
+      personas: validPersonas,
       email: email,
       isAdmin: isAdmin,
       domains: selectedDomain.map((domain) => domain.fullyQualifiedName ?? ''),
@@ -222,7 +273,8 @@ const CreateUser = ({
       }}
       layout="vertical"
       validateMessages={VALIDATION_MESSAGES}
-      onFinish={handleSave}>
+      onFinish={handleSave}
+    >
       <Form.Item
         label={t('label.email')}
         name="email"
@@ -235,7 +287,8 @@ const CreateUser = ({
               fieldText: t('label.email'),
             }),
           },
-        ]}>
+        ]}
+      >
         <Input
           data-testid="email"
           name="email"
@@ -257,11 +310,13 @@ const CreateUser = ({
             {
               required: true,
             },
-          ]}>
+          ]}
+        >
           <Select
             className="w-full"
             data-testid="token-expiry"
-            placeholder={t('message.select-token-expiration')}>
+            placeholder={t('message.select-token-expiration')}
+          >
             {getJWTTokenExpiryOptions()}
           </Select>
         </Form.Item>
@@ -299,7 +354,8 @@ const CreateUser = ({
                         pattern: passwordRegex,
                         message: t('message.password-error-message'),
                       },
-                    ]}>
+                    ]}
+                  >
                     <Input.Password
                       autoComplete="off"
                       name="password"
@@ -326,7 +382,8 @@ const CreateUser = ({
                           return Promise.resolve();
                         },
                       },
-                    ]}>
+                    ]}
+                  >
                     <Input.Password
                       autoComplete="off"
                       name="confirmPassword"
@@ -347,7 +404,8 @@ const CreateUser = ({
                       {
                         required: true,
                       },
-                    ]}>
+                    ]}
+                  >
                     <Input.Password
                       readOnly
                       addonAfter={
@@ -355,7 +413,8 @@ const CreateUser = ({
                           <div
                             className="w-8 h-7 flex-center cursor-pointer"
                             data-testid="password-generator"
-                            onClick={generateRandomPassword}>
+                            onClick={generateRandomPassword}
+                          >
                             {isPasswordGenerating ? (
                               <Loader size="small" type="default" />
                             ) : (
@@ -398,6 +457,26 @@ const CreateUser = ({
                   options={roleOptions}
                   placeholder={t('label.please-select-entity', {
                     entity: t('label.role-plural'),
+                  })}
+                />
+              </Form.Item>
+              <Form.Item label={t('label.persona-plural')} name="personas">
+                <AsyncSelect
+                  enableInfiniteScroll
+                  showSearch
+                  api={fetchPersonaOptions}
+                  data-testid="personas-dropdown"
+                  filterOption={(input, option) => {
+                    const label = String(option?.label ?? option?.value ?? '');
+
+                    return (
+                      !input ||
+                      label.toLowerCase().includes(input.toLowerCase())
+                    );
+                  }}
+                  mode="multiple"
+                  placeholder={t('label.please-select-entity', {
+                    entity: t('label.persona-plural'),
                   })}
                 />
               </Form.Item>
@@ -448,7 +527,8 @@ const CreateUser = ({
           form="create-user-bot-form"
           htmlType="submit"
           loading={isLoading}
-          type="primary">
+          type="primary"
+        >
           {t('label.create')}
         </Button>
       </Space>

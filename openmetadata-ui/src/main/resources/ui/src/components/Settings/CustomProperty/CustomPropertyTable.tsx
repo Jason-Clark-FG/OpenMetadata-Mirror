@@ -159,7 +159,10 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
           if (!isString(config) && !isArray(config)) {
             if (config?.columns) {
               return (
-                <div className="w-full d-flex gap-2 flex-column">
+                <div
+                  className="w-full d-flex gap-2 flex-column"
+                  data-testid="table-config"
+                >
                   <Typography.Text>
                     <span className="font-medium">{`${t(
                       'label.column-plural'
@@ -177,7 +180,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
             return (
               <div
                 className="w-full d-flex gap-2 flex-column"
-                data-testid="enum-config">
+                data-testid="enum-config"
+              >
                 <Typography.Text>
                   {JSON.stringify(config?.values ?? [])}
                 </Typography.Text>
@@ -209,7 +213,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                       entity: t('label.property'),
                     })
                   : t(NO_PERMISSION_FOR_ACTION)
-              }>
+              }
+            >
               <Button
                 className="cursor-pointer p-0"
                 data-testid="edit-button"
@@ -219,7 +224,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                 onClick={() => {
                   setSelectedProperty(record);
                   setOperation(OPERATION.UPDATE);
-                }}>
+                }}
+              >
                 <IconEdit name={t('label.edit')} width={16} />
               </Button>
             </Tooltip>
@@ -230,7 +236,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                       entity: t('label.property'),
                     })
                   : t(NO_PERMISSION_FOR_ACTION)
-              }>
+              }
+            >
               <Button
                 className="cursor-pointer p-0"
                 data-testid="delete-button"
@@ -240,7 +247,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                 onClick={() => {
                   setSelectedProperty(record);
                   setOperation(OPERATION.DELETE);
-                }}>
+                }}
+              >
                 <IconDelete name={t('label.delete')} width={16} />
               </Button>
             </Tooltip>

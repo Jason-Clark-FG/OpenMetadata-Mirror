@@ -79,7 +79,8 @@ jest.mock(
                 handleUpdateOwner();
                 handleUpdateTier();
                 onUpdateDataModel();
-              }}>
+              }}
+            >
               {UPDATE_DATA_MODEL}
             </button>
             <button onClick={handleFollowDataModel}>{FOLLOW_DATA_MODEL}</button>
@@ -101,7 +102,9 @@ jest.mock('../../context/PermissionProvider/PermissionProvider', () => ({
 }));
 
 jest.mock('../../hooks/useFqn', () => ({
-  useFqn: jest.fn().mockImplementation(() => ({ fqn: 'testFqn', entityFqn: 'testFqn' })),
+  useFqn: jest
+    .fn()
+    .mockImplementation(() => ({ fqn: 'testFqn', entityFqn: 'testFqn' })),
 }));
 
 jest.mock('../../rest/dataModelsAPI', () => ({

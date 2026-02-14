@@ -130,7 +130,8 @@ jest.mock(
                       state: State.Confirmed,
                     },
                   ])
-                }>
+                }
+              >
                 SubmitStrings
               </button>
               <button
@@ -148,7 +149,8 @@ jest.mock(
                       state: State.Confirmed,
                     },
                   ])
-                }>
+                }
+              >
                 SubmitObjects
               </button>
               {children}
@@ -183,7 +185,8 @@ jest.mock('../IconButtons/EditIconButton', () => ({
       className="edit-icon"
       data-testid="edit-icon-button"
       onClick={onClick}
-      {...props}>
+      {...props}
+    >
       Edit
     </button>
   )),
@@ -422,7 +425,6 @@ describe('GlossaryTermsSection', () => {
       (updateEntityField as jest.Mock).mockImplementationOnce(() =>
         Promise.resolve({ success: false })
       );
-      const onUpdate = jest.fn();
 
       render(
         <GlossaryTermsSection
@@ -431,7 +433,6 @@ describe('GlossaryTermsSection', () => {
           entityId="123"
           entityType={EntityType.TABLE}
           tags={baseGlossaryTags as TagLabel[]}
-          onGlossaryTermsUpdate={onUpdate}
         />
       );
 
@@ -441,7 +442,7 @@ describe('GlossaryTermsSection', () => {
       });
 
       await waitFor(() => {
-        expect(onUpdate).not.toHaveBeenCalled();
+        expect(updateEntityField).toHaveBeenCalled();
       });
     });
   });

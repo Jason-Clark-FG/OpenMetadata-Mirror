@@ -31,6 +31,7 @@ import {
   HelperTextType,
 } from '../../../interface/FormUtils.interface';
 import { generateFormFields, getField } from '../../../utils/formUtils';
+import { referenceURLValidator } from '../../../utils/GlossaryUtils';
 import { fetchGlossaryList } from '../../../utils/TagsUtils';
 import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
 import { AddGlossaryTermFormProps } from './AddGlossaryTermForm.interface';
@@ -383,7 +384,8 @@ const AddGlossaryTermForm = ({
           description: editMode && glossaryTerm ? glossaryTerm.description : '',
         }}
         layout="vertical"
-        onFinish={handleSave}>
+        onFinish={handleSave}
+      >
         {generateFormFields(formFields)}
 
         <Form.List name="references">
@@ -392,7 +394,8 @@ const AddGlossaryTermForm = ({
               <Form.Item
                 className="form-item-horizontal"
                 colon={false}
-                label={t('label.reference-plural')}>
+                label={t('label.reference-plural')}
+              >
                 <Button
                   data-testid="add-reference"
                   icon={
@@ -420,7 +423,8 @@ const AddGlossaryTermForm = ({
                             fieldText: t('label.name'),
                           })}`,
                         },
-                      ]}>
+                      ]}
+                    >
                       <Input
                         id={`name-${index}`}
                         placeholder={t('label.name')}
@@ -436,7 +440,11 @@ const AddGlossaryTermForm = ({
                           message: t('message.valid-url-endpoint'),
                           type: 'url',
                         },
-                      ]}>
+                        {
+                          validator: referenceURLValidator,
+                        },
+                      ]}
+                    >
                       <Input
                         id={`url-${index}`}
                         placeholder={t('label.endpoint')}

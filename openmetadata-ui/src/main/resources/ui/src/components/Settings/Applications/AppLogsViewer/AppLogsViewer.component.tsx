@@ -25,7 +25,7 @@ import {
   Typography,
 } from 'antd';
 import { capitalize, isEmpty, isNil } from 'lodash';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ICON_DIMENSION, STATUS_ICON } from '../../../../constants/constants';
 import { StepStats } from '../../../../generated/entity/applications/appRunRecord';
@@ -35,12 +35,25 @@ import { formatJsonString } from '../../../../utils/StringsUtils';
 import AppBadge from '../../../common/Badge/Badge.component';
 import CopyToClipboardButton from '../../../common/CopyToClipboardButton/CopyToClipboardButton';
 import './app-logs-viewer.less';
-import { AppLogsViewerProps } from './AppLogsViewer.interface';
+import {
+  AppLogsViewerProps,
+  ServerStats,
+  ServerStatsData,
+} from './AppLogsViewer.interface';
+import ReindexFailures from './ReindexFailures.component';
 
 const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
   const { t } = useTranslation();
+  const [showFailuresDrawer, setShowFailuresDrawer] = useState(false);
 
   const { successContext, failureContext, timestamp, status } = data;
+
+  const hasFailures = useMemo(() => {
+    const jobStats =
+      successContext?.stats?.jobStats ?? failureContext?.stats?.jobStats;
+
+    return (jobStats?.failedRecords ?? 0) > 0;
+  }, [successContext, failureContext]);
 
   const handleJumpToEnd = () => {
     const logsBody = document.getElementsByClassName(
@@ -62,7 +75,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
                 ghost
                 data-testid="jump-to-end-button"
                 type="primary"
-                onClick={handleJumpToEnd}>
+                onClick={handleJumpToEnd}
+              >
                 {t('label.jump-to-end')}
               </Button>
 
@@ -73,7 +87,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           <Col
             className="p-t-md h-min-400 lazy-log-container"
             data-testid="lazy-log"
-            span={24}>
+            span={24}
+          >
             <LazyLog
               caseInsensitive
               enableSearch
@@ -92,7 +107,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
       <Card
         data-testid={`stats-component${title ? `-${title.toLowerCase()}` : ''}`}
         size="small"
-        title={title}>
+        title={title}
+      >
         <Row gutter={[16, 8]}>
           <Col span={24}>
             <Space wrap direction="horizontal" size={0}>
@@ -151,6 +167,19 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
                         entity: t('label.failed'),
                       })}: ${stepStats.failedRecords}`}
                     />
+
+                    {stepStats.warningRecords !== undefined &&
+                      stepStats.warningRecords > 0 && (
+                        <Badge
+                          showZero
+                          className="request-badge warning"
+                          count={stepStats.warningRecords}
+                          overflowCount={99999999}
+                          title={`${t('label.entity-index', {
+                            entity: t('label.warning-plural'),
+                          })}: ${stepStats.warningRecords}`}
+                        />
+                      )}
                   </Space>
                 </span>
               </div>
@@ -268,6 +297,158 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
     [tableColumn]
   );
 
+  const serverStatsData = useMemo((): ServerStatsData[] => {
+    const serverStats = successContext?.serverStats as
+      | Record<string, ServerStats>
+      | undefined;
+    if (!serverStats) {
+      return [];
+    }
+
+    return Object.entries(serverStats).map(([serverId, stats]) => ({
+      name: serverId,
+      processedRecords: stats.processedRecords ?? 0,
+      successRecords: stats.successRecords ?? 0,
+      failedRecords: stats.failedRecords ?? 0,
+      partitions: `${stats.completedPartitions ?? 0}/${
+        stats.totalPartitions ?? 0
+      }`,
+    }));
+  }, [successContext?.serverStats]);
+
+  const serverStatsColumns = useMemo(() => {
+    if (serverStatsData.length === 0) {
+      return [];
+    }
+
+    const totalProcessed = serverStatsData.reduce(
+      (sum, s) => sum + s.processedRecords,
+      0
+    );
+    const totalSuccess = serverStatsData.reduce(
+      (sum, s) => sum + s.successRecords,
+      0
+    );
+    const totalFailed = serverStatsData.reduce(
+      (sum, s) => sum + s.failedRecords,
+      0
+    );
+
+    return [
+      {
+        title: t('label.server'),
+        dataIndex: 'name',
+        key: 'name',
+        render: (text: string) => (
+          <Typography.Text className="font-medium">{text}</Typography.Text>
+        ),
+      },
+      {
+        title: (
+          <div className="d-flex items-center">
+            <Typography.Text>
+              {t('label.entity-record-plural', {
+                entity: t('label.processed'),
+              })}{' '}
+            </Typography.Text>
+            <AppBadge
+              className="entity-stats total m-l-sm"
+              label={totalProcessed}
+            />
+          </div>
+        ),
+        dataIndex: 'processedRecords',
+        key: 'processedRecords',
+        render: (text: number) => (
+          <Typography.Text className="text-primary">{text}</Typography.Text>
+        ),
+      },
+      {
+        title: (
+          <div className="d-flex items-center">
+            <Typography.Text>
+              {t('label.entity-record-plural', {
+                entity: t('label.success'),
+              })}{' '}
+            </Typography.Text>
+            <AppBadge
+              className="entity-stats success m-l-sm"
+              label={totalSuccess}
+            />
+          </div>
+        ),
+        dataIndex: 'successRecords',
+        key: 'successRecords',
+        render: (text: number) => (
+          <Typography.Text className="text-success">{text}</Typography.Text>
+        ),
+      },
+      {
+        title: (
+          <div className="d-flex items-center">
+            <Typography.Text>
+              {t('label.entity-record-plural', {
+                entity: t('label.failed'),
+              })}{' '}
+            </Typography.Text>
+            <AppBadge
+              className="entity-stats failure m-l-sm"
+              label={totalFailed}
+            />
+          </div>
+        ),
+        dataIndex: 'failedRecords',
+        key: 'failedRecords',
+        render: (text: number) => (
+          <Typography.Text className="text-failure">{text}</Typography.Text>
+        ),
+      },
+      {
+        title: t('label.partition-plural'),
+        dataIndex: 'partitions',
+        key: 'partitions',
+        render: (text: string) => <Typography.Text>{text}</Typography.Text>,
+      },
+    ];
+  }, [serverStatsData]);
+
+  const serverStatsRenderer = useCallback(() => {
+    if (serverStatsData.length === 0) {
+      return null;
+    }
+
+    const serverCount = successContext?.serverCount as number | undefined;
+
+    return (
+      <Card
+        className="m-t-md"
+        data-testid="server-stats-card"
+        size="small"
+        title={
+          <Space>
+            <span>{t('label.server-stat-plural')}</span>
+            {serverCount && (
+              <Badge
+                className="request-badge running"
+                count={serverCount}
+                title={`${serverCount} ${t('label.server')}(s)`}
+              />
+            )}
+          </Space>
+        }
+      >
+        <Table
+          columns={serverStatsColumns}
+          data-testid="server-stats-table"
+          dataSource={serverStatsData}
+          pagination={false}
+          rowKey="name"
+          size="small"
+        />
+      </Card>
+    );
+  }, [serverStatsData, serverStatsColumns, successContext?.serverCount]);
+
   return (
     <>
       {successContext?.stats?.jobStats &&
@@ -281,43 +462,85 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           t('label.overall-stat-plural')
         )}
 
-      {successContext?.stats?.readerStats && (
-        <div className="m-t-md">
-          {statsRender(
-            successContext.stats.readerStats,
-            t('label.reader-stat-plural'),
-            false
-          )}
-        </div>
-      )}
-      {failureContext?.stats?.readerStats && (
-        <div className="m-t-md">
-          {statsRender(
-            failureContext.stats.readerStats,
-            t('label.reader-stat-plural'),
-            false
-          )}
-        </div>
-      )}
+      <Row className="m-t-md" gutter={[16, 16]}>
+        {successContext?.stats?.readerStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.readerStats,
+              t('label.reader-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.readerStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.readerStats,
+              t('label.reader-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
 
-      {successContext?.stats?.sinkStats && (
-        <div className="m-t-md">
-          {statsRender(
-            successContext.stats.sinkStats,
-            t('label.sink-stat-plural'),
-            false
-          )}
-        </div>
-      )}
-      {failureContext?.stats?.sinkStats && (
-        <div className="m-t-md">
-          {statsRender(
-            failureContext.stats.sinkStats,
-            t('label.sink-stat-plural'),
-            false
-          )}
-        </div>
-      )}
+        {successContext?.stats?.processStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.processStats,
+              t('label.process-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.processStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.processStats,
+              t('label.process-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+
+        {successContext?.stats?.sinkStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.sinkStats,
+              t('label.sink-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.sinkStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.sinkStats,
+              t('label.sink-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+
+        {successContext?.stats?.vectorStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.vectorStats,
+              t('label.vector-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.vectorStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.vectorStats,
+              t('label.vector-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+      </Row>
+
+      {serverStatsRenderer()}
 
       {successContext?.stats?.entityStats &&
         entityStatsRenderer(successContext.stats.entityStats)}
@@ -331,6 +554,23 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           )
         )
       )}
+
+      {hasFailures && (
+        <div className="m-t-md">
+          <Button
+            data-testid="view-reindex-failures-button"
+            type="link"
+            onClick={() => setShowFailuresDrawer(true)}
+          >
+            {t('label.view-reindex-failure-plural')}
+          </Button>
+        </div>
+      )}
+
+      <ReindexFailures
+        visible={showFailuresDrawer}
+        onClose={() => setShowFailuresDrawer(false)}
+      />
     </>
   );
 };

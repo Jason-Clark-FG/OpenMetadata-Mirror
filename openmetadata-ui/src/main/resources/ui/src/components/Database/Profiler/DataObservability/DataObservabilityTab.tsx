@@ -86,7 +86,10 @@ const DataObservabilityTab = (props: TableProfilerProps) => {
           EntityTabs.PROFILER,
           newValue as ProfilerTabPath
         ),
-        search: Qs.stringify(searchData),
+        search:
+          newValue === ProfilerTabPath.INCIDENTS
+            ? undefined
+            : Qs.stringify(searchData),
       },
       {
         replace: true,
@@ -165,12 +168,14 @@ const DataObservabilityTab = (props: TableProfilerProps) => {
       <div
         className="data-observability-tab-container"
         data-testid="table-profiler-container"
-        id="profilerDetails">
+        id="profilerDetails"
+      >
         <Stack
           alignItems="center"
           direction="row"
           justifyContent="space-between"
-          spacing={4}>
+          spacing={4}
+        >
           {isEmpty(activeColumnFqn) ? (
             <Tabs
               sx={(theme) => ({
@@ -205,7 +210,8 @@ const DataObservabilityTab = (props: TableProfilerProps) => {
                 },
               })}
               value={activeTab}
-              onChange={handleTabChangeMUI}>
+              onChange={handleTabChangeMUI}
+            >
               {tabOptions.map(({ label, key }) => (
                 <Tab
                   key={key}
@@ -243,7 +249,8 @@ const DataObservabilityTab = (props: TableProfilerProps) => {
                     activeColumnFqn: undefined,
                   }),
                 });
-              }}>
+              }}
+            >
               {t(PAGE_HEADERS.COLUMN_PROFILE.header)}
             </Button>
           )}

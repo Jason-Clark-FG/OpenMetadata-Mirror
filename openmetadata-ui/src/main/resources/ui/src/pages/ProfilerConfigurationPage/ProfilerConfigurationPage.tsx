@@ -32,6 +32,7 @@ import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/Ti
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import {
   DEFAULT_PROFILER_CONFIG_VALUE,
   PROFILER_METRICS_TYPE_OPTIONS,
@@ -168,13 +169,16 @@ const ProfilerConfigurationPage = () => {
                 'message.page-sub-header-for-profiler-configuration'
               ),
             }}
+            learningPageId={LEARNING_PAGE_IDS.PROFILER_CONFIGURATION}
+            title={t('label.profiler-configuration')}
           />
         </Col>
         <Col span={24}>
           <Collapse
             className="profiler-configuration-collapse"
             defaultActiveKey={['profileConfig']}
-            expandIconPosition="right">
+            expandIconPosition="right"
+          >
             <Collapse.Panel
               header={
                 <PageHeader
@@ -184,14 +188,16 @@ const ProfilerConfigurationPage = () => {
                   }}
                 />
               }
-              key="profileConfig">
+              key="profileConfig"
+            >
               <Form<ProfilerConfiguration>
                 className="new-form-style"
                 data-testid="profiler-config-form"
                 form={form}
                 id="profiler-config"
                 layout="vertical"
-                onFinish={handleSubmit}>
+                onFinish={handleSubmit}
+              >
                 <Form.List name="metricConfiguration">
                   {(fields, { add, remove }) => {
                     return (
@@ -217,7 +223,8 @@ const ProfilerConfigurationPage = () => {
                                       }
                                     ),
                                   },
-                                ]}>
+                                ]}
+                              >
                                 <Select
                                   allowClear
                                   showSearch
@@ -241,7 +248,8 @@ const ProfilerConfigurationPage = () => {
                                       name
                                     ]?.['disabled']
                                   );
-                                }}>
+                                }}
+                              >
                                 {() => (
                                   <Form.Item name={[name, 'metrics']}>
                                     <TreeSelect
@@ -269,7 +277,8 @@ const ProfilerConfigurationPage = () => {
                             <Col className="d-flex justify-between" span={3}>
                               <Form.Item
                                 name={[name, 'disabled']}
-                                valuePropName="checked">
+                                valuePropName="checked"
+                              >
                                 <Switch data-testid="disabled-switch" />
                               </Form.Item>
                               <Form.Item>
@@ -291,13 +300,15 @@ const ProfilerConfigurationPage = () => {
                               data-testid="add-fields"
                               icon={<PlusOutlined />}
                               type="text"
-                              onClick={() => add()}>
+                              onClick={() => add()}
+                            >
                               {t('label.add-new-field')}
                             </Button>
                             <div className="d-flex justify-end gap-2">
                               <Button
                                 data-testid="cancel-button"
-                                onClick={() => navigate(-1)}>
+                                onClick={() => navigate(-1)}
+                              >
                                 {t('label.cancel')}
                               </Button>
                               <Button
@@ -305,7 +316,8 @@ const ProfilerConfigurationPage = () => {
                                 form="profiler-config"
                                 htmlType="submit"
                                 loading={isFormSubmitting}
-                                type="primary">
+                                type="primary"
+                              >
                                 {t('label.save')}
                               </Button>
                             </div>

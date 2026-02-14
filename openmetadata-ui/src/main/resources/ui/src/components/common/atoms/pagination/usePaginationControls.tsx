@@ -47,6 +47,7 @@ interface PaginationControlsConfig {
   onPageSizeChange?: (pageSize: number) => void;
   rowsPerPageOptions?: number[];
   loading?: boolean;
+  prevNextOnly?: boolean;
 }
 
 export const usePaginationControls = (config: PaginationControlsConfig) => {
@@ -105,7 +106,8 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
           pt: 3.5,
           px: 6,
           pb: 5,
-        }}>
+        }}
+      >
         <Button
           color="secondary"
           data-testid="previous"
@@ -117,40 +119,46 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
             />
           }
           variant="contained"
-          onClick={() => config.onPageChange(config.currentPage - 1)}>
+          onClick={() => config.onPageChange(config.currentPage - 1)}
+        >
           {t('label.previous')}
         </Button>
 
-        <Pagination
-          hideNextButton
-          hidePrevButton
-          count={config.totalPages}
-          page={config.currentPage}
-          shape="rounded"
-          variant="outlined"
-          onChange={(_, page) => config.onPageChange(page)}
-        />
+        {!config.prevNextOnly && (
+          <Pagination
+            hideNextButton
+            hidePrevButton
+            count={config.totalPages}
+            page={config.currentPage}
+            shape="rounded"
+            variant="outlined"
+            onChange={(_, page) => config.onPageChange(page)}
+          />
+        )}
 
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             gap: 1.5,
-          }}>
-          {config.onPageSizeChange && (
+          }}
+        >
+          {!config.prevNextOnly && config.onPageSizeChange && (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-              }}>
+              }}
+            >
               <Typography
                 sx={{
                   fontSize: theme.typography.pxToRem(14),
                   color: theme.palette.text.secondary,
                   whiteSpace: 'nowrap',
                   marginRight: theme.spacing(1),
-                }}>
+                }}
+              >
                 {`${formatNumberWithComma(
                   displayedRowsRange.start
                 )}-${formatNumberWithComma(displayedRowsRange.end)} ${t(
@@ -169,7 +177,8 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
                   },
                 }}
                 value={selectedPageSize}
-                onChange={handlePageSizeChange}>
+                onChange={handlePageSizeChange}
+              >
                 {rowsPerPageOptions.map((option) => (
                   <MenuItem key={option} value={option}>
                     {option}
@@ -190,7 +199,8 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
             }
             size="small"
             variant="contained"
-            onClick={() => config.onPageChange(config.currentPage + 1)}>
+            onClick={() => config.onPageChange(config.currentPage + 1)}
+          >
             {t('label.next')}
           </Button>
         </Box>
@@ -203,6 +213,7 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
       config.totalEntities,
       config.onPageChange,
       config.onPageSizeChange,
+      config.prevNextOnly,
       rowsPerPageOptions,
       displayedRowsRange,
       selectedPageSize,

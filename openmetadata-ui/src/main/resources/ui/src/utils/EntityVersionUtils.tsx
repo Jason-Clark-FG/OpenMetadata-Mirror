@@ -38,6 +38,7 @@ import {
   ExtentionEntitiesKeys,
 } from '../components/common/CustomPropertyTable/CustomPropertyTable.interface';
 import { OwnerLabel } from '../components/common/OwnerLabel/OwnerLabel.component';
+import { BulkImportVersionSummary } from '../components/Entity/EntityVersionTimeLine/BulkImportVersionSummary/BulkImportVersionSummary.component';
 import { VersionButton } from '../components/Entity/EntityVersionTimeLine/EntityVersionTimeLine';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import { NO_DATA_PLACEHOLDER } from '../constants/constants';
@@ -130,7 +131,8 @@ export const getDiffValue = (oldValue: string, newValue: string) => {
       <span
         className={diffChangeText}
         data-testid={`${diffChangeText}`}
-        key={part.value}>
+        key={part.value}
+      >
         {part.value}
       </span>
     );
@@ -143,7 +145,8 @@ export const getAddedDiffElement = (text: string) => {
       className="diff-added text-underline"
       data-diff="true"
       data-testid="diff-added"
-      key={uniqueId()}>
+      key={uniqueId()}
+    >
       {text}
     </span>
   );
@@ -155,7 +158,8 @@ export const getRemovedDiffElement = (text: string) => {
       className="text-grey-muted text-line-through"
       data-diff="true"
       data-testid="diff-removed"
-      key={uniqueId()}>
+      key={uniqueId()}
+    >
       {text}
     </span>
   );
@@ -390,6 +394,28 @@ const getSummaryText = ({
   return `${glossaryTermApprovalText} ${summaryText}`;
 };
 
+const getBulkImportSummary = (fieldsUpdated: FieldChange[]) => {
+  const bulkImportField = fieldsUpdated.find(
+    (field) => field.name === 'bulkImport'
+  );
+
+  if (!bulkImportField) {
+    return null;
+  }
+
+  const newValue = isObject(bulkImportField.newValue)
+    ? bulkImportField.newValue
+    : isValidJSONString(bulkImportField.newValue)
+    ? JSON.parse(bulkImportField.newValue)
+    : null;
+
+  if (!newValue) {
+    return null;
+  }
+
+  return <BulkImportVersionSummary csvImportResult={newValue} />;
+};
+
 export const getSummary = ({
   changeDescription,
   isPrefix = false,
@@ -411,6 +437,8 @@ export const getSummary = ({
       (field) => field.name === 'deleted'
     ) ?? []),
   ];
+
+  const bulkImportSummary = getBulkImportSummary(fieldsUpdated);
 
   return (
     <Fragment>
@@ -441,13 +469,20 @@ export const getSummary = ({
       ) : null}
       {fieldsUpdated?.length ? (
         <Typography.Paragraph>
-          {getSummaryText({
-            isPrefix,
-            fieldsChanged: fieldsUpdated,
-            actionType: t('label.edited'),
-            actionText: t('label.updated-lowercase'),
-            isGlossaryTerm,
-          })}
+          {bulkImportSummary ? (
+            <>
+              {t('message.bulk-import-completed')}
+              {bulkImportSummary}
+            </>
+          ) : (
+            getSummaryText({
+              isPrefix,
+              fieldsChanged: fieldsUpdated,
+              actionType: t('label.edited'),
+              actionText: t('label.updated-lowercase'),
+              isGlossaryTerm,
+            })
+          )}
         </Typography.Paragraph>
       ) : null}
       {fieldsDeleted?.length ? (
@@ -1265,7 +1300,8 @@ export const getParameterValueDiffDisplay = (
       <Space
         wrap
         className="parameter-value-container parameter-value"
-        size={6}>
+        size={6}
+      >
         {otherParamDiffs.length === 0 ? (
           <Typography.Text type="secondary">
             {t('label.no-parameter-available')}

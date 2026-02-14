@@ -28,7 +28,10 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ReactComponent as SettingIcon } from '../../../../../assets/svg/ic-settings-primery.svg';
-import { DEFAULT_RANGE_DATA } from '../../../../../constants/profiler.constant';
+import {
+  DEFAULT_RANGE_DATA,
+  DEFAULT_SELECTED_RANGE,
+} from '../../../../../constants/profiler.constant';
 import { useTourProvider } from '../../../../../context/TourProvider/TourProvider';
 import { EntityTabs, EntityType } from '../../../../../enums/entity.enum';
 import { ProfilerDashboardType } from '../../../../../enums/table.enum';
@@ -78,8 +81,8 @@ const TabFilters = () => {
       dateRangeObject: {
         startTs,
         endTs,
-        key: searchData.key as string,
-        title: searchData.title as string,
+        key: (searchData.key as string) ?? DEFAULT_SELECTED_RANGE.key,
+        title: (searchData.title as string) ?? DEFAULT_SELECTED_RANGE.title,
       } as DateRangeObject,
     } as {
       activeColumnFqn: string;
@@ -181,7 +184,8 @@ const TabFilters = () => {
       alignItems="center"
       direction="row"
       justifyContent="flex-end"
-      spacing={5}>
+      spacing={5}
+    >
       {!isEmpty(activeColumnFqn) && (
         <Box alignItems="center" display="flex" gap={2}>
           <Typography
@@ -189,7 +193,8 @@ const TabFilters = () => {
               color: theme.palette.grey[900],
               fontSize: theme.typography.pxToRem(13),
               fontWeight: 500,
-            }}>
+            }}
+          >
             {`${t('label.column')}:`}
           </Typography>
           <ColumnPickerMenu
@@ -204,6 +209,7 @@ const TabFilters = () => {
         ProfilerTabPath.COLUMN_PROFILE,
         ProfilerTabPath.DATA_QUALITY,
         ProfilerTabPath.OVERVIEW,
+        ProfilerTabPath.INCIDENTS,
       ].includes(activeTab) && isEmpty(activeColumnFqn) ? null : (
         <Box alignItems="center" display="flex" gap={2}>
           <Typography
@@ -211,7 +217,8 @@ const TabFilters = () => {
               color: theme.palette.grey[900],
               fontSize: theme.typography.pxToRem(13),
               fontWeight: 500,
-            }}>
+            }}
+          >
             {`${t('label.date')}:`}
           </Typography>
           <MuiDatePickerMenu
@@ -232,7 +239,8 @@ const TabFilters = () => {
                 endIcon={<KeyboardArrowDown />}
                 sx={{ height: '32px' }}
                 variant="contained"
-                onClick={handleMenuClick}>
+                onClick={handleMenuClick}
+              >
                 {t('label.add')}
               </Button>
               <Menu
@@ -251,7 +259,8 @@ const TabFilters = () => {
                   vertical: 'top',
                   horizontal: 'right',
                 }}
-                onClose={handleMenuClose}>
+                onClose={handleMenuClose}
+              >
                 <MenuItem onClick={handleTestCaseClick}>
                   <TabsLabel id="test-case" name={t('label.test-case')} />
                 </MenuItem>
@@ -273,7 +282,8 @@ const TabFilters = () => {
                 height: '32px',
               }}
               variant="outlined"
-              onClick={onSettingButtonClick}>
+              onClick={onSettingButtonClick}
+            >
               <SettingIcon />
             </Button>
           </Tooltip>

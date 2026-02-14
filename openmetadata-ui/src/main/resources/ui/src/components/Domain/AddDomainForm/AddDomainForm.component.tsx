@@ -43,7 +43,6 @@ import {
 } from '../../common/IconPicker';
 import '../domain.less';
 import { DomainFormType } from '../DomainPage.interface';
-import './add-domain-form.less';
 import { AddDomainFormProps } from './AddDomainForm.interface';
 
 const AddDomainForm = ({
@@ -173,7 +172,7 @@ const AddDomainForm = ({
           'data-testid': 'description',
           initialValue: '',
           height: 'auto',
-          className: 'add-domain-form-description',
+          className: 'add-domain-form-description new-form-style',
         },
       },
       {
@@ -374,7 +373,8 @@ const AddDomainForm = ({
       data-testid="add-domain"
       form={form}
       layout="vertical"
-      onFinish={handleFormSubmit}>
+      onFinish={handleFormSubmit}
+    >
       {/* Cover Image */}
       {coverImageField && <Box sx={{ mb: 2 }}>{getField(coverImageField)}</Box>}
 
@@ -399,7 +399,8 @@ const AddDomainForm = ({
         <Space
           className="w-full justify-end"
           data-testid="cta-buttons"
-          size={16}>
+          size={16}
+        >
           <Button data-testid="cancel-domain" type="link" onClick={onCancel}>
             {t('label.cancel')}
           </Button>
@@ -408,7 +409,8 @@ const AddDomainForm = ({
             disabled={!createPermission}
             htmlType="submit"
             loading={loading}
-            type="primary">
+            type="primary"
+          >
             {t('label.save')}
           </Button>
         </Space>

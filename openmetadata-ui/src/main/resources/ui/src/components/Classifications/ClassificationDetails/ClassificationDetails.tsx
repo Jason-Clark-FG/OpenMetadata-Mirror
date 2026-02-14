@@ -22,6 +22,7 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +55,7 @@ import {
   getClassificationVersionsPath,
 } from '../../../utils/RouterUtils';
 import { getErrorText } from '../../../utils/StringsUtils';
+import tagClassBase from '../../../utils/TagClassBase';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import AppBadge from '../../common/Badge/Badge.component';
 import DescriptionV1 from '../../common/EntityDescription/DescriptionV1';
@@ -82,6 +84,7 @@ const ClassificationDetails = forwardRef(
       handleAddNewTagClick,
       disableEditButton,
       isVersionView = false,
+      isClassificationLoading = false,
       handleToggleDisable,
     }: Readonly<ClassificationDetailsProps>,
     ref
@@ -93,6 +96,9 @@ const ClassificationDetails = forwardRef(
     const navigate = useNavigate();
     const [tags, setTags] = useState<Tag[]>([]);
     const [isTagsLoading, setIsTagsLoading] = useState(true);
+    const isLoading = isTagsLoading || isClassificationLoading;
+    const previousClassificationRef = useRef<string | undefined>();
+    const isClassificationChangingRef = useRef(false);
     const {
       currentPage,
       paging,
@@ -334,6 +340,28 @@ const ClassificationDetails = forwardRef(
 
     useEffect(() => {
       if (currentClassification?.fullyQualifiedName && !isAddingTag) {
+        const classificationChanged =
+          previousClassificationRef.current !== undefined &&
+          previousClassificationRef.current !==
+            currentClassification.fullyQualifiedName;
+
+        previousClassificationRef.current =
+          currentClassification.fullyQualifiedName;
+
+        if (classificationChanged) {
+          isClassificationChangingRef.current = true;
+          handlePageChange(1, { cursorType: null, cursorValue: undefined });
+          fetchClassificationChildren(currentClassification.fullyQualifiedName);
+
+          return;
+        }
+
+        if (isClassificationChangingRef.current) {
+          isClassificationChangingRef.current = false;
+
+          return;
+        }
+
         const { cursorType, cursorValue } = pagingCursor ?? {};
 
         if (cursorType && cursorValue) {
@@ -396,7 +424,8 @@ const ClassificationDetails = forwardRef(
                       data-testid="add-new-tag-button"
                       disabled={isClassificationDisabled}
                       type="primary"
-                      onClick={handleAddNewTagClick}>
+                      onClick={handleAddNewTagClick}
+                    >
                       {t('label.add-entity', {
                         entity: t('label.tag'),
                       })}
@@ -412,12 +441,14 @@ const ClassificationDetails = forwardRef(
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}>
+                    )}
+                  >
                     <Button
                       className="w-16 p-0"
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={versionHandler}>
+                      onClick={versionHandler}
+                    >
                       <Typography.Text>{currentVersion}</Typography.Text>
                     </Button>
                   </Tooltip>
@@ -432,7 +463,7 @@ const ClassificationDetails = forwardRef(
                       editDisplayNamePermission={
                         editDisplayNamePermission && !isClassificationDisabled
                       }
-                      entityFQN={currentClassification.fullyQualifiedName}
+                      entityFQN={currentClassification?.fullyQualifiedName}
                       entityId={currentClassification.id}
                       entityName={currentClassification.name}
                       entityType={EntityType.CLASSIFICATION}
@@ -447,13 +478,14 @@ const ClassificationDetails = forwardRef(
         )}
 
         <GenericProvider<Classification>
-          data={currentClassification as Classification}
+          data={(currentClassification as Classification) ?? {}}
           isVersionView={isVersionView}
           permissions={classificationPermissions}
           type={EntityType.CLASSIFICATION as CustomizeEntityType}
           onUpdate={(updatedData: Classification) =>
             Promise.resolve(handleUpdateClassification?.(updatedData))
-          }>
+          }
+        >
           <Row className="m-t-md" gutter={16}>
             <Col span={18}>
               <Card className="classification-details-card">
@@ -474,7 +506,7 @@ const ClassificationDetails = forwardRef(
                   columns={tableColumn}
                   customPaginationProps={{
                     currentPage,
-                    isLoading: isTagsLoading,
+                    isLoading,
                     pageSize,
                     paging,
                     showPagination,
@@ -483,7 +515,7 @@ const ClassificationDetails = forwardRef(
                   }}
                   data-testid="table"
                   dataSource={tags}
-                  loading={isTagsLoading}
+                  loading={isLoading}
                   locale={{
                     emptyText: (
                       <ErrorPlaceHolder
@@ -510,6 +542,7 @@ const ClassificationDetails = forwardRef(
                   dataTestId="classification-owner-name"
                   hasPermission={editOwnerPermission}
                 />
+                {tagClassBase.getClassificationReviewerWidget()}
               </div>
             </Col>
           </Row>

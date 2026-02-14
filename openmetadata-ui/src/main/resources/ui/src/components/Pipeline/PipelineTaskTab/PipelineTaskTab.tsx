@@ -15,7 +15,7 @@ import { Card, Segmented, Typography } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
 import { groupBy, isEmpty, isUndefined, uniqBy } from 'lodash';
 import { EntityTags, TagFilterOptions } from 'Models';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ReactComponent as ExternalLinkIcon } from '../../../assets/svg/external-links.svg';
@@ -64,6 +64,7 @@ export const PipelineTaskTab = () => {
     onUpdate,
     openColumnDetailPanel,
     selectedColumn,
+    setDisplayedColumns,
   } = useGenericContext<Pipeline>();
   const {
     entityFqn: pipelineFQN,
@@ -90,6 +91,11 @@ export const PipelineTaskTab = () => {
     openColumnDetailPanel,
     selectedColumn: selectedColumn as Task | null,
   });
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(pipelineDetails.tasks ?? []);
+  }, [pipelineDetails.tasks, setDisplayedColumns]);
 
   const {
     editDescriptionPermission,
@@ -221,12 +227,13 @@ export const PipelineTaskTab = () => {
         }),
         render: (_, record) =>
           isEmpty(record.sourceUrl) ? (
-            <span>{getEntityName(record)}</span>
+            <span className="text-link-color">{getEntityName(record)}</span>
           ) : (
             <Link
               className="flex items-center gap-2"
               target="_blank"
-              to={record.sourceUrl ?? ''}>
+              to={record.sourceUrl ?? ''}
+            >
               <div className="d-flex items-center">
                 <span className="break-all">{getEntityName(record)}</span>
 
@@ -356,7 +363,8 @@ export const PipelineTaskTab = () => {
       {editTask && (
         <EntityAttachmentProvider
           entityFqn={editTask.task.fullyQualifiedName}
-          entityType={EntityType.PIPELINE}>
+          entityType={EntityType.PIPELINE}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.task'),

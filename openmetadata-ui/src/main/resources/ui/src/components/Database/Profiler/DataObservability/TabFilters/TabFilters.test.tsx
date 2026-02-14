@@ -92,8 +92,14 @@ jest.mock('../../../../../constants/profiler.constant', () => ({
   DEFAULT_RANGE_DATA: {
     startTs: 1711065600000,
     endTs: 1711670399000,
+  },
+  DEFAULT_SELECTED_RANGE: {
     key: 'last7days',
-    title: 'Last 7 days',
+    title: 'label.last-number-of-days',
+    titleData: {
+      numberOfDays: 7,
+    },
+    days: 7,
   },
 }));
 
@@ -144,7 +150,8 @@ jest.mock('../../../../common/MuiDatePickerMenu/MuiDatePickerMenu', () => {
               key: 'last7days',
               title: 'Last 7 days',
             })
-          }>
+          }
+        >
           Change Date
         </button>
       </div>
@@ -158,7 +165,6 @@ jest.mock('../../TableProfiler/ColumnPickerMenu', () => {
     handleChange,
   }: {
     activeColumnFqn: string;
-    columns: Column[];
     handleChange: (key: string) => void;
   }) {
     return (

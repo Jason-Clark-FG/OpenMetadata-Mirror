@@ -16,6 +16,7 @@ import { AxiosError } from 'axios';
 import { EntityTags } from 'Models';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
@@ -27,6 +28,7 @@ import { PageType } from '../../../generated/system/ui/page';
 import { TagLabel } from '../../../generated/type/schema';
 import LimitWrapper from '../../../hoc/LimitWrapper';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
+import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useFqn } from '../../../hooks/useFqn';
 import { FeedCounts } from '../../../interface/feed.interface';
 import { restoreTopic } from '../../../rest/topicsAPI';
@@ -70,8 +72,6 @@ import { EntityName } from '../../Modals/EntityNameModal/EntityNameModal.interfa
 import PageLayoutV1 from '../../PageLayoutV1/PageLayoutV1';
 import { SourceType } from '../../SearchedData/SearchedData.interface';
 import { TopicDetailsProps } from './TopicDetails.interface';
-import { useNavigate } from 'react-router-dom';
-import { useCustomPages } from '../../../hooks/useCustomPages';
 
 const TopicDetails: React.FC<TopicDetailsProps> = ({
   updateTopicDetailsState,
@@ -87,8 +87,9 @@ const TopicDetails: React.FC<TopicDetailsProps> = ({
 }: TopicDetailsProps) => {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
-  const { tab: activeTab = EntityTabs.SCHEMA } =
-    useRequiredParams<{ tab: EntityTabs }>();
+  const { tab: activeTab = EntityTabs.SCHEMA } = useRequiredParams<{
+    tab: EntityTabs;
+  }>();
   const navigate = useNavigate();
   const { customizedPage, isLoading } = useCustomPages(PageType.Topic);
   const [isTabExpanded, setIsTabExpanded] = useState(false);
@@ -179,11 +180,7 @@ const TopicDetails: React.FC<TopicDetailsProps> = ({
   const handleTabChange = (activeKey: string) => {
     if (activeKey !== activeTab) {
       navigate(
-        getEntityDetailsPath(
-          EntityType.TOPIC,
-          decodedTopicFQN,
-          activeKey
-        ),
+        getEntityDetailsPath(EntityType.TOPIC, decodedTopicFQN, activeKey),
         { replace: true }
       );
     }
@@ -459,7 +456,8 @@ const TopicDetails: React.FC<TopicDetailsProps> = ({
           isTabExpanded={isTabExpanded}
           permissions={topicPermissions}
           type={EntityType.TOPIC}
-          onUpdate={onTopicUpdate}>
+          onUpdate={onTopicUpdate}
+        >
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

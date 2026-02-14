@@ -453,7 +453,8 @@ function IngestionListTable({
     <>
       <div
         className={classNames('ingestion-list-table', tableContainerClassName)}
-        data-testid="ingestion-table">
+        data-testid="ingestion-table"
+      >
         <Table
           columns={tableColumn}
           containerClassName={tableClassName}
@@ -486,7 +487,7 @@ function IngestionListTable({
           }}
           pagination={false}
           rowKey="fullyQualifiedName"
-          scroll={{ x: 1300 }}
+          scroll={data.length > 0 ? { x: 1300 } : undefined}
           size="small"
           {...extraTableProps}
         />

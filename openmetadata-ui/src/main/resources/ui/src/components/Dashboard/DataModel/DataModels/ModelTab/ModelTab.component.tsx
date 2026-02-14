@@ -29,6 +29,8 @@ import {
 } from '../../../../../generated/entity/data/dashboardDataModel';
 import { TagLabel, TagSource } from '../../../../../generated/type/tagLabel';
 import { usePaging } from '../../../../../hooks/paging/usePaging';
+import { useFqn } from '../../../../../hooks/useFqn';
+import { useFqnDeepLink } from '../../../../../hooks/useFqnDeepLink';
 import {
   getDataModelColumnsByFQN,
   searchDataModelColumnsByFQN,
@@ -39,15 +41,15 @@ import {
   getEntityName,
 } from '../../../../../utils/EntityUtils';
 import { columnFilterIcon } from '../../../../../utils/TableColumn.util';
-import { useFqn } from '../../../../../hooks/useFqn';
-import { useFqnDeepLink } from '../../../../../hooks/useFqnDeepLink';
 import {
   getAllTags,
   searchTagInData,
 } from '../../../../../utils/TableTags/TableTags.utils';
 import {
   getHighlightedRowClassName,
+  getTableExpandableConfig,
   pruneEmptyChildren,
+  updateColumnInNestedStructure,
 } from '../../../../../utils/TableUtils';
 import DisplayName from '../../../../common/DisplayName/DisplayName';
 import { EntityAttachmentProvider } from '../../../../common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
@@ -70,7 +72,7 @@ const ModelTab = () => {
   const [editColumnDescription, setEditColumnDescription] = useState<Column>();
   const [_expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
-  const { openColumnDetailPanel, selectedColumn } =
+  const { openColumnDetailPanel, selectedColumn, setDisplayedColumns } =
     useGenericContext<DashboardDataModel>();
 
   const [paginatedColumns, setPaginatedColumns] = useState<Column[]>([]);
@@ -90,10 +92,7 @@ const ModelTab = () => {
     useGenericContext<DashboardDataModel>();
   const { fullyQualifiedName: entityFqn, deleted: isReadOnly } = dataModel;
 
-  const {
-    columnFqn: columnPart,
-    fqn,
-  } = useFqn({
+  const { columnFqn: columnPart, fqn } = useFqn({
     type: EntityType.DASHBOARD_DATA_MODEL,
   });
 
@@ -202,10 +201,15 @@ const ModelTab = () => {
     }
   }, [entityFqn, searchText, fetchPaginatedColumns, pageSize, dataModel]);
 
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(paginatedColumns);
+  }, [paginatedColumns, setDisplayedColumns]);
+
   const updateColumnDetails = async (
     columnFqn: string,
     column: Partial<Column>,
-    field?: keyof Column
+    field: keyof Column
   ) => {
     const response = await updateDataModelColumn(columnFqn, column);
     const cleanResponse = isEmpty(response.children)
@@ -213,12 +217,7 @@ const ModelTab = () => {
       : response;
 
     setPaginatedColumns((prev) =>
-      prev.map((col) =>
-        col.fullyQualifiedName === columnFqn
-          ? // Have to omit the field which is being updated to avoid persisted old value
-            { ...omit(col, field ?? ''), ...cleanResponse }
-          : col
-      )
+      updateColumnInNestedStructure(prev, columnFqn, cleanResponse, field)
     );
 
     return response;
@@ -333,7 +332,7 @@ const ModelTab = () => {
         key: TABLE_COLUMNS_KEYS.NAME,
         width: 250,
         fixed: 'left',
-        className: 'cursor-pointer',
+        className: 'cursor-pointer text-link-color',
         sorter: getColumnSorter<Column, 'name'>('name'),
         onCell: (record: Column) => ({
           onClick: (event: React.MouseEvent) =>
@@ -458,6 +457,10 @@ const ModelTab = () => {
         data-testid="data-model-column-table"
         dataSource={data}
         defaultVisibleColumns={DEFAULT_DASHBOARD_DATA_MODEL_VISIBLE_COLUMNS}
+        expandable={{
+          ...getTableExpandableConfig<Column>(false, 'text-link-color'),
+          rowExpandable: (record) => !isEmpty(record.children),
+        }}
         loading={columnsLoading}
         locale={{
           emptyText: <FilterTablePlaceHolder />,
@@ -474,7 +477,8 @@ const ModelTab = () => {
       {editColumnDescription && (
         <EntityAttachmentProvider
           entityFqn={editColumnDescription.fullyQualifiedName}
-          entityType={EntityType.DASHBOARD_DATA_MODEL}>
+          entityType={EntityType.DASHBOARD_DATA_MODEL}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.column'),

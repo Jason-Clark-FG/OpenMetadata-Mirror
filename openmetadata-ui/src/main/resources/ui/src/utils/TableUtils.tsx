@@ -315,7 +315,8 @@ export const getConstraintIcon = ({
       className={classNames(className)}
       placement="bottom"
       title={title}
-      trigger="hover">
+      trigger="hover"
+    >
       <Icon
         alt={title}
         className={classNames({
@@ -597,7 +598,8 @@ export const generateEntityLink = (fqn: string, includeColumn = false) => {
 };
 
 export function getTableExpandableConfig<T>(
-  isDraggable?: boolean
+  isDraggable?: boolean,
+  expandIconClass?: string
 ): ExpandableConfig<T> {
   const expandableConfig: ExpandableConfig<T> = {
     expandIcon: ({ expanded, onExpand, expandable, record }) =>
@@ -605,7 +607,10 @@ export function getTableExpandableConfig<T>(
         <>
           {isDraggable && <IconDrag className="drag-icon" />}
           <Icon
-            className="table-expand-icon vertical-baseline"
+            className={classNames(
+              'table-expand-icon vertical-baseline',
+              expandIconClass
+            )}
             component={expanded ? IconDown : IconRight}
             data-testid="expand-icon"
             onClick={(e) => onExpand(record, e)}
@@ -784,6 +789,42 @@ export const updateFieldDescription = <T extends TableFieldsInfoCommonEntities>(
       updateFieldDescription(
         changedFieldFQN,
         description,
+        field?.children as Array<T>
+      );
+    }
+  });
+};
+
+export const updateFieldDisplayName = <T extends TableFieldsInfoCommonEntities>(
+  changedFieldFQN: string,
+  displayName: string,
+  searchIndexFields?: Array<T>
+) => {
+  searchIndexFields?.forEach((field) => {
+    if (field.fullyQualifiedName === changedFieldFQN) {
+      field.displayName = displayName;
+    } else {
+      updateFieldDisplayName(
+        changedFieldFQN,
+        displayName,
+        field?.children as Array<T>
+      );
+    }
+  });
+};
+
+export const updateFieldExtension = <T extends TableFieldsInfoCommonEntities>(
+  changedFieldFQN: string,
+  extension: Record<string, unknown>,
+  searchIndexFields?: Array<T>
+) => {
+  searchIndexFields?.forEach((field) => {
+    if (field.fullyQualifiedName === changedFieldFQN) {
+      field.extension = extension;
+    } else {
+      updateFieldExtension(
+        changedFieldFQN,
+        extension,
         field?.children as Array<T>
       );
     }
@@ -983,7 +1024,10 @@ export const getTableDetailPageBaseTabs = ({
         />
       ),
       isHidden: !(
-        tableDetails?.dataModel?.sql || tableDetails?.dataModel?.rawSql
+        tableDetails?.dataModel?.sql ||
+        tableDetails?.dataModel?.rawSql ||
+        tableDetails?.dataModel?.path ||
+        tableDetails?.dataModel?.dbtSourceProject
       ),
       key: EntityTabs.DBT,
       children: (
@@ -1138,11 +1182,13 @@ export const tableConstraintRendererBasedOnType = (
     <div
       className="d-flex constraint-columns"
       data-testid={`${constraintType}-container`}
-      key={constraintType}>
+      key={constraintType}
+    >
       <Space
         className="constraint-icon-container"
         direction="vertical"
-        size={0}>
+        size={0}
+      >
         {columns?.map((column, index) => (
           <Fragment key={column}>
             {(columns?.length ?? 0) - 1 !== index || isSingleColumn ? (
@@ -1341,12 +1387,15 @@ export const findColumnByEntityLink = (
 export const updateColumnInNestedStructure = (
   columns: Column[],
   targetFqn: string,
-  update: Partial<Column>
+  update: Partial<Column>,
+  field?: string
 ): Column[] => {
   return columns.map((column: Column) => {
     if (column.fullyQualifiedName === targetFqn) {
+      const newCol = omit(column, field ?? '');
+
       return {
-        ...column,
+        ...(newCol as Column),
         ...update,
       };
     }
@@ -1357,7 +1406,8 @@ export const updateColumnInNestedStructure = (
         children: updateColumnInNestedStructure(
           column.children,
           targetFqn,
-          update
+          update,
+          field
         ),
       };
     } else {
@@ -1826,4 +1876,18 @@ export const getHighlightedRowClassName = <
   }
 
   return '';
+};
+
+export const getNestedSectionTitle = (
+  entityType: EntityType | undefined
+): string => {
+  switch (entityType) {
+    case EntityType.TOPIC:
+    case EntityType.API_ENDPOINT:
+      return 'label.schema-field-plural';
+    case EntityType.SEARCH_INDEX:
+      return 'label.field-plural';
+    default:
+      return 'label.nested-column-plural';
+  }
 };

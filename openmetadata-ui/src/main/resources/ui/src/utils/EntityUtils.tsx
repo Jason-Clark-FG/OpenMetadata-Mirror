@@ -1586,7 +1586,8 @@ export const getFrequentlyJoinedColumns = (
               to={getEntityDetailsPath(
                 EntityType.TABLE,
                 columnJoin.fullyQualifiedName
-              )}>
+              )}
+            >
               {getPartialNameFromTableFQN(
                 columnJoin.fullyQualifiedName,
                 [
@@ -1618,7 +1619,8 @@ export const getFrequentlyJoinedColumns = (
                           columnJoin?.fullyQualifiedName,
                           [FqnPart.Column]
                         )
-                      )}>
+                      )}
+                    >
                       {getPartialNameFromTableFQN(
                         columnJoin?.fullyQualifiedName,
                         [FqnPart.Database, FqnPart.Table, FqnPart.Column]
@@ -1629,7 +1631,8 @@ export const getFrequentlyJoinedColumns = (
               </div>
             }
             placement="bottom"
-            trigger="click">
+            trigger="click"
+          >
             <span className="show-more m-l-xss text-underline">...</span>
           </Popover>
         )}
@@ -2719,6 +2722,7 @@ export const getPluralizeEntityName = (entityType?: string) => {
     [EntityType.PIPELINE]: t('label.pipeline-plural'),
     [EntityType.CONTAINER]: t('label.container-plural'),
     [EntityType.DASHBOARD]: t('label.dashboard-plural'),
+    [EntityType.CHART]: t('label.chart-plural'),
     [EntityType.STORED_PROCEDURE]: t('label.stored-procedure-plural'),
     [EntityType.MLMODEL]: t('label.ml-model-plural'),
     [EntityType.DASHBOARD_DATA_MODEL]: t('label.data-model-plural'),

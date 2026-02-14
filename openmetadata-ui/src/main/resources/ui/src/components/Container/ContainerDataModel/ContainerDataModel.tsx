@@ -21,8 +21,7 @@ import {
   uniqBy,
 } from 'lodash';
 import { EntityTags, TagFilterOptions } from 'Models';
-import { FC, useCallback, useMemo, useState } from 'react';
-import { useFqn } from '../../../hooks/useFqn';
+import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   HIGHLIGHTED_ROW_SELECTOR,
@@ -40,13 +39,14 @@ import {
   TagLabel,
 } from '../../../generated/entity/data/container';
 import { TagSource } from '../../../generated/type/tagLabel';
+import { useFqn } from '../../../hooks/useFqn';
+import { useFqnDeepLink } from '../../../hooks/useFqnDeepLink';
+import { useScrollToElement } from '../../../hooks/useScrollToElement';
 import {
   updateContainerColumnDescription,
   updateContainerColumnTags,
 } from '../../../utils/ContainerDetailUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { useFqnDeepLink } from '../../../hooks/useFqnDeepLink';
-import { useScrollToElement } from '../../../hooks/useScrollToElement';
 import { columnFilterIcon } from '../../../utils/TableColumn.util';
 import {
   getAllTags,
@@ -78,19 +78,24 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
   entityFqn,
 }) => {
   const { t } = useTranslation();
-  const { openColumnDetailPanel, selectedColumn } =
+  const { openColumnDetailPanel, selectedColumn, setDisplayedColumns } =
     useGenericContext<Container>();
 
   const [editContainerColumnDescription, setEditContainerColumnDescription] =
     useState<Column>();
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
-  const schema = pruneEmptyChildren(dataModel?.columns ?? []);
+  const schema = useMemo(
+    () => pruneEmptyChildren(dataModel?.columns ?? []),
+    [dataModel?.columns]
+  );
 
-  const {
-    columnFqn: columnPart,
-    fqn,
-  } = useFqn({
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(schema);
+  }, [schema, setDisplayedColumns]);
+
+  const { columnFqn: columnPart, fqn } = useFqn({
     type: EntityType.CONTAINER,
   });
   useFqnDeepLink({
@@ -183,7 +188,9 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
         render: (_, record: Column) => (
           <div className="d-inline-flex items-center gap-2 hover-icon-group w-max-90">
             <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
-              <Typography.Text>{getEntityName(record)}</Typography.Text>
+              <Typography.Text className="text-link-color">
+                {getEntityName(record)}
+              </Typography.Text>
             </Tooltip>
             {record.fullyQualifiedName && (
               <CopyLinkButton
@@ -213,7 +220,8 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
                 overflowWrap: 'break-word',
                 textAlign: 'center',
               }}
-              title={toLower(dataTypeDisplay)}>
+              title={toLower(dataTypeDisplay)}
+            >
               <Typography.Text ellipsis className="cursor-pointer">
                 {dataTypeDisplay ?? record.dataType}
               </Typography.Text>
@@ -314,7 +322,7 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
         dataSource={schema}
         defaultVisibleColumns={DEFAULT_CONTAINER_DATA_MODEL_VISIBLE_COLUMNS}
         expandable={{
-          ...getTableExpandableConfig<Column>(),
+          ...getTableExpandableConfig<Column>(false, 'text-link-color'),
           rowExpandable: (record) => !isEmpty(record.children),
           expandedRowKeys,
           onExpandedRowsChange: (keys) => setExpandedRowKeys(keys as string[]),
@@ -329,7 +337,8 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
       {editContainerColumnDescription && (
         <EntityAttachmentProvider
           entityFqn={editContainerColumnDescription.fullyQualifiedName}
-          entityType={EntityType.CONTAINER}>
+          entityType={EntityType.CONTAINER}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.column'),

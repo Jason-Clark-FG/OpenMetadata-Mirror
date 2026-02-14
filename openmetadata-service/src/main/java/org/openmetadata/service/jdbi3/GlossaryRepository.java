@@ -30,6 +30,7 @@ import static org.openmetadata.service.Entity.GLOSSARY_TERM;
 import static org.openmetadata.service.search.SearchClient.GLOSSARY_TERM_SEARCH_INDEX;
 import static org.openmetadata.service.util.EntityUtil.compareTagLabel;
 
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -49,6 +50,8 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
+import org.openmetadata.csv.CsvExportProgressCallback;
+import org.openmetadata.csv.CsvImportProgressCallback;
 import org.openmetadata.csv.CsvUtil;
 import org.openmetadata.csv.EntityCsv;
 import org.openmetadata.schema.EntityInterface;
@@ -74,11 +77,13 @@ import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO.EntityRelationshipRecord;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.resources.glossary.GlossaryResource;
 import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
@@ -100,7 +105,7 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
   }
 
   @Override
-  public void setFields(Glossary glossary, Fields fields) {
+  public void setFields(Glossary glossary, Fields fields, RelationIncludes relationIncludes) {
     glossary.setTermCount(
         fields.contains("termCount") ? getTermCount(glossary) : glossary.getTermCount());
     glossary.withUsageCount(
@@ -173,6 +178,25 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
   }
 
   @Override
+  public void storeEntities(List<Glossary> entities) {
+    List<Glossary> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+
+    for (Glossary glossary : entities) {
+      List<EntityReference> reviewers = glossary.getReviewers();
+
+      glossary.withReviewers(null);
+
+      String jsonCopy = gson.toJson(glossary);
+      entitiesToStore.add(gson.fromJson(jsonCopy, Glossary.class));
+
+      glossary.withReviewers(reviewers);
+    }
+
+    storeMany(entitiesToStore);
+  }
+
+  @Override
   public void storeRelationships(Glossary glossary) {
     // Nothing to do
   }
@@ -208,6 +232,13 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
   /** Export glossary as CSV */
   @Override
   public String exportToCsv(String name, String user, boolean recursive) throws IOException {
+    return exportToCsv(name, user, recursive, null);
+  }
+
+  @Override
+  public String exportToCsv(
+      String name, String user, boolean recursive, CsvExportProgressCallback callback)
+      throws IOException {
     Glossary glossary = getByName(null, name, Fields.EMPTY_FIELDS); // Validate glossary name
     GlossaryTermRepository repository =
         (GlossaryTermRepository) Entity.getEntityRepository(GLOSSARY_TERM);
@@ -216,16 +247,22 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
             repository.getFields("owners,reviewers,tags,relatedTerms,synonyms,extension,parent"),
             glossary.getFullyQualifiedName());
     terms.sort(Comparator.comparing(EntityInterface::getFullyQualifiedName));
-    return new GlossaryCsv(glossary, user).exportCsv(terms);
+    return new GlossaryCsv(glossary, user).exportCsv(terms, callback);
   }
 
   /** Load CSV provided for bulk upload */
   @Override
   public CsvImportResult importFromCsv(
-      String name, String csv, boolean dryRun, String user, boolean recursive) throws IOException {
-    Glossary glossary = getByName(null, name, Fields.EMPTY_FIELDS); // Validate glossary name
+      String name,
+      String csv,
+      boolean dryRun,
+      String user,
+      boolean recursive,
+      CsvImportProgressCallback callback)
+      throws IOException {
+    Glossary glossary = getByName(null, name, Fields.EMPTY_FIELDS);
     GlossaryCsv glossaryCsv = new GlossaryCsv(glossary, user);
-    return glossaryCsv.importCsv(csv, dryRun);
+    return glossaryCsv.importCsv(csv, dryRun, callback);
   }
 
   public static class GlossaryCsv extends EntityCsv<GlossaryTerm> {
@@ -252,8 +289,22 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
               : FullyQualifiedName.add(csvRecord.get(0), csvRecord.get(1));
 
       // TODO add header
+      // Handle parent GlossaryTerm with dependency resolution
+      EntityReference parentRef = null;
+      String parentFqn = csvRecord.get(0);
+      if (!nullOrEmpty(parentFqn)) {
+        try {
+          GlossaryTerm parentTerm =
+              getEntityWithDependencyResolution(GLOSSARY_TERM, parentFqn, "*", Include.NON_DELETED);
+          parentRef = parentTerm.getEntityReference();
+        } catch (EntityNotFoundException ex) {
+          // Fall back to regular lookup
+          parentRef = getEntityReference(printer, csvRecord, 0, GLOSSARY_TERM);
+        }
+      }
+
       glossaryTerm
-          .withParent(getEntityReference(printer, csvRecord, 0, GLOSSARY_TERM))
+          .withParent(parentRef)
           .withName(csvRecord.get(1))
           .withFullyQualifiedName(glossaryTermFqn)
           .withDisplayName(csvRecord.get(2))
@@ -270,8 +321,8 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
           .withStyle(getStyle(csvRecord))
           .withExtension(getExtension(printer, csvRecord, 13));
 
-      // Validate during dry run to catch logical errors early
-      if (processRecord && importResult.getDryRun()) {
+      // Validate to catch logical errors for both dry run and actual import
+      if (processRecord) {
         try {
           repository.validateForDryRun(glossaryTerm, dryRunCreatedEntities);
         } catch (Exception ex) {

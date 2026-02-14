@@ -215,7 +215,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         width: 200,
         render: (result: TestCaseResult, record: TestCase) => {
           return result?.result &&
-            record.testCaseStatus !== TestCaseStatus.Success ? (
+            result.testCaseStatus !== TestCaseStatus.Success ? (
             <Tooltip
               arrow
               placement="top"
@@ -227,7 +227,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                   },
                 },
               }}
-              title={result.result}>
+              title={result.result}
+            >
               <MuiTypography
                 data-testid={`reason-text-${record.name}`}
                 sx={{
@@ -239,7 +240,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                   WebkitBoxOrient: 'vertical',
                   fontSize: '14px',
                   cursor: 'pointer',
-                }}>
+                }}
+              >
                 {result.result}
               </MuiTypography>
             </Tooltip>
@@ -276,7 +278,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             <Typography.Paragraph
               className="m-0"
               data-testid={name}
-              style={{ maxWidth: 280 }}>
+              style={{ maxWidth: 280 }}
+            >
               <Link state={{ breadcrumbData }} to={urlData}>
                 {getEntityName(record)}
               </Link>
@@ -304,7 +307,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                       EntityTabs.PROFILER,
                       ProfilerTabPath.DATA_QUALITY
                     )}
-                    onClick={(e) => e.stopPropagation()}>
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {tableFqn}
                   </Link>
                 );
@@ -338,7 +342,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
               <Typography.Paragraph
                 className="m-0"
                 data-testid={name}
-                style={{ maxWidth: 120 }}>
+                style={{ maxWidth: 120 }}
+              >
                 {name}
               </Typography.Paragraph>
             );
@@ -433,7 +438,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
               alignItems="center"
               display="flex"
               gap={2.5}
-              justifyContent="end">
+              justifyContent="end"
+            >
               {dimensions.length > 0 && (
                 <Tooltip
                   arrow
@@ -445,12 +451,14 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                     {
                       number: dimensions.length,
                     }
-                  )}>
+                  )}
+                >
                   <Link
                     to={getTestCaseDetailPagePath(
                       record.fullyQualifiedName ?? '',
                       TestCasePageTabs.DIMENSIONALITY
-                    )}>
+                    )}
+                  >
                     <Box
                       data-testid={`dimension-count-${record.name}`}
                       sx={{
@@ -461,13 +469,15 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                         backgroundColor: theme.palette.allShades.blueGray[50],
                         borderRadius: '6px',
                         color: theme.palette.primary.main,
-                      }}>
+                      }}
+                    >
                       <DimensionIcon height={12} width={12} />
                       <MuiTypography
                         sx={{
                           fontSize: '12px',
                           fontWeight: 500,
-                        }}>
+                        }}
+                      >
                         {dimensions.length}
                       </MuiTypography>
                     </Box>
@@ -488,7 +498,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                   color: 'grey.400',
                   '&:hover': { backgroundColor: 'transparent' },
                 }}
-                onClick={(e) => handleMenuClick(e, record.id ?? '')}>
+                onClick={(e) => handleMenuClick(e, record.id ?? '')}
+              >
                 <MenuIcon />
               </IconButton>
               <Menu
@@ -507,11 +518,13 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                   vertical: 'top',
                   horizontal: 'right',
                 }}
-                onClose={handleMenuClose}>
+                onClose={handleMenuClose}
+              >
                 <MenuItem
                   data-testid={`edit-${record.name}`}
                   disabled={!testCaseEditPermission}
-                  onClick={() => handleEdit(record)}>
+                  onClick={() => handleEdit(record)}
+                >
                   {t('label.edit')}
                 </MenuItem>
                 <MenuItem
@@ -521,7 +534,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                       : `delete-${record.name}`
                   }
                   disabled={!testCaseDeletePermission}
-                  onClick={() => handleDelete(record)}>
+                  onClick={() => handleDelete(record)}
+                >
                   {deleteBtnLabel}
                 </MenuItem>
               </Menu>
@@ -641,7 +655,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     <div
       className={classNames({
         'data-quality-tab-container': !isUndefined(tableHeader),
-      })}>
+      })}
+    >
       {tableHeader && (
         <div className="data-quality-table-header">{tableHeader}</div>
       )}

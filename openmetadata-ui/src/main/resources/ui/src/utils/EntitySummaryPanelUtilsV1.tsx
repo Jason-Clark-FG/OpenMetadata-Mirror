@@ -186,7 +186,8 @@ const NestedFieldCard: React.FC<NestedFieldCardProps> = ({
         style={{
           paddingLeft: `${level * 24}px`,
           paddingBottom: hasChildren ? '8px' : '0',
-        }}>
+        }}
+      >
         <div className="field-card-no-border">
           <FieldCard
             columnConstraint={column.constraint}
@@ -209,7 +210,8 @@ const NestedFieldCard: React.FC<NestedFieldCardProps> = ({
               className="d-flex p-0 h-auto m-b-xs"
               size="small"
               type="link"
-              onClick={() => onToggleExpand(column.fullyQualifiedName ?? '')}>
+              onClick={() => onToggleExpand(column.fullyQualifiedName ?? '')}
+            >
               <Typography color={theme.palette.primary.main} variant="caption">
                 {isExpanded
                   ? t('label.show-less')
@@ -266,7 +268,7 @@ const SchemaFieldCardsV1: React.FC<{
         const params = {
           offset,
           limit: columnsPaging.limit,
-          fields: 'tags,customMetrics,description',
+          fields: 'tags,customMetrics,description,extension',
           ...(search && { q: search }),
         };
 
@@ -359,7 +361,8 @@ const SchemaFieldCardsV1: React.FC<{
         block
         loading={isLoading && currentPage > 1}
         type="link"
-        onClick={handleLoadMore}>
+        onClick={handleLoadMore}
+      >
         {t('label.show-more')}
       </Button>
     );

@@ -37,9 +37,11 @@ import { AddTestCaseList } from '../../components/DataQuality/AddTestCaseList/Ad
 import TestSuitePipelineTab from '../../components/DataQuality/TestSuite/TestSuitePipelineTab/TestSuitePipelineTab.component';
 import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import EntityHeaderTitle from '../../components/Entity/EntityHeaderTitle/EntityHeaderTitle.component';
+import { LearningIcon } from '../../components/Learning/LearningIcon/LearningIcon.component';
 import { EntityName } from '../../components/Modals/EntityNameModal/EntityNameModal.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { INITIAL_PAGING_VALUE } from '../../constants/constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { DEFAULT_SORT_ORDER } from '../../constants/profiler.constant';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import {
@@ -508,7 +510,8 @@ const TestSuiteDetailsPage = () => {
     <PageLayoutV1
       pageTitle={t('label.entity-detail-plural', {
         entity: getEntityName(testSuite),
-      })}>
+      })}
+    >
       <Row className="page-container" gutter={[0, 24]}>
         <Col span={24}>
           <TitleBreadcrumb
@@ -525,6 +528,7 @@ const TestSuiteDetailsPage = () => {
                 icon={<TestSuiteIcon className="h-9" />}
                 name={testSuite?.name ?? ''}
                 serviceName="testSuite"
+                suffix={<LearningIcon pageId={LEARNING_PAGE_IDS.TEST_SUITE} />}
               />
             </Col>
             <Col className="d-flex justify-end" span={6}>
@@ -534,7 +538,8 @@ const TestSuiteDetailsPage = () => {
                   <Button
                     data-testid="add-test-case-btn"
                     type="primary"
-                    onClick={() => setIsTestCaseModalOpen(true)}>
+                    onClick={() => setIsTestCaseModalOpen(true)}
+                  >
                     {t('label.add-entity', {
                       entity: t('label.test-case-plural'),
                     })}
@@ -611,7 +616,8 @@ const TestSuiteDetailsPage = () => {
             title={t('label.add-entity', {
               entity: t('label.test-case-plural'),
             })}
-            width={750}>
+            width={750}
+          >
             <AddTestCaseList
               existingTest={testSuite?.tests ?? []}
               selectedTest={selectedTestCases}

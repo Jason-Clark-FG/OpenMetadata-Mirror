@@ -247,6 +247,30 @@ const DataProductsPage = () => {
     setIsFollowingLoading(false);
   }, [isFollowing, unFollowDataProduct, followDataProduct]);
 
+  // Refresh data product without showing loader (for port updates)
+  const refreshDataProduct = useCallback(async () => {
+    if (!dataProductFqn) {
+      return;
+    }
+    try {
+      const data = await getDataProductByName(dataProductFqn, {
+        fields: [
+          TabSpecificField.DOMAINS,
+          TabSpecificField.OWNERS,
+          TabSpecificField.EXPERTS,
+          TabSpecificField.ASSETS,
+          TabSpecificField.EXTENSION,
+          TabSpecificField.TAGS,
+          TabSpecificField.FOLLOWERS,
+          TabSpecificField.REVIEWERS,
+        ],
+      });
+      setDataProduct(data);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    }
+  }, [dataProductFqn]);
+
   useEffect(() => {
     if (dataProductFqn) {
       fetchDataProductByFqn(dataProductFqn);
@@ -271,7 +295,8 @@ const DataProductsPage = () => {
             ghost
             className="m-t-sm"
             type="primary"
-            onClick={() => navigate(getDomainPath())}>
+            onClick={() => navigate(getDomainPath())}
+          >
             {t('label.go-back')}
           </Button>
         </div>
@@ -285,7 +310,8 @@ const DataProductsPage = () => {
         className={classNames('data-product-page-layout', {
           'version-data': version,
         })}
-        pageTitle={getEntityName(dataProduct)}>
+        pageTitle={getEntityName(dataProduct)}
+      >
         <DataProductsDetailsPage
           dataProduct={
             version ? selectedVersionData ?? dataProduct : dataProduct
@@ -295,6 +321,7 @@ const DataProductsPage = () => {
           isFollowingLoading={isFollowingLoading}
           isVersionsView={Boolean(version)}
           onDelete={handleDataProductDelete}
+          onRefresh={refreshDataProduct}
           onUpdate={handleDataProductUpdate}
         />
       </PageLayoutV1>

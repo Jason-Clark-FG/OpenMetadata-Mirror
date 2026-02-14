@@ -35,6 +35,7 @@ interface Props {
   serviceName: string;
   titleColor?: string;
   badge?: React.ReactNode;
+  suffix?: React.ReactNode;
   showName?: boolean;
   nameClassName?: string;
   displayNameClassName?: string;
@@ -55,6 +56,7 @@ export const EntityHeader = ({
   gutter = 'default',
   serviceName,
   badge,
+  suffix,
   titleColor,
   showName = true,
   isFollowingLoading,
@@ -72,7 +74,8 @@ export const EntityHeader = ({
           'entity-breadcrumb',
           gutter === 'large' ? 'm-b-sm' : 'm-b-xss'
         )}
-        data-testid="category-name">
+        data-testid="category-name"
+      >
         <TitleBreadcrumb titleLinks={breadcrumb} />
       </div>
 
@@ -98,6 +101,7 @@ export const EntityHeader = ({
         serviceName={serviceName}
         showName={showName}
         showOnlyDisplayName={showOnlyDisplayName}
+        suffix={suffix}
       />
     </div>
   );

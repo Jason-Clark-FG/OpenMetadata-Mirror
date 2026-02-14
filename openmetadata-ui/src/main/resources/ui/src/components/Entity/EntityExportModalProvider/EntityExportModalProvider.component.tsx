@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Badge, Form, Input, Modal, Select } from 'antd';
+import { Badge, Form, Input, Modal, Progress, Select, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { isString, lowerCase } from 'lodash';
@@ -212,6 +212,9 @@ export const EntityExportModalProvider = ({
           response.data ?? '',
           csvExportJobRef.current?.fileName
         );
+      } else if (response.status === 'IN_PROGRESS') {
+        // Keep downloading state true during progress
+        setDownloading(true);
       } else {
         setDownloading(false);
       }
@@ -269,21 +272,25 @@ export const EntityExportModalProvider = ({
             }}
             okText={t('label.export')}
             title={exportData.title ?? t('label.export')}
-            onCancel={handleCancel}>
+            onCancel={handleCancel}
+          >
             <Form
               form={form}
               id="export-form"
               layout="vertical"
-              onFinish={handleExport}>
+              onFinish={handleExport}
+            >
               <Form.Item label={`${t('label.export-type')}:`} name="exportType">
                 <Select
                   data-testid="export-type-select"
-                  disabled={exportData.exportTypes.length === 1}>
+                  disabled={exportData.exportTypes.length === 1}
+                >
                   {exportTypesOptions.map((type) => (
                     <Select.Option
                       key={type.value}
                       title={type.value}
-                      value={type.value}>
+                      value={type.value}
+                    >
                       <div className="d-flex items-center">
                         {type.label}
                         {BETA_EXPORT_TYPES.includes(type.value) && (
@@ -304,7 +311,8 @@ export const EntityExportModalProvider = ({
                 label={`${t('label.entity-name', {
                   entity: t('label.file'),
                 })}:`}
-                name="fileName">
+                name="fileName"
+              >
                 <Input
                   addonAfter={`.${lowerCase(selectedExportType)}`}
                   data-testid="file-name-input"
@@ -313,12 +321,31 @@ export const EntityExportModalProvider = ({
             </Form>
 
             {csvExportJob?.jobId && (
-              <Banner
-                className="border-radius"
-                isLoading={downloading}
-                message={csvExportJob.error ?? csvExportJob.message ?? ''}
-                type={csvExportJob.error ? 'error' : 'success'}
-              />
+              <>
+                {csvExportJob.status === 'IN_PROGRESS' &&
+                  csvExportJob.progress !== undefined &&
+                  csvExportJob.total !== undefined && (
+                    <div className="m-b-md">
+                      <Progress
+                        percent={Math.round(
+                          (csvExportJob.progress / csvExportJob.total) * 100
+                        )}
+                        status="active"
+                      />
+                      <Typography.Text className="text-grey-muted text-xs">
+                        {csvExportJob.message}
+                      </Typography.Text>
+                    </div>
+                  )}
+                {csvExportJob.status !== 'IN_PROGRESS' && (
+                  <Banner
+                    className="border-radius"
+                    isLoading={downloading}
+                    message={csvExportJob.error ?? csvExportJob.message ?? ''}
+                    type={csvExportJob.error ? 'error' : 'success'}
+                  />
+                )}
+              </>
             )}
           </Modal>
         )}

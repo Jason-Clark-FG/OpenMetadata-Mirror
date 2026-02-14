@@ -94,12 +94,10 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
     onUpdate: onApiEndpointUpdate,
     openColumnDetailPanel,
     selectedColumn,
+    setDisplayedColumns,
   } = useGenericContext<APIEndpoint>();
 
-  const {
-    columnFqn: columnPart,
-    fqn,
-  } = useFqn({
+  const { columnFqn: columnPart, fqn } = useFqn({
     type: EntityType.API_ENDPOINT,
   });
 
@@ -228,6 +226,11 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
     selectedColumn: selectedColumn as Field | null,
   });
 
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(activeSchemaFields);
+  }, [activeSchemaFields, setDisplayedColumns]);
+
   useScrollToElement(
     HIGHLIGHTED_ROW_SELECTOR,
     Boolean(fqn && activeSchemaFields?.length)
@@ -271,7 +274,7 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
             {isVersionView ? (
               <RichTextEditorPreviewerV1 markdown={getEntityName(record)} />
             ) : (
-              getEntityName(record)
+              <span className="text-link-color">{getEntityName(record)}</span>
             )}
           </span>
         </Tooltip>
@@ -470,7 +473,7 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
           }
           defaultVisibleColumns={DEFAULT_API_ENDPOINT_SCHEMA_VISIBLE_COLUMNS}
           expandable={{
-            ...getTableExpandableConfig<Field>(),
+            ...getTableExpandableConfig<Field>(false, 'text-link-color'),
             rowExpandable: (record) => !isEmpty(record.children),
             onExpandedRowsChange: handleExpandedRowsChange,
             expandedRowKeys,
@@ -503,7 +506,8 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
       {editFieldDescription && (
         <EntityAttachmentProvider
           entityFqn={editFieldDescription.fullyQualifiedName}
-          entityType={EntityType.API_ENDPOINT}>
+          entityType={EntityType.API_ENDPOINT}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.schema-field'),

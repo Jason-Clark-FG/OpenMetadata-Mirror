@@ -14,6 +14,7 @@
 import { Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { get, isEmpty, isNil, isString, isUndefined, lowerCase } from 'lodash';
+import { Bucket } from 'Models';
 import Qs from 'qs';
 import React from 'react';
 import {
@@ -36,11 +37,7 @@ import { EntityFields } from '../enums/AdvancedSearch.enum';
 import { SORT_ORDER } from '../enums/common.enum';
 import { EntityType } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
-import {
-  Aggregations,
-  Bucket,
-  SearchResponse,
-} from '../interface/search.interface';
+import { Aggregations, SearchResponse } from '../interface/search.interface';
 import {
   EsBoolQuery,
   QueryFieldInterface,
@@ -507,14 +504,16 @@ export const generateTabItems = (
       label: (
         <div
           className="d-flex items-center justify-between"
-          data-testid={`${lowerCase(tabDetail.label)}-tab`}>
+          data-testid={`${lowerCase(tabDetail.label)}-tab`}
+        >
           <div className="explore-tab-label">
             <span className="explore-icon d-flex m-r-xs">
               <Icon />
             </span>
             <Typography.Text
               className={tabSearchIndex === searchIndex ? 'text-primary' : ''}
-              ellipsis={{ tooltip: true }}>
+              ellipsis={{ tooltip: true }}
+            >
               {tabDetail.label}
             </Typography.Text>
           </div>

@@ -93,8 +93,9 @@ function FileDetails({
 }: Readonly<FileDetailsProps>) {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
-  const { tab: activeTab = EntityTabs.OVERVIEW } =
-    useRequiredParams<{ tab: EntityTabs }>();
+  const { tab: activeTab = EntityTabs.OVERVIEW } = useRequiredParams<{
+    tab: EntityTabs;
+  }>();
 
   const navigate = useNavigate();
   const { customizedPage, isLoading } = useCustomPages(PageType.File);
@@ -331,6 +332,7 @@ function FileDetails({
       activeTab,
       feedCount,
       labelMap: tabLabelMap,
+      fileDetails,
     });
 
     return getDetailsTabWithNewLabel(
@@ -418,7 +420,8 @@ function FileDetails({
           isTabExpanded={isTabExpanded}
           permissions={filePermissions}
           type={EntityType.FILE}
-          onUpdate={onFileUpdate}>
+          onUpdate={onFileUpdate}
+        >
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

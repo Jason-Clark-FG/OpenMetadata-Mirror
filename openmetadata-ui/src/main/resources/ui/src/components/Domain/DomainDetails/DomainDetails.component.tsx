@@ -99,6 +99,7 @@ import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumb
 import { useBreadcrumbs } from '../../common/atoms/navigation/useBreadcrumbs';
 
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
+import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { FeedCounts } from '../../../interface/feed.interface';
 import { withActivityFeed } from '../../AppRouter/withActivityFeed';
 import { CoverImage } from '../../common/CoverImage/CoverImage.component';
@@ -111,6 +112,7 @@ import Loader from '../../common/Loader/Loader';
 import { GenericProvider } from '../../Customization/GenericProvider/GenericProvider';
 import { AssetSelectionDrawer } from '../../DataAssets/AssetsSelectionModal/AssetSelectionDrawer';
 import { EntityDetailsObjectInterface } from '../../Explore/ExplorePage.interface';
+import { LearningIcon } from '../../Learning/LearningIcon/LearningIcon.component';
 import StyleModal from '../../Modals/StyleModal/StyleModal.component';
 import AddDomainForm from '../AddDomainForm/AddDomainForm.component';
 import '../domain.less';
@@ -137,8 +139,11 @@ const DomainDetails = ({
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { getEntityPermission, permissions } = usePermissionProvider();
-  const routeParams =
-    useParams<{ fqn?: string; tab?: string; version?: string }>();
+  const routeParams = useParams<{
+    fqn?: string;
+    tab?: string;
+    version?: string;
+  }>();
   const reactNavigate = useNavigate();
   const navigate = useCallback(
     (path: string) => {
@@ -643,15 +648,19 @@ const DomainDetails = ({
       name: newName?.trim(),
     };
 
-    await onUpdate(updatedDetails);
-    setIsNameEditing(false);
+    try {
+      await onUpdate(updatedDetails);
+      setIsNameEditing(false);
 
-    // If name changed, navigate to the new URL
-    if (newName && newName.trim() !== domain.name) {
-      const newFqn = domain.parent
-        ? `${domain.parent.fullyQualifiedName}.${newName.trim()}`
-        : newName.trim();
-      navigate(getDomainDetailsPath(newFqn, activeTab));
+      // If name changed, navigate to the new URL
+      if (newName && newName.trim() !== domain.name) {
+        const newFqn = domain.parent
+          ? `${domain.parent.fullyQualifiedName}.${newName.trim()}`
+          : newName.trim();
+        navigate(getDomainDetailsPath(newFqn, activeTab));
+      }
+    } catch (error) {
+      setIsNameEditing(false);
     }
   };
 
@@ -878,7 +887,8 @@ const DomainDetails = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}>
+        }}
+      >
         {!isTreeView && (
           <CoverImage
             imageUrl={domain.style?.coverImage?.url}
@@ -891,7 +901,8 @@ const DomainDetails = ({
             display: 'flex',
             mx: 5,
             alignItems: 'flex-end',
-          }}>
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <EntityHeader
               breadcrumb={[]}
@@ -903,6 +914,11 @@ const DomainDetails = ({
               isFollowing={isFollowing}
               isFollowingLoading={isFollowingLoading}
               serviceName=""
+              suffix={
+                !isTreeView && (
+                  <LearningIcon pageId={LEARNING_PAGE_IDS.DOMAIN} />
+                )
+              }
               titleColor={domain.style?.color}
             />
           </Box>
@@ -915,7 +931,8 @@ const DomainDetails = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}>
+              }}
+            >
               {!isVersionsView && addButtonContent.length > 0 && (
                 <Dropdown
                   data-testid="domain-details-add-button-menu"
@@ -923,10 +940,12 @@ const DomainDetails = ({
                     items: addButtonContent,
                   }}
                   placement="bottomRight"
-                  trigger={['click']}>
+                  trigger={['click']}
+                >
                   <Button
                     data-testid="domain-details-add-button"
-                    type="primary">
+                    type="primary"
+                  >
                     <Space>
                       {t('label.add')}
                       <DownOutlined />
@@ -944,18 +963,21 @@ const DomainDetails = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}>
+                    )}
+                  >
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}>
+                      onClick={handleVersionClick}
+                    >
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}>
+                        })}
+                      >
                         {toString(domain.version)}
                       </Typography.Text>
                     </Button>
@@ -974,12 +996,14 @@ const DomainDetails = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}>
+                    onOpenChange={setShowActions}
+                  >
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.domain'),
-                      })}>
+                      })}
+                    >
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -1010,7 +1034,8 @@ const DomainDetails = ({
           isVersionView={isVersionsView}
           permissions={domainPermission}
           type={EntityType.DOMAIN}
-          onUpdate={onUpdate}>
+          onUpdate={onUpdate}
+        >
           <Box className="domain-details-page-tabs" sx={{ width: '100%' }}>
             <Box sx={{ px: isTreeView ? 0 : 5, py: 5 }}>
               <Tabs
@@ -1065,6 +1090,7 @@ const DomainDetails = ({
         />
       )}
       <EntityNameModal<Domain>
+        allowRename
         entity={domain}
         title={t('label.edit-entity', {
           entity: t('label.name'),
@@ -1100,7 +1126,8 @@ const DomainDetails = ({
         sx={{
           ...getDomainContainerStyles(theme),
           ...(isTreeView && { border: 'none' }),
-        }}>
+        }}
+      >
         {content}
       </Box>
     </>

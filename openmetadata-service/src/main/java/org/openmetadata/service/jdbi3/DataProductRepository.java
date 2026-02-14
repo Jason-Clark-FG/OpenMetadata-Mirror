@@ -35,10 +35,13 @@ import jakarta.json.JsonPatch;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.openmetadata.schema.EntityInterface;
@@ -84,6 +87,8 @@ import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.util.EntityFieldUtils;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
+import org.openmetadata.service.util.EntityWithType;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.LineageUtil;
 import org.openmetadata.service.util.RestUtil;
@@ -117,7 +122,7 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
   }
 
   @Override
-  public void setFields(DataProduct entity, Fields fields) {
+  public void setFields(DataProduct entity, Fields fields, RelationIncludes relationIncludes) {
     // Assets, inputPorts, outputPorts are accessed via dedicated paginated APIs:
     // GET /v1/dataProducts/{id}/assets
     // GET /v1/dataProducts/{id}/inputPorts
@@ -156,6 +161,14 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
   public void storeEntity(DataProduct entity, boolean update) {
     // Ports are stored as relationships via dedicated APIs, not in entity JSON
     store(entity, update);
+  }
+
+  @Override
+  protected void clearEntitySpecificRelationshipsForMany(List<DataProduct> entities) {
+    if (entities.isEmpty()) return;
+    List<UUID> ids = entities.stream().map(DataProduct::getId).toList();
+    deleteToMany(ids, Entity.DATA_PRODUCT, Relationship.CONTAINS, Entity.DOMAIN);
+    deleteFromMany(ids, Entity.DATA_PRODUCT, Relationship.EXPERT, Entity.USER);
   }
 
   @Override
@@ -277,16 +290,68 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     BulkOperationResult result =
         new BulkOperationResult().withStatus(ApiStatus.SUCCESS).withDryRun(false);
     List<BulkResponse> success = new ArrayList<>();
+    List<BulkResponse> failed = new ArrayList<>();
 
     List<EntityReference> assets = new ArrayList<>(listOrEmpty(request.getAssets()));
     EntityUtil.populateEntityReferences(assets);
 
     String fieldName = relationship == Relationship.INPUT_PORT ? "inputPorts" : "outputPorts";
 
+    Relationship oppositeRelationship =
+        relationship == Relationship.INPUT_PORT
+            ? Relationship.OUTPUT_PORT
+            : Relationship.INPUT_PORT;
+
+    Set<UUID> oppositePortIds = Set.of();
+    Set<UUID> dataProductAssetIds = Set.of();
+    if (isAdd) {
+      oppositePortIds =
+          daoCollection
+              .relationshipDAO()
+              .findTo(dataProduct.getId(), DATA_PRODUCT, oppositeRelationship.ordinal())
+              .stream()
+              .map(CollectionDAO.EntityRelationshipRecord::getId)
+              .collect(Collectors.toCollection(HashSet::new));
+      if (relationship == Relationship.OUTPUT_PORT) {
+        dataProductAssetIds =
+            daoCollection
+                .relationshipDAO()
+                .findTo(dataProduct.getId(), DATA_PRODUCT, Relationship.HAS.ordinal())
+                .stream()
+                .map(CollectionDAO.EntityRelationshipRecord::getId)
+                .collect(Collectors.toCollection(HashSet::new));
+      }
+    }
+
     for (EntityReference ref : assets) {
       result.setNumberOfRowsProcessed(result.getNumberOfRowsProcessed() + 1);
 
       if (isAdd) {
+        if (oppositePortIds.contains(ref.getId())) {
+          String oppositePortType =
+              oppositeRelationship == Relationship.INPUT_PORT ? "input" : "output";
+          String msg =
+              String.format(
+                  "Asset '%s' is already part of %s ports and cannot be added to %s",
+                  ref.getFullyQualifiedName(), oppositePortType, fieldName);
+          failed.add(new BulkResponse().withRequest(ref).withMessage(msg));
+          result.setNumberOfRowsFailed(result.getNumberOfRowsFailed() + 1);
+          result.setStatus(ApiStatus.PARTIAL_SUCCESS);
+          continue;
+        }
+
+        if (relationship == Relationship.OUTPUT_PORT
+            && !dataProductAssetIds.contains(ref.getId())) {
+          String msg =
+              String.format(
+                  "Asset '%s' must belong to the data product before it can be added as an output port",
+                  ref.getFullyQualifiedName());
+          failed.add(new BulkResponse().withRequest(ref).withMessage(msg));
+          result.setNumberOfRowsFailed(result.getNumberOfRowsFailed() + 1);
+          result.setStatus(ApiStatus.PARTIAL_SUCCESS);
+          continue;
+        }
+
         addRelationship(
             dataProduct.getId(), ref.getId(), DATA_PRODUCT, ref.getType(), relationship);
       } else {
@@ -301,11 +366,17 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
           .onEntityUpdated(dataProduct.getEntityReference(), null);
     }
 
-    result.withSuccessRequest(success);
+    result.withSuccessRequest(success).withFailedRequest(failed);
 
-    if (result.getStatus().equals(ApiStatus.SUCCESS)) {
+    if (success.isEmpty() && !failed.isEmpty()) {
+      result.setStatus(ApiStatus.FAILURE);
+    }
+
+    if (!success.isEmpty()) {
+      List<EntityReference> successAssets =
+          success.stream().map(r -> (EntityReference) r.getRequest()).collect(Collectors.toList());
       ChangeDescription change =
-          addBulkAddRemoveChangeDescription(dataProduct.getVersion(), isAdd, assets, null);
+          addBulkAddRemoveChangeDescription(dataProduct.getVersion(), isAdd, successAssets, null);
       if (!change.getFieldsAdded().isEmpty()) {
         change.getFieldsAdded().get(0).setName(fieldName);
       }
@@ -382,30 +453,30 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     return dataProductAssetCounts;
   }
 
-  public ResultList<EntityInterface> getPaginatedInputPorts(
-      UUID dataProductId, int limit, int offset) {
-    return getPaginatedPorts(dataProductId, Relationship.INPUT_PORT, limit, offset);
+  public ResultList<EntityWithType> getPaginatedInputPorts(
+      UUID dataProductId, String fields, int limit, int offset) {
+    return getPaginatedPorts(dataProductId, Relationship.INPUT_PORT, fields, limit, offset);
   }
 
-  public ResultList<EntityInterface> getPaginatedInputPortsByName(
-      String dataProductName, int limit, int offset) {
+  public ResultList<EntityWithType> getPaginatedInputPortsByName(
+      String dataProductName, String fields, int limit, int offset) {
     DataProduct dataProduct = getByName(null, dataProductName, getFields("id"));
-    return getPaginatedInputPorts(dataProduct.getId(), limit, offset);
+    return getPaginatedInputPorts(dataProduct.getId(), fields, limit, offset);
   }
 
-  public ResultList<EntityInterface> getPaginatedOutputPorts(
-      UUID dataProductId, int limit, int offset) {
-    return getPaginatedPorts(dataProductId, Relationship.OUTPUT_PORT, limit, offset);
+  public ResultList<EntityWithType> getPaginatedOutputPorts(
+      UUID dataProductId, String fields, int limit, int offset) {
+    return getPaginatedPorts(dataProductId, Relationship.OUTPUT_PORT, fields, limit, offset);
   }
 
-  public ResultList<EntityInterface> getPaginatedOutputPortsByName(
-      String dataProductName, int limit, int offset) {
+  public ResultList<EntityWithType> getPaginatedOutputPortsByName(
+      String dataProductName, String fields, int limit, int offset) {
     DataProduct dataProduct = getByName(null, dataProductName, getFields("id"));
-    return getPaginatedOutputPorts(dataProduct.getId(), limit, offset);
+    return getPaginatedOutputPorts(dataProduct.getId(), fields, limit, offset);
   }
 
-  private ResultList<EntityInterface> getPaginatedPorts(
-      UUID dataProductId, Relationship relationship, int limit, int offset) {
+  private ResultList<EntityWithType> getPaginatedPorts(
+      UUID dataProductId, Relationship relationship, String fields, int limit, int offset) {
     List<CollectionDAO.EntityRelationshipRecord> relationshipRecords =
         daoCollection
             .relationshipDAO()
@@ -429,18 +500,23 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     }
 
     // Bulk fetch entities by type and collect in order
-    Map<UUID, EntityInterface> entitiesById = new HashMap<>();
+    // Use empty string if fields is null to avoid NPE
+    String fieldsToFetch = fields != null ? fields : "";
+    Map<UUID, EntityWithType> entitiesById = new HashMap<>();
     for (Map.Entry<String, List<EntityReference>> entry : refsByType.entrySet()) {
-      List<EntityInterface> entitiesOfType = Entity.getEntities(entry.getValue(), "", NON_DELETED);
+      String entityType = entry.getKey();
+      List<EntityInterface> entitiesOfType =
+          Entity.getEntities(entry.getValue(), fieldsToFetch, NON_DELETED);
       for (int i = 0; i < entitiesOfType.size(); i++) {
-        entitiesById.put(entry.getValue().get(i).getId(), entitiesOfType.get(i));
+        entitiesById.put(
+            entry.getValue().get(i).getId(), new EntityWithType(entitiesOfType.get(i), entityType));
       }
     }
 
     // Preserve original order from relationship records
-    List<EntityInterface> entities = new ArrayList<>();
+    List<EntityWithType> entities = new ArrayList<>();
     for (CollectionDAO.EntityRelationshipRecord record : relationshipRecords) {
-      EntityInterface entity = entitiesById.get(record.getId());
+      EntityWithType entity = entitiesById.get(record.getId());
       if (entity != null) {
         entities.add(entity);
       }
@@ -450,24 +526,39 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
   }
 
   public DataProductPortsView getPortsView(
-      UUID dataProductId, int inputLimit, int inputOffset, int outputLimit, int outputOffset) {
+      UUID dataProductId,
+      String fields,
+      int inputLimit,
+      int inputOffset,
+      int outputLimit,
+      int outputOffset) {
     DataProduct dataProduct = get(null, dataProductId, getFields("id,fullyQualifiedName"));
-    return buildPortsView(dataProduct, inputLimit, inputOffset, outputLimit, outputOffset);
+    return buildPortsView(dataProduct, fields, inputLimit, inputOffset, outputLimit, outputOffset);
   }
 
   public DataProductPortsView getPortsViewByName(
-      String dataProductName, int inputLimit, int inputOffset, int outputLimit, int outputOffset) {
+      String dataProductName,
+      String fields,
+      int inputLimit,
+      int inputOffset,
+      int outputLimit,
+      int outputOffset) {
     DataProduct dataProduct = getByName(null, dataProductName, getFields("id,fullyQualifiedName"));
-    return buildPortsView(dataProduct, inputLimit, inputOffset, outputLimit, outputOffset);
+    return buildPortsView(dataProduct, fields, inputLimit, inputOffset, outputLimit, outputOffset);
   }
 
   @SuppressWarnings("unchecked")
   private DataProductPortsView buildPortsView(
-      DataProduct dataProduct, int inputLimit, int inputOffset, int outputLimit, int outputOffset) {
-    ResultList<EntityInterface> inputPorts =
-        getPaginatedInputPorts(dataProduct.getId(), inputLimit, inputOffset);
-    ResultList<EntityInterface> outputPorts =
-        getPaginatedOutputPorts(dataProduct.getId(), outputLimit, outputOffset);
+      DataProduct dataProduct,
+      String fields,
+      int inputLimit,
+      int inputOffset,
+      int outputLimit,
+      int outputOffset) {
+    ResultList<EntityWithType> inputPorts =
+        getPaginatedInputPorts(dataProduct.getId(), fields, inputLimit, inputOffset);
+    ResultList<EntityWithType> outputPorts =
+        getPaginatedOutputPorts(dataProduct.getId(), fields, outputLimit, outputOffset);
 
     return new DataProductPortsView()
         .withEntity(dataProduct.getEntityReference())
@@ -1016,6 +1107,20 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
           "{} Task not found for data product {}",
           TaskType.RequestApproval,
           dataProduct.getFullyQualifiedName());
+    }
+  }
+
+  public org.openmetadata.schema.entity.data.DataContract getDataProductContract(
+      UUID dataProductId) {
+    try {
+      DataContractRepository contractRepo =
+          (DataContractRepository) Entity.getEntityRepository(Entity.DATA_CONTRACT);
+      EntityReference dataProductRef =
+          new EntityReference().withId(dataProductId).withType(Entity.DATA_PRODUCT);
+      return contractRepo.loadEntityDataContract(dataProductRef);
+    } catch (Exception e) {
+      LOG.debug("No contract found for data product {}: {}", dataProductId, e.getMessage());
+      return null;
     }
   }
 }

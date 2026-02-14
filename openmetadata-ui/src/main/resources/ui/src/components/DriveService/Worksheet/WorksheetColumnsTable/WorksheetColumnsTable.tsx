@@ -22,7 +22,7 @@ import {
   uniqBy,
 } from 'lodash';
 import { EntityTags, TagFilterOptions } from 'Models';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TABLE_SCROLL_VALUE } from '../../../../constants/Table.constants';
 import {
@@ -50,6 +50,7 @@ import {
   updateFieldDescription,
   updateFieldTags,
 } from '../../../../utils/TableUtils';
+import CopyLinkButton from '../../../common/CopyLinkButton/CopyLinkButton';
 import { EntityAttachmentProvider } from '../../../common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Table from '../../../common/Table/Table';
@@ -57,7 +58,6 @@ import { useGenericContext } from '../../../Customization/GenericProvider/Generi
 import { ColumnFilter } from '../../../Database/ColumnFilter/ColumnFilter.component';
 import TableDescription from '../../../Database/TableDescription/TableDescription.component';
 import TableTags from '../../../Database/TableTags/TableTags.component';
-import CopyLinkButton from '../../../common/CopyLinkButton/CopyLinkButton';
 import { ModalWithMarkdownEditor } from '../../../Modals/ModalWithMarkdownEditor/ModalWithMarkdownEditor';
 
 function WorksheetColumnsTable() {
@@ -67,6 +67,7 @@ function WorksheetColumnsTable() {
     permissions,
     onUpdate,
     openColumnDetailPanel,
+    setDisplayedColumns,
   } = useGenericContext<Worksheet>();
 
   const [editWorksheetColumnDescription, setEditWorksheetColumnDescription] =
@@ -91,7 +92,15 @@ function WorksheetColumnsTable() {
     };
   }, [permissions, worksheetDetails]);
 
-  const schema = pruneEmptyChildren(worksheetDetails?.columns ?? []);
+  const schema = useMemo(
+    () => pruneEmptyChildren(worksheetDetails?.columns ?? []),
+    [worksheetDetails?.columns]
+  );
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(schema);
+  }, [schema, setDisplayedColumns]);
 
   const handleFieldClick = (field: Column) => {
     openColumnDetailPanel(field);
@@ -173,10 +182,11 @@ function WorksheetColumnsTable() {
                   columnConstraint: record.constraint,
                 })}
                 <Typography.Text
-                  className={classNames('m-b-0 d-block break-word', {
-                    'text-grey-600': !isEmpty(displayName),
-                  })}
-                  data-testid="column-name">
+                  className={classNames(
+                    'm-b-0 d-block break-word text-link-color'
+                  )}
+                  data-testid="column-name"
+                >
                   {name}
                 </Typography.Text>
                 {record.fullyQualifiedName && (
@@ -189,7 +199,8 @@ function WorksheetColumnsTable() {
               {!isEmpty(displayName) ? (
                 <Typography.Text
                   className="m-b-0 d-block break-word"
-                  data-testid="column-display-name">
+                  data-testid="column-display-name"
+                >
                   {getEntityName(record)}
                 </Typography.Text>
               ) : null}
@@ -215,7 +226,8 @@ function WorksheetColumnsTable() {
                 overflowWrap: 'break-word',
                 textAlign: 'center',
               }}
-              title={toLower(dataTypeDisplay)}>
+              title={toLower(dataTypeDisplay)}
+            >
               <Typography.Text ellipsis className="cursor-pointer">
                 {dataTypeDisplay ?? record.dataType}
               </Typography.Text>
@@ -315,7 +327,7 @@ function WorksheetColumnsTable() {
         dataSource={schema}
         defaultVisibleColumns={DEFAULT_WORKSHEET_DATA_MODEL_VISIBLE_COLUMNS}
         expandable={{
-          ...getTableExpandableConfig<Column>(),
+          ...getTableExpandableConfig<Column>(false, 'text-link-color'),
           rowExpandable: (record) => !isEmpty(record.children),
         }}
         pagination={false}
@@ -327,7 +339,8 @@ function WorksheetColumnsTable() {
       {editWorksheetColumnDescription && (
         <EntityAttachmentProvider
           entityFqn={editWorksheetColumnDescription.fullyQualifiedName}
-          entityType={EntityType.WORKSHEET}>
+          entityType={EntityType.WORKSHEET}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.column'),

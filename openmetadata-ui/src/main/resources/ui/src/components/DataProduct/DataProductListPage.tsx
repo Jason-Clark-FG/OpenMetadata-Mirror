@@ -19,6 +19,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
 import { DRAWER_HEADER_STYLING } from '../../constants/DomainsListPage.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
@@ -132,6 +133,7 @@ const DataProductListPage = () => {
     createPermission: permissions.dataProduct?.Create || false,
     addButtonLabelKey: 'label.add-data-product',
     onAddClick: openDrawer,
+    learningPageId: LEARNING_PAGE_IDS.DATA_PRODUCT,
   });
 
   const { titleAndCount } = useTitleAndCount({
@@ -272,7 +274,8 @@ const DataProductListPage = () => {
             py: 4,
             borderBottom: `1px solid`,
             borderColor: theme.palette.allShades?.gray?.[200],
-          }}>
+          }}
+        >
           <Box sx={{ display: 'flex', gap: 5, alignItems: 'center' }}>
             {titleAndCount}
             {search}

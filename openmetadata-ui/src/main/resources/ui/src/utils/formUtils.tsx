@@ -336,7 +336,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <DomainSelectableList
-            {...(rest as unknown as DomainSelectableListProps)}>
+            {...(rest as unknown as DomainSelectableListProps)}
+          >
             {children}
           </DomainSelectableList>
         );
@@ -365,7 +366,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <UserTeamSelectableList
-            {...(rest as unknown as UserSelectDropdownProps)}>
+            {...(rest as unknown as UserSelectDropdownProps)}
+          >
             {children}
           </UserTeamSelectableList>
         );
@@ -473,6 +475,12 @@ export const getField = (field: FieldProp) => {
       );
     }
 
+    case FieldTypes.COMPONENT: {
+      fieldElement = props.children;
+
+      break;
+    }
+
     default:
       break;
   }
@@ -511,7 +519,8 @@ export const getField = (field: FieldProp) => {
           'm-b-xss': helperTextType === HelperTextType.ALERT,
         })}
         {...formProps}
-        label={labelValue}>
+        label={labelValue}
+      >
         {fieldElement}
       </Form.Item>
 

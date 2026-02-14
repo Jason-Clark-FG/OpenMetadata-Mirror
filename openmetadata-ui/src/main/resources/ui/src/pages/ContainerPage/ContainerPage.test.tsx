@@ -212,6 +212,14 @@ jest.mock('../../utils/PermissionsUtils', () => ({
 
 jest.mock('../../utils/StringsUtils', () => ({
   getDecodedFqn: jest.fn().mockImplementation((fqn) => fqn),
+  getEncodedFqn: jest.fn().mockImplementation((fqn) => fqn),
+  stringToHTML: jest.fn().mockImplementation((str) => str),
+  getErrorText: jest
+    .fn()
+    .mockImplementation(
+      (error: Error, defaultMessage: string) =>
+        error?.message || defaultMessage || 'Error'
+    ),
 }));
 
 jest.mock('../../utils/TableUtils', () => {
@@ -355,8 +363,9 @@ describe('Container Page Component', () => {
   });
 
   it('show ErrorPlaceHolder if container data fetch fail', async () => {
-    (getContainerByName as jest.Mock)
-      .mockRejectedValue('failed to fetch container data'); // For fetch
+    (getContainerByName as jest.Mock).mockRejectedValue(
+      'failed to fetch container data'
+    ); // For fetch
 
     render(
       <MemoryRouter>
@@ -376,9 +385,7 @@ describe('Container Page Component', () => {
   });
 
   it('should render the page container data, with the schema tab selected', async () => {
-    (getContainerByName as jest.Mock).mockResolvedValue(
-      MOCK_CONTAINER_DATA
-    );
+    (getContainerByName as jest.Mock).mockResolvedValue(MOCK_CONTAINER_DATA);
 
     render(
       <MemoryRouter>
@@ -427,9 +434,7 @@ describe('Container Page Component', () => {
   });
 
   it('onClick of follow container should call addContainerFollower', async () => {
-    (getContainerByName as jest.Mock).mockResolvedValue(
-      MOCK_CONTAINER_DATA
-    );
+    (getContainerByName as jest.Mock).mockResolvedValue(MOCK_CONTAINER_DATA);
 
     render(
       <MemoryRouter>
@@ -449,9 +454,7 @@ describe('Container Page Component', () => {
   });
 
   it('tab switch should work', async () => {
-    (getContainerByName as jest.Mock).mockResolvedValue(
-      MOCK_CONTAINER_DATA
-    );
+    (getContainerByName as jest.Mock).mockResolvedValue(MOCK_CONTAINER_DATA);
 
     render(
       <MemoryRouter>
@@ -476,9 +479,7 @@ describe('Container Page Component', () => {
   });
 
   it('children should render on children tab', async () => {
-    (getContainerByName as jest.Mock).mockResolvedValue(
-      MOCK_CONTAINER_DATA_1
-    );
+    (getContainerByName as jest.Mock).mockResolvedValue(MOCK_CONTAINER_DATA_1);
     mockUseParams.mockReturnValue({
       fqn: MOCK_CONTAINER_DATA_1.fullyQualifiedName,
       tab: EntityTabs.CHILDREN,
@@ -509,9 +510,7 @@ describe('Container Page Component', () => {
   });
 
   it('should pass entity name as pageTitle to PageLayoutV1', async () => {
-    (getContainerByName as jest.Mock).mockResolvedValue(
-      MOCK_CONTAINER_DATA
-    );
+    (getContainerByName as jest.Mock).mockResolvedValue(MOCK_CONTAINER_DATA);
 
     render(
       <MemoryRouter>

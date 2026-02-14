@@ -70,7 +70,7 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
           ...entityDetails,
           extension: updatedExtension,
         };
-        await onUpdate(updatedData);
+        await onUpdate(updatedData, 'extension' as keyof ExtentionEntities[T]);
       }
     },
     [entityDetails, onUpdate]
@@ -122,7 +122,8 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
             entityType,
             entityDetails.fullyQualifiedName,
             EntityTabs.CUSTOM_PROPERTIES
-          )}>
+          )}
+        >
           {t('label.view-all')}
         </Link>
       );
@@ -217,7 +218,8 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
           className="border-none"
           contentMaxWidth="24rem"
           icon={<CustomPropertyEmpty />}
-          type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}>
+          type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}
+        >
           <Transi18next
             i18nKey="message.no-custom-properties-entity"
             renderElement={
@@ -256,7 +258,8 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
                 'top-border-radius': index === 0,
                 'bottom-border-radius': index === dataSource.length - 1,
               })}
-              key={record.name}>
+              key={record.name}
+            >
               <PropertyValue
                 extension={extensionObject.extensionObject}
                 hasEditPermissions={hasEditAccess}
@@ -284,7 +287,8 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
         cardProps={{
           className: 'no-scrollbar',
           title: header,
-        }}>
+        }}
+      >
         {propertyList}
       </ExpandableCard>
     );

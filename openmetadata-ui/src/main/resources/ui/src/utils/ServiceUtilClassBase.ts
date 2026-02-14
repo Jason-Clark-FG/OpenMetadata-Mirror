@@ -35,6 +35,7 @@ import {
   AZURESQL,
   BIGQUERY,
   BIGTABLE,
+  BURSTIQ,
   CASSANDRA,
   CLICKHOUSE,
   COCKROACH,
@@ -103,6 +104,7 @@ import {
   SAP_HANA,
   SAS,
   SCIKIT,
+  SFTP,
   SIGMA,
   SINGLESTORE,
   SNOWFLAKE,
@@ -192,6 +194,8 @@ class ServiceUtilClassBase {
     DatabaseServiceType.Dremio,
     MetadataServiceType.Collibra,
     PipelineServiceType.Mulesoft,
+    DatabaseServiceType.MicrosoftFabric,
+    PipelineServiceType.MicrosoftFabricPipeline,
   ];
 
   DatabaseServiceTypeSmallCase = this.convertEnumToLowerCase<
@@ -537,6 +541,9 @@ class ServiceUtilClassBase {
       case this.DatabaseServiceTypeSmallCase.Synapse:
         return SYNAPSE;
 
+      case this.DatabaseServiceTypeSmallCase.BurstIQ:
+        return BURSTIQ;
+
       case this.MessagingServiceTypeSmallCase.CustomMessaging:
         return TOPIC_DEFAULT;
 
@@ -696,6 +703,9 @@ class ServiceUtilClassBase {
       case this.DriveServiceTypeSmallCase.GoogleDrive:
         return GOOGLE_DRIVE;
 
+      case this.DriveServiceTypeSmallCase.Sftp:
+        return SFTP;
+
       case this.DatabaseServiceTypeSmallCase.Timescale:
         return TIMESCALE;
 
@@ -769,41 +779,41 @@ class ServiceUtilClassBase {
 
     switch (true) {
       case Object.values(database).includes(
-        serviceType as typeof database[keyof typeof database]
+        serviceType as (typeof database)[keyof typeof database]
       ):
         return ExplorePageTabs.TABLES;
       case Object.values(messaging).includes(
-        serviceType as typeof messaging[keyof typeof messaging]
+        serviceType as (typeof messaging)[keyof typeof messaging]
       ):
         return ExplorePageTabs.TOPICS;
       case Object.values(dashboard).includes(
-        serviceType as typeof dashboard[keyof typeof dashboard]
+        serviceType as (typeof dashboard)[keyof typeof dashboard]
       ):
         return ExplorePageTabs.DASHBOARDS;
       case Object.values(mlmodel).includes(
-        serviceType as typeof mlmodel[keyof typeof mlmodel]
+        serviceType as (typeof mlmodel)[keyof typeof mlmodel]
       ):
         return ExplorePageTabs.MLMODELS;
       case Object.values(pipeline).includes(
-        serviceType as typeof pipeline[keyof typeof pipeline]
+        serviceType as (typeof pipeline)[keyof typeof pipeline]
       ):
         return ExplorePageTabs.PIPELINES;
       case Object.values(storage).includes(
-        serviceType as typeof storage[keyof typeof storage]
+        serviceType as (typeof storage)[keyof typeof storage]
       ):
         return ExplorePageTabs.CONTAINERS;
       case Object.values(search).includes(
-        serviceType as typeof search[keyof typeof search]
+        serviceType as (typeof search)[keyof typeof search]
       ):
         return ExplorePageTabs.SEARCH_INDEX;
 
       case Object.values(api).includes(
-        serviceType as typeof api[keyof typeof api]
+        serviceType as (typeof api)[keyof typeof api]
       ):
         return ExplorePageTabs.API_ENDPOINT;
 
       case Object.values(security).includes(
-        serviceType as typeof security[keyof typeof security]
+        serviceType as (typeof security)[keyof typeof security]
       ):
         return ExplorePageTabs.TABLES; // Security services don't have a specific tab, default to tables
 

@@ -17,6 +17,7 @@ import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.analytics.WebAnalyticEventResource;
 import org.openmetadata.service.util.EntityUtil;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
 
@@ -35,7 +36,8 @@ public class WebAnalyticEventRepository extends EntityRepository<WebAnalyticEven
   }
 
   @Override
-  public void setFields(WebAnalyticEvent entity, EntityUtil.Fields fields) {
+  public void setFields(
+      WebAnalyticEvent entity, EntityUtil.Fields fields, RelationIncludes relationIncludes) {
     /* Nothing to do */
   }
 
@@ -167,7 +169,8 @@ public class WebAnalyticEventRepository extends EntityRepository<WebAnalyticEven
   }
 
   private int getOffset(String offset) {
-    return offset != null ? Integer.parseInt(RestUtil.decodeCursor(offset)) : 0;
+    String decoded = RestUtil.decodeCursor(offset);
+    return offset != null && decoded != null ? Integer.parseInt(decoded) : 0;
   }
 
   private Map<String, List<?>> getEntityList(List<String> jsons, boolean skipErrors) {

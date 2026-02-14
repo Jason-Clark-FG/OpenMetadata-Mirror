@@ -13,7 +13,6 @@
 
 import { removeSession } from '@analytics/session-utils';
 import { Auth0Provider } from '@auth0/auth0-react';
-
 import {
   Configuration,
   IPublicClientApplication,
@@ -509,7 +508,7 @@ export const AuthProvider = ({
               (error.config.url === '/users/loggedInUser' &&
                 !error.response.data.message.includes('Expired token!'))
             ) {
-              return Promise.reject(error);
+              throw error;
             }
             handleStoreProtectedRedirectPath();
 
@@ -659,7 +658,8 @@ export const AuthProvider = ({
             cacheLocation="memory"
             clientId={authConfig.clientId.toString()}
             domain={authConfig.authority.toString()}
-            redirectUri={authConfig.callbackUrl.toString()}>
+            redirectUri={authConfig.callbackUrl.toString()}
+          >
             <Auth0Authenticator ref={authenticatorRef}>
               {childElement}
             </Auth0Authenticator>
@@ -682,7 +682,8 @@ export const AuthProvider = ({
           <OidcAuthenticator
             childComponentType={childComponentType}
             ref={authenticatorRef}
-            userConfig={userConfig}>
+            userConfig={userConfig}
+          >
             {childElement}
           </OidcAuthenticator>
         );

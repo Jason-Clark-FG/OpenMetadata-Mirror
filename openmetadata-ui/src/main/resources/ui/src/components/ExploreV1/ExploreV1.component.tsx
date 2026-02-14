@@ -306,6 +306,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
   return (
     <div className="explore-page bg-grey" data-testid="explore-page">
       <ResizableLeftPanels
+        showLearningIcon
         className="content-height-with-resizable-panel"
         firstPanel={{
           className: 'content-resizable-panel-container',
@@ -323,7 +324,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
               <Row
                 className="quick-filters-container"
                 gutter={[20, 0]}
-                wrap={false}>
+                wrap={false}
+              >
                 <Col span={24}>
                   <Card className="p-md card-padding-0 m-b-box">
                     <Row>
@@ -345,7 +347,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
                           </Col>
                           <Col
                             className="d-flex items-center justify-end gap-3"
-                            flex={410}>
+                            flex={410}
+                          >
                             <span className="flex-center">
                               <Switch
                                 checked={showDeleted}
@@ -360,7 +363,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
                               <Typography.Text
                                 className="text-primary self-center cursor-pointer font-medium"
                                 data-testid="clear-filters"
-                                onClick={() => clearFilters()}>
+                                onClick={() => clearFilters()}
+                              >
                                 {t('label.clear-entity', {
                                   entity: '',
                                 })}
@@ -391,7 +395,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
                                       ? SORT_ORDER.DESC
                                       : SORT_ORDER.ASC
                                   )
-                                }>
+                                }
+                              >
                                 {isAscSortOrder ? (
                                   <SortAscendingOutlined
                                     style={{ fontSize: '14px' }}
@@ -431,7 +436,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
               <Row
                 className="explore-data-container"
                 gutter={[20, 0]}
-                wrap={false}>
+                wrap={false}
+              >
                 <Col flex="auto">
                   <Card className="h-full explore-main-card">
                     <div className="h-full">
@@ -470,6 +476,11 @@ const ExploreV1: React.FC<ExploreProps> = ({
                         },
                         ['description', 'displayName']
                       )}
+                      key={
+                        entityDetails.entityType +
+                        '-' +
+                        entityDetails.fullyQualifiedName
+                      }
                       panelPath="explore"
                     />
                   </Col>

@@ -104,6 +104,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
     currentVersionData,
     openColumnDetailPanel,
     selectedColumn,
+    setDisplayedColumns,
   } = useGenericContext<Topic>();
 
   const {
@@ -227,6 +228,11 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
     selectedColumn: selectedColumn as Field | null,
   });
 
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(messageSchema?.schemaFields ?? []);
+  }, [messageSchema?.schemaFields, setDisplayedColumns]);
+
   const toggleExpandAll = () => {
     if (expandedRowKeys.length < schemaAllRowKeys.length) {
       const safeKeys = getSafeExpandAllKeys(
@@ -252,7 +258,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
             {isVersionView ? (
               <RichTextEditorPreviewerV1 markdown={getEntityName(record)} />
             ) : (
-              getEntityName(record)
+              <span className="text-link-color">{getEntityName(record)}</span>
             )}
           </span>
         </Tooltip>
@@ -353,7 +359,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
         width: 220,
         sorter: getColumnSorter<Field, 'name'>('name'),
         render: renderSchemaName,
-        className: 'cursor-pointer',
+        className: 'cursor-pointer hover:text-link-color',
         onCell: (record: Field) => ({
           onClick: (event) => handleColumnClick(record, event),
           'data-testid': 'column-name-cell',
@@ -475,7 +481,7 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
                 dataSource={messageSchema?.schemaFields}
                 defaultVisibleColumns={DEFAULT_TOPIC_VISIBLE_COLUMNS}
                 expandable={{
-                  ...getTableExpandableConfig<Field>(),
+                  ...getTableExpandableConfig<Field>(false, 'text-link-color'),
                   rowExpandable: (record) => !isEmpty(record.children),
                   onExpandedRowsChange: handleExpandedRowsChange,
                   expandedRowKeys,
@@ -501,7 +507,8 @@ const TopicSchemaFields: FC<TopicSchemaFieldsProps> = ({
       {editFieldDescription && (
         <EntityAttachmentProvider
           entityFqn={editFieldDescription.fullyQualifiedName}
-          entityType={EntityType.TOPIC}>
+          entityType={EntityType.TOPIC}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.schema-field'),

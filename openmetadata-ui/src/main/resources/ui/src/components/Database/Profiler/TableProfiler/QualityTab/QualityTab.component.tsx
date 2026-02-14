@@ -172,7 +172,7 @@ export const QualityTab = () => {
         limit: 0,
       });
       setIngestionPipelineCount(ingestionPipelinePaging.total);
-    } catch (error) {
+    } catch {
       // do nothing for count error
     }
   };
@@ -260,14 +260,14 @@ export const QualityTab = () => {
     };
 
     return table?.fullyQualifiedName
-      ? (ExtraTestCaseDropdownOptions(
+      ? ExtraTestCaseDropdownOptions(
           table.fullyQualifiedName,
           bulkImportExportTestCasePermission,
           table?.deleted ?? false,
           navigate,
           showModal,
           EntityType.TABLE
-        ) as ItemType[])
+        )
       : [];
   }, [globalPermissions, table, navigate, showModal]);
 
@@ -378,12 +378,14 @@ export const QualityTab = () => {
         sx={{
           border: `1px solid ${theme.palette.grey['200']}`,
           borderRadius: '10px',
-        }}>
+        }}
+      >
         <Box
           alignItems="center"
           display="flex"
           justifyContent="space-between"
-          p={4}>
+          p={4}
+        >
           <Box display="flex" gap={5} width="100%">
             <Tabs
               sx={{
@@ -422,7 +424,8 @@ export const QualityTab = () => {
                 },
               }}
               value={qualityTab}
-              onChange={handleTabChange}>
+              onChange={handleTabChange}
+            >
               {tabs.map(({ label, key }) => (
                 <Tab key={key} label={label} value={key} />
               ))}
@@ -445,14 +448,14 @@ export const QualityTab = () => {
           {isTestCaseTab && (
             <Form className="new-form-style" layout="inline">
               <Space align="center" className="w-full justify-end" size={20}>
-                <Form.Item className="m-0 w-40" label={t('label.type')}>
+                <Form.Item className="m-0 w-52" label={t('label.type')}>
                   <Select
                     options={TEST_CASE_TYPE_OPTION}
                     value={selectedTestType}
                     onChange={handleTestCaseTypeChange}
                   />
                 </Form.Item>
-                <Form.Item className="m-0 w-40" label={t('label.status')}>
+                <Form.Item className="m-0 w-52" label={t('label.status')}>
                   <Select
                     options={TEST_CASE_STATUS_OPTION}
                     value={selectedTestCaseStatus}

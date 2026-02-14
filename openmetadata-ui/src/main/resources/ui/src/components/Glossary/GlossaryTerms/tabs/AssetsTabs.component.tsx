@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import {
+  Alert,
   Button,
   Checkbox,
   Col,
@@ -57,7 +58,9 @@ import { Aggregations } from '../../../../interface/search.interface';
 import { QueryFilterInterface } from '../../../../pages/ExplorePage/ExplorePage.interface';
 import {
   getDataProductByName,
+  getDataProductOutputPorts,
   removeAssetsFromDataProduct,
+  removePortsFromDataProduct,
 } from '../../../../rest/dataProductAPI';
 import {
   getDomainByName,
@@ -124,6 +127,8 @@ const AssetsTabs = forwardRef(
       noDataPlaceholder,
       entityFqn,
       assetCount,
+      preloadedData,
+      skipSearch = false,
     }: AssetsTabsProps,
     ref
   ) => {
@@ -150,6 +155,8 @@ const AssetsTabs = forwardRef(
       () =>
         [
           AssetsOfEntity.DATA_PRODUCT,
+          AssetsOfEntity.DATA_PRODUCT_INPUT_PORT,
+          AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT,
           AssetsOfEntity.DOMAIN,
           AssetsOfEntity.GLOSSARY,
           AssetsOfEntity.TAG,
@@ -176,6 +183,12 @@ const AssetsTabs = forwardRef(
     >([]);
     const [filters, setFilters] = useState<ExploreQuickFilterField[]>([]);
     const [searchValue, setSearchValue] = useState('');
+    const [outputPortsFqns, setOutputPortsFqns] = useState<Set<string>>(
+      new Set()
+    );
+    const [confirmationBodyText, setConfirmationBodyText] =
+      useState<ReactNode>('');
+    const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
     const entityTypeString = getEntityTypeString(type);
 
@@ -211,6 +224,17 @@ const AssetsTabs = forwardRef(
             'dataProducts.fullyQualifiedName': entityFqn ?? '',
           });
 
+        case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+        case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
+          // Use the provided queryFilter (which filters by specific port FQNs)
+          // Fall back to default data product query if no filter provided
+          return (
+            queryFilter ??
+            getTermQuery({
+              'dataProducts.fullyQualifiedName': entityFqn ?? '',
+            })
+          );
+
         case AssetsOfEntity.TEAM:
         case AssetsOfEntity.MY_DATA:
         case AssetsOfEntity.FOLLOWING:
@@ -225,7 +249,7 @@ const AssetsTabs = forwardRef(
         default:
           return getTagAssetsQueryFilter(encodedFqn);
       }
-    }, [type, entityFqn]);
+    }, [type, entityFqn, queryFilter]);
 
     const fetchAssets = useCallback(
       async ({
@@ -237,6 +261,19 @@ const AssetsTabs = forwardRef(
         page?: number;
         queryFilter?: QueryFilterInterface;
       }) => {
+        if (skipSearch && preloadedData) {
+          setData(preloadedData);
+          handlePagingChange({ total: assetCount ?? preloadedData.length });
+          setIsLoading(false);
+          if (preloadedData[0]) {
+            setSelectedCard(preloadedData[0]._source);
+          } else {
+            setSelectedCard(undefined);
+          }
+
+          return;
+        }
+
         try {
           setIsLoading(true);
 
@@ -274,7 +311,15 @@ const AssetsTabs = forwardRef(
           setIsLoading(false);
         }
       },
-      [currentPage, pageSize, searchValue, queryParam, assetCount]
+      [
+        currentPage,
+        pageSize,
+        searchValue,
+        queryParam,
+        assetCount,
+        skipSearch,
+        preloadedData,
+      ]
     );
 
     const hideNotification = () => {
@@ -292,11 +337,6 @@ const AssetsTabs = forwardRef(
       }
     };
 
-    const onExploreCardDelete = useCallback((source: SourceType) => {
-      setAssetToDelete(source);
-      setShowDeleteModal(true);
-    }, []);
-
     const handleAssetButtonVisibleChange = (newVisible: boolean) =>
       setVisible(newVisible);
 
@@ -309,6 +349,8 @@ const AssetsTabs = forwardRef(
 
           break;
         case AssetsOfEntity.DATA_PRODUCT:
+        case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+        case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
           data = await getDataProductByName(fqn, {
             fields: [TabSpecificField.DOMAINS, TabSpecificField.ASSETS],
           });
@@ -329,6 +371,105 @@ const AssetsTabs = forwardRef(
 
       setActiveEntity(data);
     }, [type, entityFqn]);
+
+    const fetchOutputPorts = useCallback(async () => {
+      // Clear stale state first to prevent false positives when switching data products
+      setOutputPortsFqns(new Set());
+
+      if (type !== AssetsOfEntity.DATA_PRODUCT || !entityFqn) {
+        return;
+      }
+      try {
+        const response = await getDataProductOutputPorts(entityFqn, {
+          limit: 1000,
+        });
+        const fqnSet = new Set<string>();
+        response.data.forEach((port) => {
+          if (port.fullyQualifiedName) {
+            fqnSet.add(port.fullyQualifiedName as string);
+          }
+        });
+        setOutputPortsFqns(fqnSet);
+      } catch {
+        // Silently fail - warning will just not show (state already cleared)
+      }
+    }, [type, entityFqn]);
+
+    const getAssetsInOutputPorts = useCallback(
+      (assets: SourceType[]): SourceType[] => {
+        if (
+          type !== AssetsOfEntity.DATA_PRODUCT ||
+          outputPortsFqns.size === 0
+        ) {
+          return [];
+        }
+
+        return assets.filter(
+          (asset) =>
+            asset.fullyQualifiedName &&
+            outputPortsFqns.has(asset.fullyQualifiedName)
+        );
+      },
+      [type, outputPortsFqns]
+    );
+
+    const getRemovalWarningContent = useCallback(
+      (assetsToRemove: SourceType[]): ReactNode => {
+        const assetsInOutputPorts = getAssetsInOutputPorts(assetsToRemove);
+
+        const baseMessage =
+          assetsToRemove.length === 1
+            ? t('message.are-you-sure-action-property', {
+                propertyName: getEntityName(assetsToRemove[0]),
+                action: t('label.remove-lowercase'),
+              })
+            : t('message.are-you-sure-action-property', {
+                propertyName: `${assetsToRemove.length} ${t(
+                  'label.asset-plural-lowercase'
+                )}`,
+                action: t('label.remove-lowercase'),
+              });
+
+        if (assetsInOutputPorts.length === 0) {
+          return baseMessage;
+        }
+
+        return (
+          <>
+            <Typography.Text>{baseMessage}</Typography.Text>
+            <Alert
+              showIcon
+              className="m-t-sm"
+              description={
+                assetsInOutputPorts.length > 1 || assetsToRemove.length > 1 ? (
+                  <ul className="m-b-0 p-l-md">
+                    {assetsInOutputPorts.map((asset) => (
+                      <li key={asset.id}>{getEntityName(asset)}</li>
+                    ))}
+                  </ul>
+                ) : undefined
+              }
+              message={
+                assetsInOutputPorts.length === 1 && assetsToRemove.length === 1
+                  ? t('message.remove-asset-will-also-remove-from-output-ports')
+                  : t('message.remove-asset-output-port-warning')
+              }
+              type="warning"
+            />
+          </>
+        );
+      },
+      [getAssetsInOutputPorts, t]
+    );
+
+    const onExploreCardDelete = useCallback(
+      (source: SourceType) => {
+        setAssetToDelete(source);
+        setConfirmationBodyText(getRemovalWarningContent([source]));
+        setShowDeleteModal(true);
+      },
+      [getRemovalWarningContent]
+    );
 
     const items: ItemType[] = [
       {
@@ -392,6 +533,16 @@ const AssetsTabs = forwardRef(
 
               break;
 
+            case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+            case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
+              await removePortsFromDataProduct(
+                activeEntity.fullyQualifiedName ?? '',
+                entities,
+                type
+              );
+
+              break;
+
             case AssetsOfEntity.GLOSSARY:
               await removeAssetsFromGlossaryTerm(
                 activeEntity as GlossaryTerm,
@@ -413,7 +564,6 @@ const AssetsTabs = forwardRef(
 
               break;
             default:
-              // Handle other entity types here
               break;
           }
 
@@ -430,9 +580,12 @@ const AssetsTabs = forwardRef(
           setAssetRemoving(false);
           hideNotification();
           setSelectedItems(new Map()); // Reset selected items
+          if (type === AssetsOfEntity.DATA_PRODUCT) {
+            fetchOutputPorts();
+          }
         }
       },
-      [type, activeEntity, entityFqn]
+      [type, activeEntity, entityFqn, fetchOutputPorts]
     );
 
     const deleteSelectedItems = useCallback(() => {
@@ -440,6 +593,30 @@ const AssetsTabs = forwardRef(
         onAssetRemove(Array.from(selectedItems.values()));
       }
     }, [selectedItems]);
+
+    const handleBulkDeleteClick = useCallback(() => {
+      const assetsToDelete = Array.from(
+        selectedItems.values()
+      ) as unknown as SourceType[];
+      const assetsInOutputPorts = getAssetsInOutputPorts(assetsToDelete);
+
+      if (assetsInOutputPorts.length > 0) {
+        setConfirmationBodyText(getRemovalWarningContent(assetsToDelete));
+        setShowBulkDeleteModal(true);
+      } else {
+        deleteSelectedItems();
+      }
+    }, [
+      selectedItems,
+      getAssetsInOutputPorts,
+      getRemovalWarningContent,
+      deleteSelectedItems,
+    ]);
+
+    const confirmBulkDelete = useCallback(() => {
+      setShowBulkDeleteModal(false);
+      deleteSelectedItems();
+    }, [deleteSelectedItems]);
 
     useEffect(() => {
       return () => {
@@ -454,6 +631,10 @@ const AssetsTabs = forwardRef(
       }
     }, [entityFqn]);
 
+    useEffect(() => {
+      fetchOutputPorts();
+    }, [fetchOutputPorts]);
+
     const assetErrorPlaceHolder = useMemo(() => {
       if (isObject(noDataPlaceholder) || searchValue) {
         return (
@@ -465,7 +646,8 @@ const AssetsTabs = forwardRef(
                 height={140}
                 width={140}
               />
-            }>
+            }
+          >
             {searchValue && type !== AssetsOfEntity.MY_DATA && (
               <div className="gap-4">
                 <Typography.Paragraph>
@@ -550,16 +732,19 @@ const AssetsTabs = forwardRef(
                       overlayClassName="manage-dropdown-list-container"
                       overlayStyle={{ width: '350px' }}
                       placement="bottomRight"
-                      trigger={['click']}>
+                      trigger={['click']}
+                    >
                       <Tooltip
                         placement="topRight"
                         title={t('label.manage-entity', {
                           entity: t('label.asset'),
-                        })}>
+                        })}
+                      >
                         <Button
                           className={classNames('flex-center px-1.5')}
                           data-testid={`manage-button-${_source.fullyQualifiedName}`}
-                          type="text">
+                          type="text"
+                        >
                           <IconDropdown className="anticon self-center manage-dropdown-icon" />
                         </Button>
                       </Tooltip>
@@ -643,7 +828,8 @@ const AssetsTabs = forwardRef(
           <div className="w-full d-flex justify-between items-center m-b-sm">
             <Checkbox
               className="assets-checkbox p-x-sm"
-              onChange={(e) => onSelectAll(e.target.checked)}>
+              onChange={(e) => onSelectAll(e.target.checked)}
+            >
               {t('label.select-field', {
                 field: t('label.all'),
               })}
@@ -778,12 +964,14 @@ const AssetsTabs = forwardRef(
             'assets-tab-container relative bg-white border-radius-card h-full'
           )}
           data-testid="table-container"
-          id="asset-tab">
+          id="asset-tab"
+        >
           <Row
             className={classNames('filters-row gap-2 p-md', {
               'h-full': totalAssetCount === 0,
             })}
-            gutter={[0, 20]}>
+            gutter={[0, 20]}
+          >
             {(type === AssetsOfEntity.MY_DATA || totalAssetCount > 0) && (
               <>
                 <Col className="d-flex gap-3" span={24}>
@@ -792,9 +980,11 @@ const AssetsTabs = forwardRef(
                       items: filterMenu,
                       selectedKeys: selectedFilter,
                     }}
-                    trigger={['click']}>
+                    trigger={['click']}
+                  >
                     <Button
                       className={classNames('feed-filter-icon')}
+                      data-testid="asset-filter-button"
                       icon={<FilterIcon height={16} />}
                     />
                   </Dropdown>
@@ -823,7 +1013,8 @@ const AssetsTabs = forwardRef(
                       {quickFilterQuery && (
                         <Typography.Text
                           className="text-primary self-center cursor-pointer"
-                          onClick={clearFilters}>
+                          onClick={clearFilters}
+                        >
                           {t('label.clear-entity', {
                             entity: '',
                           })}
@@ -840,7 +1031,8 @@ const AssetsTabs = forwardRef(
                   className="w-full"
                   data-testid="loader"
                   direction="vertical"
-                  size={16}>
+                  size={16}
+                >
                   <Skeleton />
                   <Skeleton />
                   <Skeleton />
@@ -852,10 +1044,7 @@ const AssetsTabs = forwardRef(
           </Row>
 
           <ConfirmationModal
-            bodyText={t('message.are-you-sure-action-property', {
-              propertyName: getEntityName(assetToDelete),
-              action: t('label.remove-lowercase'),
-            })}
+            bodyText={confirmationBodyText}
             cancelText={t('label.cancel')}
             confirmText={t('label.delete')}
             header={t('label.remove-entity', {
@@ -868,12 +1057,28 @@ const AssetsTabs = forwardRef(
               onAssetRemove(assetToDelete ? [assetToDelete] : [])
             }
           />
+
+          <ConfirmationModal
+            bodyText={confirmationBodyText}
+            cancelText={t('label.cancel')}
+            confirmText={t('label.delete')}
+            header={t('label.remove-entity', {
+              entity: `${selectedItems.size} ${t(
+                'label.asset-plural-lowercase'
+              )}?`,
+            })}
+            isLoading={assetRemoving}
+            visible={showBulkDeleteModal}
+            onCancel={() => setShowBulkDeleteModal(false)}
+            onConfirm={confirmBulkDelete}
+          />
         </div>
         {!isLoading && permissions?.EditAll && totalAssetCount > 0 && (
           <div
             className={classNames('asset-tab-delete-notification', {
               visible: selectedItems.size > 0,
-            })}>
+            })}
+          >
             <div className="d-flex items-center justify-between">
               <Typography.Text className="text-white">
                 {selectedItems.size} {t('label.items-selected-lowercase')}
@@ -883,7 +1088,8 @@ const AssetsTabs = forwardRef(
                 data-testid="delete-all-button"
                 loading={assetRemoving}
                 type="primary"
-                onClick={deleteSelectedItems}>
+                onClick={handleBulkDeleteClick}
+              >
                 {t('label.delete')}
               </Button>
             </div>

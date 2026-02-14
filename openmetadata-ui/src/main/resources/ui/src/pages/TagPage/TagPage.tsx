@@ -58,6 +58,7 @@ import AssetsTabs, {
   AssetsTabRef,
 } from '../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
+import { LearningIcon } from '../../components/Learning/LearningIcon/LearningIcon.component';
 import EntityDeleteModal from '../../components/Modals/EntityDeleteModal/EntityDeleteModal';
 import EntityNameModal from '../../components/Modals/EntityNameModal/EntityNameModal.component';
 import IconColorModal from '../../components/Modals/IconColorModal';
@@ -70,6 +71,7 @@ import {
 import { CustomizeEntityType } from '../../constants/Customize.constants';
 import { TAGS_DOCS } from '../../constants/docs.constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../constants/entity.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { COMMON_RESIZABLE_PANEL_CONFIG } from '../../constants/ResizablePanel.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import {
@@ -707,7 +709,8 @@ const TagPage = () => {
           <Row
             className="data-classification"
             data-testid="data-classification"
-            gutter={[0, 12]}>
+            gutter={[0, 12]}
+          >
             <Col className="p-x-md" flex="1">
               <EntityHeader
                 badge={badge}
@@ -716,6 +719,12 @@ const TagPage = () => {
                 entityType={EntityType.TAG}
                 icon={icon}
                 serviceName={tagItem.name}
+                suffix={
+                  <LearningIcon
+                    className="m-t-xss"
+                    pageId={LEARNING_PAGE_IDS.TAGS}
+                  />
+                }
                 titleColor={tagItem.style?.color ?? BLACK_COLOR}
               />
             </Col>
@@ -726,7 +735,8 @@ const TagPage = () => {
                     <Button
                       data-testid="data-classification-add-button"
                       type="primary"
-                      onClick={() => setAssetModalVisible(true)}>
+                      onClick={() => setAssetModalVisible(true)}
+                    >
                       {t('label.add-entity', {
                         entity: t('label.asset-plural'),
                       })}
@@ -743,12 +753,14 @@ const TagPage = () => {
                       overlayStyle={{ width: '350px' }}
                       placement="bottomRight"
                       trigger={['click']}
-                      onOpenChange={setShowActions}>
+                      onOpenChange={setShowActions}
+                    >
                       <Tooltip
                         placement="topRight"
                         title={t('label.manage-entity', {
                           entity: t('label.tag-lowercase'),
-                        })}>
+                        })}
+                      >
                         <Button
                           className="flex-center"
                           data-testid="manage-button"
@@ -774,14 +786,16 @@ const TagPage = () => {
           type={EntityType.TAG as CustomizeEntityType}
           onUpdate={(updatedData: Tag) =>
             Promise.resolve(updateTag(updatedData))
-          }>
+          }
+        >
           <Col
             span={24}
             style={{
               overflowY: 'auto',
               overflowX: 'hidden',
               height: 'calc(100vh - 170px)',
-            }}>
+            }}
+          >
             <Tabs
               destroyInactiveTabPane
               activeKey={activeTab}

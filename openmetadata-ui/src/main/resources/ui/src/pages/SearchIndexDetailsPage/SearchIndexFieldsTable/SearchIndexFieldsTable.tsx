@@ -27,6 +27,7 @@ import { EntityTags, TagFilterOptions } from 'Models';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CopyLinkButton from '../../../components/common/CopyLinkButton/CopyLinkButton';
 import { EntityAttachmentProvider } from '../../../components/common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 import FilterTablePlaceHolder from '../../../components/common/ErrorWithPlaceholder/FilterTablePlaceHolder';
 import Table from '../../../components/common/Table/Table';
@@ -53,16 +54,15 @@ import {
 } from '../../../generated/entity/data/searchIndex';
 import { TagSource } from '../../../generated/type/schema';
 import { TagLabel } from '../../../generated/type/tagLabel';
+import { useFqn } from '../../../hooks/useFqn';
+import { useFqnDeepLink } from '../../../hooks/useFqnDeepLink';
+import { useScrollToElement } from '../../../hooks/useScrollToElement';
 import {
   getColumnSorter,
   getEntityName,
   highlightSearchArrayElement,
   highlightSearchText,
 } from '../../../utils/EntityUtils';
-import CopyLinkButton from '../../../components/common/CopyLinkButton/CopyLinkButton';
-import { useFqn } from '../../../hooks/useFqn';
-import { useScrollToElement } from '../../../hooks/useScrollToElement';
-import { useFqnDeepLink } from '../../../hooks/useFqnDeepLink';
 import { makeData } from '../../../utils/SearchIndexUtils';
 import { stringToHTML } from '../../../utils/StringsUtils';
 import {
@@ -70,8 +70,8 @@ import {
   searchTagInData,
 } from '../../../utils/TableTags/TableTags.utils';
 import {
-  getTableExpandableConfig,
   getHighlightedRowClassName,
+  getTableExpandableConfig,
   searchInFields,
   updateFieldDescription,
   updateFieldTags,
@@ -102,14 +102,15 @@ const SearchIndexFieldsTable = ({
   );
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
-  const { openColumnDetailPanel, permissions, selectedColumn } =
-    useGenericContext<SearchIndex>();
+  const {
+    openColumnDetailPanel,
+    permissions,
+    selectedColumn,
+    setDisplayedColumns,
+  } = useGenericContext<SearchIndex>();
 
   // Extract base FQN and column part from URL
-  const {
-    columnFqn: columnPart,
-    fqn,
-  } = useFqn({
+  const { columnFqn: columnPart, fqn } = useFqn({
     type: EntityType.SEARCH_INDEX,
   });
   useFqnDeepLink({
@@ -291,7 +292,7 @@ const SearchIndexFieldsTable = ({
         }),
         render: (_, record: SearchIndexField) => (
           <div className="d-inline-flex items-center gap-2 hover-icon-group w-max-90">
-            <span className="break-word">
+            <span className="break-word text-link-color">
               {stringToHTML(
                 highlightSearchText(getEntityName(record), searchText)
               )}
@@ -384,7 +385,7 @@ const SearchIndexFieldsTable = ({
 
   const expandableConfig: ExpandableConfig<SearchIndexField> = useMemo(
     () => ({
-      ...getTableExpandableConfig<SearchIndexField>(),
+      ...getTableExpandableConfig<SearchIndexField>(false, 'text-link-color'),
       rowExpandable: (record) => !isEmpty(record.children),
       expandedRowKeys,
       onExpand: (expanded, record) => {
@@ -410,7 +411,18 @@ const SearchIndexFieldsTable = ({
       setSearchedFields(sortByOrdinalPosition);
       setExpandedRowKeys([]);
     }
-  }, [searchText, searchIndexFields]);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (!searchText) {
+      setSearchedFields(sortByOrdinalPosition);
+    }
+  }, [searchIndexFields, sortByOrdinalPosition]);
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(searchedFields);
+  }, [searchedFields, setDisplayedColumns]);
 
   return (
     <>
@@ -447,7 +459,8 @@ const SearchIndexFieldsTable = ({
       {editField && (
         <EntityAttachmentProvider
           entityFqn={editField.field.fullyQualifiedName}
-          entityType={EntityType.SEARCH_INDEX}>
+          entityType={EntityType.SEARCH_INDEX}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.field'),

@@ -13,6 +13,7 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Row } from 'antd';
+import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
 import { sortBy } from 'lodash';
 import QueryString from 'qs';
@@ -44,6 +45,7 @@ import { getServiceFromTestSuiteFQN } from '../../../../utils/TestSuiteUtils';
 import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import ErrorPlaceHolderIngestion from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolderIngestion';
+import MUIFormItemLabel from '../../../common/MUIFormItemLabel/MUIFormItemLabel';
 import { PagingHandlerParams } from '../../../common/NextPrevious/NextPrevious.interface';
 import IngestionListTable from '../../../Settings/Services/Ingestion/IngestionListTable/IngestionListTable';
 
@@ -234,7 +236,8 @@ const TestSuitePipelineTab = ({
               data-testid="add-placeholder-button"
               icon={<PlusOutlined />}
               type="primary"
-              onClick={handleAddPipelineRedirection}>
+              onClick={handleAddPipelineRedirection}
+            >
               {t('label.add')}
             </Button>
           }
@@ -243,7 +246,8 @@ const TestSuitePipelineTab = ({
           permissionValue={t('label.create-entity', {
             entity: t('label.test-suite-ingestion'),
           })}
-          type={ERROR_PLACEHOLDER_TYPE.ASSIGN}>
+          type={ERROR_PLACEHOLDER_TYPE.ASSIGN}
+        >
           {t('message.no-table-pipeline')}
         </ErrorPlaceHolder>
       ) : (
@@ -253,6 +257,33 @@ const TestSuitePipelineTab = ({
         />
       ),
     [testSuite, testSuiteFQN, createPermission]
+  );
+
+  const pipelineTypeColumnObj: ColumnsType<IngestionPipeline> = useMemo(
+    () => [
+      {
+        title: (
+          <MUIFormItemLabel
+            helperText={t('message.test-case-count-info')}
+            label={t('label.test-case-plural')}
+          />
+        ),
+        dataIndex: 'testCases',
+        key: 'testCases',
+        width: 120,
+        render: (_: string, record: IngestionPipeline) => {
+          const testCasesCount =
+            record?.sourceConfig?.config?.testCases?.length ?? t('label.all');
+
+          return (
+            <span data-testid={`test-case-count-${record.name}`}>
+              {testCasesCount}
+            </span>
+          );
+        },
+      },
+    ],
+    [t]
   );
 
   if (!isAirflowAvailable && !(isLoading || isFetchingStatus)) {
@@ -266,7 +297,8 @@ const TestSuitePipelineTab = ({
           <Button
             data-testid="add-pipeline-button"
             type="primary"
-            onClick={handleAddPipelineRedirection}>
+            onClick={handleAddPipelineRedirection}
+          >
             {t('label.add-entity', { entity: t('label.pipeline') })}
           </Button>
         </Col>
@@ -283,6 +315,7 @@ const TestSuitePipelineTab = ({
           ingestionPagingInfo={pipelinePaging}
           isLoading={isLoading}
           pipelineIdToFetchStatus={pipelineIdToFetchStatus}
+          pipelineTypeColumnObj={pipelineTypeColumnObj}
           serviceCategory={ServiceCategory.DATABASE_SERVICES}
           serviceName={getServiceFromTestSuiteFQN(testSuiteFQN)}
           tableClassName="test-suite-pipeline-tab"

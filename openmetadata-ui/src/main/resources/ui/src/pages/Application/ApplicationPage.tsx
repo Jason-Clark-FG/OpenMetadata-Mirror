@@ -26,6 +26,7 @@ import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import ApplicationCard from '../../components/Settings/Applications/ApplicationCard/ApplicationCard.component';
 import { ROUTES } from '../../constants/constants';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { App } from '../../generated/entity/applications/app';
@@ -123,7 +124,8 @@ const ApplicationPage = () => {
       <Col className="mt-24 text-center" span={24}>
         <ErrorPlaceHolder
           heading={t('label.application-plural')}
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+        >
           <div>{t('message.no-installed-applications-found')}</div>
         </ErrorPlaceHolder>
       </Col>
@@ -160,6 +162,7 @@ const ApplicationPage = () => {
               ),
               subHeader: t(PAGE_HEADERS.APPLICATION.subHeader),
             }}
+            learningPageId={LEARNING_PAGE_IDS.AUTOMATIONS}
           />
         </Col>
         <Col className="d-flex justify-end" span={8}>
@@ -176,7 +179,8 @@ const ApplicationPage = () => {
               <Button
                 data-testid="add-application"
                 type="primary"
-                onClick={handleAddApplication}>
+                onClick={handleAddApplication}
+              >
                 {t('label.add-entity', {
                   entity: t('label.app-plural'),
                 })}
@@ -207,7 +211,8 @@ const ApplicationPage = () => {
                     lg={8}
                     md={12}
                     sm={24}
-                    xl={6}>
+                    xl={6}
+                  >
                     <ApplicationCard
                       appName={item.fullyQualifiedName ?? ''}
                       deleted={item.deleted}

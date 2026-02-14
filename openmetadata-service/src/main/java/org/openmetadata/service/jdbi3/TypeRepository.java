@@ -23,6 +23,7 @@ import static org.openmetadata.service.util.EntityUtil.customFieldMatch;
 import static org.openmetadata.service.util.EntityUtil.getCustomField;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.gson.Gson;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.UriInfo;
 import java.time.format.DateTimeFormatter;
@@ -56,6 +57,7 @@ import org.openmetadata.service.jobs.EnumCleanupHandler;
 import org.openmetadata.service.resources.types.TypeResource;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
+import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.RestUtil.PutResponse;
 
 @Slf4j
@@ -75,7 +77,7 @@ public class TypeRepository extends EntityRepository<Type> {
   }
 
   @Override
-  public void setFields(Type type, Fields fields) {
+  public void setFields(Type type, Fields fields, RelationIncludes relationIncludes) {
     type.withCustomProperties(
         fields.contains("customProperties")
             ? getCustomProperties(type)
@@ -100,6 +102,28 @@ public class TypeRepository extends EntityRepository<Type> {
     store(type, update);
     type.withCustomProperties(customProperties);
     updateTypeMap(type);
+  }
+
+  public void storeEntities(List<Type> types) {
+    List<Type> typesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+
+    for (Type type : types) {
+      List<CustomProperty> customProperties = type.getCustomProperties();
+
+      type.withCustomProperties(null);
+
+      String jsonCopy = gson.toJson(type);
+      typesToStore.add(gson.fromJson(jsonCopy, Type.class));
+
+      type.withCustomProperties(customProperties);
+    }
+
+    storeMany(typesToStore);
+
+    for (Type type : types) {
+      updateTypeMap(type);
+    }
   }
 
   public void addToRegistry(Type type) {
@@ -202,7 +226,9 @@ public class TypeRepository extends EntityRepository<Type> {
           customProperty.getCustomPropertyConfig(), getDateTimeTokens(), "Invalid dateTime format");
       case "time-cp" -> validateDateFormat(
           customProperty.getCustomPropertyConfig(), getTimeTokens(), "Invalid time format");
-      case "int", "string" -> {}
+        // hyperlink-cp requires no special config validation - URL protocol validation
+        // (http/https only) is enforced in EntityRepository.validateHyperlinkUrl
+      case "int", "string", "hyperlink-cp" -> {}
     }
   }
 

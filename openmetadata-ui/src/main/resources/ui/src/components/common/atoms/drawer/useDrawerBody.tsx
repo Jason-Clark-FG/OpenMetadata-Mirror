@@ -19,6 +19,7 @@ export interface DrawerBodyConfig {
   loading?: boolean;
   loadingMessage?: string;
   padding?: number | string;
+  className?: string;
   sx?: any;
 }
 
@@ -53,7 +54,14 @@ export interface DrawerBodyConfig {
  * ```
  */
 export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
-  const { children, loading, loadingMessage, padding = 6, sx = {} } = config;
+  const {
+    children,
+    loading,
+    loadingMessage,
+    padding = 6,
+    className,
+    sx = {},
+  } = config;
 
   const drawerBody = useMemo(
     () => (
@@ -63,7 +71,8 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
           position: 'relative',
           overflow: 'hidden',
           ...sx,
-        }}>
+        }}
+      >
         {loading && (
           <Box
             sx={{
@@ -78,7 +87,8 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
               justifyContent: 'center',
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               zIndex: 1000,
-            }}>
+            }}
+          >
             <CircularProgress />
             {loadingMessage && (
               <Box sx={{ mt: 2, color: 'text.secondary' }}>
@@ -88,16 +98,18 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
           </Box>
         )}
         <Box
+          className={className}
           sx={{
             overflow: 'auto',
             height: '100%',
             p: padding,
-          }}>
+          }}
+        >
           {children}
         </Box>
       </Box>
     ),
-    [children, loading, loadingMessage, padding, sx]
+    [children, loading, loadingMessage, padding, className, sx]
   );
 
   return {

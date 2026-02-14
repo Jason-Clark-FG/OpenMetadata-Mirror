@@ -84,6 +84,13 @@ const DataModelTable = ({
   const [isLoading, setIsLoading] = useState(true);
   const { setFilters } = useTableFilters({});
 
+  useEffect(() => {
+    const urlPage = Number(pagingCursor.currentPage) || INITIAL_PAGING_VALUE;
+    if (currentPage !== urlPage) {
+      handlePageChange(urlPage);
+    }
+  }, [pagingCursor.currentPage, currentPage, handlePageChange]);
+
   const searchValue = useMemo(() => {
     const param = location.search;
     const searchData = QueryString.parse(
@@ -142,7 +149,8 @@ const DataModelTable = ({
                 to={getEntityDetailsPath(
                   EntityType.DASHBOARD_DATA_MODEL,
                   record.fullyQualifiedName || ''
-                )}>
+                )}
+              >
                 {stringToHTML(
                   highlightSearchText(dataModelDisplayName, searchValue)
                 )}

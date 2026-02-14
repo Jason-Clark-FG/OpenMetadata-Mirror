@@ -52,6 +52,7 @@ export const ColumnSummaryList = ({
         const { data, paging } = await api(fqn, {
           offset,
           limit: columnsPaging.limit,
+          fields: 'tags,extension',
         });
 
         setColumns((prev) => [...prev, ...data]);
@@ -104,7 +105,8 @@ export const ColumnSummaryList = ({
         block
         loading={loading && currentPage > 1}
         type="link"
-        onClick={handleLoadMore}>
+        onClick={handleLoadMore}
+      >
         {t('label.show-more')}
       </Button>
     );

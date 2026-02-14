@@ -35,6 +35,7 @@ import {
   GlobalSettingOptions,
   GlobalSettingsMenuCategory,
 } from '../../constants/GlobalSettings.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
@@ -232,7 +233,8 @@ const NotificationListPage = () => {
             record.fullyQualifiedName && (
               <Link
                 data-testid="alert-name"
-                to={getNotificationAlertDetailsPath(record.fullyQualifiedName)}>
+                to={getNotificationAlertDetailsPath(record.fullyQualifiedName)}
+              >
                 {getEntityName(record)}
               </Link>
             )
@@ -321,6 +323,8 @@ const NotificationListPage = () => {
                 header: t(PAGE_HEADERS.NOTIFICATION.header),
                 subHeader: t(PAGE_HEADERS.NOTIFICATION.subHeader),
               }}
+              learningPageId={LEARNING_PAGE_IDS.ALERTS}
+              title={t('label.alert')}
             />
             {(alertResourcePermission?.Create ||
               alertResourcePermission?.All) && (
@@ -335,7 +339,8 @@ const NotificationListPage = () => {
                         GlobalSettingOptions.ADD_NOTIFICATION
                       )
                     )
-                  }>
+                  }
+                >
                   {t('label.add-entity', { entity: t('label.alert') })}
                 </Button>
               </LimitWrapper>

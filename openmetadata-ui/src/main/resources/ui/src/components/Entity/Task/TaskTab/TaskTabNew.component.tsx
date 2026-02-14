@@ -82,6 +82,7 @@ import {
 import Assignees from '../../../../pages/TasksPage/shared/Assignees';
 import DescriptionTask from '../../../../pages/TasksPage/shared/DescriptionTask';
 import DescriptionTaskNew from '../../../../pages/TasksPage/shared/DescriptionTaskNew';
+import FeedbackApprovalTask from '../../../../pages/TasksPage/shared/FeedbackApprovalTask';
 import TagsTask from '../../../../pages/TasksPage/shared/TagsTask';
 import {
   Option,
@@ -216,6 +217,9 @@ export const TaskTabNew = ({
 
   const isTaskGlossaryApproval = taskDetails?.type === TaskType.RequestApproval;
 
+  const isTaskRecognizerFeedbackApproval =
+    taskDetails?.type === TaskType.RecognizerFeedbackApproval;
+
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);
 
@@ -315,7 +319,8 @@ export const TaskTabNew = ({
             className="p-0 task-feed-message font-medium text-md"
             data-testid="task-title"
             type="link"
-            onClick={handleTaskLinkClick}>
+            onClick={handleTaskLinkClick}
+          >
             <Typography.Text className="p-0 task-id text-sm task-details-id">{`#${taskDetails.id} `}</Typography.Text>
 
             <Typography.Text className="p-xss task-details">
@@ -326,7 +331,8 @@ export const TaskTabNew = ({
 
             <Typography.Text
               className="break-all text-sm entity-link header-link whitespace-normal"
-              data-testid="entity-link">
+              data-testid="entity-link"
+            >
               {getNameFromFQN(entityFQN)}
             </Typography.Text>
 
@@ -359,13 +365,20 @@ export const TaskTabNew = ({
   };
 
   const onGlossaryTaskResolve = (status = 'approved') => {
-    const newValue = isTaskGlossaryApproval ? status : taskDetails?.suggestion;
+    const newValue =
+      isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
+        ? status
+        : taskDetails?.suggestion;
     const data = { newValue: newValue };
     updateTaskData(data as TaskDetails);
   };
 
   const onTaskResolve = () => {
-    if (!isTaskGlossaryApproval && isEmpty(taskDetails?.suggestion)) {
+    if (
+      !isTaskGlossaryApproval &&
+      !isTaskRecognizerFeedbackApproval &&
+      isEmpty(taskDetails?.suggestion)
+    ) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -384,9 +397,10 @@ export const TaskTabNew = ({
 
       updateTaskData(tagsData as TaskDetails);
     } else {
-      const newValue = isTaskGlossaryApproval
-        ? 'approved'
-        : taskDetails?.suggestion;
+      const newValue =
+        isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
+          ? 'approved'
+          : taskDetails?.suggestion;
       const data = { newValue: newValue };
       updateTaskData(data as TaskDetails);
     }
@@ -451,6 +465,32 @@ export const TaskTabNew = ({
       });
   };
 
+  const onTaskReject = () => {
+    if (
+      !isTaskGlossaryApproval &&
+      !isTaskRecognizerFeedbackApproval &&
+      !hasAddedComment
+    ) {
+      showErrorToast(t('server.task-closed-without-comment'));
+
+      return;
+    }
+
+    const updatedComment =
+      isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
+        ? 'Rejected'
+        : recentComment;
+    updateTask(TaskOperation.REJECT, taskDetails?.id + '', {
+      comment: updatedComment,
+    } as unknown as TaskDetails)
+      .then(() => {
+        showSuccessToast(t('server.task-closed-successfully'));
+        rest.onAfterClose?.();
+        rest.onUpdateEntityDetails?.();
+      })
+      .catch((err: AxiosError) => showErrorToast(err));
+  };
+
   const handleMenuItemClick: MenuProps['onClick'] = (info) => {
     if (info.key === TaskActionMode.EDIT) {
       setShowEditTaskModel(true);
@@ -466,25 +506,6 @@ export const TaskTabNew = ({
         ...INCIDENT_TASK_ACTION_LIST,
       ].find((action) => action.key === info.key) ?? TASK_ACTION_LIST[0]
     );
-  };
-
-  const onTaskReject = () => {
-    if (!isTaskGlossaryApproval && !hasAddedComment) {
-      showErrorToast(t('server.task-closed-without-comment'));
-
-      return;
-    }
-
-    const updatedComment = isTaskGlossaryApproval ? 'Rejected' : recentComment;
-    updateTask(TaskOperation.REJECT, taskDetails?.id + '', {
-      comment: updatedComment,
-    } as unknown as TaskDetails)
-      .then(() => {
-        showSuccessToast(t('server.task-closed-successfully'));
-        rest.onAfterClose?.();
-        rest.onUpdateEntityDetails?.();
-      })
-      .catch((err: AxiosError) => showErrorToast(err));
   };
 
   const onTestCaseIncidentAssigneeUpdate = async () => {
@@ -626,7 +647,8 @@ export const TaskTabNew = ({
         data-testid="comment-button"
         disabled={isEmpty(comment)}
         type="primary"
-        onClick={onSave}>
+        onClick={onSave}
+      >
         {t('label.comment')}
       </Button>
     );
@@ -640,13 +662,15 @@ export const TaskTabNew = ({
       <Space
         className="items-end  justify-end"
         data-testid="task-cta-buttons"
-        size="small">
+        size="small"
+      >
         <Tooltip
           title={
-            !hasApprovalAccess
-              ? t('message.only-reviewers-can-approve-or-reject')
-              : ''
-          }>
+            hasApprovalAccess
+              ? ''
+              : t('message.only-reviewers-can-approve-or-reject')
+          }
+        >
           <Dropdown.Button
             className="task-action-button"
             data-testid="glossary-accept-reject-task-dropdown"
@@ -659,7 +683,8 @@ export const TaskTabNew = ({
               onClick: handleGlossaryTaskMenuClick,
             }}
             overlayClassName="task-action-dropdown"
-            onClick={onTaskDropdownClick}>
+            onClick={onTaskDropdownClick}
+          >
             {taskAction.label}
           </Dropdown.Button>
         </Tooltip>
@@ -698,7 +723,8 @@ export const TaskTabNew = ({
             disabled: !hasApprovalAccess,
           }}
           overlayClassName="task-action-dropdown"
-          onClick={onTestCaseTaskDropdownClick}>
+          onClick={onTestCaseTaskDropdownClick}
+        >
           {taskAction.label}
         </Dropdown.Button>
       </div>
@@ -712,7 +738,7 @@ export const TaskTabNew = ({
   ]);
 
   const actionButtons = useMemo(() => {
-    if (isTaskGlossaryApproval) {
+    if (isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval) {
       return approvalWorkflowActions;
     }
 
@@ -724,7 +750,8 @@ export const TaskTabNew = ({
       <Space
         className="items-end  justify-end"
         data-testid="task-cta-buttons"
-        size="small">
+        size="small"
+      >
         {isCreator && !hasEditAccess && (
           <Button data-testid="close-button" onClick={onTaskReject}>
             {t('label.close')}
@@ -745,7 +772,8 @@ export const TaskTabNew = ({
                     onClick: handleNoSuggestionMenuItemClick,
                   }}
                   overlayClassName="task-action-dropdown"
-                  onClick={onNoSuggestionTaskDropdownClick}>
+                  onClick={onNoSuggestionTaskDropdownClick}
+                >
                   {taskAction.label}
                 </Dropdown.Button>
               </div>
@@ -763,7 +791,8 @@ export const TaskTabNew = ({
                 overlayClassName="task-action-dropdown"
                 onClick={() =>
                   handleMenuItemClick({ key: taskAction.key } as MenuInfo)
-                }>
+                }
+              >
                 {taskAction.label}
               </Dropdown.Button>
             )}
@@ -779,6 +808,7 @@ export const TaskTabNew = ({
     taskAction,
     isTaskClosed,
     isTaskGlossaryApproval,
+    isTaskRecognizerFeedbackApproval,
     showAddSuggestionButton,
     isCreator,
     approvalWorkflowActions,
@@ -877,29 +907,30 @@ export const TaskTabNew = ({
     <div
       className={classNames('d-flex justify-between flex-wrap gap-2 relative', {
         'flex-column': isEditAssignee,
-      })}>
+      })}
+    >
       <div className="d-flex gap-2" data-testid="task-assignees">
         <Row className="m-l-0" gutter={[16, 16]}>
-          <Col className="flex items-center gap-2 text-grey-muted" span={8}>
+          <Col
+            className="flex items-center gap-2 text-grey-muted"
+            span={8}
+            style={{ paddingLeft: 0 }}
+          >
             <UserIcon height={16} />
             <Typography.Text className="incident-manager-details-label">
               {t('label.created-by')}
             </Typography.Text>
           </Col>
-          <Col span={16}>
+          <Col span={16} style={{ paddingLeft: '2px' }}>
             <Link
               className="no-underline flex items-center gap-2"
-              to={getUserPath(taskThread.createdBy ?? '')}>
-              <UserPopOverCard userName={taskThread.createdBy ?? ''}>
-                <div className="d-flex items-center">
-                  <ProfilePicture
-                    name={taskThread.createdBy ?? ''}
-                    width="24"
-                  />
-                </div>
-              </UserPopOverCard>
-
-              <Typography.Text>{taskThread.createdBy}</Typography.Text>
+              to={getUserPath(taskThread.createdBy ?? '')}
+            >
+              <UserPopOverCard
+                showUserName
+                profileWidth={22}
+                userName={taskThread.createdBy ?? ''}
+              />
             </Link>
           </Col>
 
@@ -908,7 +939,8 @@ export const TaskTabNew = ({
               className="w-full"
               form={assigneesForm}
               layout="vertical"
-              onFinish={handleAssigneeUpdate}>
+              onFinish={handleAssigneeUpdate}
+            >
               <Form.Item
                 data-testid="assignees"
                 name="assignees"
@@ -919,7 +951,8 @@ export const TaskTabNew = ({
                       fieldText: t('label.assignee-plural'),
                     }),
                   },
-                ]}>
+                ]}
+              >
                 <InlineEdit
                   className="assignees-edit-input"
                   direction="horizontal"
@@ -928,7 +961,8 @@ export const TaskTabNew = ({
                     setIsEditAssignee(false);
                     assigneesForm.setFieldValue('assignees', initialAssignees);
                   }}
-                  onSave={() => assigneesForm.submit()}>
+                  onSave={() => assigneesForm.submit()}
+                >
                   <Assignees
                     disabled={owners.length > 0}
                     options={options}
@@ -950,27 +984,31 @@ export const TaskTabNew = ({
             </Form>
           ) : (
             <>
-              <Col className="flex gap-2 text-grey-muted" span={8}>
+              <Col
+                className="flex gap-2 text-grey-muted"
+                span={8}
+                style={{ paddingLeft: 0 }}
+              >
                 <AssigneesIcon height={16} />
                 <Typography.Text className="incident-manager-details-label @grey-8">
                   {t('label.assignee-plural')}
                 </Typography.Text>
               </Col>
-              <Col className="flex gap-2" span={16}>
+              <Col
+                className="flex gap-2"
+                span={16}
+                style={{ paddingLeft: '2px' }}
+              >
                 {taskThread?.task?.assignees?.length === 1 ? (
                   <div className="d-flex items-center gap-2">
                     <UserPopOverCard
-                      userName={taskThread?.task?.assignees[0].name ?? ''}>
-                      <div className="d-flex items-center">
-                        <ProfilePicture
-                          name={taskThread?.task?.assignees[0].name ?? ''}
-                          width="24"
-                        />
-                      </div>
-                    </UserPopOverCard>
-                    <Typography.Text className="text-grey-body">
-                      {getEntityName(taskThread?.task?.assignees[0])}
-                    </Typography.Text>
+                      showUserName
+                      displayName={getEntityName(
+                        taskThread?.task?.assignees[0]
+                      )}
+                      profileWidth={22}
+                      userName={taskThread?.task?.assignees[0]?.name ?? ''}
+                    />
                   </div>
                 ) : (
                   <OwnerLabel
@@ -1088,7 +1126,8 @@ export const TaskTabNew = ({
     <Row
       className="relative task-details-panel"
       data-testid="task-tab"
-      gutter={[0, 20]}>
+      gutter={[0, 20]}
+    >
       <Col className="d-flex items-start task-feed-message-container" span={24}>
         <Icon
           className="m-r-xs"
@@ -1125,6 +1164,12 @@ export const TaskTabNew = ({
             />
           </div>
         )}
+
+        {isTaskRecognizerFeedbackApproval && taskDetails && (
+          <div className="feedback-details-container">
+            <FeedbackApprovalTask task={taskDetails} />
+          </div>
+        )}
         {taskThread.task?.status === ThreadTaskStatus.Open &&
           !rest.isOpenInDrawer &&
           ActionRequired()}
@@ -1136,7 +1181,8 @@ export const TaskTabNew = ({
                 'm-b-md':
                   taskThread?.task?.status === ThreadTaskStatus.Open &&
                   !showFeedEditor,
-              })}>
+              })}
+            >
               {t('label.comment-plural')}
             </Typography.Text>
 
@@ -1197,12 +1243,14 @@ export const TaskTabNew = ({
           title={`${t('label.resolve')} ${t('label.task')} #${taskDetails?.id}`}
           width={768}
           onCancel={() => setShowEditTaskModel(false)}
-          onOk={form.submit}>
+          onOk={form.submit}
+        >
           <Form
             form={form}
             initialValues={initialFormValue}
             layout="vertical"
-            onFinish={onTestCaseIncidentResolve}>
+            onFinish={onTestCaseIncidentResolve}
+          >
             <Form.Item
               label={t('label.reason')}
               name="testCaseFailureReason"
@@ -1213,11 +1261,13 @@ export const TaskTabNew = ({
                     field: t('label.reason'),
                   }),
                 },
-              ]}>
+              ]}
+            >
               <Select
                 placeholder={t('label.please-select-entity', {
                   entity: t('label.reason'),
-                })}>
+                })}
+              >
                 {Object.values(TestCaseFailureReasonType).map((value) => (
                   <Select.Option key={value}>{startCase(value)}</Select.Option>
                 ))}
@@ -1242,12 +1292,14 @@ export const TaskTabNew = ({
             form.resetFields();
             setShowEditTaskModel(false);
           }}
-          onOk={form.submit}>
+          onOk={form.submit}
+        >
           <Form
             form={form}
             initialValues={initialFormValue}
             layout="vertical"
-            onFinish={onEditAndSuggest}>
+            onFinish={onEditAndSuggest}
+          >
             {isTaskTags ? (
               <Form.Item
                 data-testid="tags-label"
@@ -1261,7 +1313,8 @@ export const TaskTabNew = ({
                     }),
                   },
                 ]}
-                trigger="onChange">
+                trigger="onChange"
+              >
                 <TagsTask
                   isTaskActionEdit
                   hasEditAccess={hasEditAccess}
@@ -1282,7 +1335,8 @@ export const TaskTabNew = ({
                     }),
                   },
                 ]}
-                trigger="onTextChange">
+                trigger="onTextChange"
+              >
                 <DescriptionTask
                   isTaskActionEdit
                   hasEditAccess={hasEditAccess}
@@ -1309,11 +1363,13 @@ export const TaskTabNew = ({
           }`}
           width={768}
           onCancel={() => setIsEditAssignee(false)}
-          onOk={assigneesForm.submit}>
+          onOk={assigneesForm.submit}
+        >
           <Form
             form={assigneesForm}
             layout="vertical"
-            onFinish={onTestCaseIncidentAssigneeUpdate}>
+            onFinish={onTestCaseIncidentAssigneeUpdate}
+          >
             <Form.Item
               data-testid="assignee"
               label={`${t('label.assignee')}:`}
@@ -1325,7 +1381,8 @@ export const TaskTabNew = ({
                     fieldText: t('label.assignee'),
                   }),
                 },
-              ]}>
+              ]}
+            >
               <Assignees
                 isSingleSelect
                 options={options}

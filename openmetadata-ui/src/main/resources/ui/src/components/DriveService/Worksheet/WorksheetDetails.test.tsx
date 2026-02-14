@@ -35,7 +35,6 @@ jest.mock('../../../utils/useRequiredParams');
 jest.mock('../../../rest/driveAPI');
 const mockGetFeedCounts = jest.fn();
 
-
 jest.mock('../../../utils/CommonUtils', () => ({
   ...jest.requireActual('../../../utils/CommonUtils'),
   getEntityMissingError: jest.fn(),
@@ -226,7 +225,8 @@ const renderWorksheetDetails = (props: Partial<WorksheetDetailsProps> = {}) => {
     <MemoryRouter
       initialEntries={[
         '/worksheet/test-service.test-spreadsheet.test-worksheet',
-      ]}>
+      ]}
+    >
       <WorksheetDetails {...finalProps} />
     </MemoryRouter>
   );

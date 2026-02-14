@@ -198,6 +198,8 @@ yarn parse-schema              # Parse JSON schemas for frontend (connection and
 - Follow existing project patterns and conventions
 - Generate production-ready code, not tutorial code
 - Create integration tests in openmetadata-integration-tests
+- Do not use Fully Qualified Names in the code such as org.openmetadata.schema.type.Status instead import the class name
+- Do not import wild-card packages instead import exactly required packages
 
 ### TypeScript/Frontend Code Requirements
 - **NEVER use `any` type** in TypeScript code - always use proper types
@@ -211,6 +213,15 @@ yarn parse-schema              # Parse JSON schemas for frontend (connection and
   3. Relative imports for utilities and components
   4. Asset imports (SVGs, styles)
   5. Type imports grouped separately when needed
+
+### Python Code Requirements
+- **Use pytest, not unittest** - write tests using pytest style with plain `assert` statements
+- Use pytest fixtures for test setup instead of `setUp`/`tearDown` methods
+- Use `unittest.mock` for mocking (MagicMock, patch) - this is compatible with pytest
+- Test classes should not inherit from `TestCase` - use plain classes prefixed with `Test`
+- Use `assert x == y` instead of `self.assertEqual(x, y)`
+- Use `assert x is None` instead of `self.assertIsNone(x)`
+- Use `assert "text" in string` instead of `self.assertIn("text", string)`
 
 ### Response Format
 - Provide clean code blocks without unnecessary explanations

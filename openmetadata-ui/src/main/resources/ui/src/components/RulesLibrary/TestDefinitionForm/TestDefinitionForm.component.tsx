@@ -11,23 +11,8 @@
  *  limitations under the License.
  */
 
-import {
-  MinusCircleOutlined,
-  PlusOutlined,
-  QuestionCircleOutlined,
-} from '@ant-design/icons';
-import {
-  Button,
-  Card,
-  Drawer,
-  Form,
-  Input,
-  Select,
-  Space,
-  Switch,
-  Tooltip,
-  Typography,
-} from 'antd';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Drawer, Form, Input, Select, Space, Switch } from 'antd';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import React, { useMemo, useState } from 'react';
@@ -35,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as CloseIcon } from '../../../assets/svg/close.svg';
 import { CSMode } from '../../../enums/codemirror.enum';
 import { CreateTestDefinition } from '../../../generated/api/tests/createTestDefinition';
+import { DatabaseServiceType } from '../../../generated/entity/services/databaseService';
 import {
   DataQualityDimensions,
   DataType,
@@ -47,7 +33,9 @@ import {
   createTestDefinition,
   patchTestDefinition,
 } from '../../../rest/testAPI';
+import { handleSearchFilterOption } from '../../../utils/CommonUtils';
 import { createScrollToErrorHandler } from '../../../utils/formUtils';
+import { isExternalTestDefinition } from '../../../utils/TestDefinitionUtils';
 import { showSuccessToast } from '../../../utils/ToastUtils';
 import AlertBar from '../../AlertBar/AlertBar';
 import FormItemLabel from '../../common/Form/FormItemLabel';
@@ -55,7 +43,7 @@ import CodeEditor from '../../Database/SchemaEditor/CodeEditor';
 
 interface TestDefinitionFormProps {
   initialValues?: TestDefinition;
-  onSuccess: () => void;
+  onSuccess: (data?: TestDefinition) => void;
   onCancel: () => void;
 }
 
@@ -71,6 +59,23 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
   const isEditMode = Boolean(initialValues);
   const scrollToError = useMemo(() => createScrollToErrorHandler(), []);
 
+  const isReadOnlyField = useMemo(() => {
+    if (!initialValues) {
+      return false;
+    }
+
+    const isExternalTest = isExternalTestDefinition(initialValues);
+
+    return isExternalTest && isEditMode;
+  }, [initialValues, isEditMode]);
+
+  const databaseServiceTypes = useMemo(() => {
+    return Object.values(DatabaseServiceType).map((service) => ({
+      label: service,
+      value: service,
+    }));
+  }, []);
+
   const handleSubmit = async (values: TestDefinition) => {
     setIsSubmitting(true);
     setErrorMessage('');
@@ -82,14 +87,26 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
         };
         const patch = compare(initialValues, updatedValues);
         if (patch.length > 0) {
-          await patchTestDefinition(initialValues?.id ?? '', patch);
+          const result = await patchTestDefinition(
+            initialValues?.id ?? '',
+            patch
+          );
+          onSuccess(result);
+          showSuccessToast(
+            t('server.entity-updated-success', {
+              entity: t('label.test-definition'),
+            })
+          );
         }
-        showSuccessToast(
-          t('server.entity-updated-success', {
-            entity: t('label.test-definition'),
-          })
-        );
       } else {
+        let validatorClass: string | undefined;
+        if (values.sqlExpression) {
+          validatorClass =
+            values.entityType === EntityType.Column
+              ? 'ColumnRuleLibrarySqlExpressionValidator'
+              : 'TableRuleLibrarySqlExpressionValidator';
+        }
+
         const payload: CreateTestDefinition = {
           name: values.name,
           displayName: values.displayName,
@@ -99,7 +116,9 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
           testPlatforms: values.testPlatforms,
           dataQualityDimension: values.dataQualityDimension,
           supportedDataTypes: values.supportedDataTypes,
+          supportedServices: values.supportedServices,
           parameterDefinition: values.parameterDefinition,
+          validatorClass,
         };
         await createTestDefinition(payload);
         showSuccessToast(
@@ -107,9 +126,8 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
             entity: t('label.test-definition'),
           })
         );
+        onSuccess();
       }
-
-      onSuccess();
     } catch (error) {
       const errorMsg =
         (error as AxiosError<{ message: string }>)?.response?.data?.message ||
@@ -149,7 +167,8 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
             htmlType="submit"
             loading={isSubmitting}
             type="primary"
-            onClick={() => form.submit()}>
+            onClick={() => form.submit()}
+          >
             {t('label.save')}
           </Button>
         </Space>
@@ -160,11 +179,12 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
           : t('label.add-entity', { entity: t('label.test-definition') })
       }
       width={720}
-      onClose={onCancel}>
+      onClose={onCancel}
+    >
       {errorMessage && (
         <div className="m-b-md">
           <AlertBar
-            defafultExpand
+            defaultExpand
             className="test-definition-form-alert"
             message={errorMessage}
             type="error"
@@ -179,10 +199,12 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
           testPlatforms: initialValues?.testPlatforms || [
             TestPlatform.OpenMetadata,
           ],
+          supportedServices: initialValues?.supportedServices || [],
         }}
         layout="vertical"
         onFinish={handleSubmit}
-        onFinishFailed={scrollToError}>
+        onFinishFailed={scrollToError}
+      >
         <Form.Item
           label={t('label.name')}
           name="name"
@@ -193,7 +215,8 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                 fieldText: t('label.name'),
               }),
             },
-          ]}>
+          ]}
+        >
           <Input
             disabled={isEditMode}
             placeholder={t('label.enter-entity-name', {
@@ -220,7 +243,8 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                 fieldText: t('label.description'),
               }),
             },
-          ]}>
+          ]}
+        >
           <Input.TextArea
             placeholder={t('label.enter-entity-description', {
               entity: t('label.test-definition'),
@@ -229,25 +253,30 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
           />
         </Form.Item>
 
-        <Form.Item name="sqlExpression">
-          <CodeEditor
-            refreshEditor
-            showCopyButton
-            className="custom-query-editor query-editor-h-200"
-            mode={{ name: CSMode.SQL }}
-            title={
-              <div className="ant-form-item-label">
-                <label className="d-flex align-items-center">
-                  <Typography.Text className="form-label-title">
-                    {t('label.sql-query')}
-                  </Typography.Text>
-                  <Tooltip title={t('message.test-definition-sql-query-help')}>
-                    <QuestionCircleOutlined className="ant-form-item-tooltip" />
-                  </Tooltip>
-                </label>
-              </div>
-            }
-          />
+        <Form.Item
+          label={
+            <FormItemLabel
+              helperText={t('message.test-definition-sql-query-help')}
+              label={t('label.sql-query')}
+            />
+          }
+          name="sqlExpression"
+        >
+          {isReadOnlyField ? (
+            <Input.TextArea
+              disabled
+              rows={8}
+              style={{ fontFamily: 'monospace', fontSize: '12px' }}
+              value={initialValues?.sqlExpression}
+            />
+          ) : (
+            <CodeEditor
+              refreshEditor
+              showCopyButton
+              className="custom-query-editor query-editor-h-200"
+              mode={{ name: CSMode.SQL }}
+            />
+          )}
         </Form.Item>
 
         <Form.Item
@@ -260,9 +289,10 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                 fieldText: t('label.entity-type'),
               }),
             },
-          ]}>
+          ]}
+        >
           <Select
-            disabled={isEditMode}
+            disabled={isReadOnlyField}
             id="entityType"
             options={Object.values(EntityType).map((type) => ({
               label: type,
@@ -284,8 +314,10 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                 fieldText: t('label.test-platform-plural'),
               }),
             },
-          ]}>
+          ]}
+        >
           <Select
+            disabled={isReadOnlyField}
             id="testPlatforms"
             mode="multiple"
             options={Object.values(TestPlatform).map((platform) => ({
@@ -300,7 +332,8 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
 
         <Form.Item
           label={t('label.data-quality-dimension')}
-          name="dataQualityDimension">
+          name="dataQualityDimension"
+        >
           <Select
             options={Object.values(DataQualityDimensions).map((dimension) => ({
               label: dimension,
@@ -313,9 +346,30 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
         </Form.Item>
 
         <Form.Item
-          label={t('label.supported-data-type-plural')}
-          name="supportedDataTypes">
+          label={
+            <FormItemLabel
+              helperText={t('message.supported-services-help')}
+              label={t('label.supported-service-plural')}
+            />
+          }
+          name="supportedServices"
+        >
           <Select
+            showSearch
+            disabled={isReadOnlyField}
+            filterOption={handleSearchFilterOption}
+            mode="multiple"
+            options={databaseServiceTypes}
+            placeholder={t('message.empty-means-all-services')}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={t('label.supported-data-type-plural')}
+          name="supportedDataTypes"
+        >
+          <Select
+            disabled={isReadOnlyField}
             mode="multiple"
             options={Object.values(DataType).map((dataType) => ({
               label: dataType,
@@ -333,17 +387,23 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
               helperText={t('message.test-definition-parameters-description')}
               label={t('label.parameter-plural')}
             />
-          }>
+          }
+        >
           <Form.List name="parameterDefinition">
             {(fields, { add, remove }) => (
               <>
                 {fields.map(({ key, name, ...restField }) => (
                   <Card
-                    extra={<MinusCircleOutlined onClick={() => remove(name)} />}
+                    extra={
+                      !isReadOnlyField && (
+                        <MinusCircleOutlined onClick={() => remove(name)} />
+                      )
+                    }
                     key={key}
                     size="small"
                     style={{ marginTop: 16 }}
-                    title={`${t('label.parameter')} ${name + 1}`}>
+                    title={`${t('label.parameter')} ${name + 1}`}
+                  >
                     <Form.Item
                       {...restField}
                       label={t('label.name')}
@@ -355,22 +415,32 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                             fieldText: t('label.name'),
                           }),
                         },
-                      ]}>
-                      <Input placeholder={t('label.parameter-name')} />
+                      ]}
+                    >
+                      <Input
+                        disabled={isReadOnlyField}
+                        placeholder={t('label.parameter-name')}
+                      />
                     </Form.Item>
 
                     <Form.Item
                       {...restField}
                       label={t('label.display-name')}
-                      name={[name, 'displayName']}>
-                      <Input placeholder={t('label.parameter-display-name')} />
+                      name={[name, 'displayName']}
+                    >
+                      <Input
+                        disabled={isReadOnlyField}
+                        placeholder={t('label.parameter-display-name')}
+                      />
                     </Form.Item>
 
                     <Form.Item
                       {...restField}
                       label={t('label.description')}
-                      name={[name, 'description']}>
+                      name={[name, 'description']}
+                    >
                       <Input.TextArea
+                        disabled={isReadOnlyField}
                         placeholder={t('label.parameter-description')}
                         rows={2}
                       />
@@ -387,8 +457,12 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                             fieldText: t('label.data-type'),
                           }),
                         },
-                      ]}>
+                      ]}
+                    >
                       <Select
+                        showSearch
+                        disabled={isReadOnlyField}
+                        filterOption={handleSearchFilterOption}
                         options={Object.values(TestDataType).map((type) => ({
                           label: type,
                           value: type,
@@ -399,35 +473,41 @@ const TestDefinitionForm: React.FC<TestDefinitionFormProps> = ({
                       />
                     </Form.Item>
 
-                    <Form.Item
-                      {...restField}
-                      label={t('label.required')}
-                      name={[name, 'required']}
-                      valuePropName="checked">
-                      <Switch />
-                    </Form.Item>
+                    <div className="d-flex items-center gap-2">
+                      <label>{t('label.required')}</label>
+                      <Form.Item
+                        noStyle
+                        {...restField}
+                        name={[name, 'required']}
+                        valuePropName="checked"
+                      >
+                        <Switch disabled={isReadOnlyField} />
+                      </Form.Item>
+                    </div>
                   </Card>
                 ))}
-                <Button
-                  block
-                  icon={<PlusOutlined />}
-                  style={{ marginTop: 16 }}
-                  type="dashed"
-                  onClick={() => add()}>
-                  {t('label.add-entity', { entity: t('label.parameter') })}
-                </Button>
+                {!isReadOnlyField && (
+                  <Button
+                    block
+                    icon={<PlusOutlined />}
+                    style={{ marginTop: 16 }}
+                    type="dashed"
+                    onClick={() => add()}
+                  >
+                    {t('label.add-entity', { entity: t('label.parameter') })}
+                  </Button>
+                )}
               </>
             )}
           </Form.List>
         </Form.Item>
         {isEditMode && (
-          <Form.Item
-            label={t('label.enabled')}
-            name="enabled"
-            style={{ marginTop: 16 }}
-            valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          <div className="d-flex items-center gap-2" style={{ marginTop: 16 }}>
+            <label>{t('label.enabled')}</label>
+            <Form.Item noStyle name="enabled" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </div>
         )}
       </Form>
     </Drawer>

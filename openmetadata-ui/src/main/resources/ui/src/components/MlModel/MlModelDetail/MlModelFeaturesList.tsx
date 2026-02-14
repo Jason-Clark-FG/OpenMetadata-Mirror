@@ -14,7 +14,7 @@
 import { Card, Col, Divider, Row, Space, Typography } from 'antd';
 import { isEmpty } from 'lodash';
 import { EntityTags } from 'Models';
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityType } from '../../../enums/entity.enum';
 import { MlFeature, Mlmodel } from '../../../generated/entity/data/mlmodel';
@@ -38,14 +38,17 @@ const MlModelFeaturesList = () => {
   );
   const [editDescription, setEditDescription] = useState<boolean>(false);
   const [_expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
-  const { data, onUpdate, permissions, openColumnDetailPanel, selectedColumn } =
-    useGenericContext<Mlmodel>();
+  const {
+    data,
+    onUpdate,
+    permissions,
+    openColumnDetailPanel,
+    selectedColumn,
+    setDisplayedColumns,
+  } = useGenericContext<Mlmodel>();
 
   // Extract base FQN and column part from URL
-  const {
-    columnFqn: columnPart,
-    fqn,
-  } = useFqn({
+  const { columnFqn: columnPart, fqn } = useFqn({
     type: EntityType.MLMODEL,
   });
   const { mlFeatures, isDeleted, entityFqn } = useMemo(() => {
@@ -65,6 +68,11 @@ const MlModelFeaturesList = () => {
     openColumnDetailPanel,
     selectedColumn: selectedColumn as MlFeature | null,
   });
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(mlFeatures || []);
+  }, [mlFeatures, setDisplayedColumns]);
 
   const hasEditPermission = useMemo(
     () => permissions.EditTags || permissions.EditAll,
@@ -160,7 +168,8 @@ const MlModelFeaturesList = () => {
                 <Card
                   className="m-b-lg shadow-none"
                   data-testid={`feature-card-${feature.name ?? ''}`}
-                  key={feature.fullyQualifiedName}>
+                  key={feature.fullyQualifiedName}
+                >
                   <Row gutter={[0, 8]}>
                     <Col span={24}>
                       <Typography.Text
@@ -169,7 +178,8 @@ const MlModelFeaturesList = () => {
                         style={{
                           cursor: isDeleted ? 'default' : 'pointer',
                         }}
-                        onClick={(event) => handleColumnClick(feature, event)}>
+                        onClick={(event) => handleColumnClick(feature, event)}
+                      >
                         {feature.name}
                       </Typography.Text>
                     </Col>
@@ -282,7 +292,8 @@ const MlModelFeaturesList = () => {
         {!isEmpty(selectedFeature) && (
           <EntityAttachmentProvider
             entityFqn={selectedFeature.fullyQualifiedName}
-            entityType={EntityType.MLMODEL}>
+            entityType={EntityType.MLMODEL}
+          >
             <ModalWithMarkdownEditor
               header={t('label.edit-entity-name', {
                 entityType: t('label.feature'),

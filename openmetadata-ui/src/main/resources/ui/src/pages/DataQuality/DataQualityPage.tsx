@@ -21,6 +21,7 @@ import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
 import TestCaseFormV1 from '../../components/DataQuality/AddDataQualityTest/components/TestCaseFormV1';
 import BundleSuiteForm from '../../components/DataQuality/BundleSuiteForm/BundleSuiteForm';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { TestCase } from '../../generated/tests/testCase';
 import { TestSuite } from '../../generated/tests/testSuite';
@@ -129,7 +130,8 @@ const DataQualityPage = () => {
       <Row
         className="data-quality-page m-b-md"
         data-testid="data-insight-container"
-        gutter={[0, 16]}>
+        gutter={[0, 16]}
+      >
         <Col span={24}>
           <Card>
             <Row>
@@ -139,6 +141,7 @@ const DataQualityPage = () => {
                     header: t('label.data-quality'),
                     subHeader: t('message.page-sub-header-for-data-quality'),
                   }}
+                  learningPageId={LEARNING_PAGE_IDS.DATA_QUALITY}
                 />
               </Col>
 
@@ -148,7 +151,8 @@ const DataQualityPage = () => {
                     <Button
                       data-testid="add-test-suite-btn"
                       type="primary"
-                      onClick={handleOpenBundleSuiteModal}>
+                      onClick={handleOpenBundleSuiteModal}
+                    >
                       {t('label.add-a-entity', {
                         entity: t('label.bundle-suite'),
                       })}
@@ -158,7 +162,8 @@ const DataQualityPage = () => {
                   <Button
                     data-testid="add-test-case-btn"
                     type="primary"
-                    onClick={handleOpenTestCaseModal}>
+                    onClick={handleOpenTestCaseModal}
+                  >
                     {t('label.add-a-entity', {
                       entity: t('label.test-case'),
                     })}
@@ -174,10 +179,12 @@ const DataQualityPage = () => {
                         items: addButtonContent,
                       }}
                       placement="bottomRight"
-                      trigger={['click']}>
+                      trigger={['click']}
+                    >
                       <Button
                         data-testid="data-quality-add-button-menu"
-                        type="primary">
+                        type="primary"
+                      >
                         <Space>
                           {t('label.add')}
                           <DownOutlined />

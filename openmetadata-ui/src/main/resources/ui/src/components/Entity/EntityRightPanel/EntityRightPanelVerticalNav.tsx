@@ -31,85 +31,90 @@ import {
 } from './EntityRightPanelVerticalNav.interface';
 import './EntityRightPanelVerticalNav.less';
 
-const EntityRightPanelVerticalNav: React.FC<EntityRightPanelVerticalNavProps> =
-  ({
-    activeTab,
-    entityType,
-    onTabChange,
-    verticalNavConatinerclassName,
-    isSideDrawer = false,
-    isColumnDetailPanel = false,
-  }) => {
-    const { t } = useTranslation();
+const EntityRightPanelVerticalNav: React.FC<
+  EntityRightPanelVerticalNavProps
+> = ({
+  activeTab,
+  entityType,
+  onTabChange,
+  verticalNavConatinerclassName,
+  isSideDrawer = false,
+  isColumnDetailPanel = false,
+}) => {
+  const { t } = useTranslation();
 
-    const getTabItems = () => {
-      const items = [
-        {
-          key: EntityRightPanelTab.OVERVIEW,
-          icon: <ExploreIcon height={16} width={16} />,
-          label: t('label.overview'),
-          'data-testid': 'overview-tab',
-        },
-      ];
+  const getTabItems = () => {
+    const items = [
+      {
+        key: EntityRightPanelTab.OVERVIEW,
+        icon: <ExploreIcon />,
+        label: t('label.overview'),
+        'data-testid': 'overview-tab',
+      },
+    ];
 
-      // Add schema tab for entities that have schema
-      if (hasSchemaTab(entityType) && !isColumnDetailPanel) {
-        items.push({
-          key: EntityRightPanelTab.SCHEMA,
-          icon: <SchemaIcon height={16} width={16} />,
-          label: t('label.schema'),
-          'data-testid': 'schema-tab',
-        });
-      }
-      // Add lineage tab for most entities
-      if (hasLineageTab(entityType) && !isColumnDetailPanel) {
-        items.push({
-          key: EntityRightPanelTab.LINEAGE,
-          icon: <PlatformLineageIcon height={16} width={16} />,
-          label: t('label.lineage'),
-          'data-testid': 'lineage-tab',
-        });
-      }
+    // Add schema tab for entities that have schema
+    if (hasSchemaTab(entityType) && !isColumnDetailPanel) {
+      items.push({
+        key: EntityRightPanelTab.SCHEMA,
+        icon: <SchemaIcon />,
+        label: t('label.schema'),
+        'data-testid': 'schema-tab',
+      });
+    }
+    // Add lineage tab for most entities
+    if (hasLineageTab(entityType) && !isColumnDetailPanel) {
+      items.push({
+        key: EntityRightPanelTab.LINEAGE,
+        icon: <PlatformLineageIcon />,
+        label: t('label.lineage'),
+        'data-testid': 'lineage-tab',
+      });
+    }
 
-      // Add data quality tab for tables
-      if (entityType === EntityType.TABLE) {
-        items.push({
-          key: EntityRightPanelTab.DATA_QUALITY,
-          icon: <DataQualityIcon height={16} width={16} />,
-          label: t('label.data-quality'),
-          'data-testid': 'data-quality-tab',
-        });
-      }
+    // Add data quality tab for tables
+    if (entityType === EntityType.TABLE) {
+      items.push({
+        key: EntityRightPanelTab.DATA_QUALITY,
+        icon: <DataQualityIcon />,
+        label: t('label.data-quality'),
+        'data-testid': 'data-quality-tab',
+      });
+    }
 
-      // Add custom properties tab
-      if (hasCustomPropertiesTab(entityType)) {
-        items.push({
-          key: EntityRightPanelTab.CUSTOM_PROPERTIES,
-          icon: <CustomPropertiesIcon height={16} width={16} />,
-          label: t('label.custom-property'),
-          'data-testid': 'custom-properties-tab',
-        });
-      }
+    // Add custom properties tab
+    if (
+      (!isColumnDetailPanel && hasCustomPropertiesTab(entityType)) ||
+      (isColumnDetailPanel && entityType === EntityType.TABLE)
+    ) {
+      items.push({
+        key: EntityRightPanelTab.CUSTOM_PROPERTIES,
+        icon: <CustomPropertiesIcon />,
+        label: t('label.custom-property'),
+        'data-testid': 'custom-properties-tab',
+      });
+    }
 
-      return items;
-    };
-
-    return (
-      <div
-        className={classNames(
-          'entity-right-panel-vertical-nav',
-          verticalNavConatinerclassName,
-          { 'drawer-entity-right-panel-vertical-nav': isSideDrawer }
-        )}>
-        <Menu
-          className="vertical-nav-menu"
-          items={getTabItems()}
-          mode="vertical"
-          selectedKeys={[activeTab]}
-          onClick={({ key }) => onTabChange(key as EntityRightPanelTab)}
-        />
-      </div>
-    );
+    return items;
   };
+
+  return (
+    <div
+      className={classNames(
+        'entity-right-panel-vertical-nav',
+        verticalNavConatinerclassName,
+        { 'drawer-entity-right-panel-vertical-nav': isSideDrawer }
+      )}
+    >
+      <Menu
+        className="vertical-nav-menu"
+        items={getTabItems()}
+        mode="vertical"
+        selectedKeys={[activeTab]}
+        onClick={({ key }) => onTabChange(key as EntityRightPanelTab)}
+      />
+    </div>
+  );
+};
 
 export default EntityRightPanelVerticalNav;
