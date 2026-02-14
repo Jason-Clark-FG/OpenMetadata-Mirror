@@ -25,8 +25,8 @@ import { EntityTypeEndpoint, ResponseDataType } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
 export class DashboardDataModelClass extends EntityClass {
-  private dashboardDataModelName: string;
-  private projectName: string;
+  private readonly dashboardDataModelName: string;
+  private readonly projectName: string;
   service: {
     name: string;
     serviceType: string;
@@ -219,7 +219,7 @@ export class DashboardDataModelClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/dashboardServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

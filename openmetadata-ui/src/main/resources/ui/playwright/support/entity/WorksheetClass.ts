@@ -224,7 +224,7 @@ export class WorksheetClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/driveServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

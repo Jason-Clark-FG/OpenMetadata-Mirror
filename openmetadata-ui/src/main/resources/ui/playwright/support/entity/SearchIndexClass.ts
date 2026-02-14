@@ -223,7 +223,7 @@ export class SearchIndexClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/searchServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

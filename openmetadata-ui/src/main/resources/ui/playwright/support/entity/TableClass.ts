@@ -497,7 +497,7 @@ export class TableClass extends EntityClass {
   async delete(apiContext: APIRequestContext, hardDelete = true) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/databaseServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=${hardDelete}`
     );
 

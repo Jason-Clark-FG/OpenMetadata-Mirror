@@ -39,7 +39,7 @@ export class TopicClass extends EntityClass {
       };
     };
   };
-  private topicName: string;
+  private readonly topicName: string;
   children: Field[];
   entity: {
     name: string;
@@ -216,7 +216,7 @@ export class TopicClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/messagingServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

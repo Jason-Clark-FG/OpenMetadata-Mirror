@@ -25,8 +25,8 @@ import { EntityTypeEndpoint, ResponseDataType } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
 export class ApiEndpointClass extends EntityClass {
-  private serviceName: string;
-  private apiCollectionName: string;
+  private readonly serviceName: string;
+  private readonly apiCollectionName: string;
   service: {
     name: string;
     displayName: string;
@@ -45,8 +45,8 @@ export class ApiEndpointClass extends EntityClass {
     service: string;
   };
 
-  private apiEndpointName: string;
-  private fqn: string;
+  private readonly apiEndpointName: string;
+  private readonly fqn: string;
 
   children: Field[];
 
@@ -295,7 +295,7 @@ export class ApiEndpointClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/apiServices/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 
