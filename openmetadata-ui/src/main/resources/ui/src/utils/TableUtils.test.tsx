@@ -2488,12 +2488,9 @@ describe('getNestedSectionTitle', () => {
     EntityType.DASHBOARD_DATA_MODEL,
     EntityType.CONTAINER,
     undefined,
-  ])(
-    'should return nested-column-plural for %s',
-    (entityType) => {
-      expect(getNestedSectionTitle(entityType)).toBe(
-        'label.nested-column-plural'
-      );
-    }
-  );
+  ])('should return nested-column-plural for %s', (entityType) => {
+    expect(getNestedSectionTitle(entityType)).toBe(
+      'label.nested-column-plural'
+    );
+  });
 });
