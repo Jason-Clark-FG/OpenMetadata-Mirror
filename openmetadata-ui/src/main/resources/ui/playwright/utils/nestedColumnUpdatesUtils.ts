@@ -11,6 +11,11 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
+import { DataType as FileDataType } from '../../src/generated/entity/data/file';
+import { DataType as SearchIndexDataType } from '../../src/generated/entity/data/searchIndex';
+import { DataType as TableDataType } from '../../src/generated/entity/data/table';
+import { DataTypeTopic } from '../../src/generated/entity/data/topic';
+import { DataType as WorksheetDataType } from '../../src/generated/entity/data/worksheet';
 import { nestedChildrenTestData } from '../constant/nestedColumnUpdates';
 import { FileClass } from '../support/entity/FileClass';
 import { WorksheetClass } from '../support/entity/WorksheetClass';
@@ -266,41 +271,41 @@ export const createTableEntity = async (apiContext: APIRequestContext) => {
   const columns = [
     {
       name: DUPLICATE_NAME,
-      dataType: 'VARCHAR',
+      dataType: TableDataType.Varchar,
       dataLength: 100,
       dataTypeDisplay: 'varchar',
       description: 'Top-level name column.',
     },
     {
       name: 'user_id',
-      dataType: 'NUMERIC',
+      dataType: TableDataType.Numeric,
       dataTypeDisplay: 'numeric',
       description: 'User identifier.',
     },
     {
       name: 'details',
-      dataType: 'STRUCT',
+      dataType: TableDataType.Struct,
       dataLength: 100,
       dataTypeDisplay: 'struct',
       description: 'User details struct.',
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'STRUCT',
+          dataType: TableDataType.Struct,
           dataLength: 100,
           dataTypeDisplay: 'struct',
           description: 'Nested name struct (duplicate name).',
           children: [
             {
               name: 'first_name',
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 100,
               dataTypeDisplay: 'varchar',
               description: 'First name.',
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 100,
               dataTypeDisplay: 'varchar',
               description: 'Duplicate name field.',
@@ -378,23 +383,23 @@ export const createTopicEntity = async (apiContext: APIRequestContext) => {
   const schemaFields = [
     {
       name: 'default',
-      dataType: 'RECORD',
+      dataType: DataTypeTopic.Record,
       tags: [],
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'RECORD',
+          dataType: DataTypeTopic.Record,
           tags: [],
           children: [
             {
               name: 'first_name',
-              dataType: 'STRING',
+              dataType: DataTypeTopic.String,
               description: 'First name field.',
               tags: [],
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'STRING',
+              dataType: DataTypeTopic.String,
               description: 'Duplicate name field.',
               tags: [],
             },
@@ -402,14 +407,14 @@ export const createTopicEntity = async (apiContext: APIRequestContext) => {
         },
         {
           name: 'age',
-          dataType: 'INT',
+          dataType: DataTypeTopic.Int,
           tags: [],
         },
       ],
     },
     {
       name: DUPLICATE_NAME,
-      dataType: 'STRING',
+      dataType: DataTypeTopic.String,
       tags: [],
     },
   ];
@@ -497,26 +502,26 @@ export const createApiEndpointEntity = async (
   const schemaFields = [
     {
       name: 'default',
-      dataType: 'RECORD',
+      dataType: DataTypeTopic.Record,
       fullyQualifiedName: `${fqnPrefix}.default`,
       tags: [],
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'RECORD',
+          dataType: DataTypeTopic.Record,
           fullyQualifiedName: `${fqnPrefix}.default.${DUPLICATE_NAME}`,
           tags: [],
           children: [
             {
               name: 'first_name',
-              dataType: 'STRING',
+              dataType: DataTypeTopic.String,
               description: 'First name.',
               fullyQualifiedName: `${fqnPrefix}.default.${DUPLICATE_NAME}.first_name`,
               tags: [],
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'STRING',
+              dataType: DataTypeTopic.String,
               description: 'Duplicate name field.',
               fullyQualifiedName: `${fqnPrefix}.default.${DUPLICATE_NAME}.${DUPLICATE_NAME}`,
               tags: [],
@@ -525,7 +530,7 @@ export const createApiEndpointEntity = async (
         },
         {
           name: 'age',
-          dataType: 'INT',
+          dataType: DataTypeTopic.Int,
           fullyQualifiedName: `${fqnPrefix}.default.age`,
           tags: [],
         },
@@ -533,7 +538,7 @@ export const createApiEndpointEntity = async (
     },
     {
       name: DUPLICATE_NAME,
-      dataType: 'STRING',
+      dataType: DataTypeTopic.String,
       fullyQualifiedName: `${fqnPrefix}.${DUPLICATE_NAME}`,
       tags: [],
     },
@@ -616,35 +621,35 @@ export const createDataModelEntity = async (apiContext: APIRequestContext) => {
   const columns = [
     {
       name: DUPLICATE_NAME,
-      dataType: 'VARCHAR',
+      dataType: TableDataType.Varchar,
       dataLength: 256,
       dataTypeDisplay: 'varchar',
       description: 'Top-level name column.',
     },
     {
       name: 'user_details',
-      dataType: 'STRUCT',
+      dataType: TableDataType.Struct,
       dataLength: 256,
       dataTypeDisplay: 'struct',
       description: 'User details.',
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'STRUCT',
+          dataType: TableDataType.Struct,
           dataLength: 256,
           dataTypeDisplay: 'struct',
           description: 'Nested name (duplicate).',
           children: [
             {
               name: 'first_name',
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 256,
               dataTypeDisplay: 'varchar',
               description: 'First name.',
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 256,
               dataTypeDisplay: 'varchar',
               description: 'Duplicate name field.',
@@ -726,7 +731,7 @@ export const createContainerEntity = async (apiContext: APIRequestContext) => {
   const columns = [
     {
       name: DUPLICATE_NAME,
-      dataType: 'VARCHAR',
+      dataType: TableDataType.Varchar,
       dataLength: 100,
       dataTypeDisplay: 'varchar',
       description: 'Top-level name column.',
@@ -735,7 +740,7 @@ export const createContainerEntity = async (apiContext: APIRequestContext) => {
     },
     {
       name: 'details',
-      dataType: 'STRUCT',
+      dataType: TableDataType.Struct,
       dataLength: 100,
       dataTypeDisplay: 'struct',
       description: 'Details struct with nested duplicate name.',
@@ -744,7 +749,7 @@ export const createContainerEntity = async (apiContext: APIRequestContext) => {
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'STRUCT',
+          dataType: TableDataType.Struct,
           dataLength: 100,
           dataTypeDisplay: 'struct',
           description: 'Nested name struct (duplicate).',
@@ -752,7 +757,7 @@ export const createContainerEntity = async (apiContext: APIRequestContext) => {
           children: [
             {
               name: 'first_name',
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 100,
               dataTypeDisplay: 'varchar',
               description: 'First name.',
@@ -760,7 +765,7 @@ export const createContainerEntity = async (apiContext: APIRequestContext) => {
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'VARCHAR',
+              dataType: TableDataType.Varchar,
               dataLength: 100,
               dataTypeDisplay: 'varchar',
               description: 'Duplicate name field.',
@@ -846,31 +851,31 @@ export const createSearchIndexEntity = async (
   const fields = [
     {
       name: DUPLICATE_NAME,
-      dataType: 'TEXT',
+      dataType: SearchIndexDataType.Text,
       dataTypeDisplay: 'text',
       description: 'Top-level name column.',
     },
     {
       name: 'details',
-      dataType: 'NESTED',
+      dataType: SearchIndexDataType.Nested,
       dataTypeDisplay: 'nested',
       description: 'User details struct.',
       children: [
         {
           name: DUPLICATE_NAME,
-          dataType: 'NESTED',
+          dataType: SearchIndexDataType.Nested,
           dataTypeDisplay: 'nested',
           description: 'Nested name struct (duplicate name).',
           children: [
             {
               name: 'first_name',
-              dataType: 'TEXT',
+              dataType: SearchIndexDataType.Text,
               dataTypeDisplay: 'text',
               description: 'First name.',
             },
             {
               name: DUPLICATE_NAME,
-              dataType: 'TEXT',
+              dataType: SearchIndexDataType.Text,
               dataTypeDisplay: 'text',
               description: 'Duplicate name field.',
             },
@@ -925,35 +930,35 @@ export const createWorksheetEntity = async (apiContext: APIRequestContext) => {
     {
       name: DUPLICATE_NAME,
       displayName: '',
-      dataType: 'STRING',
+      dataType: WorksheetDataType.String,
       dataTypeDisplay: 'string',
       description: 'Top-level column.',
     },
     {
       name: 'details',
       displayName: 'details',
-      dataType: 'STRUCT',
+      dataType: WorksheetDataType.Struct,
       dataTypeDisplay: 'struct',
       description: 'Details struct.',
       children: [
         {
           name: DUPLICATE_NAME,
           displayName: '',
-          dataType: 'STRUCT',
+          dataType: WorksheetDataType.Struct,
           dataTypeDisplay: 'struct',
           description: 'Nested name struct.',
           children: [
             {
               name: 'first_name',
               displayName: 'first_name',
-              dataType: 'STRING',
+              dataType: WorksheetDataType.String,
               dataTypeDisplay: 'string',
               description: 'First name.',
             },
             {
               name: DUPLICATE_NAME,
               displayName: '',
-              dataType: 'STRING',
+              dataType: WorksheetDataType.String,
               dataTypeDisplay: 'string',
               description: 'Duplicate name field.',
             },
@@ -994,35 +999,35 @@ export const createFileEntity = async (apiContext: APIRequestContext) => {
     {
       name: DUPLICATE_NAME,
       displayName: '',
-      dataType: 'STRING',
+      dataType: FileDataType.String,
       dataTypeDisplay: 'string',
       description: 'Top-level column.',
     },
     {
       name: 'details',
       displayName: 'details',
-      dataType: 'STRUCT',
+      dataType: FileDataType.Struct,
       dataTypeDisplay: 'struct',
       description: 'Details struct.',
       children: [
         {
           name: DUPLICATE_NAME,
           displayName: '',
-          dataType: 'STRUCT',
+          dataType: FileDataType.Struct,
           dataTypeDisplay: 'struct',
           description: 'Nested name struct.',
           children: [
             {
               name: 'first_name',
               displayName: 'first_name',
-              dataType: 'STRING',
+              dataType: FileDataType.String,
               dataTypeDisplay: 'string',
               description: 'First name.',
             },
             {
               name: DUPLICATE_NAME,
               displayName: '',
-              dataType: 'STRING',
+              dataType: FileDataType.String,
               dataTypeDisplay: 'string',
               description: 'Duplicate name field.',
             },
