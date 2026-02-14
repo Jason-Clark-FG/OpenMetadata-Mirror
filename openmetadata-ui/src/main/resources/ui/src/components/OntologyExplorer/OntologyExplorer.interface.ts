@@ -124,6 +124,11 @@ export type NodeColorMode =
   | 'hierarchyLevel'
   | 'connectionCount';
 export type NodeSizeMode = 'uniform' | 'connectionCount' | 'childCount';
+export type GraphViewMode =
+  | 'overview'
+  | 'hierarchy'
+  | 'neighborhood'
+  | 'crossGlossary';
 
 export interface GraphSettings {
   layout: LayoutAlgorithm;
@@ -131,17 +136,23 @@ export interface GraphSettings {
   nodeSizeMode: NodeSizeMode;
   showEdgeLabels: boolean;
   showNodeDescriptions: boolean;
+  showGlossaryHulls: boolean;
+  showMetrics: boolean;
   highlightOnHover: boolean;
   animateTransitions: boolean;
   physicsEnabled: boolean;
+  edgeBundling: boolean;
 }
 
 export interface GraphFilters {
+  viewMode: GraphViewMode;
   glossaryIds: string[];
   relationTypes: string[];
   hierarchyLevels: number[];
   showIsolatedNodes: boolean;
+  showCrossGlossaryOnly: boolean;
   searchQuery: string;
+  depth: number;
 }
 
 export interface NodeContextMenuAction {

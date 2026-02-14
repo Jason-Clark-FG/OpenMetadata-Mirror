@@ -15,3 +15,8 @@ SELECT 'glossaryTermRelationSettings', '{"relationTypes":[{"name":"relatedTo","d
 WHERE NOT EXISTS (
   SELECT 1 FROM openmetadata_settings WHERE configtype = 'glossaryTermRelationSettings'
 );
+
+-- Backfill conceptMappings for existing glossary terms
+UPDATE glossary_term_entity
+SET json = jsonb_set(COALESCE(json::jsonb, '{}'::jsonb), '{conceptMappings}', '[]'::jsonb)
+WHERE json IS NULL OR json::jsonb->'conceptMappings' IS NULL;

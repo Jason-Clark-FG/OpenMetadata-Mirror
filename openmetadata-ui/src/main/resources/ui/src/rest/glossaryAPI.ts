@@ -299,6 +299,19 @@ export const removeAssetsFromGlossaryTerm = async (
   return response.data;
 };
 
+export const getGlossaryTermAssets = async (
+  termId: string,
+  limit = 100,
+  offset = 0
+) => {
+  const response = await APIClient.get<PagingResponse<EntityReference[]>>(
+    `/glossaryTerms/${termId}/assets`,
+    { params: { limit, offset } }
+  );
+
+  return response.data;
+};
+
 export const searchGlossaryTerms = async (search: string, page = 1) => {
   const apiUrl = `/search/query?q=${search ?? ''}`;
 

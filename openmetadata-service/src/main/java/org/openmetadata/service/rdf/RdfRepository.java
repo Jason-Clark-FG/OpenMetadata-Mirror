@@ -17,6 +17,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.configuration.rdf.RdfConfiguration;
+import org.openmetadata.schema.configuration.RelationCardinality;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityRelationship;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -82,6 +83,10 @@ public class RdfRepository {
 
   public boolean isEnabled() {
     return config.getEnabled() != null && config.getEnabled() && storageService != null;
+  }
+
+  public String getBaseUri() {
+    return config.getBaseUri().toString();
   }
 
   public void createOrUpdate(EntityInterface entity) {
@@ -1958,6 +1963,7 @@ public class RdfRepository {
     model.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
     model.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     model.setNsPrefix("dct", "http://purl.org/dc/terms/");
+    model.setNsPrefix("sh", "http://www.w3.org/ns/shacl#");
 
     Property rdfType = model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "type");
     Property skosConceptScheme =
@@ -2064,6 +2070,7 @@ public class RdfRepository {
             }
           }
         }
+        addRelationCardinalityShapes(model);
       }
 
       java.io.StringWriter writer = new java.io.StringWriter();
@@ -2120,6 +2127,94 @@ public class RdfRepository {
         yield model.createProperty("https://open-metadata.org/ontology/", relationType);
       }
     };
+  }
+
+  private void addRelationCardinalityShapes(Model model) {
+    try {
+      org.openmetadata.schema.configuration.GlossaryTermRelationSettings settings =
+          org.openmetadata.service.resources.settings.SettingsCache.getSetting(
+              org.openmetadata.schema.settings.SettingsType.GLOSSARY_TERM_RELATION_SETTINGS,
+              org.openmetadata.schema.configuration.GlossaryTermRelationSettings.class);
+
+      if (settings == null || settings.getRelationTypes() == null) {
+        return;
+      }
+
+      String shNs = "http://www.w3.org/ns/shacl#";
+      String rdfNs = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+      String skosNs = "http://www.w3.org/2004/02/skos/core#";
+
+      Property rdfType = model.createProperty(rdfNs, "type");
+      Property shTargetClass = model.createProperty(shNs, "targetClass");
+      Property shProperty = model.createProperty(shNs, "property");
+      Property shPath = model.createProperty(shNs, "path");
+      Property shMaxCount = model.createProperty(shNs, "maxCount");
+      Property shInversePath = model.createProperty(shNs, "inversePath");
+
+      Resource shape = null;
+
+      for (var relationType : settings.getRelationTypes()) {
+        Integer sourceMax = relationType.getSourceMax();
+        Integer targetMax = relationType.getTargetMax();
+        RelationCardinality cardinality = relationType.getCardinality();
+
+        if (cardinality != null && cardinality != RelationCardinality.CUSTOM) {
+          switch (cardinality) {
+            case ONE_TO_ONE -> {
+              sourceMax = 1;
+              targetMax = 1;
+            }
+            case ONE_TO_MANY -> {
+              sourceMax = 1;
+              targetMax = null;
+            }
+            case MANY_TO_ONE -> {
+              sourceMax = null;
+              targetMax = 1;
+            }
+            case MANY_TO_MANY -> {
+              sourceMax = null;
+              targetMax = null;
+            }
+            default -> {
+              // No-op for unknown values.
+            }
+          }
+        }
+
+        if (sourceMax == null && targetMax == null) {
+          continue;
+        }
+
+        if (shape == null) {
+          String shapeUri =
+              config.getBaseUri().toString() + "shapes/glossaryTermRelationCardinality";
+          shape = model.createResource(shapeUri);
+          shape.addProperty(rdfType, model.createResource(shNs + "NodeShape"));
+          shape.addProperty(shTargetClass, model.createResource(skosNs + "Concept"));
+        }
+
+        Property relationProp = getSkosRelationProperty(relationType.getName(), model);
+
+        if (sourceMax != null) {
+          Resource propertyShape = model.createResource();
+          shape.addProperty(shProperty, propertyShape);
+          propertyShape.addProperty(shPath, relationProp);
+          propertyShape.addProperty(shMaxCount, model.createTypedLiteral(sourceMax));
+        }
+
+        if (targetMax != null) {
+          Resource propertyShape = model.createResource();
+          shape.addProperty(shProperty, propertyShape);
+          Resource inversePath = model.createResource();
+          inversePath.addProperty(shInversePath, relationProp);
+          propertyShape.addProperty(shPath, inversePath);
+          propertyShape.addProperty(shMaxCount, model.createTypedLiteral(targetMax));
+        }
+      }
+    } catch (Exception e) {
+      LOG.debug("Could not add glossary term cardinality shapes", e);
+    }
   }
 
   public void clearAll() {

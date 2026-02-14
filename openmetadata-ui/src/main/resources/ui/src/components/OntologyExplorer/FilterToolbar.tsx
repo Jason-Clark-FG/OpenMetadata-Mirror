@@ -16,33 +16,83 @@ import {
   FilterOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { Button, Input, Select, Space, Switch, Tag, Tooltip } from 'antd';
+import {
+  AutoComplete,
+  Button,
+  Input,
+  Segmented,
+  Select,
+  Space,
+  Switch,
+  Tag,
+  Tooltip,
+} from 'antd';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Glossary } from '../../generated/entity/data/glossary';
 import { GlossaryTermRelationType } from '../../rest/settingConfigAPI';
-import { GraphFilters } from './OntologyExplorer.interface';
+import { GraphFilters, GraphViewMode } from './OntologyExplorer.interface';
 
 interface FilterToolbarProps {
   filters: GraphFilters;
   glossaries: Glossary[];
   relationTypes: GlossaryTermRelationType[];
+  searchOptions?: {
+    label: React.ReactNode;
+    options: Array<{
+      label: React.ReactNode;
+      value: string;
+      type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
+      nodeId?: string;
+      glossaryId?: string;
+      relationType?: string;
+    }>;
+  }[];
   onFiltersChange: (filters: GraphFilters) => void;
+  onSearchSelect?: (
+    value: string,
+    option: {
+      type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
+      nodeId?: string;
+      glossaryId?: string;
+      relationType?: string;
+    }
+  ) => void;
+  onViewModeChange?: (viewMode: GraphViewMode) => void;
 }
 
 const FilterToolbar: React.FC<FilterToolbarProps> = ({
   filters,
   glossaries,
   relationTypes,
+  searchOptions,
   onFiltersChange,
+  onSearchSelect,
+  onViewModeChange,
 }) => {
   const { t } = useTranslation();
 
   const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onFiltersChange({ ...filters, searchQuery: e.target.value });
+    (value: string) => {
+      onFiltersChange({ ...filters, searchQuery: value });
     },
     [filters, onFiltersChange]
+  );
+
+  const handleSearchSelect = useCallback(
+    (value: string, option: unknown) => {
+      onFiltersChange({ ...filters, searchQuery: value });
+      onSearchSelect?.(
+        value,
+        option as {
+          type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
+          nodeId?: string;
+          glossaryId?: string;
+          relationType?: string;
+        }
+      );
+    },
+    [filters, onFiltersChange, onSearchSelect]
   );
 
   const handleGlossaryChange = useCallback(
@@ -66,22 +116,49 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
     [filters, onFiltersChange]
   );
 
+  const handleCrossGlossaryChange = useCallback(
+    (showCrossGlossaryOnly: boolean) => {
+      onFiltersChange({ ...filters, showCrossGlossaryOnly });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleDepthChange = useCallback(
+    (depth: number) => {
+      onFiltersChange({ ...filters, depth });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleViewModeChange = useCallback(
+    (viewMode: GraphViewMode) => {
+      onViewModeChange?.(viewMode);
+    },
+    [onViewModeChange]
+  );
+
   const handleClearFilters = useCallback(() => {
     onFiltersChange({
+      viewMode: 'overview',
       glossaryIds: [],
       relationTypes: [],
       hierarchyLevels: [],
       showIsolatedNodes: true,
+      showCrossGlossaryOnly: false,
       searchQuery: '',
+      depth: 0,
     });
   }, [onFiltersChange]);
 
   const hasActiveFilters = useMemo(() => {
     return (
+      filters.viewMode !== 'overview' ||
       filters.glossaryIds.length > 0 ||
       filters.relationTypes.length > 0 ||
       filters.searchQuery.length > 0 ||
-      !filters.showIsolatedNodes
+      !filters.showIsolatedNodes ||
+      filters.showCrossGlossaryOnly ||
+      filters.depth > 0
     );
   }, [filters]);
 
@@ -99,18 +176,51 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
     }));
   }, [relationTypes]);
 
+  const depthOptions = useMemo(
+    () => [
+      { value: 0, label: t('label.all') },
+      { value: 1, label: '1' },
+      { value: 2, label: '2' },
+      { value: 3, label: '3' },
+    ],
+    [t]
+  );
+
+  const viewModeOptions = useMemo(
+    () => [
+      { label: t('label.overview'), value: 'overview' },
+      { label: t('label.hierarchy'), value: 'hierarchy' },
+      { label: t('label.related'), value: 'neighborhood' },
+      { label: t('label.cross-glossary'), value: 'crossGlossary' },
+    ],
+    [t]
+  );
+
   return (
     <div className="filter-toolbar">
       <Space wrap size="small">
-        <Input
+        <Segmented
+          options={viewModeOptions}
+          size="small"
+          value={filters.viewMode}
+          onChange={(value) => handleViewModeChange(value as GraphViewMode)}
+        />
+
+        <AutoComplete
           allowClear
           className="filter-search"
-          placeholder={t('label.search-in-graph')}
-          prefix={<SearchOutlined />}
-          style={{ width: 180 }}
+          options={searchOptions}
           value={filters.searchQuery}
-          onChange={handleSearchChange}
-        />
+          onSearch={handleSearchChange}
+          onSelect={handleSearchSelect}
+        >
+          <Input
+            allowClear
+            placeholder={t('label.search-in-graph')}
+            prefix={<SearchOutlined />}
+            style={{ width: 200 }}
+          />
+        </AutoComplete>
 
         <Select
           allowClear
@@ -144,10 +254,19 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
           onChange={handleRelationTypeChange}
         />
 
+        <Select
+          options={depthOptions}
+          placeholder={t('label.depth')}
+          style={{ width: 110 }}
+          value={filters.depth}
+          onChange={handleDepthChange}
+        />
+
         <Tooltip title={t('label.show-isolated-nodes')}>
           <Tag
             className="cursor-pointer"
-            color={filters.showIsolatedNodes ? 'default' : 'blue'}>
+            color={filters.showIsolatedNodes ? 'default' : 'blue'}
+          >
             <Space>
               <Switch
                 checked={filters.showIsolatedNodes}
@@ -155,6 +274,22 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
                 onChange={handleShowIsolatedChange}
               />
               {t('label.isolated')}
+            </Space>
+          </Tag>
+        </Tooltip>
+
+        <Tooltip title={t('label.cross-glossary')}>
+          <Tag
+            className="cursor-pointer"
+            color={filters.showCrossGlossaryOnly ? 'blue' : 'default'}
+          >
+            <Space>
+              <Switch
+                checked={filters.showCrossGlossaryOnly}
+                size="small"
+                onChange={handleCrossGlossaryChange}
+              />
+              {t('label.cross-glossary')}
             </Space>
           </Tag>
         </Tooltip>

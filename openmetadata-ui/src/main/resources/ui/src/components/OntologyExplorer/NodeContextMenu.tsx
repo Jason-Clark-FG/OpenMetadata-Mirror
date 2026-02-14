@@ -14,9 +14,11 @@
 import {
   AimOutlined,
   CopyOutlined,
+  ExpandOutlined,
   ExportOutlined,
   InfoCircleOutlined,
   PlusOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons';
 import { Menu, MenuProps } from 'antd';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -33,6 +35,7 @@ export interface NodeContextMenuProps {
   onViewDetails: (node: OntologyNode) => void;
   onOpenInNewTab: (node: OntologyNode) => void;
   onAddRelation?: (node: OntologyNode) => void;
+  onExpandNeighbors?: (node: OntologyNode, depth: number) => void;
 }
 
 const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
@@ -43,6 +46,7 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
   onViewDetails,
   onOpenInNewTab,
   onAddRelation,
+  onExpandNeighbors,
 }) => {
   const { t } = useTranslation();
   const { onCopyToClipBoard } = useClipboard(node.fullyQualifiedName ?? '');
@@ -97,6 +101,16 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
           onClose();
 
           break;
+        case 'reveal-relations':
+          onExpandNeighbors?.(node, 1);
+          onClose();
+
+          break;
+        case 'expand-2':
+          onExpandNeighbors?.(node, 2);
+          onClose();
+
+          break;
         default:
           break;
       }
@@ -107,6 +121,7 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
       onViewDetails,
       onOpenInNewTab,
       onAddRelation,
+      onExpandNeighbors,
       handleCopyFQN,
       onClose,
     ]
@@ -138,7 +153,7 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
       },
     ];
 
-    if (onAddRelation) {
+    if (onAddRelation && node.type !== 'dataAsset') {
       items.push(
         { type: 'divider' },
         {
@@ -149,8 +164,24 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
       );
     }
 
+    if (onExpandNeighbors) {
+      items.push(
+        { type: 'divider' },
+        {
+          key: 'reveal-relations',
+          icon: <ShareAltOutlined />,
+          label: `${t('label.expand')} 1 hop`,
+        },
+        {
+          key: 'expand-2',
+          icon: <ExpandOutlined />,
+          label: `${t('label.expand')} 2 hops`,
+        }
+      );
+    }
+
     return items;
-  }, [node.fullyQualifiedName, onAddRelation, t]);
+  }, [node.fullyQualifiedName, onAddRelation, onExpandNeighbors, t]);
 
   return (
     <div

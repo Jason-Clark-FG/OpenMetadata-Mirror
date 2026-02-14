@@ -2354,6 +2354,29 @@ export interface GlossaryTermRelationType {
      * RDF predicate URI for this relation (e.g., 'skos:broader').
      */
     rdfPredicate?: string;
+    /**
+     * Preset cardinality for this relation type. CUSTOM lets you set explicit source/target maxima.
+     */
+    cardinality?: RelationCardinality;
+    /**
+     * Maximum number of relations of this type that can originate from a term. Null means unbounded.
+     */
+    sourceMax?: number | null;
+    /**
+     * Maximum number of relations of this type that can target a term. Null means unbounded.
+     */
+    targetMax?: number | null;
+}
+
+/**
+ * Preset cardinality for term-to-term relations.
+ */
+export enum RelationCardinality {
+    Custom = "CUSTOM",
+    ManyToMany = "MANY_TO_MANY",
+    ManyToOne = "MANY_TO_ONE",
+    OneToMany = "ONE_TO_MANY",
+    OneToOne = "ONE_TO_ONE",
 }
 
 /**

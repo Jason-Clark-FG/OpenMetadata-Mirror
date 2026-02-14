@@ -71,6 +71,23 @@ public class RdfIndexApp extends AbstractNativeApplication {
           .map(Relationship::ordinal)
           .collect(Collectors.toList());
 
+  // Entity types that should be excluded from RDF relationships as they don't provide
+  // meaningful semantic value (operational/audit entities)
+  private static final Set<String> EXCLUDED_RELATIONSHIP_ENTITY_TYPES =
+      Set.of(
+          "changeEvent",
+          "auditLog",
+          "webAnalyticEvent",
+          "entityUsage",
+          "eventSubscription",
+          "vote",
+          "THREAD");
+
+  // Relationship types that should be excluded from RDF as they don't provide
+  // meaningful semantic relationships (user interactions, not data relationships)
+  private static final Set<Integer> EXCLUDED_RELATIONSHIP_TYPES =
+      Set.of(Relationship.VOTED.ordinal(), Relationship.FOLLOWS.ordinal());
+
   private final RdfRepository rdfRepository;
   private volatile boolean stopped = false;
   private volatile long lastWebSocketUpdate = 0;
@@ -355,6 +372,29 @@ public class RdfIndexApp extends AbstractNativeApplication {
       List<org.openmetadata.schema.type.EntityRelationship> allRelationships = new ArrayList<>();
 
       for (EntityRelationshipObject rel : outgoingRelationships) {
+        // Skip relationships to/from excluded entity types (changeEvent, auditLog, vote, etc.)
+        // These don't provide meaningful semantic value in the knowledge graph
+        if (EXCLUDED_RELATIONSHIP_ENTITY_TYPES.contains(rel.getToEntity())
+            || EXCLUDED_RELATIONSHIP_ENTITY_TYPES.contains(rel.getFromEntity())) {
+          LOG.debug(
+              "Skipping relationship {} -> {} (excluded entity type: {} or {})",
+              rel.getFromId(),
+              rel.getToId(),
+              rel.getFromEntity(),
+              rel.getToEntity());
+          continue;
+        }
+
+        // Skip excluded relationship types (VOTED, FOLLOWS, etc.)
+        if (EXCLUDED_RELATIONSHIP_TYPES.contains(rel.getRelation())) {
+          LOG.debug(
+              "Skipping relationship {} -> {} (excluded relationship type: {})",
+              rel.getFromId(),
+              rel.getToId(),
+              rel.getRelation());
+          continue;
+        }
+
         if (rel.getRelation() == Relationship.UPSTREAM.ordinal() && rel.getJson() != null) {
           processLineageRelationship(rel);
         } else {
@@ -374,6 +414,17 @@ public class RdfIndexApp extends AbstractNativeApplication {
       }
 
       for (EntityRelationshipObject rel : incomingLineage) {
+        // Skip relationships to/from excluded entity types
+        if (EXCLUDED_RELATIONSHIP_ENTITY_TYPES.contains(rel.getToEntity())
+            || EXCLUDED_RELATIONSHIP_ENTITY_TYPES.contains(rel.getFromEntity())) {
+          continue;
+        }
+
+        // Skip excluded relationship types
+        if (EXCLUDED_RELATIONSHIP_TYPES.contains(rel.getRelation())) {
+          continue;
+        }
+
         if (rel.getJson() != null) {
           processLineageRelationship(rel);
         } else {

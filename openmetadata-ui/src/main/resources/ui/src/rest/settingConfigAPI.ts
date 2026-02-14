@@ -21,6 +21,12 @@ import { UIThemePreference } from '../generated/configuration/uiThemePreference'
 import { Settings, SettingType } from '../generated/settings/settings';
 
 export type RelationCategory = 'hierarchical' | 'associative' | 'equivalence';
+export type RelationCardinality =
+  | 'ONE_TO_ONE'
+  | 'ONE_TO_MANY'
+  | 'MANY_TO_ONE'
+  | 'MANY_TO_MANY'
+  | 'CUSTOM';
 
 export interface GlossaryTermRelationType {
   name: string;
@@ -28,6 +34,9 @@ export interface GlossaryTermRelationType {
   description?: string;
   inverseRelation?: string;
   rdfPredicate?: string;
+  cardinality?: RelationCardinality;
+  sourceMax?: number | null;
+  targetMax?: number | null;
   isSymmetric?: boolean;
   isTransitive?: boolean;
   isCrossGlossaryAllowed?: boolean;

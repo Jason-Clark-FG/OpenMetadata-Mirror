@@ -46,6 +46,8 @@ const RELATION_COLORS: Record<string, string> = {
   containedIn: '#06b6d4',
   dependsOn: '#dc2626',
   usedBy: '#d97706',
+  metricFor: '#0ea5e9',
+  hasGlossaryTerm: '#0f766e',
 };
 
 const RELATION_DISPLAY_NAMES: Record<string, string> = {
@@ -78,6 +80,8 @@ const RELATION_DISPLAY_NAMES: Record<string, string> = {
   containedIn: 'Contained In',
   dependsOn: 'Depends On',
   usedBy: 'Used By',
+  metricFor: 'Metric For',
+  hasGlossaryTerm: 'Tagged With',
 };
 
 export interface OntologyLegendProps {

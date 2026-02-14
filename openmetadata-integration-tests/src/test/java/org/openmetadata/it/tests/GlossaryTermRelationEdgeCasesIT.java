@@ -648,6 +648,335 @@ public class GlossaryTermRelationEdgeCasesIT {
             + synonymCount);
   }
 
+  // ==================== PRIORITY 7: HARD DELETE CASCADE ====================
+
+  @Test
+  void testHardDeleteCascadesRelations(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+    GlossaryTerm termC = GlossaryTermTestFactory.createWithName(ns, glossary, "termC");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "relatedTo");
+    addTermRelation(termA.getId().toString(), termC.getId().toString(), "synonym");
+
+    GlossaryTerm beforeDelete = getGlossaryTerm(termB.getId().toString());
+    boolean hasRelationBeforeDelete =
+        beforeDelete.getRelatedTerms() != null
+            && beforeDelete.getRelatedTerms().stream()
+                .anyMatch(r -> r.getTerm().getId().equals(termA.getId()));
+    assertTrue(hasRelationBeforeDelete, "termB should have relation to termA before delete");
+
+    hardDeleteTerm(termA.getId().toString());
+
+    GlossaryTerm termBAfterDelete = getGlossaryTerm(termB.getId().toString());
+    boolean hasRelationAfterDelete =
+        termBAfterDelete.getRelatedTerms() != null
+            && termBAfterDelete.getRelatedTerms().stream()
+                .anyMatch(r -> r.getTerm().getId().equals(termA.getId()));
+
+    assertFalse(
+        hasRelationAfterDelete, "termB should NOT have relation to termA after hard delete");
+
+    GlossaryTerm termCAfterDelete = getGlossaryTerm(termC.getId().toString());
+    boolean cHasRelationAfterDelete =
+        termCAfterDelete.getRelatedTerms() != null
+            && termCAfterDelete.getRelatedTerms().stream()
+                .anyMatch(r -> r.getTerm().getId().equals(termA.getId()));
+
+    assertFalse(
+        cHasRelationAfterDelete,
+        "termC should NOT have synonym relation to termA after hard delete");
+  }
+
+  @Test
+  void testSoftDeleteAndRestorePreservesRelations(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+
+    GlossaryTerm beforeDelete = getGlossaryTerm(termA.getId().toString());
+    int countBefore =
+        beforeDelete.getRelatedTerms() != null ? beforeDelete.getRelatedTerms().size() : 0;
+    assertTrue(countBefore > 0, "Should have relations before soft delete");
+
+    softDeleteTerm(termA.getId().toString());
+
+    restoreTerm(termA.getId().toString());
+
+    GlossaryTerm afterRestore = getGlossaryTerm(termA.getId().toString());
+    int countAfter =
+        afterRestore.getRelatedTerms() != null ? afterRestore.getRelatedTerms().size() : 0;
+
+    LOG.info("Relations before delete: {}, after restore: {}", countBefore, countAfter);
+
+    assertEquals(
+        countBefore, countAfter, "Relations should be preserved after soft delete + restore");
+  }
+
+  // ==================== PRIORITY 8: GRAPH ENDPOINT EDGE CASES ====================
+
+  @Test
+  void testRelationGraphForTermWithNoRelations(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm isolatedTerm = GlossaryTermTestFactory.createWithName(ns, glossary, "isolated");
+
+    Map<String, Object> graph = getTermRelationGraph(isolatedTerm.getId().toString(), 1, null);
+
+    assertNotNull(graph, "Graph should not be null even for isolated term");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> nodes = (List<Map<String, Object>>) graph.get("nodes");
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> edges = (List<Map<String, Object>>) graph.get("edges");
+
+    assertNotNull(nodes, "Nodes should not be null");
+    assertEquals(1, nodes.size(), "Should have exactly 1 node (the term itself)");
+    assertTrue(edges == null || edges.isEmpty(), "Should have no edges for isolated term");
+  }
+
+  @Test
+  void testRelationGraphFilteredBySpecificType(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+    GlossaryTerm termC = GlossaryTermTestFactory.createWithName(ns, glossary, "termC");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+    addTermRelation(termA.getId().toString(), termC.getId().toString(), "broader");
+
+    Map<String, Object> allGraph = getTermRelationGraph(termA.getId().toString(), 1, null);
+    Map<String, Object> synonymOnlyGraph =
+        getTermRelationGraph(termA.getId().toString(), 1, "synonym");
+
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> allEdges = (List<Map<String, Object>>) allGraph.get("edges");
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> synonymEdges =
+        (List<Map<String, Object>>) synonymOnlyGraph.get("edges");
+
+    LOG.info(
+        "All edges: {}, synonym-only edges: {}",
+        allEdges != null ? allEdges.size() : 0,
+        synonymEdges != null ? synonymEdges.size() : 0);
+
+    assertTrue(
+        allEdges != null && allEdges.size() >= 2, "Unfiltered graph should have at least 2 edges");
+    assertTrue(
+        synonymEdges != null && synonymEdges.size() >= 1,
+        "Synonym-filtered graph should have at least 1 edge");
+    assertTrue(
+        synonymEdges.size() <= allEdges.size(),
+        "Filtered graph should have fewer or equal edges than unfiltered");
+  }
+
+  @Test
+  void testRelationGraphForNonExistentTerm(TestNamespace ns) throws Exception {
+    String nonExistentId = UUID.randomUUID().toString();
+
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    String url =
+        String.format("%s/v1/glossaryTerms/%s/relationsGraph?depth=1", baseUrl, nonExistentId);
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .header("Accept", "application/json")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    assertTrue(
+        response.statusCode() >= 400,
+        "Graph for non-existent term should return 4xx. Got: " + response.statusCode());
+  }
+
+  // ==================== PRIORITY 9: PATCH OPERATIONS ====================
+
+  @Test
+  void testPatchRemoveSpecificRelation(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+    GlossaryTerm termC = GlossaryTermTestFactory.createWithName(ns, glossary, "termC");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+    addTermRelation(termA.getId().toString(), termC.getId().toString(), "relatedTo");
+
+    GlossaryTerm before = getGlossaryTerm(termA.getId().toString());
+    int countBefore = before.getRelatedTerms() != null ? before.getRelatedTerms().size() : 0;
+    assertTrue(countBefore >= 2, "Should have at least 2 relations before removal");
+
+    removeTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+
+    GlossaryTerm after = getGlossaryTerm(termA.getId().toString());
+
+    boolean stillHasSynonym =
+        after.getRelatedTerms() != null
+            && after.getRelatedTerms().stream()
+                .anyMatch(
+                    r ->
+                        r.getTerm().getId().equals(termB.getId())
+                            && "synonym".equals(r.getRelationType()));
+
+    boolean stillHasRelatedTo =
+        after.getRelatedTerms() != null
+            && after.getRelatedTerms().stream()
+                .anyMatch(
+                    r ->
+                        r.getTerm().getId().equals(termC.getId())
+                            && "relatedTo".equals(r.getRelationType()));
+
+    assertFalse(stillHasSynonym, "Synonym to termB should be removed");
+    assertTrue(stillHasRelatedTo, "relatedTo to termC should still exist");
+  }
+
+  @Test
+  void testRemoveRelationWithoutSpecifyingType(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    String url =
+        String.format("%s/v1/glossaryTerms/%s/relations/%s", baseUrl, termA.getId(), termB.getId());
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .timeout(Duration.ofSeconds(30))
+            .DELETE()
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    LOG.info(
+        "Remove without relationType: status={}, body={}", response.statusCode(), response.body());
+
+    assertTrue(
+        response.statusCode() == 200 || response.statusCode() >= 400,
+        "Remove without type should either succeed (remove all) or fail explicitly");
+
+    if (response.statusCode() == 200) {
+      GlossaryTerm after = getGlossaryTerm(termA.getId().toString());
+      boolean hasRelation =
+          after.getRelatedTerms() != null
+              && after.getRelatedTerms().stream()
+                  .anyMatch(r -> r.getTerm().getId().equals(termB.getId()));
+      LOG.info("After remove without type, relation exists: {}", hasRelation);
+    }
+  }
+
+  // ==================== PRIORITY 10: BULK CREATION ====================
+
+  @Test
+  void testCreateTermWithRelatedTermsInPayload(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm existingTerm = GlossaryTermTestFactory.createWithName(ns, glossary, "existing");
+
+    GlossaryTerm newTerm =
+        GlossaryTermTestFactory.createWithRelatedTerms(
+            ns, glossary, "withRelated", List.of(existingTerm.getFullyQualifiedName()));
+
+    assertNotNull(newTerm, "Term with related terms should be created");
+
+    GlossaryTerm fetched = getGlossaryTerm(newTerm.getId().toString());
+    boolean hasRelation =
+        fetched.getRelatedTerms() != null
+            && fetched.getRelatedTerms().stream()
+                .anyMatch(r -> r.getTerm().getId().equals(existingTerm.getId()));
+
+    assertTrue(hasRelation, "Newly created term should have relation to existing term");
+  }
+
+  @Test
+  void testCreateTermWithMultipleRelatedTerms(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm term1 = GlossaryTermTestFactory.createWithName(ns, glossary, "rel1");
+    GlossaryTerm term2 = GlossaryTermTestFactory.createWithName(ns, glossary, "rel2");
+    GlossaryTerm term3 = GlossaryTermTestFactory.createWithName(ns, glossary, "rel3");
+
+    GlossaryTerm newTerm =
+        GlossaryTermTestFactory.createWithRelatedTerms(
+            ns,
+            glossary,
+            "multiRelated",
+            List.of(
+                term1.getFullyQualifiedName(),
+                term2.getFullyQualifiedName(),
+                term3.getFullyQualifiedName()));
+
+    assertNotNull(newTerm, "Term with multiple related terms should be created");
+
+    GlossaryTerm fetched = getGlossaryTerm(newTerm.getId().toString());
+    int relationCount = fetched.getRelatedTerms() != null ? fetched.getRelatedTerms().size() : 0;
+
+    LOG.info("Term created with {} related terms, fetched has {} relations", 3, relationCount);
+
+    assertTrue(relationCount >= 3, "Should have at least 3 relations from creation payload");
+  }
+
+  // ==================== PRIORITY 11: MIGRATION VERIFICATION ====================
+
+  @Test
+  void testExistingRelationsHaveRelationType(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "relatedTo");
+
+    GlossaryTerm fetched = getGlossaryTerm(termA.getId().toString());
+    assertNotNull(fetched.getRelatedTerms(), "Should have related terms");
+    assertFalse(fetched.getRelatedTerms().isEmpty(), "Related terms should not be empty");
+
+    for (var relation : fetched.getRelatedTerms()) {
+      assertNotNull(
+          relation.getRelationType(),
+          "Every relation should have a relationType (migration backfill)");
+      assertFalse(relation.getRelationType().isEmpty(), "relationType should not be empty");
+      LOG.info(
+          "Relation to {} has type: {}", relation.getTerm().getName(), relation.getRelationType());
+    }
+  }
+
+  // ==================== PRIORITY 12: USAGE COUNTS ACCURACY ====================
+
+  @Test
+  void testUsageCountsReflectActualRelations(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm termA = GlossaryTermTestFactory.createWithName(ns, glossary, "termA");
+    GlossaryTerm termB = GlossaryTermTestFactory.createWithName(ns, glossary, "termB");
+    GlossaryTerm termC = GlossaryTermTestFactory.createWithName(ns, glossary, "termC");
+
+    Map<String, Integer> countsBefore = getUsageCounts();
+    int synonymBefore = countsBefore.getOrDefault("synonym", 0);
+
+    addTermRelation(termA.getId().toString(), termB.getId().toString(), "synonym");
+    addTermRelation(termA.getId().toString(), termC.getId().toString(), "synonym");
+
+    Map<String, Integer> countsAfter = getUsageCounts();
+    int synonymAfter = countsAfter.getOrDefault("synonym", 0);
+
+    LOG.info("Synonym usage: before={}, after={}", synonymBefore, synonymAfter);
+
+    assertTrue(
+        synonymAfter > synonymBefore,
+        "Synonym usage count should increase after adding synonym relations");
+  }
+
   // ==================== HELPER METHODS ====================
 
   private GlossaryTerm addTermRelation(String fromTermId, String toTermId, String relationType)
@@ -810,5 +1139,97 @@ public class GlossaryTermRelationEdgeCasesIT {
     HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     return response.body();
+  }
+
+  private void hardDeleteTerm(String termId) throws Exception {
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    String url =
+        String.format("%s/v1/glossaryTerms/%s?hardDelete=true&recursive=true", baseUrl, termId);
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .timeout(Duration.ofSeconds(30))
+            .DELETE()
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    if (response.statusCode() != 200) {
+      LOG.warn(
+          "Failed to hard delete term: status={}, body={}", response.statusCode(), response.body());
+    }
+  }
+
+  private void softDeleteTerm(String termId) throws Exception {
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    String url = String.format("%s/v1/glossaryTerms/%s", baseUrl, termId);
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .timeout(Duration.ofSeconds(30))
+            .DELETE()
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    if (response.statusCode() != 200) {
+      LOG.warn(
+          "Failed to soft delete term: status={}, body={}", response.statusCode(), response.body());
+    }
+  }
+
+  private void restoreTerm(String termId) throws Exception {
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    String url = String.format("%s/v1/glossaryTerms/restore", baseUrl);
+    String jsonBody = String.format("{\"id\":\"%s\"}", termId);
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .header("Content-Type", "application/json")
+            .timeout(Duration.ofSeconds(30))
+            .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    if (response.statusCode() != 200) {
+      LOG.warn(
+          "Failed to restore term: status={}, body={}", response.statusCode(), response.body());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Integer> getUsageCounts() throws Exception {
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + "/v1/glossaryTerms/relationTypes/usage"))
+            .header("Authorization", "Bearer " + token)
+            .header("Accept", "application/json")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    if (response.statusCode() != 200) {
+      return Map.of();
+    }
+
+    return OBJECT_MAPPER.readValue(response.body(), new TypeReference<Map<String, Integer>>() {});
   }
 }

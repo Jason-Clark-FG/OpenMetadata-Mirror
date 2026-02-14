@@ -43,6 +43,10 @@
     padding: 10px 16px;
     background: @white;
     border-bottom: 1px solid @border-color;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 
     .filter-toolbar {
       display: flex;
@@ -51,6 +55,22 @@
       .ant-space {
         flex-wrap: wrap;
         gap: 8px;
+      }
+
+      .ant-segmented {
+        background: @grey-1;
+        border-radius: 8px;
+        padding: 2px;
+
+        .ant-segmented-item {
+          border-radius: 6px;
+          font-size: 12px;
+        }
+
+        .ant-segmented-item-selected {
+          background: @white;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
       }
 
       .filter-search {
@@ -84,6 +104,23 @@
           margin-right: 0;
         }
       }
+    }
+  }
+
+  &-actionbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid @border-color;
+
+    .ant-btn {
+      border-radius: 6px;
+    }
+
+    .actionbar-select {
+      min-width: 180px;
     }
   }
 
@@ -195,7 +232,7 @@
     min-width: 0;
     min-height: 400px;
     height: 100%;
-    background: @grey-1;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   }
 
   &-controls {
@@ -233,6 +270,7 @@
       border-radius: 8px;
       background: @white;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border: 1px solid @border-color;
 
       &.ant-btn-icon-only {
         width: 32px;
@@ -280,8 +318,8 @@
     max-height: calc(100% - 24px);
     background: @white;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-    border: 1px solid @border-color;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.35);
     z-index: 101;
     overflow: hidden;
     display: flex;
@@ -470,6 +508,21 @@
       .ant-btn {
         flex: 1;
       }
+    }
+  }
+
+  .quick-add-panel {
+    display: flex;
+    flex-direction: column;
+
+    .ant-select {
+      .ant-select-selector {
+        border-radius: 6px !important;
+      }
+    }
+
+    .ant-btn {
+      border-radius: 6px;
     }
   }
 
@@ -759,7 +812,12 @@
 .ontology-cytoscape-container {
   width: 100%;
   height: 100%;
-  background: @grey-1;
+  background-color: #f8fafc;
+  background-image: radial-gradient(
+    rgba(15, 23, 42, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
 }
 
 // Legend component styles
@@ -769,8 +827,8 @@
   left: 12px;
   background: @white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid @border-color;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.35);
   z-index: 100;
   max-width: 200px;
   max-height: 300px;

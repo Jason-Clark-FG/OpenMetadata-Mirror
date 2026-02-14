@@ -337,7 +337,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.ASSOCIATIVE,
                   true,
-                  "#1890ff"),
+                  "#1890ff",
+                  null,
+                  null),
               createRelationType(
                   "synonym",
                   "Synonym",
@@ -348,7 +350,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.EQUIVALENCE,
                   true,
-                  "#722ed1"),
+                  "#722ed1",
+                  null,
+                  null),
               createRelationType(
                   "antonym",
                   "Antonym",
@@ -359,7 +363,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.ASSOCIATIVE,
                   true,
-                  "#f5222d"),
+                  "#f5222d",
+                  null,
+                  null),
               createRelationType(
                   "broader",
                   "Broader",
@@ -370,7 +376,9 @@ public class SettingsCache {
                   true,
                   RelationCategory.HIERARCHICAL,
                   true,
-                  "#597ef7"),
+                  "#597ef7",
+                  null,
+                  null),
               createRelationType(
                   "narrower",
                   "Narrower",
@@ -381,7 +389,9 @@ public class SettingsCache {
                   true,
                   RelationCategory.HIERARCHICAL,
                   true,
-                  "#85a5ff"),
+                  "#85a5ff",
+                  null,
+                  null),
               createRelationType(
                   "partOf",
                   "Part Of",
@@ -392,7 +402,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.HIERARCHICAL,
                   true,
-                  "#13c2c2"),
+                  "#13c2c2",
+                  null,
+                  null),
               createRelationType(
                   "hasPart",
                   "Has Part",
@@ -403,7 +415,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.HIERARCHICAL,
                   true,
-                  "#36cfc9"),
+                  "#36cfc9",
+                  null,
+                  null),
               createRelationType(
                   "calculatedFrom",
                   "Calculated From",
@@ -414,7 +428,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.ASSOCIATIVE,
                   true,
-                  "#faad14"),
+                  "#faad14",
+                  null,
+                  null),
               createRelationType(
                   "usedToCalculate",
                   "Used To Calculate",
@@ -425,7 +441,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.ASSOCIATIVE,
                   true,
-                  "#ffc53d"),
+                  "#ffc53d",
+                  null,
+                  null),
               createRelationType(
                   "seeAlso",
                   "See Also",
@@ -436,7 +454,9 @@ public class SettingsCache {
                   false,
                   RelationCategory.ASSOCIATIVE,
                   true,
-                  "#eb2f96"));
+                  "#eb2f96",
+                  null,
+                  null));
 
       Settings setting =
           new Settings()
@@ -457,7 +477,9 @@ public class SettingsCache {
       boolean isTransitive,
       RelationCategory category,
       boolean isSystemDefined,
-      String color) {
+      String color,
+      Integer sourceMax,
+      Integer targetMax) {
     return new GlossaryTermRelationType()
         .withName(name)
         .withDisplayName(displayName)
@@ -468,7 +490,9 @@ public class SettingsCache {
         .withIsTransitive(isTransitive)
         .withCategory(category)
         .withIsSystemDefined(isSystemDefined)
-        .withColor(color);
+        .withColor(color)
+        .withSourceMax(sourceMax)
+        .withTargetMax(targetMax);
   }
 
   public static <T> T getSetting(SettingsType settingName, Class<T> clazz) {

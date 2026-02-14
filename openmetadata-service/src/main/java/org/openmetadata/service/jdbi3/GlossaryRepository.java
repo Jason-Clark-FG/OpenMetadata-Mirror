@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -317,7 +318,17 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
 
     /** Default relation types supported by the system */
     private static final Set<String> DEFAULT_RELATION_TYPES =
-        Set.of("relatedTo", "synonym", "broader", "narrower", "antonym", "partOf", "hasPart");
+        Set.of(
+            "relatedTo",
+            "synonym",
+            "broader",
+            "narrower",
+            "antonym",
+            "partOf",
+            "hasPart",
+            "calculatedFrom",
+            "usedToCalculate",
+            "seeAlso");
 
     /**
      * Parse term relations from CSV field with support for relation type prefix.
@@ -347,13 +358,22 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
           String prefix = entry.substring(0, colonIndex).trim();
           String suffix = entry.substring(colonIndex + 1).trim();
 
-          // Validate if prefix is a known relation type
           if (isValidRelationType(prefix)) {
             relationType = prefix;
             termFqn = suffix;
+          } else if (!prefix.contains(".")) {
+            // Prefix has no dots, so it looks like an intended relation type, not part of an FQN
+            importFailure(
+                printer,
+                invalidField(
+                    fieldNumber,
+                    String.format(
+                        "Invalid relation type '%s' in entry '%s'. " + "Valid types: %s",
+                        prefix, entry.trim(), getValidRelationTypeNames())),
+                csvRecord);
+            continue;
           }
-          // If prefix is not a valid relation type, treat entire string as FQN
-          // (handles FQNs that may contain colons)
+          // If prefix contains dots, it's likely part of an FQN — treat entire string as FQN
         }
 
         // Resolve the term FQN to an EntityReference
@@ -383,6 +403,23 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
       } catch (Exception e) {
         return DEFAULT_RELATION_TYPES.contains(relationType);
       }
+    }
+
+    private String getValidRelationTypeNames() {
+      try {
+        GlossaryTermRelationSettings settings =
+            SettingsCache.getSetting(
+                SettingsType.GLOSSARY_TERM_RELATION_SETTINGS, GlossaryTermRelationSettings.class);
+        if (settings != null && settings.getRelationTypes() != null) {
+          return settings.getRelationTypes().stream()
+              .map(rt -> rt.getName())
+              .sorted()
+              .collect(Collectors.joining(", "));
+        }
+      } catch (Exception e) {
+        // Fall through to defaults
+      }
+      return String.join(", ", new TreeSet<>(DEFAULT_RELATION_TYPES));
     }
 
     private EntityStatus getTermStatus(CSVPrinter printer, CSVRecord csvRecord) throws IOException {

@@ -201,6 +201,9 @@ public class GlossaryCsvRelationTypesIT {
     String result = importGlossaryCsv(glossary.getName(), csvContent, true);
 
     assertNotNull(result);
+    assertTrue(
+        result.contains("Invalid relation type") || result.contains("failure"),
+        "Import should report invalid relation type. Result: " + result);
 
     LOG.debug("Invalid relation type handling verified for glossary: {}", glossary.getName());
   }
@@ -225,12 +228,10 @@ public class GlossaryCsvRelationTypesIT {
     assertNotNull(exportedCsv);
     LOG.debug("Exported CSV for round-trip test:\n{}", exportedCsv);
 
-    // Verify the CSV contains the related term FQN
-    // (relation type prefix export is a known issue - verifying term reference exists)
     assertTrue(
-        exportedCsv.contains(term1.getFullyQualifiedName())
-            || exportedCsv.contains(term2.getFullyQualifiedName()),
-        "Exported CSV should contain term FQN in related terms. CSV:\n" + exportedCsv);
+        exportedCsv.contains("synonym:" + term2.getFullyQualifiedName())
+            || exportedCsv.contains("synonym:" + term1.getFullyQualifiedName()),
+        "Exported CSV should contain 'synonym:' prefixed relation. CSV:\n" + exportedCsv);
 
     LOG.debug("Round-trip test completed for glossary: {}", glossary.getName());
   }
@@ -284,7 +285,16 @@ public class GlossaryCsvRelationTypesIT {
     Glossary glossary = GlossaryTestFactory.createSimple(ns);
 
     String[] relationTypes = {
-      "relatedTo", "synonym", "broader", "narrower", "antonym", "partOf", "hasPart"
+      "relatedTo",
+      "synonym",
+      "broader",
+      "narrower",
+      "antonym",
+      "partOf",
+      "hasPart",
+      "calculatedFrom",
+      "usedToCalculate",
+      "seeAlso"
     };
 
     GlossaryTerm baseTerm = GlossaryTermTestFactory.createWithName(ns, glossary, "baseTerm");
@@ -314,11 +324,76 @@ public class GlossaryCsvRelationTypesIT {
             || csv.contains("narrower:")
             || csv.contains("antonym:")
             || csv.contains("partOf:")
-            || csv.contains("hasPart:");
+            || csv.contains("hasPart:")
+            || csv.contains("calculatedFrom:")
+            || csv.contains("usedToCalculate:")
+            || csv.contains("seeAlso:");
     assertTrue(
         hasRelationPrefix, "CSV should contain at least one relation type prefix. CSV:\n" + csv);
 
     LOG.debug("All valid relation types test completed for glossary: {}", glossary.getName());
+  }
+
+  @Test
+  void testImportThenVerifyRelationViaApi(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm existingTerm = GlossaryTermTestFactory.createWithName(ns, glossary, "targetTerm");
+
+    String newTermName = ns.prefix("") + "_importedTerm";
+    String csvContent =
+        String.format(
+            "parent,name*,displayName,description,synonyms,relatedTerms,references,tags,reviewers,owner,glossaryStatus,color,iconURL,extension%n"
+                + ",%s,Imported Term,Imported via CSV,,broader:%s,,,,,Draft,,,",
+            newTermName, existingTerm.getFullyQualifiedName());
+
+    String result = importGlossaryCsv(glossary.getName(), csvContent, false);
+    assertNotNull(result);
+    LOG.debug("Import result: {}", result);
+
+    GlossaryTerm importedTerm =
+        getGlossaryTerm(glossary.getFullyQualifiedName() + "." + newTermName, "relatedTerms");
+
+    assertNotNull(importedTerm, "Imported term should exist via API");
+    assertNotNull(importedTerm.getRelatedTerms(), "Imported term should have related terms");
+    assertFalse(importedTerm.getRelatedTerms().isEmpty(), "Related terms should not be empty");
+
+    boolean hasBroaderRelation =
+        importedTerm.getRelatedTerms().stream()
+            .anyMatch(
+                r ->
+                    "broader".equals(r.getRelationType())
+                        && r.getTerm().getId().equals(existingTerm.getId()));
+
+    assertTrue(
+        hasBroaderRelation,
+        "Imported term should have 'broader' relation to target. Relations: "
+            + importedTerm.getRelatedTerms());
+  }
+
+  @Test
+  void testFullRoundTripExportReimportVerify(TestNamespace ns) throws Exception {
+    Glossary glossary = GlossaryTestFactory.createSimple(ns);
+    GlossaryTerm term1 = GlossaryTermTestFactory.createWithName(ns, glossary, "alpha");
+    GlossaryTerm term2 = GlossaryTermTestFactory.createWithName(ns, glossary, "beta");
+
+    addTermRelation(term1.getId().toString(), term2.getId().toString(), "broader");
+
+    String exportedCsv = exportGlossaryCsv(glossary.getName());
+    assertNotNull(exportedCsv);
+    LOG.debug("Exported CSV for full round-trip:\n{}", exportedCsv);
+
+    assertTrue(
+        exportedCsv.contains("broader:"),
+        "Exported CSV should contain 'broader:' prefix. CSV:\n" + exportedCsv);
+
+    Glossary glossary2 = GlossaryTestFactory.createWithName(ns, "roundtripTarget");
+    String result = importGlossaryCsv(glossary2.getName(), exportedCsv, false);
+    assertNotNull(result);
+    LOG.debug("Re-import result: {}", result);
+
+    assertTrue(
+        result.contains("\"numberOfRowsPassed\""),
+        "Re-import should process rows. Result: " + result);
   }
 
   @Test

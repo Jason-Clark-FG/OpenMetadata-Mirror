@@ -614,6 +614,12 @@ om:hasTag a owl:ObjectProperty ;
     rdfs:domain om:Entity ;
     rdfs:range om:Tag .
 
+om:hasGlossaryTerm a owl:ObjectProperty ;
+    rdfs:label "has glossary term" ;
+    rdfs:subPropertyOf dct:subject ;
+    rdfs:domain om:Entity ;
+    rdfs:range om:GlossaryTerm .
+
 om:hasOwner a owl:ObjectProperty ;
     rdfs:label "has owner" ;
     rdfs:subPropertyOf dcat:contactPoint ;

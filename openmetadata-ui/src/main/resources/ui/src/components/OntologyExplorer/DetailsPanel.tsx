@@ -32,9 +32,15 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+import { startCase } from 'lodash';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getGlossaryTermDetailsPath } from '../../utils/RouterUtils';
+import { EntityType } from '../../enums/entity.enum';
+import { GlossaryTermRelationType } from '../../rest/settingConfigAPI';
+import {
+  getEntityDetailsPath,
+  getGlossaryTermDetailsPath,
+} from '../../utils/RouterUtils';
 import RichTextEditorPreviewer from '../common/RichTextEditor/RichTextEditorPreviewer';
 import {
   DetailsPanelProps,
@@ -45,6 +51,7 @@ import {
 interface EnhancedDetailsPanelProps extends DetailsPanelProps {
   edges?: OntologyEdge[];
   nodes?: OntologyNode[];
+  relationTypes?: GlossaryTermRelationType[];
   onNodeClick?: (nodeId: string) => void;
   onFocusNode?: () => void;
 }
@@ -53,6 +60,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   node,
   edges = [],
   nodes = [],
+  relationTypes = [],
   onClose,
   onAddRelation,
   onNodeClick,
@@ -64,6 +72,17 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   const entityPath = useMemo(() => {
     if (!node?.fullyQualifiedName) {
       return '';
+    }
+
+    if (node.entityRef?.type && node.entityRef?.fullyQualifiedName) {
+      return getEntityDetailsPath(
+        node.entityRef.type,
+        node.entityRef.fullyQualifiedName
+      );
+    }
+
+    if (node.type === 'metric') {
+      return getEntityDetailsPath(EntityType.METRIC, node.fullyQualifiedName);
     }
 
     return getGlossaryTermDetailsPath(node.fullyQualifiedName);
@@ -95,6 +114,83 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
     return { incoming, outgoing };
   }, [node, edges, nodes]);
 
+  const relationTypeMap = useMemo(() => {
+    const map = new Map<string, GlossaryTermRelationType>();
+    relationTypes.forEach((relationType) => {
+      map.set(relationType.name, relationType);
+    });
+
+    return map;
+  }, [relationTypes]);
+
+  const relationLabelOverrides = useMemo(
+    () => ({
+      metricFor: `${t('label.metric')} ${t('label.for-lowercase')}`,
+      hasGlossaryTerm: t('label.tagged-with'),
+    }),
+    [t]
+  );
+
+  const cardinalityLabels = useMemo(
+    () => ({
+      ONE_TO_ONE: t('label.one-to-one'),
+      ONE_TO_MANY: t('label.one-to-many'),
+      MANY_TO_ONE: t('label.many-to-one'),
+      MANY_TO_MANY: t('label.many-to-many'),
+      CUSTOM: t('label.custom'),
+    }),
+    [t]
+  );
+
+  const deriveCardinality = useCallback(
+    (relationType?: GlossaryTermRelationType) => {
+      if (!relationType) {
+        return undefined;
+      }
+      const sourceMax = relationType.sourceMax;
+      const targetMax = relationType.targetMax;
+      if (sourceMax == null && targetMax == null) {
+        return 'MANY_TO_MANY';
+      }
+      if (sourceMax === 1 && targetMax === 1) {
+        return 'ONE_TO_ONE';
+      }
+      if (sourceMax === 1 && targetMax == null) {
+        return 'ONE_TO_MANY';
+      }
+      if (sourceMax == null && targetMax === 1) {
+        return 'MANY_TO_ONE';
+      }
+
+      return 'CUSTOM';
+    },
+    []
+  );
+
+  const formatCardinality = useCallback(
+    (relationType?: GlossaryTermRelationType) => {
+      if (!relationType) {
+        return null;
+      }
+      const cardinality =
+        relationType.cardinality ?? deriveCardinality(relationType);
+      if (cardinality && cardinality !== 'CUSTOM') {
+        return cardinalityLabels[cardinality] ?? cardinality;
+      }
+
+      const source =
+        relationType.sourceMax == null ? '*' : relationType.sourceMax;
+      const target =
+        relationType.targetMax == null ? '*' : relationType.targetMax;
+      const customLabel = cardinalityLabels.CUSTOM;
+
+      return `${customLabel} - ${t('label.source')}: ${source}, ${t(
+        'label.target'
+      )}: ${target}`;
+    },
+    [cardinalityLabels, deriveCardinality, t]
+  );
+
   const handleRelatedNodeClick = useCallback(
     (nodeId: string) => {
       onNodeClick?.(nodeId);
@@ -104,10 +200,15 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
 
   const getReadableType = useCallback(
     (type: string) => {
+      if (node.entityRef?.type) {
+        return startCase(node.entityRef.type);
+      }
       const typeMap: Record<string, string> = {
         glossary: t('label.glossary'),
         glossaryTerm: t('label.glossary-term'),
         glossaryTermIsolated: t('label.glossary-term'),
+        metric: t('label.metric'),
+        dataAsset: t('label.data-asset'),
       };
 
       return typeMap[type] ?? type;
@@ -174,7 +275,15 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
       <div className="detail-section">
         <div className="section-label">{t('label.type')}</div>
         <div className="section-value">
-          <Tag color={node.type === 'glossary' ? 'purple' : 'cyan'}>
+          <Tag
+            color={
+              node.type === 'glossary'
+                ? 'purple'
+                : node.type === 'dataAsset'
+                ? 'gold'
+                : 'cyan'
+            }
+          >
             {getReadableType(node.type)}
           </Tag>
         </div>
@@ -199,14 +308,47 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
                 }
               >
-                <Space>
-                  <Tag color="green">{rel.relationType}</Tag>
-                  <Typography.Text>
-                    {rel.relatedNode?.originalLabel ??
-                      rel.relatedNode?.label ??
-                      rel.to}
-                  </Typography.Text>
-                </Space>
+                {(() => {
+                  const relationMeta = relationTypeMap.get(rel.relationType);
+                  const displayName =
+                    relationMeta?.displayName ??
+                    relationLabelOverrides[rel.relationType] ??
+                    rel.relationType;
+                  const predicate = relationMeta?.rdfPredicate;
+                  const cardinality = formatCardinality(relationMeta);
+
+                  return (
+                    <Space direction="vertical" size={2}>
+                      <Space>
+                        <Tag
+                          style={
+                            relationMeta?.color
+                              ? {
+                                  backgroundColor: relationMeta.color,
+                                  borderColor: relationMeta.color,
+                                  color: '#ffffff',
+                                }
+                              : undefined
+                          }
+                        >
+                          {displayName}
+                        </Tag>
+                        <Typography.Text>
+                          {rel.relatedNode?.originalLabel ??
+                            rel.relatedNode?.label ??
+                            rel.to}
+                        </Typography.Text>
+                      </Space>
+                      {(predicate || cardinality) && (
+                        <Typography.Text type="secondary">
+                          {predicate ? predicate : ''}
+                          {predicate && cardinality ? ' • ' : ''}
+                          {cardinality ? cardinality : ''}
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  );
+                })()}
               </List.Item>
             )}
             size="small"
@@ -229,14 +371,47 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
                 }
               >
-                <Space>
-                  <Tag color="blue">{rel.relationType}</Tag>
-                  <Typography.Text>
-                    {rel.relatedNode?.originalLabel ??
-                      rel.relatedNode?.label ??
-                      rel.from}
-                  </Typography.Text>
-                </Space>
+                {(() => {
+                  const relationMeta = relationTypeMap.get(rel.relationType);
+                  const displayName =
+                    relationMeta?.displayName ??
+                    relationLabelOverrides[rel.relationType] ??
+                    rel.relationType;
+                  const predicate = relationMeta?.rdfPredicate;
+                  const cardinality = formatCardinality(relationMeta);
+
+                  return (
+                    <Space direction="vertical" size={2}>
+                      <Space>
+                        <Tag
+                          style={
+                            relationMeta?.color
+                              ? {
+                                  backgroundColor: relationMeta.color,
+                                  borderColor: relationMeta.color,
+                                  color: '#ffffff',
+                                }
+                              : undefined
+                          }
+                        >
+                          {displayName}
+                        </Tag>
+                        <Typography.Text>
+                          {rel.relatedNode?.originalLabel ??
+                            rel.relatedNode?.label ??
+                            rel.from}
+                        </Typography.Text>
+                      </Space>
+                      {(predicate || cardinality) && (
+                        <Typography.Text type="secondary">
+                          {predicate ? predicate : ''}
+                          {predicate && cardinality ? ' • ' : ''}
+                          {cardinality ? cardinality : ''}
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  );
+                })()}
               </List.Item>
             )}
             size="small"
@@ -289,7 +464,11 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
             </Typography.Text>
           </Tooltip>
           <span className="type-badge">
-            {node.type === 'glossary' ? '📚' : '📝'}
+            {node.type === 'glossary'
+              ? '📚'
+              : node.type === 'metric'
+              ? '📈'
+              : '📝'}
           </span>
         </div>
         <Space size={4}>

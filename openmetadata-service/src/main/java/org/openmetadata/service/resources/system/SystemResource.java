@@ -46,6 +46,7 @@ import org.openmetadata.schema.auth.EmailRequest;
 import org.openmetadata.schema.configuration.EntityRulesSettings;
 import org.openmetadata.schema.configuration.GlossaryTermRelationSettings;
 import org.openmetadata.schema.configuration.GlossaryTermRelationType;
+import org.openmetadata.schema.configuration.RelationCardinality;
 import org.openmetadata.schema.configuration.SecurityConfiguration;
 import org.openmetadata.schema.settings.Settings;
 import org.openmetadata.schema.settings.SettingsType;
@@ -379,6 +380,10 @@ public class SystemResource {
     if (GLOSSARY_TERM_RELATION_SETTINGS
         .value()
         .equalsIgnoreCase(settingName.getConfigType().toString())) {
+      GlossaryTermRelationSettings relationSettings =
+          JsonUtils.convertValue(settingName.getConfigValue(), GlossaryTermRelationSettings.class);
+      normalizeGlossaryTermRelationSettings(relationSettings);
+      settingName.setConfigValue(relationSettings);
       validateGlossaryTermRelationSettingsUpdate(settingName);
     }
     Response response = systemRepository.createOrUpdate(settingName);
@@ -855,5 +860,65 @@ public class SystemResource {
       message.setLength(message.length() - 2);
       throw new SystemSettingsException(message.toString());
     }
+  }
+
+  private void normalizeGlossaryTermRelationSettings(GlossaryTermRelationSettings settings) {
+    if (settings == null || settings.getRelationTypes() == null) {
+      return;
+    }
+
+    for (GlossaryTermRelationType relationType : settings.getRelationTypes()) {
+      if (relationType == null) {
+        continue;
+      }
+
+      RelationCardinality cardinality = relationType.getCardinality();
+      if (cardinality == null) {
+        relationType.setCardinality(
+            deriveCardinality(relationType.getSourceMax(), relationType.getTargetMax()));
+        continue;
+      }
+
+      switch (cardinality) {
+        case ONE_TO_ONE -> {
+          relationType.setSourceMax(1);
+          relationType.setTargetMax(1);
+        }
+        case ONE_TO_MANY -> {
+          relationType.setSourceMax(1);
+          relationType.setTargetMax(null);
+        }
+        case MANY_TO_ONE -> {
+          relationType.setSourceMax(null);
+          relationType.setTargetMax(1);
+        }
+        case MANY_TO_MANY -> {
+          relationType.setSourceMax(null);
+          relationType.setTargetMax(null);
+        }
+        case CUSTOM -> {
+          // Keep explicit values as-is.
+        }
+        default -> {
+          // No-op for unknown values.
+        }
+      }
+    }
+  }
+
+  private RelationCardinality deriveCardinality(Integer sourceMax, Integer targetMax) {
+    if (sourceMax == null && targetMax == null) {
+      return RelationCardinality.MANY_TO_MANY;
+    }
+    if (Integer.valueOf(1).equals(sourceMax) && Integer.valueOf(1).equals(targetMax)) {
+      return RelationCardinality.ONE_TO_ONE;
+    }
+    if (Integer.valueOf(1).equals(sourceMax) && targetMax == null) {
+      return RelationCardinality.ONE_TO_MANY;
+    }
+    if (sourceMax == null && Integer.valueOf(1).equals(targetMax)) {
+      return RelationCardinality.MANY_TO_ONE;
+    }
+    return RelationCardinality.CUSTOM;
   }
 }

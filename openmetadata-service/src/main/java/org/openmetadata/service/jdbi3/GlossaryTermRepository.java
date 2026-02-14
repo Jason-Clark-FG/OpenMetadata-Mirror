@@ -77,6 +77,7 @@ import org.openmetadata.schema.api.feed.CloseTask;
 import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.configuration.GlossaryTermRelationSettings;
 import org.openmetadata.schema.configuration.GlossaryTermRelationType;
+import org.openmetadata.schema.configuration.RelationCardinality;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.feed.Thread;
@@ -437,7 +438,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     List<TermRelation> relatedTerms = entity.getRelatedTerms();
     List<EntityReference> reviewers = entity.getReviewers();
 
-    entity.withGlossary(null).withParent(null).withRelatedTerms(relatedTerms).withReviewers(null);
+    entity.withGlossary(null).withParent(null).withRelatedTerms(null).withReviewers(null);
     store(entity, update);
 
     // Restore the relationships
@@ -455,13 +456,24 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     for (GlossaryTerm entity : entities) {
       EntityReference glossary = entity.getGlossary();
       EntityReference parentTerm = entity.getParent();
+      List<TermRelation> relatedTerms = entity.getRelatedTerms();
       List<EntityReference> reviewers = entity.getReviewers();
 
-      String jsonCopy = gson.toJson(entity.withGlossary(null).withParent(null).withReviewers(null));
+      String jsonCopy =
+          gson.toJson(
+              entity
+                  .withGlossary(null)
+                  .withParent(null)
+                  .withRelatedTerms(null)
+                  .withReviewers(null));
       entitiesToStore.add(gson.fromJson(jsonCopy, GlossaryTerm.class));
 
       // restore the relationships
-      entity.withGlossary(glossary).withParent(parentTerm).withReviewers(reviewers);
+      entity
+          .withGlossary(glossary)
+          .withParent(parentTerm)
+          .withRelatedTerms(relatedTerms)
+          .withReviewers(reviewers);
     }
     storeMany(entitiesToStore);
   }
@@ -470,6 +482,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   public void storeRelationships(GlossaryTerm entity) {
     addGlossaryRelationship(entity);
     addParentRelationship(entity);
+    validateRelationCardinality(entity.getId(), listOrEmpty(entity.getRelatedTerms()));
     for (TermRelation termRelation : listOrEmpty(entity.getRelatedTerms())) {
       String relationType =
           termRelation.getRelationType() != null ? termRelation.getRelationType() : "relatedTo";
@@ -497,6 +510,21 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     String relationType =
         termRelation.getRelationType() != null ? termRelation.getRelationType() : "relatedTo";
     validateRelationType(relationType);
+
+    boolean exists =
+        listOrEmpty(term.getRelatedTerms()).stream()
+            .anyMatch(
+                rel ->
+                    rel.getTerm() != null
+                        && rel.getTerm().getId() != null
+                        && rel.getTerm().getId().equals(termRef.getId())
+                        && Objects.equals(
+                            rel.getRelationType() != null ? rel.getRelationType() : "relatedTo",
+                            relationType));
+    if (!exists) {
+      validateRelationCardinality(id, List.of(termRelation));
+    }
+
     String json = String.format("{\"relationType\":\"%s\"}", relationType);
     addRelationship(
         id, termRef.getId(), GLOSSARY_TERM, GLOSSARY_TERM, Relationship.RELATED_TO, json, true);
@@ -506,7 +534,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   @Transaction
   public GlossaryTerm removeTermRelation(UUID id, UUID toTermId, String relationType) {
-    deleteRelationship(id, GLOSSARY_TERM, toTermId, GLOSSARY_TERM, Relationship.RELATED_TO);
+    deleteBidirectionalRelatedTo(id, toTermId);
     String actualRelationType = relationType != null ? relationType : "relatedTo";
     RdfUpdater.removeGlossaryTermRelation(id, toTermId, actualRelationType);
     return get(null, id, getFields("relatedTerms"), Include.NON_DELETED, false);
@@ -543,6 +571,141 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
       // Settings not available, use defaults
     }
     return DEFAULT_RELATION_TYPES;
+  }
+
+  private GlossaryTermRelationType getRelationTypeConfig(String relationType) {
+    if (relationType == null || relationType.isEmpty()) {
+      return null;
+    }
+    try {
+      GlossaryTermRelationSettings settings =
+          SettingsCache.getSetting(
+              SettingsType.GLOSSARY_TERM_RELATION_SETTINGS, GlossaryTermRelationSettings.class);
+      if (settings != null && settings.getRelationTypes() != null) {
+        return settings.getRelationTypes().stream()
+            .filter(rt -> relationType.equalsIgnoreCase(rt.getName()))
+            .findFirst()
+            .orElse(null);
+      }
+    } catch (Exception e) {
+      // Settings not available, ignore
+    }
+    return null;
+  }
+
+  private int getRelationCount(UUID termId, String relationType, Map<String, Integer> cache) {
+    String key = "any:" + termId + ":" + relationType;
+    Integer cached = cache.get(key);
+    if (cached != null) {
+      return cached;
+    }
+
+    int count = 0;
+    Set<String> seen = new HashSet<>();
+
+    List<EntityRelationshipRecord> toRecords =
+        daoCollection
+            .relationshipDAO()
+            .findTo(termId, GLOSSARY_TERM, Relationship.RELATED_TO.ordinal());
+    for (EntityRelationshipRecord record : toRecords) {
+      String relType = extractRelationType(record.getJson());
+      if (relationType.equalsIgnoreCase(relType)) {
+        String relKey = termId + "->" + record.getId();
+        if (seen.add(relKey)) {
+          count++;
+        }
+      }
+    }
+
+    List<EntityRelationshipRecord> fromRecords =
+        daoCollection
+            .relationshipDAO()
+            .findFrom(termId, GLOSSARY_TERM, Relationship.RELATED_TO.ordinal(), GLOSSARY_TERM);
+    for (EntityRelationshipRecord record : fromRecords) {
+      String relType = extractRelationType(record.getJson());
+      if (relationType.equalsIgnoreCase(relType)) {
+        String relKey = record.getId() + "->" + termId;
+        if (seen.add(relKey)) {
+          count++;
+        }
+      }
+    }
+
+    cache.put(key, count);
+    return count;
+  }
+
+  private void validateRelationCardinality(UUID fromId, List<TermRelation> additions) {
+    if (additions == null || additions.isEmpty()) {
+      return;
+    }
+
+    Map<String, Integer> relationCountCache = new HashMap<>();
+    Map<String, Integer> outgoingAdds = new HashMap<>();
+    Map<String, Integer> incomingAdds = new HashMap<>();
+
+    for (TermRelation relation : additions) {
+      if (relation == null || relation.getTerm() == null || relation.getTerm().getId() == null) {
+        continue;
+      }
+
+      String relationType =
+          relation.getRelationType() != null ? relation.getRelationType() : "relatedTo";
+      GlossaryTermRelationType config = getRelationTypeConfig(relationType);
+      Integer sourceMax = config != null ? config.getSourceMax() : null;
+      Integer targetMax = config != null ? config.getTargetMax() : null;
+      RelationCardinality cardinality = config != null ? config.getCardinality() : null;
+
+      if (cardinality != null && cardinality != RelationCardinality.CUSTOM) {
+        switch (cardinality) {
+          case ONE_TO_ONE -> {
+            sourceMax = 1;
+            targetMax = 1;
+          }
+          case ONE_TO_MANY -> {
+            sourceMax = 1;
+            targetMax = null;
+          }
+          case MANY_TO_ONE -> {
+            sourceMax = null;
+            targetMax = 1;
+          }
+          case MANY_TO_MANY -> {
+            sourceMax = null;
+            targetMax = null;
+          }
+          default -> {
+            // Keep configured values for unknown/custom.
+          }
+        }
+      }
+
+      UUID toId = relation.getTerm().getId();
+
+      if (sourceMax != null) {
+        String outKey = fromId + ":" + relationType;
+        int addedOut = outgoingAdds.merge(outKey, 1, Integer::sum);
+        int existingOut = getRelationCount(fromId, relationType, relationCountCache);
+        if (existingOut + addedOut > sourceMax) {
+          throw new BadRequestException(
+              String.format(
+                  "Relation type '%s' exceeds source cardinality (max=%d) for term %s",
+                  relationType, sourceMax, fromId));
+        }
+      }
+
+      if (targetMax != null) {
+        String inKey = toId + ":" + relationType;
+        int addedIn = incomingAdds.merge(inKey, 1, Integer::sum);
+        int existingIn = getRelationCount(toId, relationType, relationCountCache);
+        if (existingIn + addedIn > targetMax) {
+          throw new BadRequestException(
+              String.format(
+                  "Relation type '%s' exceeds target cardinality (max=%d) for term %s",
+                  relationType, targetMax, toId));
+        }
+      }
+    }
   }
 
   public Map<String, Object> getTermRelationGraph(UUID id, int depth, List<String> relationTypes) {
@@ -1574,17 +1737,14 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
                   && Objects.equals(tr1.getRelationType(), tr2.getRelationType()));
 
       for (TermRelation termRelation : deleted) {
-        deleteRelationship(
-            origTerm.getId(),
-            GLOSSARY_TERM,
-            termRelation.getTerm().getId(),
-            GLOSSARY_TERM,
-            Relationship.RELATED_TO);
+        deleteBidirectionalRelatedTo(origTerm.getId(), termRelation.getTerm().getId());
         String delRelationType =
             termRelation.getRelationType() != null ? termRelation.getRelationType() : "relatedTo";
         RdfUpdater.removeGlossaryTermRelation(
             origTerm.getId(), termRelation.getTerm().getId(), delRelationType);
       }
+
+      validateRelationCardinality(origTerm.getId(), added);
 
       for (TermRelation termRelation : added) {
         String relationType =
@@ -1816,6 +1976,16 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
         invalidateTerm(tagRecord.getId(), visited);
       }
     }
+  }
+
+  private void deleteBidirectionalRelatedTo(UUID termA, UUID termB) {
+    UUID from = termA;
+    UUID to = termB;
+    if (from.compareTo(to) > 0) {
+      from = termB;
+      to = termA;
+    }
+    deleteRelationship(from, GLOSSARY_TERM, to, GLOSSARY_TERM, Relationship.RELATED_TO);
   }
 
   public ResultList<GlossaryTerm> searchGlossaryTermsById(

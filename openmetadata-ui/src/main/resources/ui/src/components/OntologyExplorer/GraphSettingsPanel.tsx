@@ -130,6 +130,39 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
         </div>
 
         <div className="d-flex justify-between align-center">
+          <Typography.Text>
+            {t('label.include-entity', {
+              entity: t('label.metric-plural'),
+            })}
+          </Typography.Text>
+          <Switch
+            checked={settings.showMetrics}
+            size="small"
+            onChange={(checked) => handleToggle('showMetrics', checked)}
+          />
+        </div>
+
+        <div className="d-flex justify-between align-center">
+          <Typography.Text>
+            {t('label.glossary')} {t('label.group')}
+          </Typography.Text>
+          <Switch
+            checked={settings.showGlossaryHulls}
+            size="small"
+            onChange={(checked) => handleToggle('showGlossaryHulls', checked)}
+          />
+        </div>
+
+        <div className="d-flex justify-between align-center">
+          <Typography.Text>{t('label.edge-bundling')}</Typography.Text>
+          <Switch
+            checked={settings.edgeBundling}
+            size="small"
+            onChange={(checked) => handleToggle('edgeBundling', checked)}
+          />
+        </div>
+
+        <div className="d-flex justify-between align-center">
           <Typography.Text>{t('label.highlight-on-hover')}</Typography.Text>
           <Switch
             checked={settings.highlightOnHover}
