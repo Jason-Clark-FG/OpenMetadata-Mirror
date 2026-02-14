@@ -133,7 +133,7 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
 
   @Override
   public boolean isAsync() {
-    return false;
+    return true;
   }
 
   public void onEntitiesCreated(List<EntityInterface> entities, SubjectContext subjectContext) {

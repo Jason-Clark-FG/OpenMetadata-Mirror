@@ -144,14 +144,16 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   }
 
   protected T addHref(UriInfo uriInfo, T entity) {
-    Entity.withHref(uriInfo, entity.getOwners());
-    Entity.withHref(uriInfo, entity.getFollowers());
-    Entity.withHref(uriInfo, entity.getExperts());
-    Entity.withHref(uriInfo, entity.getReviewers());
-    Entity.withHref(uriInfo, entity.getChildren());
-    Entity.withHref(uriInfo, entity.getDomains());
-    Entity.withHref(uriInfo, entity.getDataProducts());
-    return entity;
+    try (var ignored = RequestLatencyContext.phase("addHref")) {
+      Entity.withHref(uriInfo, entity.getOwners());
+      Entity.withHref(uriInfo, entity.getFollowers());
+      Entity.withHref(uriInfo, entity.getExperts());
+      Entity.withHref(uriInfo, entity.getReviewers());
+      Entity.withHref(uriInfo, entity.getChildren());
+      Entity.withHref(uriInfo, entity.getDomains());
+      Entity.withHref(uriInfo, entity.getDataProducts());
+      return entity;
+    }
   }
 
   protected List<MetadataOperation> getEntitySpecificOperations() {
@@ -159,8 +161,10 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   }
 
   public final ResultList<T> addHref(UriInfo uriInfo, ResultList<T> list) {
-    listOrEmpty(list.getData()).forEach(i -> addHref(uriInfo, i));
-    return list;
+    try (var ignored = RequestLatencyContext.phase("addHref")) {
+      listOrEmpty(list.getData()).forEach(i -> addHref(uriInfo, i));
+      return list;
+    }
   }
 
   public ResultList<T> listInternal(
@@ -427,7 +431,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
 
   public Response create(UriInfo uriInfo, SecurityContext securityContext, T entity) {
     OperationContext operationContext = new OperationContext(entityType, CREATE);
-    CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+    CreateResourceContext<T> createResourceContext =
+        new CreateResourceContext<>(entityType, entity);
     limits.enforceLimits(securityContext, createResourceContext, operationContext);
     authorizer.authorize(securityContext, operationContext, createResourceContext);
     String impersonatedBy = ImpersonationContext.getImpersonatedBy();
@@ -435,10 +440,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         addHref(
             uriInfo,
             repository.create(
-                uriInfo,
-                entity,
-                securityContext.getUserPrincipal().getName(),
-                impersonatedBy));
+                uriInfo, entity, securityContext.getUserPrincipal().getName(), impersonatedBy));
     return Response.created(createdEntity.getHref()).entity(createdEntity).build();
   }
 
@@ -449,7 +451,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       AuthorizationLogic authorizationLogic,
       T entity) {
     OperationContext operationContext = new OperationContext(entityType, CREATE);
-    CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+    CreateResourceContext<T> createResourceContext =
+        new CreateResourceContext<>(entityType, entity);
     limits.enforceLimits(securityContext, createResourceContext, operationContext);
     authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
     String impersonatedBy = ImpersonationContext.getImpersonatedBy();
@@ -457,10 +460,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
         addHref(
             uriInfo,
             repository.create(
-                uriInfo,
-                entity,
-                securityContext.getUserPrincipal().getName(),
-                impersonatedBy));
+                uriInfo, entity, securityContext.getUserPrincipal().getName(), impersonatedBy));
     return Response.created(createdEntity.getHref()).entity(createdEntity).build();
   }
 
@@ -472,7 +472,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     OperationContext operationContext = new OperationContext(entityType, operation);
     String impersonatedBy = ImpersonationContext.getImpersonatedBy();
     if (operation == CREATE) {
-      CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+      CreateResourceContext<T> createResourceContext =
+          new CreateResourceContext<>(entityType, entity);
       limits.enforceLimits(securityContext, createResourceContext, operationContext);
       authorizer.authorize(securityContext, operationContext, createResourceContext);
       T createdEntity =
@@ -505,7 +506,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     OperationContext operationContext = new OperationContext(entityType, operation);
     String impersonatedBy = ImpersonationContext.getImpersonatedBy();
     if (operation == CREATE) {
-      CreateResourceContext<T> createResourceContext = new CreateResourceContext<>(entityType, entity);
+      CreateResourceContext<T> createResourceContext =
+          new CreateResourceContext<>(entityType, entity);
       limits.enforceLimits(securityContext, createResourceContext, operationContext);
       authorizer.authorizeRequests(securityContext, authRequests, authorizationLogic);
       T createdEntity =
@@ -1042,8 +1044,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
 
   protected ResourceContext<T> getResourceContextById(
       UUID id, RelationIncludes relationIncludes, Fields fields) {
-    Include include =
-        relationIncludes == null ? Include.ALL : relationIncludes.getDefaultInclude();
+    Include include = relationIncludes == null ? Include.ALL : relationIncludes.getDefaultInclude();
     return new ResourceContext<>(entityType, id, null, include, fields, relationIncludes);
   }
 
@@ -1062,8 +1063,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
 
   protected ResourceContext<T> getResourceContextByName(
       String name, RelationIncludes relationIncludes, Fields fields) {
-    Include include =
-        relationIncludes == null ? Include.ALL : relationIncludes.getDefaultInclude();
+    Include include = relationIncludes == null ? Include.ALL : relationIncludes.getDefaultInclude();
     return new ResourceContext<>(entityType, null, name, include, fields, relationIncludes);
   }
 

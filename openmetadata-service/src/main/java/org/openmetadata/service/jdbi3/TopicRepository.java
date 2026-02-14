@@ -172,7 +172,11 @@ public class TopicRepository extends EntityRepository<Topic> {
       }
       relationships.add(
           newRelationship(
-              service.getId(), topic.getId(), service.getType(), entityType, Relationship.CONTAINS));
+              service.getId(),
+              topic.getId(),
+              service.getType(),
+              entityType,
+              Relationship.CONTAINS));
     }
     bulkInsertRelationships(relationships);
   }

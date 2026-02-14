@@ -39,10 +39,7 @@ final class ReadPlanBuilder {
     relationSpecs.put(
         field,
         new ReadPlan.RelationSpec(
-            ReadPlan.RelationDirection.TO,
-            relationship,
-            fromEntityTypeFilter,
-            normalizedInclude));
+            ReadPlan.RelationDirection.TO, relationship, fromEntityTypeFilter, normalizedInclude));
     return this;
   }
 
@@ -57,10 +54,7 @@ final class ReadPlanBuilder {
     relationSpecs.put(
         field,
         new ReadPlan.RelationSpec(
-            ReadPlan.RelationDirection.FROM,
-            relationship,
-            toEntityTypeFilter,
-            normalizedInclude));
+            ReadPlan.RelationDirection.FROM, relationship, toEntityTypeFilter, normalizedInclude));
     return this;
   }
 

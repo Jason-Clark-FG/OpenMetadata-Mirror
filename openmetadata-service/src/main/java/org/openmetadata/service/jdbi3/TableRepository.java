@@ -343,10 +343,15 @@ public class TableRepository extends EntityRepository<Table> {
     }
 
     String inheritanceFields =
-        needsOwnersOrDomains ? "owners,domains,retentionPeriod" : "retentionPeriod";
+        needsOwnersOrDomains
+            ? (needsRetention ? "owners,domains,retentionPeriod" : "owners,domains")
+            : "retentionPeriod";
     DatabaseSchema schema =
-        Entity.getEntityForInheritance(
-            DATABASE_SCHEMA, table.getDatabaseSchema().getId(), inheritanceFields, ALL);
+        getOrLoadInheritanceParent(
+            table.getDatabaseSchema(), inheritanceFields, DatabaseSchema.class);
+    if (schema == null) {
+      return;
+    }
     if (needsOwnersOrDomains) {
       inheritOwners(table, fields, schema);
       inheritDomains(table, fields, schema);
@@ -380,7 +385,8 @@ public class TableRepository extends EntityRepository<Table> {
     if (!hasId(serviceRef) && hasId(databaseRef)) {
       // Fast path: table JSON already stores database ref, resolve service directly from database.
       serviceRef =
-          getFromEntityRef(databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+          getFromEntityRef(
+              databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
     }
 
     if (table.getServiceType() == null && hasId(schemaRef)) {
@@ -671,7 +677,8 @@ public class TableRepository extends EntityRepository<Table> {
     try (var ignored = phase("tableSampleDataStore")) {
       daoCollection
           .entityExtensionDAO()
-          .insert(tableId, TABLE_SAMPLE_DATA_EXTENSION, "tableData", JsonUtils.pojoToJson(tableData));
+          .insert(
+              tableId, TABLE_SAMPLE_DATA_EXTENSION, "tableData", JsonUtils.pojoToJson(tableData));
     }
     try (var ignored = phase("tableSampleDataHydrate")) {
       setFieldsInternal(table, Fields.EMPTY_FIELDS);
@@ -684,8 +691,7 @@ public class TableRepository extends EntityRepository<Table> {
     try (var ignored = phase("tableSampleDataFind")) {
       table = find(tableId, NON_DELETED);
     }
-    TableData sampleData =
-        JsonUtils.readValue(null, TableData.class);
+    TableData sampleData = JsonUtils.readValue(null, TableData.class);
     try (var ignored = phase("tableSampleDataLoad")) {
       sampleData =
           JsonUtils.readValue(
@@ -702,7 +708,8 @@ public class TableRepository extends EntityRepository<Table> {
     // Set the column tags. Will be used to mask the sample data
     if (!authorizePII) {
       try (var ignored = phase("tableSampleDataMaskPII")) {
-        populateEntityFieldTags(entityType, table.getColumns(), table.getFullyQualifiedName(), true);
+        populateEntityFieldTags(
+            entityType, table.getColumns(), table.getFullyQualifiedName(), true);
         table.setTags(getTags(table));
         return PIIMasker.getSampleData(table);
       }
@@ -836,8 +843,7 @@ public class TableRepository extends EntityRepository<Table> {
   }
 
   private List<PipelineObservability> getAllPipelineObservability(Table table) {
-    List<ExtensionRecord> extensionRecords =
-        Collections.emptyList();
+    List<ExtensionRecord> extensionRecords = Collections.emptyList();
     try (var ignored = phase("tablePipelineObsLoadExtensions")) {
       extensionRecords =
           daoCollection
@@ -885,8 +891,7 @@ public class TableRepository extends EntityRepository<Table> {
       table = find(tableId, NON_DELETED);
     }
 
-    List<ExtensionRecord> extensionRecords =
-        Collections.emptyList();
+    List<ExtensionRecord> extensionRecords = Collections.emptyList();
     try (var ignored = phase("tablePipelineObsLoadExtensions")) {
       extensionRecords =
           daoCollection
@@ -1238,7 +1243,8 @@ public class TableRepository extends EntityRepository<Table> {
       return;
     }
 
-    Map<String, EntityProfile> latestProfilesByColumn = batchFetchLatestColumnProfiles(flattenedColumns);
+    Map<String, EntityProfile> latestProfilesByColumn =
+        batchFetchLatestColumnProfiles(flattenedColumns);
     for (Column column : flattenedColumns) {
       ColumnProfile columnProfile = null;
       EntityProfile entityProfile =
@@ -2476,7 +2482,16 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumns(
-        tableId, limit, offset, fieldsParam, include, null, "asc", null, authorizer, securityContext);
+        tableId,
+        limit,
+        offset,
+        fieldsParam,
+        include,
+        null,
+        "asc",
+        null,
+        authorizer,
+        securityContext);
   }
 
   public ResultList<Column> getTableColumns(
@@ -2571,16 +2586,7 @@ public class TableRepository extends EntityRepository<Table> {
       Authorizer authorizer,
       SecurityContext securityContext) {
     return getTableColumnsByFQN(
-        fqn,
-        limit,
-        offset,
-        fieldsParam,
-        include,
-        sortBy,
-        "asc",
-        null,
-        authorizer,
-        securityContext);
+        fqn, limit, offset, fieldsParam, include, sortBy, "asc", null, authorizer, securityContext);
   }
 
   public ResultList<Column> getTableColumnsByFQN(

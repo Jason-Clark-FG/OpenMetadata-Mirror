@@ -218,7 +218,8 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
         && databaseRef.getId() != null) {
       // Fast path: schema JSON already stores database ref, resolve service directly from database.
       serviceRef =
-          getFromEntityRef(databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
+          getFromEntityRef(
+              databaseRef.getId(), Entity.DATABASE, Relationship.CONTAINS, null, false);
     }
 
     // Fallback for legacy rows with incomplete parent refs.
@@ -470,10 +471,14 @@ public class DatabaseSchemaRepository extends EntityRepository<DatabaseSchema> {
     }
 
     String inheritanceFields =
-        needsOwnersOrDomains ? "owners,domains,retentionPeriod" : "retentionPeriod";
+        needsOwnersOrDomains
+            ? (needsRetention ? "owners,domains,retentionPeriod" : "owners,domains")
+            : "retentionPeriod";
     Database database =
-        Entity.getEntityForInheritance(
-            Entity.DATABASE, schema.getDatabase().getId(), inheritanceFields, ALL);
+        getOrLoadInheritanceParent(schema.getDatabase(), inheritanceFields, Database.class);
+    if (database == null) {
+      return;
+    }
     if (needsOwnersOrDomains) {
       inheritOwners(schema, fields, database);
       inheritDomains(schema, fields, database);

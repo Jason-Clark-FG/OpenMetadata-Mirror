@@ -27,6 +27,37 @@ public final class RequestEntityCache {
     REQUEST_CACHE.remove();
   }
 
+  /**
+   * Invalidate cached shapes for a single entity across all field/include combinations.
+   * This is required for same-thread read-after-write correctness (for example async jobs).
+   */
+  public static void invalidate(String entityType, UUID id, String name) {
+    if (entityType == null || (id == null && name == null)) {
+      return;
+    }
+    try (var ignored = phase("requestCacheInvalidate")) {
+      REQUEST_CACHE
+          .get()
+          .entrySet()
+          .removeIf(
+              entry -> {
+                EntityCacheKey key = entry.getKey();
+                if (!entityType.equals(key.entityType())) {
+                  return false;
+                }
+                boolean idMatch =
+                    id != null
+                        && key.lookupType() == LookupType.ID
+                        && id.toString().equals(key.lookupValue());
+                boolean nameMatch =
+                    name != null
+                        && key.lookupType() == LookupType.NAME
+                        && name.equals(key.lookupValue());
+                return idMatch || nameMatch;
+              });
+    }
+  }
+
   public static <T extends EntityInterface> T getById(
       String entityType,
       UUID id,

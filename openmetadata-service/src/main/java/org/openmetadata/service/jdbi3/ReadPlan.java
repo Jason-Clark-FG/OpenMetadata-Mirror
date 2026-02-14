@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.Relationship;
 
 /** Immutable query plan for request-scoped relationship and metadata prefetching. */
 final class ReadPlan {
@@ -145,7 +145,8 @@ final class ReadPlan {
     return Collections.unmodifiableMap(copy);
   }
 
-  private static Map<String, RelationSpec> immutableRelationSpecMap(Map<String, RelationSpec> source) {
+  private static Map<String, RelationSpec> immutableRelationSpecMap(
+      Map<String, RelationSpec> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }

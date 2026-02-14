@@ -402,11 +402,7 @@ public class ContainerRepository extends EntityRepository<Container> {
       if (parent != null && parent.getId() != null) {
         relationships.add(
             newRelationship(
-                parent.getId(),
-                container.getId(),
-                CONTAINER,
-                CONTAINER,
-                Relationship.CONTAINS));
+                parent.getId(), container.getId(), CONTAINER, CONTAINER, Relationship.CONTAINS));
       }
     }
     bulkInsertRelationships(relationships);

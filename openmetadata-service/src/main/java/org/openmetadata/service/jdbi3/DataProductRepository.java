@@ -197,12 +197,17 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
 
   @Override
   public void setInheritedFields(DataProduct dataProduct, Fields fields) {
-    // If dataProduct does not have owners and experts, inherit them from the domains
-    List<EntityReference> domains =
-        !nullOrEmpty(dataProduct.getDomains()) ? getDomains(dataProduct) : Collections.emptyList();
-    if (!nullOrEmpty(domains)
-        && (fields.contains(FIELD_EXPERTS) || fields.contains(FIELD_OWNERS))
-        && (nullOrEmpty(dataProduct.getOwners()) || nullOrEmpty(dataProduct.getExperts()))) {
+    boolean inheritOwners = fields.contains(FIELD_OWNERS) && nullOrEmpty(dataProduct.getOwners());
+    boolean inheritExperts =
+        fields.contains(FIELD_EXPERTS) && nullOrEmpty(dataProduct.getExperts());
+    if (!inheritOwners && !inheritExperts) {
+      return;
+    }
+
+    // Domains may not be part of requested response fields, but they are required to derive
+    // inherited owners/experts.
+    List<EntityReference> domains = getDomains(dataProduct);
+    if (!nullOrEmpty(domains)) {
       List<EntityReference> owners = new ArrayList<>();
       List<EntityReference> experts = new ArrayList<>();
 
@@ -212,10 +217,10 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
         experts = mergedInheritedEntityRefs(experts, domain.getExperts());
       }
       // inherit only if applicable and empty
-      if (fields.contains(FIELD_OWNERS) && nullOrEmpty(dataProduct.getOwners())) {
+      if (inheritOwners) {
         dataProduct.setOwners(owners);
       }
-      if (fields.contains(FIELD_EXPERTS) && nullOrEmpty(dataProduct.getExperts())) {
+      if (inheritExperts) {
         dataProduct.setExperts(experts);
       }
     }

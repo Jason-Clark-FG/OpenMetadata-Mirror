@@ -675,9 +675,28 @@ public class SearchRepository {
       return;
     }
 
+    // Keep only the latest state per (entityType, entityId) within the same bulk call.
+    // This avoids repeated writes/propagation for duplicates in a single request.
+    Map<String, EntityInterface> dedupedEntities = new LinkedHashMap<>();
+    for (EntityInterface entity : entities) {
+      if (entity == null || entity.getId() == null || entity.getEntityReference() == null) {
+        continue;
+      }
+      String entityType = entity.getEntityReference().getType();
+      if (nullOrEmpty(entityType)) {
+        continue;
+      }
+      String key = entityType + ":" + entity.getId();
+      dedupedEntities.remove(key);
+      dedupedEntities.put(key, entity);
+    }
+    if (dedupedEntities.isEmpty()) {
+      return;
+    }
+
     // Group entities by their actual type to ensure each goes to the correct index
     Map<String, List<EntityInterface>> entitiesByType = new HashMap<>();
-    for (EntityInterface entity : entities) {
+    for (EntityInterface entity : dedupedEntities.values()) {
       String actualType = entity.getEntityReference().getType();
       entitiesByType.computeIfAbsent(actualType, k -> new ArrayList<>()).add(entity);
     }
@@ -700,15 +719,6 @@ public class SearchRepository {
         bulkSink.flushAndAwait(60); // Wait up to 60 seconds for completion
       } catch (Exception e) {
         LOG.error("Error during bulk entity update in search index for type {}", entityType, e);
-        // Fall back to individual updates for this type
-        for (EntityInterface entity : typeEntities) {
-          try {
-            updateEntityIndex(entity);
-          } catch (Exception ex) {
-            LOG.error(
-                "Error updating entity {} in search index", entity.getFullyQualifiedName(), ex);
-          }
-        }
       } finally {
         if (bulkSink != null) {
           try {
@@ -718,6 +728,60 @@ public class SearchRepository {
           }
         }
       }
+    }
+
+    // Run fan-out propagation once after all bulk doc updates are flushed.
+    propagateEntitiesAfterBulkFlush(dedupedEntities.values());
+  }
+
+  private void propagateEntitiesAfterBulkFlush(Iterable<EntityInterface> entities) {
+    int candidates = 0;
+    int propagated = 0;
+    long startTime = System.currentTimeMillis();
+
+    for (EntityInterface entity : entities) {
+      if (entity == null || entity.getId() == null || entity.getEntityReference() == null) {
+        continue;
+      }
+      String entityType = entity.getEntityReference().getType();
+      if (!checkIfIndexingIsSupported(entityType)) {
+        continue;
+      }
+
+      ChangeDescription incrementalChangeDescription = entity.getIncrementalChangeDescription();
+      ChangeDescription changeDescription =
+          !isNullOrEmptyChangeDescription(incrementalChangeDescription)
+              ? incrementalChangeDescription
+              : entity.getChangeDescription();
+
+      if (!requiresPropagation(changeDescription, entityType, entity)) {
+        continue;
+      }
+
+      candidates++;
+      try {
+        IndexMapping indexMapping = entityIndexMap.get(entityType);
+        propagateInheritedFieldsToChildren(
+            entityType, entity.getId().toString(), changeDescription, indexMapping, entity);
+        propagateGlossaryTags(entityType, entity.getFullyQualifiedName(), changeDescription);
+        propagateCertificationTags(entityType, entity, changeDescription);
+        propagateToRelatedEntities(entityType, changeDescription, indexMapping, entity);
+        propagated++;
+      } catch (Exception e) {
+        LOG.error(
+            "Error propagating bulk search updates for entity {} of type {}",
+            entity.getId(),
+            entityType,
+            e);
+      }
+    }
+
+    if (candidates > 0) {
+      LOG.info(
+          "Bulk propagation phase completed: candidates={}, propagated={}, durationMs={}",
+          candidates,
+          propagated,
+          System.currentTimeMillis() - startTime);
     }
   }
 

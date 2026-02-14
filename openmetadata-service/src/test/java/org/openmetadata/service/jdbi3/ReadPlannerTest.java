@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.entity.data.Table;
-import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -57,7 +56,8 @@ class ReadPlannerTest {
     assertEquals(ReadPlan.RelationDirection.TO, spec.direction());
     assertEquals(Relationship.OWNS, spec.relationship());
     assertEquals(null, spec.relatedEntityType());
-    assertEquals(Set.of(Relationship.OWNS.ordinal()), plan.getToRelationsByInclude().get(NON_DELETED));
+    assertEquals(
+        Set.of(Relationship.OWNS.ordinal()), plan.getToRelationsByInclude().get(NON_DELETED));
   }
 
   @Test
@@ -95,7 +95,8 @@ class ReadPlannerTest {
 
   @Test
   void dataProductsFieldCreatesToRelationPlan() {
-    ReadPlan plan = buildPlan(Set.of(FIELD_DATA_PRODUCTS), RelationIncludes.fromInclude(NON_DELETED));
+    ReadPlan plan =
+        buildPlan(Set.of(FIELD_DATA_PRODUCTS), RelationIncludes.fromInclude(NON_DELETED));
 
     assertTrue(plan.shouldLoadRelationField(FIELD_DATA_PRODUCTS));
     ReadPlan.RelationSpec spec = plan.getRelationSpec(FIELD_DATA_PRODUCTS).orElseThrow();
@@ -206,13 +207,16 @@ class ReadPlannerTest {
     assertEquals(Set.of(Relationship.HAS.ordinal()), plan.getToRelationsByInclude().get(DELETED));
     assertEquals(
         Set.of(Relationship.FOLLOWS.ordinal()), plan.getToRelationsByInclude().get(NON_DELETED));
-    assertEquals(Set.of(Relationship.CONTAINS.ordinal()), plan.getFromRelationsByInclude().get(ALL));
-    assertEquals(Set.of(Relationship.EXPERT.ordinal()), plan.getFromRelationsByInclude().get(DELETED));
+    assertEquals(
+        Set.of(Relationship.CONTAINS.ordinal()), plan.getFromRelationsByInclude().get(ALL));
+    assertEquals(
+        Set.of(Relationship.EXPERT.ordinal()), plan.getFromRelationsByInclude().get(DELETED));
   }
 
   @Test
   void unsupportedFlagsDisableSpecificFieldsOnly() {
-    SupportFlags supports = new SupportFlags(false, false, false, false, false, false, true, true, true);
+    SupportFlags supports =
+        new SupportFlags(false, false, false, false, false, false, true, true, true);
     ReadPlan plan =
         buildPlan(
             Set.of(

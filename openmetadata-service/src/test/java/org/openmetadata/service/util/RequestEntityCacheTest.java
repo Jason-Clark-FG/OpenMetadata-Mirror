@@ -34,7 +34,8 @@ class RequestEntityCacheTest {
     assertNotSame(table, first);
     first.withName("orders_mutated");
 
-    Table second = RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class);
+    Table second =
+        RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class);
     assertEquals("orders", second.getName());
   }
 
@@ -49,15 +50,11 @@ class RequestEntityCacheTest {
 
     assertNull(
         RequestEntityCache.getById(
-            Entity.TABLE,
-            id,
-            new Fields(Set.of("domains")),
-            includeAll,
-            true,
-            Table.class));
+            Entity.TABLE, id, new Fields(Set.of("domains")), includeAll, true, Table.class));
     assertNull(
         RequestEntityCache.getById(
             Entity.TABLE, id, fields, RelationIncludes.fromInclude(null), true, Table.class));
-    assertNull(RequestEntityCache.getById(Entity.TABLE, id, fields, includeAll, false, Table.class));
+    assertNull(
+        RequestEntityCache.getById(Entity.TABLE, id, fields, includeAll, false, Table.class));
   }
 }

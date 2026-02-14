@@ -130,5 +130,4 @@ final class ReadPlanner {
             supportsVotes)
         .build();
   }
-
 }

@@ -3,6 +3,8 @@ package org.openmetadata.service.monitoring;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,8 +26,10 @@ public class RequestLatencyContext {
   private static final String ENDPOINT = "endpoint";
   private static final String METHOD = "method";
   private static final String SLOW_REQUEST_THRESHOLD_PROPERTY = "requestLatencyThresholdMs";
-  private static final long DEFAULT_SLOW_REQUEST_THRESHOLD_MS = 200L;
+  private static final long DEFAULT_SLOW_REQUEST_THRESHOLD_MS = 0L;
   private static final ThreadLocal<RequestContext> requestContext = new ThreadLocal<>();
+  private static final ThreadLocal<Deque<ActivePhase>> phaseStack =
+      ThreadLocal.withInitial(ArrayDeque::new);
 
   private static final ConcurrentHashMap<String, Timer> requestTimers = new ConcurrentHashMap<>();
   private static final ConcurrentHashMap<String, Timer> databaseTimers = new ConcurrentHashMap<>();
@@ -180,6 +184,13 @@ public class RequestLatencyContext {
     context.internalTimerStartNanos.set(System.nanoTime());
   }
 
+  public static void trackJsonDeserialize(int jsonLength) {
+    RequestContext context = requestContext.get();
+    if (context == null) return;
+    context.jsonBytesDeserialized.addAndGet(jsonLength);
+    context.jsonDeserializeCount.incrementAndGet();
+  }
+
   public static Phase phase(String name) {
     RequestContext context = requestContext.get();
     if (context == null) {
@@ -193,19 +204,60 @@ public class RequestLatencyContext {
 
     private final String name;
     private final RequestContext context;
-    private final long startNanos;
+    private final ActivePhase activePhase;
 
     private Phase(String name, RequestContext context) {
       this.name = name;
       this.context = context;
-      this.startNanos = context != null ? System.nanoTime() : 0;
+      if (context != null) {
+        this.activePhase = new ActivePhase(System.nanoTime(), context.dbTime.get());
+        phaseStack.get().push(this.activePhase);
+      } else {
+        this.activePhase = null;
+      }
     }
 
     @Override
     public void close() {
-      if (context != null) {
-        long elapsed = System.nanoTime() - startNanos;
-        context.phaseTime.computeIfAbsent(name, k -> new AtomicLong(0)).addAndGet(elapsed);
+      if (context == null || activePhase == null) {
+        return;
+      }
+
+      Deque<ActivePhase> stack = phaseStack.get();
+      ActivePhase top = stack.peek();
+      if (top == activePhase) {
+        stack.pop();
+      } else {
+        // Defensive: handle out-of-order close without throwing.
+        if (!stack.remove(activePhase)) {
+          return;
+        }
+      }
+
+      long elapsed = System.nanoTime() - activePhase.startNanos;
+      long exclusive = elapsed - activePhase.childNanos;
+      if (exclusive < 0) {
+        exclusive = 0;
+      }
+
+      long dbInPhase = context.dbTime.get() - activePhase.dbTimeAtStartNanos;
+      long exclusiveDb = dbInPhase - activePhase.childDbNanos;
+      if (exclusiveDb < 0) {
+        exclusiveDb = 0;
+      }
+
+      context.phaseTime.computeIfAbsent(name, k -> new AtomicLong(0)).addAndGet(elapsed);
+      context.phaseExclusiveTime.computeIfAbsent(name, k -> new AtomicLong(0)).addAndGet(exclusive);
+      if (exclusiveDb > 0) {
+        context.phaseDbTime.computeIfAbsent(name, k -> new AtomicLong(0)).addAndGet(exclusiveDb);
+      }
+
+      ActivePhase parent = stack.peek();
+      if (parent != null) {
+        parent.childNanos += elapsed;
+        parent.childDbNanos += dbInPhase;
+      } else if (stack.isEmpty()) {
+        phaseStack.remove();
       }
     }
   }
@@ -298,9 +350,18 @@ public class RequestLatencyContext {
       if (context.totalTime > slowRequestThresholdNanos) {
         String path = context.uriPath != null ? context.uriPath : context.endpoint;
         String phaseBreakdown = formatPhaseBreakdown(context.phaseTime);
+        String phaseExclusiveBreakdown =
+            formatPhaseBreakdown("phaseExclusive", context.phaseExclusiveTime);
+        String phaseDbBreakdown = formatPhaseBreakdown("phaseDb", context.phaseDbTime);
+        long phaseExclusiveNanos =
+            context.phaseExclusiveTime.values().stream().mapToLong(AtomicLong::get).sum();
+        long unphasedServerNanos = Math.max(0L, serverTimeNanos - phaseExclusiveNanos);
+        long jsonKB = context.jsonBytesDeserialized.get() / 1024;
+        int jsonOps = context.jsonDeserializeCount.get();
         LOG.warn(
             "Slow request - {} {}, total: {}ms, db: {}ms, search: {}ms, auth: {}ms, rdf: {}ms,"
-                + " server: {}ms, dbOps: {}, searchOps: {}, rdfOps: {}{}",
+                + " server: {}ms, dbOps: {}, searchOps: {}, rdfOps: {}, jsonKB: {}, jsonOps:"
+                + " {}{}, unphasedServer: {}ms{}{}",
             context.method,
             path,
             context.totalTime / 1_000_000,
@@ -312,15 +373,26 @@ public class RequestLatencyContext {
             dbOps,
             context.searchOperationCount.get(),
             context.rdfOperationCount.get(),
-            phaseBreakdown);
+            jsonKB,
+            jsonOps,
+            phaseBreakdown,
+            unphasedServerNanos / 1_000_000,
+            phaseExclusiveBreakdown,
+            phaseDbBreakdown);
       }
 
     } finally {
+      phaseStack.remove();
       requestContext.remove();
     }
   }
 
   private static String formatPhaseBreakdown(ConcurrentHashMap<String, AtomicLong> phaseTime) {
+    return formatPhaseBreakdown("phases", phaseTime);
+  }
+
+  private static String formatPhaseBreakdown(
+      String label, ConcurrentHashMap<String, AtomicLong> phaseTime) {
     if (phaseTime.isEmpty()) {
       return "";
     }
@@ -329,7 +401,7 @@ public class RequestLatencyContext {
             .sorted((a, b) -> Long.compare(b.getValue().get(), a.getValue().get()))
             .map(e -> e.getKey() + ": " + (e.getValue().get() / 1_000_000) + "ms")
             .collect(Collectors.joining(", "));
-    return ", phases: {" + phases + "}";
+    return ", " + label + ": {" + phases + "}";
   }
 
   public static RequestContext getContext() {
@@ -343,7 +415,22 @@ public class RequestLatencyContext {
   }
 
   public static void clearContext() {
+    phaseStack.remove();
     requestContext.remove();
+  }
+
+  private static final class ActivePhase {
+    private final long startNanos;
+    private final long dbTimeAtStartNanos;
+    private long childNanos;
+    private long childDbNanos;
+
+    private ActivePhase(long startNanos, long dbTimeAtStartNanos) {
+      this.startNanos = startNanos;
+      this.dbTimeAtStartNanos = dbTimeAtStartNanos;
+      this.childNanos = 0;
+      this.childDbNanos = 0;
+    }
   }
 
   public static Runnable wrapWithContext(Runnable task) {
@@ -401,8 +488,12 @@ public class RequestLatencyContext {
     final AtomicInteger searchOperationCount = new AtomicInteger(0);
     final AtomicInteger authOperationCount = new AtomicInteger(0);
     final AtomicInteger rdfOperationCount = new AtomicInteger(0);
+    final AtomicLong jsonBytesDeserialized = new AtomicLong(0);
+    final AtomicInteger jsonDeserializeCount = new AtomicInteger(0);
 
     final ConcurrentHashMap<String, AtomicLong> phaseTime = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<String, AtomicLong> phaseExclusiveTime = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<String, AtomicLong> phaseDbTime = new ConcurrentHashMap<>();
 
     RequestContext(String endpoint, String method, String uriPath) {
       this.endpoint = endpoint;

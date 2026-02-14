@@ -110,8 +110,11 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
 
     if (endpoint.getApiCollection() != null) {
       APICollection apiCollection =
-          Entity.getEntityForInheritance(
-              API_COLLECTION, endpoint.getApiCollection().getId(), getInheritableFields(), ALL);
+          getOrLoadInheritanceParent(
+              endpoint.getApiCollection(), getInheritableFields(), APICollection.class);
+      if (apiCollection == null) {
+        return;
+      }
       inheritOwners(endpoint, fields, apiCollection);
       inheritDomains(endpoint, fields, apiCollection);
     }
@@ -292,10 +295,12 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     List<Field> schemaFields = new ArrayList<>();
     for (APIEndpoint endpoint : apiEndpoints) {
       if (endpoint.getRequestSchema() != null) {
-        schemaFields.addAll(EntityUtil.getFlattenedEntityField(endpoint.getRequestSchema().getSchemaFields()));
+        schemaFields.addAll(
+            EntityUtil.getFlattenedEntityField(endpoint.getRequestSchema().getSchemaFields()));
       }
       if (endpoint.getResponseSchema() != null) {
-        schemaFields.addAll(EntityUtil.getFlattenedEntityField(endpoint.getResponseSchema().getSchemaFields()));
+        schemaFields.addAll(
+            EntityUtil.getFlattenedEntityField(endpoint.getResponseSchema().getSchemaFields()));
       }
     }
 
@@ -319,7 +324,8 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
 
     for (Field schemaField : schemaFields) {
       List<TagLabel> fieldTags =
-          schemaFieldTags.getOrDefault(schemaField.getFullyQualifiedName(), Collections.emptyList());
+          schemaFieldTags.getOrDefault(
+              schemaField.getFullyQualifiedName(), Collections.emptyList());
       schemaField.setTags(addDerivedTagsWithPreFetched(fieldTags, derivedSchemaFieldTags));
     }
   }
@@ -434,7 +440,10 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
 
   @Override
   protected void augmentReadPlan(
-      ReadPlanBuilder builder, APIEndpoint entity, Fields fields, RelationIncludes relationIncludes) {
+      ReadPlanBuilder builder,
+      APIEndpoint entity,
+      Fields fields,
+      RelationIncludes relationIncludes) {
     builder.addEntitySpecificPrefetch(PREFETCH_DEFAULT_FIELDS);
   }
 
@@ -471,7 +480,8 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
       return;
     }
 
-    Map<UUID, EntityReference> servicesByApiCollection = batchFetchApiCollectionServices(apiCollectionRefs);
+    Map<UUID, EntityReference> servicesByApiCollection =
+        batchFetchApiCollectionServices(apiCollectionRefs);
 
     for (APIEndpoint endpoint : endpointsMissingDefaults) {
       EntityReference apiCollectionRef = apiCollectionRefs.get(endpoint.getId());
@@ -495,7 +505,11 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     }
 
     List<String> apiCollectionIds =
-        apiCollectionRefs.values().stream().map(EntityReference::getId).distinct().map(UUID::toString).toList();
+        apiCollectionRefs.values().stream()
+            .map(EntityReference::getId)
+            .distinct()
+            .map(UUID::toString)
+            .toList();
     if (apiCollectionIds.isEmpty()) {
       return servicesByApiCollection;
     }
@@ -510,7 +524,10 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     }
 
     List<UUID> serviceIds =
-        relations.stream().map(relation -> UUID.fromString(relation.getFromId())).distinct().toList();
+        relations.stream()
+            .map(relation -> UUID.fromString(relation.getFromId()))
+            .distinct()
+            .toList();
     if (serviceIds.isEmpty()) {
       return servicesByApiCollection;
     }

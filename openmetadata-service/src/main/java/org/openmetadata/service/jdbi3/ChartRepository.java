@@ -133,7 +133,11 @@ public class ChartRepository extends EntityRepository<Chart> {
       if (service != null && service.getId() != null) {
         relationships.add(
             newRelationship(
-                service.getId(), chart.getId(), service.getType(), entityType, Relationship.CONTAINS));
+                service.getId(),
+                chart.getId(),
+                service.getType(),
+                entityType,
+                Relationship.CONTAINS));
       }
       for (EntityReference dashboard : listOrEmpty(chart.getDashboards())) {
         if (dashboard.getId() == null) {

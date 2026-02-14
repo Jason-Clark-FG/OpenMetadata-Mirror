@@ -777,8 +777,7 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
       return term.getGlossary();
     }
 
-    Relationship preferred =
-        term.getParent() != null ? Relationship.HAS : Relationship.CONTAINS;
+    Relationship preferred = term.getParent() != null ? Relationship.HAS : Relationship.CONTAINS;
     EntityReference glossaryRef = getFromEntityRef(term.getId(), preferred, GLOSSARY, false);
     if (glossaryRef != null) {
       return glossaryRef;

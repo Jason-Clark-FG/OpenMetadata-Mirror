@@ -113,7 +113,8 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
   protected void storeEntitySpecificRelationshipsForMany(List<StoredProcedure> entities) {
     List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
     for (StoredProcedure storedProcedure : entities) {
-      if (storedProcedure.getDatabaseSchema() == null || storedProcedure.getDatabaseSchema().getId() == null) {
+      if (storedProcedure.getDatabaseSchema() == null
+          || storedProcedure.getDatabaseSchema().getId() == null) {
         continue;
       }
       relationships.add(
@@ -178,7 +179,8 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
       if (!schemaRefs.isEmpty()) {
         List<UUID> schemaIds =
             schemaRefs.values().stream().map(EntityReference::getId).distinct().toList();
-        var schemaRepository = (DatabaseSchemaRepository) Entity.getEntityRepository(DATABASE_SCHEMA);
+        var schemaRepository =
+            (DatabaseSchemaRepository) Entity.getEntityRepository(DATABASE_SCHEMA);
         List<DatabaseSchema> schemas =
             schemaRepository.getDao().findEntitiesByIds(new ArrayList<>(schemaIds), Include.ALL);
         schemaRepository.setFieldsInBulk(EntityUtil.Fields.EMPTY_FIELDS, schemas);

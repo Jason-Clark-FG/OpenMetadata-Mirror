@@ -1655,7 +1655,7 @@ public class TableResource extends EntityResource<Table, TableRepository> {
                   @Schema(
                       type = "string",
                       allowableValues = {"asc", "desc"}))
-      @QueryParam("sortOrder")
+          @QueryParam("sortOrder")
           @DefaultValue("asc")
           String sortOrder) {
     OperationContext operationContext =
@@ -1743,7 +1743,7 @@ public class TableResource extends EntityResource<Table, TableRepository> {
                   @Schema(
                       type = "string",
                       allowableValues = {"asc", "desc"}))
-      @QueryParam("sortOrder")
+          @QueryParam("sortOrder")
           @DefaultValue("asc")
           String sortOrder) {
     OperationContext operationContext =

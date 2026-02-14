@@ -452,7 +452,11 @@ public class DashboardRepository extends EntityRepository<Dashboard> {
         }
         relationships.add(
             newRelationship(
-                dashboard.getId(), chart.getId(), Entity.DASHBOARD, Entity.CHART, Relationship.HAS));
+                dashboard.getId(),
+                chart.getId(),
+                Entity.DASHBOARD,
+                Entity.CHART,
+                Relationship.HAS));
       }
       for (EntityReference dataModel : listOrEmpty(dashboard.getDataModels())) {
         if (dataModel.getId() == null) {

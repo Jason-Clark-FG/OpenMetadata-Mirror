@@ -6390,8 +6390,21 @@ public interface CollectionDAO {
         connectionType = POSTGRES)
     void insert(@Bind("json") String json);
 
-    @SqlBatch("INSERT INTO change_event (json) VALUES (:json)")
-    void insertBatch(@Bind("json") List<String> jsons);
+    @Transaction
+    @ConnectionAwareSqlBatch(
+        value = "INSERT INTO change_event (json) VALUES (:json)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlBatch(
+        value = "INSERT INTO change_event (json) VALUES (CAST(:json AS jsonb))",
+        connectionType = POSTGRES)
+    void insertBatchInternal(@Bind("json") List<String> jsons);
+
+    default void insertBatch(List<String> jsons) {
+      if (jsons == null || jsons.isEmpty()) {
+        return;
+      }
+      insertBatchInternal(jsons);
+    }
 
     @SqlUpdate("DELETE FROM change_event WHERE entityType = :entityType")
     void deleteAll(@Bind("entityType") String entityType);

@@ -214,10 +214,7 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
     }
 
     List<UUID> serviceIds =
-        records.stream()
-            .map(record -> UUID.fromString(record.getFromId()))
-            .distinct()
-            .toList();
+        records.stream().map(record -> UUID.fromString(record.getFromId())).distinct().toList();
 
     Map<UUID, EntityReference> serviceRefMap =
         Entity.getEntityReferencesByIds(Entity.API_SERVICE, serviceIds, Include.ALL).stream()
