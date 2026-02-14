@@ -2123,6 +2123,26 @@ public interface CollectionDAO {
         @Bind("toEntity") String toEntity,
         @Bind("relation") int relation);
 
+    @ConnectionAwareSqlUpdate(
+        value =
+            "DELETE FROM entity_relationship WHERE fromId = :fromId AND fromEntity = :fromEntity "
+                + "AND toId = :toId AND toEntity = :toEntity AND relation = :relation "
+                + "AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.relationType')) = :relationType",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "DELETE FROM entity_relationship WHERE fromId = :fromId AND fromEntity = :fromEntity "
+                + "AND toId = :toId AND toEntity = :toEntity AND relation = :relation "
+                + "AND json->>'relationType' = :relationType",
+        connectionType = POSTGRES)
+    int deleteWithRelationType(
+        @BindUUID("fromId") UUID fromId,
+        @Bind("fromEntity") String fromEntity,
+        @BindUUID("toId") UUID toId,
+        @Bind("toEntity") String toEntity,
+        @Bind("relation") int relation,
+        @Bind("relationType") String relationType);
+
     // Delete all the entity relationship fromID --- relation --> entity of type toEntity
     @SqlUpdate(
         "DELETE from entity_relationship WHERE fromId = :fromId AND fromEntity = :fromEntity "

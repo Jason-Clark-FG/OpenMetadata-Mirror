@@ -81,6 +81,7 @@ public class RdfResource {
             content = @Content(mediaType = MediaType.APPLICATION_JSON))
       })
   public Response getRdfStatus(@Context SecurityContext securityContext) {
+    authorizer.authorizeAdmin(securityContext);
     boolean enabled = rdfRepository.isEnabled();
     boolean inferenceEnabled = enabled && rdfRepository.isInferenceEnabledByDefault();
     String defaultInferenceLevel = enabled ? rdfRepository.getDefaultInferenceLevel() : "NONE";
@@ -121,6 +122,7 @@ public class RdfResource {
         @ApiResponse(responseCode = "503", description = "RDF service not enabled")
       })
   public Response debugGlossaryRelations(@Context SecurityContext securityContext) {
+    authorizer.authorizeAdmin(securityContext);
     try {
       if (!rdfRepository.isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -133,7 +135,7 @@ public class RdfResource {
 
     } catch (IOException e) {
       LOG.error("Error debugging glossary relations", e);
-      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -165,7 +167,7 @@ public class RdfResource {
       @Parameter(description = "Entity id", required = true) @PathParam("id") UUID id,
       @Parameter(description = "RDF format") @QueryParam("format") @DefaultValue("jsonld")
           String format) {
-
+    authorizer.authorizeAdmin(securityContext);
     try {
       if (!rdfRepository.isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -198,7 +200,7 @@ public class RdfResource {
 
     } catch (IOException e) {
       LOG.error("Error retrieving entity as RDF", e);
-      return Response.serverError().entity("Error retrieving entity: " + e.getMessage()).build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -227,7 +229,7 @@ public class RdfResource {
           @QueryParam("depth")
           @DefaultValue("2")
           int depth) {
-
+    authorizer.authorizeAdmin(securityContext);
     try {
       if (!rdfRepository.isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -240,7 +242,7 @@ public class RdfResource {
 
     } catch (Exception e) {
       LOG.error("Error exploring entity graph", e);
-      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -259,6 +261,7 @@ public class RdfResource {
         @ApiResponse(responseCode = "500", description = "Internal server error")
       })
   public Response querySparqlGet(
+      @Context SecurityContext securityContext,
       @Parameter(description = "SPARQL query string", required = true)
           @QueryParam("query")
           @NotEmpty
@@ -275,6 +278,7 @@ public class RdfResource {
           @QueryParam("inference")
           @DefaultValue("none")
           String inference) {
+    authorizer.authorizeAdmin(securityContext);
     return executeSparqlQuery(query, format, inference);
   }
 
@@ -292,7 +296,9 @@ public class RdfResource {
         @ApiResponse(responseCode = "400", description = "Invalid query"),
         @ApiResponse(responseCode = "500", description = "Internal server error")
       })
-  public Response querySparqlPost(SparqlQuery sparqlQuery) {
+  public Response querySparqlPost(
+      @Context SecurityContext securityContext, SparqlQuery sparqlQuery) {
+    authorizer.authorizeAdmin(securityContext);
     String inference =
         sparqlQuery.getInference() != null ? sparqlQuery.getInference().toString() : "none";
     String format = sparqlQuery.getFormat() != null ? sparqlQuery.getFormat().toString() : "json";
@@ -312,8 +318,9 @@ public class RdfResource {
         @ApiResponse(responseCode = "500", description = "Internal server error")
       })
   public Response updateSparql(
+      @Context SecurityContext securityContext,
       @Parameter(description = "SPARQL UPDATE query", required = true) SparqlQuery sparqlQuery) {
-
+    authorizer.authorizeAdmin(securityContext);
     if (!rdfRepository.isEnabled()) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
           .entity("RDF repository is not enabled")
@@ -339,7 +346,7 @@ public class RdfResource {
     } catch (Exception e) {
       LOG.error("Error executing SPARQL update", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Error executing SPARQL update: " + e.getMessage())
+          .entity("{\"error\": \"An internal error occurred\"}")
           .build();
     }
   }
@@ -363,12 +370,12 @@ public class RdfResource {
     } catch (IllegalArgumentException e) {
       LOG.error("Invalid SPARQL query: {}", query, e);
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity("Invalid SPARQL query: " + e.getMessage())
+          .entity("{\"error\": \"Invalid SPARQL query\"}")
           .build();
     } catch (Exception e) {
       LOG.error("Error executing SPARQL query", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Error executing query: " + e.getMessage())
+          .entity("{\"error\": \"An internal error occurred\"}")
           .build();
     }
   }
@@ -399,6 +406,7 @@ public class RdfResource {
         @ApiResponse(responseCode = "404", description = "Entity not found")
       })
   public Response getFullLineage(
+      @Context SecurityContext securityContext,
       @Parameter(description = "Entity ID", required = true) @PathParam("entityId") UUID entityId,
       @Parameter(description = "Entity type", required = true) @QueryParam("entityType")
           String entityType,
@@ -408,14 +416,14 @@ public class RdfResource {
           @QueryParam("direction")
           @DefaultValue("both")
           String direction) {
-
+    authorizer.authorizeAdmin(securityContext);
     try {
       String query = buildLineageQuery(entityId, entityType, direction);
       String results = rdfRepository.executeSparqlQueryWithInference(query, SPARQL_JSON, "custom");
       return Response.ok(results).build();
     } catch (Exception e) {
       LOG.error("Error getting lineage with inference", e);
-      return Response.serverError().entity("Error: " + e.getMessage()).build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -508,7 +516,7 @@ public class RdfResource {
           @QueryParam("includeIsolated")
           @DefaultValue("true")
           boolean includeIsolated) {
-
+    authorizer.authorizeAdmin(securityContext);
     try {
       if (!rdfRepository.isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -523,7 +531,7 @@ public class RdfResource {
 
     } catch (Exception e) {
       LOG.error("Error getting glossary term graph", e);
-      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -551,10 +559,10 @@ public class RdfResource {
           @QueryParam("limit")
           @DefaultValue("10")
           int limit) {
-
+    authorizer.authorizeAdmin(securityContext);
     if (!rdfRepository.isEnabled()) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity("RDF repository is not enabled")
+          .entity("{\"error\": \"RDF service not enabled\"}")
           .build();
     }
 
@@ -564,7 +572,7 @@ public class RdfResource {
     } catch (Exception e) {
       LOG.error("Semantic search failed", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Search failed: " + e.getMessage())
+          .entity("{\"error\": \"An internal error occurred\"}")
           .build();
     }
   }
@@ -592,10 +600,10 @@ public class RdfResource {
           @QueryParam("limit")
           @DefaultValue("10")
           int limit) {
-
+    authorizer.authorizeAdmin(securityContext);
     if (!rdfRepository.isEnabled()) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity("RDF repository is not enabled")
+          .entity("{\"error\": \"RDF service not enabled\"}")
           .build();
     }
 
@@ -605,7 +613,7 @@ public class RdfResource {
     } catch (Exception e) {
       LOG.error("Similar entity search failed", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Search failed: " + e.getMessage())
+          .entity("{\"error\": \"An internal error occurred\"}")
           .build();
     }
   }
@@ -644,7 +652,7 @@ public class RdfResource {
           @QueryParam("includeRelations")
           @DefaultValue("true")
           boolean includeRelations) {
-
+    authorizer.authorizeAdmin(securityContext);
     try {
       if (!rdfRepository.isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
@@ -668,7 +676,7 @@ public class RdfResource {
 
     } catch (Exception e) {
       LOG.error("Error exporting glossary as ontology", e);
-      return Response.serverError().entity("{\"error\": \"" + e.getMessage() + "\"}").build();
+      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
   }
 
@@ -704,10 +712,10 @@ public class RdfResource {
           @QueryParam("limit")
           @DefaultValue("10")
           int limit) {
-
+    authorizer.authorizeAdmin(securityContext);
     if (!rdfRepository.isEnabled()) {
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity("RDF repository is not enabled")
+          .entity("{\"error\": \"RDF service not enabled\"}")
           .build();
     }
 
@@ -717,7 +725,7 @@ public class RdfResource {
     } catch (Exception e) {
       LOG.error("Recommendation generation failed", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Recommendation failed: " + e.getMessage())
+          .entity("{\"error\": \"An internal error occurred\"}")
           .build();
     }
   }

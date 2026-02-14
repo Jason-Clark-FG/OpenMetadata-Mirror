@@ -930,7 +930,13 @@ public class RdfRepository {
       case "partof" -> "om:partOf";
       case "haspart" -> "om:hasPart";
       case "antonym" -> "om:antonym";
-      default -> "om:" + relationType;
+      default -> {
+        if (!relationType.matches("[a-zA-Z][a-zA-Z0-9]*")) {
+          LOG.warn("Invalid relation type rejected: {}", relationType);
+          yield "om:relatedTo";
+        }
+        yield "om:" + relationType;
+      }
     };
   }
 
@@ -1825,7 +1831,7 @@ public class RdfRepository {
         Resource toResource = model.createResource(toUri);
 
         Property predicate = getGlossaryTermRelationPredicate(relation.relationType(), model);
-        LOG.info(
+        LOG.debug(
             "RDF Indexing: {} -> {} with predicate {} (relationType={})",
             relation.fromTermId(),
             relation.toTermId(),
@@ -1838,7 +1844,7 @@ public class RdfRepository {
       model.write(writer, "N-TRIPLES");
       String triples = writer.toString();
 
-      LOG.info("Generated N-Triples:\n{}", triples);
+      LOG.debug("Generated N-Triples:\n{}", triples);
 
       if (!triples.isEmpty()) {
         StringBuilder insertQuery = new StringBuilder();
@@ -1847,7 +1853,7 @@ public class RdfRepository {
         insertQuery.append(" } }");
 
         storageService.executeSparqlUpdate(insertQuery.toString());
-        LOG.info("Bulk added {} glossary term relations to RDF store", relations.size());
+        LOG.debug("Bulk added {} glossary term relations to RDF store", relations.size());
       }
     } catch (Exception e) {
       LOG.error("Failed to bulk add glossary term relations to RDF", e);
@@ -1855,11 +1861,12 @@ public class RdfRepository {
   }
 
   private Property getGlossaryTermRelationPredicate(String relationType, Model model) {
-    LOG.info(
+    LOG.debug(
         "getGlossaryTermRelationPredicate: Looking up predicate for relationType='{}'",
         relationType);
     if (relationType == null) {
-      LOG.info("getGlossaryTermRelationPredicate: relationType is null, defaulting to 'relatedTo'");
+      LOG.debug(
+          "getGlossaryTermRelationPredicate: relationType is null, defaulting to 'relatedTo'");
       relationType = "relatedTo";
     }
 
@@ -1871,20 +1878,20 @@ public class RdfRepository {
               org.openmetadata.schema.configuration.GlossaryTermRelationSettings.class);
 
       if (settings != null && settings.getRelationTypes() != null) {
-        LOG.info(
+        LOG.debug(
             "getGlossaryTermRelationPredicate: Found {} relation types in settings",
             settings.getRelationTypes().size());
         for (var configuredType : settings.getRelationTypes()) {
           if (configuredType.getName().equalsIgnoreCase(relationType)) {
             java.net.URI rdfPredicateUri = configuredType.getRdfPredicate();
-            LOG.info(
+            LOG.debug(
                 "getGlossaryTermRelationPredicate: Matched '{}' to configured type '{}' with rdfPredicate='{}'",
                 relationType,
                 configuredType.getName(),
                 rdfPredicateUri);
             if (rdfPredicateUri != null) {
               Property prop = createPropertyFromUri(rdfPredicateUri.toString(), model);
-              LOG.info(
+              LOG.debug(
                   "getGlossaryTermRelationPredicate: Created property with URI='{}'",
                   prop.getURI());
               return prop;
@@ -1892,21 +1899,21 @@ public class RdfRepository {
             break;
           }
         }
-        LOG.info(
+        LOG.debug(
             "getGlossaryTermRelationPredicate: No match found for '{}' in configured types",
             relationType);
       } else {
-        LOG.info("getGlossaryTermRelationPredicate: Settings or relationTypes is null");
+        LOG.debug("getGlossaryTermRelationPredicate: Settings or relationTypes is null");
       }
     } catch (Exception e) {
-      LOG.info(
+      LOG.debug(
           "getGlossaryTermRelationPredicate: Could not load settings, error: {}", e.getMessage());
     }
 
     // Fall back to default: use OpenMetadata ontology namespace with the relation type name
     Property defaultProp =
         model.createProperty("https://open-metadata.org/ontology/", relationType);
-    LOG.info(
+    LOG.debug(
         "getGlossaryTermRelationPredicate: Using default predicate URI='{}'", defaultProp.getURI());
     return defaultProp;
   }

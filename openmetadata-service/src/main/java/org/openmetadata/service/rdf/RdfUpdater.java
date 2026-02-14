@@ -81,9 +81,11 @@ public class RdfUpdater {
     }
   }
 
-  /**
-   * Check if RDF is enabled
-   */
+  public static void disable() {
+    rdfRepository = null;
+    LOG.info("RDF updater disabled");
+  }
+
   public static boolean isEnabled() {
     return rdfRepository != null && rdfRepository.isEnabled();
   }
