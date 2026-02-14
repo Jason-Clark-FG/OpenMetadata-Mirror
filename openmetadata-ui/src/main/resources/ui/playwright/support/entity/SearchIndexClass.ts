@@ -180,6 +180,10 @@ export class SearchIndexClass extends EntityClass {
     this.serviceResponseData = await serviceResponse.json();
     this.entityResponseData = await entityResponse.json();
 
+    this.childrenSelectorId = (
+      this.entityResponseData as any
+    ).fields[0].fullyQualifiedName;
+
     return {
       service: serviceResponse.body,
       entity: entityResponse.body,

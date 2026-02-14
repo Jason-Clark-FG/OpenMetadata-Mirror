@@ -266,6 +266,10 @@ export class TableClass extends EntityClass {
     this.schemaResponseData = schema;
     this.entityResponseData = entity;
 
+    this.childrenSelectorId = (
+      this.entityResponseData as any
+    ).columns[0].fullyQualifiedName;
+
     return {
       service,
       database,

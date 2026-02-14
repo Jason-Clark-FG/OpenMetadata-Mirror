@@ -199,6 +199,10 @@ export class ContainerClass extends EntityClass {
       this.childResponseData = await childResponse.json();
     }
 
+    this.childrenSelectorId = (
+      this.entityResponseData as any
+    ).dataModel.columns[0].fullyQualifiedName;
+
     return {
       service: serviceResponse.body,
       entity: entityResponse.body,

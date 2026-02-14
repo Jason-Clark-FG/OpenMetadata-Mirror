@@ -12,12 +12,7 @@
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
 import { nestedChildrenTestData } from '../constant/nestedColumnUpdates';
-import { ApiEndpointClass } from '../support/entity/ApiEndpointClass';
-import { DashboardDataModelClass } from '../support/entity/DashboardDataModelClass';
 import { FileClass } from '../support/entity/FileClass';
-import { SearchIndexClass } from '../support/entity/SearchIndexClass';
-import { TableClass } from '../support/entity/TableClass';
-import { TopicClass } from '../support/entity/TopicClass';
 import { WorksheetClass } from '../support/entity/WorksheetClass';
 import { uuid } from './common';
 import { visitEntityPage } from './entity';
@@ -27,83 +22,91 @@ type EntityTypes = InstanceType<
 >;
 
 export const getNestedColumnDetails = (type: string, data: EntityTypes) => {
-  const fqn = data.entityResponseData.fullyQualifiedName;
+  const entityData = data.entityResponseData as any;
+  const fqn = entityData.fullyQualifiedName;
 
   switch (type) {
     case 'API Endpoint': {
-      const entity = data as ApiEndpointClass;
-      const level0Key = `${fqn}.requestSchema.${entity.children?.[0].name}`;
-      const level1Key = `${level0Key}.${entity.children?.[0].children?.[0].name}`;
-      const level2Key = `${level1Key}.${entity.children?.[0].children?.[0].children?.[0].name}`;
+      const field0 = entityData.requestSchema.schemaFields[0];
+      const field1 = field0.children[0];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key:
+          field0.fullyQualifiedName ?? `${fqn}.requestSchema.${field0.name}`,
+        level1Key:
+          field1.fullyQualifiedName ??
+          `${fqn}.requestSchema.${field0.name}.${field1.name}`,
+        level2Key:
+          field2.fullyQualifiedName ??
+          `${fqn}.requestSchema.${field0.name}.${field1.name}.${field2.name}`,
         expand: true,
       };
     }
     case 'Topic': {
-      const entity = data as TopicClass;
-      const level0Key = `${entity.children?.[0].name}`;
-      const level1Key = `${entity.children?.[0].children?.[0].name}`;
-      const level2Key = `${entity.children?.[0].children?.[0].children?.[0].name}`;
+      const field0 = entityData.messageSchema.schemaFields[0];
+      const field1 = field0.children[0];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key: field0.fullyQualifiedName ?? field0.name,
+        level1Key: field1.fullyQualifiedName ?? field1.name,
+        level2Key: field2.fullyQualifiedName ?? field2.name,
         expand: false,
       };
     }
     case 'Data Model': {
-      const entity = data as DashboardDataModelClass;
-
-      const level0Key = `${entity.children?.[1].name}`;
-      const level1Key = `${entity.children?.[1].children?.[0].name}`;
-      const level2Key = `${entity.children?.[1].children?.[0].children?.[0].name}`;
+      const field0 = entityData.columns[1];
+      const field1 = field0.children[0];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key: field0.fullyQualifiedName ?? `${fqn}.${field0.name}`,
+        level1Key:
+          field1.fullyQualifiedName ?? `${fqn}.${field0.name}.${field1.name}`,
+        level2Key:
+          field2.fullyQualifiedName ??
+          `${fqn}.${field0.name}.${field1.name}.${field2.name}`,
         expand: true,
       };
     }
     case 'File':
     case 'Worksheet': {
-      const entity = data as FileClass;
-
-      const level0Key = `${fqn}.${entity.children?.[1].name}`;
-      const level1Key = `${level0Key}.${entity.children?.[1].children?.[0].name}`;
-      const level2Key = `${level1Key}.${entity.children?.[1].children?.[0].children?.[0].name}`;
+      const field0 = entityData.columns[1];
+      const field1 = field0.children[0];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key: field0.fullyQualifiedName ?? `${fqn}.${field0.name}`,
+        level1Key:
+          field1.fullyQualifiedName ?? `${fqn}.${field0.name}.${field1.name}`,
+        level2Key:
+          field2.fullyQualifiedName ??
+          `${fqn}.${field0.name}.${field1.name}.${field2.name}`,
         expand: true,
       };
     }
     case 'Search Index': {
-      const entity = data as SearchIndexClass;
-
-      const level0Key = `${fqn}.${entity.children?.[3].name}`;
-      const level1Key = `${level0Key}.${entity.children?.[3].children?.[0].name}`;
-      const level2Key = `${level1Key}.${entity.children?.[3].children?.[0].children?.[0].name}`;
+      const field0 = entityData.fields[3];
+      const field1 = field0.children[0];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key: field0.fullyQualifiedName ?? `${fqn}.${field0.name}`,
+        level1Key:
+          field1.fullyQualifiedName ?? `${fqn}.${field0.name}.${field1.name}`,
+        level2Key:
+          field2.fullyQualifiedName ??
+          `${fqn}.${field0.name}.${field1.name}.${field2.name}`,
         expand: true,
       };
     }
     case 'Table': {
-      const entity = data as TableClass;
-
-      const level0Key = `${fqn}.${entity.children?.[2].name}`;
-      const level1Key = `${level0Key}.${entity.children?.[2].children?.[1].name}`;
-      const level2Key = `${level1Key}.${entity.children?.[2].children?.[1].children?.[0].name}`;
+      const field0 = entityData.columns[2];
+      const field1 = field0.children[1];
+      const field2 = field1.children[0];
       return {
-        level0Key,
-        level1Key,
-        level2Key,
+        level0Key: field0.fullyQualifiedName ?? `${fqn}.${field0.name}`,
+        level1Key:
+          field1.fullyQualifiedName ?? `${fqn}.${field0.name}.${field1.name}`,
+        level2Key:
+          field2.fullyQualifiedName ??
+          `${fqn}.${field0.name}.${field1.name}.${field2.name}`,
         expand: false,
       };
     }

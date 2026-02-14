@@ -168,6 +168,10 @@ export class WorksheetClass extends EntityClass {
     );
     this.entityResponseData = await entityResponse.json();
 
+    this.childrenSelectorId = (
+      this.entityResponseData as any
+    ).columns[0].fullyQualifiedName;
+
     return {
       service: serviceResponse.body,
       entity: entityResponse.body,

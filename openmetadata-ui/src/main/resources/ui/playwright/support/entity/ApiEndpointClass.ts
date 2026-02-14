@@ -238,6 +238,10 @@ export class ApiEndpointClass extends EntityClass {
     this.apiCollectionResponseData = await apiCollectionResponse.json();
     this.entityResponseData = await entityResponse.json();
 
+    this.childrenSelectorId = (
+      this.entityResponseData as any
+    ).requestSchema.schemaFields[0].fullyQualifiedName;
+
     return {
       service: serviceResponse.body,
       apiCollection: apiCollectionResponse.body,
