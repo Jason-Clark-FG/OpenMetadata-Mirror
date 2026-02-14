@@ -23,11 +23,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.module.blackbird.BlackbirdModule;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import com.fasterxml.jackson.datatype.jsr353.JSR353Module;
+import com.fasterxml.jackson.module.blackbird.BlackbirdModule;
 import com.github.fge.jsonpatch.JsonPatchException;
 import com.github.fge.jsonpatch.diff.JsonDiff;
 import com.jayway.jsonpath.DocumentContext;
@@ -55,6 +57,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -350,14 +353,37 @@ public final class JsonUtils {
   }
 
   public static <T> T applyPatch(T original, JsonPatch patch, Class<T> clz) {
-    JsonValue value = applyPatch(original, patch);
-    // Convert Jakarta JSON JsonValue to Jackson JsonNode
     try {
-      String jsonString = value.toString();
-      JsonNode jsonNode = OBJECT_MAPPER.readTree(jsonString);
-      return OBJECT_MAPPER.convertValue(jsonNode, clz);
+      JsonNode targetNode = OBJECT_MAPPER.valueToTree(original);
+      JsonNode patchArray = OBJECT_MAPPER.readTree(patch.toJsonArray().toString());
+
+      ArrayNode filteredPatch = OBJECT_MAPPER.createArrayNode();
+      for (JsonNode op : patchArray) {
+        String path = op.get("path").asText();
+        if (path.endsWith("href")
+            || path.equals("/changeDescription")
+            || path.startsWith("/changeDescription/")
+            || path.equals("/incrementalChangeDescription")
+            || path.startsWith("/incrementalChangeDescription/")) {
+          continue;
+        }
+        if (op.has("from")) {
+          String from = op.get("from").asText();
+          if (from.equals("/changeDescription")
+              || from.startsWith("/changeDescription/")
+              || from.equals("/incrementalChangeDescription")
+              || from.startsWith("/incrementalChangeDescription/")) {
+            continue;
+          }
+        }
+        filteredPatch.add(op);
+      }
+
+      JsonNode patched = com.flipkart.zjsonpatch.JsonPatch.apply(filteredPatch, targetNode);
+      return OBJECT_MAPPER.treeToValue(patched, clz);
     } catch (Exception e) {
-      throw new RuntimeException("Failed to convert JsonValue to target class", e);
+      LOG.debug("Failed to apply the json patch {}", patch);
+      throw new RuntimeException("Failed to apply JSON patch", e);
     }
   }
 
@@ -373,6 +399,26 @@ public final class JsonUtils {
     JsonNode dest = valueToTree(v2);
     JsonNode patchNode = JsonDiff.asJson(source, dest);
     return Json.createPatch(Json.createReader(new StringReader(patchNode.toString())).readArray());
+  }
+
+  public static Set<String> extractPatchedFields(JsonPatch patch) {
+    Set<String> fields = new HashSet<>();
+    JsonArray array = patch.toJsonArray();
+    for (JsonValue entry : array) {
+      JsonObject op = entry.asJsonObject();
+      addTopLevelField(fields, op.getString("path", null));
+      if (op.containsKey("from")) {
+        addTopLevelField(fields, op.getString("from", null));
+      }
+    }
+    return fields;
+  }
+
+  private static void addTopLevelField(Set<String> fields, String path) {
+    if (path == null || path.isEmpty() || path.equals("/")) return;
+    String stripped = path.startsWith("/") ? path.substring(1) : path;
+    int slash = stripped.indexOf('/');
+    fields.add(slash > 0 ? stripped.substring(0, slash) : stripped);
   }
 
   private static JsonNode applyJsonPatch(JsonPatch patch, JsonNode targetNode)
@@ -620,13 +666,19 @@ public final class JsonUtils {
   }
 
   public static <T> T deepCopy(T original, Class<T> clazz) {
-    return OBJECT_MAPPER.convertValue(original, clazz);
+    try {
+      TokenBuffer tb = new TokenBuffer(OBJECT_MAPPER, false);
+      OBJECT_MAPPER.writeValue(tb, original);
+      return OBJECT_MAPPER.readValue(tb.asParser(), clazz);
+    } catch (IOException e) {
+      throw new RuntimeException("Deep copy failed", e);
+    }
   }
 
   public static <T> List<T> deepCopyList(List<T> original, Class<T> clazz) {
     List<T> list = new ArrayList<>(original.size());
     for (T t : original) {
-      list.add(OBJECT_MAPPER.convertValue(t, clazz));
+      list.add(deepCopy(t, clazz));
     }
     return list;
   }

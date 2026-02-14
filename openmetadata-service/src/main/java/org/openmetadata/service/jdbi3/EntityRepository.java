@@ -284,13 +284,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private record InheritanceCacheKey(String entityType, UUID entityId, String fieldsKey) {}
 
-  public static final LoadingCache<Pair<String, String>, EntityInterface> CACHE_WITH_NAME =
+  public static final LoadingCache<Pair<String, String>, String> CACHE_WITH_NAME =
       CacheBuilder.newBuilder()
           .maximumSize(20000)
           .expireAfterWrite(30, TimeUnit.SECONDS)
           .recordStats()
           .build(new EntityLoaderWithName());
-  public static final LoadingCache<Pair<String, UUID>, EntityInterface> CACHE_WITH_ID =
+  public static final LoadingCache<Pair<String, UUID>, String> CACHE_WITH_ID =
       CacheBuilder.newBuilder()
           .maximumSize(20000)
           .expireAfterWrite(30, TimeUnit.SECONDS)
@@ -1266,24 +1266,20 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     try {
-      T cached;
+      String cachedJson;
       try (var ignored = phase("cacheGet")) {
-        @SuppressWarnings("unchecked")
-        T c = (T) CACHE_WITH_ID.get(new ImmutablePair<>(entityType, id));
-        cached = c;
+        cachedJson = CACHE_WITH_ID.get(new ImmutablePair<>(entityType, id));
       }
       T entity;
       try (var ignored = phase("cacheCopy")) {
-        entity = JsonUtils.deepCopy(cached, entityClass);
+        entity = JsonUtils.readValue(cachedJson, entityClass);
       }
 
       // Validate the entity retrieved from cache
       if (entity != null && entity.getId() == null) {
         LOG.error(
             "CRITICAL: Entity from cache has null ID! Type: {}, Expected ID: {}", entityType, id);
-        // Invalidate the corrupted cache entry and reload from database
         CACHE_WITH_ID.invalidate(new ImmutablePair<>(entityType, id));
-        // Try one more time without cache
         entity = dao.findEntityById(id, include);
         if (entity == null) {
           throw new EntityNotFoundException(entityNotFound(entityType, id));
@@ -1655,15 +1651,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     try {
-      T cached;
+      String cachedJson;
       try (var ignored = phase("cacheGet")) {
-        @SuppressWarnings("unchecked")
-        T c = (T) CACHE_WITH_NAME.get(new ImmutablePair<>(entityType, fqn));
-        cached = c;
+        cachedJson = CACHE_WITH_NAME.get(new ImmutablePair<>(entityType, fqn));
       }
       T entity;
       try (var ignored = phase("cacheCopy")) {
-        entity = JsonUtils.deepCopy(cached, entityClass);
+        entity = JsonUtils.readValue(cachedJson, entityClass);
       }
       if (include == NON_DELETED && Boolean.TRUE.equals(entity.getDeleted())
           || include == DELETED && !Boolean.TRUE.equals(entity.getDeleted())) {
@@ -7439,160 +7433,132 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  static class EntityLoaderWithName extends CacheLoader<Pair<String, String>, EntityInterface> {
+  static class EntityLoaderWithName extends CacheLoader<Pair<String, String>, String> {
     @Override
-    public @NonNull EntityInterface load(@NotNull Pair<String, String> fqnPair) {
+    public @NonNull String load(@NotNull Pair<String, String> fqnPair) {
       String entityType = fqnPair.getLeft();
       String fqn = fqnPair.getRight();
       EntityRepository<? extends EntityInterface> repository =
           Entity.getEntityRepository(entityType);
-
-      // Skip cache for user entities to avoid authentication issues
-      if ("user".equals(entityType)) {
-        LOG.debug("Skipping cache for user entity to ensure fresh auth data: {}", fqn);
-        EntityInterface entity = repository.getDao().findEntityByName(fqn, ALL);
-        return entity;
-      }
+      EntityDAO<?> dao = repository.getDao();
 
       // Try to load from external cache first (read-through) for non-user entities
-      var cachedEntityDao = CacheBundle.getCachedEntityDao();
-      if (cachedEntityDao != null) {
-        Optional<String> cachedJson = cachedEntityDao.getByName(entityType, fqn);
-        if (cachedJson.isPresent()) {
-          LOG.debug("CACHE HIT: Loading entity by name from Redis cache: {} {}", entityType, fqn);
-          try {
-            // Get the entity class from the repository and deserialize with proper type
-            Class<? extends EntityInterface> entityClass = repository.getEntityClass();
-            EntityInterface entity = JsonUtils.readValue(cachedJson.get(), entityClass);
-
-            // Validate the cached entity - if invalid, evict and fall back to database
-            if (entity.getId() == null || entity.getFullyQualifiedName() == null) {
-              LOG.error(
-                  "CACHE ERROR: Cached entity from name lookup is invalid! Evicting bad cache entry. Type: {}, Name: {}",
-                  entityType,
-                  fqn);
-              // Evict the corrupted cache entry
-              cachedEntityDao.deleteByName(entityType, fqn);
-              // Fall back to database load below
-            } else {
-              // Valid cached entity, return it
-              return entity;
-            }
-          } catch (Exception e) {
-            LOG.warn(
-                "Failed to deserialize cached entity, evicting and falling back to database: {} {}",
-                entityType,
-                fqn,
-                e);
-            // Evict the corrupted cache entry
+      if (!"user".equals(entityType)) {
+        var cachedEntityDao = CacheBundle.getCachedEntityDao();
+        if (cachedEntityDao != null) {
+          Optional<String> cachedJson = cachedEntityDao.getByName(entityType, fqn);
+          if (cachedJson.isPresent()) {
+            LOG.debug("CACHE HIT: Loading entity by name from Redis cache: {} {}", entityType, fqn);
             try {
-              cachedEntityDao.deleteByName(entityType, fqn);
-            } catch (Exception evictError) {
-              LOG.debug(
-                  "Failed to evict bad cache entry by name: {} {}", entityType, fqn, evictError);
+              Class<? extends EntityInterface> entityClass = repository.getEntityClass();
+              EntityInterface entity = JsonUtils.readValue(cachedJson.get(), entityClass);
+              if (entity.getId() == null || entity.getFullyQualifiedName() == null) {
+                LOG.error(
+                    "CACHE ERROR: Cached entity from name lookup is invalid! Evicting. Type: {}, Name: {}",
+                    entityType,
+                    fqn);
+                cachedEntityDao.deleteByName(entityType, fqn);
+              } else {
+                return cachedJson.get();
+              }
+            } catch (Exception e) {
+              LOG.warn(
+                  "Failed to deserialize cached entity, evicting and falling back to database: {} {}",
+                  entityType,
+                  fqn,
+                  e);
+              try {
+                cachedEntityDao.deleteByName(entityType, fqn);
+              } catch (Exception evictError) {
+                LOG.debug(
+                    "Failed to evict bad cache entry by name: {} {}", entityType, fqn, evictError);
+              }
             }
           }
+          LOG.debug("CACHE MISS: Entity not in Redis cache by name: {} {}", entityType, fqn);
         }
-        LOG.debug("CACHE MISS: Entity not in Redis cache by name: {} {}", entityType, fqn);
       }
 
-      // If not in cache, load from database
+      // Load raw JSON from database
       LOG.debug("Loading entity by name from database: {} {}", entityType, fqn);
-      EntityInterface entity = repository.getDao().findEntityByName(fqn, ALL);
+      String json =
+          dao.findByName(dao.getTableName(), dao.getNameHashColumn(), fqn, dao.getCondition(ALL));
+      if (json == null) {
+        throw new EntityNotFoundException(
+            String.format("Entity not found: %s %s", entityType, fqn));
+      }
 
-      // Validate entity loaded from database
+      // Validate
+      EntityInterface entity = JsonUtils.readValue(json, repository.getEntityClass());
       if (!isValidEntityForCache(entity)) {
-        if (entity == null) {
-          LOG.error("Entity not found in database by name: {} {}", entityType, fqn);
-          throw new EntityNotFoundException(
-              String.format("Entity not found: %s %s", entityType, fqn));
-        }
-        // For name lookups, we can't fix missing ID since we don't know it
         LOG.error(
             "CRITICAL: Entity loaded from database by name is invalid! Type: {}, Name: {}, ID: {}",
             entityType,
             fqn,
-            entity.getId());
+            entity == null ? "null" : entity.getId());
         throw new IllegalStateException(
             String.format("Invalid entity from database: %s %s", entityType, fqn));
       }
 
-      // Note: Do NOT write to Redis cache here - this loader is part of Guava cache
-      // Redis caching is handled separately by writeThroughCache after DB operations
-      // This maintains clean separation between Guava (local) and Redis (distributed) caching
-
-      return entity;
+      return json;
     }
   }
 
-  static class EntityLoaderWithId extends CacheLoader<Pair<String, UUID>, EntityInterface> {
+  static class EntityLoaderWithId extends CacheLoader<Pair<String, UUID>, String> {
     @Override
-    public @NonNull EntityInterface load(@NotNull Pair<String, UUID> idPair) {
+    public @NonNull String load(@NotNull Pair<String, UUID> idPair) {
       String entityType = idPair.getLeft();
       UUID id = idPair.getRight();
       EntityRepository<? extends EntityInterface> repository =
           Entity.getEntityRepository(entityType);
-
-      // Skip cache for user entities to avoid authentication issues
-      if ("user".equals(entityType)) {
-        LOG.debug("Skipping cache for user entity to ensure fresh auth data: {}", id);
-        EntityInterface entity = repository.getDao().findEntityById(id, ALL);
-        return entity;
-      }
+      EntityDAO<?> dao = repository.getDao();
 
       // Try to load from external cache first (read-through) for non-user entities
-      var cachedEntityDao = CacheBundle.getCachedEntityDao();
-      if (cachedEntityDao != null) {
-        String cachedJson = cachedEntityDao.getBase(id, entityType);
-        if (cachedJson != null && !cachedJson.isEmpty()) {
-          LOG.debug("CACHE HIT: Loading entity from Redis cache: {} {}", entityType, id);
-          try {
-            // Get the entity class from the repository and deserialize with proper type
-            Class<? extends EntityInterface> entityClass = repository.getEntityClass();
-            EntityInterface entity = JsonUtils.readValue(cachedJson, entityClass);
-
-            // Validate the cached entity - if invalid, evict and fall back to database
-            if (entity.getId() == null) {
-              LOG.error(
-                  "CACHE ERROR: Cached entity has null ID! Evicting bad cache entry. Type: {}, Expected ID: {}",
-                  entityType,
-                  id);
-              // Evict the corrupted cache entry
-              cachedEntityDao.deleteBase(entityType, id);
-              // Fall back to database load below
-            } else {
-              // Valid cached entity, return it
-              return entity;
-            }
-          } catch (Exception e) {
-            LOG.warn(
-                "Failed to deserialize cached entity, evicting and falling back to database: {} {}",
-                entityType,
-                id,
-                e);
-            // Evict the corrupted cache entry
+      if (!"user".equals(entityType)) {
+        var cachedEntityDao = CacheBundle.getCachedEntityDao();
+        if (cachedEntityDao != null) {
+          String cachedJson = cachedEntityDao.getBase(id, entityType);
+          if (cachedJson != null && !cachedJson.isEmpty()) {
+            LOG.debug("CACHE HIT: Loading entity from Redis cache: {} {}", entityType, id);
             try {
-              cachedEntityDao.deleteBase(entityType, id);
-            } catch (Exception evictError) {
-              LOG.debug("Failed to evict bad cache entry: {} {}", entityType, id, evictError);
+              Class<? extends EntityInterface> entityClass = repository.getEntityClass();
+              EntityInterface entity = JsonUtils.readValue(cachedJson, entityClass);
+              if (entity.getId() == null) {
+                LOG.error(
+                    "CACHE ERROR: Cached entity has null ID! Evicting. Type: {}, Expected ID: {}",
+                    entityType,
+                    id);
+                cachedEntityDao.deleteBase(entityType, id);
+              } else {
+                return cachedJson;
+              }
+            } catch (Exception e) {
+              LOG.warn(
+                  "Failed to deserialize cached entity, evicting and falling back to database: {} {}",
+                  entityType,
+                  id,
+                  e);
+              try {
+                cachedEntityDao.deleteBase(entityType, id);
+              } catch (Exception evictError) {
+                LOG.debug("Failed to evict bad cache entry: {} {}", entityType, id, evictError);
+              }
             }
           }
+          LOG.debug("CACHE MISS: Entity not in Redis cache: {} {}", entityType, id);
         }
-        LOG.debug("CACHE MISS: Entity not in Redis cache: {} {}", entityType, id);
       }
 
-      // If not in cache, load from database
+      // Load raw JSON from database
       LOG.debug("Loading entity from database: {} {}", entityType, id);
-      EntityInterface entity = repository.getDao().findEntityById(id, ALL);
+      String json = dao.findById(dao.getTableName(), id, dao.getCondition(ALL));
+      if (json == null) {
+        throw new EntityNotFoundException(String.format("Entity not found: %s %s", entityType, id));
+      }
 
-      // Validate entity loaded from database
+      // Validate
+      EntityInterface entity = JsonUtils.readValue(json, repository.getEntityClass());
       if (!isValidEntityForCache(entity)) {
-        if (entity == null) {
-          LOG.error("Entity not found in database: {} {}", entityType, id);
-          throw new EntityNotFoundException(
-              String.format("Entity not found: %s %s", entityType, id));
-        }
-        // Try to fix missing ID if entity exists but ID is null
         if (entity.getId() == null) {
           LOG.error(
               "CRITICAL: Entity loaded from database has null ID! Type: {}, Expected ID: {}, FQN: {}",
@@ -7600,8 +7566,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
               id,
               entity.getFullyQualifiedName());
           entity.setId(id);
+          json = JsonUtils.pojoToJson(entity);
         }
-        // If still invalid, throw exception
+        entity = JsonUtils.readValue(json, repository.getEntityClass());
         if (!isValidEntityForCache(entity)) {
           LOG.error("Entity from database is invalid for caching: {} {}", entityType, id);
           throw new IllegalStateException(
@@ -7609,11 +7576,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         }
       }
 
-      // Note: Do NOT write to Redis cache here - this loader is part of Guava cache
-      // Redis caching is handled separately by writeThroughCache after DB operations
-      // This maintains clean separation between Guava (local) and Redis (distributed) caching
-
-      return entity;
+      return json;
     }
   }
 

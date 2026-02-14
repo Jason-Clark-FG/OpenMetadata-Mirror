@@ -120,8 +120,6 @@ public final class RequestEntityCache {
     if (cached == null) {
       return null;
     }
-    // Defensive copy on read keeps cache entries immutable for callers while avoiding
-    // an extra deep copy at cache put time.
     try (var ignored = phase("requestCacheCopy")) {
       return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
     }
