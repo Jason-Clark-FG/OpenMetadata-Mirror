@@ -27,6 +27,10 @@ export interface GlossaryTerm {
      */
     childrenCount?: number;
     /**
+     * Optional mappings to external concepts (e.g., SKOS alignments).
+     */
+    conceptMappings?: ConceptMapping[];
+    /**
      * List of data products this entity is part of.
      */
     dataProducts?: EntityReference[];
@@ -109,10 +113,6 @@ export interface GlossaryTerm {
      * Link to a reference from an external glossary.
      */
     references?: TermReference[];
-    /**
-     * Optional mappings to external concepts (e.g., SKOS alignments).
-     */
-    conceptMappings?: ConceptMapping[];
     /**
      * Other glossary terms that are related to this glossary term with typed semantic relations.
      */
@@ -286,6 +286,42 @@ export interface EntityReference {
 }
 
 /**
+ * Mapping to an external concept (e.g., SKOS concept IRI).
+ */
+export interface ConceptMapping {
+    /**
+     * External concept IRI to map this glossary term to.
+     */
+    conceptIri: string;
+    /**
+     * Type of mapping used for the external concept alignment.
+     */
+    mappingType: ConceptMappingType;
+    /**
+     * Optional external concept scheme IRI for the mapped concept.
+     */
+    schemeIri?: string;
+    /**
+     * Optional source label or catalog for the external concept.
+     */
+    source?: string;
+}
+
+/**
+ * Type of mapping used for the external concept alignment.
+ *
+ * Type of mapping used to align this term with an external concept.
+ */
+export enum ConceptMappingType {
+    BroadMatch = "BROAD_MATCH",
+    CloseMatch = "CLOSE_MATCH",
+    ExactMatch = "EXACT_MATCH",
+    NarrowMatch = "NARROW_MATCH",
+    RelatedMatch = "RELATED_MATCH",
+    SameAs = "SAME_AS",
+}
+
+/**
  * Approval status of the glossary term.
  *
  * Status of an entity. It is used for governance and is applied to all the entities in the
@@ -310,40 +346,6 @@ export enum ProviderType {
     Automation = "automation",
     System = "system",
     User = "user",
-}
-
-/**
- * Type of mapping used to align this term with an external concept.
- */
-export enum ConceptMappingType {
-    BroadMatch = "BROAD_MATCH",
-    CloseMatch = "CLOSE_MATCH",
-    ExactMatch = "EXACT_MATCH",
-    NarrowMatch = "NARROW_MATCH",
-    RelatedMatch = "RELATED_MATCH",
-    SameAs = "SAME_AS",
-}
-
-/**
- * Mapping to an external concept (e.g., SKOS concept IRI).
- */
-export interface ConceptMapping {
-    /**
-     * External concept IRI to map this glossary term to.
-     */
-    conceptIri: string;
-    /**
-     * Type of mapping used for the external concept alignment.
-     */
-    mappingType: ConceptMappingType;
-    /**
-     * Optional external concept scheme IRI for the mapped concept.
-     */
-    schemeIri?: string;
-    /**
-     * Optional source label or catalog for the external concept.
-     */
-    source?: string;
 }
 
 export interface TermReference {

@@ -26,6 +26,11 @@ export interface GlossaryTermRelationSettings {
  */
 export interface GlossaryTermRelationType {
     /**
+     * Preset cardinality for this relation type. CUSTOM lets you set explicit source/target
+     * maxima.
+     */
+    cardinality?: RelationCardinality;
+    /**
      * Category of the relation.
      */
     category: RelationCategory;
@@ -71,11 +76,8 @@ export interface GlossaryTermRelationType {
      */
     rdfPredicate?: string;
     /**
-     * Preset cardinality for this relation type. CUSTOM lets you set explicit source/target maxima.
-     */
-    cardinality?: RelationCardinality;
-    /**
-     * Maximum number of relations of this type that can originate from a term. Null means unbounded.
+     * Maximum number of relations of this type that can originate from a term. Null means
+     * unbounded.
      */
     sourceMax?: number | null;
     /**
@@ -85,6 +87,9 @@ export interface GlossaryTermRelationType {
 }
 
 /**
+ * Preset cardinality for this relation type. CUSTOM lets you set explicit source/target
+ * maxima.
+ *
  * Preset cardinality for term-to-term relations.
  */
 export enum RelationCardinality {
