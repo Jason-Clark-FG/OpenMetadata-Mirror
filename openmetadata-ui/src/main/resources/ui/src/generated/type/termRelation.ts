@@ -16,8 +16,8 @@
  */
 export interface TermRelation {
     /**
-     * Type of the relation (e.g., 'broader', 'narrower', 'synonym', 'related'). Defaults to
-     * 'related' for backward compatibility.
+     * Type of the relation (e.g., 'broader', 'narrower', 'synonym', 'relatedTo'). Defaults to
+     * 'relatedTo' for backward compatibility.
      */
     relationType?: string;
     /**
