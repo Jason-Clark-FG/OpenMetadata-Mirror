@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -24,7 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.util.SdkClients;
+import org.openmetadata.schema.api.configuration.rdf.RdfConfiguration;
 import org.openmetadata.schema.api.data.CreateGlossary;
 import org.openmetadata.schema.api.data.CreateGlossaryTerm;
 import org.openmetadata.schema.entity.data.Glossary;
@@ -32,6 +35,7 @@ import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TermRelation;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.service.rdf.RdfUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +65,16 @@ public class GlossaryTermRelationIT {
 
   @BeforeAll
   public static void setup() throws Exception {
+    RdfConfiguration rdfConfig = new RdfConfiguration();
+    rdfConfig.setEnabled(true);
+    rdfConfig.setBaseUri(java.net.URI.create("https://open-metadata.org/"));
+    rdfConfig.setStorageType(RdfConfiguration.StorageType.FUSEKI);
+    rdfConfig.setRemoteEndpoint(java.net.URI.create(TestSuiteBootstrap.getFusekiEndpoint()));
+    rdfConfig.setUsername("admin");
+    rdfConfig.setPassword("test-admin");
+    rdfConfig.setDataset("openmetadata");
+    RdfUpdater.initialize(rdfConfig);
+
     client = SdkClients.adminClient();
 
     // Create test glossary
@@ -359,5 +373,10 @@ public class GlossaryTermRelationIT {
             + response.statusCode()
             + ", Body: "
             + response.body());
+  }
+
+  @AfterAll
+  static void disableRdf() {
+    RdfUpdater.disable();
   }
 }

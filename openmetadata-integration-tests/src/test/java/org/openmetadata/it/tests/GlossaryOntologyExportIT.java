@@ -11,17 +11,22 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.factories.GlossaryTermTestFactory;
 import org.openmetadata.it.factories.GlossaryTestFactory;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
+import org.openmetadata.schema.api.configuration.rdf.RdfConfiguration;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
+import org.openmetadata.service.rdf.RdfUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +51,24 @@ public class GlossaryOntologyExportIT {
   private static final String RDF_XML_CONTENT_TYPE = "application/rdf+xml";
   private static final String N_TRIPLES_CONTENT_TYPE = "application/n-triples";
   private static final String JSON_LD_CONTENT_TYPE = "application/ld+json";
+
+  @BeforeAll
+  static void enableRdf() {
+    RdfConfiguration rdfConfig = new RdfConfiguration();
+    rdfConfig.setEnabled(true);
+    rdfConfig.setBaseUri(java.net.URI.create("https://open-metadata.org/"));
+    rdfConfig.setStorageType(RdfConfiguration.StorageType.FUSEKI);
+    rdfConfig.setRemoteEndpoint(java.net.URI.create(TestSuiteBootstrap.getFusekiEndpoint()));
+    rdfConfig.setUsername("admin");
+    rdfConfig.setPassword("test-admin");
+    rdfConfig.setDataset("openmetadata");
+    RdfUpdater.initialize(rdfConfig);
+  }
+
+  @AfterAll
+  static void disableRdf() {
+    RdfUpdater.disable();
+  }
 
   @Test
   void testExportGlossaryAsTurtle(TestNamespace ns) throws Exception {

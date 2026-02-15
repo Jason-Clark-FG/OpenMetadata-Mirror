@@ -435,6 +435,9 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
       })
   public Response getRelationTypeUsageCounts(
       @Context UriInfo uriInfo, @Context SecurityContext securityContext) {
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.VIEW_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContext());
     java.util.Map<String, Integer> result = repository.getRelationTypeUsageCounts();
     return Response.ok(result).build();
   }
@@ -454,6 +457,9 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
       })
   public Response getAllGlossaryTermsWithAssetsCount(
       @Context UriInfo uriInfo, @Context SecurityContext securityContext) {
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.VIEW_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContext());
     java.util.Map<String, Integer> result = repository.getAllGlossaryTermsWithAssetsCount();
     return Response.ok(result).build();
   }

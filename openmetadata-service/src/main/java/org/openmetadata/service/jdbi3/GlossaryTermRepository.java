@@ -318,7 +318,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
       relations.add(buildTermRelation(record));
     }
     for (EntityRelationshipRecord record : toRecords) {
-      relations.add(buildTermRelation(record));
+      TermRelation rel = buildTermRelation(record);
+      String inverse = getInverseRelationType(rel.getRelationType());
+      if (inverse != null) {
+        rel.setRelationType(inverse);
+      }
+      relations.add(rel);
     }
     relations.sort(Comparator.comparing(tr -> tr.getTerm().getFullyQualifiedName()));
     return relations;
@@ -599,9 +604,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   @Transaction
   public GlossaryTerm removeTermRelation(UUID id, UUID toTermId, String relationType) {
-    String actualRelationType = relationType != null ? relationType : "relatedTo";
-    deleteBidirectionalRelatedTo(id, toTermId, actualRelationType);
-    RdfUpdater.removeGlossaryTermRelation(id, toTermId, actualRelationType);
+    if (relationType != null) {
+      deleteBidirectionalRelatedTo(id, toTermId, relationType);
+      RdfUpdater.removeGlossaryTermRelation(id, toTermId, relationType);
+    } else {
+      deleteAllBidirectionalRelatedTo(id, toTermId);
+    }
     return get(null, id, getFields("relatedTerms"), Include.NON_DELETED, false);
   }
 
@@ -654,6 +662,14 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
       }
     } catch (Exception e) {
       // Settings not available, ignore
+    }
+    return null;
+  }
+
+  private String getInverseRelationType(String relationType) {
+    GlossaryTermRelationType config = getRelationTypeConfig(relationType);
+    if (config != null && config.getInverseRelation() != null) {
+      return config.getInverseRelation();
     }
     return null;
   }
@@ -728,12 +744,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
             targetMax = 1;
           }
           case ONE_TO_MANY -> {
-            sourceMax = 1;
-            targetMax = null;
-          }
-          case MANY_TO_ONE -> {
             sourceMax = null;
             targetMax = 1;
+          }
+          case MANY_TO_ONE -> {
+            sourceMax = 1;
+            targetMax = null;
           }
           case MANY_TO_MANY -> {
             sourceMax = null;
@@ -1503,10 +1519,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
             new TermRelation().withTerm(relatedRef).withRelationType(relationType);
         relatedTermsMap.computeIfAbsent(termId, k -> new ArrayList<>()).add(relation);
 
+        String inverseType = getInverseRelationType(relationType);
+        String reverseType = inverseType != null ? inverseType : relationType;
         EntityReference termRef =
             Entity.getEntityReferenceById(Entity.GLOSSARY_TERM, termId, Include.ALL);
         TermRelation reverseRelation =
-            new TermRelation().withTerm(termRef).withRelationType(relationType);
+            new TermRelation().withTerm(termRef).withRelationType(reverseType);
         relatedTermsMap.computeIfAbsent(relatedTermId, k -> new ArrayList<>()).add(reverseRelation);
       }
     }
@@ -1528,10 +1546,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
           relationType);
 
       if (processedPairs.add(pairKey)) {
+        String inverseType = getInverseRelationType(relationType);
+        String termRelType = inverseType != null ? inverseType : relationType;
         EntityReference relatedRef =
             Entity.getEntityReferenceById(Entity.GLOSSARY_TERM, relatedTermId, Include.ALL);
         TermRelation relation =
-            new TermRelation().withTerm(relatedRef).withRelationType(relationType);
+            new TermRelation().withTerm(relatedRef).withRelationType(termRelType);
         relatedTermsMap.computeIfAbsent(termId, k -> new ArrayList<>()).add(relation);
 
         EntityReference termRef =
@@ -1873,6 +1893,8 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
         RdfUpdater.addGlossaryTermRelation(
             origTerm.getId(), termRelation.getTerm().getId(), relationType);
       }
+
+      updatedTerm.setRelatedTerms(updatedRelated.isEmpty() ? null : updatedRelated);
     }
 
     /**
@@ -2106,6 +2128,18 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
             GLOSSARY_TERM,
             Relationship.RELATED_TO.ordinal(),
             relationType);
+  }
+
+  private void deleteAllBidirectionalRelatedTo(UUID termA, UUID termB) {
+    UUID from = termA;
+    UUID to = termB;
+    if (from.compareTo(to) > 0) {
+      from = termB;
+      to = termA;
+    }
+    daoCollection
+        .relationshipDAO()
+        .delete(from, GLOSSARY_TERM, to, GLOSSARY_TERM, Relationship.RELATED_TO.ordinal());
   }
 
   public ResultList<GlossaryTerm> searchGlossaryTermsById(
