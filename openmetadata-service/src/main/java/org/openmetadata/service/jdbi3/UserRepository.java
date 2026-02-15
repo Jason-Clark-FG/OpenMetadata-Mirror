@@ -1244,8 +1244,9 @@ public class UserRepository extends EntityRepository<User> {
       if (shouldCompare("personaPreferences")) updatePersonaPreferences(original, updated);
       if (shouldCompare("authenticationMechanism"))
         updateAuthenticationMechanism(original, updated);
-      // Invalidate policy cache for this user when roles/teams change
-      SubjectCache.invalidateUser(updated.getName());
+      if (shouldCompare("roles") || shouldCompare("teams")) {
+        SubjectCache.invalidateUser(updated.getName());
+      }
     }
 
     private void updateRoles(User original, User updated) {

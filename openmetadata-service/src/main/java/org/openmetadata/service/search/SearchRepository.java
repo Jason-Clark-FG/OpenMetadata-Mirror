@@ -719,6 +719,14 @@ public class SearchRepository {
         bulkSink.flushAndAwait(60); // Wait up to 60 seconds for completion
       } catch (Exception e) {
         LOG.error("Error during bulk entity update in search index for type {}", entityType, e);
+        for (EntityInterface entity : typeEntities) {
+          try {
+            updateEntityIndex(entity);
+          } catch (Exception ex) {
+            LOG.error(
+                "Error updating entity {} in search index", entity.getFullyQualifiedName(), ex);
+          }
+        }
       } finally {
         if (bulkSink != null) {
           try {

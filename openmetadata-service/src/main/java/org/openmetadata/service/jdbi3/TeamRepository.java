@@ -1249,11 +1249,22 @@ public class TeamRepository extends EntityRepository<Team> {
       if (shouldCompare("email")) recordChange("email", original.getEmail(), updated.getEmail());
       if (shouldCompare("users")) updateUsers(original, updated);
       if (shouldCompare("defaultRoles")) updateDefaultRoles(original, updated);
-      if (shouldCompare("parents")) updateParents(original, updated);
-      if (shouldCompare("children")) updateChildren(original, updated);
-      if (shouldCompare("policies")) updatePolicies(original, updated);
-      // Invalidate policy cache when team roles/policies/hierarchy changes
-      SubjectCache.invalidateAll();
+      boolean hierarchyOrPolicyChanged = false;
+      if (shouldCompare("parents")) {
+        updateParents(original, updated);
+        hierarchyOrPolicyChanged = true;
+      }
+      if (shouldCompare("children")) {
+        updateChildren(original, updated);
+        hierarchyOrPolicyChanged = true;
+      }
+      if (shouldCompare("policies")) {
+        updatePolicies(original, updated);
+        hierarchyOrPolicyChanged = true;
+      }
+      if (hierarchyOrPolicyChanged) {
+        SubjectCache.invalidateAll();
+      }
     }
 
     private void updateUsers(Team origTeam, Team updatedTeam) {

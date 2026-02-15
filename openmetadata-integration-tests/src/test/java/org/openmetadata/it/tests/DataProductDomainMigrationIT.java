@@ -807,7 +807,7 @@ public class DataProductDomainMigrationIT {
   }
 
   private void waitForSearchIndexUpdate() throws InterruptedException {
-    Thread.sleep(5000);
+    Thread.sleep(2000);
   }
 
   /**

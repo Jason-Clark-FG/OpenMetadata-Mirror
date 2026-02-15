@@ -158,10 +158,10 @@ qos:
 # Logging settings.
 # https://logback.qos.ch/manual/layouts.html#conversionWord
 logging:
-  level: ${LOG_LEVEL:-DEBUG }
+  level: ${LOG_LEVEL:-INFO}
   loggers:
     org.openmetadata.service.util.jdbi.OMSqlLogger:
-      level: ${SQL_LOG_LEVEL:-DEBUG}
+      level: ${SQL_LOG_LEVEL:-INFO}
       additive: false
       appenders:
         - type: file

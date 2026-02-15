@@ -359,7 +359,11 @@ public final class JsonUtils {
 
       ArrayNode filteredPatch = OBJECT_MAPPER.createArrayNode();
       for (JsonNode op : patchArray) {
-        String path = op.get("path").asText();
+        String path = op.path("path").asText(null);
+        if (path == null) {
+          filteredPatch.add(op);
+          continue;
+        }
         if (path.endsWith("href")
             || path.equals("/changeDescription")
             || path.startsWith("/changeDescription/")

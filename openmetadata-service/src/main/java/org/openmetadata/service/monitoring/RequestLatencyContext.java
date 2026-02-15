@@ -26,7 +26,7 @@ public class RequestLatencyContext {
   private static final String ENDPOINT = "endpoint";
   private static final String METHOD = "method";
   private static final String SLOW_REQUEST_THRESHOLD_PROPERTY = "requestLatencyThresholdMs";
-  private static final long DEFAULT_SLOW_REQUEST_THRESHOLD_MS = 0L;
+  private static final long DEFAULT_SLOW_REQUEST_THRESHOLD_MS = 1000L;
   private static final ThreadLocal<RequestContext> requestContext = new ThreadLocal<>();
   private static final ThreadLocal<Deque<ActivePhase>> phaseStack =
       ThreadLocal.withInitial(ArrayDeque::new);
@@ -38,8 +38,10 @@ public class RequestLatencyContext {
   private static final ConcurrentHashMap<String, Timer> rdfTimers = new ConcurrentHashMap<>();
   private static final ConcurrentHashMap<String, Timer> serverTimers = new ConcurrentHashMap<>();
 
+  private static final io.micrometer.core.instrument.MeterRegistry NOOP_REGISTRY =
+      new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
   private static final Timer DUMMY_TIMER =
-      Timer.builder("dummy.timer").register(Metrics.globalRegistry);
+      Timer.builder("internal.sample.stop").register(NOOP_REGISTRY);
   private static final long slowRequestThresholdNanos = resolveSlowRequestThresholdNanos();
 
   private static long resolveSlowRequestThresholdNanos() {

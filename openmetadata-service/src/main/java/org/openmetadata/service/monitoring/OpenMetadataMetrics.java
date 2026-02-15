@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 public class OpenMetadataMetrics {
   private final MeterRegistry meterRegistry;
 
-  private final Counter httpRequestCounter;
   private final DistributionSummary httpResponseSize;
 
   private final Timer jdbiQueryTimer;
@@ -37,11 +36,6 @@ public class OpenMetadataMetrics {
   @Inject
   public OpenMetadataMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
-
-    this.httpRequestCounter =
-        Counter.builder("http.server.requests.total")
-            .description("Total number of HTTP requests")
-            .register(meterRegistry);
 
     this.httpResponseSize =
         DistributionSummary.builder("http.server.response.size")

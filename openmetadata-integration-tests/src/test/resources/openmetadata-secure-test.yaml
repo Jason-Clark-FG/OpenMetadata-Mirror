@@ -13,7 +13,7 @@ server:
       port: 0
 qos:
   enabled: true
-  maxRequestCount: 150
+  maxRequestCount: 100
   maxSuspendedRequestCount: 1000
   maxSuspendSeconds: 30
 logging:
@@ -60,10 +60,10 @@ database:
   password:
   url: jdbc:postgresql://localhost:5432/openmetadata
   # Optimized for single JVM with method-level parallelization
-  # Dynamic factor 2.0 = ~32 threads on 16-core, need sufficient connections
-  maxSize: 150
-  minSize: 30
-  initialSize: 30
+  # Dynamic factor 1.0 = ~16 threads on 16-core, need sufficient connections
+  maxSize: 100
+  minSize: 20
+  initialSize: 20
   checkConnectionWhileIdle: true
   checkConnectionOnBorrow: false
   evictionInterval: 30 seconds
