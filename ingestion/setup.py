@@ -412,6 +412,7 @@ test_unit = {
     "pytest-cov",
     "pytest-order",
     "pytest-rerunfailures",
+    "pytest-retry",
     "dirty-equals",
     "faker==37.1.0",  # The version needs to be fixed to prevent flaky tests!
     # TODO: Remove once no unit test requires testcontainers
@@ -432,6 +433,7 @@ test = {
     "pytest==7.0.1",
     "pytest-cov",
     "pytest-order",
+    "pytest-retry",
     "dirty-equals",
     # install dbt dependency
     "collate-dbt-artifacts-parser",

@@ -25,7 +25,7 @@ from typing import (
     cast,
 )
 
-from sqlalchemy import Column, and_, case, column, func, literal
+from sqlalchemy import and_, case, column, func, literal
 from sqlalchemy.orm import DeclarativeMeta, Session
 
 if TYPE_CHECKING:
@@ -154,53 +154,12 @@ class Histogram(HybridMetric):
 
         return num_bins, bin_width
 
-    def get_sqlalchemy_histogram(
-        self,
-        col: Column,
-        num_bins: int,
-        starting_bin_bound: float,
-        ending_bin_bound: float,
-        bin_width: float,
-        session: Session,
-        sample: DeclarativeMeta,
-    ) -> Optional[HistogramResult]:
-        case_stmts = []
-        for bin_num in range(num_bins):
-            if bin_num < num_bins - 1:
-                condition = and_(col >= starting_bin_bound, col < ending_bin_bound)
-            else:
-                # for the last bin we won't add the upper bound
-                condition = and_(col >= starting_bin_bound)
-                case_stmts.append(
-                    func.sum(case([(condition, literal(1))], else_=literal(0))).label(
-                        self._format_bin_labels(starting_bin_bound)
-                    )
-                )
-                continue
-
-            case_stmts.append(
-                func.sum(case([(condition, literal(1))], else_=literal(0))).label(
-                    self._format_bin_labels(
-                        starting_bin_bound,
-                        ending_bin_bound,
-                    )
-                )
-            )
-            starting_bin_bound = ending_bin_bound
-            ending_bin_bound += bin_width
-
-        rows = session.query(*case_stmts).select_from(sample).first()
-
-        if rows:
-            return HistogramResult(boundaries=list(rows.keys()), frequencies=list(rows))
-        return None
-
     def fn(
         self,
         sample: Optional[DeclarativeMeta],
         res: Dict[str, Any],
         session: Optional[Session] = None,
-    ):
+    ) -> Optional[HistogramResult]:
         """
         Build the histogram query
         """
@@ -237,15 +196,36 @@ class Histogram(HybridMetric):
         else:
             col = column(self.col.name, self.col.type)  # type: ignore
 
-        return self.get_sqlalchemy_histogram(
-            col,
-            num_bins,
-            starting_bin_bound,
-            ending_bin_bound,
-            bin_width,
-            session,
-            sample,
-        )
+        case_stmts = []
+        for bin_num in range(num_bins):
+            if bin_num < num_bins - 1:
+                condition = and_(col >= starting_bin_bound, col < ending_bin_bound)
+            else:
+                # for the last bin we won't add the upper bound
+                condition = and_(col >= starting_bin_bound)
+                case_stmts.append(
+                    func.sum(case([(condition, literal(1))], else_=literal(0))).label(
+                        self._format_bin_labels(starting_bin_bound)
+                    )
+                )
+                continue
+
+            case_stmts.append(
+                func.sum(case([(condition, literal(1))], else_=literal(0))).label(
+                    self._format_bin_labels(
+                        starting_bin_bound,
+                        ending_bin_bound,
+                    )
+                )
+            )
+            starting_bin_bound = ending_bin_bound
+            ending_bin_bound += bin_width
+
+        rows = session.query(*case_stmts).select_from(sample).first()
+
+        if rows:
+            return HistogramResult(boundaries=list(rows.keys()), frequencies=list(rows))
+        return None
 
     def df_fn(
         self,

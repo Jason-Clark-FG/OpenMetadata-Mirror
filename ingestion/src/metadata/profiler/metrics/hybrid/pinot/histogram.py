@@ -12,12 +12,20 @@
 """
 PinotDB Histogram Metric definition
 """
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
-from sqlalchemy import and_, case, func, literal
+from sqlalchemy import and_, case, column, func, literal
 from sqlalchemy.orm import DeclarativeMeta, Session
 
 from metadata.profiler.metrics.hybrid.histogram import Histogram, HistogramResult
+from metadata.profiler.metrics.static.max import Max
+from metadata.profiler.metrics.static.min import Min
+from metadata.profiler.orm.functions.length import LenFn
+from metadata.profiler.orm.registry import (
+    is_concatenable,
+    is_quantifiable,
+    is_value_non_numeric,
+)
 
 
 class PinotDBHistogram(Histogram):
@@ -76,15 +84,11 @@ class PinotDBHistogram(Histogram):
 
     SCALE_FACTOR: int = 1000
 
-    def get_sqlalchemy_histogram(
+    def fn(
         self,
-        col,
-        num_bins: int,
-        starting_bin_bound: float,
-        ending_bin_bound: float,
-        bin_width: float,
-        session: Session,
-        sample: DeclarativeMeta,
+        sample: Optional[DeclarativeMeta],
+        res: Dict[str, Any],
+        session: Optional[Session] = None,
     ) -> Optional[HistogramResult]:
         """
         Build a histogram query using scaled integer comparisons.
@@ -93,6 +97,38 @@ class PinotDBHistogram(Histogram):
         all comparisons operate on integers, working around Pinot's restriction
         on CASE WHEN inside aggregate functions.
         """
+        if not session:
+            raise AttributeError(
+                "We are missing the session attribute to compute the Histogram."
+            )
+
+        if not is_quantifiable(self.col.type) or (
+            is_value_non_numeric(res.get(Min.name()))
+            or is_value_non_numeric(res.get(Max.name()))
+        ):
+            return None
+
+        # get the metric need for the freedman-diaconis rule
+        results = self._get_res(res)
+        if not results:
+            return None
+        res_iqr, res_row_count, res_min, res_max = results
+
+        num_bins, bin_width = self._get_bins(res_iqr, res_row_count, res_min, res_max)
+
+        if num_bins == 0:
+            return None
+
+        # set starting and ending bin bounds for the first bin
+        starting_bin_bound = res_min
+        res_min = cast(Union[float, int], res_min)  # satisfy mypy
+        ending_bin_bound = res_min + bin_width
+
+        if is_concatenable(self.col.type):
+            col = LenFn(column(self.col.name, self.col.type))
+        else:
+            col = column(self.col.name, self.col.type)  # type: ignore
+
         scaled_col = col * self.SCALE_FACTOR
 
         case_stmts: List = []

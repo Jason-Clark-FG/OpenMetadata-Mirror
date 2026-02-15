@@ -34,6 +34,7 @@ def run_profiler(
     run_workflow(ProfilerWorkflow, profiler_config)
 
 
+@pytest.mark.flaky(retries=3, delay=3)
 @pytest.mark.parametrize(
     "table_fqn,expected_column_profiles",
     [

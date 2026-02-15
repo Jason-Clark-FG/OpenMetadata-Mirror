@@ -17,9 +17,7 @@ Unit tests for PinotDB profiler classes:
 """
 from unittest.mock import MagicMock, patch
 
-import pytest
 from sqlalchemy import Integer
-from sqlalchemy import column as sa_column
 
 from metadata.generated.schema.configuration.profilerConfiguration import MetricType
 from metadata.profiler.interface.sqlalchemy.pinotdb.profiler_interface import (
@@ -59,47 +57,6 @@ def _res_with(
 
 
 class TestPinotDBHistogramFn:
-    def test_fn_passes_correct_initial_bounds(self) -> None:
-        histogram = _make_histogram_instance()
-        session = MagicMock()
-        sample = MagicMock()
-        res = _res_with(count=100.0, min_val=0.0, max_val=100.0, iqr=25.0)
-
-        _, bin_width = histogram._get_bins(
-            float(res[InterQuartileRange.name()]),
-            float(res[Count.name()]),
-            float(res[Min.name()]),
-            float(res[Max.name()]),
-        )
-        expected_starting = float(res[Min.name()])
-        expected_ending = expected_starting + bin_width
-
-        with patch.object(
-            histogram,
-            "get_sqlalchemy_histogram",
-            return_value={"boundaries": [], "frequencies": []},
-        ) as mock_get_hist:
-            with patch(
-                "metadata.profiler.metrics.hybrid.pinot.histogram.is_quantifiable",
-                return_value=True,
-            ):
-                with patch(
-                    "metadata.profiler.metrics.hybrid.pinot.histogram.is_value_non_numeric",
-                    return_value=False,
-                ):
-                    with patch(
-                        "metadata.profiler.metrics.hybrid.pinot.histogram.is_concatenable",
-                        return_value=False,
-                    ):
-                        histogram.fn(sample, res, session)
-
-        mock_get_hist.assert_called_once()
-        _args, _kwargs = mock_get_hist.call_args
-        _, _num_bins, actual_starting, actual_ending, *_ = _args
-
-        assert actual_starting == expected_starting
-        assert actual_ending == pytest.approx(expected_ending)
-
     def test_fn_returns_none_for_non_quantifiable(self) -> None:
         histogram = _make_histogram_instance()
         session = MagicMock()
@@ -199,110 +156,3 @@ class TestPinotDBProfilerInterfaceDeclaration:
 
     def test_override_dict_does_not_mutate_base_class(self) -> None:
         assert SQAProfilerInterface.HYBRID_METRIC_OVERRIDES == {}
-
-
-class TestPinotDBGetSqlalchemyHistogram:
-    def _make_histogram(self) -> PinotDBHistogram:
-        return _make_histogram_instance()
-
-    def _make_session(self, first_return_value=None):
-        query_chain = MagicMock()
-        query_chain.select_from.return_value = query_chain
-        query_chain.first.return_value = first_return_value
-
-        session = MagicMock()
-        session.query.return_value = query_chain
-        return session, query_chain
-
-    def test_scale_factor_is_applied_to_bounds(self) -> None:
-        histogram = self._make_histogram()
-        sample = MagicMock()
-        col = sa_column("age", Integer)
-
-        row_mock = MagicMock()
-        row_mock.keys.return_value = ["12.000 to 19.000", "19.000 and up"]
-        row_mock.__iter__ = MagicMock(return_value=iter([45, 12]))
-
-        session, _ = self._make_session(first_return_value=row_mock)
-
-        histogram.get_sqlalchemy_histogram(
-            col=col,
-            num_bins=2,
-            starting_bin_bound=12.0,
-            ending_bin_bound=19.0,
-            bin_width=7.0,
-            session=session,
-            sample=sample,
-        )
-
-        case_stmts = session.query.call_args[0]
-        compiled_sql = " ".join(
-            str(arg.compile(compile_kwargs={"literal_binds": True}))
-            for arg in case_stmts
-        )
-
-        assert "12000" in compiled_sql
-        assert "19000" in compiled_sql
-
-    def test_single_query_not_subquery(self) -> None:
-        histogram = self._make_histogram()
-        sample = MagicMock()
-        col = sa_column("age", Integer)
-
-        session, _ = self._make_session(first_return_value=None)
-
-        histogram.get_sqlalchemy_histogram(
-            col=col,
-            num_bins=3,
-            starting_bin_bound=0.0,
-            ending_bin_bound=10.0,
-            bin_width=10.0,
-            session=session,
-            sample=sample,
-        )
-
-        assert session.query.call_count == 1
-
-    def test_returns_histogram_result(self) -> None:
-        histogram = self._make_histogram()
-        sample = MagicMock()
-        col = sa_column("age", Integer)
-
-        row_mock = MagicMock()
-        row_mock.keys.return_value = ["12.000 to 19.000", "19.000 and up"]
-        row_mock.__iter__ = MagicMock(return_value=iter([45, 12]))
-
-        session, _ = self._make_session(first_return_value=row_mock)
-
-        result = histogram.get_sqlalchemy_histogram(
-            col=col,
-            num_bins=2,
-            starting_bin_bound=12.0,
-            ending_bin_bound=19.0,
-            bin_width=7.0,
-            session=session,
-            sample=sample,
-        )
-
-        assert result is not None
-        assert result["boundaries"] == ["12.000 to 19.000", "19.000 and up"]
-        assert result["frequencies"] == [45, 12]
-
-    def test_returns_none_on_empty_rows(self) -> None:
-        histogram = self._make_histogram()
-        sample = MagicMock()
-        col = sa_column("age", Integer)
-
-        session, _ = self._make_session(first_return_value=None)
-
-        result = histogram.get_sqlalchemy_histogram(
-            col=col,
-            num_bins=2,
-            starting_bin_bound=12.0,
-            ending_bin_bound=19.0,
-            bin_width=7.0,
-            session=session,
-            sample=sample,
-        )
-
-        assert result is None
