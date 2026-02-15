@@ -804,7 +804,13 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     nodes.add(rootNode);
     visited.add(rootTerm.getId());
 
-    buildGraph(rootTerm, depth, relationTypes, visited, nodes, edges);
+    Map<UUID, GlossaryTerm> prefetchedTerms = new HashMap<>();
+    prefetchedTerms.put(rootTerm.getId(), rootTerm);
+    if (depth > 1) {
+      prefetchGraphTerms(rootTerm, depth, prefetchedTerms);
+    }
+
+    buildGraph(rootTerm, depth, relationTypes, visited, nodes, edges, prefetchedTerms);
 
     graph.put("nodes", nodes);
     graph.put("edges", edges);
@@ -813,13 +819,41 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   private static final int MAX_GRAPH_NODES = 200;
 
+  private void prefetchGraphTerms(
+      GlossaryTerm term, int depth, Map<UUID, GlossaryTerm> prefetchedTerms) {
+    if (depth <= 1 || term.getRelatedTerms() == null || prefetchedTerms.size() >= MAX_GRAPH_NODES) {
+      return;
+    }
+    List<UUID> toFetch = new ArrayList<>();
+    for (TermRelation relation : term.getRelatedTerms()) {
+      UUID relatedId = relation.getTerm().getId();
+      if (!prefetchedTerms.containsKey(relatedId)) {
+        toFetch.add(relatedId);
+      }
+    }
+    for (UUID fetchId : toFetch) {
+      if (prefetchedTerms.size() >= MAX_GRAPH_NODES) {
+        break;
+      }
+      try {
+        GlossaryTerm fetched =
+            get(null, fetchId, getFields("relatedTerms"), Include.NON_DELETED, false);
+        prefetchedTerms.put(fetchId, fetched);
+        prefetchGraphTerms(fetched, depth - 1, prefetchedTerms);
+      } catch (Exception e) {
+        LOG.debug("Failed to prefetch term {}: {}", fetchId, e.getMessage());
+      }
+    }
+  }
+
   private void buildGraph(
       GlossaryTerm term,
       int depth,
       List<String> relationTypes,
       Set<UUID> visited,
       List<Map<String, Object>> nodes,
-      List<Map<String, Object>> edges) {
+      List<Map<String, Object>> edges,
+      Map<UUID, GlossaryTerm> prefetchedTerms) {
     if (depth <= 0 || term.getRelatedTerms() == null) {
       return;
     }
@@ -847,12 +881,10 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
         nodes.add(node);
 
         if (depth > 1) {
-          try {
-            GlossaryTerm relatedTerm =
-                get(null, relatedTermId, getFields("relatedTerms"), Include.NON_DELETED, false);
-            buildGraph(relatedTerm, depth - 1, relationTypes, visited, nodes, edges);
-          } catch (Exception e) {
-            LOG.debug("Failed to fetch related term {}: {}", relatedTermId, e.getMessage());
+          GlossaryTerm relatedTerm = prefetchedTerms.get(relatedTermId);
+          if (relatedTerm != null) {
+            buildGraph(
+                relatedTerm, depth - 1, relationTypes, visited, nodes, edges, prefetchedTerms);
           }
         }
       }

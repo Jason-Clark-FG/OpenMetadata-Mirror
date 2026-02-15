@@ -2338,7 +2338,10 @@ public class RdfRepository {
       return JsonUtils.pojoToJson(response);
     } catch (Exception e) {
       LOG.error("Error debugging glossary term relations", e);
-      return "{\"error\": \"" + e.getMessage() + "\"}";
+      com.fasterxml.jackson.databind.node.ObjectNode errorNode =
+          JsonUtils.getObjectMapper().createObjectNode();
+      errorNode.put("error", e.getMessage() != null ? e.getMessage() : "Unknown error");
+      return JsonUtils.pojoToJson(errorNode);
     }
   }
 

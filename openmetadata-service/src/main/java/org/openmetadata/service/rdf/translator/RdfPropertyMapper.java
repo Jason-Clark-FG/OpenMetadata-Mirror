@@ -353,11 +353,12 @@ public class RdfPropertyMapper {
       GlossaryTerm term =
           Entity.getEntityByName(Entity.GLOSSARY_TERM, termFqn, "id", Include.NON_DELETED, false);
       UUID termId = term != null ? term.getId() : null;
-      glossaryTermIdCache.put(termFqn, termId);
+      if (termId != null) {
+        glossaryTermIdCache.put(termFqn, termId);
+      }
       return termId;
     } catch (Exception e) {
       LOG.debug("Could not resolve glossary term id for FQN {}", termFqn);
-      glossaryTermIdCache.put(termFqn, null);
       return null;
     }
   }

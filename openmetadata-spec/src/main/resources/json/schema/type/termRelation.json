@@ -7,10 +7,10 @@
   "javaType": "org.openmetadata.schema.type.TermRelation",
   "properties": {
     "relationType": {
-      "description": "Type of the relation (e.g., 'broader', 'narrower', 'synonym', 'related'). Defaults to 'related' for backward compatibility.",
+      "description": "Type of the relation (e.g., 'broader', 'narrower', 'synonym', 'relatedTo'). Defaults to 'relatedTo' for backward compatibility.",
       "type": "string",
       "pattern": "^[a-zA-Z][a-zA-Z0-9]*$",
-      "default": "related"
+      "default": "relatedTo"
     },
     "term": {
       "description": "Reference to the related glossary term.",
