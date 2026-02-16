@@ -211,6 +211,7 @@ const AuditLogsPage = () => {
   const { search: searchComponent, clearSearch } = useSearch({
     searchPlaceholder: t('label.search-audit-logs'),
     onSearchChange: handleSearchChange,
+    testId: 'audit-log-search',
   });
 
   const handleClearFilters = useCallback(() => {
