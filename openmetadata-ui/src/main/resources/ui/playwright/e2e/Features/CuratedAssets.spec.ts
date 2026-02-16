@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { test as base, expect, Page } from '@playwright/test';
-import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { UserClass } from '../../support/user/UserClass';
@@ -106,7 +105,7 @@ base.afterAll('Cleanup', async ({ browser }) => {
   await afterAction();
 });
 
-test.describe('Curated Assets Widget', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
+test.describe('Curated Assets Widget', () => {
   test.beforeAll(async ({ page }) => {
     test.slow(true);
 
