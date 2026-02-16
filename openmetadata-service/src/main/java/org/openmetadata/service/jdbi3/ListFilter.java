@@ -50,6 +50,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getTestSuiteFQNCondition());
     conditions.add(getDomainCondition(tableName));
     conditions.add(getOwnerCondition(tableName));
+    conditions.add(getOwnedByCondition());
     conditions.add(getTierCondition(tableName));
     conditions.add(getEntityFQNHashCondition());
     conditions.add(getTestCaseResolutionStatusType());
@@ -406,6 +407,28 @@ conditions.add(getTaskStatusCondition(tableName));
     return String.format(
         "(%s IN (SELECT entity_relationship.toId FROM entity_relationship WHERE entity_relationship.fromEntity IN ('user', 'team') AND entity_relationship.fromId = :ownerIdParam AND relation=8))",
         entityIdColumn);
+  }
+
+  /**
+   * Filter tasks by ownership of their target entity (about).
+   * This returns tasks where the entity linked through MENTIONED_IN is owned by any of the
+   * provided user/team IDs.
+   */
+  private String getOwnedByCondition() {
+    String ownedByIds = getQueryParam("ownedByIds");
+    if (ownedByIds == null) {
+      return "";
+    }
+
+    return String.format(
+        "(id IN (SELECT taskRel.toId FROM entity_relationship taskRel "
+            + "INNER JOIN entity_relationship ownerRel ON ownerRel.toId = taskRel.fromId "
+            + "WHERE taskRel.toEntity = 'task' "
+            + "AND taskRel.relation = %d "
+            + "AND ownerRel.fromEntity IN ('user','team') "
+            + "AND ownerRel.relation = %d "
+            + "AND ownerRel.fromId IN (%s)))",
+        Relationship.MENTIONED_IN.ordinal(), Relationship.OWNS.ordinal(), ownedByIds);
   }
 
   private String getTierCondition(String tableName) {

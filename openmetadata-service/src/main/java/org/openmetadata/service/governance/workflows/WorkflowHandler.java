@@ -69,6 +69,12 @@ public class WorkflowHandler {
   private static WorkflowHandler instance;
   @Getter private static volatile boolean initialized = false;
 
+  private enum WorkflowTaskKind {
+    TASK_ENTITY,
+    LEGACY_THREAD,
+    UNKNOWN
+  }
+
   private WorkflowHandler(OpenMetadataApplicationConfig config) {
     ProcessEngineConfiguration processEngineConfiguration =
         new StandaloneProcessEngineConfiguration()
@@ -569,12 +575,18 @@ public class WorkflowHandler {
             LOG.debug(
                 "[WorkflowTask] SUCCESS: Multi-approval task '{}' recorded vote, waiting for more votes",
                 customTaskId);
-            // Update entity to remove the task from the current voter's feed
-            // Check if this is a Task entity (new system) or Thread entity (legacy)
-            if (isTaskEntity(customTaskId)) {
+            // Update entity to remove the task from the current voter's feed based on backing
+            // entity type (new Task entity or legacy Thread entity).
+            WorkflowTaskKind taskKind = resolveWorkflowTaskKind(customTaskId);
+            if (taskKind == WorkflowTaskKind.TASK_ENTITY) {
               removeTaskFromVoterFeedForTaskEntity(task, customTaskId, variables);
-            } else {
+            } else if (taskKind == WorkflowTaskKind.LEGACY_THREAD) {
               removeTaskFromVoterFeed(task, customTaskId, variables);
+            } else {
+              LOG.warn(
+                  "[WorkflowTask] Could not resolve backing entity kind for customTaskId='{}'. "
+                      + "Skipping voter feed update.",
+                  customTaskId);
             }
           }
         } else {
@@ -693,48 +705,7 @@ public class WorkflowHandler {
               taskThread.getId());
         }
       }
-
-      // Also update Flowable task to remove the user from candidates
-      TaskService taskService = processEngine.getTaskService();
-      if (flowableTask != null) {
-        // Store voted users in Flowable variables
-        @SuppressWarnings("unchecked")
-        List<String> votedUsers =
-            (List<String>) taskService.getVariable(flowableTask.getId(), "votedUsers");
-        if (votedUsers == null) {
-          votedUsers = new ArrayList<>();
-        }
-
-        if (!votedUsers.contains(currentUser)) {
-          votedUsers.add(currentUser);
-          taskService.setVariable(flowableTask.getId(), "votedUsers", votedUsers);
-          LOG.debug(
-              "[WorkflowTask] Added user '{}' to voted users list for Flowable task", currentUser);
-        }
-
-        // Remove the user from Flowable task assignees if they're directly assigned
-        try {
-          // If current user is the assignee, unassign them
-          String currentAssignee = flowableTask.getAssignee();
-          if (currentUser.equals(currentAssignee)) {
-            taskService.unclaim(flowableTask.getId());
-            LOG.debug(
-                "[WorkflowTask] Unclaimed Flowable task '{}' from user '{}'",
-                flowableTask.getId(),
-                currentUser);
-          }
-
-          // Remove from candidate users if present
-          taskService.deleteCandidateUser(flowableTask.getId(), currentUser);
-          LOG.debug(
-              "[WorkflowTask] Removed user '{}' from candidate users for Flowable task '{}'",
-              currentUser,
-              flowableTask.getId());
-
-        } catch (Exception e) {
-          LOG.debug("[WorkflowTask] Could not update Flowable task assignees: {}", e.getMessage());
-        }
-      }
+      updateFlowableVoteTracking(flowableTask, currentUser);
     } catch (Exception e) {
       LOG.error(
           "[WorkflowTask] Failed to update task voter information for task '{}': {}",
@@ -746,6 +717,10 @@ public class WorkflowHandler {
   }
 
   private String extractCurrentUser(Map<String, Object> variables) {
+    if (variables == null || variables.isEmpty()) {
+      return null;
+    }
+
     // Try direct key first
     String currentUser = (String) variables.get("updatedBy");
     if (currentUser != null) {
@@ -763,6 +738,30 @@ public class WorkflowHandler {
     }
 
     return null;
+  }
+
+  private WorkflowTaskKind resolveWorkflowTaskKind(UUID customTaskId) {
+    if (isTaskEntity(customTaskId)) {
+      return WorkflowTaskKind.TASK_ENTITY;
+    }
+    if (isLegacyThreadTask(customTaskId)) {
+      return WorkflowTaskKind.LEGACY_THREAD;
+    }
+    return WorkflowTaskKind.UNKNOWN;
+  }
+
+  private boolean isLegacyThreadTask(UUID customTaskId) {
+    try {
+      FeedRepository feedRepository = Entity.getFeedRepository();
+      Thread thread = feedRepository.get(customTaskId);
+      return thread != null && thread.getTask() != null;
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not find legacy Thread task with ID '{}': {}",
+          customTaskId,
+          e.getMessage());
+      return false;
+    }
   }
 
   /**
@@ -867,42 +866,44 @@ public class WorkflowHandler {
               taskEntity.getId());
         }
       }
-
-      // Also update Flowable task to track voted users
-      if (flowableTask != null) {
-        TaskService taskService = processEngine.getTaskService();
-
-        @SuppressWarnings("unchecked")
-        List<String> votedUsers =
-            (List<String>) taskService.getVariable(flowableTask.getId(), "votedUsers");
-        if (votedUsers == null) {
-          votedUsers = new ArrayList<>();
-        }
-
-        if (!votedUsers.contains(currentUser)) {
-          votedUsers.add(currentUser);
-          taskService.setVariable(flowableTask.getId(), "votedUsers", votedUsers);
-          LOG.debug(
-              "[WorkflowTask] Added user '{}' to voted users list for Flowable task", currentUser);
-        }
-
-        // Remove user from Flowable task candidates
-        try {
-          String currentAssignee = flowableTask.getAssignee();
-          if (currentUser.equals(currentAssignee)) {
-            taskService.unclaim(flowableTask.getId());
-          }
-          taskService.deleteCandidateUser(flowableTask.getId(), currentUser);
-        } catch (Exception e) {
-          LOG.debug("[WorkflowTask] Could not update Flowable task assignees: {}", e.getMessage());
-        }
-      }
+      updateFlowableVoteTracking(flowableTask, currentUser);
     } catch (Exception e) {
       LOG.error(
           "[WorkflowTask] Failed to update task voter information for Task entity '{}': {}",
           customTaskId,
           e.getMessage(),
           e);
+    }
+  }
+
+  private void updateFlowableVoteTracking(Task flowableTask, String currentUser) {
+    if (flowableTask == null || currentUser == null) {
+      return;
+    }
+
+    TaskService taskService = processEngine.getTaskService();
+    @SuppressWarnings("unchecked")
+    List<String> votedUsers =
+        (List<String>) taskService.getVariable(flowableTask.getId(), "votedUsers");
+    if (votedUsers == null) {
+      votedUsers = new ArrayList<>();
+    }
+
+    if (!votedUsers.contains(currentUser)) {
+      votedUsers.add(currentUser);
+      taskService.setVariable(flowableTask.getId(), "votedUsers", votedUsers);
+      LOG.debug(
+          "[WorkflowTask] Added user '{}' to voted users list for Flowable task", currentUser);
+    }
+
+    try {
+      String currentAssignee = flowableTask.getAssignee();
+      if (currentUser.equals(currentAssignee)) {
+        taskService.unclaim(flowableTask.getId());
+      }
+      taskService.deleteCandidateUser(flowableTask.getId(), currentUser);
+    } catch (Exception e) {
+      LOG.debug("[WorkflowTask] Could not update Flowable task assignees: {}", e.getMessage());
     }
   }
 
@@ -1017,6 +1018,40 @@ public class WorkflowHandler {
     } catch (Exception e) {
       LOG.debug("Task {} not found or already completed", customTaskId);
       return false;
+    }
+  }
+
+  /**
+   * Returns true when there is an active Flowable runtime task for the given custom task ID.
+   * This is used during migration cutover where legacy tasks might be converted to Task entities
+   * before `workflowInstanceId` is backfilled.
+   */
+  public boolean hasActiveRuntimeTask(UUID customTaskId) {
+    return isTaskStillOpen(customTaskId);
+  }
+
+  /**
+   * Returns workflow instance ID (if available as runtime variable) for an active task.
+   * Returns null if task is not active or the variable is missing.
+   */
+  public UUID getRuntimeWorkflowInstanceId(UUID customTaskId) {
+    try {
+      Task task = getTaskFromCustomTaskId(customTaskId);
+      if (task == null) {
+        return null;
+      }
+      Object workflowInstanceId =
+          processEngine.getTaskService().getVariable(task.getId(), "workflowInstanceId");
+      if (workflowInstanceId == null) {
+        return null;
+      }
+      return UUID.fromString(workflowInstanceId.toString());
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not fetch runtime workflowInstanceId for customTaskId '{}': {}",
+          customTaskId,
+          e.getMessage());
+      return null;
     }
   }
 

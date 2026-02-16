@@ -13,7 +13,7 @@
 
 package org.openmetadata.service.resources.tasks;
 
-import static org.openmetadata.service.jdbi3.RoleRepository.DOMAIN_ONLY_ACCESS_ROLE;
+import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
 
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
@@ -75,6 +75,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
+import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.resources.Collection;
 import org.openmetadata.service.resources.EntityResource;
@@ -171,6 +172,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     if (type != null) {
       filter.addQueryParam("taskType", type.value());
     }
+    repository.addDomainFilter(filter, domain);
     if (priority != null) {
       filter.addQueryParam("taskPriority", priority.value());
     }
@@ -318,6 +320,66 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
 
     return new ResultList<>(allTasksList);
+  }
+
+  @GET
+  @Path("/owned")
+  @Operation(
+      operationId = "listMyOwnedTasks",
+      summary = "List tasks for entities owned by the current user",
+      description =
+          "Get tasks for entities owned by the current user or their teams. "
+              + "Includes tasks where the task target entity is owned by the user or their teams.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of owned tasks",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TaskList.class)))
+      })
+  public ResultList<Task> listMyOwnedTasks(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Fields to include in response", schema = @Schema(type = "string"))
+          @QueryParam("fields")
+          String fieldsParam,
+      @Parameter(description = "Filter by task status") @QueryParam("status")
+          TaskEntityStatus status,
+      @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
+          @DefaultValue("10")
+          @QueryParam("limit")
+          @Min(0)
+          @Max(1000000)
+          int limitParam,
+      @Parameter(description = "Returns list of tasks before this cursor") @QueryParam("before")
+          String before,
+      @Parameter(description = "Returns list of tasks after this cursor") @QueryParam("after")
+          String after,
+      @Parameter(description = "Include deleted tasks")
+          @QueryParam("include")
+          @DefaultValue("non-deleted")
+          Include include) {
+    String userName = securityContext.getUserPrincipal().getName();
+    UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
+    User user = userRepository.getByName(uriInfo, userName, userRepository.getFields("email"));
+    List<EntityReference> groupTeams =
+        userRepository.getGroupTeams(uriInfo, securityContext, user.getEmail());
+
+    List<String> ownerIds = new ArrayList<>();
+    ownerIds.add("'" + user.getId() + "'");
+    if (groupTeams != null) {
+      ownerIds.addAll(groupTeams.stream().map(team -> "'" + team.getId() + "'").toList());
+    }
+
+    ListFilter filter = new ListFilter(include);
+    if (status != null) {
+      filter.addQueryParam("taskStatus", status.value());
+    }
+    filter.addQueryParam("ownedByIds", String.join(",", ownerIds));
+
+    return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
   }
 
   @GET
@@ -543,7 +605,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
   private void enforceDomainOnlyPolicyForTask(SecurityContext securityContext, Task task) {
     SubjectContext subjectContext = getSubjectContext(securityContext);
 
-    if (subjectContext.isAdmin() || !subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE)) {
+    if (subjectContext.isAdmin() || !subjectContext.hasDomainOnlyAccessRole()) {
       return;
     }
 
@@ -552,32 +614,45 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       return;
     }
 
-    try {
-      EntityReference targetDomain = getEntityDomain(about);
-      if (targetDomain == null) {
-        return;
-      }
+    List<EntityReference> targetDomains = getEntityDomains(about);
+    if (nullOrEmpty(targetDomains)) {
+      throw new AuthorizationException(
+          String.format(
+              "User with domain-only access cannot create task on entity '%s' with no domain",
+              about.getFullyQualifiedName()));
+    }
 
-      List<EntityReference> userDomains = subjectContext.getUserDomains();
-      boolean hasMatchingDomain =
-          userDomains.stream().anyMatch(d -> d.getId().equals(targetDomain.getId()));
+    List<EntityReference> userDomains = subjectContext.getUserDomains();
+    if (nullOrEmpty(userDomains)) {
+      throw new AuthorizationException(
+          String.format(
+              "User with domain-only access has no assigned domains and cannot create task on '%s'",
+              about.getFullyQualifiedName()));
+    }
 
-      if (!hasMatchingDomain) {
-        throw new AuthorizationException(
-            String.format(
-                "User with domain-only access cannot create task on entity '%s' in domain '%s'",
-                about.getFullyQualifiedName(), targetDomain.getFullyQualifiedName()));
-      }
-    } catch (AuthorizationException e) {
-      throw e;
-    } catch (Exception e) {
-      LOG.debug(
-          "Could not check domain policy for task on entity {}: {}", about.getId(), e.getMessage());
+    boolean hasMatchingDomain =
+        targetDomains.stream().anyMatch(targetDomain -> isDomainAllowed(targetDomain, userDomains));
+
+    if (!hasMatchingDomain) {
+      throw new AuthorizationException(
+          String.format(
+              "User with domain-only access cannot create task on entity '%s' in domains [%s]",
+              about.getFullyQualifiedName(),
+              targetDomains.stream()
+                  .map(EntityReference::getFullyQualifiedName)
+                  .filter(name -> !nullOrEmpty(name))
+                  .reduce((a, b) -> a + ", " + b)
+                  .orElse("unknown")));
     }
   }
 
+  private boolean isDomainAllowed(
+      EntityReference targetDomain, List<EntityReference> allowedDomains) {
+    return allowedDomains.stream().anyMatch(domain -> domain.getId().equals(targetDomain.getId()));
+  }
+
   @SuppressWarnings("unchecked")
-  private EntityReference getEntityDomain(EntityReference entityRef) {
+  private List<EntityReference> getEntityDomains(EntityReference entityRef) {
     try {
       EntityRepository<?> repo = Entity.getEntityRepository(entityRef.getType());
       Object entity = repo.get(null, entityRef.getId(), repo.getFields("domains"));
@@ -585,15 +660,18 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       java.lang.reflect.Method getDomainsMethod = entity.getClass().getMethod("getDomains");
       Object domains = getDomainsMethod.invoke(entity);
       if (domains instanceof List<?> domainList && !domainList.isEmpty()) {
-        Object first = domainList.get(0);
-        if (first instanceof EntityReference) {
-          return (EntityReference) first;
-        }
+        return domainList.stream()
+            .filter(EntityReference.class::isInstance)
+            .map(EntityReference.class::cast)
+            .toList();
       }
     } catch (Exception e) {
-      LOG.debug("Could not get domains for entity {}: {}", entityRef.getId(), e.getMessage());
+      throw new AuthorizationException(
+          String.format(
+              "Could not evaluate domain policy for entity '%s': %s",
+              entityRef.getId(), e.getMessage()));
     }
-    return null;
+    return List.of();
   }
 
   @PATCH

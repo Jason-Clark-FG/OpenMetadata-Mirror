@@ -70,6 +70,11 @@ public class TaskService extends EntityServiceBase<Task> {
     return list(params);
   }
 
+  public ListResponse<Task> listByDomain(String domainFqn, int limit) throws OpenMetadataException {
+    ListParams params = new ListParams().setDomain(domainFqn).setLimit(limit);
+    return list(params);
+  }
+
   public ListResponse<Task> listWithFilters(Map<String, String> filters)
       throws OpenMetadataException {
     RequestOptions options = RequestOptions.builder().queryParams(filters).build();
@@ -111,6 +116,21 @@ public class TaskService extends EntityServiceBase<Task> {
 
   public ListResponse<Task> listCreated(TaskEntityStatus status) throws OpenMetadataException {
     String path = basePath + "/created";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (status != null) {
+      optionsBuilder.queryParam("status", status.value());
+    }
+    String responseStr =
+        httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
+    return deserializeListResponse(responseStr);
+  }
+
+  public ListResponse<Task> listOwned() throws OpenMetadataException {
+    return listOwned(null);
+  }
+
+  public ListResponse<Task> listOwned(TaskEntityStatus status) throws OpenMetadataException {
+    String path = basePath + "/owned";
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     if (status != null) {
       optionsBuilder.queryParam("status", status.value());

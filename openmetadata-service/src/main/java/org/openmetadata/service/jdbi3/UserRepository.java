@@ -610,7 +610,7 @@ public class UserRepository extends EntityRepository<User> {
   private List<EntityReference> getGroupTeams(List<EntityReference> teams) {
     Set<EntityReference> result = new HashSet<>();
     for (EntityReference t : teams) {
-      Team team = Entity.getEntity(t, "", Include.ALL);
+      Team team = Entity.getEntity(Entity.TEAM, t.getId(), "teamType", Include.ALL);
       if (TeamType.GROUP.equals(team.getTeamType())) {
         result.add(t);
       } else {

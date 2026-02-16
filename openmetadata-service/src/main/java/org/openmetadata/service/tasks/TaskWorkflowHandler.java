@@ -89,8 +89,9 @@ public class TaskWorkflowHandler {
         approved,
         user);
 
-    // Check if task is managed by a Flowable workflow
-    boolean isWorkflowManaged = task.getWorkflowInstanceId() != null;
+    // During migration cutover, legacy workflow tasks can be converted to Task entities before
+    // workflowInstanceId is backfilled. Runtime-task presence is the source of truth in that case.
+    boolean isWorkflowManaged = isWorkflowManaged(task);
 
     if (isWorkflowManaged) {
       return resolveWorkflowTask(task, approved, newValue, user);
@@ -611,9 +612,24 @@ public class TaskWorkflowHandler {
    * Check if a task supports multi-approval.
    */
   public boolean supportsMultiApproval(Task task) {
-    if (task.getWorkflowInstanceId() == null) {
+    if (!isWorkflowManaged(task)) {
       return false;
     }
     return WorkflowHandler.getInstance().hasMultiApprovalSupport(task.getId());
+  }
+
+  private boolean isWorkflowManaged(Task task) {
+    if (task.getWorkflowInstanceId() != null) {
+      return true;
+    }
+    try {
+      return WorkflowHandler.getInstance().hasActiveRuntimeTask(task.getId());
+    } catch (Exception e) {
+      LOG.debug(
+          "[TaskWorkflowHandler] Could not determine runtime workflow state for task '{}': {}",
+          task.getId(),
+          e.getMessage());
+      return false;
+    }
   }
 }

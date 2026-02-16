@@ -23,7 +23,9 @@ import static org.openmetadata.service.Entity.USER;
 import static org.openmetadata.service.jdbi3.UserRepository.TEAMS_FIELD;
 
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,7 @@ import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
@@ -60,6 +63,7 @@ import org.openmetadata.service.util.FullyQualifiedName;
 public class TaskRepository extends EntityRepository<Task> {
 
   public static final String COLLECTION_PATH = "/v1/tasks";
+  private static final String NO_MATCH_DOMAIN_ID = "'00000000-0000-0000-0000-000000000000'";
   public static final String FIELD_ASSIGNEES = "assignees";
   public static final String FIELD_REVIEWERS = "reviewers";
   public static final String FIELD_WATCHERS = "watchers";
@@ -82,6 +86,52 @@ public class TaskRepository extends EntityRepository<Task> {
     this.allowedFields.add(FIELD_DOMAINS);
     this.allowedFields.add(FIELD_CREATED_BY);
     this.allowedFields.add(FIELD_PAYLOAD);
+  }
+
+  @Override
+  public ResultList<Task> listAfter(
+      UriInfo uriInfo, Fields fields, ListFilter filter, int limitParam, String after) {
+    applyTaskDomainFilter(filter);
+    return super.listAfter(uriInfo, fields, filter, limitParam, after);
+  }
+
+  @Override
+  public ResultList<Task> listBefore(
+      UriInfo uriInfo, Fields fields, ListFilter filter, int limitParam, String before) {
+    applyTaskDomainFilter(filter);
+    return super.listBefore(uriInfo, fields, filter, limitParam, before);
+  }
+
+  public void addDomainFilter(ListFilter filter, String domainFilter) {
+    if (nullOrEmpty(domainFilter)) {
+      return;
+    }
+
+    List<EntityReference> domains =
+        Arrays.stream(domainFilter.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .map(domain -> Entity.getEntityReferenceByName(DOMAIN, domain, NON_DELETED))
+            .toList();
+
+    if (!nullOrEmpty(domains)) {
+      filter.addQueryParam("domainId", EntityUtil.getCommaSeparatedIdsFromRefs(domains));
+    }
+  }
+
+  public void applyTaskDomainFilter(ListFilter filter) {
+    String domainId = filter.getQueryParam("domainId");
+    if (domainId == null) {
+      return;
+    }
+
+    // Tasks now carry explicit domains, so domain-scoped task queries should always match
+    // the selected/allowed domain set and should not include no-domain tasks by fallback.
+    if (ListFilter.NULL_PARAM.equals(domainId)) {
+      filter.addQueryParam("domainId", NO_MATCH_DOMAIN_ID);
+      filter.removeQueryParam("entityType");
+    }
+    filter.removeQueryParam("domainAccessControl");
   }
 
   @Override

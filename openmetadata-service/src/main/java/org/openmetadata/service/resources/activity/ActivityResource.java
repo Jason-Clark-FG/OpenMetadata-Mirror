@@ -14,7 +14,6 @@
 package org.openmetadata.service.resources.activity;
 
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
-import static org.openmetadata.service.jdbi3.RoleRepository.DOMAIN_ONLY_ACCESS_ROLE;
 import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -494,7 +493,7 @@ public class ActivityResource {
       SubjectContext subjectContext = getSubjectContext(securityContext);
       if (subjectContext != null
           && !subjectContext.isAdmin()
-          && subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE)) {
+          && subjectContext.hasDomainOnlyAccessRole()) {
         // User can only see activity in their domains
         List<EntityReference> userDomains = subjectContext.getUserDomains();
         if (!nullOrEmpty(userDomains)) {
