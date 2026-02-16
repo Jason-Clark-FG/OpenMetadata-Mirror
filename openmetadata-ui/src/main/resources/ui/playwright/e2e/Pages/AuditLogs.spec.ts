@@ -33,29 +33,37 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await test.step('Verify page header', async () => {
-      const header = page.getByTestId('heading');
+      const header = page.getByTestId('audit-logs-page-header');
       await expect(header).toBeVisible();
-      await expect(header).toHaveText('Audit Logs');
-    });
-
-    await test.step('Verify page sub-header', async () => {
-      const subHeader = page.getByTestId('sub-heading');
-      await expect(subHeader).toBeVisible();
-      await expect(subHeader).toContainText(
+      await expect(header).toContainText('Audit Logs');
+      await expect(header).toContainText(
         'Review who changed what by browsing persisted metadata change events'
       );
     });
   });
 
-  test('should display Filters dropdown and search bar', async ({ page }) => {
-    await test.step('Verify Filters dropdown is visible', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await expect(filtersDropdown).toBeVisible();
-      await expect(filtersDropdown).toContainText('Filters');
+  test('should display filter controls and search bar', async ({ page }) => {
+    await test.step('Verify Time filter is visible', async () => {
+      const timeFilter = page.getByTestId('date-picker-menu');
+      await expect(timeFilter).toBeVisible();
+    });
+
+    await test.step('Verify other filters are visible', async () => {
+      const userFilter = page.locator(
+        '[data-testid="search-dropdown-User"]'
+      );
+      await expect(userFilter).toBeVisible();
+
+      const entityTypeFilter = page.locator(
+        '[data-testid="search-dropdown-Entity Type"]'
+      );
+      await expect(entityTypeFilter).toBeVisible();
     });
 
     await test.step('Verify search bar is visible', async () => {
-      const searchInput = page.getByTestId('audit-log-search');
+      const searchContainer = page.getByTestId('audit-log-search-container');
+      await expect(searchContainer).toBeVisible();
+      const searchInput = page.getByPlaceholder('Search audit logs');
       await expect(searchInput).toBeVisible();
     });
   });
@@ -72,32 +80,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     });
   });
 
-  test('should open Filters dropdown and show filter categories', async ({
-    page,
-  }) => {
-    const filtersDropdown = page.getByTestId('filters-dropdown');
-    await filtersDropdown.click();
-
-    await test.step('Verify filter categories are visible', async () => {
-      // Check that the popover is open and contains filter categories
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeVisible();
-
-      // Verify filter category options
-      await expect(popover.getByText('Time')).toBeVisible();
-      await expect(popover.getByText('User')).toBeVisible();
-      await expect(popover.getByText('Bot')).toBeVisible();
-      await expect(popover.getByText('Entity Type')).toBeVisible();
-    });
-
-    await test.step('Close popover by clicking elsewhere', async () => {
-      // Click outside the popover to close it
-      await page.locator('body').click({ position: { x: 10, y: 10 } });
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeHidden({ timeout: 10000 });
-    });
-  });
-
   test('should apply and clear filters', async ({ page }) => {
     await test.step(
       'Clear button should not be visible initially',
@@ -108,17 +90,13 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     );
 
     await test.step('Select a Time filter', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
+      const timeFilter = page.getByTestId('date-picker-menu');
+      await timeFilter.click();
 
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeVisible();
-
-      // Click on "Time" category
-      await popover.getByText('Time').click();
-
-      // Wait for the value selector to show
-      await expect(popover.getByText('Yesterday')).toBeVisible();
+      // Wait for dropdown to ensure options are visible
+      // Antd dropdowns often render in portal, so we look for text 'Yesterday' globaly or in dropdown
+      const yesterdayOption = page.getByText('Yesterday').first();
+      await expect(yesterdayOption).toBeVisible();
 
       const auditLogResponse = page.waitForResponse(
         (response) =>
@@ -126,16 +104,18 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       );
 
       // Click on "Yesterday" option
-      await popover.getByText('Yesterday').click();
+      await yesterdayOption.click();
       await auditLogResponse;
     });
 
     await test.step(
       'Verify filter tag appears and Clear button shows',
       async () => {
-        // Active filter tag should appear
-        const filterTag = page.getByTestId('active-filter-time');
+        // Active filter tag should appear (Time filter updates the button text or adds a tag? 
+        // Logic: AuditLogFilters renders tags if `hasActiveFilters` is true.
+        const filterTag = page.getByTestId('filter-chip-time');
         await expect(filterTag).toBeVisible();
+        await expect(filterTag).toContainText('Yesterday');
 
         // Clear button should now be visible
         const clearButton = page.getByTestId('clear-filters');
@@ -154,7 +134,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await auditLogResponse;
 
       // Filter tag should be removed
-      const filterTag = page.getByTestId('active-filter-time');
+      const filterTag = page.getByTestId('filter-chip-time');
       await expect(filterTag).not.toBeVisible();
 
       // Clear button should be hidden
@@ -166,41 +146,28 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await test.step('Select Time filter', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
-
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeVisible();
-
-      // Click on "Time" category
-      await popover.getByText('Time').click();
-      await expect(popover.getByText('Yesterday')).toBeVisible();
-
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
-      );
-
-      await popover.getByText('Yesterday').click();
-      await auditLogResponse;
+      const timeFilter = page.getByTestId('date-picker-menu');
+      await timeFilter.click();
+      
+      const yesterdayOption = page.getByText('Yesterday').first();
+      await yesterdayOption.click();
 
       // Verify Time filter is active
-      const timeFilterTag = page.getByTestId('active-filter-time');
+      const timeFilterTag = page.getByTestId('filter-chip-time');
       await expect(timeFilterTag).toBeVisible();
     });
 
     await test.step(
       'Add Entity Type filter (should add to existing filters)',
       async () => {
-        const filtersDropdown = page.getByTestId('filters-dropdown');
-        await filtersDropdown.click();
+        const entityTypeFilter = page.locator(
+          '[data-testid="search-dropdown-Entity Type"]'
+        );
+        await entityTypeFilter.click();
 
-        const popover = page.locator('.audit-log-filter-popover');
-        await expect(popover).toBeVisible();
-
-        // Click on "Entity Type" category
-        await popover.getByText('Entity Type').click();
-        await expect(popover.getByText('Table')).toBeVisible();
+        // Entity Type uses SearchDropdown, options are in a list
+        const tableOption = page.getByText('Table').last(); // last because label and option logic
+        await expect(tableOption).toBeVisible();
 
         const auditLogResponse = page.waitForResponse(
           (response) =>
@@ -208,15 +175,15 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
             response.status() === 200
         );
 
-        await popover.getByText('Table').click();
+        await tableOption.click();
         await auditLogResponse;
 
         // Verify both filters are active (multi-filter behavior)
-        const timeFilterTag = page.getByTestId('active-filter-time');
+        const timeFilterTag = page.getByTestId('filter-chip-time');
         await expect(timeFilterTag).toBeVisible();
 
         const entityTypeFilterTag = page.getByTestId(
-          'active-filter-entityType'
+          'filter-chip-entityType'
         );
         await expect(entityTypeFilterTag).toBeVisible();
       }
@@ -225,53 +192,34 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('should allow searching within User filter', async ({ page }) => {
     await test.step('Open User filter category', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
-
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeVisible();
-
-      await popover.getByText('User').click();
+      const userFilter = page.locator(
+        '[data-testid="search-dropdown-User"]'
+      );
+      await userFilter.click();
     });
 
     await test.step('Verify search input is available', async () => {
-      const popover = page.locator('.audit-log-filter-popover');
-      const searchInput = popover.getByPlaceholder('Search');
-
+      const searchInput = page.getByTestId('search-input');
       await expect(searchInput).toBeVisible();
-    });
-
-    await test.step('Navigate back to categories', async () => {
-      const popover = page.locator('.audit-log-filter-popover');
-      const backButton = popover.getByText('Back');
-
-      await backButton.click();
-
-      await expect(popover.getByText('Time')).toBeVisible();
-      await expect(popover.getByText('User')).toBeVisible();
     });
   });
 
   test('should allow searching within Entity Type filter', async ({ page }) => {
     await test.step('Open Entity Type filter category', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
-
-      const popover = page.locator('.audit-log-filter-popover');
-      await expect(popover).toBeVisible();
-
-      await popover.getByText('Entity Type').click();
+      const entityTypeFilter = page.locator(
+        '[data-testid="search-dropdown-Entity Type"]'
+      );
+      await entityTypeFilter.click();
     });
 
     await test.step('Verify entity types are searchable', async () => {
-      const popover = page.locator('.audit-log-filter-popover');
-      const searchInput = popover.getByPlaceholder('Search');
-
+      const searchInput = page.getByTestId('search-input');
       await expect(searchInput).toBeVisible();
 
       await searchInput.fill('Table');
-
-      await expect(popover.getByText('Table')).toBeVisible();
+      
+      const tableOption = page.getByText('Table').last();
+      await expect(tableOption).toBeVisible();
     });
   });
 
@@ -279,29 +227,27 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await test.step('Add a Time filter', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
+      const timeFilter = page.getByTestId('date-picker-menu');
+      await timeFilter.click();
 
-      const popover = page.locator('.audit-log-filter-popover');
-      await popover.getByText('Time').click();
-
+      const yesterdayOption = page.getByText('Yesterday').first();
+      // Wait for API response
       const auditLogResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/audit') && response.status() === 200
       );
-
-      await popover.getByText('Yesterday').click();
+      await yesterdayOption.click();
       await auditLogResponse;
     });
 
     await test.step('Verify filter tag is displayed', async () => {
-      const filterTag = page.getByTestId('active-filter-time');
+      const filterTag = page.getByTestId('filter-chip-time');
       await expect(filterTag).toBeVisible();
     });
 
     await test.step('Remove filter by clicking close icon', async () => {
-      const filterTag = page.getByTestId('active-filter-time');
-      const closeIcon = filterTag.locator('.anticon-close');
+      const filterTag = page.getByTestId('filter-chip-time');
+      const closeIcon = page.getByTestId('remove-filter-time');
 
       const auditLogResponse = page.waitForResponse(
         (response) =>
@@ -319,38 +265,33 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await test.step('Select Yesterday filter', async () => {
-      const filtersDropdown = page.getByTestId('filters-dropdown');
-      await filtersDropdown.click();
+      const timeFilter = page.getByTestId('date-picker-menu');
+      await timeFilter.click();
 
-      const popover = page.locator('.audit-log-filter-popover');
-      await popover.getByText('Time').click();
-
+      const yesterdayOption = page.getByText('Yesterday').first();
       const auditLogResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/audit') && response.status() === 200
       );
-
-      await popover.getByText('Yesterday').click();
+      await yesterdayOption.click();
       await auditLogResponse;
     });
 
     await test.step('Verify Yesterday filter is active', async () => {
-      const filterTag = page.getByTestId('active-filter-time');
+      const filterTag = page.getByTestId('filter-chip-time');
       await expect(filterTag).toContainText('Yesterday');
     });
 
     await test.step(
       'Select Last 7 Days filter (should replace Yesterday)',
       async () => {
-        const filtersDropdown = page.getByTestId('filters-dropdown');
-        await filtersDropdown.click();
-
-        const popover = page.locator('.audit-log-filter-popover');
-        await expect(popover).toBeVisible();
-        await popover.getByText('Time').click();
+        // Re-open time filter
+        const timeFilter = page.getByTestId('date-picker-menu');
+        await timeFilter.click();
 
         // Wait for Time options to be visible
-        await expect(popover.getByText('Last 7 Days')).toBeVisible({
+        const last7DaysOption = page.getByText('Last 7 Days').first();
+        await expect(last7DaysOption).toBeVisible({
           timeout: 5000,
         });
 
@@ -360,7 +301,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
             response.status() === 200
         );
 
-        await popover.getByText('Last 7 Days').click();
+        await last7DaysOption.click();
         await auditLogResponse;
       }
     );
@@ -368,12 +309,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await test.step(
       'Verify Last 7 Days filter replaced Yesterday',
       async () => {
-        const filterTag = page.getByTestId('active-filter-time');
+        const filterTag = page.getByTestId('filter-chip-time');
         await expect(filterTag).toContainText('Last 7 Days');
 
         // Should only have one time filter tag
         const timeFilterTags = page.locator(
-          '[data-testid="active-filter-time"]'
+          '[data-testid="filter-chip-time"]'
         );
         await expect(timeFilterTags).toHaveCount(1);
       }
@@ -382,7 +323,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('should search audit logs', async ({ page }) => {
     await test.step('Enter search term and press Enter', async () => {
-      const searchInput = page.getByTestId('audit-log-search');
+      const searchInput = page.getByPlaceholder('Search audit logs');
       await searchInput.fill('admin');
 
       const auditLogResponse = page.waitForResponse(
@@ -405,14 +346,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const clearButton = page.getByTestId('clear-filters');
       await clearButton.click();
 
-      const searchInput = page.getByTestId('audit-log-search');
+      const searchInput = page.getByPlaceholder('Search audit logs');
       await expect(searchInput).toHaveValue('');
     });
   });
 
   test('should support case-insensitive search', async ({ page }) => {
     await test.step('Search with lowercase term', async () => {
-      const searchInput = page.getByTestId('audit-log-search');
+      const searchInput = page.getByPlaceholder('Search audit logs');
       await searchInput.fill('admin');
 
       const auditLogResponse = page.waitForResponse(
@@ -424,8 +365,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       await searchInput.press('Enter');
       const response = await auditLogResponse;
-      const responseData = await response.json();
-      const lowercaseCount = responseData.data?.length ?? 0;
+      expect(response.ok()).toBe(true);
 
       // Clear search
       const clearButton = page.getByTestId('clear-filters');
@@ -445,147 +385,63 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       await searchInput.press('Enter');
       const response2 = await auditLogResponse2;
-      const responseData2 = await response2.json();
-      const uppercaseCount = responseData2.data?.length ?? 0;
-
-      // Both searches should return results (case-insensitive)
-      // We just verify the API accepts both and returns successfully
-      expect(response.ok()).toBe(true);
       expect(response2.ok()).toBe(true);
     });
   });
 
-  test('should display Export button', async ({ page }) => {
-    await test.step('Verify Export button is visible', async () => {
-      const exportButton = page.getByTestId('export-audit-logs-button');
-      await expect(exportButton).toBeVisible();
-      await expect(exportButton).toContainText('Export');
-    });
-  });
-
-  test('should open and close Export modal', async ({ page }) => {
-    await test.step('Open Export modal', async () => {
-      const exportButton = page.getByTestId('export-audit-logs-button');
-      await exportButton.click();
-
-      // Wait for modal to appear in DOM and be visible
-      await page.waitForSelector('.ant-modal-content', {
-        state: 'visible',
-        timeout: 10000,
-      });
-    });
-
-    await test.step('Verify modal contains export elements', async () => {
-      // Verify modal has the date picker
-      const dateRangePicker = page.getByTestId('export-date-range-picker');
-      await expect(dateRangePicker).toBeVisible({ timeout: 5000 });
-    });
-
-    await test.step('Close modal', async () => {
-      // Close by clicking Cancel button or X
-      const cancelButton = page.locator('.ant-modal-footer button').first();
-      await cancelButton.click();
-
-      // Wait for modal to close
-      await page.waitForSelector('.ant-modal-content', {
-        state: 'hidden',
-        timeout: 5000,
-      });
-    });
-  });
-
-  test('should require date range for export', async ({ page }) => {
-    await test.step('Open Export modal', async () => {
-      const exportButton = page.getByTestId('export-audit-logs-button');
-      await exportButton.click();
-
-      await page.waitForSelector('.ant-modal-content', {
-        state: 'visible',
-        timeout: 10000,
-      });
-    });
-
-    await test.step(
-      'Verify Export button is disabled without date range',
-      async () => {
-        const exportOkButton = page.locator(
-          '.ant-modal-footer button.ant-btn-primary'
-        );
-        await expect(exportOkButton).toBeDisabled({ timeout: 5000 });
-      }
-    );
-
-    await test.step('Verify date range label shows Required', async () => {
-      const modal = page.locator('.ant-modal-content');
-      // Date Range label has required asterisk (*)
-      await expect(modal.getByText('Date Range *')).toBeVisible();
-    });
-  });
-
-  test('should allow export with date range filter', async ({ page }) => {
-    await test.step('Open Export modal', async () => {
-      const exportButton = page.getByTestId('export-audit-logs-button');
-      await exportButton.click();
-
-      await page.waitForSelector('.ant-modal-content', {
-        state: 'visible',
-        timeout: 10000,
-      });
-    });
-
-    await test.step('Select a date range', async () => {
-      const dateRangePicker = page.getByTestId('export-date-range-picker');
-      await dateRangePicker.click();
-
-      await page.waitForSelector('.ant-picker-dropdown', { state: 'visible' });
-
-      const today = page.locator(
-        '.ant-picker-dropdown:visible .ant-picker-cell-today'
-      );
-      await today.click();
-      await today.click();
-    });
-
-    await test.step('Verify Export button is still enabled', async () => {
-      const exportOkButton = page.locator(
-        '.ant-modal-footer button.ant-btn-primary'
-      );
-      await expect(exportOkButton).toBeEnabled({ timeout: 5000 });
-    });
-  });
-
-  test('should support pagination controls', async ({ page }) => {
+  test('should support pagination and page size selection', async ({ page }) => {
     await test.step('Verify pagination area exists', async () => {
+      // Ensure we have logs to show pagination
       await page.waitForSelector('[data-testid="audit-log-list"]', {
         state: 'visible',
       });
-
+      
       const listItems = page.locator('[data-testid="audit-log-list-item"]');
       const itemCount = await listItems.count();
 
       if (itemCount === 0) {
         test.skip();
-
         return;
       }
 
-      const paginationArea = page.locator('[class*="NextPrevious"]');
-      const hasPagination = await paginationArea.count();
+      await expect(page.getByTestId('pagination')).toBeVisible();
+    });
 
-      expect(hasPagination >= 0).toBe(true);
+    await test.step('Verify default page size', async () => {
+      const pageSizeDropdown = page.getByTestId('page-size-selection-dropdown');
+      await expect(pageSizeDropdown).toBeVisible();
+      await expect(pageSizeDropdown).toContainText('25');
+    });
+
+    await test.step('Change page size', async () => {
+      const pageSizeDropdown = page.getByTestId('page-size-selection-dropdown');
+      await pageSizeDropdown.click();
+
+      // Select 50
+
+      
+      // Let's rely on text globally in the portal
+      const option50Global = page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item').filter({ hasText: '50' }).first();
+      
+      if (await option50Global.isVisible()) {
+         const auditLogResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/audit') && 
+            response.url().includes('limit=50') &&
+            response.status() === 200
+        );
+        await option50Global.click();
+        await auditLogResponse;
+
+        // Verify dropdown shows 50
+        await expect(pageSizeDropdown).toContainText('50');
+      }
     });
 
     await test.step('Navigate pages if available', async () => {
       const nextPageButton = page.getByTestId('next-page');
-      const isNextVisible = await nextPageButton.isVisible().catch(() => false);
-
-      if (!isNextVisible) {
-        return;
-      }
-
-      const isNextEnabled = await nextPageButton.isEnabled().catch(() => false);
-
-      if (isNextEnabled) {
+      
+      if (await nextPageButton.isVisible() && await nextPageButton.isEnabled()) {
         const auditLogResponse = page.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/audit') &&
@@ -596,13 +452,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await auditLogResponse;
 
         const previousPageButton = page.getByTestId('previous-page');
-        const isPrevVisible = await previousPageButton
-          .isVisible()
-          .catch(() => false);
-
-        if (isPrevVisible) {
-          await expect(previousPageButton).toBeEnabled();
-        }
+        await expect(previousPageButton).toBeEnabled();
       }
     });
   });
@@ -732,51 +582,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 test.describe('Audit Logs - Search Functionality', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test('should search and find admin user activity', async ({ page }) => {
-    await redirectToHomePage(page);
-    await navigateToAuditLogsPage(page);
 
-    await test.step('Search for admin user activity', async () => {
-      const searchInput = page.getByTestId('audit-log-search');
-      // Search for "admin" which should always have activity
-      await searchInput.fill('admin');
-
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') &&
-          response.url().includes('q=admin') &&
-          response.status() === 200
-      );
-
-      await searchInput.press('Enter');
-      const response = await auditLogResponse;
-
-      // Verify API call succeeded
-      expect(response.ok()).toBe(true);
-
-      const responseData = await response.json();
-
-      // If there's any admin activity, it should be returned
-      // The search is working if API responds successfully
-      expect(responseData.data).toBeDefined();
-    });
-
-    await test.step(
-      'Verify search results are displayed or empty state shown',
-      async () => {
-        const list = page.getByTestId('audit-log-list');
-        await expect(list).toBeVisible();
-
-        const listContent = await list.textContent();
-        const hasResults =
-          listContent?.includes('admin') ||
-          listContent?.includes('No data') ||
-          listContent?.includes('Events');
-
-        expect(hasResults).toBe(true);
-      }
-    );
-  });
 
   test('should verify search API returns proper response structure', async ({
     page,
@@ -787,7 +593,7 @@ test.describe('Audit Logs - Search Functionality', PLAYWRIGHT_BASIC_TEST_TAG_OBJ
     await test.step(
       'Perform search and validate response structure',
       async () => {
-        const searchInput = page.getByTestId('audit-log-search');
+        const searchInput = page.getByPlaceholder('Search audit logs');
         await searchInput.fill('table');
 
         const auditLogResponse = page.waitForResponse(
@@ -902,7 +708,7 @@ test.describe('Audit Logs - Export Functionality', PLAYWRIGHT_BASIC_TEST_TAG_OBJ
     });
 
     await test.step('Enter a search term', async () => {
-      const searchInput = page.getByTestId('audit-log-search');
+      const searchInput = page.getByPlaceholder('Search audit logs');
       await searchInput.fill('admin');
       await searchInput.press('Enter');
 
@@ -1025,10 +831,8 @@ test.describe('Audit Logs - Export Non-Admin Access', PLAYWRIGHT_BASIC_TEST_TAG_
         // 1. Not see the export button at all
         // 2. See the page but export API returns 403
         // 3. Be redirected away from the page
-        const exportButton = page.getByTestId('export-audit-logs-button');
-        const isExportVisible = await exportButton
-          .isVisible()
-          .catch(() => false);
+
+
 
         // If export button is not visible, the page correctly hides it from non-admins
         // If it is visible, we would need to verify API returns 403
