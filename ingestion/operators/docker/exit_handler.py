@@ -27,6 +27,11 @@ from metadata.generated.schema.metadataIngestion.workflow import (
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 
 SUCCESS_STATES = {"Succeeded"}
+TERMINAL_PIPELINE_STATES = {
+    PipelineState.success,
+    PipelineState.failed,
+    PipelineState.partialSuccess,
+}
 
 
 def main():
@@ -96,6 +101,14 @@ def main():
                 startDate=datetime.now().timestamp() * 1000,
                 timestamp=datetime.now().timestamp() * 1000,
             )
+
+        # If the workflow already reported a terminal status, the exit handler has nothing to do.
+        if pipeline_status.pipelineState in TERMINAL_PIPELINE_STATES:
+            logging.info(
+                f"Pipeline already in terminal state '{pipeline_status.pipelineState.value}', "
+                f"skipping exit handler update"
+            )
+            return
 
         pipeline_status.endDate = datetime.now().timestamp() * 1000
         pipeline_status.pipelineState = (
