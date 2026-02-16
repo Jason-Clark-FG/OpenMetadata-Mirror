@@ -12,13 +12,13 @@ export const TagCheckbox = ({ className, isFocused, isSelected, isDisabled, size
     return (
         <div
             className={cx(
-                "flex cursor-pointer appearance-none items-center justify-center rounded bg-primary ring-1 ring-primary ring-inset",
-                size === "sm" && "size-3.5",
-                size === "md" && "size-4",
-                size === "lg" && "size-4.5",
-                isSelected && "bg-brand-solid ring-bg-brand-solid",
-                isDisabled && "cursor-not-allowed bg-disabled_subtle ring-disabled",
-                isFocused && "outline-2 outline-offset-2 outline-focus-ring",
+                "tw:flex tw:cursor-pointer tw:appearance-none tw:items-center tw:justify-center tw:rounded tw:bg-primary tw:ring-1 tw:ring-primary tw:ring-inset",
+                size === "sm" && "tw:size-3.5",
+                size === "md" && "tw:size-4",
+                size === "lg" && "tw:size-4.5",
+                isSelected && "tw:bg-brand-solid tw:ring-bg-brand-solid",
+                isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:ring-disabled",
+                isFocused && "tw:outline-2 tw:outline-offset-2 tw:outline-focus-ring",
                 className,
             )}
         >
@@ -27,12 +27,12 @@ export const TagCheckbox = ({ className, isFocused, isSelected, isDisabled, size
                 viewBox="0 0 14 14"
                 fill="none"
                 className={cx(
-                    "pointer-events-none absolute text-fg-white opacity-0 transition-inherit-all",
-                    size === "sm" && "size-2.5",
-                    size === "md" && "size-3",
-                    size === "lg" && "size-3.5",
-                    isSelected && "opacity-100",
-                    isDisabled && "text-fg-disabled_subtle",
+                    "tw:pointer-events-none tw:absolute tw:text-fg-white tw:opacity-0 tw:transition-inherit-all",
+                    size === "sm" && "tw:size-2.5",
+                    size === "md" && "tw:size-3",
+                    size === "lg" && "tw:size-3.5",
+                    isSelected && "tw:opacity-100",
+                    isDisabled && "tw:text-fg-disabled_subtle",
                 )}
             >
                 <path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

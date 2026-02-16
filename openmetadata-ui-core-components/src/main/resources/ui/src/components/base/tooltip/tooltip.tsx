@@ -61,29 +61,29 @@ export const Tooltip = ({
                 offset={offset}
                 placement={placement}
                 crossOffset={crossOffset ?? calculatedCrossOffset}
-                className={({ isEntering, isExiting }) => cx(isEntering && "ease-out animate-in", isExiting && "ease-in animate-out")}
+                className={({ isEntering, isExiting }) => cx(isEntering && "tw:ease-out tw:animate-in", isExiting && "tw:ease-in tw:animate-out")}
             >
                 {({ isEntering, isExiting }) => (
                     <div
                         className={cx(
-                            "z-50 flex max-w-xs origin-(--trigger-anchor-point) flex-col items-start gap-1 rounded-lg bg-primary-solid px-3 shadow-lg will-change-transform",
-                            description ? "py-3" : "py-2",
+                            "tw:z-50 tw:flex tw:max-w-xs tw:origin-(--trigger-anchor-point) tw:flex-col tw:items-start tw:gap-1 tw:rounded-lg tw:bg-primary-solid tw:px-3 tw:shadow-lg tw:will-change-transform",
+                            description ? "tw:py-3" : "tw:py-2",
 
                             isEntering &&
-                                "ease-out animate-in fade-in zoom-in-95 in-placement-left:slide-in-from-right-0.5 in-placement-right:slide-in-from-left-0.5 in-placement-top:slide-in-from-bottom-0.5 in-placement-bottom:slide-in-from-top-0.5",
+                                "tw:ease-out tw:animate-in tw:fade-in tw:zoom-in-95 in-placement-left:tw:slide-in-from-right-0.5 in-placement-right:tw:slide-in-from-left-0.5 in-placement-top:tw:slide-in-from-bottom-0.5 in-placement-bottom:tw:slide-in-from-top-0.5",
                             isExiting &&
-                                "ease-in animate-out fade-out zoom-out-95 in-placement-left:slide-out-to-right-0.5 in-placement-right:slide-out-to-left-0.5 in-placement-top:slide-out-to-bottom-0.5 in-placement-bottom:slide-out-to-top-0.5",
+                                "tw:ease-in tw:animate-out tw:fade-out tw:zoom-out-95 in-placement-left:tw:slide-out-to-right-0.5 in-placement-right:tw:slide-out-to-left-0.5 in-placement-top:tw:slide-out-to-bottom-0.5 in-placement-bottom:tw:slide-out-to-top-0.5",
                         )}
                     >
-                        <span className="text-xs font-semibold text-white">{title}</span>
+                        <span className="tw:text-xs tw:font-semibold tw:text-white">{title}</span>
 
-                        {description && <span className="text-xs font-medium text-tooltip-supporting-text">{description}</span>}
+                        {description && <span className="tw:text-xs tw:font-medium tw:text-tooltip-supporting-text">{description}</span>}
 
                         {arrow && (
                             <AriaOverlayArrow>
                                 <svg
                                     viewBox="0 0 100 100"
-                                    className="size-2.5 fill-bg-primary-solid in-placement-left:-rotate-90 in-placement-right:rotate-90 in-placement-top:rotate-0 in-placement-bottom:rotate-180"
+                                    className="tw:size-2.5 tw:fill-bg-primary-solid in-placement-left:tw:-rotate-90 in-placement-right:tw:rotate-90 in-placement-top:tw:rotate-0 in-placement-bottom:tw:rotate-180"
                                 >
                                     <path d="M0,0 L35.858,35.858 Q50,50 64.142,35.858 L100,0 Z" />
                                 </svg>
@@ -100,7 +100,7 @@ interface TooltipTriggerProps extends AriaButtonProps {}
 
 export const TooltipTrigger = ({ children, className, ...buttonProps }: TooltipTriggerProps) => {
     return (
-        <AriaButton {...buttonProps} className={(values) => cx("h-max w-max outline-hidden", typeof className === "function" ? className(values) : className)}>
+        <AriaButton {...buttonProps} className={(values) => cx("tw:h-max tw:w-max tw:outline-hidden", typeof className === "function" ? className(values) : className)}>
             {children}
         </AriaButton>
     );

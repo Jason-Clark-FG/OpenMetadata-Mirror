@@ -236,9 +236,9 @@ export const BadgeWithIcon = <T extends BadgeTypes>(props: BadgeWithIconProps<T>
 
     return (
         <span className={cx(colors.common, sizes[type][size][icon], colors.styles[color].root, className)}>
-            {IconLeading && <IconLeading className={cx(colors.styles[color].addon, "size-3 stroke-3")} />}
+            {IconLeading && <IconLeading className={cx(colors.styles[color].addon, "tw:size-3 tw:stroke-3")} />}
             {children}
-            {IconTrailing && <IconTrailing className={cx(colors.styles[color].addon, "size-3 stroke-3")} />}
+            {IconTrailing && <IconTrailing className={cx(colors.styles[color].addon, "tw:size-3 tw:stroke-3")} />}
         </span>
     );
 };
@@ -275,7 +275,7 @@ export const BadgeWithFlag = <T extends BadgeTypes>(props: BadgeWithFlagProps<T>
 
     return (
         <span className={cx(colors.common, sizes[type][size], colors.styles[color].root)}>
-            <img src={`https://www.untitledui.com/images/flags/${flag}.svg`} className="size-4 max-w-none rounded-full" alt={`${flag} flag`} />
+            <img src={`https://www.untitledui.com/images/flags/${flag}.svg`} className="tw:size-4 tw:max-w-none tw:rounded-full" alt={`${flag} flag`} />
             {children}
         </span>
     );
@@ -313,7 +313,7 @@ export const BadgeWithImage = <T extends BadgeTypes>(props: BadgeWithImageProps<
 
     return (
         <span className={cx(colors.common, sizes[type][size], colors.styles[color].root)}>
-            <img src={imgSrc} className="size-4 max-w-none rounded-full" alt="Badge image" />
+            <img src={imgSrc} className="tw:size-4 tw:max-w-none tw:rounded-full" alt="Badge image" />
             {children}
         </span>
     );
@@ -365,12 +365,12 @@ export const BadgeWithButton = <T extends BadgeTypes>(props: BadgeWithButtonProp
                 aria-label={buttonLabel}
                 onClick={props.onButtonClick}
                 className={cx(
-                    "flex cursor-pointer items-center justify-center p-0.5 outline-focus-ring transition duration-100 ease-linear focus-visible:outline-2",
+                    "tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:p-0.5 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear focus-visible:tw:outline-2",
                     colors.styles[color].addonButton,
-                    type === "pill-color" ? "rounded-full" : "rounded-[3px]",
+                    type === "pill-color" ? "tw:rounded-full" : "tw:rounded-[3px]",
                 )}
             >
-                <Icon className="size-3 stroke-[3px] transition-inherit-all" />
+                <Icon className="tw:size-3 tw:stroke-[3px] tw:transition-inherit-all" />
             </button>
         </span>
     );
@@ -409,7 +409,7 @@ export const BadgeIcon = <T extends BadgeTypes>(props: BadgeIconProps<T>) => {
 
     return (
         <span className={cx(colors.common, sizes[type][size], colors.styles[color].root)}>
-            <Icon className={cx("size-3 stroke-[3px]", colors.styles[color].addon)} />
+            <Icon className={cx("tw:size-3 tw:stroke-[3px]", colors.styles[color].addon)} />
         </span>
     );
 };

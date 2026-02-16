@@ -16,13 +16,13 @@ export const Popover = (props: PopoverProps) => {
             {...props}
             className={(state) =>
                 cx(
-                    "max-h-64! w-(--trigger-width) origin-(--trigger-anchor-point) overflow-x-hidden overflow-y-auto rounded-lg bg-primary py-1 shadow-lg ring-1 ring-secondary_alt outline-hidden will-change-transform",
+                    "tw:max-h-64! tw:w-(--trigger-width) tw:origin-(--trigger-anchor-point) tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-lg tw:bg-primary tw:py-1 tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:outline-hidden tw:will-change-transform",
 
                     state.isEntering &&
-                        "duration-150 ease-out animate-in fade-in placement-right:slide-in-from-left-0.5 placement-top:slide-in-from-bottom-0.5 placement-bottom:slide-in-from-top-0.5",
+                        "tw:duration-150 tw:ease-out tw:animate-in tw:fade-in placement-right:tw:slide-in-from-left-0.5 placement-top:tw:slide-in-from-bottom-0.5 placement-bottom:tw:slide-in-from-top-0.5",
                     state.isExiting &&
-                        "duration-100 ease-in animate-out fade-out placement-right:slide-out-to-left-0.5 placement-top:slide-out-to-bottom-0.5 placement-bottom:slide-out-to-top-0.5",
-                    props.size === "md" && "max-h-80!",
+                        "tw:duration-100 tw:ease-in tw:animate-out tw:fade-out placement-right:tw:slide-out-to-left-0.5 placement-top:tw:slide-out-to-bottom-0.5 placement-bottom:tw:slide-out-to-top-0.5",
+                    props.size === "md" && "tw:max-h-80!",
 
                     typeof props.className === "function" ? props.className(state) : props.className,
                 )

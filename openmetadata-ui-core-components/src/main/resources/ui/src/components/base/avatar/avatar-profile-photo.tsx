@@ -64,8 +64,8 @@ export const AvatarProfilePhoto = ({
                     alt={alt}
                     onError={() => setIsFailed(true)}
                     className={cx(
-                        "size-full rounded-full object-cover",
-                        contrastBorder && "outline-1 -outline-offset-1 outline-avatar-contrast-border",
+                        "tw:size-full tw:rounded-full tw:object-cover",
+                        contrastBorder && "tw:outline-1 tw:-outline-offset-1 tw:outline-avatar-contrast-border",
                         styles[size].content,
                     )}
                 />
@@ -74,23 +74,23 @@ export const AvatarProfilePhoto = ({
 
         if (initials) {
             return (
-                <div className={cx("flex size-full items-center justify-center rounded-full bg-tertiary ring-1 ring-secondary_alt", styles[size].content)}>
-                    <span className={cx("text-quaternary", styles[size].initials)}>{initials}</span>
+                <div className={cx("tw:flex tw:size-full tw:items-center tw:justify-center tw:rounded-full tw:bg-tertiary tw:ring-1 tw:ring-secondary_alt", styles[size].content)}>
+                    <span className={cx("tw:text-quaternary", styles[size].initials)}>{initials}</span>
                 </div>
             );
         }
 
         if (PlaceholderIcon) {
             return (
-                <div className={cx("flex size-full items-center justify-center rounded-full bg-tertiary ring-1 ring-secondary_alt", styles[size].content)}>
-                    <PlaceholderIcon className={cx("text-fg-quaternary", styles[size].icon)} />
+                <div className={cx("tw:flex tw:size-full tw:items-center tw:justify-center tw:rounded-full tw:bg-tertiary tw:ring-1 tw:ring-secondary_alt", styles[size].content)}>
+                    <PlaceholderIcon className={cx("tw:text-fg-quaternary", styles[size].icon)} />
                 </div>
             );
         }
 
         return (
-            <div className={cx("flex size-full items-center justify-center rounded-full bg-tertiary ring-1 ring-secondary_alt", styles[size].content)}>
-                {placeholder || <User01 className={cx("text-fg-quaternary", styles[size].icon)} />}
+            <div className={cx("tw:flex tw:size-full tw:items-center tw:justify-center tw:rounded-full tw:bg-tertiary tw:ring-1 tw:ring-secondary_alt", styles[size].content)}>
+                {placeholder || <User01 className={cx("tw:text-fg-quaternary", styles[size].icon)} />}
             </div>
         );
     };
@@ -101,7 +101,7 @@ export const AvatarProfilePhoto = ({
         }
 
         if (verified) {
-            return <VerifiedTick size={tickSizeMap[size]} className={cx("absolute", styles[size].badge)} />;
+            return <VerifiedTick size={tickSizeMap[size]} className={cx("tw:absolute", styles[size].badge)} />;
         }
 
         return badge;
@@ -110,7 +110,7 @@ export const AvatarProfilePhoto = ({
     return (
         <div
             className={cx(
-                "relative flex shrink-0 items-center justify-center rounded-full bg-primary ring-1 ring-secondary_alt",
+                "tw:relative tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-primary tw:ring-1 tw:ring-secondary_alt",
                 styles[size].root,
                 (!src || isFailed) && styles[size].rootWithPlaceholder,
                 className,

@@ -37,20 +37,20 @@ export const SelectItem = ({ label, id, value, avatarUrl, supportingText, isDisa
             textValue={textValue}
             isDisabled={isDisabled}
             {...props}
-            className={(state) => cx("w-full px-1.5 py-px outline-hidden", typeof className === "function" ? className(state) : className)}
+            className={(state) => cx("tw:w-full tw:px-1.5 tw:py-px tw:outline-hidden", typeof className === "function" ? className(state) : className)}
         >
             {(state) => (
                 <div
                     className={cx(
-                        "flex cursor-pointer items-center gap-2 rounded-md outline-hidden select-none",
-                        state.isSelected && "bg-active",
-                        state.isDisabled && "cursor-not-allowed",
-                        state.isFocused && "bg-primary_hover",
-                        state.isFocusVisible && "ring-2 ring-focus-ring ring-inset",
+                        "tw:flex tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-md tw:outline-hidden tw:select-none",
+                        state.isSelected && "tw:bg-active",
+                        state.isDisabled && "tw:cursor-not-allowed",
+                        state.isFocused && "tw:bg-primary_hover",
+                        state.isFocusVisible && "tw:ring-2 tw:ring-focus-ring tw:ring-inset",
 
                         // Icon styles
-                        "*:data-icon:size-5 *:data-icon:shrink-0 *:data-icon:text-fg-quaternary",
-                        state.isDisabled && "*:data-icon:text-fg-disabled",
+                        "*:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:text-fg-quaternary",
+                        state.isDisabled && "*:data-icon:tw:text-fg-disabled",
 
                         sizes[size],
                     )}
@@ -63,16 +63,16 @@ export const SelectItem = ({ label, id, value, avatarUrl, supportingText, isDisa
                         Icon
                     ) : null}
 
-                    <div className="flex w-full min-w-0 flex-1 flex-wrap gap-x-2">
+                    <div className="tw:flex tw:w-full tw:min-w-0 tw:flex-1 tw:flex-wrap tw:gap-x-2">
                         <AriaText
                             slot="label"
-                            className={cx("truncate text-md font-medium whitespace-nowrap text-primary", state.isDisabled && "text-disabled")}
+                            className={cx("tw:truncate tw:text-md tw:font-medium tw:whitespace-nowrap tw:text-primary", state.isDisabled && "tw:text-disabled")}
                         >
                             {label || (typeof children === "function" ? children(state) : children)}
                         </AriaText>
 
                         {supportingText && (
-                            <AriaText slot="description" className={cx("text-md whitespace-nowrap text-tertiary", state.isDisabled && "text-disabled")}>
+                            <AriaText slot="description" className={cx("tw:text-md tw:whitespace-nowrap tw:text-tertiary", state.isDisabled && "tw:text-disabled")}>
                                 {supportingText}
                             </AriaText>
                         )}
@@ -82,9 +82,9 @@ export const SelectItem = ({ label, id, value, avatarUrl, supportingText, isDisa
                         <Check
                             aria-hidden="true"
                             className={cx(
-                                "ml-auto text-fg-brand-primary",
-                                size === "sm" ? "size-4 stroke-[2.5px]" : "size-5",
-                                state.isDisabled && "text-fg-disabled",
+                                "tw:ml-auto tw:text-fg-brand-primary",
+                                size === "sm" ? "tw:size-4 tw:stroke-[2.5px]" : "tw:size-5",
+                                state.isDisabled && "tw:text-fg-disabled",
                             )}
                         />
                     )}

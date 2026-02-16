@@ -79,18 +79,18 @@ export const Avatar = ({
 
     const renderMainContent = () => {
         if (src && !isFailed) {
-            return <img data-avatar-img className="size-full rounded-full object-cover" src={src} alt={alt} onError={() => setIsFailed(true)} />;
+            return <img data-avatar-img className="tw:size-full tw:rounded-full tw:object-cover" src={src} alt={alt} onError={() => setIsFailed(true)} />;
         }
 
         if (initials) {
-            return <span className={cx("text-quaternary", styles[size].initials)}>{initials}</span>;
+            return <span className={cx("tw:text-quaternary", styles[size].initials)}>{initials}</span>;
         }
 
         if (PlaceholderIcon) {
-            return <PlaceholderIcon className={cx("text-fg-quaternary", styles[size].icon)} />;
+            return <PlaceholderIcon className={cx("tw:text-fg-quaternary", styles[size].icon)} />;
         }
 
-        return placeholder || <User01 className={cx("text-fg-quaternary", styles[size].icon)} />;
+        return placeholder || <User01 className={cx("tw:text-fg-quaternary", styles[size].icon)} />;
     };
 
     const renderBadgeContent = () => {
@@ -102,7 +102,7 @@ export const Avatar = ({
             return (
                 <VerifiedTick
                     size={size === "xxs" ? "xs" : size}
-                    className={cx("absolute right-0 bottom-0", (size === "xxs" || size === "xs") && "-right-px -bottom-px")}
+                    className={cx("tw:absolute tw:right-0 tw:bottom-0", (size === "xxs" || size === "xs") && "tw:-right-px tw:-bottom-px")}
                 />
             );
         }
@@ -114,10 +114,10 @@ export const Avatar = ({
         <div
             data-avatar
             className={cx(
-                "relative inline-flex shrink-0 items-center justify-center rounded-full bg-avatar-bg outline-transparent",
+                "tw:relative tw:inline-flex tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-avatar-bg tw:outline-transparent",
                 // Focus styles
-                focusable && "group-outline-focus-ring group-focus-visible:outline-2 group-focus-visible:outline-offset-2",
-                contrastBorder && "outline outline-avatar-contrast-border",
+                focusable && "tw:group-outline-focus-ring group-focus-visible:tw:outline-2 group-focus-visible:tw:outline-offset-2",
+                contrastBorder && "tw:outline tw:outline-avatar-contrast-border",
                 styles[size].root,
                 className,
             )}

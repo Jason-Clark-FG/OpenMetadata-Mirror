@@ -107,7 +107,7 @@ export const Tag = ({
     const leadingContent = avatarSrc ? (
         <Avatar size="xxs" src={avatarSrc} alt="Avatar" contrastBorder={avatarContrastBorder} />
     ) : dot ? (
-        <Dot className={cx("text-fg-success-secondary", dotClassName)} size="sm" />
+        <Dot className={cx("tw:text-fg-success-secondary", dotClassName)} size="sm" />
     ) : null;
 
     return (
@@ -117,7 +117,7 @@ export const Tag = ({
             textValue={typeof children === "string" ? children : undefined}
             className={(state) =>
                 cx(
-                    "flex cursor-default items-center gap-0.75 rounded-md bg-primary text-secondary ring-1 ring-primary ring-inset focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    "tw:flex tw:cursor-default tw:items-center tw:gap-0.75 tw:rounded-md tw:bg-primary tw:text-secondary tw:ring-1 tw:ring-primary tw:ring-inset focus:tw:outline-hidden focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2 focus-visible:tw:outline-focus-ring",
                     styles[context.size].root.base,
 
                     // With avatar
@@ -131,7 +131,7 @@ export const Tag = ({
                     // With checkbox
                     context.selectionMode !== "none" && styles[context.size].root.withCheckbox,
                     // Disabled
-                    isDisabled && "cursor-not-allowed",
+                    isDisabled && "tw:cursor-not-allowed",
 
                     typeof className === "function" ? className(state) : className,
                 )
@@ -139,7 +139,7 @@ export const Tag = ({
         >
             {({ isSelected, isDisabled, allowsRemoving }) => (
                 <>
-                    <div className={cx("flex items-center gap-1", styles[context.size].content)}>
+                    <div className={cx("tw:flex tw:items-center tw:gap-1", styles[context.size].content)}>
                         {context.selectionMode !== "none" && <TagCheckbox size={context.size} isSelected={isSelected} isDisabled={isDisabled} />}
 
                         {leadingContent}
@@ -147,7 +147,7 @@ export const Tag = ({
                         {children}
 
                         {typeof count === "number" && (
-                            <span className={cx("flex items-center justify-center rounded-[3px] bg-tertiary text-center", styles[context.size].count)}>
+                            <span className={cx("tw:flex tw:items-center tw:justify-center tw:rounded-[3px] tw:bg-tertiary tw:text-center", styles[context.size].count)}>
                                 {count}
                             </span>
                         )}

@@ -13,37 +13,37 @@ const sizes = sortCx({
     xxs: {
         strokeWidth: 6,
         radius: 29,
-        valueClass: "text-sm font-semibold text-primary",
-        labelClass: "text-xs font-medium text-tertiary",
-        halfCircleTextPosition: "absolute bottom-0.5 text-center",
+        valueClass: "tw:text-sm tw:font-semibold tw:text-primary",
+        labelClass: "tw:text-xs tw:font-medium tw:text-tertiary",
+        halfCircleTextPosition: "tw:absolute tw:bottom-0.5 tw:text-center",
     },
     xs: {
         strokeWidth: 16,
         radius: 72,
-        valueClass: "text-display-xs font-semibold text-primary",
-        labelClass: "text-xs font-medium text-tertiary",
-        halfCircleTextPosition: "absolute bottom-0.5 text-center",
+        valueClass: "tw:text-display-xs tw:font-semibold tw:text-primary",
+        labelClass: "tw:text-xs tw:font-medium tw:text-tertiary",
+        halfCircleTextPosition: "tw:absolute tw:bottom-0.5 tw:text-center",
     },
     sm: {
         strokeWidth: 20,
         radius: 90,
-        valueClass: "text-display-sm font-semibold text-primary",
-        labelClass: "text-xs font-medium text-tertiary",
-        halfCircleTextPosition: "absolute bottom-1 text-center",
+        valueClass: "tw:text-display-sm tw:font-semibold tw:text-primary",
+        labelClass: "tw:text-xs tw:font-medium tw:text-tertiary",
+        halfCircleTextPosition: "tw:absolute tw:bottom-1 tw:text-center",
     },
     md: {
         strokeWidth: 24,
         radius: 108,
-        valueClass: "text-display-md font-semibold text-primary",
-        labelClass: "text-sm font-medium text-tertiary",
-        halfCircleTextPosition: "absolute bottom-1 text-center",
+        valueClass: "tw:text-display-md tw:font-semibold tw:text-primary",
+        labelClass: "tw:text-sm tw:font-medium tw:text-tertiary",
+        halfCircleTextPosition: "tw:absolute tw:bottom-1 tw:text-center",
     },
     lg: {
         strokeWidth: 28,
         radius: 126,
-        valueClass: "text-display-lg font-semibold text-primary",
-        labelClass: "text-sm font-medium text-tertiary",
-        halfCircleTextPosition: "absolute bottom-0 text-center",
+        valueClass: "tw:text-display-lg tw:font-semibold tw:text-primary",
+        labelClass: "tw:text-sm tw:font-medium tw:text-tertiary",
+        halfCircleTextPosition: "tw:absolute tw:bottom-0 tw:text-center",
     },
 });
 
@@ -65,12 +65,12 @@ export const ProgressBarCircle = ({ value, min = 0, max = 100, size, label, valu
     const strokeDashoffset = 100 - percentage;
 
     return (
-        <div className="flex flex-col items-center gap-0.5">
-            <div role="progressbar" aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} className="relative flex w-max items-center justify-center">
-                <svg className="-rotate-90" width={width} height={height} viewBox={viewBox}>
+        <div className="tw:flex tw:flex-col tw:items-center tw:gap-0.5">
+            <div role="progressbar" aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} className="tw:relative tw:flex tw:w-max tw:items-center tw:justify-center">
+                <svg className="tw:-rotate-90" width={width} height={height} viewBox={viewBox}>
                     {/* Background circle */}
                     <circle
-                        className="stroke-bg-quaternary"
+                        className="tw:stroke-bg-quaternary"
                         cx={cx}
                         cy={cy}
                         r={radius}
@@ -83,7 +83,7 @@ export const ProgressBarCircle = ({ value, min = 0, max = 100, size, label, valu
 
                     {/* Foreground circle */}
                     <circle
-                        className="stroke-fg-brand-primary"
+                        className="tw:stroke-fg-brand-primary"
                         cx={cx}
                         cy={cy}
                         r={radius}
@@ -96,7 +96,7 @@ export const ProgressBarCircle = ({ value, min = 0, max = 100, size, label, valu
                     />
                 </svg>
                 {label && size !== "xxs" ? (
-                    <div className="absolute text-center">
+                    <div className="tw:absolute tw:text-center">
                         <div className={labelClass}>{label}</div>
                         <div className={valueClass}>{valueFormatter ? valueFormatter(value, percentage) : `${percentage}%`}</div>
                     </div>
@@ -126,12 +126,12 @@ export const ProgressBarHalfCircle = ({ value, min = 0, max = 100, size, label, 
     const strokeDashoffset = -50 - (100 - percentage) / 2;
 
     return (
-        <div className="flex flex-col items-center gap-0.5">
-            <div role="progressbar" aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} className="relative flex w-max items-center justify-center">
+        <div className="tw:flex tw:flex-col tw:items-center tw:gap-0.5">
+            <div role="progressbar" aria-valuenow={value} aria-valuemin={min} aria-valuemax={max} className="tw:relative tw:flex tw:w-max tw:items-center tw:justify-center">
                 <svg width={width} height={height} viewBox={viewBox}>
                     {/* Background half-circle */}
                     <circle
-                        className="stroke-bg-quaternary"
+                        className="tw:stroke-bg-quaternary"
                         cx={cx}
                         cy={cy}
                         r={radius}
@@ -145,7 +145,7 @@ export const ProgressBarHalfCircle = ({ value, min = 0, max = 100, size, label, 
 
                     {/* Foreground half-circle */}
                     <circle
-                        className="origin-center -scale-x-100 stroke-fg-brand-primary"
+                        className="tw:origin-center tw:-scale-x-100 tw:stroke-fg-brand-primary"
                         cx={cx}
                         cy={cy}
                         r={radius}

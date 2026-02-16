@@ -56,17 +56,17 @@ const SelectValue = ({ isOpen, isFocused, isDisabled, size, placeholder, placeho
         <AriaButton
             ref={ref}
             className={cx(
-                "relative flex w-full cursor-pointer items-center rounded-lg bg-primary shadow-xs ring-1 ring-primary outline-hidden transition duration-100 ease-linear ring-inset",
-                (isFocused || isOpen) && "ring-2 ring-brand",
-                isDisabled && "cursor-not-allowed bg-disabled_subtle text-disabled",
+                "tw:relative tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset",
+                (isFocused || isOpen) && "tw:ring-2 tw:ring-brand",
+                isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:text-disabled",
             )}
         >
             <AriaSelectValue<SelectItemType>
                 className={cx(
-                    "flex h-max w-full items-center justify-start gap-2 truncate text-left align-middle",
+                    "tw:flex tw:h-max tw:w-full tw:items-center tw:justify-start tw:gap-2 tw:truncate tw:text-left tw:align-middle",
 
                     // Icon styles
-                    "*:data-icon:size-5 *:data-icon:shrink-0 *:data-icon:text-fg-quaternary in-disabled:*:data-icon:text-fg-disabled",
+                    "*:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:text-fg-quaternary in-disabled:*:data-icon:tw:text-fg-disabled",
 
                     sizes[size].root,
                 )}
@@ -84,17 +84,17 @@ const SelectValue = ({ isOpen, isFocused, isDisabled, size, placeholder, placeho
                             ) : null}
 
                             {state.selectedItem ? (
-                                <section className="flex w-full gap-2 truncate">
-                                    <p className="truncate text-md font-medium text-primary">{state.selectedItem?.label}</p>
-                                    {state.selectedItem?.supportingText && <p className="text-md text-tertiary">{state.selectedItem?.supportingText}</p>}
+                                <section className="tw:flex tw:w-full tw:gap-2 tw:truncate">
+                                    <p className="tw:truncate tw:text-md tw:font-medium tw:text-primary">{state.selectedItem?.label}</p>
+                                    {state.selectedItem?.supportingText && <p className="tw:text-md tw:text-tertiary">{state.selectedItem?.supportingText}</p>}
                                 </section>
                             ) : (
-                                <p className={cx("text-md text-placeholder", isDisabled && "text-disabled")}>{placeholder}</p>
+                                <p className={cx("tw:text-md tw:text-placeholder", isDisabled && "tw:text-disabled")}>{placeholder}</p>
                             )}
 
                             <ChevronDown
                                 aria-hidden="true"
-                                className={cx("ml-auto shrink-0 text-fg-quaternary", size === "sm" ? "size-4 stroke-[2.5px]" : "size-5")}
+                                className={cx("tw:ml-auto tw:shrink-0 tw:text-fg-quaternary", size === "sm" ? "tw:size-4 tw:stroke-[2.5px]" : "tw:size-5")}
                             />
                         </>
                     );
@@ -109,7 +109,7 @@ export const SelectContext = createContext<{ size: "sm" | "md" }>({ size: "sm" }
 const Select = ({ placeholder = "Select", placeholderIcon, size = "sm", children, items, label, hint, tooltip, className, ...rest }: SelectProps) => {
     return (
         <SelectContext.Provider value={{ size }}>
-            <AriaSelect {...rest} className={(state) => cx("flex flex-col gap-1.5", typeof className === "function" ? className(state) : className)}>
+            <AriaSelect {...rest} className={(state) => cx("tw:flex tw:flex-col tw:gap-1.5", typeof className === "function" ? className(state) : className)}>
                 {(state) => (
                     <>
                         {label && (
@@ -121,7 +121,7 @@ const Select = ({ placeholder = "Select", placeholderIcon, size = "sm", children
                         <SelectValue {...state} {...{ size, placeholder }} placeholderIcon={placeholderIcon} />
 
                         <Popover size={size} className={rest.popoverClassName}>
-                            <AriaListBox items={items} className="size-full outline-hidden">
+                            <AriaListBox items={items} className="tw:size-full tw:outline-hidden">
                                 {children}
                             </AriaListBox>
                         </Popover>

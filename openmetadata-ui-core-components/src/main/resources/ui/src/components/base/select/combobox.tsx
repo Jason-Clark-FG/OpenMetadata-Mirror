@@ -42,44 +42,44 @@ const ComboBoxValue = ({ size, shortcut, placeholder, shortcutClassName, ...othe
             {...otherProps}
             className={({ isFocusWithin, isDisabled }) =>
                 cx(
-                    "relative flex w-full items-center gap-2 rounded-lg bg-primary shadow-xs ring-1 ring-primary outline-hidden transition-shadow duration-100 ease-linear ring-inset",
-                    isDisabled && "cursor-not-allowed bg-disabled_subtle",
-                    isFocusWithin && "ring-2 ring-brand",
+                    "tw:relative tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition-shadow tw:duration-100 tw:ease-linear tw:ring-inset",
+                    isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle",
+                    isFocusWithin && "tw:ring-2 tw:ring-brand",
                     sizes[size].root,
                 )
             }
         >
             {({ isDisabled }) => (
                 <>
-                    <SearchIcon className="pointer-events-none size-5 shrink-0 text-fg-quaternary" />
+                    <SearchIcon className="tw:pointer-events-none tw:size-5 tw:shrink-0 tw:text-fg-quaternary" />
 
-                    <div className="relative flex w-full items-center gap-2">
+                    <div className="tw:relative tw:flex tw:w-full tw:items-center tw:gap-2">
                         {inputValue && (
-                            <span className="absolute top-1/2 z-0 inline-flex w-full -translate-y-1/2 gap-2 truncate" aria-hidden="true">
-                                <p className={cx("text-md font-medium text-primary", isDisabled && "text-disabled")}>{first}</p>
-                                {last && <p className={cx("-ml-0.75 text-md text-tertiary", isDisabled && "text-disabled")}>{last}</p>}
+                            <span className="tw:absolute tw:top-1/2 tw:z-0 tw:inline-flex tw:w-full tw:-translate-y-1/2 tw:gap-2 tw:truncate" aria-hidden="true">
+                                <p className={cx("tw:text-md tw:font-medium tw:text-primary", isDisabled && "tw:text-disabled")}>{first}</p>
+                                {last && <p className={cx("tw:-ml-0.75 tw:text-md tw:text-tertiary", isDisabled && "tw:text-disabled")}>{last}</p>}
                             </span>
                         )}
 
                         <AriaInput
                             placeholder={placeholder}
-                            className="z-10 w-full appearance-none bg-transparent text-md text-transparent caret-alpha-black/90 placeholder:text-placeholder focus:outline-hidden disabled:cursor-not-allowed disabled:text-disabled disabled:placeholder:text-disabled"
+                            className="tw:z-10 tw:w-full tw:appearance-none tw:bg-transparent tw:text-md tw:text-transparent tw:caret-alpha-black/90 placeholder:tw:text-placeholder focus:tw:outline-hidden disabled:tw:cursor-not-allowed disabled:tw:text-disabled disabled:placeholder:tw:text-disabled"
                         />
                     </div>
 
                     {shortcut && (
                         <div
                             className={cx(
-                                "absolute inset-y-0.5 right-0.5 z-10 flex items-center rounded-r-[inherit] bg-linear-to-r from-transparent to-bg-primary to-40% pl-8",
-                                isDisabled && "to-bg-disabled_subtle",
+                                "tw:absolute tw:inset-y-0.5 tw:right-0.5 tw:z-10 tw:flex tw:items-center tw:rounded-r-[inherit] tw:bg-linear-to-r tw:from-transparent tw:to-bg-primary tw:to-40% tw:pl-8",
+                                isDisabled && "tw:to-bg-disabled_subtle",
                                 sizes[size].shortcut,
                                 shortcutClassName,
                             )}
                         >
                             <span
                                 className={cx(
-                                    "pointer-events-none rounded px-1 py-px text-xs font-medium text-quaternary ring-1 ring-secondary select-none ring-inset",
-                                    isDisabled && "bg-transparent text-disabled",
+                                    "tw:pointer-events-none tw:rounded tw:px-1 tw:py-px tw:text-xs tw:font-medium tw:text-quaternary tw:ring-1 tw:ring-secondary tw:select-none tw:ring-inset",
+                                    isDisabled && "tw:bg-transparent tw:text-disabled",
                                 )}
                                 aria-hidden="true"
                             >
@@ -116,7 +116,7 @@ export const ComboBox = ({ placeholder = "Search", shortcut = true, size = "sm",
         <SelectContext.Provider value={{ size }}>
             <AriaComboBox menuTrigger="focus" {...otherProps}>
                 {(state) => (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="tw:flex tw:flex-col tw:gap-1.5">
                         {otherProps.label && (
                             <Label isRequired={state.isRequired} tooltip={otherProps.tooltip}>
                                 {otherProps.label}
@@ -136,7 +136,7 @@ export const ComboBox = ({ placeholder = "Search", shortcut = true, size = "sm",
                         />
 
                         <Popover size={size} triggerRef={placeholderRef} style={{ width: popoverWidth }} className={otherProps.popoverClassName}>
-                            <AriaListBox items={items} className="size-full outline-hidden">
+                            <AriaListBox items={items} className="tw:size-full tw:outline-hidden">
                                 {children}
                             </AriaListBox>
                         </Popover>

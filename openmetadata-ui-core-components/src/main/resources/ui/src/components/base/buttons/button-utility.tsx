@@ -90,12 +90,12 @@ export const ButtonUtility = ({
             aria-label={tooltip}
             {...props}
             className={cx(
-                "group relative inline-flex h-max cursor-pointer items-center justify-center rounded-md p-1.5 outline-focus-ring transition duration-100 ease-linear focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-fg-disabled_subtle",
+                "tw:group tw:relative tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:p-1.5 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2 disabled:tw:cursor-not-allowed disabled:tw:text-fg-disabled_subtle",
                 styles[color],
 
                 // Icon styles
-                "*:data-icon:pointer-events-none *:data-icon:shrink-0 *:data-icon:text-current *:data-icon:transition-inherit-all",
-                size === "xs" ? "*:data-icon:size-4" : "*:data-icon:size-5",
+                "*:data-icon:tw:pointer-events-none *:data-icon:tw:shrink-0 *:data-icon:tw:text-current *:data-icon:tw:transition-inherit-all",
+                size === "xs" ? "*:data-icon:tw:size-4" : "*:data-icon:tw:size-5",
 
                 className,
             )}

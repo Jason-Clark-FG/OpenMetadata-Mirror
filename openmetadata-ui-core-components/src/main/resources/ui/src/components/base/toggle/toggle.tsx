@@ -18,21 +18,21 @@ export const ToggleBase = ({ className, isHovered, isDisabled, isFocusVisible, i
         default: {
             sm: {
                 root: "h-5 w-9 p-0.5",
-                switch: cx("size-4", isSelected && "translate-x-4"),
+                switch: cx("tw:size-4", isSelected && "tw:translate-x-4"),
             },
             md: {
                 root: "h-6 w-11 p-0.5",
-                switch: cx("size-5", isSelected && "translate-x-5"),
+                switch: cx("tw:size-5", isSelected && "tw:translate-x-5"),
             },
         },
         slim: {
             sm: {
                 root: "h-4 w-8",
-                switch: cx("size-4", isSelected && "translate-x-4"),
+                switch: cx("tw:size-4", isSelected && "tw:translate-x-4"),
             },
             md: {
                 root: "h-5 w-10",
-                switch: cx("size-5", isSelected && "translate-x-5"),
+                switch: cx("tw:size-5", isSelected && "tw:translate-x-5"),
             },
         },
     };
@@ -42,14 +42,14 @@ export const ToggleBase = ({ className, isHovered, isDisabled, isFocusVisible, i
     return (
         <div
             className={cx(
-                "cursor-pointer rounded-full bg-tertiary outline-focus-ring transition duration-150 ease-linear",
-                isSelected && "bg-brand-solid",
-                isSelected && isHovered && "bg-brand-solid_hover",
-                isDisabled && "cursor-not-allowed bg-disabled",
-                isFocusVisible && "outline-2 outline-offset-2",
+                "tw:cursor-pointer tw:rounded-full tw:bg-tertiary tw:outline-focus-ring tw:transition tw:duration-150 tw:ease-linear",
+                isSelected && "tw:bg-brand-solid",
+                isSelected && isHovered && "tw:bg-brand-solid_hover",
+                isDisabled && "tw:cursor-not-allowed tw:bg-disabled",
+                isFocusVisible && "tw:outline-2 tw:outline-offset-2",
 
-                slim && "ring-1 ring-secondary ring-inset",
-                slim && isSelected && "ring-transparent",
+                slim && "tw:ring-1 tw:ring-secondary tw:ring-inset",
+                slim && isSelected && "tw:ring-transparent",
                 classes.root,
                 className,
             )}
@@ -59,13 +59,13 @@ export const ToggleBase = ({ className, isHovered, isDisabled, isFocusVisible, i
                     transition: "transform 0.15s ease-in-out, translate 0.15s ease-in-out, border-color 0.1s linear, background-color 0.1s linear",
                 }}
                 className={cx(
-                    "rounded-full bg-fg-white shadow-sm",
-                    isDisabled && "bg-toggle-button-fg_disabled",
+                    "tw:rounded-full tw:bg-fg-white tw:shadow-sm",
+                    isDisabled && "tw:bg-toggle-button-fg_disabled",
 
-                    slim && "shadow-xs",
-                    slim && "border border-toggle-border",
-                    slim && isSelected && "border-toggle-slim-border_pressed",
-                    slim && isSelected && isHovered && "border-toggle-slim-border_pressed-hover",
+                    slim && "tw:shadow-xs",
+                    slim && "tw:border tw:border-toggle-border",
+                    slim && isSelected && "tw:border-toggle-slim-border_pressed",
+                    slim && isSelected && isHovered && "tw:border-toggle-slim-border_pressed-hover",
 
                     classes.switch,
                 )}
@@ -102,8 +102,8 @@ export const Toggle = ({ label, hint, className, size = "sm", slim, ...ariaSwitc
             {...ariaSwitchProps}
             className={(renderProps) =>
                 cx(
-                    "flex w-max items-start",
-                    renderProps.isDisabled && "cursor-not-allowed",
+                    "tw:flex tw:w-max tw:items-start",
+                    renderProps.isDisabled && "tw:cursor-not-allowed",
                     sizes[size].root,
                     typeof className === "function" ? className(renderProps) : className,
                 )
@@ -118,14 +118,14 @@ export const Toggle = ({ label, hint, className, size = "sm", slim, ...ariaSwitc
                         isDisabled={isDisabled}
                         isFocusVisible={isFocusVisible}
                         isSelected={isSelected}
-                        className={slim ? "mt-0.5" : ""}
+                        className={slim ? "tw:mt-0.5" : ""}
                     />
 
                     {(label || hint) && (
-                        <div className={cx("flex flex-col", sizes[size].textWrapper)}>
-                            {label && <p className={cx("text-secondary select-none", sizes[size].label)}>{label}</p>}
+                        <div className={cx("tw:flex tw:flex-col", sizes[size].textWrapper)}>
+                            {label && <p className={cx("tw:text-secondary tw:select-none", sizes[size].label)}>{label}</p>}
                             {hint && (
-                                <span className={cx("text-tertiary", sizes[size].hint)} onClick={(event) => event.stopPropagation()}>
+                                <span className={cx("tw:text-tertiary", sizes[size].hint)} onClick={(event) => event.stopPropagation()}>
                                     {hint}
                                 </span>
                             )}

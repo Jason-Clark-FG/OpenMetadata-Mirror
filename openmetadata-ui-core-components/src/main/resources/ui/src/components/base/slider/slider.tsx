@@ -9,10 +9,10 @@ import {
 import { cx, sortCx } from "@/utils/cx";
 
 const styles = sortCx({
-    default: "hidden",
-    bottom: "absolute top-2 left-1/2 -translate-x-1/2 translate-y-full text-md font-medium text-primary",
+    default: "tw:hidden",
+    bottom: "tw:absolute tw:top-2 tw:left-1/2 tw:-translate-x-1/2 tw:translate-y-full tw:text-md tw:font-medium tw:text-primary",
     "top-floating":
-        "absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-secondary shadow-lg ring-1 ring-secondary_alt",
+        "tw:absolute tw:-top-2 tw:left-1/2 tw:-translate-x-1/2 tw:-translate-y-full tw:rounded-lg tw:bg-primary tw:px-3 tw:py-2 tw:text-xs tw:font-semibold tw:text-secondary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt",
 });
 
 interface SliderProps extends AriaSliderProps {
@@ -30,16 +30,16 @@ export const Slider = ({ labelPosition = "default", minValue = 0, maxValue = 100
     return (
         <AriaSlider {...rest} {...{ minValue, maxValue }} formatOptions={formatOptions ?? defaultFormatOptions}>
             <AriaLabel />
-            <AriaSliderTrack className="relative h-6 w-full">
+            <AriaSliderTrack className="tw:relative tw:h-6 tw:w-full">
                 {({ state: { values, getThumbValue, getThumbPercent, getFormattedValue } }) => {
                     const left = values.length === 1 ? 0 : getThumbPercent(0);
                     const width = values.length === 1 ? getThumbPercent(0) : getThumbPercent(1) - left;
 
                     return (
                         <>
-                            <span className="absolute top-1/2 h-2 w-full -translate-y-1/2 rounded-full bg-quaternary" />
+                            <span className="tw:absolute tw:top-1/2 tw:h-2 tw:w-full tw:-translate-y-1/2 tw:rounded-full tw:bg-quaternary" />
                             <span
-                                className="absolute top-1/2 h-2 w-full -translate-y-1/2 rounded-full bg-brand-solid"
+                                className="tw:absolute tw:top-1/2 tw:h-2 tw:w-full tw:-translate-y-1/2 tw:rounded-full tw:bg-brand-solid"
                                 style={{
                                     left: `${left * 100}%`,
                                     width: `${width * 100}%`,
@@ -52,13 +52,13 @@ export const Slider = ({ labelPosition = "default", minValue = 0, maxValue = 100
                                         index={index}
                                         className={({ isFocusVisible, isDragging }) =>
                                             cx(
-                                                "top-1/2 box-border size-6 cursor-grab rounded-full bg-slider-handle-bg shadow-md ring-2 ring-slider-handle-border ring-inset",
-                                                isFocusVisible && "outline-2 outline-offset-2 outline-focus-ring",
-                                                isDragging && "cursor-grabbing",
+                                                "tw:top-1/2 tw:box-border tw:size-6 tw:cursor-grab tw:rounded-full tw:bg-slider-handle-bg tw:shadow-md tw:ring-2 tw:ring-slider-handle-border tw:ring-inset",
+                                                isFocusVisible && "tw:outline-2 tw:outline-offset-2 tw:outline-focus-ring",
+                                                isDragging && "tw:cursor-grabbing",
                                             )
                                         }
                                     >
-                                        <AriaSliderOutput className={cx("whitespace-nowrap", styles[labelPosition])}>
+                                        <AriaSliderOutput className={cx("tw:whitespace-nowrap", styles[labelPosition])}>
                                             {labelFormatter ? labelFormatter(getThumbValue(index)) : getFormattedValue(getThumbValue(index) / 100)}
                                         </AriaSliderOutput>
                                     </AriaSliderThumb>

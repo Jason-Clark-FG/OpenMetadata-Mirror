@@ -17,123 +17,123 @@ import { isReactComponent } from "@/utils/is-react-component";
 export const styles = sortCx({
   common: {
     root: [
-      "group relative inline-flex h-max tw:cursor-pointer items-center justify-center whitespace-nowrap outline-brand transition duration-100 ease-linear before:absolute focus-visible:outline-2 focus-visible:outline-offset-2",
+      "tw:group tw:relative tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:justify-center tw:whitespace-nowrap tw:outline-brand tw:transition tw:duration-100 tw:ease-linear before:tw:absolute focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
       // When button is used within `InputGroup`
-      "in-data-input-wrapper:shadow-xs in-data-input-wrapper:focus:!z-50 in-data-input-wrapper:in-data-leading:-mr-px in-data-input-wrapper:in-data-leading:rounded-r-none in-data-input-wrapper:in-data-leading:before:rounded-r-none in-data-input-wrapper:in-data-trailing:-ml-px in-data-input-wrapper:in-data-trailing:rounded-l-none in-data-input-wrapper:in-data-trailing:before:rounded-l-none",
+      "in-data-input-wrapper:tw:shadow-xs in-data-input-wrapper:focus:tw:!z-50 in-data-input-wrapper:in-data-leading:tw:-mr-px in-data-input-wrapper:in-data-leading:tw:rounded-r-none in-data-input-wrapper:in-data-leading:before:tw:rounded-r-none in-data-input-wrapper:in-data-trailing:tw:-ml-px in-data-input-wrapper:in-data-trailing:tw:rounded-l-none in-data-input-wrapper:in-data-trailing:before:tw:rounded-l-none",
       // Disabled styles
-      "disabled:cursor-not-allowed disabled:text-fg-disabled",
+      "disabled:tw:cursor-not-allowed disabled:tw:text-fg-disabled",
       // Icon styles
-      "disabled:*:data-icon:text-fg-disabled_subtle",
+      "disabled:*:data-icon:tw:text-fg-disabled_subtle",
       // Same as `icon` but for SSR icons that cannot be passed to the client as functions.
-      "*:data-icon:pointer-events-none *:data-icon:size-5 *:data-icon:shrink-0 *:data-icon:transition-inherit-all",
+      "*:data-icon:tw:pointer-events-none *:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:transition-inherit-all",
     ].join(" "),
-    icon: "pointer-events-none size-5 shrink-0 transition-inherit-all",
+    icon: "tw:pointer-events-none tw:size-5 tw:shrink-0 tw:transition-inherit-all",
   },
   sizes: {
     sm: {
       root: [
-        "gap-1 rounded-lg px-3 py-2 text-sm font-semibold before:rounded-[7px] data-icon-only:p-2",
-        "in-data-input-wrapper:px-3.5 in-data-input-wrapper:py-2.5 in-data-input-wrapper:data-icon-only:p-2.5",
+        "tw:gap-1 tw:rounded-lg tw:px-3 tw:py-2 tw:text-sm tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-2",
+        "in-data-input-wrapper:tw:px-3.5 in-data-input-wrapper:tw:py-2.5 in-data-input-wrapper:data-icon-only:tw:p-2.5",
       ].join(" "),
-      linkRoot: "gap-1",
+      linkRoot: "tw:gap-1",
     },
     md: {
       root: [
-        "gap-1 rounded-lg px-3.5 py-2.5 text-sm font-semibold before:rounded-[7px] data-icon-only:p-2.5",
-        "in-data-input-wrapper:gap-1.5 in-data-input-wrapper:px-4 in-data-input-wrapper:text-md in-data-input-wrapper:data-icon-only:p-3",
+        "tw:gap-1 tw:rounded-lg tw:px-3.5 tw:py-2.5 tw:text-sm tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-2.5",
+        "in-data-input-wrapper:tw:gap-1.5 in-data-input-wrapper:tw:px-4 in-data-input-wrapper:tw:text-md in-data-input-wrapper:data-icon-only:tw:p-3",
       ].join(" "),
-      linkRoot: "gap-1",
+      linkRoot: "tw:gap-1",
     },
     lg: {
-      root: "gap-1.5 rounded-lg px-4 py-2.5 text-md font-semibold before:rounded-[7px] data-icon-only:p-3",
-      linkRoot: "gap-1.5",
+      root: "tw:gap-1.5 tw:rounded-lg tw:px-4 tw:py-2.5 tw:text-md tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-3",
+      linkRoot: "tw:gap-1.5",
     },
     xl: {
-      root: "gap-1.5 rounded-lg px-4.5 py-3 text-md font-semibold before:rounded-[7px] data-icon-only:p-3.5",
-      linkRoot: "gap-1.5",
+      root: "tw:gap-1.5 tw:rounded-lg tw:px-4.5 tw:py-3 tw:text-md tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-3.5",
+      linkRoot: "tw:gap-1.5",
     },
   },
 
   colors: {
     primary: {
       root: [
-        "bg-brand-solid text-white shadow-xs-skeumorphic ring-1 ring-transparent ring-inset hover:bg-brand-solid_hover data-loading:bg-brand-solid_hover",
+        "tw:bg-brand-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset hover:tw:bg-brand-solid_hover data-loading:tw:bg-brand-solid_hover",
         // Inner border gradient
-        "before:absolute before:inset-px before:border before:border-white/12 before:mask-b-from-0%",
+        "before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0%",
         // Disabled styles
-        "disabled:bg-disabled disabled:shadow-xs disabled:ring-disabled_subtle",
+        "disabled:tw:bg-disabled disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:text-button-primary-icon hover:*:data-icon:text-button-primary-icon_hover",
+        "*:data-icon:tw:text-button-primary-icon hover:*:data-icon:tw:text-button-primary-icon_hover",
       ].join(" "),
     },
     secondary: {
       root: [
-        "bg-primary text-secondary shadow-xs-skeumorphic ring-1 ring-primary ring-inset hover:bg-primary_hover hover:text-secondary_hover data-loading:bg-primary_hover",
+        "tw:bg-primary tw:text-secondary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-primary tw:ring-inset hover:tw:bg-primary_hover hover:tw:text-secondary_hover data-loading:tw:bg-primary_hover",
         // Disabled styles
-        "disabled:shadow-xs disabled:ring-disabled_subtle",
+        "disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:text-fg-quaternary hover:*:data-icon:text-fg-quaternary_hover",
+        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
       ].join(" "),
     },
     tertiary: {
       root: [
-        "text-tertiary hover:bg-primary_hover hover:text-tertiary_hover data-loading:bg-primary_hover",
+        "tw:text-tertiary hover:tw:bg-primary_hover hover:tw:text-tertiary_hover data-loading:tw:bg-primary_hover",
         // Icon styles
-        "*:data-icon:text-fg-quaternary hover:*:data-icon:text-fg-quaternary_hover",
+        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
       ].join(" "),
     },
     "link-gray": {
       root: [
-        "justify-normal rounded p-0! text-tertiary hover:text-tertiary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-tertiary hover:tw:text-tertiary_hover",
         // Inner text underline
-        "*:data-text:underline *:data-text:decoration-transparent *:data-text:underline-offset-2 hover:*:data-text:decoration-current",
+        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
         // Icon styles
-        "*:data-icon:text-fg-quaternary hover:*:data-icon:text-fg-quaternary_hover",
+        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
       ].join(" "),
     },
     "link-color": {
       root: [
-        "justify-normal rounded p-0! text-brand-secondary hover:text-brand-secondary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-brand-secondary hover:tw:text-brand-secondary_hover",
         // Inner text underline
-        "*:data-text:underline *:data-text:decoration-transparent *:data-text:underline-offset-2 hover:*:data-text:decoration-current",
+        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
         // Icon styles
-        "*:data-icon:text-fg-brand-secondary_alt hover:*:data-icon:text-fg-brand-secondary_hover",
+        "*:data-icon:tw:text-fg-brand-secondary_alt hover:*:data-icon:tw:text-fg-brand-secondary_hover",
       ].join(" "),
     },
     "primary-destructive": {
       root: [
-        "bg-error-solid text-white shadow-xs-skeumorphic ring-1 ring-transparent outline-error ring-inset hover:bg-error-solid_hover data-loading:bg-error-solid_hover",
+        "tw:bg-error-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:outline-error tw:ring-inset hover:tw:bg-error-solid_hover data-loading:tw:bg-error-solid_hover",
         // Inner border gradient
-        "before:absolute before:inset-px before:border before:border-white/12 before:mask-b-from-0%",
+        "before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0%",
         // Disabled styles
-        "disabled:bg-disabled disabled:shadow-xs disabled:ring-disabled_subtle",
+        "disabled:tw:bg-disabled disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:text-button-destructive-primary-icon hover:*:data-icon:text-button-destructive-primary-icon_hover",
+        "*:data-icon:tw:text-button-destructive-primary-icon hover:*:data-icon:tw:text-button-destructive-primary-icon_hover",
       ].join(" "),
     },
     "secondary-destructive": {
       root: [
-        "bg-primary text-error-primary shadow-xs-skeumorphic ring-1 ring-error_subtle outline-error ring-inset hover:bg-error-primary hover:text-error-primary_hover data-loading:bg-error-primary",
+        "tw:bg-primary tw:text-error-primary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-error_subtle tw:outline-error tw:ring-inset hover:tw:bg-error-primary hover:tw:text-error-primary_hover data-loading:tw:bg-error-primary",
         // Disabled styles
-        "disabled:bg-primary disabled:shadow-xs disabled:ring-disabled_subtle",
+        "disabled:tw:bg-primary disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:text-fg-error-secondary hover:*:data-icon:text-fg-error-primary",
+        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
       ].join(" "),
     },
     "tertiary-destructive": {
       root: [
-        "text-error-primary outline-error hover:bg-error-primary hover:text-error-primary_hover data-loading:bg-error-primary",
+        "tw:text-error-primary tw:outline-error hover:tw:bg-error-primary hover:tw:text-error-primary_hover data-loading:tw:bg-error-primary",
         // Icon styles
-        "*:data-icon:text-fg-error-secondary hover:*:data-icon:text-fg-error-primary",
+        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
       ].join(" "),
     },
     "link-destructive": {
       root: [
-        "justify-normal rounded p-0! text-error-primary outline-error hover:text-error-primary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-error hover:tw:text-error-primary_hover",
         // Inner text underline
-        "*:data-text:underline *:data-text:decoration-transparent *:data-text:underline-offset-2 hover:*:data-text:decoration-current",
+        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
         // Icon styles
-        "*:data-icon:text-fg-error-secondary hover:*:data-icon:text-fg-error-primary",
+        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
       ].join(" "),
     },
   },
@@ -243,12 +243,12 @@ export const Button = ({
         styles.sizes[size].root,
         styles.colors[color].root,
         isLinkType && styles.sizes[size].linkRoot,
-        (loading || (href && (disabled || loading))) && "pointer-events-none",
+        (loading || (href && (disabled || loading))) && "tw:pointer-events-none",
         // If in `loading` state, hide everything except the loading icon (and text if `showTextWhileLoading` is true).
         loading &&
           (showTextWhileLoading
-            ? "[&>*:not([data-icon=loading]):not([data-text])]:hidden"
-            : "[&>*:not([data-icon=loading])]:invisible"),
+            ? "[&>*:not([data-icon=loading]):not([data-text])]:tw:hidden"
+            : "[&>*:not([data-icon=loading])]:tw:invisible"),
         className,
       )}
     >
@@ -266,12 +266,12 @@ export const Button = ({
           className={cx(
             styles.common.icon,
             !showTextWhileLoading &&
-              "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+              "tw:absolute tw:top-1/2 tw:left-1/2 tw:-translate-x-1/2 tw:-translate-y-1/2",
           )}
         >
           {/* Background circle */}
           <circle
-            className="stroke-current opacity-30"
+            className="tw:stroke-current tw:opacity-30"
             cx="10"
             cy="10"
             r="8"
@@ -280,7 +280,7 @@ export const Button = ({
           />
           {/* Spinning circle */}
           <circle
-            className="origin-center animate-spin stroke-current"
+            className="tw:origin-center tw:animate-spin tw:stroke-current"
             cx="10"
             cy="10"
             r="8"
@@ -295,7 +295,7 @@ export const Button = ({
       {children && (
         <span
           data-text
-          className={cx("transition-inherit-all", !noTextPadding && "px-0.5")}
+          className={cx("tw:transition-inherit-all", !noTextPadding && "tw:px-0.5")}
         >
           {children}
         </span>

@@ -15,11 +15,11 @@ export const CheckboxBase = ({ className, isSelected, isDisabled, isIndeterminat
     return (
         <div
             className={cx(
-                "relative flex size-4 shrink-0 cursor-pointer appearance-none items-center justify-center rounded bg-primary ring-1 ring-primary ring-inset",
-                size === "md" && "size-5 rounded-md",
-                (isSelected || isIndeterminate) && "bg-brand-solid ring-bg-brand-solid",
-                isDisabled && "cursor-not-allowed bg-disabled_subtle ring-disabled",
-                isFocusVisible && "outline-2 outline-offset-2 outline-focus-ring",
+                "tw:relative tw:flex tw:size-4 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:items-center tw:justify-center tw:rounded tw:bg-primary tw:ring-1 tw:ring-primary tw:ring-inset",
+                size === "md" && "tw:size-5 tw:rounded-md",
+                (isSelected || isIndeterminate) && "tw:bg-brand-solid tw:ring-bg-brand-solid",
+                isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:ring-disabled",
+                isFocusVisible && "tw:outline-2 tw:outline-offset-2 tw:outline-focus-ring",
                 className,
             )}
         >
@@ -28,10 +28,10 @@ export const CheckboxBase = ({ className, isSelected, isDisabled, isIndeterminat
                 viewBox="0 0 14 14"
                 fill="none"
                 className={cx(
-                    "pointer-events-none absolute h-3 w-2.5 text-fg-white opacity-0 transition-inherit-all",
-                    size === "md" && "size-3.5",
-                    isIndeterminate && "opacity-100",
-                    isDisabled && "text-fg-disabled_subtle",
+                    "tw:pointer-events-none tw:absolute tw:h-3 tw:w-2.5 tw:text-fg-white tw:opacity-0 tw:transition-inherit-all",
+                    size === "md" && "tw:size-3.5",
+                    isIndeterminate && "tw:opacity-100",
+                    isDisabled && "tw:text-fg-disabled_subtle",
                 )}
             >
                 <path d="M2.91675 7H11.0834" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -42,10 +42,10 @@ export const CheckboxBase = ({ className, isSelected, isDisabled, isIndeterminat
                 viewBox="0 0 14 14"
                 fill="none"
                 className={cx(
-                    "pointer-events-none absolute size-3 text-fg-white opacity-0 transition-inherit-all",
-                    size === "md" && "size-3.5",
-                    isSelected && !isIndeterminate && "opacity-100",
-                    isDisabled && "text-fg-disabled_subtle",
+                    "tw:pointer-events-none tw:absolute tw:size-3 tw:text-fg-white tw:opacity-0 tw:transition-inherit-all",
+                    size === "md" && "tw:size-3.5",
+                    isSelected && !isIndeterminate && "tw:opacity-100",
+                    isDisabled && "tw:text-fg-disabled_subtle",
                 )}
             >
                 <path d="M11.6666 3.5L5.24992 9.91667L2.33325 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -83,8 +83,8 @@ export const Checkbox = ({ label, hint, size = "sm", className, ...ariaCheckboxP
             {...ariaCheckboxProps}
             className={(state) =>
                 cx(
-                    "flex items-start",
-                    state.isDisabled && "cursor-not-allowed",
+                    "tw:flex tw:items-start",
+                    state.isDisabled && "tw:cursor-not-allowed",
                     sizes[size].root,
                     typeof className === "function" ? className(state) : className,
                 )
@@ -98,13 +98,13 @@ export const Checkbox = ({ label, hint, size = "sm", className, ...ariaCheckboxP
                         isIndeterminate={isIndeterminate}
                         isDisabled={isDisabled}
                         isFocusVisible={isFocusVisible}
-                        className={label || hint ? "mt-0.5" : ""}
+                        className={label || hint ? "tw:mt-0.5" : ""}
                     />
                     {(label || hint) && (
-                        <div className={cx("inline-flex flex-col", sizes[size].textWrapper)}>
-                            {label && <p className={cx("text-secondary select-none", sizes[size].label)}>{label}</p>}
+                        <div className={cx("tw:inline-flex tw:flex-col", sizes[size].textWrapper)}>
+                            {label && <p className={cx("tw:text-secondary tw:select-none", sizes[size].label)}>{label}</p>}
                             {hint && (
-                                <span className={cx("text-tertiary", sizes[size].hint)} onClick={(event) => event.stopPropagation()}>
+                                <span className={cx("tw:text-tertiary", sizes[size].hint)} onClick={(event) => event.stopPropagation()}>
                                     {hint}
                                 </span>
                             )}

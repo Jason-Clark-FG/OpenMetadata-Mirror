@@ -40,8 +40,8 @@ const DropdownItem = ({ label, children, addon, icon: Icon, unstyled, ...props }
             {...props}
             className={(state) =>
                 cx(
-                    "group block cursor-pointer px-1.5 py-px outline-hidden",
-                    state.isDisabled && "cursor-not-allowed",
+                    "tw:group tw:block tw:cursor-pointer tw:px-1.5 tw:py-px tw:outline-hidden",
+                    state.isDisabled && "tw:cursor-not-allowed",
                     typeof props.className === "function" ? props.className(state) : props.className,
                 )
             }
@@ -49,24 +49,24 @@ const DropdownItem = ({ label, children, addon, icon: Icon, unstyled, ...props }
             {(state) => (
                 <div
                     className={cx(
-                        "relative flex items-center rounded-md px-2.5 py-2 outline-focus-ring transition duration-100 ease-linear",
-                        !state.isDisabled && "group-hover:bg-primary_hover",
-                        state.isFocused && "bg-primary_hover",
-                        state.isFocusVisible && "outline-2 -outline-offset-2",
+                        "tw:relative tw:flex tw:items-center tw:rounded-md tw:px-2.5 tw:py-2 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear",
+                        !state.isDisabled && "group-hover:tw:bg-primary_hover",
+                        state.isFocused && "tw:bg-primary_hover",
+                        state.isFocusVisible && "tw:outline-2 tw:-outline-offset-2",
                     )}
                 >
                     {Icon && (
                         <Icon
                             aria-hidden="true"
-                            className={cx("mr-2 size-4 shrink-0 stroke-[2.25px]", state.isDisabled ? "text-fg-disabled" : "text-fg-quaternary")}
+                            className={cx("tw:mr-2 tw:size-4 tw:shrink-0 tw:stroke-[2.25px]", state.isDisabled ? "tw:text-fg-disabled" : "tw:text-fg-quaternary")}
                         />
                     )}
 
                     <span
                         className={cx(
-                            "grow truncate text-sm font-semibold",
-                            state.isDisabled ? "text-disabled" : "text-secondary",
-                            state.isFocused && "text-secondary_hover",
+                            "tw:grow tw:truncate tw:text-sm tw:font-semibold",
+                            state.isDisabled ? "tw:text-disabled" : "tw:text-secondary",
+                            state.isFocused && "tw:text-secondary_hover",
                         )}
                     >
                         {label || (typeof children === "function" ? children(state) : children)}
@@ -75,8 +75,8 @@ const DropdownItem = ({ label, children, addon, icon: Icon, unstyled, ...props }
                     {addon && (
                         <span
                             className={cx(
-                                "ml-3 shrink-0 rounded px-1 py-px text-xs font-medium ring-1 ring-secondary ring-inset",
-                                state.isDisabled ? "text-disabled" : "text-quaternary",
+                                "tw:ml-3 tw:shrink-0 tw:rounded tw:px-1 tw:py-px tw:text-xs tw:font-medium tw:ring-1 tw:ring-secondary tw:ring-inset",
+                                state.isDisabled ? "tw:text-disabled" : "tw:text-quaternary",
                             )}
                         >
                             {addon}
@@ -97,7 +97,7 @@ const DropdownMenu = <T extends object>(props: DropdownMenuProps<T>) => {
             selectionMode="single"
             {...props}
             className={(state) =>
-                cx("h-min overflow-y-auto py-1 outline-hidden select-none", typeof props.className === "function" ? props.className(state) : props.className)
+                cx("tw:h-min tw:overflow-y-auto tw:py-1 tw:outline-hidden tw:select-none", typeof props.className === "function" ? props.className(state) : props.className)
             }
         />
     );
@@ -112,11 +112,11 @@ const DropdownPopover = (props: DropdownPopoverProps) => {
             {...props}
             className={(state) =>
                 cx(
-                    "w-62 origin-(--trigger-anchor-point) overflow-auto rounded-lg bg-primary shadow-lg ring-1 ring-secondary_alt will-change-transform",
+                    "tw:w-62 tw:origin-(--trigger-anchor-point) tw:overflow-auto tw:rounded-lg tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:will-change-transform",
                     state.isEntering &&
-                        "duration-150 ease-out animate-in fade-in placement-right:slide-in-from-left-0.5 placement-top:slide-in-from-bottom-0.5 placement-bottom:slide-in-from-top-0.5",
+                        "tw:duration-150 tw:ease-out tw:animate-in tw:fade-in placement-right:tw:slide-in-from-left-0.5 placement-top:tw:slide-in-from-bottom-0.5 placement-bottom:tw:slide-in-from-top-0.5",
                     state.isExiting &&
-                        "duration-100 ease-in animate-out fade-out placement-right:slide-out-to-left-0.5 placement-top:slide-out-to-bottom-0.5 placement-bottom:slide-out-to-top-0.5",
+                        "tw:duration-100 tw:ease-in tw:animate-out tw:fade-out placement-right:tw:slide-out-to-left-0.5 placement-top:tw:slide-out-to-bottom-0.5 placement-bottom:tw:slide-out-to-top-0.5",
                     typeof props.className === "function" ? props.className(state) : props.className,
                 )
             }
@@ -127,7 +127,7 @@ const DropdownPopover = (props: DropdownPopoverProps) => {
 };
 
 const DropdownSeparator = (props: AriaSeparatorProps) => {
-    return <AriaSeparator {...props} className={cx("my-1 h-px w-full bg-border-secondary", props.className)} />;
+    return <AriaSeparator {...props} className={cx("tw:my-1 tw:h-px tw:w-full tw:bg-border-secondary", props.className)} />;
 };
 
 const DropdownDotsButton = (props: AriaButtonProps & RefAttributes<HTMLButtonElement>) => {
@@ -137,14 +137,14 @@ const DropdownDotsButton = (props: AriaButtonProps & RefAttributes<HTMLButtonEle
             aria-label="Open menu"
             className={(state) =>
                 cx(
-                    "cursor-pointer rounded-md text-fg-quaternary outline-focus-ring transition duration-100 ease-linear",
-                    (state.isPressed || state.isHovered) && "text-fg-quaternary_hover",
-                    (state.isPressed || state.isFocusVisible) && "outline-2 outline-offset-2",
+                    "tw:cursor-pointer tw:rounded-md tw:text-fg-quaternary tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear",
+                    (state.isPressed || state.isHovered) && "tw:text-fg-quaternary_hover",
+                    (state.isPressed || state.isFocusVisible) && "tw:outline-2 tw:outline-offset-2",
                     typeof props.className === "function" ? props.className(state) : props.className,
                 )
             }
         >
-            <DotsVertical className="size-5 transition-inherit-all" />
+            <DotsVertical className="tw:size-5 tw:transition-inherit-all" />
         </AriaButton>
     );
 };

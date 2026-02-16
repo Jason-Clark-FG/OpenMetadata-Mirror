@@ -6,45 +6,45 @@ import { AppleLogo, DribbleLogo, FacebookLogo, FigmaLogo, FigmaLogoOutlined, Goo
 
 export const styles = sortCx({
     common: {
-        root: "group relative inline-flex h-max cursor-pointer items-center justify-center font-semibold whitespace-nowrap outline-focus-ring transition duration-100 ease-linear before:absolute focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:stroke-fg-disabled disabled:text-fg-disabled disabled:*:text-fg-disabled",
-        icon: "pointer-events-none shrink-0 transition-inherit-all",
+        root: "tw:group tw:relative tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:justify-center tw:font-semibold tw:whitespace-nowrap tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear before:tw:absolute focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2 disabled:tw:cursor-not-allowed disabled:tw:stroke-fg-disabled disabled:tw:text-fg-disabled disabled:*:tw:text-fg-disabled",
+        icon: "tw:pointer-events-none tw:shrink-0 tw:transition-inherit-all",
     },
 
     sizes: {
         sm: {
-            root: "gap-2 rounded-lg px-3 py-2 text-sm before:rounded-[7px] data-icon-only:p-2",
+            root: "tw:gap-2 tw:rounded-lg tw:px-3 tw:py-2 tw:text-sm before:tw:rounded-[7px] data-icon-only:tw:p-2",
         },
         md: {
-            root: "gap-2.5 rounded-lg px-3.5 py-2.5 text-sm before:rounded-[7px] data-icon-only:p-2.5",
+            root: "tw:gap-2.5 tw:rounded-lg tw:px-3.5 tw:py-2.5 tw:text-sm before:tw:rounded-[7px] data-icon-only:tw:p-2.5",
         },
         lg: {
-            root: "gap-3 rounded-lg px-4 py-2.5 text-md before:rounded-[7px] data-icon-only:p-2.5",
+            root: "tw:gap-3 tw:rounded-lg tw:px-4 tw:py-2.5 tw:text-md before:tw:rounded-[7px] data-icon-only:tw:p-2.5",
         },
         xl: {
-            root: "gap-3.5 rounded-lg px-4.5 py-3 text-md before:rounded-[7px] data-icon-only:p-3.5",
+            root: "tw:gap-3.5 tw:rounded-lg tw:px-4.5 tw:py-3 tw:text-md before:tw:rounded-[7px] data-icon-only:tw:p-3.5",
         },
         "2xl": {
-            root: "gap-4 rounded-[10px] px-5.5 py-4 text-lg before:rounded-[9px] data-icon-only:p-4",
+            root: "tw:gap-4 tw:rounded-[10px] tw:px-5.5 tw:py-4 tw:text-lg before:tw:rounded-[9px] data-icon-only:tw:p-4",
         },
     },
 
     colors: {
         gray: {
-            root: "bg-primary text-secondary shadow-xs-skeumorphic ring-1 ring-primary ring-inset hover:bg-primary_hover hover:text-secondary_hover",
-            icon: "text-fg-quaternary group-hover:text-fg-quaternary_hover",
+            root: "tw:bg-primary tw:text-secondary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-primary tw:ring-inset hover:tw:bg-primary_hover hover:tw:text-secondary_hover",
+            icon: "tw:text-fg-quaternary group-hover:tw:text-fg-quaternary_hover",
         },
         black: {
-            root: "bg-black text-white shadow-xs-skeumorphic ring-1 ring-transparent ring-inset before:absolute before:inset-px before:border before:border-white/12 before:mask-b-from-0%",
+            root: "tw:bg-black tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0%",
             icon: "",
         },
 
         facebook: {
-            root: "bg-[#1877F2] text-white shadow-xs-skeumorphic ring-1 ring-transparent ring-inset before:absolute before:inset-px before:border before:border-white/12 before:mask-b-from-0% hover:bg-[#0C63D4]",
+            root: "tw:bg-[#1877F2] tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0% hover:tw:bg-[#0C63D4]",
             icon: "",
         },
 
         dribble: {
-            root: "bg-[#EA4C89] text-white shadow-xs-skeumorphic ring-1 ring-transparent ring-inset before:absolute before:inset-px before:border before:border-white/12 before:mask-b-from-0% hover:bg-[#E62872]",
+            root: "tw:bg-[#EA4C89] tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0% hover:tw:bg-[#E62872]",
             icon: "",
         },
     },
@@ -131,9 +131,9 @@ export const SocialButton = ({ size = "lg", theme = "brand", social, className, 
                     theme === "gray"
                         ? colorStyles.icon
                         : theme === "brand" && (social === "facebook" || social === "apple" || social === "twitter")
-                          ? "text-white"
+                          ? "tw:text-white"
                           : theme === "color" && (social === "apple" || social === "twitter")
-                            ? "text-alpha-black"
+                            ? "tw:text-alpha-black"
                             : "",
                 )}
                 colorful={

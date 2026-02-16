@@ -28,26 +28,26 @@ const getSizeClasses = (
 ): Record<Align, Record<Size, { root?: string; addon?: string; icon?: string; dot?: string }>> => ({
     leading: {
         md: {
-            root: cx("py-1 pr-2 pl-1 text-xs font-medium", !text && !icon && "pr-1"),
-            addon: cx("px-2 py-0.5", theme === "modern" && "gap-1 px-1.5", text && "mr-2"),
+            root: cx("tw:py-1 tw:pr-2 tw:pl-1 tw:text-xs tw:font-medium", !text && !icon && "tw:pr-1"),
+            addon: cx("tw:px-2 tw:py-0.5", theme === "modern" && "tw:gap-1 tw:px-1.5", text && "tw:mr-2"),
             icon: "ml-1 size-4",
         },
         lg: {
-            root: cx("py-1 pr-2 pl-1 text-sm font-medium", !text && !icon && "pr-1"),
-            addon: cx("px-2.5 py-0.5", theme === "modern" && "gap-1.5 px-2", text && "mr-2"),
+            root: cx("tw:py-1 tw:pr-2 tw:pl-1 tw:text-sm tw:font-medium", !text && !icon && "tw:pr-1"),
+            addon: cx("tw:px-2.5 tw:py-0.5", theme === "modern" && "tw:gap-1.5 tw:px-2", text && "tw:mr-2"),
             icon: "ml-1 size-4",
         },
     },
     trailing: {
         md: {
-            root: cx("py-1 pr-1 pl-3 text-xs font-medium", theme === "modern" && "pl-2.5"),
-            addon: cx("py-0.5 pr-1.5 pl-2", theme === "modern" && "pr-1.5 pl-2", text && "ml-2"),
+            root: cx("tw:py-1 tw:pr-1 tw:pl-3 tw:text-xs tw:font-medium", theme === "modern" && "tw:pl-2.5"),
+            addon: cx("tw:py-0.5 tw:pr-1.5 tw:pl-2", theme === "modern" && "tw:pr-1.5 tw:pl-2", text && "tw:ml-2"),
             icon: "ml-0.5 size-3 stroke-[3px]",
             dot: "mr-1.5",
         },
         lg: {
             root: "py-1 pr-1 pl-3 text-sm font-medium",
-            addon: cx("py-0.5 pr-2 pl-2.5", theme === "modern" && "pr-1.5 pl-2", text && "ml-2"),
+            addon: cx("tw:py-0.5 tw:pr-2 tw:pl-2.5", theme === "modern" && "tw:pr-1.5 tw:pl-2", text && "tw:ml-2"),
             icon: "ml-1 size-3 stroke-[3px]",
             dot: "mr-2",
         },
@@ -57,46 +57,46 @@ const getSizeClasses = (
 const colorClasses: Record<Theme, Record<Color, { root?: string; addon?: string; icon?: string; dot?: string }>> = sortCx({
     light: {
         brand: {
-            root: "bg-utility-brand-50 text-utility-brand-700 ring-utility-brand-200 hover:bg-utility-brand-100",
-            addon: "bg-primary text-current ring-utility-brand-200",
-            icon: "text-utility-brand-500",
+            root: "tw:bg-utility-brand-50 tw:text-utility-brand-700 tw:ring-utility-brand-200 hover:tw:bg-utility-brand-100",
+            addon: "tw:bg-primary tw:text-current tw:ring-utility-brand-200",
+            icon: "tw:text-utility-brand-500",
         },
         gray: {
-            root: "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200 hover:bg-utility-gray-100",
-            addon: "bg-primary text-current ring-utility-gray-200",
-            icon: "text-utility-gray-500",
+            root: "tw:bg-utility-gray-50 tw:text-utility-gray-700 tw:ring-utility-gray-200 hover:tw:bg-utility-gray-100",
+            addon: "tw:bg-primary tw:text-current tw:ring-utility-gray-200",
+            icon: "tw:text-utility-gray-500",
         },
         error: {
-            root: "bg-utility-error-50 text-utility-error-700 ring-utility-error-200 hover:bg-utility-error-100",
-            addon: "bg-primary text-current ring-utility-error-200",
-            icon: "text-utility-error-500",
+            root: "tw:bg-utility-error-50 tw:text-utility-error-700 tw:ring-utility-error-200 hover:tw:bg-utility-error-100",
+            addon: "tw:bg-primary tw:text-current tw:ring-utility-error-200",
+            icon: "tw:text-utility-error-500",
         },
         warning: {
-            root: "bg-utility-warning-50 text-utility-warning-700 ring-utility-warning-200 hover:bg-utility-warning-100",
-            addon: "bg-primary text-current ring-utility-warning-200",
-            icon: "text-utility-warning-500",
+            root: "tw:bg-utility-warning-50 tw:text-utility-warning-700 tw:ring-utility-warning-200 hover:tw:bg-utility-warning-100",
+            addon: "tw:bg-primary tw:text-current tw:ring-utility-warning-200",
+            icon: "tw:text-utility-warning-500",
         },
         success: {
-            root: "bg-utility-success-50 text-utility-success-700 ring-utility-success-200 hover:bg-utility-success-100",
-            addon: "bg-primary text-current ring-utility-success-200",
-            icon: "text-utility-success-500",
+            root: "tw:bg-utility-success-50 tw:text-utility-success-700 tw:ring-utility-success-200 hover:tw:bg-utility-success-100",
+            addon: "tw:bg-primary tw:text-current tw:ring-utility-success-200",
+            icon: "tw:text-utility-success-500",
         },
     },
     modern: {
         brand: {
-            dot: "bg-utility-brand-500 outline-3 -outline-offset-1 outline-utility-brand-100",
+            dot: "tw:bg-utility-brand-500 tw:outline-3 tw:-outline-offset-1 tw:outline-utility-brand-100",
         },
         gray: {
-            dot: "bg-utility-gray-500 outline-3 -outline-offset-1 outline-utility-gray-100",
+            dot: "tw:bg-utility-gray-500 tw:outline-3 tw:-outline-offset-1 tw:outline-utility-gray-100",
         },
         error: {
-            dot: "bg-utility-error-500 outline-3 -outline-offset-1 outline-utility-error-100",
+            dot: "tw:bg-utility-error-500 tw:outline-3 tw:-outline-offset-1 tw:outline-utility-error-100",
         },
         warning: {
-            dot: "bg-utility-warning-500 outline-3 -outline-offset-1 outline-utility-warning-100",
+            dot: "tw:bg-utility-warning-500 tw:outline-3 tw:-outline-offset-1 tw:outline-utility-warning-100",
         },
         success: {
-            dot: "bg-utility-success-500 outline-3 -outline-offset-1 outline-utility-success-100",
+            dot: "tw:bg-utility-success-500 tw:outline-3 tw:-outline-offset-1 tw:outline-utility-success-100",
         },
     },
 });
@@ -129,14 +129,14 @@ export const BadgeGroup = ({
     const sizes = getSizeClasses(theme, !!children, !!IconTrailing)[align][size];
 
     const rootClasses = cx(
-        "inline-flex w-max cursor-pointer items-center transition duration-100 ease-linear",
+        "tw:inline-flex tw:w-max tw:cursor-pointer tw:items-center tw:transition tw:duration-100 tw:ease-linear",
         baseClasses[theme].root,
         sizes.root,
         colors.root,
         className,
     );
-    const addonClasses = cx("inline-flex items-center", baseClasses[theme].addon, sizes.addon, colors.addon);
-    const dotClasses = cx("inline-block size-2 shrink-0 rounded-full", sizes.dot, colors.dot);
+    const addonClasses = cx("tw:inline-flex tw:items-center", baseClasses[theme].addon, sizes.addon, colors.addon);
+    const dotClasses = cx("tw:inline-block tw:size-2 tw:shrink-0 tw:rounded-full", sizes.dot, colors.dot);
     const iconClasses = cx(baseClasses[theme].icon, sizes.icon, colors.icon);
 
     if (align === "trailing") {

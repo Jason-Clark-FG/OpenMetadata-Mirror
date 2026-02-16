@@ -11,29 +11,29 @@ import { isReactComponent } from "@/utils/is-react-component";
 export const styles = sortCx({
     common: {
         root: [
-            "group/button-group inline-flex h-max cursor-pointer items-center bg-primary font-semibold whitespace-nowrap text-secondary shadow-skeumorphic ring-1 ring-primary outline-brand transition duration-100 ease-linear ring-inset",
+            "tw:group/button-group tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:bg-primary tw:font-semibold tw:whitespace-nowrap tw:text-secondary tw:shadow-skeumorphic tw:ring-1 tw:ring-primary tw:outline-brand tw:transition tw:duration-100 tw:ease-linear tw:ring-inset",
             // Hover and focus styles
-            "hover:bg-primary_hover hover:text-secondary_hover focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2",
+            "hover:tw:bg-primary_hover hover:tw:text-secondary_hover focus-visible:tw:z-10 focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
             // Disabled styles
-            "disabled:cursor-not-allowed disabled:bg-primary disabled:text-disabled",
+            "disabled:tw:cursor-not-allowed disabled:tw:bg-primary disabled:tw:text-disabled",
             // Selected styles
-            "selected:bg-active selected:text-secondary_hover selected:disabled:bg-disabled_subtle",
+            "selected:tw:bg-active selected:tw:text-secondary_hover selected:disabled:tw:bg-disabled_subtle",
         ].join(" "),
-        icon: "pointer-events-none text-fg-quaternary transition-[inherit] group-hover/button-group:text-fg-quaternary_hover group-disabled/button-group:text-fg-disabled_subtle",
+        icon: "tw:pointer-events-none tw:text-fg-quaternary tw:transition-[inherit] group-hover/button-group:tw:text-fg-quaternary_hover group-disabled/button-group:tw:text-fg-disabled_subtle",
     },
 
     sizes: {
         sm: {
-            root: "gap-1.5 px-3.5 py-2 text-sm not-last:pr-[calc(calc(var(--spacing)*3.5)+1px)] first:rounded-l-lg last:rounded-r-lg data-icon-leading:pl-3 data-icon-only:p-2",
-            icon: "size-5",
+            root: "tw:gap-1.5 tw:px-3.5 tw:py-2 tw:text-sm not-last:tw:pr-[calc(calc(var(--spacing)*3.5)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-3 data-icon-only:tw:p-2",
+            icon: "tw:size-5",
         },
         md: {
-            root: "gap-1.5 px-4 py-2.5 text-sm not-last:pr-[calc(calc(var(--spacing)*4)+1px)] first:rounded-l-lg last:rounded-r-lg data-icon-leading:pl-3.5 data-icon-only:px-3",
-            icon: "size-5",
+            root: "tw:gap-1.5 tw:px-4 tw:py-2.5 tw:text-sm not-last:tw:pr-[calc(calc(var(--spacing)*4)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-3.5 data-icon-only:tw:px-3",
+            icon: "tw:size-5",
         },
         lg: {
-            root: "gap-2 px-4.5 py-2.5 text-md not-last:pr-[calc(calc(var(--spacing)*4.5)+1px)] first:rounded-l-lg last:rounded-r-lg data-icon-leading:pl-4 data-icon-only:p-3",
-            icon: "size-5",
+            root: "tw:gap-2 tw:px-4.5 tw:py-2.5 tw:text-md not-last:tw:pr-[calc(calc(var(--spacing)*4.5)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-4 data-icon-only:tw:p-3",
+            icon: "tw:size-5",
         },
     },
 });
@@ -94,7 +94,7 @@ export const ButtonGroup = ({ children, size = "md", className, ...otherProps }:
         <ButtonGroupContext.Provider value={{ size }}>
             <AriaToggleButtonGroup
                 selectionMode="single"
-                className={cx("relative z-0 inline-flex w-max -space-x-px rounded-lg shadow-xs", className)}
+                className={cx("tw:relative tw:z-0 tw:inline-flex tw:w-max tw:-space-x-px tw:rounded-lg tw:shadow-xs", className)}
                 {...otherProps}
             >
                 {children}

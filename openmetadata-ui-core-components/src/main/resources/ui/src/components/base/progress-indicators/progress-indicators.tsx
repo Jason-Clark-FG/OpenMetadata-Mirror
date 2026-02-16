@@ -42,12 +42,12 @@ export const ProgressBarBase = ({ value, min = 0, max = 100, className, progress
             aria-valuenow={value}
             aria-valuemin={min}
             aria-valuemax={max}
-            className={cx("h-2 w-full overflow-hidden rounded-md bg-quaternary", className)}
+            className={cx("tw:h-2 tw:w-full tw:overflow-hidden tw:rounded-md tw:bg-quaternary", className)}
         >
             <div
                 // Use transform instead of width to avoid layout thrashing (and for smoother animation)
                 style={{ transform: `translateX(-${100 - percentage}%)` }}
-                className={cx("size-full rounded-md bg-fg-brand-primary transition duration-75 ease-linear", progressClassName)}
+                className={cx("tw:size-full tw:rounded-md tw:bg-fg-brand-primary tw:transition tw:duration-75 tw:ease-linear", progressClassName)}
             />
         </div>
     );
@@ -78,39 +78,39 @@ export const ProgressBar = ({ value, min = 0, max = 100, valueFormatter, labelPo
     switch (labelPosition) {
         case "right":
             return (
-                <div className="flex items-center gap-3">
+                <div className="tw:flex tw:items-center tw:gap-3">
                     {baseProgressBar}
-                    <span className="shrink-0 text-sm font-medium text-secondary tabular-nums">{formattedValue}</span>
+                    <span className="tw:shrink-0 tw:text-sm tw:font-medium tw:text-secondary tw:tabular-nums">{formattedValue}</span>
                 </div>
             );
         case "bottom":
             return (
-                <div className="flex flex-col items-end gap-2">
+                <div className="tw:flex tw:flex-col tw:items-end tw:gap-2">
                     {baseProgressBar}
-                    <span className="text-sm font-medium text-secondary tabular-nums">{formattedValue}</span>
+                    <span className="tw:text-sm tw:font-medium tw:text-secondary tw:tabular-nums">{formattedValue}</span>
                 </div>
             );
         case "top-floating":
             return (
-                <div className="relative flex flex-col items-end gap-2">
+                <div className="tw:relative tw:flex tw:flex-col tw:items-end tw:gap-2">
                     {baseProgressBar}
                     <div
                         style={{ left: `${percentage}%` }}
-                        className="absolute -top-2 -translate-x-1/2 -translate-y-full rounded-lg bg-primary_alt px-3 py-2 shadow-lg ring-1 ring-secondary_alt"
+                        className="tw:absolute tw:-top-2 tw:-translate-x-1/2 tw:-translate-y-full tw:rounded-lg tw:bg-primary_alt tw:px-3 tw:py-2 tw:shadow-lg tw:ring-1 tw:ring-secondary_alt"
                     >
-                        <div className="text-xs font-semibold text-secondary tabular-nums">{formattedValue}</div>
+                        <div className="tw:text-xs tw:font-semibold tw:text-secondary tw:tabular-nums">{formattedValue}</div>
                     </div>
                 </div>
             );
         case "bottom-floating":
             return (
-                <div className="relative flex flex-col items-end gap-2">
+                <div className="tw:relative tw:flex tw:flex-col tw:items-end tw:gap-2">
                     {baseProgressBar}
                     <div
                         style={{ left: `${percentage}%` }}
-                        className="absolute -bottom-2 -translate-x-1/2 translate-y-full rounded-lg bg-primary_alt px-3 py-2 shadow-lg ring-1 ring-secondary_alt"
+                        className="tw:absolute tw:-bottom-2 tw:-translate-x-1/2 tw:translate-y-full tw:rounded-lg tw:bg-primary_alt tw:px-3 tw:py-2 tw:shadow-lg tw:ring-1 tw:ring-secondary_alt"
                     >
-                        <div className="text-xs font-semibold text-secondary">{formattedValue}</div>
+                        <div className="tw:text-xs tw:font-semibold tw:text-secondary">{formattedValue}</div>
                     </div>
                 </div>
             );

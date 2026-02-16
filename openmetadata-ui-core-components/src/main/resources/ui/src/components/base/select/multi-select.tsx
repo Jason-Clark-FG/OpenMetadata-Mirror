@@ -162,7 +162,7 @@ export const MultiSelectBase = ({
                 {...props}
             >
                 {(state) => (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="tw:flex tw:flex-col tw:gap-1.5">
                         {props.label && (
                             <Label isRequired={state.isRequired} tooltip={props.tooltip}>
                                 {props.label}
@@ -181,7 +181,7 @@ export const MultiSelectBase = ({
                         />
 
                         <Popover size={"md"} triggerRef={placeholderRef} style={{ width: popoverWidth }} className={props?.popoverClassName}>
-                            <AriaListBox selectionMode="multiple" className="size-full outline-hidden">
+                            <AriaListBox selectionMode="multiple" className="tw:size-full tw:outline-hidden">
                                 {children}
                             </AriaListBox>
                         </Popover>
@@ -262,18 +262,18 @@ const InnerMultiSelect = ({ isDisabled, shortcut, shortcutClassName, placeholder
     const isSelectionEmpty = comboBoxContext?.selectedItems?.items?.length === 0;
 
     return (
-        <div className="relative flex w-full flex-1 flex-row flex-wrap items-center justify-start gap-1.5">
+        <div className="tw:relative tw:flex tw:w-full tw:flex-1 tw:flex-row tw:flex-wrap tw:items-center tw:justify-start tw:gap-1.5">
             {!isSelectionEmpty &&
                 comboBoxContext?.selectedItems?.items?.map((value) => (
-                    <span key={value.id} className="flex items-center rounded-md bg-primary py-0.5 pr-1 pl-1.25 ring-1 ring-primary ring-inset">
+                    <span key={value.id} className="tw:flex tw:items-center tw:rounded-md tw:bg-primary tw:py-0.5 tw:pr-1 tw:pl-1.25 tw:ring-1 tw:ring-primary tw:ring-inset">
                         <Avatar size="xxs" alt={value?.label} src={value?.avatarUrl} />
 
-                        <p className="ml-1.25 truncate text-sm font-medium whitespace-nowrap text-secondary select-none">{value?.label}</p>
+                        <p className="tw:ml-1.25 tw:truncate tw:text-sm tw:font-medium tw:whitespace-nowrap tw:text-secondary tw:select-none">{value?.label}</p>
 
                         <TagCloseX
                             size="md"
                             isDisabled={isDisabled}
-                            className="ml-0.75"
+                            className="tw:ml-0.75"
                             // For workaround, onKeyDown is added to the button
                             onKeyDown={(event) => handleTagKeyDown(event, value.id)}
                             onPress={() => comboBoxContext.onRemove(new Set([value.id]))}
@@ -281,26 +281,26 @@ const InnerMultiSelect = ({ isDisabled, shortcut, shortcutClassName, placeholder
                     </span>
                 ))}
 
-            <div className={cx("relative flex min-w-[20%] flex-1 flex-row items-center", !isSelectionEmpty && "ml-0.5", shortcut && "min-w-[30%]")}>
+            <div className={cx("tw:relative tw:flex tw:min-w-[20%] tw:flex-1 tw:flex-row tw:items-center", !isSelectionEmpty && "tw:ml-0.5", shortcut && "tw:min-w-[30%]")}>
                 <AriaInput
                     placeholder={placeholder}
                     onKeyDown={handleInputKeyDown}
                     onMouseDown={handleInputMouseDown}
-                    className="w-full flex-[1_0_0] appearance-none bg-transparent text-md text-ellipsis text-primary caret-alpha-black/90 outline-none placeholder:text-placeholder focus:outline-hidden disabled:cursor-not-allowed disabled:text-disabled disabled:placeholder:text-disabled"
+                    className="tw:w-full tw:flex-[1_0_0] tw:appearance-none tw:bg-transparent tw:text-md tw:text-ellipsis tw:text-primary tw:caret-alpha-black/90 tw:outline-none placeholder:tw:text-placeholder focus:tw:outline-hidden disabled:tw:cursor-not-allowed disabled:tw:text-disabled disabled:placeholder:tw:text-disabled"
                 />
 
                 {shortcut && (
                     <div
                         aria-hidden="true"
                         className={cx(
-                            "absolute inset-y-0.5 right-0.5 z-10 flex items-center rounded-r-[inherit] bg-linear-to-r from-transparent to-bg-primary to-40% pl-8",
+                            "tw:absolute tw:inset-y-0.5 tw:right-0.5 tw:z-10 tw:flex tw:items-center tw:rounded-r-[inherit] tw:bg-linear-to-r tw:from-transparent tw:to-bg-primary tw:to-40% tw:pl-8",
                             shortcutClassName,
                         )}
                     >
                         <span
                             className={cx(
-                                "pointer-events-none rounded px-1 py-px text-xs font-medium text-quaternary ring-1 ring-secondary select-none ring-inset",
-                                isDisabled && "bg-transparent text-disabled",
+                                "tw:pointer-events-none tw:rounded tw:px-1 tw:py-px tw:text-xs tw:font-medium tw:text-quaternary tw:ring-1 tw:ring-secondary tw:select-none tw:ring-inset",
+                                isDisabled && "tw:bg-transparent tw:text-disabled",
                             )}
                         >
                             ⌘K
@@ -327,16 +327,16 @@ export const MultiSelectTagsValue = ({
             {...otherProps}
             className={({ isFocusWithin, isDisabled }) =>
                 cx(
-                    "relative flex w-full items-center gap-2 rounded-lg bg-primary shadow-xs ring-1 ring-primary outline-hidden transition duration-100 ease-linear ring-inset",
-                    isDisabled && "cursor-not-allowed bg-disabled_subtle",
-                    isFocusWithin && "ring-2 ring-brand",
+                    "tw:relative tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset",
+                    isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle",
+                    isFocusWithin && "tw:ring-2 tw:ring-brand",
                     sizes[size].root,
                 )
             }
         >
             {({ isDisabled }) => (
                 <>
-                    {Icon && <Icon className="pointer-events-none size-5 text-fg-quaternary" />}
+                    {Icon && <Icon className="tw:pointer-events-none tw:size-5 tw:text-fg-quaternary" />}
                     <FocusScope contain={false} autoFocus={false} restoreFocus={false}>
                         <InnerMultiSelect
                             isDisabled={isDisabled}

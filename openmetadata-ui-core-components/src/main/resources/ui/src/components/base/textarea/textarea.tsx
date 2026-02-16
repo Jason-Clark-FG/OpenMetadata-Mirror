@@ -27,15 +27,15 @@ export const TextAreaBase = ({ className, ...props }: TextAreaBaseProps) => {
             }
             className={(state) =>
                 cx(
-                    "w-full scroll-py-3 rounded-lg bg-primary px-3.5 py-3 text-md text-primary shadow-xs ring-1 ring-primary transition duration-100 ease-linear ring-inset placeholder:text-placeholder autofill:rounded-lg autofill:text-primary focus:outline-hidden",
+                    "tw:w-full tw:scroll-py-3 tw:rounded-lg tw:bg-primary tw:px-3.5 tw:py-3 tw:text-md tw:text-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:transition tw:duration-100 tw:ease-linear tw:ring-inset placeholder:tw:text-placeholder autofill:tw:rounded-lg autofill:tw:text-primary focus:tw:outline-hidden",
 
                     // Resize handle
-                    "[&::-webkit-resizer]:bg-(image:--resize-handle-bg) [&::-webkit-resizer]:bg-contain dark:[&::-webkit-resizer]:bg-(image:--resize-handle-bg-dark)",
+                    "[&::-webkit-resizer]:tw:bg-(image:--resize-handle-bg) [&::-webkit-resizer]:tw:bg-contain dark:[&::-webkit-resizer]:tw:bg-(image:--resize-handle-bg-dark)",
 
-                    state.isFocused && !state.isDisabled && "ring-2 ring-brand",
-                    state.isDisabled && "cursor-not-allowed bg-disabled_subtle text-disabled ring-disabled",
-                    state.isInvalid && "ring-error_subtle",
-                    state.isInvalid && state.isFocused && "ring-2 ring-error",
+                    state.isFocused && !state.isDisabled && "tw:ring-2 tw:ring-brand",
+                    state.isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:text-disabled tw:ring-disabled",
+                    state.isInvalid && "tw:ring-error_subtle",
+                    state.isInvalid && state.isFocused && "tw:ring-2 tw:ring-error",
 
                     typeof className === "function" ? className(state) : className,
                 )
@@ -86,7 +86,7 @@ export const TextArea = ({
         <AriaTextField
             {...props}
             className={(state) =>
-                cx("group flex h-max w-full flex-col items-start justify-start gap-1.5", typeof className === "function" ? className(state) : className)
+                cx("tw:group tw:flex tw:h-max tw:w-full tw:flex-col tw:items-start tw:justify-start tw:gap-1.5", typeof className === "function" ? className(state) : className)
             }
         >
             {({ isInvalid, isRequired }) => (

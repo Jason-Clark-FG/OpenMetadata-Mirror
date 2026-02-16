@@ -1,6 +1,13 @@
 @import "./host.css";
-@import "tailwindcss/theme.css";
-@import "tailwindcss/utilities.css";
+
+@layer theme, base, components, utilities;
+
+/* Bring in Tailwind’s theme + utilities, but skip preflight */
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+
+/* @import "tailwindcss/theme.css" prefix(tw);
+@import "tailwindcss/utilities.css" prefix(tw); */
 @import "./theme.css";
 
 @plugin "tailwindcss-animate";

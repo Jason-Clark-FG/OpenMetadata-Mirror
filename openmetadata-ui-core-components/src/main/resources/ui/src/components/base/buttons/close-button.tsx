@@ -27,14 +27,14 @@ export const CloseButton = ({ label, className, size = "sm", theme = "light", ..
             aria-label={label || "Close"}
             className={(state) =>
                 cx(
-                    "flex cursor-pointer items-center justify-center rounded-lg p-2 transition duration-100 ease-linear focus:outline-hidden",
+                    "tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-lg tw:p-2 tw:transition tw:duration-100 tw:ease-linear focus:tw:outline-hidden",
                     sizes[size].root,
                     themes[theme],
                     typeof className === "function" ? className(state) : className,
                 )
             }
         >
-            <CloseIcon aria-hidden="true" className={cx("shrink-0 transition-inherit-all", sizes[size].icon)} />
+            <CloseIcon aria-hidden="true" className={cx("tw:shrink-0 tw:transition-inherit-all", sizes[size].icon)} />
         </AriaButton>
     );
 };

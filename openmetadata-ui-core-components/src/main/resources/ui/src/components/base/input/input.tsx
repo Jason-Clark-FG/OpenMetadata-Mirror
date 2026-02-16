@@ -62,16 +62,16 @@ export const InputBase = ({
 
     const sizes = sortCx({
         sm: {
-            root: cx("px-3 py-2", hasTrailingIcon && "pr-9", hasLeadingIcon && "pl-10"),
-            iconLeading: "left-3",
-            iconTrailing: "right-3",
-            shortcut: "pr-2.5",
+            root: cx("tw:px-3 tw:py-2", hasTrailingIcon && "tw:pr-9", hasLeadingIcon && "tw:pl-10"),
+            iconLeading: "tw:left-3",
+            iconTrailing: "tw:right-3",
+            shortcut: "tw:pr-2.5",
         },
         md: {
-            root: cx("px-3.5 py-2.5", hasTrailingIcon && "pr-9.5", hasLeadingIcon && "pl-10.5"),
-            iconLeading: "left-3.5",
-            iconTrailing: "right-3.5",
-            shortcut: "pr-3",
+            root: cx("tw:px-3.5 tw:py-2.5", hasTrailingIcon && "tw:pr-9.5", hasLeadingIcon && "tw:pl-10.5"),
+            iconLeading: "tw:left-3.5",
+            iconTrailing: "tw:right-3.5",
+            shortcut: "tw:pr-3",
         },
     });
 
@@ -81,21 +81,21 @@ export const InputBase = ({
             ref={groupRef}
             className={({ isFocusWithin, isDisabled, isInvalid }) =>
                 cx(
-                    "relative flex w-full flex-row place-content-center place-items-center rounded-lg bg-primary shadow-xs ring-1 ring-primary transition-shadow duration-100 ease-linear ring-inset",
+                    "tw:relative tw:flex tw:w-full tw:flex-row tw:place-content-center tw:place-items-center tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:transition-shadow tw:duration-100 tw:ease-linear tw:ring-inset",
 
-                    isFocusWithin && !isDisabled && "ring-2 ring-brand",
+                    isFocusWithin && !isDisabled && "tw:ring-2 tw:ring-brand",
 
                     // Disabled state styles
-                    isDisabled && "cursor-not-allowed bg-disabled_subtle ring-disabled",
-                    "group-disabled:cursor-not-allowed group-disabled:bg-disabled_subtle group-disabled:ring-disabled",
+                    isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:ring-disabled",
+                    "group-disabled:tw:cursor-not-allowed group-disabled:tw:bg-disabled_subtle group-disabled:tw:ring-disabled",
 
                     // Invalid state styles
-                    isInvalid && "ring-error_subtle",
-                    "group-invalid:ring-error_subtle",
+                    isInvalid && "tw:ring-error_subtle",
+                    "group-invalid:tw:ring-error_subtle",
 
                     // Invalid state with focus-within styles
-                    isInvalid && isFocusWithin && "ring-2 ring-error",
-                    isFocusWithin && "group-invalid:ring-2 group-invalid:ring-error",
+                    isInvalid && isFocusWithin && "tw:ring-2 tw:ring-error",
+                    isFocusWithin && "group-invalid:tw:ring-2 group-invalid:tw:ring-error",
 
                     context?.wrapperClassName,
                     wrapperClassName,
@@ -106,8 +106,8 @@ export const InputBase = ({
             {Icon && (
                 <Icon
                     className={cx(
-                        "pointer-events-none absolute size-5 text-fg-quaternary",
-                        isDisabled && "text-fg-disabled",
+                        "tw:pointer-events-none tw:absolute tw:size-5 tw:text-fg-quaternary",
+                        isDisabled && "tw:text-fg-disabled",
                         sizes[inputSize].iconLeading,
                         context?.iconClassName,
                         iconClassName,
@@ -121,8 +121,8 @@ export const InputBase = ({
                 ref={ref}
                 placeholder={placeholder}
                 className={cx(
-                    "m-0 w-full bg-transparent text-md text-primary ring-0 outline-hidden placeholder:text-placeholder autofill:rounded-lg autofill:text-primary",
-                    isDisabled && "cursor-not-allowed text-disabled",
+                    "tw:m-0 tw:w-full tw:bg-transparent tw:text-md tw:text-primary tw:ring-0 tw:outline-hidden placeholder:tw:text-placeholder autofill:tw:rounded-lg autofill:tw:text-primary",
+                    isDisabled && "tw:cursor-not-allowed tw:text-disabled",
                     sizes[inputSize].root,
                     context?.inputClassName,
                     inputClassName,
@@ -134,13 +134,13 @@ export const InputBase = ({
                 <Tooltip title={tooltip} placement="top">
                     <TooltipTrigger
                         className={cx(
-                            "absolute cursor-pointer text-fg-quaternary transition duration-200 hover:text-fg-quaternary_hover focus:text-fg-quaternary_hover",
+                            "tw:absolute tw:cursor-pointer tw:text-fg-quaternary tw:transition tw:duration-200 hover:tw:text-fg-quaternary_hover focus:tw:text-fg-quaternary_hover",
                             sizes[inputSize].iconTrailing,
                             context?.tooltipClassName,
                             tooltipClassName,
                         )}
                     >
-                        <HelpCircle className="size-4" />
+                        <HelpCircle className="tw:size-4" />
                     </TooltipTrigger>
                 </Tooltip>
             )}
@@ -149,7 +149,7 @@ export const InputBase = ({
             {isInvalid && (
                 <InfoCircle
                     className={cx(
-                        "pointer-events-none absolute size-4 text-fg-error-secondary",
+                        "tw:pointer-events-none tw:absolute tw:size-4 tw:text-fg-error-secondary",
                         sizes[inputSize].iconTrailing,
                         context?.tooltipClassName,
                         tooltipClassName,
@@ -161,14 +161,14 @@ export const InputBase = ({
             {shortcut && (
                 <div
                     className={cx(
-                        "pointer-events-none absolute inset-y-0.5 right-0.5 z-10 flex items-center rounded-r-[inherit] bg-linear-to-r from-transparent to-bg-primary to-40% pl-8",
+                        "tw:pointer-events-none tw:absolute tw:inset-y-0.5 tw:right-0.5 tw:z-10 tw:flex tw:items-center tw:rounded-r-[inherit] tw:bg-linear-to-r tw:from-transparent tw:to-bg-primary tw:to-40% tw:pl-8",
                         sizes[inputSize].shortcut,
                     )}
                 >
                     <span
                         className={cx(
-                            "pointer-events-none rounded px-1 py-px text-xs font-medium text-quaternary ring-1 ring-secondary select-none ring-inset",
-                            isDisabled && "bg-transparent text-disabled",
+                            "tw:pointer-events-none tw:rounded tw:px-1 tw:py-px tw:text-xs tw:font-medium tw:text-quaternary tw:ring-1 tw:ring-secondary tw:select-none tw:ring-inset",
+                            isDisabled && "tw:bg-transparent tw:text-disabled",
                         )}
                         aria-hidden="true"
                     >
@@ -205,7 +205,7 @@ export const TextField = ({ className, ...props }: TextFieldProps) => {
                 {...props}
                 data-input-wrapper
                 className={(state) =>
-                    cx("group flex h-max w-full flex-col items-start justify-start gap-1.5", typeof className === "function" ? className(state) : className)
+                    cx("tw:group tw:flex tw:h-max tw:w-full tw:flex-col tw:items-start tw:justify-start tw:gap-1.5", typeof className === "function" ? className(state) : className)
                 }
             />
         </TextFieldContext.Provider>
