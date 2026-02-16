@@ -741,6 +741,11 @@ public class TestSuiteResourceIT extends BaseEntityIT<TestSuite, CreateTestSuite
   void test_deleteLogicalTestSuiteWithPipeline(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
+    // Require K8s for this test
+    if (!TestSuiteBootstrap.isK8sEnabled()) {
+      TestSuiteBootstrap.setupK8s();
+    }
+
     // Create a logical test suite
     CreateTestSuite logicalSuiteReq = new CreateTestSuite();
     logicalSuiteReq.setName(ns.prefix("logical_suite_pipeline"));
