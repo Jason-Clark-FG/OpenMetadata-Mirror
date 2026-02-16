@@ -35,6 +35,7 @@ import {
 import { AuthProvider } from '../generated/settings/settings';
 import { isDev } from './EnvironmentUtils';
 import { getBasePath } from './HistoryUtils';
+import { t } from './i18next/LocalUtil';
 import { oidcTokenStorage } from './OidcTokenStorage';
 import { setOidcToken } from './SwTokenStorageUtils';
 
@@ -46,23 +47,27 @@ export const EXPIRY_THRESHOLD_MILLES = 1 * 60 * 1000;
 const subPath = getBasePath();
 
 export const getRedirectUri = (callbackUrl: string) => {
-  return isDev()
-    ? `http://localhost:3000${subPath}/callback`
-    : !isNil(callbackUrl)
-    ? callbackUrl
-    : `${window.location.origin}${subPath}/callback`;
+  if (isDev()) {
+    return `http://localhost:3000${subPath}/callback`;
+  }
+
+  if (isNil(callbackUrl)) {
+    return `${globalThis.location.origin}${subPath}/callback`;
+  }
+
+  return callbackUrl;
 };
 
 export const getSilentRedirectUri = () => {
   return isDev()
     ? `http://localhost:3000${subPath}/silent-callback`
-    : `${window.location.origin}${subPath}/silent-callback`;
+    : `${globalThis.location.origin}${subPath}/silent-callback`;
 };
 
 export const getUserManagerConfig = (
   authClient: AuthenticationConfigurationWithScope
 ): Record<string, string | boolean | WebStorageStateStore> => {
-  const { authority, clientId, callbackUrl, scope } = authClient;
+  const { authority = '', clientId = '', callbackUrl = '', scope } = authClient;
 
   return {
     authority,
@@ -91,83 +96,73 @@ export const getAuthConfig = (
     clientType = 'public',
   } = authClient;
   let config = {};
-  const redirectUri = getRedirectUri(callbackUrl);
+  const redirectUri = getRedirectUri(callbackUrl ?? '');
   switch (provider) {
     case AuthProvider.Okta:
-      {
-        config = {
-          clientId,
-          issuer: authority,
-          redirectUri,
-          scopes: ['openid', 'profile', 'email', 'offline_access'],
-          pkce: true,
-          provider,
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        };
-      }
+      config = {
+        clientId,
+        issuer: authority,
+        redirectUri,
+        scopes: ['openid', 'profile', 'email', 'offline_access'],
+        pkce: true,
+        provider,
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      };
 
       break;
     case AuthProvider.CustomOidc:
-      {
-        config = {
-          authority,
-          clientId,
-          callbackUrl: redirectUri,
-          provider,
-          providerName,
-          scope: 'openid email profile',
-          responseType,
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        };
-      }
+      config = {
+        authority,
+        clientId,
+        callbackUrl: redirectUri,
+        provider,
+        providerName,
+        scope: 'openid email profile',
+        responseType,
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      };
 
       break;
     case AuthProvider.Google:
-      {
-        config = {
-          authority,
-          clientId,
-          callbackUrl: redirectUri,
-          provider,
-          scope: 'openid email profile',
-          responseType,
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        };
-      }
+      config = {
+        authority,
+        clientId,
+        callbackUrl: redirectUri,
+        provider,
+        scope: 'openid email profile',
+        responseType,
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      };
 
       break;
     case AuthProvider.Saml:
-      {
-        config = {
-          samlConfiguration,
-          provider,
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        };
-      }
+      config = {
+        samlConfiguration,
+        provider,
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      };
 
       break;
     case AuthProvider.AwsCognito:
-      {
-        config = {
-          authority,
-          clientId,
-          callbackUrl: redirectUri,
-          provider,
-          scope: 'openid email profile',
-          responseType: 'code',
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        };
-      }
+      config = {
+        authority,
+        clientId,
+        callbackUrl: redirectUri,
+        provider,
+        scope: 'openid email profile',
+        responseType: 'code',
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      };
 
       break;
     case AuthProvider.Auth0: {
@@ -204,23 +199,21 @@ export const getAuthConfig = (
       break;
     }
     case AuthProvider.Azure:
-      {
-        config = {
-          auth: {
-            authority,
-            clientId,
-            redirectUri,
-            postLogoutRedirectUri: '/',
-          },
-          cache: {
-            cacheLocation: BrowserCacheLocation.LocalStorage,
-          },
-          provider,
-          clientType,
-          enableSelfSignup,
-          enableAutoRedirect,
-        } as Configuration;
-      }
+      config = {
+        auth: {
+          authority,
+          clientId,
+          redirectUri,
+          postLogoutRedirectUri: '/',
+        },
+        cache: {
+          cacheLocation: BrowserCacheLocation.LocalStorage,
+        },
+        provider,
+        clientType,
+        enableSelfSignup,
+        enableAutoRedirect,
+      } as Configuration;
 
       break;
   }
@@ -234,7 +227,7 @@ export const msalLoginRequest: PopupRequest = {
 };
 
 export const getNameFromEmail = (email: string) => {
-  if (email?.match(EMAIL_REG_EX)) {
+  if (new RegExp(EMAIL_REG_EX).exec(email)) {
     return email.split('@')[0];
   } else {
     // if the string does not conform to email format return the string
@@ -354,12 +347,10 @@ export const getNameFromUserData = (
     email = userName + '@' + domain;
   } else {
     const mappingObj: Record<string, string> = {};
-    jwtPrincipalClaimsMapping.reduce((acc, value) => {
+    jwtPrincipalClaimsMapping.forEach((value) => {
       const [key, claim] = value.split(':');
-      acc[key] = claim;
-
-      return acc;
-    }, mappingObj);
+      mappingObj[key] = claim;
+    });
 
     if (mappingObj['username'] && mappingObj['email']) {
       userName = get(user, mappingObj['username'], '');
@@ -515,8 +506,7 @@ export const requiredAuthFields = [
 ];
 
 export const validateAuthFields = (
-  configJson: AuthenticationConfigurationWithScope,
-  t: (key: string, options?: any) => string
+  configJson: AuthenticationConfigurationWithScope
 ) => {
   requiredAuthFields.forEach((field) => {
     const value =
