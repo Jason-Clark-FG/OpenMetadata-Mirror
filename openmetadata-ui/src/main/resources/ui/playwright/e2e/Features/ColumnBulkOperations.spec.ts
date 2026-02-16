@@ -266,16 +266,14 @@ test.describe(
       page,
     }) => {
       const totalUniqueLocator = page.getByTestId('total-unique-columns-value');
-      const totalOccurrencesLocator = page.getByTestId('total-occurrences-value');
+      const totalOccurrencesLocator = page.getByTestId(
+        'total-occurrences-value'
+      );
 
-      const initialUnique = (await totalUniqueLocator.textContent())?.trim() ?? '';
+      const initialUnique =
+        (await totalUniqueLocator.textContent())?.trim() ?? '';
       const initialOccurrences =
         (await totalOccurrencesLocator.textContent())?.trim() ?? '';
-
-      test.skip(
-        initialUnique === '0' || initialOccurrences === '0',
-        'Needs non-zero baseline stats to validate flicker behavior.'
-      );
 
       let releaseDelayedResponse: (() => void) | undefined;
       const delayedResponse = new Promise<void>((resolve) => {
@@ -376,7 +374,9 @@ test.describe(
 
       await page.route(`**${GRID_API_URL}**`, async (route) => {
         const url = route.request().url();
-        if (url.includes(`columnNamePattern=${encodeURIComponent(staleQuery)}`)) {
+        if (
+          url.includes(`columnNamePattern=${encodeURIComponent(staleQuery)}`)
+        ) {
           await staleResponseGate;
           await route.fulfill({
             status: 200,
@@ -386,7 +386,9 @@ test.describe(
 
           return;
         }
-        if (url.includes(`columnNamePattern=${encodeURIComponent(freshQuery)}`)) {
+        if (
+          url.includes(`columnNamePattern=${encodeURIComponent(freshQuery)}`)
+        ) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -406,7 +408,9 @@ test.describe(
       await page.waitForRequest(
         (request) =>
           request.url().includes(GRID_API_URL) &&
-          request.url().includes(`columnNamePattern=${encodeURIComponent(staleQuery)}`),
+          request
+            .url()
+            .includes(`columnNamePattern=${encodeURIComponent(staleQuery)}`),
         { timeout: 15000 }
       );
 
@@ -415,7 +419,9 @@ test.describe(
       await page.waitForRequest(
         (request) =>
           request.url().includes(GRID_API_URL) &&
-          request.url().includes(`columnNamePattern=${encodeURIComponent(freshQuery)}`),
+          request
+            .url()
+            .includes(`columnNamePattern=${encodeURIComponent(freshQuery)}`),
         { timeout: 15000 }
       );
 
@@ -550,7 +556,9 @@ test.describe(
         await searchInput.fill(sharedColumnName);
         await waitForAllLoadersToDisappear(page);
 
-        const groupRow = page.locator(`[data-row-id="${sharedColumnName}"]`).first();
+        const groupRow = page
+          .locator(`[data-row-id="${sharedColumnName}"]`)
+          .first();
         await expect(groupRow).toBeVisible();
 
         const columnNameCellText =
@@ -566,21 +574,26 @@ test.describe(
         await checkbox.check();
       });
 
-      await test.step('Open drawer and verify selected count matches occurrences', async () => {
-        const editButton = page.getByTestId('edit-button');
-        await expect(editButton).toBeEnabled();
-        await editButton.click();
+      await test.step(
+        'Open drawer and verify selected count matches occurrences',
+        async () => {
+          const editButton = page.getByTestId('edit-button');
+          await expect(editButton).toBeEnabled();
+          await editButton.click();
 
-        const drawer = page.getByTestId('column-bulk-operations-form-drawer');
-        await expect(drawer).toBeVisible();
+          const drawer = page.getByTestId('column-bulk-operations-form-drawer');
+          await expect(drawer).toBeVisible();
 
-        await expect(drawer.getByTestId('form-heading')).toContainText(
-          String(expectedOccurrences).padStart(2, '0')
-        );
-        await expect(
-          drawer.getByTestId('column-name-input').locator('input')
-        ).toHaveValue(new RegExp(`${expectedOccurrences}\\s+columns selected`, 'i'));
-      });
+          await expect(drawer.getByTestId('form-heading')).toContainText(
+            String(expectedOccurrences).padStart(2, '0')
+          );
+          await expect(
+            drawer.getByTestId('column-name-input').locator('input')
+          ).toHaveValue(
+            new RegExp(`${expectedOccurrences}\\s+columns selected`, 'i')
+          );
+        }
+      );
     });
 
     test('should show pending progress spinner after submitting bulk update', async ({
