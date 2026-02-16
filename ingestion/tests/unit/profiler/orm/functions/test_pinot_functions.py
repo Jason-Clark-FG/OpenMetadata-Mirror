@@ -13,12 +13,19 @@
 Test PinotDB-specific SQL function compilers
 """
 import pytest
-from sqlalchemy import Column, Integer, String, create_engine, literal, types
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    cast,
+    create_engine,
+    func,
+    literal,
+    types,
+)
 from sqlalchemy.orm import declarative_base
 
-from metadata.profiler.orm.functions.cast import CastFn
 from metadata.profiler.orm.functions.concat import ConcatFn
-from metadata.profiler.orm.functions.md5 import MD5
 from metadata.profiler.orm.functions.substr import Substr
 
 Base = declarative_base()
@@ -30,43 +37,6 @@ class SampleTable(Base):
     name = Column(String(50))
     email = Column(String(100))
     status = Column(String(20))
-
-
-class TestCastFn:
-    """Test CAST function compilation"""
-
-    @pytest.fixture
-    def engine(self):
-        """Create a generic SQL engine for testing"""
-        return create_engine("sqlite:///:memory:")
-
-    @pytest.fixture
-    def pinot_engine(self):
-        """Create a PinotDB engine for testing"""
-        return create_engine("pinot://localhost:8099/default")
-
-    def test_cast_basic_compilation(self, engine):
-        """Test basic CAST compilation for standard SQL"""
-        cast_expr = CastFn(SampleTable.id, types.String())
-        compiled = str(
-            cast_expr.compile(engine, compile_kwargs={"literal_binds": True})
-        )
-
-        assert compiled == "CAST(test_table.id AS VARCHAR)"
-
-    def test_cast_with_column(self, engine):
-        """Test CAST with column reference"""
-        cast_expr = CastFn(SampleTable.name, types.Integer())
-        compiled = str(
-            cast_expr.compile(engine, compile_kwargs={"literal_binds": True})
-        )
-
-        assert compiled == "CAST(test_table.name AS INTEGER)"
-
-    def test_cast_requires_two_arguments(self, engine):
-        """Test CAST validation requires exactly 2 arguments"""
-        with pytest.raises(TypeError):
-            CastFn(SampleTable.id)
 
 
 class TestConcatFn:
@@ -168,7 +138,7 @@ class TestSubstr:
 
     def test_substr_pinot_with_expressions(self, pinot_engine):
         """Test PinotDB SUBSTR with complex expressions"""
-        hash_expr = MD5(SampleTable.name)
+        hash_expr = func.MD5(func.toUtf8(SampleTable.name))
         substr_expr = Substr(hash_expr, literal(0), literal(2))
         compiled = str(
             substr_expr.compile(pinot_engine, compile_kwargs={"literal_binds": True})
@@ -200,8 +170,8 @@ class TestPinotFunctionIntegration:
     def test_hash_based_sampling_expression(self, pinot_engine):
         """Test complete hash-based sampling expression compilation"""
 
-        cast_expr = CastFn(SampleTable.id, types.String())
-        hash_expr = MD5(cast_expr)
+        cast_expr = cast(SampleTable.id, types.String())
+        hash_expr = func.MD5(func.toUtf8(cast_expr))
         substr_expr = Substr(hash_expr, literal(0), literal(2))
 
         compiled = str(
@@ -213,12 +183,12 @@ class TestPinotFunctionIntegration:
     def test_multi_column_hash_expression(self, pinot_engine):
         """Test hash expression with multiple columns concatenated"""
 
-        cast1 = CastFn(SampleTable.id, types.String())
-        cast2 = CastFn(SampleTable.name, types.String())
+        cast1 = cast(SampleTable.id, types.String())
+        cast2 = cast(SampleTable.name, types.String())
         seed = literal("ABC123", types.String)
 
         concat_expr = ConcatFn(cast1, seed, cast2, seed, type_=types.String)
-        hash_expr = MD5(concat_expr)
+        hash_expr = func.MD5(func.toUtf8(concat_expr))
         substr_expr = Substr(hash_expr, literal(0), literal(2))
 
         compiled = str(

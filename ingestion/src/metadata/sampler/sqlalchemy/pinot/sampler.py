@@ -14,7 +14,7 @@ Helper module to handle data sampling for PinotDB profiler
 import uuid
 from typing import Dict, List, Optional, Union
 
-from sqlalchemy import Column, literal, types
+from sqlalchemy import Column, cast, func, literal, types
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql.compiler import IdentifierPreparer
 from sqlalchemy.sql.functions import FunctionElement
@@ -33,9 +33,7 @@ from metadata.generated.schema.entity.services.connections.database.datalakeConn
 )
 from metadata.generated.schema.entity.services.databaseService import DatabaseConnection
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
-from metadata.profiler.orm.functions.cast import CastFn
 from metadata.profiler.orm.functions.concat import ConcatFn
-from metadata.profiler.orm.functions.md5 import MD5
 from metadata.profiler.orm.functions.substr import Substr
 from metadata.sampler.models import SampleConfig
 from metadata.sampler.sqlalchemy.sampler import SQASampler
@@ -150,7 +148,7 @@ class PinotDBSampler(SQASampler):
         if len(columns) == 0:
             raise ValueError("No columns specified")
 
-        safe_cols = [CastFn(col, types.String()) for col in columns]
+        safe_cols = [cast(col, types.String()) for col in columns]
 
         if len(safe_cols) == 1:
             expression = safe_cols[0]
@@ -159,7 +157,7 @@ class PinotDBSampler(SQASampler):
 
             expression = ConcatFn(*values_to_concat, type_=types.String)
 
-        return Substr(MD5(expression), 0, 2)
+        return Substr(func.md5(func.toutf8(expression)), 0, 2)
 
     def _get_sample_delimiter(self) -> str:
         profile_sample_percentage = (
@@ -185,4 +183,4 @@ class PinotDBSampler(SQASampler):
     def random_filtering_criterion(self, column: Column) -> ColumnOperators:
         """Generate a random filtering criterion"""
         profile_sample = self._get_sample_delimiter()
-        return column <= CastFn(literal(profile_sample), types.String())
+        return column <= cast(literal(profile_sample), types.String())

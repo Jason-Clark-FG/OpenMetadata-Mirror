@@ -172,7 +172,7 @@ class TestPinotDBSampler:
         compiled = str(hash_expr.compile(compile_kwargs={"literal_binds": True}))
 
         assert "SUBSTR" in compiled
-        assert "MD5" in compiled
+        assert "md5" in compiled
         assert "CAST" in compiled
         assert "id" in compiled
         assert "VARCHAR" in compiled
@@ -197,7 +197,7 @@ class TestPinotDBSampler:
         compiled = str(hash_expr.compile(compile_kwargs={"literal_binds": True}))
 
         assert "SUBSTR" in compiled
-        assert "MD5" in compiled
+        assert "md5" in compiled
         assert "CAST" in compiled
         assert "VARCHAR" in compiled
         assert '"quotable id"' in compiled or "'quotable id'" in compiled
@@ -222,7 +222,7 @@ class TestPinotDBSampler:
         compiled = str(hash_expr.compile(compile_kwargs={"literal_binds": True}))
 
         assert "SUBSTR" in compiled
-        assert "MD5" in compiled
+        assert "md5" in compiled
         assert "CONCAT" in compiled
         assert "CAST" in compiled
         assert "id" in compiled
@@ -294,7 +294,7 @@ class TestPinotDBSampler:
         query_str = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         assert "SUBSTR" in query_str or "substr" in query_str.lower()
-        assert "MD5" in query_str or "md5" in query_str.lower()
+        assert "md5" in query_str or "md5" in query_str.lower()
         assert "CAST" in query_str or "cast" in query_str.lower()
         assert "VARCHAR" in query_str or "varchar" in query_str.lower()
 
@@ -388,8 +388,8 @@ class TestPinotDBSampler:
         assert (
             compiled
             == """SUBSTR(
-    MD5(
-        toUtf8(
+    md5(
+        toutf8(
             CONCAT(
                 CAST(test_table.id AS VARCHAR),
                 CONCAT(
@@ -448,7 +448,7 @@ class TestPinotDBSampler:
         query_str = str(query.compile(engine, compile_kwargs={"literal_binds": True}))
 
         assert (
-            "SUBSTR(MD5(toUtf8(CAST(test_table.id AS VARCHAR))), 0, 2) AS random"
+            "SUBSTR(md5(toutf8(CAST(test_table.id AS VARCHAR))), 0, 2) AS random"
             in query_str
         )
 
