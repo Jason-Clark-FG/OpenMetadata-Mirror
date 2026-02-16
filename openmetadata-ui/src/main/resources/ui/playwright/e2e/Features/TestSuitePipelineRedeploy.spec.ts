@@ -69,16 +69,19 @@ test.describe('Bulk Re-Deploy pipelines ', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
 
     await expect(page.getByRole('button', { name: 'Re Deploy' })).toBeEnabled();
 
-    const redeployResponse = page.waitForRequest(
-      (request) =>
-        request.url().includes('/api/v1/services/ingestionPipelines/deploy') &&
-        request.method() === 'POST'
+    const redeployResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/services/ingestionPipelines/deploy') &&
+        response.request().method() === 'POST' &&
+        response.status() === 200
     );
     await page.getByRole('button', { name: 'Re Deploy' }).click();
     await redeployResponse;
 
     await expect(
-      page.getByText(/Pipelines Re Deploy Successfully/i)
+      page.getByRole('alert').filter({
+        hasText: /Pipelines Re Deploy Successfully/i,
+      })
     ).toBeVisible();
   });
 
