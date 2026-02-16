@@ -177,9 +177,9 @@ export const verifyTotalDataAssetsFilters = async (
   ).toBeVisible();
 
   await page
-  .getByTestId(widgetKey)
-  .getByTestId('widget-sort-by-dropdown')
-  .click();
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown')
+    .click();
   const last14DaysFilter = page.waitForResponse(
     (response) =>
       response
@@ -199,11 +199,10 @@ export const verifyTotalDataAssetsFilters = async (
     }
   );
 
-  
   await page
-  .getByTestId(widgetKey)
-  .getByTestId('widget-sort-by-dropdown')
-  .click();
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown')
+    .click();
   const last7DaysFilter = page.waitForResponse(
     (response) =>
       response
@@ -235,7 +234,9 @@ export const verifyDataProductsFilters = async (
     }
   );
 
-  const sortDropdown = page.getByTestId(widgetKey).getByTestId('widget-sort-by-dropdown');
+  const sortDropdown = page
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown');
 
   await expect(sortDropdown).toBeVisible();
 
@@ -304,9 +305,9 @@ export const verifyDomainsFilters = async (page: Page, widgetKey: string) => {
   ).toBeVisible();
 
   await page
-  .getByTestId(widgetKey)
-  .getByTestId('widget-sort-by-dropdown')
-  .click();
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown')
+    .click();
   const aToZFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
@@ -324,9 +325,9 @@ export const verifyDomainsFilters = async (page: Page, widgetKey: string) => {
   );
 
   await page
-  .getByTestId(widgetKey)
-  .getByTestId('widget-sort-by-dropdown')
-  .click();
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown')
+    .click();
   const zToAFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
@@ -344,9 +345,9 @@ export const verifyDomainsFilters = async (page: Page, widgetKey: string) => {
   );
 
   await page
-  .getByTestId(widgetKey)
-  .getByTestId('widget-sort-by-dropdown')
-  .click();
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown')
+    .click();
   const latestFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
@@ -365,6 +366,18 @@ export const verifyDomainsFilters = async (page: Page, widgetKey: string) => {
 };
 
 export const verifyTaskFilters = async (page: Page, widgetKey: string) => {
+  const waitForTaskFilterResponse = (filterType: string) =>
+    page.waitForResponse((response) => {
+      const url = response.url();
+
+      return (
+        url.includes('/api/v1/tasks') ||
+        (url.includes('/api/v1/feed') &&
+          url.includes('type=Task') &&
+          url.includes(`filterType=${filterType}`))
+      );
+    });
+
   await page
     .waitForSelector(`[data-testid="${widgetKey}"] entity-list-skeleton`, {
       state: 'detached',
@@ -382,16 +395,7 @@ export const verifyTaskFilters = async (page: Page, widgetKey: string) => {
     .getByTestId(widgetKey)
     .getByTestId('widget-sort-by-dropdown')
     .click();
-  // Wait for either old /api/v1/feed or new /api/v1/tasks API
-  const mentionsTaskFilter = Promise.race([
-    page.waitForResponse(
-      (response) =>
-        (response.url().includes('/api/v1/feed') &&
-          response.url().includes('type=Task')) ||
-        response.url().includes('/api/v1/tasks')
-    ),
-    page.waitForTimeout(5000),
-  ]);
+  const mentionsTaskFilter = waitForTaskFilterResponse('MENTIONS');
   await page.getByRole('menuitem', { name: 'Mentions' }).click();
   await mentionsTaskFilter;
   await page.waitForLoadState('networkidle');
@@ -400,15 +404,7 @@ export const verifyTaskFilters = async (page: Page, widgetKey: string) => {
     .getByTestId(widgetKey)
     .getByTestId('widget-sort-by-dropdown')
     .click();
-  const assignedTasksFilter = Promise.race([
-    page.waitForResponse(
-      (response) =>
-        (response.url().includes('/api/v1/feed') &&
-          response.url().includes('type=Task')) ||
-        response.url().includes('/api/v1/tasks')
-    ),
-    page.waitForTimeout(5000),
-  ]);
+  const assignedTasksFilter = waitForTaskFilterResponse('ASSIGNED_TO');
   await page.getByRole('menuitem', { name: 'Assigned' }).click();
   await assignedTasksFilter;
   await page.waitForLoadState('networkidle');
@@ -417,15 +413,7 @@ export const verifyTaskFilters = async (page: Page, widgetKey: string) => {
     .getByTestId(widgetKey)
     .getByTestId('widget-sort-by-dropdown')
     .click();
-  const allTasksFilter = Promise.race([
-    page.waitForResponse(
-      (response) =>
-        (response.url().includes('/api/v1/feed') &&
-          response.url().includes('type=Task')) ||
-        response.url().includes('/api/v1/tasks')
-    ),
-    page.waitForTimeout(5000),
-  ]);
+  const allTasksFilter = waitForTaskFilterResponse('OWNER_OR_FOLLOWS');
   await page.getByRole('menuitem', { name: 'All' }).click();
   await allTasksFilter;
   await page.waitForLoadState('networkidle');
@@ -442,7 +430,9 @@ export const verifyDataAssetsFilters = async (
     }
   );
 
-  const sortDropdown = page.getByTestId(widgetKey).getByTestId('widget-sort-by-dropdown');
+  const sortDropdown = page
+    .getByTestId(widgetKey)
+    .getByTestId('widget-sort-by-dropdown');
 
   await expect(sortDropdown).toBeVisible();
 

@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Box } from '@mui/material';
 import {
   Button,
   Card,
@@ -25,21 +26,37 @@ import {
 import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
+import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconEdit } from '../../../assets/svg/edit-new.svg';
 import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg';
+import {
+  INITIAL_PAGING_VALUE,
+  PAGE_SIZE_BASE,
+} from '../../../constants/constants';
+import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
+import {
+  TEST_DEFINITION_DEFAULT_QUICK_FILTERS,
+  TEST_DEFINITION_FILTERS,
+} from '../../../constants/TestDefinition.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
   ResourceEntity,
 } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { SearchIndex } from '../../../enums/search.enum';
 import { ProviderType } from '../../../generated/entity/bot';
 import { Operation } from '../../../generated/entity/policies/policy';
-import { TestDefinition } from '../../../generated/tests/testDefinition';
+import {
+  EntityType,
+  TestDefinition,
+  TestPlatform,
+} from '../../../generated/tests/testDefinition';
 import { Paging } from '../../../generated/type/paging';
 import { usePaging } from '../../../hooks/paging/usePaging';
+import { useTableFilters } from '../../../hooks/useTableFilters';
 import {
   deleteTestDefinitionByFqn,
   getListTestDefinitions,
@@ -50,27 +67,45 @@ import {
   checkPermission,
   DEFAULT_ENTITY_PERMISSION,
 } from '../../../utils/PermissionsUtils';
+import {
+  isExternalTestDefinition,
+  mapUrlValueToOption,
+} from '../../../utils/TestDefinitionUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { useFilterSelection } from '../../common/atoms/filters/useFilterSelection';
+import {
+  SelectMode,
+  useQuickFiltersWithComponent,
+} from '../../common/atoms/filters/useQuickFiltersWithComponent';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
-import Loader from '../../common/Loader/Loader';
 import { PagingHandlerParams } from '../../common/NextPrevious/NextPrevious.interface';
 import RichTextEditorPreviewerNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../common/Table/Table';
+import { ExploreQuickFilterField } from '../../Explore/ExplorePage.interface';
+import { LearningIcon } from '../../Learning/LearningIcon/LearningIcon.component';
 import EntityDeleteModal from '../../Modals/EntityDeleteModal/EntityDeleteModal';
 import TestDefinitionForm from '../TestDefinitionForm/TestDefinitionForm.component';
 
 const TestDefinitionList = () => {
   const { t } = useTranslation();
   const { permissions, getEntityPermissionByFqn } = usePermissionProvider();
+
+  // Use useTableFilters for filter state management
+  const { filters: urlParams, setFilters: updateUrlParams } = useTableFilters({
+    entityType: undefined,
+    testPlatforms: undefined,
+  });
+
   const {
     currentPage,
     paging,
     pageSize,
     handlePagingChange,
     handlePageChange,
+    handlePageSizeChange,
     showPagination,
     pagingCursor,
-  } = usePaging();
+  } = usePaging(PAGE_SIZE_BASE);
 
   const [testDefinitions, setTestDefinitions] = useState<TestDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +121,88 @@ const TestDefinitionList = () => {
     Record<string, OperationPermission>
   >({});
   const [permissionLoading, setPermissionLoading] = useState(true);
+
+  // Parse filters from URL dynamically
+  const urlFilters = useMemo(() => {
+    const filters: Record<string, string[]> = {};
+
+    TEST_DEFINITION_DEFAULT_QUICK_FILTERS.forEach((key) => {
+      const paramValue = urlParams[key as keyof typeof urlParams];
+      if (paramValue) {
+        const values = String(paramValue).split(',').filter(Boolean);
+        // For single-select mode, only take the first value
+        filters[key] = values.length > 0 ? [values[0]] : [];
+      }
+    });
+
+    return filters;
+  }, [urlParams]);
+
+  // Create parsedFilters from URL for filter hooks
+  const parsedFilters = useMemo<ExploreQuickFilterField[]>(() => {
+    return TEST_DEFINITION_FILTERS.map((filter) => ({
+      ...filter,
+      value:
+        urlFilters[filter.key]?.map((v) =>
+          mapUrlValueToOption(v, filter.options)
+        ) || [],
+    }));
+  }, [urlFilters]);
+
+  // Handle filter changes
+  const handleFilterChange = useCallback(
+    (filters: ExploreQuickFilterField[]) => {
+      const filterUpdates: Record<string, string | null> = {};
+
+      // Clear all filter keys
+      TEST_DEFINITION_DEFAULT_QUICK_FILTERS.forEach((key) => {
+        filterUpdates[key] = null;
+      });
+
+      // Set new filter values
+      filters.forEach((filter) => {
+        const values = filter.value?.map((v) => v.key) || [];
+        if (values.length > 0) {
+          filterUpdates[filter.key] = values.join(',');
+        }
+      });
+
+      // Update filter URL params
+      updateUrlParams(filterUpdates);
+
+      // Reset pagination through usePaging to update both URL and internal state
+      handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
+    },
+    [updateUrlParams, handlePageChange]
+  );
+
+  // Use filter hooks
+  const { quickFilters } = useQuickFiltersWithComponent({
+    defaultFilters: TEST_DEFINITION_FILTERS.map((f) => ({
+      ...f,
+      value: [],
+      hideCounts: true,
+    })),
+    parsedFilters,
+    searchIndex: SearchIndex.ALL,
+    onFilterChange: handleFilterChange,
+    mode: SelectMode.SINGLE,
+  });
+
+  const { filterSelectionDisplay } = useFilterSelection({
+    urlState: {
+      filters: urlFilters,
+      searchQuery: '',
+      currentPage,
+      pageSize,
+    },
+    filterConfigs: TEST_DEFINITION_FILTERS,
+    parsedFilters,
+    onFilterChange: handleFilterChange,
+  });
 
   const createPermission = useMemo(
     () =>
@@ -162,10 +279,20 @@ const TestDefinitionList = () => {
     async (pagingOffset?: Partial<Paging>) => {
       setIsLoading(true);
       try {
+        // Extract filter values for API
+        const entityTypeFilter = urlFilters.entityType?.[0] as
+          | EntityType
+          | undefined;
+        const testPlatformFilter = urlFilters.testPlatforms?.[0] as
+          | TestPlatform
+          | undefined;
+
         const { data, paging: responsePaging } = await getListTestDefinitions({
           after: pagingOffset?.after,
           before: pagingOffset?.before,
           limit: pageSize,
+          entityType: entityTypeFilter,
+          testPlatform: testPlatformFilter,
         });
         setTestDefinitions(data);
         handlePagingChange(responsePaging);
@@ -177,7 +304,7 @@ const TestDefinitionList = () => {
         setIsLoading(false);
       }
     },
-    [pageSize, handlePagingChange, fetchTestDefinitionPermissions]
+    [pageSize, handlePagingChange, fetchTestDefinitionPermissions, urlFilters]
   );
 
   useEffect(() => {
@@ -188,7 +315,7 @@ const TestDefinitionList = () => {
     } else {
       fetchTestDefinitions();
     }
-  }, [pageSize, pagingCursor]);
+  }, [pageSize, pagingCursor, urlParams.entityType, urlParams.testPlatforms]);
 
   const handleEnableToggle = async (
     record: TestDefinition,
@@ -246,6 +373,13 @@ const TestDefinitionList = () => {
       );
       setIsDeleteModalVisible(false);
       setDefinitionToDelete(undefined);
+      // Reset pagination to page 1: handlePageChange synchronously updates URL params,
+      // and fetchTestDefinitions reads from usePaging state which syncs with URL.
+      // This ensures the list refreshes at page 1 with no cursor.
+      handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
       fetchTestDefinitions();
     } catch (error) {
       showErrorToast(error as AxiosError);
@@ -257,10 +391,22 @@ const TestDefinitionList = () => {
     setDefinitionToDelete(undefined);
   };
 
-  const handleFormSuccess = () => {
+  const handleFormSuccess = (data?: TestDefinition) => {
     setIsFormVisible(false);
+    if (selectedDefinition && data) {
+      setTestDefinitions((prev) =>
+        prev.map((item) => (item.id === data.id ? data : item))
+      );
+    } else {
+      // New item created: reset to page 1 to show the new item
+      // (same pattern as handleDeleteConfirm)
+      handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
+      fetchTestDefinitions();
+    }
     setSelectedDefinition(undefined);
-    fetchTestDefinitions();
   };
 
   const handleFormCancel = () => {
@@ -317,6 +463,7 @@ const TestDefinitionList = () => {
         render: (enabled: boolean, record: TestDefinition) => {
           const entityPermissions = testDefinitionPermissions[record.name];
           const hasEditPermission = entityPermissions?.[Operation.EditAll];
+          const isExternal = isExternalTestDefinition(record);
 
           if (permissionLoading || !entityPermissions) {
             return (
@@ -324,16 +471,20 @@ const TestDefinitionList = () => {
             );
           }
 
+          let tooltipTitle;
+          if (isExternal) {
+            tooltipTitle = t('message.external-test-cannot-be-toggled');
+          } else if (!hasEditPermission) {
+            tooltipTitle = t('message.no-permission-for-action');
+          }
+
           return (
-            <Tooltip
-              title={
-                !hasEditPermission && t('message.no-permission-for-action')
-              }>
+            <Tooltip title={tooltipTitle}>
               <div className="new-form-style d-inline-flex">
                 <Switch
                   checked={enabled ?? true}
                   data-testid={`enable-switch-${record.name}`}
-                  disabled={!hasEditPermission}
+                  disabled={isExternal || !hasEditPermission}
                   size="small"
                   onChange={(checked) => handleEnableToggle(record, checked)}
                 />
@@ -411,10 +562,6 @@ const TestDefinitionList = () => {
     currentPage,
   }: PagingHandlerParams) => {
     if (cursorType && paging) {
-      fetchTestDefinitions({
-        [cursorType]: paging[cursorType],
-        total: paging.total,
-      } as Paging);
       handlePageChange(
         currentPage,
         { cursorType, cursorValue: paging[cursorType] },
@@ -425,25 +572,24 @@ const TestDefinitionList = () => {
 
   const customPaginationProps = useMemo(
     () => ({
-      currentPage: currentPage,
-      pageSize: pageSize,
-      paging: paging,
+      currentPage,
+      pageSize,
+      paging,
       pagingHandler: handlePageChangeCallback,
-      showPagination: showPagination,
+      showPagination,
+      isLoading,
+      onShowSizeChange: handlePageSizeChange,
     }),
     [
       currentPage,
       paging,
       pageSize,
-      handlePagingChange,
       handlePageChange,
+      handlePageSizeChange,
       showPagination,
+      isLoading,
     ]
   );
-
-  if (isLoading) {
-    return <Loader />;
-  }
 
   if (!viewPermission) {
     return <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.PERMISSION} />;
@@ -451,14 +597,21 @@ const TestDefinitionList = () => {
 
   return (
     <>
+      {/* Header Section - Separate from table */}
       <Row className="p-b-md" gutter={[16, 16]}>
         <Col span={24}>
           <Card>
             <Row justify="space-between">
               <Col>
-                <Typography.Title level={5}>
-                  {t('label.data-quality-rule-plural')}
-                </Typography.Title>
+                <div className="flex gap-2 items-center m-b-xss">
+                  <Typography.Title className="m-b-0" level={5}>
+                    {t('label.data-quality-rule-plural')}
+                  </Typography.Title>
+                  <LearningIcon
+                    pageId={LEARNING_PAGE_IDS.RULES_LIBRARY}
+                    title={t('label.data-quality-rule-plural')}
+                  />
+                </div>
                 <Typography.Text type="secondary">
                   {t('message.page-sub-header-for-test-definitions')}
                 </Typography.Text>
@@ -478,23 +631,48 @@ const TestDefinitionList = () => {
             </Row>
           </Card>
         </Col>
+
         <Col span={24}>
-          {testDefinitions.length > 0 ? (
+          <Card
+            bodyStyle={{
+              padding: 0,
+            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                p: 4,
+              }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                {quickFilters}
+              </Box>
+              {!isEmpty(urlFilters) && <Box>{filterSelectionDisplay}</Box>}
+            </Box>
+
+            {/* Table */}
             <Table
               bordered
               columns={columns}
+              containerClassName="custom-card-with-table"
               customPaginationProps={customPaginationProps}
               data-testid="test-definition-table"
               dataSource={testDefinitions}
               loading={isLoading}
+              locale={{
+                emptyText: !isLoading && (
+                  <ErrorPlaceHolder
+                    className="p-y-lg"
+                    type={ERROR_PLACEHOLDER_TYPE.NO_DATA}
+                  />
+                ),
+              }}
               pagination={false}
               rowKey="id"
-              scroll={{ x: 1200 }}
+              scroll={{ x: testDefinitions.length ? 1200 : undefined }}
               size="small"
             />
-          ) : (
-            <ErrorPlaceHolder />
-          )}
+          </Card>
         </Col>
       </Row>
 
