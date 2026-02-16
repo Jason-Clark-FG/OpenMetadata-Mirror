@@ -5240,7 +5240,7 @@ public class WorkflowDefinitionResourceIT {
                 try {
                   org.openmetadata.schema.entity.domains.DataProduct checkDataProduct =
                       SdkClients.adminClient().dataProducts().get(dataProduct.getId().toString());
-                  return checkDataProduct.getEntityStatus() != null;
+                  return EntityStatus.Approved.equals(checkDataProduct.getEntityStatus());
                 } catch (Exception e) {
                   LOG.debug("Auto-approval check failed, will retry: {}", e.getMessage());
                   return false;
@@ -6424,46 +6424,6 @@ public class WorkflowDefinitionResourceIT {
                         .anyMatch(t -> expectedTaskType.equals(t.getType().toString()));
               } catch (Exception e) {
                 LOG.debug("Task creation check failed, will retry: {}", e.getMessage());
-                return false;
-              }
-            });
-  }
-
-  private void waitForWorkflowProcessing(
-      List<UUID> entityIds, String entityType, String fieldToCheck) {
-    await()
-        .atMost(Duration.ofSeconds(60))
-        .pollInterval(Duration.ofSeconds(2))
-        .pollDelay(Duration.ofSeconds(1))
-        .ignoreExceptions()
-        .until(
-            () -> {
-              try {
-                OpenMetadataClient client = SdkClients.adminClient();
-                for (UUID entityId : entityIds) {
-                  switch (entityType.toLowerCase()) {
-                    case "table":
-                      Table table = client.tables().get(entityId.toString(), fieldToCheck);
-                      if ("tags".equals(fieldToCheck)) {
-                        if (table.getTags() == null || table.getTags().isEmpty()) {
-                          return false;
-                        }
-                      }
-                      break;
-                    case "glossaryterm":
-                      GlossaryTerm term =
-                          client.glossaryTerms().get(entityId.toString(), fieldToCheck);
-                      if ("description".equals(fieldToCheck)) {
-                        if (term.getDescription() == null || term.getDescription().isEmpty()) {
-                          return false;
-                        }
-                      }
-                      break;
-                  }
-                }
-                return true;
-              } catch (Exception e) {
-                LOG.debug("Workflow processing check failed, will retry: {}", e.getMessage());
                 return false;
               }
             });
