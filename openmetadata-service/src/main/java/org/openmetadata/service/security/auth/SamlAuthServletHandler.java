@@ -104,7 +104,10 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
               "givenName",
               "familyName",
               "firstName",
-              "lastName");
+              "lastName",
+              "http://schemas.microsoft.com/identity/claims/displayname",
+              "displayName",
+              "name");
     }
   }
 
@@ -352,18 +355,6 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
    */
   private String extractDisplayNameFromSamlAttributes(Auth auth) {
     try {
-      // DIAGNOSTIC: Log ALL available SAML attributes (debug only to avoid logging PII in
-      // production)
-      Map<String, List<String>> allAttributes = auth.getAttributes();
-      LOG.debug("[SAML] ALL available SAML attributes from IdP:");
-      if (allAttributes != null && !allAttributes.isEmpty()) {
-        for (Map.Entry<String, List<String>> entry : allAttributes.entrySet()) {
-          LOG.debug("[SAML]   Attribute: '{}' = {}", entry.getKey(), entry.getValue());
-        }
-      } else {
-        LOG.warn("[SAML] No attributes received from SAML assertion!");
-      }
-
       // Convert SAML attributes to claims map (case-insensitive)
       Map<String, Object> claims = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
@@ -390,11 +381,8 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
 
       if (displayName == null) {
         LOG.warn(
-            "[SAML] Could not construct display name from attributes. " + "Available: {} = {}",
-            claims.keySet(),
-            claims);
-      } else {
-        LOG.info("[SAML] Extracted display name: '{}'", displayName);
+            "[SAML] Could not construct display name from attributes. " + "Available keys: {}",
+            claims.keySet());
       }
 
       return displayName;
