@@ -23,7 +23,7 @@ import time
 import traceback
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from sqlalchemy import Column, inspect, text
 from sqlalchemy.exc import DBAPIError, ProgrammingError, ResourceClosedError
@@ -85,8 +85,6 @@ class SQAProfilerInterface(ProfilerInterface, SQAInterfaceMixin):
     Interface to interact with registry supporting
     sqlalchemy.
     """
-
-    HYBRID_METRIC_OVERRIDES: ClassVar[Dict[str, Type[HybridMetric]]] = {}
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -591,10 +589,9 @@ class SQAProfilerInterface(ProfilerInterface, SQAInterfaceMixin):
         Returns:
             dictionnary of results
         """
-        effective_metric = self.HYBRID_METRIC_OVERRIDES.get(metric.name(), metric)
         dataset = self.sampler.get_dataset(column=column)
         try:
-            return effective_metric(column).fn(dataset, column_results, self.session)
+            return metric(column).fn(dataset, column_results, self.session)
         except Exception as exc:
             logger.debug(traceback.format_exc())
             logger.warning(f"Unexpected exception computing metrics: {exc}")

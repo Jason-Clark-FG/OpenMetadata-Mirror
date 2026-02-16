@@ -13,7 +13,9 @@
 Profiler interface for PinotDB, overriding hybrid metrics with PinotDB-specific implementations.
 """
 
-from typing import ClassVar, Dict, Type
+from typing import Any, ClassVar, Dict, Type
+
+from sqlalchemy import Column
 
 from metadata.generated.schema.configuration.profilerConfiguration import MetricType
 from metadata.profiler.interface.sqlalchemy.profiler_interface import (
@@ -29,3 +31,13 @@ class PinotDBProfilerInterface(SQAProfilerInterface):
     HYBRID_METRIC_OVERRIDES: ClassVar[Dict[str, Type[HybridMetric]]] = {
         MetricType.histogram.value: PinotDBHistogram,
     }
+
+    def get_hybrid_metrics(
+        self,
+        column: Column,
+        metric: Type[HybridMetric],
+        column_results: Dict[str, Any],
+    ):
+        effective_metric = self.HYBRID_METRIC_OVERRIDES.get(metric.name(), metric)
+
+        return super().get_hybrid_metrics(column, effective_metric, column_results)
