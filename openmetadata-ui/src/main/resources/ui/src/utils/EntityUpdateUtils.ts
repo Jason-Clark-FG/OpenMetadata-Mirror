@@ -71,11 +71,6 @@ export const updateEntityField = async <T>({
   }
 
   if (!entityType) {
-    if (onSuccess) {
-      onSuccess(newValue);
-
-      return { success: true, data: newValue };
-    }
     showErrorToast(t('message.entity-type-required'));
 
     return { success: false };
