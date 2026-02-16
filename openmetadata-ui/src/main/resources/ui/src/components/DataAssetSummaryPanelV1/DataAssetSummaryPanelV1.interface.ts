@@ -33,9 +33,11 @@ export type DataAssetSummaryPanelProps = {
   onOwnerUpdate?: (updatedOwners: EntityReference[]) => void;
   onDomainUpdate?: (updatedDomains: EntityReference[]) => void;
   onTierUpdate?: (updatedTier?: TagLabel) => void;
-  onTagsUpdate?: (updatedTags: TagLabel[]) => void;
+  onTagsUpdate?: (updatedTags: TagLabel[]) => Promise<TagLabel[] | undefined>;
   onDataProductsUpdate?: (updatedDataProducts: EntityReference[]) => void;
-  onGlossaryTermsUpdate?: (updatedGlossaryTerms: TagLabel[]) => void;
+  onGlossaryTermsUpdate?: (
+    updatedGlossaryTerms: TagLabel[]
+  ) => Promise<TagLabel[] | undefined>;
   onDescriptionUpdate?: (updatedDescription: string) => void;
   onLinkClick?: () => void;
   onLineageClick?: () => void;

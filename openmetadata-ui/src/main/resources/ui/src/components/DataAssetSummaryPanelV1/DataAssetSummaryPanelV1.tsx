@@ -466,9 +466,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editOwnerPermission}
-                key={`owners-${dataAsset.id}-${
-                  (dataAsset.owners as EntityReference[])?.length || 0
-                }`}
+                key={`owners-${dataAsset.id}-${(dataAsset.owners as EntityReference[])?.length || 0
+                  }`}
                 owners={dataAsset.owners as EntityReference[]}
                 onOwnerUpdate={onOwnerUpdate}
               />
@@ -480,9 +479,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editDomainPermission}
-                key={`domains-${dataAsset.id}-${
-                  (dataAsset.domains as EntityReference[])?.length || 0
-                }`}
+                key={`domains-${dataAsset.id}-${(dataAsset.domains as EntityReference[])?.length || 0
+                  }`}
                 onDomainUpdate={onDomainUpdate}
               />
             </div>
@@ -502,9 +500,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editGlossaryTermsPermission}
-                key={`glossary-terms-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`glossary-terms-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                  }`}
                 maxVisibleGlossaryTerms={3}
                 tags={dataAsset.tags}
                 onGlossaryTermsUpdate={onGlossaryTermsUpdate}
@@ -515,9 +512,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`tags-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                  }`}
                 tags={dataAsset.tags}
                 onTagsUpdate={onTagsUpdate}
               />
@@ -529,9 +525,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editDataProductPermission}
-                key={`data-products-${dataAsset.id}-${
-                  (dataAsset.dataProducts as unknown[])?.length || 0
-                }`}
+                key={`data-products-${dataAsset.id}-${(dataAsset.dataProducts as unknown[])?.length || 0
+                  }`}
                 onDataProductsUpdate={onDataProductsUpdate}
               />
             </div>
@@ -551,9 +546,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editOwnerPermission}
-                key={`owners-${dataAsset.id}-${
-                  (dataAsset.owners as EntityReference[])?.length || 0
-                }`}
+                key={`owners-${dataAsset.id}-${(dataAsset.owners as EntityReference[])?.length || 0
+                  }`}
                 owners={dataAsset.owners as EntityReference[]}
                 onOwnerUpdate={onOwnerUpdate}
               />
@@ -563,9 +557,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`tags-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                  }`}
                 tags={dataAsset.tags}
                 onTagsUpdate={onTagsUpdate}
               />
@@ -575,9 +568,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editGlossaryTermsPermission}
-                key={`glossary-terms-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`glossary-terms-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                  }`}
                 maxVisibleGlossaryTerms={3}
                 tags={dataAsset.tags}
                 onGlossaryTermsUpdate={onGlossaryTermsUpdate}
@@ -598,9 +590,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editOwnerPermission}
-                key={`owners-${dataAsset.id}-${
-                  (dataAsset.owners as EntityReference[])?.length || 0
-                }`}
+                key={`owners-${dataAsset.id}-${(dataAsset.owners as EntityReference[])?.length || 0
+                  }`}
                 owners={dataAsset.owners as EntityReference[]}
                 onOwnerUpdate={onOwnerUpdate}
               />
@@ -612,9 +603,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editDomainPermission}
-                key={`domains-${dataAsset.id}-${
-                  (dataAsset.domains as EntityReference[])?.length || 0
-                }`}
+                key={`domains-${dataAsset.id}-${(dataAsset.domains as EntityReference[])?.length || 0
+                  }`}
                 onDomainUpdate={onDomainUpdate}
               />
             </div>
@@ -634,9 +624,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`tags-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                  }`}
                 tags={dataAsset.tags?.filter(
                   (tag: TagLabel) => tag.source !== TagSource.Glossary
                 )}
@@ -691,9 +680,8 @@ export const DataAssetSummaryPanelV1 = ({
                   entityId={dataAsset.id}
                   entityType={entityType}
                   hasPermission={editOwnerPermission}
-                  key={`owners-${dataAsset.id}-${
-                    (dataAsset.owners as EntityReference[])?.length || 0
-                  }`}
+                  key={`owners-${dataAsset.id}-${(dataAsset.owners as EntityReference[])?.length || 0
+                    }`}
                   owners={dataAsset.owners as EntityReference[]}
                   onOwnerUpdate={onOwnerUpdate}
                 />
@@ -705,9 +693,8 @@ export const DataAssetSummaryPanelV1 = ({
                   entityId={dataAsset.id}
                   entityType={entityType}
                   hasPermission={editTagsPermission}
-                  key={`tags-${dataAsset.id}-${
-                    (dataAsset.tags as unknown[])?.length || 0
-                  }`}
+                  key={`tags-${dataAsset.id}-${(dataAsset.tags as unknown[])?.length || 0
+                    }`}
                   tags={dataAsset.tags?.filter(
                     (tag: TagLabel) => tag.source !== TagSource.Glossary
                   )}
