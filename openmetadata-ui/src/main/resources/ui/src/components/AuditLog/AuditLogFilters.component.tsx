@@ -26,7 +26,6 @@ import { searchData } from '../../rest/miscAPI';
 import {
   AuditLogActiveFilter,
   AuditLogFilterCategoryType,
-  AuditLogListParams,
   TimeFilterValue,
 } from '../../types/auditLogs.interface';
 import { formatUsersResponse } from '../../utils/APIUtils';
@@ -38,8 +37,7 @@ import {
   AuditLogFiltersProps,
   FilterOption,
 } from './AuditLogFilters.interface';
-import './AuditLogFilters.less';
-
+import { buildParamsFromFilters } from '../../utils/AuditLogUtils';
 
 const ENTITY_TYPE_OPTIONS: FilterOption[] = [
   // Data Assets
@@ -131,45 +129,7 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingBots, setIsLoadingBots] = useState(false);
 
-  const buildParamsFromFilters = useCallback(
-    (filters: AuditLogActiveFilter[]): Partial<AuditLogListParams> => {
-      const params: Partial<AuditLogListParams> = {};
 
-      filters.forEach((filter) => {
-        switch (filter.category) {
-          case 'time': {
-            const timeValue = filter.value as TimeFilterValue;
-            if (
-              timeValue.startTs !== undefined &&
-              timeValue.endTs !== undefined
-            ) {
-              params.startTs = timeValue.startTs;
-              params.endTs = timeValue.endTs;
-            }
-
-            break;
-          }
-          case 'user':
-            params.userName = filter.value.value;
-            params.actorType = 'USER';
-
-            break;
-          case 'bot':
-            params.userName = filter.value.value;
-            params.actorType = 'BOT';
-
-            break;
-          case 'entityType':
-            params.entityType = filter.value.value;
-
-            break;
-        }
-      });
-
-      return params;
-    },
-    []
-  );
 
   const getCategoryLabel = useCallback(
     (category: AuditLogFilterCategoryType): string => {
@@ -258,7 +218,7 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
       const params = buildParamsFromFilters(newFilters);
       onFiltersChange(newFilters, params);
     },
-    [activeFilters, getCategoryLabel, buildParamsFromFilters, onFiltersChange]
+    [activeFilters, getCategoryLabel, onFiltersChange]
   );
 
   const handleDropdownChange = useCallback(
@@ -297,7 +257,6 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
     [
       activeFilters,
       getCategoryLabel,
-      buildParamsFromFilters,
       onFiltersChange,
     ]
   );
@@ -334,10 +293,10 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
       const response = await getBots({ limit: 10 });
       const filteredBots = search
         ? response.data.filter(
-            (bot: Bot) =>
-              bot.name?.toLowerCase().includes(search.toLowerCase()) ||
-              bot.displayName?.toLowerCase().includes(search.toLowerCase())
-          )
+          (bot: Bot) =>
+            bot.name?.toLowerCase().includes(search.toLowerCase()) ||
+            bot.displayName?.toLowerCase().includes(search.toLowerCase())
+        )
         : response.data;
 
       setBotOptions(

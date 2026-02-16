@@ -59,6 +59,7 @@ import {
   AuditLogListParams,
   AuditLogListResponse,
 } from '../../types/auditLogs.interface';
+import { buildParamsFromFilters } from '../../utils/AuditLogUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { getSettingPath } from '../../utils/RouterUtils';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
@@ -222,55 +223,16 @@ const AuditLogsPage = () => {
     fetchAuditLogs({ after: undefined, before: undefined }, {});
   }, [fetchAuditLogs, clearSearch]);
 
-  const buildParamsFromRemainingFilters = useCallback(
-    (
-      filters: AuditLogActiveFilter[]
-    ): Partial<AuditLogListParams> => {
-      const params: Partial<AuditLogListParams> = {};
-
-      filters.forEach((filter) => {
-        switch (filter.category) {
-          case 'time': {
-            const tv = filter.value as { startTs?: number; endTs?: number };
-            if (tv.startTs !== undefined && tv.endTs !== undefined) {
-              params.startTs = tv.startTs;
-              params.endTs = tv.endTs;
-            }
-
-            break;
-          }
-          case 'user':
-            params.userName = filter.value.value;
-            params.actorType = 'USER';
-
-            break;
-          case 'bot':
-            params.userName = filter.value.value;
-            params.actorType = 'BOT';
-
-            break;
-          case 'entityType':
-            params.entityType = filter.value.value;
-
-            break;
-        }
-      });
-
-      return params;
-    },
-    []
-  );
-
   const handleRemoveFilter = useCallback(
     (category: string) => {
       const remaining = activeFilters.filter((f) => f.category !== category);
-      const params = buildParamsFromRemainingFilters(remaining);
+      const params = buildParamsFromFilters(remaining);
       setActiveFilters(remaining);
       setFilterParams(params);
       setCurrentPage(1);
       fetchAuditLogs({ after: undefined, before: undefined }, params);
     },
-    [activeFilters, buildParamsFromRemainingFilters, fetchAuditLogs]
+    [activeFilters, fetchAuditLogs]
   );
 
   const handleExportDownload = useCallback((data: string) => {
