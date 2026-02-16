@@ -92,6 +92,7 @@ export const useColumnGridListingData = (
   const totalOccurrencesRef = useRef<number>(0);
   const refetchInProgressRef = useRef(false);
   const needsRefetchAgainRef = useRef(false);
+  const latestRequestIdRef = useRef(0);
 
   // Local pagination state (cursor-based, not in URL)
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,6 +182,7 @@ export const useColumnGridListingData = (
         rethrowOnError?: boolean;
       }
     ) => {
+      const requestId = ++latestRequestIdRef.current;
       setLoading(true);
       try {
         // For page 1, start fresh (no cursor). For other pages, use stored cursor from previous page
@@ -196,6 +198,12 @@ export const useColumnGridListingData = (
           };
 
         const response = await getColumnGrid(apiParams);
+
+        // Ignore stale out-of-order responses when a newer search/filter/page
+        // request is already in flight.
+        if (requestId !== latestRequestIdRef.current) {
+          return;
+        }
 
         // Store items for this specific page
         itemsByPageRef.current.set(page, response.columns);
@@ -230,12 +238,12 @@ export const useColumnGridListingData = (
         setCursor(response.cursor);
         setHasMore(!!response.cursor);
       } catch (error) {
+        if (requestId !== latestRequestIdRef.current) {
+          return;
+        }
         if (!options?.rethrowOnError) {
-          setGridItems([]);
-          setEntities([]);
-          setAllRows([]);
-          setTotalUniqueColumns(0);
-          setTotalOccurrences(0);
+          // Keep previous data on transient errors/loading transitions to avoid
+          // jarring "0 stats + empty grid" flicker while requests are in flight.
         }
         if (process.env.NODE_ENV === 'development') {
           // eslint-disable-next-line no-console
@@ -245,7 +253,9 @@ export const useColumnGridListingData = (
           throw error;
         }
       } finally {
-        setLoading(false);
+        if (requestId === latestRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     []
@@ -337,9 +347,6 @@ export const useColumnGridListingData = (
       totalUniqueColumnsRef.current = 0;
       totalOccurrencesRef.current = 0;
       editedValuesRef.current = new Map();
-      setGridItems([]);
-      setTotalUniqueColumns(0);
-      setTotalOccurrences(0);
       previousFiltersRef.current = currentFiltersString;
     }
 

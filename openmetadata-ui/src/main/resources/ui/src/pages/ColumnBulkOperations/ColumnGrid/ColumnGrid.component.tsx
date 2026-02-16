@@ -76,6 +76,7 @@ import {
   ColumnOccurrenceRef,
   MetadataStatus,
 } from '../../../generated/api/data/columnGridResponse';
+import { BulkOperationResult } from '../../../generated/type/bulkOperationResult';
 import {
   LabelType,
   State,
@@ -108,6 +109,50 @@ const EDITED_ROW_KEYS: ReadonlyArray<
 const hasEditedValues = (r: ColumnGridRowData): boolean =>
   some(EDITED_ROW_KEYS, (key) => !isUndefined(r[key]));
 
+interface ColumnOccurrenceTarget {
+  columnFQN: string;
+  entityType: string;
+}
+
+const getOccurrenceKey = (occurrence: ColumnOccurrenceTarget): string =>
+  occurrence.columnFQN;
+
+const extractRowOccurrences = (
+  row: ColumnGridRowData
+): ColumnOccurrenceTarget[] => {
+  const occurrences: ColumnOccurrenceTarget[] = [];
+
+  if (row.occurrence) {
+    occurrences.push({
+      columnFQN: row.occurrence.columnFQN,
+      entityType: row.occurrence.entityType,
+    });
+  } else if (row.occurrenceRef) {
+    occurrences.push({
+      columnFQN: row.occurrenceRef.columnFQN,
+      entityType: row.occurrenceRef.entityType,
+    });
+  } else if (row.group?.occurrences && row.group.occurrences.length > 0) {
+    occurrences.push(...row.group.occurrences);
+  } else if (row.gridItem && row.gridItem.groups.length > 0) {
+    for (const group of row.gridItem.groups) {
+      if (group.occurrences && group.occurrences.length > 0) {
+        occurrences.push(...group.occurrences);
+      }
+    }
+  }
+
+  return occurrences;
+};
+
+interface BulkAssetsSocketMessage {
+  jobId?: string;
+  status?: string;
+  progress?: number;
+  total?: number;
+  result?: BulkOperationResult;
+}
+
 const ColumnGrid: React.FC<ColumnGridProps> = ({
   filters: externalFilters,
 }) => {
@@ -122,6 +167,10 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const [pendingRefetchRowIds, setPendingRefetchRowIds] = useState<Set<string>>(
     new Set()
   );
+  const [bulkUpdateProgress, setBulkUpdateProgress] = useState<{
+    processed: number;
+    total: number;
+  } | null>(null);
   const editorRef = React.useRef<EditorContentRef>(null);
   const activeJobIdRef = useRef<string | null>(null);
   const lastBulkUpdateCountRef = useRef<number>(0);
@@ -1035,53 +1084,44 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     );
   }, [columnGridListing]);
 
+  const selectedRowsData = useMemo(
+    () =>
+      columnGridListing.allRows.filter((r: ColumnGridRowData) =>
+        columnGridListing.isSelected(r.id)
+      ),
+    [columnGridListing.allRows, columnGridListing.isSelected]
+  );
+
+  const selectedGroupRowCount = useMemo(
+    () =>
+      selectedRowsData.filter(
+        (row) => (row.isGroup || row.occurrenceCount > 1) && !row.parentId
+      ).length,
+    [selectedRowsData]
+  );
+
+  const editedNonGroupCount = useMemo(
+    () =>
+      selectedRowsData.filter((row) => !row.isGroup && hasEditedValues(row))
+        .length,
+    [selectedRowsData]
+  );
+
   const handleBulkUpdate = useCallback(async () => {
-    const selectedRowsData = columnGridListing.allRows.filter(
-      (r: ColumnGridRowData) => columnGridListing.isSelected(r.id)
-    );
-
-    const updatesCount = selectedRowsData.filter(hasEditedValues).length;
-
-    if (updatesCount === 0) {
-      showErrorToast(t('message.no-changes-to-save'));
-
-      return;
-    }
-
     setIsUpdating(true);
 
     try {
-      const columnUpdates: ColumnUpdate[] = [];
+      const columnUpdatesByKey = new Map<string, ColumnUpdate>();
 
       for (const row of selectedRowsData) {
         if (!hasEditedValues(row)) {
           continue;
         }
 
-        const allOccurrences: { columnFQN: string; entityType: string }[] = [];
-
-        if (row.occurrence) {
-          allOccurrences.push({
-            columnFQN: row.occurrence.columnFQN,
-            entityType: row.occurrence.entityType,
-          });
-        } else if (row.occurrenceRef) {
-          allOccurrences.push({
-            columnFQN: row.occurrenceRef.columnFQN,
-            entityType: row.occurrenceRef.entityType,
-          });
-        } else if (row.group?.occurrences && row.group.occurrences.length > 0) {
-          allOccurrences.push(...row.group.occurrences);
-        } else if (row.gridItem && row.gridItem.groups.length > 0) {
-          for (const group of row.gridItem.groups) {
-            if (group.occurrences && group.occurrences.length > 0) {
-              allOccurrences.push(...group.occurrences);
-            }
-          }
-        }
-
-        for (const occurrence of allOccurrences) {
-          const update: ColumnUpdate = {
+        for (const occurrence of extractRowOccurrences(row)) {
+          const key = getOccurrenceKey(occurrence);
+          const existing = columnUpdatesByKey.get(key);
+          const update: ColumnUpdate = existing ?? {
             columnFQN: occurrence.columnFQN,
             entityType: occurrence.entityType,
           };
@@ -1096,13 +1136,16 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             update.tags = row.editedTags;
           }
 
-          columnUpdates.push(update);
+          columnUpdatesByKey.set(key, update);
         }
       }
+
+      const columnUpdates = Array.from(columnUpdatesByKey.values());
 
       if (columnUpdates.length === 0) {
         showErrorToast(t('message.no-changes-to-save'));
         setIsUpdating(false);
+        setBulkUpdateProgress(null);
 
         return;
       }
@@ -1132,6 +1175,11 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         columnUpdates: cleanedUpdates,
       };
 
+      setBulkUpdateProgress({
+        processed: 0,
+        total: cleanedUpdates.length,
+      });
+
       const response = await bulkUpdateColumnsAsync(request);
 
       // Store the jobId to listen for WebSocket notification when job completes
@@ -1144,7 +1192,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       pendingHighlightRowIdsRef.current = updatedRowIds;
       lastBulkUpdateCountRef.current = cleanedUpdates.length;
 
-      setIsUpdating(false);
       closeDrawerRef.current();
       columnGridListing.clearSelection();
 
@@ -1162,10 +1209,10 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     } catch (error) {
       showErrorToast(t('server.entity-updating-error'));
       setIsUpdating(false);
+      setBulkUpdateProgress(null);
     }
   }, [
-    columnGridListing.allRows,
-    columnGridListing.selectedEntities,
+    selectedRowsData,
     columnGridListing.clearEditedValues,
     columnGridListing.setAllRows,
     columnGridListing.clearSelection,
@@ -1174,9 +1221,9 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
   const handleBulkAssetsNotification = useCallback(
     async (message: string) => {
-      let data: { jobId?: string; status?: string };
+      let data: BulkAssetsSocketMessage;
       try {
-        data = JSON.parse(message) as { jobId?: string; status?: string };
+        data = JSON.parse(message) as BulkAssetsSocketMessage;
       } catch {
         return;
       }
@@ -1185,13 +1232,76 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         return;
       }
 
+      const status = data.status?.toUpperCase();
+
       const clearJobState = () => {
         setPendingRefetchRowIds(new Set());
         activeJobIdRef.current = null;
         setIsUpdating(false);
+        setBulkUpdateProgress(null);
       };
 
-      if (data.status === 'COMPLETED' || data.status === 'SUCCESS') {
+      if (status === 'STARTED') {
+        setIsUpdating(true);
+        setBulkUpdateProgress((prev) => {
+          const total = Math.max(
+            0,
+            data.total ?? prev?.total ?? lastBulkUpdateCountRef.current
+          );
+          if (total === 0) {
+            return prev;
+          }
+
+          return { processed: 0, total };
+        });
+
+        return;
+      }
+
+      if (status === 'IN_PROGRESS' || status === 'RUNNING') {
+        setIsUpdating(true);
+        setBulkUpdateProgress((prev) => {
+          const incomingProgress = Math.max(0, data.progress ?? 0);
+          const total = Math.max(
+            incomingProgress,
+            data.total ?? prev?.total ?? lastBulkUpdateCountRef.current ?? 0
+          );
+          if (total === 0) {
+            return prev;
+          }
+
+          const processed = Math.min(
+            total,
+            Math.max(incomingProgress, prev?.processed ?? 0)
+          );
+
+          return { processed, total };
+        });
+
+        return;
+      }
+
+      if (status === 'COMPLETED' || status === 'SUCCESS') {
+        setBulkUpdateProgress((prev) => {
+          const resultProcessed = data.result?.numberOfRowsPassed;
+          const resultTotal = data.result?.numberOfRowsProcessed;
+          const total = Math.max(
+            resultProcessed ?? 0,
+            resultTotal ?? 0,
+            prev?.total ?? lastBulkUpdateCountRef.current
+          );
+          if (total === 0) {
+            return prev;
+          }
+
+          const processed = Math.min(
+            total,
+            Math.max(resultProcessed ?? total, 0)
+          );
+
+          return { processed, total };
+        });
+
         const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
         const preservedExpandedRows = new Set(expandedRowsRef.current);
         const preservedExpandedStructRows = new Set(
@@ -1227,7 +1337,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           showErrorToast(t('server.entity-updating-error'));
           clearJobState();
         }
-      } else if (data.status === 'FAILED' || data.status === 'FAILURE') {
+      } else if (status === 'FAILED' || status === 'FAILURE') {
         showErrorToast(t('server.entity-updating-error'));
         clearJobState();
         pendingHighlightRowIdsRef.current = new Set();
@@ -1548,12 +1658,38 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     ]
   );
 
-  const editedCount = useMemo(() => {
-    return columnGridListing.allRows.filter(hasEditedValues).length;
-  }, [columnGridListing.allRows]);
-
-  const selectedCount = columnGridListing.selectedEntities.length;
+  const selectedCount = Math.max(
+    0,
+    columnGridListing.selectedEntities.length - selectedGroupRowCount
+  );
+  const editedCount = editedNonGroupCount;
   const hasSelection = selectedCount > 0;
+  const pendingChangesDisplayValue = useMemo(() => {
+    if (bulkUpdateProgress && bulkUpdateProgress.total > 0) {
+      const processed = Math.min(
+        bulkUpdateProgress.processed,
+        bulkUpdateProgress.total
+      );
+
+      return `${processed}/${bulkUpdateProgress.total}`;
+    }
+
+    return editedCount > 0
+      ? `${editedCount}/${selectedCount || editedCount}`
+      : '0';
+  }, [bulkUpdateProgress, editedCount, selectedCount]);
+
+  const showPendingChangesSpinner = useMemo(() => {
+    if (isUpdating) {
+      return true;
+    }
+
+    return Boolean(
+      bulkUpdateProgress &&
+        bulkUpdateProgress.total > 0 &&
+        bulkUpdateProgress.processed < bulkUpdateProgress.total
+    );
+  }, [bulkUpdateProgress, isUpdating]);
 
   const getTagDisplayLabel = useCallback((tag: TagLabel): string => {
     if (tag.displayName) {
@@ -1569,10 +1705,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   }, []);
 
   const drawerContent = useMemo(() => {
-    const selectedRows = columnGridListing.allRows.filter((r) =>
-      columnGridListing.isSelected(r.id)
-    );
-    const firstRow = selectedRows[0];
+    const firstRow = selectedRowsData[0];
     if (!firstRow && selectedCount === 0) {
       return (
         <Text type="secondary">{t('message.select-columns-to-edit')}</Text>
@@ -1623,7 +1756,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         };
       });
 
-    const drawerKey = `${columnGridListing.selectedEntities.join('-')}`;
+    const drawerKey = `${selectedRowsData.map((row) => row.id).join('-')}`;
 
     return (
       <Box
@@ -1667,7 +1800,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             placeholder={t('label.display-name')}
             size="small"
             onChange={(e) => {
-              columnGridListing.selectedEntities.forEach((rowId: string) => {
+              selectedRowsData.forEach((row) => {
+                const rowId = row.id;
                 updateRowField(rowId, 'displayName', e.target.value);
               });
             }}
@@ -1691,7 +1825,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             })}
             ref={editorRef}
             onTextChange={(value) => {
-              columnGridListing.selectedEntities.forEach((rowId: string) => {
+              selectedRowsData.forEach((row) => {
+                const rowId = row.id;
                 updateRowField(rowId, 'description', value);
               });
             }}
@@ -1738,12 +1873,14 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                     description: tagData.description,
                   };
                 });
-              columnGridListing.selectedEntities.forEach((rowId: string) => {
-                const row = columnGridListing.allRows.find(
+              selectedRowsData.forEach((selectedRow) => {
+                const rowId = selectedRow.id;
+                const foundRow = columnGridListing.allRows.find(
                   (r: ColumnGridRowData) => r.id === rowId
                 );
-                if (row) {
-                  const existingTags = row.editedTags ?? row.tags ?? [];
+                if (foundRow) {
+                  const existingTags =
+                    foundRow.editedTags ?? foundRow.tags ?? [];
                   const glossaryTerms = existingTags.filter(
                     (tag: TagLabel) => tag.source === TagSource.Glossary
                   );
@@ -1793,12 +1930,14 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                     description: termData.description,
                   };
                 });
-              columnGridListing.selectedEntities.forEach((rowId: string) => {
-                const row = columnGridListing.allRows.find(
+              selectedRowsData.forEach((selectedRow) => {
+                const rowId = selectedRow.id;
+                const foundRow = columnGridListing.allRows.find(
                   (r: ColumnGridRowData) => r.id === rowId
                 );
-                if (row) {
-                  const existingTags = row.editedTags ?? row.tags ?? [];
+                if (foundRow) {
+                  const existingTags =
+                    foundRow.editedTags ?? foundRow.tags ?? [];
                   const classificationTags = existingTags.filter(
                     (tag: TagLabel) => tag.source !== TagSource.Glossary
                   );
@@ -1815,8 +1954,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     );
   }, [
     columnGridListing.allRows,
-    columnGridListing.selectedEntities,
-    columnGridListing.isSelected,
+    selectedRowsData,
     selectedCount,
     t,
     getTagDisplayLabel,
@@ -1827,18 +1965,10 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     if (selectedCount === 0) {
       return null;
     }
-    const selectedRows = columnGridListing.allRows.filter((r) =>
-      columnGridListing.isSelected(r.id)
-    );
-    const firstRow = selectedRows[0];
+    const firstRow = selectedRowsData[0];
 
     return firstRow ? getColumnLink(firstRow) : null;
-  }, [
-    selectedCount,
-    columnGridListing.allRows,
-    columnGridListing.isSelected,
-    getColumnLink,
-  ]);
+  }, [selectedCount, selectedRowsData, getColumnLink]);
 
   const viewAssetHeaderAction = useMemo(() => {
     if (!drawerHeaderAssetLink) {
@@ -2032,15 +2162,25 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                   data-testid="pending-changes-value"
                   fontWeight={theme.typography.h6.fontWeight}
                   variant="subtitle1">
-                  {editedCount > 0
-                    ? `${editedCount}/${selectedCount || editedCount}`
-                    : '0'}
+                  {pendingChangesDisplayValue}
                 </Typography>
                 <Typography
                   color={theme.palette.grey[700]}
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                  }}
                   variant="body2"
                   whiteSpace="nowrap">
-                  {t('label.pending-changes')}
+                  <span>{t('label.pending-changes')}</span>
+                  {showPendingChangesSpinner && (
+                    <Box
+                      className="pending-changes-inline-spinner"
+                      data-testid="pending-changes-progress-spinner"
+                    />
+                  )}
                 </Typography>
               </Box>
             </Box>
