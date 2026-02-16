@@ -94,59 +94,6 @@ class TestPinotDBHistogramFn:
         assert result is None
 
 
-class TestHybridMetricOverrideDispatch:
-    def _make_interface(self, overrides: dict) -> SQAProfilerInterface:
-        interface = MagicMock(spec=SQAProfilerInterface)
-        interface.HYBRID_METRIC_OVERRIDES = overrides
-        interface.get_hybrid_metrics = SQAProfilerInterface.get_hybrid_metrics.__get__(
-            interface, type(interface)
-        )
-        return interface
-
-    def test_override_dispatches_to_pinot_histogram(self) -> None:
-        overrides = {MetricType.histogram.value: PinotDBHistogram}
-        interface = self._make_interface(overrides)
-        interface.sampler = MagicMock()
-        interface.sampler.get_dataset.return_value = MagicMock()
-        interface.session = MagicMock()
-
-        col = MagicMock()
-        col.type = MagicMock(spec=Integer)
-        col.name = "value"
-        column_results = _res_with()
-
-        with patch.object(
-            PinotDBHistogram, "fn", return_value={"boundaries": [], "frequencies": []}
-        ) as mock_pinot_fn:
-            with patch.object(Histogram, "fn", return_value=None) as mock_base_fn:
-                interface.get_hybrid_metrics(col, Histogram, column_results)
-
-        mock_pinot_fn.assert_called_once()
-        mock_base_fn.assert_not_called()
-
-    def test_no_override_uses_original_metric(self) -> None:
-        interface = self._make_interface({})
-        interface.sampler = MagicMock()
-        interface.sampler.get_dataset.return_value = MagicMock()
-        interface.session = MagicMock()
-
-        col = MagicMock()
-        col.type = MagicMock(spec=Integer)
-        col.name = "value"
-        column_results = _res_with()
-
-        with patch.object(
-            Histogram, "fn", return_value={"boundaries": [], "frequencies": []}
-        ) as mock_base_fn:
-            with patch.object(
-                PinotDBHistogram, "fn", return_value=None
-            ) as mock_pinot_fn:
-                interface.get_hybrid_metrics(col, Histogram, column_results)
-
-        mock_base_fn.assert_called_once()
-        mock_pinot_fn.assert_not_called()
-
-
 class TestPinotDBProfilerInterfaceDeclaration:
     def test_histogram_override_is_registered(self) -> None:
         assert (
@@ -154,5 +101,20 @@ class TestPinotDBProfilerInterfaceDeclaration:
             is PinotDBHistogram
         )
 
-    def test_override_dict_does_not_mutate_base_class(self) -> None:
-        assert SQAProfilerInterface.HYBRID_METRIC_OVERRIDES == {}
+    def test_get_hybrid_metrics_uses_pinot_histogram(self) -> None:
+        with patch.object(SQAProfilerInterface, "__init__", return_value=None):
+            interface = PinotDBProfilerInterface.__new__(PinotDBProfilerInterface)
+
+        column = MagicMock()
+        column_results: dict = {}
+
+        with patch.object(
+            SQAProfilerInterface, "get_hybrid_metrics"
+        ) as mock_parent_get_hybrid_metrics:
+            interface.get_hybrid_metrics(
+                column=column, metric=Histogram, column_results=column_results
+            )
+
+        mock_parent_get_hybrid_metrics.assert_called_once_with(
+            column, PinotDBHistogram, column_results
+        )
