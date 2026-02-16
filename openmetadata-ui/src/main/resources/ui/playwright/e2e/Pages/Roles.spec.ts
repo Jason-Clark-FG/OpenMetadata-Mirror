@@ -39,10 +39,6 @@ const errorMessageValidation = {
   lastPolicyCannotBeRemoved: 'At least one policy is required in a role',
 };
 
-const roleName = `Role-test-${uuid()}`;
-const description = `This is ${roleName} description`;
-const updatedRoleName = `PW Updated ${roleName}`;
-
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -60,6 +56,10 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('Roles page should work properly', async ({ page }) => {
     test.slow();
+
+    const roleName = `Role-test-${uuid()}`;
+    const description = `This is ${roleName} description`;
+    const updatedRoleName = `PW Updated ${roleName}`;
 
     await test.step('Add new role and check all tabs data', async () => {
       // Ensure add-role button is visible before clicking
@@ -344,7 +344,9 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Wait for roles page to be ready
       await expect(page.locator('[data-testid="loader"]')).not.toBeVisible();
 
-      const roleLocator = page.getByRole('link', { name: roleName });
+      const roleLocator = page.locator(
+        `[data-testid="role-name"][href="/settings/access/roles/${roleName}"]`
+      );
       await getElementWithPagination(page, roleLocator);
 
       // Wait for role details page to load
@@ -409,7 +411,9 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Wait for roles page to be ready
       await expect(page.locator('[data-testid="loader"]')).not.toBeVisible();
 
-      const roleLocator = page.getByRole('link', { name: roleName });
+      const roleLocator = page.locator(
+        `[data-testid="role-name"][href="/settings/access/roles/${roleName}"]`
+      );
       await getElementWithPagination(page, roleLocator);
 
       // Wait for role details page to load
@@ -440,7 +444,9 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Wait for roles page to be ready
       await expect(page.locator('[data-testid="loader"]')).not.toBeVisible();
 
-      const roleLocator = page.getByRole('link', { name: roleName });
+      const roleLocator = page.locator(
+        `[data-testid="role-name"][href="/settings/access/roles/${roleName}"]`
+      );
       await getElementWithPagination(page, roleLocator);
 
       // Wait for role details page to load
@@ -548,8 +554,9 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     await page.reload();
 
-    // Wait for page to be ready after reload
-    await expect(page.locator('[data-testid="loader"]')).not.toBeVisible();
+    await page.waitForSelector('[data-testid="loader"]', {
+      state: 'detached',
+    });
     await expect(page.locator('[data-testid="add-role"]')).toBeVisible();
 
     await getElementWithPagination(page, roleLocator);
