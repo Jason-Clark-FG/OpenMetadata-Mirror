@@ -427,13 +427,57 @@ export default function EntitySummaryPanel({
   );
 
   const handleTagsUpdate = useCallback(
-    (updatedTags: TagLabel[]) => {
-      // updatedTags from TagsSection contains the complete tags array
-      // from the API response (including glossary and tier tags),
-      // so we pass it through directly without re-adding them.
-      updateEntityData({ tags: updatedTags });
+    async (updatedTags: TagLabel[]) => {
+      if (onEntityUpdate) {
+        onEntityUpdate({ tags: updatedTags });
+
+        return updatedTags;
+      }
+
+      const baseData = entityData ?? entityDetails.details;
+      const jsonPatch = compare(baseData, {
+        ...baseData,
+        tags: updatedTags,
+      });
+
+      if (isEmpty(jsonPatch)) {
+        return updatedTags;
+      }
+
+      try {
+        const apiFunc = entityUpdateMap[entityType];
+        if (apiFunc && id) {
+          const res = await apiFunc(id, jsonPatch);
+          setEntityData((prev: EntityData) => ({
+            ...(prev || entityDetails.details),
+            ...(res as Partial<EntityData>),
+          }));
+
+          showSuccessToast(
+            t('server.update-entity-success', {
+              entity: t('label.tag-plural'),
+            })
+          );
+
+          return (res as EntityData).tags;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        throw error;
+      }
+
+      return undefined;
     },
-    [updateEntityData]
+    [
+      onEntityUpdate,
+      entityData,
+      entityDetails.details,
+      entityType,
+      id,
+      entityUpdateMap,
+      t,
+    ]
   );
 
   const handleTierUpdate = useCallback(
