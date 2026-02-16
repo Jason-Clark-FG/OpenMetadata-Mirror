@@ -217,6 +217,33 @@ class OracleUnitTest(TestCase):
             for either in self.oracle.yield_stored_procedure(MOCK_STORED_PACKAGE)
         ]
 
+    def test_stored_procedure_queries_have_order_by(self):
+        """
+        Test that stored procedure queries have ORDER BY clause to ensure
+        lines are returned in correct order from the database.
+
+        This is critical because the process_result method concatenates text
+        as rows are received without reordering. Without ORDER BY, Oracle can
+        return rows in any physical order, causing scrambled code.
+        """
+        assert "ORDER BY OWNER, NAME, LINE" in ORACLE_GET_STORED_PROCEDURES
+        assert (
+            """ORDER BY OWNER, NAME, CASE type
+        WHEN 'PACKAGE' THEN 1
+        WHEN 'PACKAGE BODY' THEN 2
+        ELSE 3
+    END, LINE"""
+            in ORACLE_GET_STORED_PACKAGES
+        )
+        assert (
+            """ORDER BY OWNER, NAME, CASE type
+        WHEN 'PACKAGE' THEN 1
+        WHEN 'PACKAGE BODY' THEN 2
+        ELSE 3
+    END, LINE"""
+            in TEST_ORACLE_GET_STORED_PACKAGES
+        )
+
     def test_get_view_definition_with_view_def_and_view_ddl(self):
         """
         Test that view definitions are correctly retrieved for both cases:
@@ -273,16 +300,3 @@ class OracleUnitTest(TestCase):
             mock_dialect.all_view_definitions[("test_view_with_ddl", "test_schema")]
             == expected_view_ddl_definition
         )
-
-    def test_stored_procedure_queries_have_order_by(self):
-        """
-        Test that stored procedure queries have ORDER BY clause to ensure
-        lines are returned in correct order from the database.
-
-        This is critical because the process_result method concatenates text
-        as rows are received without reordering. Without ORDER BY, Oracle can
-        return rows in any physical order, causing scrambled code.
-        """
-        assert "ORDER BY OWNER, NAME, LINE" in ORACLE_GET_STORED_PROCEDURES
-        assert "ORDER BY OWNER, NAME, LINE" in ORACLE_GET_STORED_PACKAGES
-        assert "ORDER BY OWNER, NAME, LINE" in TEST_ORACLE_GET_STORED_PACKAGES
