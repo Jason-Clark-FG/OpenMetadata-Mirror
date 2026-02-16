@@ -97,43 +97,34 @@ class PinotDBSampler(SQASampler):
     def _get_sampling_columns(self) -> List[Column]:
         """
         Select columns for hash-based sampling using tiered strategy.
-
-        Returns:
-            List of column names to use for hash-based sampling
+        Priority: PRIMARY_KEY constraint > UNIQUE constraint > column-level PK > all columns
         """
-        columns = []
-        if self.entity.tableConstraints:
-            for constraint in self.entity.tableConstraints:
-                if constraint.constraintType == ConstraintType.PRIMARY_KEY:
-                    logger.debug(
-                        f"Using PRIMARY KEY columns for sampling: {constraint.columns}"
-                    )
-                    columns = constraint.columns
-                    break
+        column_names = (
+            self._get_constraint_columns(ConstraintType.PRIMARY_KEY)
+            or self._get_constraint_columns(ConstraintType.UNIQUE)
+            or self._get_column_level_pk()
+            or [col.name.root for col in self.entity.columns]
+        )
 
-            if not columns:
-                for constraint in self.entity.tableConstraints:
-                    if constraint.constraintType == ConstraintType.UNIQUE:
-                        logger.debug(
-                            f"Using UNIQUE constraint columns for sampling: {constraint.columns}"
-                        )
-                        columns = constraint.columns
-                        break
-        else:
-            for column in self.entity.columns:
-                if column.constraint == Constraint.PRIMARY_KEY:
-                    logger.debug(
-                        f"Using PRIMARY KEY column for sampling: {column.name.root}"
-                    )
-                    columns = [column.name.root]
+        logger.debug(f"Sampling columns resolved: {column_names}")
+        return [getattr(self._table, name) for name in column_names]
 
-        if not columns:
-            columns = [col.name.root for col in self.entity.columns]
-            logger.debug(
-                "No PRIMARY KEY or UNIQUE constraints found, using all columns for sampling"
-            )
+    def _get_constraint_columns(self, constraint_type: ConstraintType) -> List[str]:
+        """Find columns from table-level constraints by type."""
+        if not self.entity.tableConstraints:
+            return []
+        for constraint in self.entity.tableConstraints:
+            if constraint.constraintType == constraint_type:
+                return constraint.columns
+        return []
 
-        return [getattr(self._table, col_name) for col_name in columns]
+    def _get_column_level_pk(self) -> List[str]:
+        """Find primary key from column-level constraint annotations."""
+        return [
+            col.name.root
+            for col in self.entity.columns
+            if col.constraint == Constraint.PRIMARY_KEY
+        ]
 
     def _build_hash_expression(self, columns: List[Column]) -> FunctionElement:
         """
