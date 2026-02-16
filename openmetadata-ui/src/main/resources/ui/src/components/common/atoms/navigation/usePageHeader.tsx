@@ -11,8 +11,9 @@
  *  limitations under the License.
  */
 
-import { Box, Button, Paper, Typography } from '@mui/material';
+import { Box, Paper, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { Button as UTButton } from '@openmetadata/ui-core-components';
 import { Plus } from '@untitledui/icons';
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,14 +85,13 @@ export const usePageHeader = (config: PageHeaderConfig) => {
             (config.createPermission &&
               config.addButtonLabelKey &&
               config.onAddClick && (
-                <Button
+                <UTButton
                   color="primary"
                   data-testid={config.addButtonTestId || 'add-entity-button'}
-                  startIcon={<Plus size={16} />}
-                  variant="contained"
+                  iconLeading={<Plus size={16} />}
                   onClick={config.onAddClick}>
                   {displayButtonLabel}
-                </Button>
+                </UTButton>
               ))}
         </Box>
       </Paper>
