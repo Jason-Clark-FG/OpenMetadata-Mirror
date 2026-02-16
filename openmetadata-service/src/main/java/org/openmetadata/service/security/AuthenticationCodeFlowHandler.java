@@ -798,13 +798,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
         needsUpdate = true;
       }
 
-      // Update display name if provided from SSO claims
-      if (!nullOrEmpty(displayName) && !displayName.equals(user.getDisplayName())) {
-        LOG.info(
-            "Updating display name for user {} from '{}' to '{}'",
-            userName,
-            user.getDisplayName(),
-            displayName);
+      // Update display name only if user doesn't already have one set
+      if (!nullOrEmpty(displayName) && nullOrEmpty(user.getDisplayName())) {
+        LOG.info("Setting display name for user {} to '{}'", userName, displayName);
         user.setDisplayName(displayName);
         needsUpdate = true;
       }

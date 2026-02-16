@@ -1,6 +1,7 @@
 package org.openmetadata.service.security.auth;
 
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+import static org.openmetadata.service.security.SecurityUtil.extractDisplayNameFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.writeJsonResponse;
 import static org.openmetadata.service.util.UserUtil.getRoleListFromUser;
 
@@ -90,7 +91,9 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
   private void initializeConfiguration() {
     SamlSSOClientConfig samlConfig = authConfig.getSamlConfiguration();
 
-    this.displayNameAttributes = samlConfig.getSamlDisplayNameAttributes();
+    if (samlConfig != null) {
+      this.displayNameAttributes = samlConfig.getSamlDisplayNameAttributes();
+    }
     if (nullOrEmpty(this.displayNameAttributes)) {
       this.displayNameAttributes =
           Arrays.asList(
@@ -349,12 +352,13 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
    */
   private String extractDisplayNameFromSamlAttributes(Auth auth) {
     try {
-      // DIAGNOSTIC: Log ALL available SAML attributes
+      // DIAGNOSTIC: Log ALL available SAML attributes (debug only to avoid logging PII in
+      // production)
       Map<String, List<String>> allAttributes = auth.getAttributes();
-      LOG.info("[SAML] ALL available SAML attributes from IdP:");
+      LOG.debug("[SAML] ALL available SAML attributes from IdP:");
       if (allAttributes != null && !allAttributes.isEmpty()) {
         for (Map.Entry<String, List<String>> entry : allAttributes.entrySet()) {
-          LOG.info("[SAML]   Attribute: '{}' = {}", entry.getKey(), entry.getValue());
+          LOG.debug("[SAML]   Attribute: '{}' = {}", entry.getKey(), entry.getValue());
         }
       } else {
         LOG.warn("[SAML] No attributes received from SAML assertion!");
@@ -382,8 +386,7 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       }
 
       // Reuse SecurityUtil for consistent extraction across OIDC and SAML
-      String displayName =
-          org.openmetadata.service.security.SecurityUtil.extractDisplayNameFromClaims(claims);
+      String displayName = extractDisplayNameFromClaims(claims);
 
       if (displayName == null) {
         LOG.warn(
@@ -465,13 +468,9 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
         needsUpdate = true;
       }
 
-      // Update display name if provided from SAML attributes
-      if (!nullOrEmpty(displayName) && !displayName.equals(existingUser.getDisplayName())) {
-        LOG.info(
-            "Updating display name for user {} from '{}' to '{}'",
-            username,
-            existingUser.getDisplayName(),
-            displayName);
+      // Update display name only if user doesn't already have one set
+      if (!nullOrEmpty(displayName) && nullOrEmpty(existingUser.getDisplayName())) {
+        LOG.info("Setting display name for user {} to '{}'", username, displayName);
         existingUser.setDisplayName(displayName);
         needsUpdate = true;
       }

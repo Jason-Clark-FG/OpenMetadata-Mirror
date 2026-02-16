@@ -283,7 +283,7 @@ export const extractNameFromUserProfile = (user: UserProfile): string => {
   }
 
   if (user.name) {
-    return user.name;
+    return user.name.trim();
   }
 
   const givenName = get(user, 'given_name', '');
@@ -294,11 +294,11 @@ export const extractNameFromUserProfile = (user: UserProfile): string => {
   }
 
   if (givenName) {
-    return givenName;
+    return givenName.trim();
   }
 
   if (familyName) {
-    return familyName;
+    return familyName.trim();
   }
 
   if (user.preferred_username) {
