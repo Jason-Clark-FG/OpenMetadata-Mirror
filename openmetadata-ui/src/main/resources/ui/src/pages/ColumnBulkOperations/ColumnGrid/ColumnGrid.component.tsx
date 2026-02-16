@@ -177,7 +177,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const pendingHighlightRowIdsRef = useRef<Set<string>>(new Set());
   const closeDrawerRef = useRef<() => void>(() => {});
   const openDrawerRef = useRef<() => void>(() => {});
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollToRowIdRef = useRef<string | null>(null);
   const expandedRowsRef = useRef<Set<string>>(new Set());
   const expandedStructRowsRef = useRef<Set<string>>(new Set());
@@ -680,7 +679,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       }
 
       return (
-        <Link className="column-link" to={entityInfo.link}>
+        <Link className="asset-link" to={entityInfo.link}>
           {entityInfo.name}
         </Link>
       );
@@ -1302,7 +1301,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           return { processed, total };
         });
 
-        const scrollTop = scrollContainerRef.current?.scrollTop ?? 0;
         const preservedExpandedRows = new Set(expandedRowsRef.current);
         const preservedExpandedStructRows = new Set(
           expandedStructRowsRef.current
@@ -1325,14 +1323,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
           columnGridListing.setExpandedRows(preservedExpandedRows);
           columnGridListing.setExpandedStructRows(preservedExpandedStructRows);
-
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              if (scrollContainerRef.current) {
-                scrollContainerRef.current.scrollTop = scrollTop;
-              }
-            });
-          });
         } catch {
           showErrorToast(t('server.entity-updating-error'));
           clearJobState();
@@ -1372,7 +1362,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
   useEffect(() => {
     const rowId = scrollToRowIdRef.current;
-    if (!rowId || !scrollContainerRef.current) {
+    if (!rowId) {
       return;
     }
     scrollToRowIdRef.current = null;
@@ -1380,7 +1370,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
     const tryScroll = (attempt = 0) => {
       requestAnimationFrame(() => {
-        const row = scrollContainerRef.current?.querySelector(selector);
+        const row = document.querySelector(selector);
         if (row) {
           row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else if (attempt < SCROLL_TO_ROW_MAX_RETRIES) {
@@ -2067,9 +2057,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
     return (
       <>
-        <Box className="table-scroll-container" ref={scrollContainerRef}>
-          {dataTable}
-        </Box>
+        {dataTable}
         {columnGridListing.totalEntities > 0 && (
           <Box
             data-testid="pagination"
