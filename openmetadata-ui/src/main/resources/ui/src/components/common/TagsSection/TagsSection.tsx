@@ -80,6 +80,22 @@ const TagsSectionV1: React.FC<TagsSectionProps> = ({
         ...tagsToSave,
       ];
 
+      if (onTagsUpdate) {
+        try {
+          const resultTags = await onTagsUpdate(updatedTags);
+          if (resultTags) {
+            setDisplayTags(resultTags);
+          }
+          completeEditing();
+        } catch {
+          setEditingTags(nonTierTags);
+          cancelEditing();
+          setIsLoading(false);
+        }
+
+        return;
+      }
+
       const result = await updateEntityField({
         entityId,
         entityType,
@@ -89,15 +105,13 @@ const TagsSectionV1: React.FC<TagsSectionProps> = ({
         entityLabel: t('label.tag-plural'),
         onSuccess: (tags) => {
           setDisplayTags(tags);
-          onTagsUpdate?.(tags);
-          completeEditing();
         },
         t,
       });
 
-      if (result.success && result.data === displayTags) {
+      if (result.success) {
         completeEditing();
-      } else if (!result.success) {
+      } else {
         setIsLoading(false);
       }
     },
@@ -133,7 +147,7 @@ const TagsSectionV1: React.FC<TagsSectionProps> = ({
       <TagSelectableList
         hasPermission={hasPermission}
         popoverProps={{
-          placement: 'topRight',
+          placement: 'top',
           open: popoverOpen,
           onOpenChange: handlePopoverOpenChange,
           overlayClassName: 'tag-select-popover',
@@ -145,7 +159,7 @@ const TagsSectionV1: React.FC<TagsSectionProps> = ({
         }}
         onUpdate={handleTagSelection}>
         <div className="d-none tag-selector-display">
-          {editingTags.length > 0 && (
+          {editingTags.length > 0 ? (
             <div className="selected-tags-list">
               {editingTags.map((tag) => (
                 <div
@@ -157,6 +171,12 @@ const TagsSectionV1: React.FC<TagsSectionProps> = ({
                 </div>
               ))}
             </div>
+          ) : (
+            <span className="no-data-placeholder">
+              {t('label.no-entity-assigned', {
+                entity: t('label.tag-plural'),
+              })}
+            </span>
           )}
         </div>
       </TagSelectableList>

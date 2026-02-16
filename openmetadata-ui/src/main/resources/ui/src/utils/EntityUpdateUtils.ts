@@ -71,6 +71,11 @@ export const updateEntityField = async <T>({
   }
 
   if (!entityType) {
+    if (onSuccess) {
+      onSuccess(newValue);
+
+      return { success: true, data: newValue };
+    }
     showErrorToast(t('message.entity-type-required'));
 
     return { success: false };
@@ -98,6 +103,17 @@ export const updateEntityField = async <T>({
 
     return { success: true, data: newValue };
   } catch (error) {
+    // If patch API is not available but onSuccess callback is provided, use custom handling
+    if (
+      error instanceof Error &&
+      error.message.includes('No patch API available') &&
+      onSuccess
+    ) {
+      onSuccess(newValue);
+
+      return { success: true, data: newValue };
+    }
+
     showErrorToast(
       error as AxiosError,
       t('server.entity-updating-error', {
