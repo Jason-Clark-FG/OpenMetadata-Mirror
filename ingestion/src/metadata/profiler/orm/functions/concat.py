@@ -56,7 +56,7 @@ def _(element, compiler, **kw):
 
     PinotDB's string concatenation function's signature looks like this:
 
-    CONCAT(first_value: VARCHAR, second_value: VARCHAR, seperator: VARCHAR) -> VARCHAR.
+    CONCAT(first_value: VARCHAR, second_value: VARCHAR, separator: VARCHAR) -> VARCHAR.
 
     Examples:
 
