@@ -2,7 +2,6 @@
 
 /* Bring in Tailwind’s theme + utilities, but skip preflight */
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
-@import "tailwindcss/preflight.css" layer(base) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
 
 @import "./theme.css";
