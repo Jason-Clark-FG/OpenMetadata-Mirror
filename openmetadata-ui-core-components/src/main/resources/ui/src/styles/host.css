@@ -1,0 +1,32 @@
+.om-ui {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-variant-ligatures: contextual;
+  font-variant-ligatures: contextual;
+  -webkit-font-kerning: normal;
+  font-kerning: normal;
+}
+
+.om-ui *,
+.om-ui *::before,
+.om-ui *::after {
+  box-sizing: border-box;
+}
+
+.om-ui img,
+.om-ui svg,
+.om-ui video,
+.om-ui canvas,
+.om-ui audio,
+.om-ui iframe,
+.om-ui embed,
+.om-ui object {
+  vertical-align: middle;
+}
+
+.om-ui img,
+.om-ui video {
+  max-width: 100%;
+  height: auto;
+}
