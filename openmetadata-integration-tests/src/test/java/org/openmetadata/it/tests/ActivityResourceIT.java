@@ -1,6 +1,7 @@
 package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,11 +21,13 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
 import org.openmetadata.schema.api.domains.CreateDomain;
+import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.activity.ActivityEvent;
 import org.openmetadata.schema.entity.data.Database;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.teams.Role;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.ActivityEventType;
@@ -328,6 +331,29 @@ public class ActivityResourceIT {
     assertNotNull(events);
   }
 
+  @Test
+  void test_domainOnlyUserOnlySeesAllowedDomainActivity(TestNamespace ns) throws Exception {
+    Domain allowedDomain = createDomain(ns, "activity-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "activity-blocked-domain");
+
+    Table allowedTable = createTableInDomain(ns, "allowed-activity-table", allowedDomain);
+    Table blockedTable = createTableInDomain(ns, "blocked-activity-table", blockedDomain);
+
+    ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
+    ActivityEvent blockedEvent = createTestActivityEvent(blockedTable, blockedDomain);
+
+    OpenMetadataClient domainOnlyClient = createDomainOnlyActivityUserClient(allowedDomain);
+    ActivityEventList events = listActivityEvents(domainOnlyClient, 200, 30);
+
+    assertNotNull(events);
+    assertTrue(
+        events.getData().stream().anyMatch(e -> allowedEvent.getId().equals(e.getId())),
+        "Domain-only user should see activity from allowed domain");
+    assertFalse(
+        events.getData().stream().anyMatch(e -> blockedEvent.getId().equals(e.getId())),
+        "Domain-only user should not see activity from blocked domain");
+  }
+
   // ==================== Count Tests ====================
 
   @Test
@@ -588,6 +614,10 @@ public class ActivityResourceIT {
   // ==================== Helper Methods ====================
 
   private ActivityEvent createTestActivityEvent(Table table) throws Exception {
+    return createTestActivityEvent(table, null);
+  }
+
+  private ActivityEvent createTestActivityEvent(Table table, Domain domain) throws Exception {
     EntityReference entityRef =
         new EntityReference()
             .withId(table.getId())
@@ -610,7 +640,19 @@ public class ActivityResourceIT {
             .withEntity(entityRef)
             .withActor(actorRef)
             .withTimestamp(System.currentTimeMillis())
-            .withSummary("Created table: " + table.getFullyQualifiedName());
+            .withSummary("Created table for domain activity visibility test");
+
+    if (domain != null) {
+      event.withDomains(
+          List.of(
+              new EntityReference()
+                  .withId(domain.getId())
+                  .withType(Entity.DOMAIN)
+                  .withName(domain.getName())
+                  .withFullyQualifiedName(domain.getFullyQualifiedName())));
+    } else if (table.getDomains() != null && !table.getDomains().isEmpty()) {
+      event.withDomains(table.getDomains());
+    }
 
     return insertActivityEvent(SdkClients.adminClient(), event);
   }
@@ -644,6 +686,65 @@ public class ActivityResourceIT {
             .in(database.getFullyQualifiedName())
             .execute();
     return TableTestFactory.createWithName(ns, schema.getFullyQualifiedName(), name);
+  }
+
+  private Table createTableInDomain(TestNamespace ns, String tableName, Domain domain)
+      throws Exception {
+    org.openmetadata.schema.api.services.CreateDatabaseService createService =
+        new org.openmetadata.schema.api.services.CreateDatabaseService()
+            .withName(ns.prefix(tableName + "-service"))
+            .withServiceType(
+                org.openmetadata.schema.api.services.CreateDatabaseService.DatabaseServiceType
+                    .Postgres)
+            .withDomains(java.util.List.of(domain.getFullyQualifiedName()));
+
+    DatabaseService service = SdkClients.adminClient().databaseServices().create(createService);
+    Database database =
+        Databases.create()
+            .name(ns.prefix(tableName + "-db"))
+            .in(service.getFullyQualifiedName())
+            .execute();
+    DatabaseSchema schema =
+        DatabaseSchemas.create()
+            .name(ns.prefix(tableName + "-schema"))
+            .in(database.getFullyQualifiedName())
+            .execute();
+    return TableTestFactory.createWithName(ns, schema.getFullyQualifiedName(), tableName);
+  }
+
+  private Domain createDomain(TestNamespace ns, String baseName) {
+    CreateDomain createDomain =
+        new CreateDomain()
+            .withName(ns.prefix(baseName))
+            .withDomainType(CreateDomain.DomainType.AGGREGATE)
+            .withDescription("Activity test domain " + baseName);
+    return SdkClients.adminClient().domains().create(createDomain);
+  }
+
+  private OpenMetadataClient createDomainOnlyActivityUserClient(Domain allowedDomain) {
+    Role domainOnlyRole = SdkClients.adminClient().roles().getByName("DomainOnlyAccessRole");
+    Role elevatedRole = getElevatedRoleForActivityTests();
+    String userName = "domactivity_" + UUID.randomUUID().toString().substring(0, 8);
+    String email = userName + "@test.om.org";
+
+    CreateUser request =
+        new CreateUser()
+            .withName(userName)
+            .withEmail(email)
+            .withDescription("Domain-only activity test user")
+            .withDomains(List.of(allowedDomain.getFullyQualifiedName()))
+            .withRoles(List.of(domainOnlyRole.getId(), elevatedRole.getId()));
+
+    SdkClients.adminClient().users().create(request);
+    return SdkClients.createClient(email, email, new String[] {});
+  }
+
+  private Role getElevatedRoleForActivityTests() {
+    try {
+      return SdkClients.adminClient().roles().getByName("shared_test_admin_role");
+    } catch (Exception ignored) {
+      return SdkClients.adminClient().roles().getByName("DataSteward");
+    }
   }
 
   private ActivityEventList listActivityEvents(OpenMetadataClient client, int limit, int days)

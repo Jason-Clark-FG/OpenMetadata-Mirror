@@ -283,6 +283,36 @@ test.describe('Activity Feed - Filters', () => {
     }
   });
 
+  test('Activity Feed widget filters should switch between All Activity, My Data, and Following', async ({
+    page,
+  }) => {
+    await regularUser.login(page);
+    await redirectToHomePage(page, false);
+
+    const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
+    await expect(feedWidget).toBeVisible();
+    const subFilterDropdown = feedWidget.getByTestId('widget-sort-by-dropdown');
+    await expect(subFilterDropdown).toBeVisible();
+
+    const selectFeedFilter = async (menuLabel: string) => {
+      await subFilterDropdown.click();
+      await page.getByRole('menuitem', { name: menuLabel }).click();
+      await expect(subFilterDropdown).toContainText(new RegExp(menuLabel, 'i'));
+      await page.waitForTimeout(300);
+    };
+
+    await subFilterDropdown.click();
+    await expect(page.getByRole('menuitem', { name: 'All Activity' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'My Data' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Following' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await selectFeedFilter('All Activity');
+    await selectFeedFilter('My Data');
+    await selectFeedFilter('Following');
+    await selectFeedFilter('All Activity');
+  });
+
   test('assignee should see assigned tasks in Tasks filter', async ({
     page,
   }) => {
@@ -439,6 +469,70 @@ test.describe('Activity Feed - Entity Page', () => {
       const allCount = await feedItems.count();
       expect(allCount).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  test('entity task filters should request open, closed, and mentions views', async ({
+    page,
+  }) => {
+    const waitForTaskResponse = (params: Record<string, string>) =>
+      page.waitForResponse((response) => {
+        if (
+          response.request().method() !== 'GET' ||
+          !response.url().includes('/api/v1/tasks')
+        ) {
+          return false;
+        }
+
+        const requestUrl = new URL(response.url());
+
+        return Object.entries(params).every(
+          ([key, value]) => requestUrl.searchParams.get(key) === value
+        );
+      });
+
+    await table.visitEntityPage(page);
+    await page.getByTestId('activity_feed').click();
+    await page.waitForLoadState('networkidle');
+
+    const leftPanel = page.getByTestId('global-setting-left-panel');
+    await expect(leftPanel).toBeVisible();
+
+    const tasksMenuItem = leftPanel.getByRole('menuitem', { name: /tasks/i });
+    await expect(tasksMenuItem).toBeVisible();
+    await tasksMenuItem.click();
+    await page.waitForLoadState('networkidle');
+
+    const taskFilterButton = page.getByTestId('user-profile-page-task-filter-icon');
+    await expect(taskFilterButton).toBeVisible();
+
+    await taskFilterButton.click();
+    await expect(page.getByTestId('closed-tasks')).toBeVisible();
+
+    const closedResponse = waitForTaskResponse({ statusGroup: 'closed' });
+    await page.getByTestId('closed-tasks').click();
+    await closedResponse;
+    await page.waitForLoadState('networkidle');
+
+    await taskFilterButton.click();
+    const openResponse = waitForTaskResponse({ statusGroup: 'open' });
+    await page.getByTestId('open-tasks').click();
+    await openResponse;
+    await page.waitForLoadState('networkidle');
+
+    const mentionsResponse = page.waitForResponse((response) => {
+      if (
+        response.request().method() !== 'GET' ||
+        !response.url().includes('/api/v1/tasks')
+      ) {
+        return false;
+      }
+
+      return new URL(response.url()).searchParams.has('mentionedUser');
+    });
+
+    await page.locator('.task-filter-container').getByText(/mention/i).click();
+    await mentionsResponse;
+    await page.waitForLoadState('networkidle');
   });
 
   test('should show description updates in activity feed', async ({ page }) => {

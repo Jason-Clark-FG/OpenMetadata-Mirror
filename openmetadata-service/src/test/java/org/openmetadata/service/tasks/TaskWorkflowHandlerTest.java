@@ -14,8 +14,16 @@
 package org.openmetadata.service.tasks;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.service.governance.workflows.WorkflowHandler;
 
 /**
  * Unit tests for TaskWorkflowHandler.
@@ -38,5 +46,37 @@ class TaskWorkflowHandlerTest {
   void testInstanceNotNull() {
     TaskWorkflowHandler handler = TaskWorkflowHandler.getInstance();
     assertNotNull(handler);
+  }
+
+  @Test
+  void testSupportsMultiApprovalUsesRuntimeTaskWhenWorkflowInstanceIdMissing() {
+    Task task = new Task().withId(UUID.randomUUID());
+    TaskWorkflowHandler handler = TaskWorkflowHandler.getInstance();
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    try (MockedStatic<WorkflowHandler> mocked = Mockito.mockStatic(WorkflowHandler.class)) {
+      mocked.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.hasActiveRuntimeTask(task.getId())).thenReturn(true);
+      when(workflowHandler.hasMultiApprovalSupport(task.getId())).thenReturn(true);
+
+      assertTrue(handler.supportsMultiApproval(task));
+      verify(workflowHandler).hasActiveRuntimeTask(task.getId());
+      verify(workflowHandler).hasMultiApprovalSupport(task.getId());
+    }
+  }
+
+  @Test
+  void testSupportsMultiApprovalReturnsFalseWithoutWorkflowBinding() {
+    Task task = new Task().withId(UUID.randomUUID());
+    TaskWorkflowHandler handler = TaskWorkflowHandler.getInstance();
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    try (MockedStatic<WorkflowHandler> mocked = Mockito.mockStatic(WorkflowHandler.class)) {
+      mocked.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.hasActiveRuntimeTask(task.getId())).thenReturn(false);
+
+      assertFalse(handler.supportsMultiApproval(task));
+      verify(workflowHandler).hasActiveRuntimeTask(task.getId());
+    }
   }
 }

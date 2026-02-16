@@ -707,28 +707,31 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
     await redirectToHomePage(page);
   });
 
+  const openReplyEditor = async (page: Page) => {
+    await page.goto(`/databaseSchema/${schemaFqn}/activity_feed/all`);
+    await page.waitForLoadState('networkidle');
+    await waitForAllLoadersToDisappear(page);
+
+    const firstConversationThread = page.locator('[data-testid="message-container"]').first();
+    await expect(firstConversationThread).toBeVisible({ timeout: 10000 });
+    await firstConversationThread.click();
+
+    const commentInput = page.getByTestId('comments-input-field');
+    await expect(commentInput).toBeVisible({ timeout: 10000 });
+    await commentInput.click();
+
+    const editorLocator = page.locator(
+      '[data-testid="editor-wrapper"] .ProseMirror, [data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
+    );
+    await expect(editorLocator.first()).toBeVisible({ timeout: 10000 });
+
+    return editorLocator.first();
+  };
+
   test('Should allow mentioning a user with Chinese characters in the activity feed', async ({
     page,
   }) => {
-    const feedPromise = page.waitForResponse((response) => {
-      const url = response.url();
-      return (
-        url.includes('/api/v1/feed') &&
-        url.includes('entityLink=') &&
-        url.includes('type=Conversation') &&
-        response.request().method() === 'GET'
-      );
-    });
-    await page.goto(`/databaseSchema/${schemaFqn}/activity_feed/all`);
-    const feedResponse = await feedPromise;
-    expect(feedResponse.status()).toBe(200);
-    await waitForAllLoadersToDisappear(page);
-
-    await page.getByTestId('comments-input-field').click();
-
-    const editorLocator = page.locator(
-      '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
-    );
+    const editorLocator = await openReplyEditor(page);
 
     await editorLocator.fill('Hey ');
 
@@ -784,32 +787,13 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
     );
 
     await waitForAllLoadersToDisappear(newPage);
-    expect(newPage.getByTestId('user-display-name')).toHaveText(userName);
+    await expect(newPage.getByTestId('user-display-name')).toHaveText(userName);
   });
 
   test('Should encode the chinese character while mentioning api endpoint', async ({
     page,
   }) => {
-    const feedPromise = page.waitForResponse((response) => {
-      const url = response.url();
-      return (
-        url.includes('/api/v1/feed') &&
-        url.includes('entityLink=') &&
-        url.includes('type=Conversation') &&
-        response.request().method() === 'GET'
-      );
-    });
-
-    await page.goto(`/databaseSchema/${schemaFqn}/activity_feed/all`);
-    const feedResponse = await feedPromise;
-    expect(feedResponse.status()).toBe(200);
-    await waitForAllLoadersToDisappear(page);
-
-    await page.getByTestId('comments-input-field').click();
-
-    const editorLocator = page.locator(
-      '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
-    );
+    const editorLocator = await openReplyEditor(page);
 
     await editorLocator.fill('Check ');
 

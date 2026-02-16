@@ -36,7 +36,9 @@ import org.openmetadata.schema.api.data.CreateContainer;
 import org.openmetadata.schema.api.data.CreateDashboard;
 import org.openmetadata.schema.api.data.CreatePipeline;
 import org.openmetadata.schema.api.data.CreateTopic;
+import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.tasks.CreateTask;
+import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.entity.data.Container;
@@ -45,16 +47,19 @@ import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.data.Topic;
+import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.MessagingService;
 import org.openmetadata.schema.entity.services.PipelineService;
 import org.openmetadata.schema.entity.services.StorageService;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.entity.teams.Role;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
 import org.openmetadata.schema.type.ContainerDataModel;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Field;
 import org.openmetadata.schema.type.FieldDataType;
 import org.openmetadata.schema.type.MessageSchema;
@@ -65,6 +70,7 @@ import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.ForbiddenException;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -531,6 +537,317 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     assertTrue(
         user1CreatedTasks.getData().stream().anyMatch(t -> t.getId().equals(createdTask.getId())),
         "User1's created tasks should include the task they created");
+  }
+
+  @Test
+  void testAssignedEndpointSupportsStatusFilter(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    CreateTask openRequest =
+        new CreateTask()
+            .withName(ns.prefix("assigned-open"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    CreateTask closedRequest =
+        new CreateTask()
+            .withName(ns.prefix("assigned-closed"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task openTask = SdkClients.adminClient().tasks().create(openRequest);
+    Task closedTask = SdkClients.adminClient().tasks().create(closedRequest);
+
+    SdkClients.user1Client().tasks().close(closedTask.getId().toString());
+
+    ListResponse<Task> openTasks =
+        SdkClients.user1Client().tasks().listAssigned(TaskEntityStatus.Open);
+    ListResponse<Task> cancelledTasks =
+        SdkClients.user1Client().tasks().listAssigned(TaskEntityStatus.Cancelled);
+
+    assertNotNull(openTasks);
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(openTask.getId())),
+        "Open assigned tasks should include open task");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(closedTask.getId())),
+        "Open assigned tasks should not include cancelled task");
+
+    assertNotNull(cancelledTasks);
+    assertTrue(
+        cancelledTasks.getData().stream().anyMatch(t -> t.getId().equals(closedTask.getId())),
+        "Cancelled assigned tasks should include cancelled task");
+    assertFalse(
+        cancelledTasks.getData().stream().anyMatch(t -> t.getId().equals(openTask.getId())),
+        "Cancelled assigned tasks should not include open task");
+  }
+
+  @Test
+  void testCreatedEndpointSupportsStatusFilter(TestNamespace ns) {
+    CreateTask openRequest =
+        new CreateTask()
+            .withName(ns.prefix("created-open"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    CreateTask closedRequest =
+        new CreateTask()
+            .withName(ns.prefix("created-closed"))
+            .withCategory(TaskCategory.Approval)
+            .withType(TaskEntityType.GlossaryApproval);
+
+    Task openTask = SdkClients.user1Client().tasks().create(openRequest);
+    Task closedTask = SdkClients.user1Client().tasks().create(closedRequest);
+
+    SdkClients.user1Client().tasks().close(closedTask.getId().toString());
+
+    ListResponse<Task> openCreated =
+        SdkClients.user1Client().tasks().listCreated(TaskEntityStatus.Open);
+    ListResponse<Task> cancelledCreated =
+        SdkClients.user1Client().tasks().listCreated(TaskEntityStatus.Cancelled);
+
+    assertNotNull(openCreated);
+    assertTrue(
+        openCreated.getData().stream().anyMatch(t -> t.getId().equals(openTask.getId())),
+        "Open created tasks should include open task");
+    assertFalse(
+        openCreated.getData().stream().anyMatch(t -> t.getId().equals(closedTask.getId())),
+        "Open created tasks should not include cancelled task");
+
+    assertNotNull(cancelledCreated);
+    assertTrue(
+        cancelledCreated.getData().stream().anyMatch(t -> t.getId().equals(closedTask.getId())),
+        "Cancelled created tasks should include cancelled task");
+    assertFalse(
+        cancelledCreated.getData().stream().anyMatch(t -> t.getId().equals(openTask.getId())),
+        "Cancelled created tasks should not include open task");
+  }
+
+  @Test
+  void testListTasksSupportsDomainFilter(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain domainA = createDomain(ns, "task-domain-a");
+    Domain domainB = createDomain(ns, "task-domain-b");
+
+    Table domainTable =
+        createTableWithDomainAndOwners(
+            ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+    Table otherDomainTable =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER2_REF));
+
+    Task domainTask = createTaskAboutTable(ns, "domain-filter-main", domainTable);
+    Task otherDomainTask = createTaskAboutTable(ns, "domain-filter-other", otherDomainTable);
+
+    ListResponse<Task> domainTasks =
+        SdkClients.adminClient()
+            .tasks()
+            .listWithFilters(
+                Map.of(
+                    "domain", domainA.getFullyQualifiedName(),
+                    "limit",
+                    "1000",
+                    "fields",
+                    "domains,about"));
+
+    assertNotNull(domainTasks);
+    assertTrue(
+        domainTasks.getData().stream().anyMatch(t -> t.getId().equals(domainTask.getId())),
+        "Domain-filtered tasks should include the task in the selected domain");
+    assertFalse(
+        domainTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Domain-filtered tasks should not include tasks from a different domain");
+  }
+
+  @Test
+  void testOwnedEndpointReturnsTasksForOwnedEntities(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Table userOwnedTable =
+        createTableWithDomainAndOwners(
+            ns, shared.DOMAIN.getEntityReference(), List.of(shared.USER1_REF));
+    Table teamOwnedTable =
+        createTableWithDomainAndOwners(
+            ns, shared.DOMAIN.getEntityReference(), List.of(shared.TEAM11.getEntityReference()));
+    Table otherOwnedTable =
+        createTableWithDomainAndOwners(
+            ns, shared.DOMAIN.getEntityReference(), List.of(shared.USER2_REF));
+
+    Task userOwnedTask = createTaskAboutTable(ns, "owned-by-user", userOwnedTable);
+    Task teamOwnedTask = createTaskAboutTable(ns, "owned-by-team", teamOwnedTable);
+    Task otherOwnedTask = createTaskAboutTable(ns, "owned-by-other", otherOwnedTable);
+
+    ListResponse<Task> user1OwnedTasks = SdkClients.user1Client().tasks().listOwned();
+
+    assertNotNull(user1OwnedTasks);
+    assertTrue(
+        user1OwnedTasks.getData().stream().anyMatch(t -> t.getId().equals(userOwnedTask.getId())),
+        "Owned tasks should include tasks for entities owned by the user");
+    assertTrue(
+        user1OwnedTasks.getData().stream().anyMatch(t -> t.getId().equals(teamOwnedTask.getId())),
+        "Owned tasks should include tasks for entities owned by user's teams");
+    assertFalse(
+        user1OwnedTasks.getData().stream().anyMatch(t -> t.getId().equals(otherOwnedTask.getId())),
+        "Owned tasks should not include tasks for entities owned by others");
+  }
+
+  @Test
+  void testDomainTasksEndpointReturnsTasksForGivenDomain(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain domainA = createDomain(ns, "domain-endpoint-a");
+    Domain domainB = createDomain(ns, "domain-endpoint-b");
+
+    Table domainTable =
+        createTableWithDomainAndOwners(
+            ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+    Table otherDomainTable =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER1_REF));
+
+    Task openDomainTask = createTaskAboutTable(ns, "domain-endpoint-open", domainTable);
+    Task closedDomainTask = createTaskAboutTable(ns, "domain-endpoint-closed", domainTable);
+    Task otherDomainTask = createTaskAboutTable(ns, "domain-endpoint-other", otherDomainTable);
+
+    SdkClients.adminClient().tasks().close(closedDomainTask.getId().toString());
+
+    ListResponse<Task> domainTasks =
+        SdkClients.adminClient()
+            .domains()
+            .listTasks(domainA.getFullyQualifiedName(), null, 1000);
+
+    assertNotNull(domainTasks);
+    assertTrue(
+        domainTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Domain endpoint should include open tasks from the selected domain");
+    assertTrue(
+        domainTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Domain endpoint should include closed tasks from the selected domain");
+    assertFalse(
+        domainTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Domain endpoint should not include tasks from a different domain");
+
+    ListResponse<Task> cancelledDomainTasks =
+        SdkClients.adminClient()
+            .domains()
+            .listTasks(domainA.getFullyQualifiedName(), TaskEntityStatus.Cancelled, 1000);
+
+    assertTrue(
+        cancelledDomainTasks.getData().stream()
+            .anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Domain endpoint status filter should include cancelled task");
+    assertFalse(
+        cancelledDomainTasks.getData().stream()
+            .anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Domain endpoint status filter should exclude open task");
+  }
+
+  @Test
+  void testDomainOnlyUserCanOnlyListTasksFromAllowedDomains(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain allowedDomain = createDomain(ns, "domain-only-allowed");
+    Domain blockedDomain = createDomain(ns, "domain-only-blocked");
+
+    Table allowedTable =
+        createTableWithDomainAndOwners(
+            ns, allowedDomain.getEntityReference(), List.of(shared.USER1_REF));
+    Table blockedTable =
+        createTableWithDomainAndOwners(
+            ns, blockedDomain.getEntityReference(), List.of(shared.USER1_REF));
+
+    Task allowedTask = createTaskAboutTable(ns, "domain-only-visible", allowedTable);
+    Task blockedTask = createTaskAboutTable(ns, "domain-only-hidden", blockedTable);
+
+    OpenMetadataClient domainOnlyClient = createDomainOnlyTaskUserClient(ns, allowedDomain);
+
+    ListResponse<Task> visibleTasks =
+        domainOnlyClient
+            .tasks()
+            .listWithFilters(Map.of("limit", "1000", "fields", "domains,about"));
+
+    assertTrue(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(allowedTask.getId())),
+        "Domain-only user should see tasks from their allowed domain");
+    assertFalse(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(blockedTask.getId())),
+        "Domain-only user should not see tasks from other domains");
+
+    ListResponse<Task> blockedDomainFilter =
+        domainOnlyClient
+            .tasks()
+            .listWithFilters(
+                Map.of(
+                    "limit",
+                    "1000",
+                    "domain",
+                    blockedDomain.getFullyQualifiedName(),
+                    "fields",
+                    "domains,about"));
+
+    assertTrue(
+        blockedDomainFilter.getData().isEmpty(),
+        "Domain-only user should not get tasks when filtering by an inaccessible domain");
+  }
+
+  @Test
+  void testDomainOnlyUserCannotCreateTaskOutsideAllowedDomain(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain allowedDomain = createDomain(ns, "create-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "create-blocked-domain");
+
+    Table allowedTable =
+        createTableWithDomainAndOwners(
+            ns, allowedDomain.getEntityReference(), List.of(shared.USER1_REF));
+    Table blockedTable =
+        createTableWithDomainAndOwners(
+            ns, blockedDomain.getEntityReference(), List.of(shared.USER1_REF));
+
+    OpenMetadataClient domainOnlyClient = createDomainOnlyTaskUserClient(ns, allowedDomain);
+
+    Task createdTask =
+        domainOnlyClient
+            .tasks()
+            .create(createTaskRequestAboutTable(ns, "domain-only-create-allowed", allowedTable));
+
+    assertNotNull(createdTask.getId(), "Domain-only user should create tasks in allowed domains");
+
+    assertThrows(
+        ForbiddenException.class,
+        () ->
+            domainOnlyClient
+                .tasks()
+                .create(
+                    createTaskRequestAboutTable(
+                        ns, "domain-only-create-blocked", blockedTable)),
+        "Domain-only user should not create tasks in inaccessible domains");
+  }
+
+  @Test
+  void testDomainOnlyUserDoesNotListTasksWithoutDomains(TestNamespace ns) {
+    Domain allowedDomain = createDomain(ns, "domain-only-list-allowed");
+    OpenMetadataClient domainOnlyClient = createDomainOnlyTaskUserClient(ns, allowedDomain);
+
+    Task noDomainTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                new CreateTask()
+                    .withName(ns.prefix("domain-only-no-domain-task"))
+                    .withDescription("Task with no target entity and no domains")
+                    .withCategory(TaskCategory.Approval)
+                    .withType(TaskEntityType.GlossaryApproval));
+
+    ListResponse<Task> visibleTasks =
+        domainOnlyClient
+            .tasks()
+            .listWithFilters(Map.of("limit", "1000", "fields", "domains,about"));
+
+    assertFalse(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(noDomainTask.getId())),
+        "Domain-only user should not receive tasks without domains");
   }
 
   @Test
@@ -2082,5 +2399,69 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     assertTrue(
         updatedTopic.getTags().stream()
             .anyMatch(t -> "PersonalData.Personal".equals(t.getTagFQN())));
+  }
+
+  private Table createTableWithDomainAndOwners(
+      TestNamespace ns, EntityReference domainRef, List<EntityReference> owners) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    table.setDomains(List.of(domainRef));
+    table.setOwners(owners);
+
+    return SdkClients.adminClient().tables().update(table.getId().toString(), table);
+  }
+
+  private Domain createDomain(TestNamespace ns, String baseName) {
+    CreateDomain request =
+        new CreateDomain()
+            .withName(ns.prefix(baseName))
+            .withDescription("Task integration test domain " + baseName)
+            .withDomainType(CreateDomain.DomainType.AGGREGATE);
+    return SdkClients.adminClient().domains().create(request);
+  }
+
+  private OpenMetadataClient createDomainOnlyTaskUserClient(TestNamespace ns, Domain allowedDomain) {
+    Role domainOnlyRole = SdkClients.adminClient().roles().getByName("DomainOnlyAccessRole");
+    Role elevatedRole = getElevatedRoleForTaskTests();
+    String userName = "domtask_" + UUID.randomUUID().toString().substring(0, 8);
+    String email = userName + "@test.om.org";
+
+    CreateUser request =
+        new CreateUser()
+            .withName(userName)
+            .withEmail(email)
+            .withDescription("Domain-only task test user")
+            .withDomains(List.of(allowedDomain.getFullyQualifiedName()))
+            .withRoles(List.of(domainOnlyRole.getId(), elevatedRole.getId()));
+
+    SdkClients.adminClient().users().create(request);
+
+    return SdkClients.createClient(email, email, new String[] {});
+  }
+
+  private Role getElevatedRoleForTaskTests() {
+    try {
+      return SdkClients.adminClient().roles().getByName("shared_test_admin_role");
+    } catch (Exception ignored) {
+      return SdkClients.adminClient().roles().getByName("DataSteward");
+    }
+  }
+
+  private Task createTaskAboutTable(TestNamespace ns, String namePrefix, Table table) {
+    return SdkClients.adminClient()
+        .tasks()
+        .create(createTaskRequestAboutTable(ns, namePrefix, table));
+  }
+
+  private CreateTask createTaskRequestAboutTable(TestNamespace ns, String namePrefix, Table table) {
+    return new CreateTask()
+        .withName(ns.prefix(namePrefix))
+        .withDescription("Task for " + table.getFullyQualifiedName())
+        .withCategory(TaskCategory.MetadataUpdate)
+        .withType(TaskEntityType.DescriptionUpdate)
+        .withAbout(table.getFullyQualifiedName())
+        .withAboutType("table");
   }
 }
