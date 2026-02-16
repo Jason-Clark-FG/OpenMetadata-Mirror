@@ -460,14 +460,22 @@ export default function EntitySummaryPanel({
           );
 
           return (res as EntityData).tags;
+        } else {
+          showErrorToast(
+            t('server.entity-updating-error', {
+              entity: t('label.tag-plural').toLowerCase(),
+            })
+          );
+
+          throw new Error(
+            `No update API available for entity type: ${entityType}`
+          );
         }
       } catch (error) {
         showErrorToast(error as AxiosError);
 
         throw error;
       }
-
-      return undefined;
     },
     [
       onEntityUpdate,
@@ -535,14 +543,22 @@ export default function EntitySummaryPanel({
           );
 
           return (res as EntityData).tags;
+        } else {
+          showErrorToast(
+            t('server.entity-updating-error', {
+              entity: t('label.glossary-term-plural').toLowerCase(),
+            })
+          );
+
+          throw new Error(
+            `No update API available for entity type: ${entityType}`
+          );
         }
       } catch (error) {
         showErrorToast(error as AxiosError);
 
         throw error;
       }
-
-      return undefined;
     },
     [
       onEntityUpdate,
