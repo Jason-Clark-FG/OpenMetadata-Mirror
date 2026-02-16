@@ -427,57 +427,13 @@ export default function EntitySummaryPanel({
   );
 
   const handleTagsUpdate = useCallback(
-    async (updatedTags: TagLabel[]) => {
-      if (onEntityUpdate) {
-        onEntityUpdate({ tags: updatedTags });
-
-        return updatedTags;
-      }
-
-      const baseData = entityData ?? entityDetails.details;
-      const jsonPatch = compare(baseData, {
-        ...baseData,
-        tags: updatedTags,
-      });
-
-      if (isEmpty(jsonPatch)) {
-        return updatedTags;
-      }
-
-      try {
-        const apiFunc = entityUpdateMap[entityType];
-        if (apiFunc && id) {
-          const res = await apiFunc(id, jsonPatch);
-          setEntityData((prev: EntityData) => ({
-            ...(prev || entityDetails.details),
-            ...(res as Partial<EntityData>),
-          }));
-
-          showSuccessToast(
-            t('server.update-entity-success', {
-              entity: t('label.tag-plural'),
-            })
-          );
-
-          return (res as EntityData).tags;
-        }
-      } catch (error) {
-        showErrorToast(error as AxiosError);
-
-        throw error;
-      }
-
-      return undefined;
+    (updatedTags: TagLabel[]) => {
+      // updatedTags from TagsSection contains the complete tags array
+      // from the API response (including glossary and tier tags),
+      // so we pass it through directly without re-adding them.
+      updateEntityData({ tags: updatedTags });
     },
-    [
-      onEntityUpdate,
-      entityData,
-      entityDetails.details,
-      entityType,
-      id,
-      entityUpdateMap,
-      t,
-    ]
+    [updateEntityData]
   );
 
   const handleTierUpdate = useCallback(
@@ -974,13 +930,11 @@ export default function EntitySummaryPanel({
       <div className="d-flex gap-2 w-full h-full">
         <Card
           bordered={false}
-          className={`summary-panel-container ${
-            isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          className={`summary-panel-container ${isSideDrawer ? 'drawer-summary-panel-container' : ''
+            }`}>
           <Card
-            className={`content-area ${
-              isSideDrawer ? 'drawer-content-area' : ''
-            }`}
+            className={`content-area ${isSideDrawer ? 'drawer-content-area' : ''
+              }`}
             style={{ width: '100%', display: 'block' }}>
             {renderTabContent()}
           </Card>
