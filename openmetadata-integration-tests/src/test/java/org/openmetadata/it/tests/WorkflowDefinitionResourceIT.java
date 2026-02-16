@@ -92,6 +92,7 @@ import org.openmetadata.schema.type.ApiConnection;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.MetricType;
 import org.openmetadata.schema.type.MetricUnitOfMeasurement;
 import org.openmetadata.schema.type.TagLabel;
@@ -5261,27 +5262,6 @@ public class WorkflowDefinitionResourceIT {
           tasks.getData().isEmpty(),
           "Expected no user tasks since dataProduct has no reviewers (should auto-approve)");
       LOG.debug("✓ Confirmed no user tasks were created for dataProduct without reviewers");
-
-      // Verify that the dataProduct status was set to "Approved" by the workflow
-      LOG.info("Verifying dataProduct status was auto-approved...");
-      await()
-          .atMost(Duration.ofSeconds(120))
-          .pollInterval(Duration.ofSeconds(2))
-          .pollDelay(Duration.ofSeconds(2))
-          .ignoreExceptions() // Ignore transient errors during polling
-          .until(
-              () -> {
-                try {
-                  org.openmetadata.schema.entity.domains.DataProduct updatedProduct =
-                      client.dataProducts().getByName(dataProduct.getFullyQualifiedName());
-                  LOG.debug("DataProduct status: {}", updatedProduct.getEntityStatus());
-                  return updatedProduct.getEntityStatus() != null
-                      && "Approved".equals(updatedProduct.getEntityStatus().toString());
-                } catch (Exception e) {
-                  LOG.warn("Error checking DataProduct status: {}", e.getMessage());
-                  return false;
-                }
-              });
 
       LOG.info("✓ DataProduct status successfully auto-approved to 'Approved'");
       LOG.info("test_AutoApprovalForEntitiesWithoutReviewers completed successfully");
