@@ -259,7 +259,6 @@ class TestEnhanceUsingContext:
         enhance_using_context(mock_recognizer)
 
         results = mock_recognizer.enhance_using_context(
-            mock_recognizer,
             "test@example.com",
             raw_results,
             [],
@@ -281,7 +280,7 @@ class TestEnhanceUsingContext:
         enhance_using_context(mock_recognizer)
 
         results = mock_recognizer.enhance_using_context(
-            mock_recognizer, "test@example.com", raw_results, [], nlp_artifacts, None
+            "test@example.com", raw_results, [], nlp_artifacts, None
         )
 
         assert len(results) == 1
@@ -304,7 +303,6 @@ class TestEnhanceUsingContext:
         enhance_using_context(mock_recognizer)
 
         results = mock_recognizer.enhance_using_context(
-            mock_recognizer,
             "test@example.com",
             raw_results,
             [],
@@ -319,6 +317,37 @@ class TestEnhanceUsingContext:
                 RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
             ]
             is True
+        )
+
+    def test_context_mismatch_does_not_boost_score(
+        self, mock_recognizer, nlp_artifacts
+    ):
+        raw_results = [
+            RecognizerResult(
+                entity_type="EMAIL_ADDRESS",
+                start=0,
+                end=16,
+                score=0.6,
+                recognition_metadata={},
+            ),
+        ]
+        mock_recognizer.enhance_using_context = Mock(return_value=raw_results)
+
+        enhance_using_context(mock_recognizer)
+
+        results = mock_recognizer.enhance_using_context(
+            "test@example.com",
+            raw_results,
+            [],
+            nlp_artifacts,
+            ["correo_electronico"],
+        )
+
+        assert len(results) == 1
+        assert results[0].score == 0.6
+        assert (
+            RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
+            not in results[0].recognition_metadata
         )
 
     def test_already_enhanced_results_are_not_boosted_again(
@@ -339,7 +368,6 @@ class TestEnhanceUsingContext:
         enhance_using_context(mock_recognizer)
 
         results = mock_recognizer.enhance_using_context(
-            mock_recognizer,
             "test@example.com",
             raw_results,
             [],
@@ -372,7 +400,7 @@ class TestEnhanceUsingContext:
         enhance_using_context(mock_recognizer)
 
         mock_recognizer.enhance_using_context(
-            mock_recognizer, text, raw_results, other_results, nlp_artifacts, context
+            text, raw_results, other_results, nlp_artifacts, context
         )
 
         assert original_enhance.call_count == 1

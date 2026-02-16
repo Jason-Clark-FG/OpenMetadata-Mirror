@@ -364,7 +364,7 @@ def enhance_using_context(recognizer: EntityRecognizer) -> EntityRecognizer:
             ):
                 continue
 
-            if any(ctx_word.lower() in context_lower for ctx_word in context):
+            if any(ctx_word.lower() in context_lower for ctx_word in rec.context):
                 original_score = result.score
                 result.score = rec.MAX_SCORE
 
@@ -380,7 +380,7 @@ def enhance_using_context(recognizer: EntityRecognizer) -> EntityRecognizer:
 
         return results
 
-    recognizer.enhance_using_context = wrapped
+    recognizer.enhance_using_context = wrapped.__get__(recognizer, type(recognizer))
 
     return recognizer
 
