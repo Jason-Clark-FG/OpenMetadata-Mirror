@@ -258,15 +258,33 @@ public final class SecurityUtil {
       return null;
     }
 
-    // First, try to get the direct 'name' claim
+    // Try direct name claims (name, displayName, displayname)
     String nameClaim = getClaimOrObject(claims.get("name"));
     if (!nullOrEmpty(nameClaim)) {
       return nameClaim.trim();
     }
 
-    // Fall back to combining given_name + family_name
+    String displayNameClaim = getClaimOrObject(claims.get("displayname"));
+    if (!nullOrEmpty(displayNameClaim)) {
+      return displayNameClaim.trim();
+    }
+
+    // Fall back to combining first + last name variations
     String givenName = getClaimOrObject(claims.get("given_name"));
+    if (nullOrEmpty(givenName)) {
+      givenName = getClaimOrObject(claims.get("givenname"));
+    }
+    if (nullOrEmpty(givenName)) {
+      givenName = getClaimOrObject(claims.get("firstname"));
+    }
+
     String familyName = getClaimOrObject(claims.get("family_name"));
+    if (nullOrEmpty(familyName)) {
+      familyName = getClaimOrObject(claims.get("familyname"));
+    }
+    if (nullOrEmpty(familyName)) {
+      familyName = getClaimOrObject(claims.get("lastname"));
+    }
 
     if (!nullOrEmpty(givenName) && !nullOrEmpty(familyName)) {
       return (givenName.trim() + " " + familyName.trim()).trim();

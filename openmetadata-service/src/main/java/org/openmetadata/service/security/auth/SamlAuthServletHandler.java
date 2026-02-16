@@ -13,14 +13,18 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.felix.http.javaxwrappers.HttpServletRequestWrapper;
 import org.apache.felix.http.javaxwrappers.HttpServletResponseWrapper;
+import org.openmetadata.catalog.security.client.SamlSSOClientConfig;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
@@ -48,6 +52,7 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
 
   final AuthenticationConfiguration authConfig;
   final AuthorizerConfiguration authorizerConfig;
+  private List<String> displayNameAttributes;
 
   private static class Holder {
     private static volatile SamlAuthServletHandler instance;
@@ -79,6 +84,25 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       AuthenticationConfiguration authConfig, AuthorizerConfiguration authorizerConfig) {
     this.authConfig = authConfig;
     this.authorizerConfig = authorizerConfig;
+    initializeConfiguration();
+  }
+
+  private void initializeConfiguration() {
+    SamlSSOClientConfig samlConfig = authConfig.getSamlConfiguration();
+
+    this.displayNameAttributes = samlConfig.getSamlDisplayNameAttributes();
+    if (nullOrEmpty(this.displayNameAttributes)) {
+      this.displayNameAttributes =
+          Arrays.asList(
+              "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+              "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+              "given_name",
+              "family_name",
+              "givenName",
+              "familyName",
+              "firstName",
+              "lastName");
+    }
   }
 
   @Override
@@ -314,56 +338,98 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
   }
 
   /**
-   * Extracts display name from SAML attributes.
+   * Extracts display name from SAML attributes using configurable attribute mapping.
    *
-   * <p>Attempts to extract display name from SAML response attributes in the following priority:
-   *
-   * <ol>
-   *   <li>Direct 'name' attribute
-   *   <li>Combination of 'given_name' + 'family_name' attributes
-   *   <li>Returns null if neither pattern is found
-   * </ol>
+   * <p>This method converts SAML attributes to a claims map and uses SecurityUtil for consistent
+   * extraction across OIDC and SAML providers. It supports configurable attribute names via
+   * samlDisplayNameAttributes configuration.
    *
    * @param auth SAML Auth object containing the response attributes
    * @return The extracted display name, or null if no suitable attributes found
    */
   private String extractDisplayNameFromSamlAttributes(Auth auth) {
     try {
-      // Try direct 'name' attribute first
-      Collection<String> nameAttr = auth.getAttribute("name");
-      if (nameAttr != null && !nameAttr.isEmpty()) {
-        String name = nameAttr.iterator().next();
-        if (!nullOrEmpty(name)) {
-          return name.trim();
+      // DIAGNOSTIC: Log ALL available SAML attributes
+      Map<String, List<String>> allAttributes = auth.getAttributes();
+      LOG.info("[SAML] ALL available SAML attributes from IdP:");
+      if (allAttributes != null && !allAttributes.isEmpty()) {
+        for (Map.Entry<String, List<String>> entry : allAttributes.entrySet()) {
+          LOG.info("[SAML]   Attribute: '{}' = {}", entry.getKey(), entry.getValue());
+        }
+      } else {
+        LOG.warn("[SAML] No attributes received from SAML assertion!");
+      }
+
+      // Convert SAML attributes to claims map (case-insensitive)
+      Map<String, Object> claims = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+
+      for (String attributeName : displayNameAttributes) {
+        Collection<String> attributeValues = auth.getAttribute(attributeName);
+        if (attributeValues != null && !attributeValues.isEmpty()) {
+          String value = attributeValues.iterator().next();
+          // Normalize to standard OIDC claim names for SecurityUtil compatibility
+          String standardKey = mapToStandardClaimName(attributeName);
+          claims.put(standardKey, value);
         }
       }
 
-      // Fall back to combining given_name + family_name
-      Collection<String> givenNameAttr = auth.getAttribute("given_name");
-      Collection<String> familyNameAttr = auth.getAttribute("family_name");
-
-      String givenName = null;
-      String familyName = null;
-
-      if (givenNameAttr != null && !givenNameAttr.isEmpty()) {
-        givenName = givenNameAttr.iterator().next();
-      }
-      if (familyNameAttr != null && !familyNameAttr.isEmpty()) {
-        familyName = familyNameAttr.iterator().next();
+      if (claims.isEmpty()) {
+        LOG.warn(
+            "[SAML] No display name attributes found in SAML assertion. "
+                + "Checked attributes: {}. Configure 'samlDisplayNameAttributes' to match your IdP.",
+            displayNameAttributes);
+        return null;
       }
 
-      if (!nullOrEmpty(givenName) && !nullOrEmpty(familyName)) {
-        return (givenName.trim() + " " + familyName.trim()).trim();
-      } else if (!nullOrEmpty(givenName)) {
-        return givenName.trim();
-      } else if (!nullOrEmpty(familyName)) {
-        return familyName.trim();
+      // Reuse SecurityUtil for consistent extraction across OIDC and SAML
+      String displayName =
+          org.openmetadata.service.security.SecurityUtil.extractDisplayNameFromClaims(claims);
+
+      if (displayName == null) {
+        LOG.warn(
+            "[SAML] Could not construct display name from attributes. " + "Available: {} = {}",
+            claims.keySet(),
+            claims);
+      } else {
+        LOG.info("[SAML] Extracted display name: '{}'", displayName);
       }
+
+      return displayName;
+
     } catch (Exception e) {
-      LOG.debug("[SAML] Could not extract display name from attributes: {}", e.getMessage());
+      LOG.error("[SAML] Error extracting display name", e);
+      return null;
+    }
+  }
+
+  /**
+   * Maps SAML attribute name variations to standard OIDC claim names. Allows
+   * SecurityUtil.extractDisplayNameFromClaims() to work with SAML attributes.
+   */
+  private String mapToStandardClaimName(String samlAttributeName) {
+    // Extract claim name from URN (e.g., "http://schemas.../givenname" -> "givenname")
+    String claimName = samlAttributeName;
+    int lastSlash = samlAttributeName.lastIndexOf('/');
+    int lastHash = samlAttributeName.lastIndexOf('#');
+    int lastSeparator = Math.max(lastSlash, lastHash);
+    if (lastSeparator > 0 && lastSeparator < samlAttributeName.length() - 1) {
+      claimName = samlAttributeName.substring(lastSeparator + 1);
     }
 
-    return null;
+    String lower = claimName.toLowerCase();
+    switch (lower) {
+      case "givenname":
+      case "firstname":
+        return "given_name";
+      case "familyname":
+      case "lastname":
+      case "surname":
+        return "family_name";
+      case "displayname":
+        return "name";
+      default:
+        return lower;
+    }
   }
 
   private User getOrCreateUser(
@@ -385,6 +451,13 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
           shouldBeAdmin,
           existingUser.getIsAdmin());
       LOG.info("Admin principals list: {}", getAdminPrincipals());
+
+      if (nullOrEmpty(displayName)) {
+        LOG.warn(
+            "[SAML] User '{}' has no display name. Check IdP configuration sends display name attributes: {}",
+            username,
+            displayNameAttributes);
+      }
 
       if (shouldBeAdmin && !Boolean.TRUE.equals(existingUser.getIsAdmin())) {
         LOG.info("Updating user {} to admin based on adminPrincipals", username);
