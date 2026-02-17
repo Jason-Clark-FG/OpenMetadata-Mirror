@@ -880,7 +880,8 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
         LOG.warn(
             "Failed to update and emit ChangeEvent for related suite {}: {}",
             relatedSuite.getId(),
-            e.getMessage());
+            e.getMessage(),
+            e);
       }
     }
   }
