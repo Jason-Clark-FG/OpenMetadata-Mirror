@@ -2335,7 +2335,6 @@ public class WorkflowDefinitionResourceIT {
     LOG.info("test_MultiEntityPeriodicQueryWithFilters completed successfully");
   }
 
-  @Test
   @Order(29)
   @RetryingTest(3)
   void test_EntitySpecificFiltering(TestNamespace ns) throws Exception {
@@ -5061,7 +5060,6 @@ public class WorkflowDefinitionResourceIT {
     LOG.info("✓ TestCase description successfully updated");
   }
 
-  @Test
   @Order(37)
   @RetryingTest(3)
   void test_AutoApprovalForEntitiesWithoutReviewers(TestNamespace ns) throws Exception {
