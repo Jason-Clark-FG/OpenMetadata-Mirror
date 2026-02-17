@@ -19,7 +19,6 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { XClose } from '@untitledui/icons';
 import { defaultColors } from '@openmetadata/ui-core-components';
 import { Button, Modal, Progress, Space } from 'antd';
@@ -74,30 +73,6 @@ interface ExportJob {
   progress?: number;
   total?: number;
 }
-
-const StyledPageLayout = styled(PageLayoutV1)(() => ({
-  '& .page-layout-v1-vertical-scroll.audit-logs-page-layout': {
-    overflow: 'hidden',
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  '& .audit-logs-page-layout > .ant-row': {
-    flex: 1,
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  '& .audit-logs-page-layout .ant-row .ant-col': {
-    flex: 'none',
-  },
-  '& .audit-logs-page-layout .ant-row .ant-col:last-child': {
-    minHeight: 0,
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-}));
 
 const AuditLogsPage = () => {
   const { t } = useTranslation();
@@ -356,12 +331,9 @@ const AuditLogsPage = () => {
     activeFilters.length > 0 || Boolean(searchTerm.trim());
 
   return (
-    <StyledPageLayout
+    <PageLayoutV1
+      fullHeight
       mainContainerClassName="audit-logs-page-layout"
-      pageContainerStyle={{
-        height: 'calc(100vh - 64px)',
-        overflow: 'hidden',
-      }}
       pageTitle={t('label.audit-log-plural')}>
       <Box
         data-testid="audit-logs-page"
@@ -618,7 +590,7 @@ const AuditLogsPage = () => {
           )}
         </Space>
       </Modal>
-    </StyledPageLayout>
+    </PageLayoutV1>
   );
 };
 
