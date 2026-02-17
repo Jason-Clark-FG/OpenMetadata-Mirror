@@ -3,10 +3,10 @@ import { cx } from "@/utils/cx";
 import { Avatar, type AvatarProps } from "./avatar";
 
 const styles = {
-    sm: { root: "gap-2", title: "text-sm font-semibold", subtitle: "text-xs" },
-    md: { root: "gap-2", title: "text-sm font-semibold", subtitle: "text-sm" },
-    lg: { root: "gap-3", title: "text-md font-semibold", subtitle: "text-md" },
-    xl: { root: "gap-4", title: "text-lg font-semibold", subtitle: "text-md" },
+    sm: { root: "tw:gap-2", title: "tw:text-sm tw:font-semibold", subtitle: "tw:text-xs" },
+    md: { root: "tw:gap-2", title: "tw:text-sm tw:font-semibold", subtitle: "tw:text-sm" },
+    lg: { root: "tw:gap-3", title: "tw:text-md tw:font-semibold", subtitle: "tw:text-md" },
+    xl: { root: "tw:gap-4", title: "tw:text-lg tw:font-semibold", subtitle: "tw:text-md" },
 };
 
 interface AvatarLabelGroupProps extends AvatarProps {

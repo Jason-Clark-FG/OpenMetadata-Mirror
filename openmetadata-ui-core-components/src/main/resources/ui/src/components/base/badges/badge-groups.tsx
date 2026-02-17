@@ -11,13 +11,13 @@ type Align = "leading" | "trailing";
 
 const baseClasses: Record<Theme, { root?: string; addon?: string; icon?: string }> = {
     light: {
-        root: "rounded-full ring-1 ring-inset",
-        addon: "rounded-full ring-1 ring-inset",
+        root: "tw:rounded-full tw:ring-1 tw:ring-inset",
+        addon: "tw:rounded-full tw:ring-1 tw:ring-inset",
     },
     modern: {
-        root: "rounded-[10px] bg-primary text-secondary shadow-xs ring-1 ring-inset ring-primary hover:bg-secondary",
-        addon: "flex items-center rounded-md bg-primary shadow-xs ring-1 ring-inset ring-primary",
-        icon: "text-utility-gray-500",
+        root: "tw:rounded-[10px] tw:bg-primary tw:text-secondary tw:shadow-xs tw:ring-1 tw:ring-inset tw:ring-primary tw:hover:bg-secondary",
+        addon: "tw:flex tw:items-center tw:rounded-md tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-inset tw:ring-primary",
+        icon: "tw:text-utility-gray-500",
     },
 };
 
@@ -30,26 +30,26 @@ const getSizeClasses = (
         md: {
             root: cx("tw:py-1 tw:pr-2 tw:pl-1 tw:text-xs tw:font-medium", !text && !icon && "tw:pr-1"),
             addon: cx("tw:px-2 tw:py-0.5", theme === "modern" && "tw:gap-1 tw:px-1.5", text && "tw:mr-2"),
-            icon: "ml-1 size-4",
+            icon: "tw:ml-1 tw:size-4",
         },
         lg: {
             root: cx("tw:py-1 tw:pr-2 tw:pl-1 tw:text-sm tw:font-medium", !text && !icon && "tw:pr-1"),
             addon: cx("tw:px-2.5 tw:py-0.5", theme === "modern" && "tw:gap-1.5 tw:px-2", text && "tw:mr-2"),
-            icon: "ml-1 size-4",
+            icon: "tw:ml-1 tw:size-4",
         },
     },
     trailing: {
         md: {
             root: cx("tw:py-1 tw:pr-1 tw:pl-3 tw:text-xs tw:font-medium", theme === "modern" && "tw:pl-2.5"),
             addon: cx("tw:py-0.5 tw:pr-1.5 tw:pl-2", theme === "modern" && "tw:pr-1.5 tw:pl-2", text && "tw:ml-2"),
-            icon: "ml-0.5 size-3 stroke-[3px]",
-            dot: "mr-1.5",
+            icon: "tw:ml-0.5 tw:size-3 tw:stroke-[3px]",
+            dot: "tw:mr-1.5",
         },
         lg: {
-            root: "py-1 pr-1 pl-3 text-sm font-medium",
+            root: "tw:py-1 tw:pr-1 tw:pl-3 tw:text-sm tw:font-medium",
             addon: cx("tw:py-0.5 tw:pr-2 tw:pl-2.5", theme === "modern" && "tw:pr-1.5 tw:pl-2", text && "tw:ml-2"),
-            icon: "ml-1 size-3 stroke-[3px]",
-            dot: "mr-2",
+            icon: "tw:ml-1 tw:size-3 tw:stroke-[3px]",
+            dot: "tw:mr-2",
         },
     },
 });

@@ -6,11 +6,11 @@ import { ComboBox as AriaComboBox, Group as AriaGroup, Input as AriaInput, ListB
 import { HintText } from "@/components/base/input/hint-text";
 import { Label } from "@/components/base/input/label";
 import { Popover } from "@/components/base/select/popover";
-import { type CommonProps, SelectContext, type SelectItemType, sizes } from "@/components/base/select/select";
+import { type SelectCommonProps, SelectContext, type SelectItemType, sizes } from "@/components/base/select/select";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
 import { cx } from "@/utils/cx";
 
-interface ComboBoxProps extends Omit<AriaComboBoxProps<SelectItemType>, "children" | "items">, RefAttributes<HTMLDivElement>, CommonProps {
+interface ComboBoxProps extends Omit<AriaComboBoxProps<SelectItemType>, "children" | "items">, RefAttributes<HTMLDivElement>, SelectCommonProps {
     shortcut?: boolean;
     items?: SelectItemType[];
     popoverClassName?: string;

@@ -9,8 +9,8 @@ import type { SelectItemType } from "./select";
 import { SelectContext } from "./select";
 
 const sizes = {
-    sm: "p-2 pr-2.5",
-    md: "p-2.5 pl-2",
+    sm: "tw:p-2 tw:pr-2.5",
+    md: "tw:p-2.5 tw:pl-2",
 };
 
 interface SelectItemProps extends Omit<AriaListBoxItemProps<SelectItemType>, "id">, SelectItemType {}

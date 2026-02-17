@@ -17,21 +17,21 @@ export const ToggleBase = ({ className, isHovered, isDisabled, isFocusVisible, i
     const styles = {
         default: {
             sm: {
-                root: "h-5 w-9 p-0.5",
+                root: "tw:h-5 tw:w-9 tw:p-0.5",
                 switch: cx("tw:size-4", isSelected && "tw:translate-x-4"),
             },
             md: {
-                root: "h-6 w-11 p-0.5",
+                root: "tw:h-6 tw:w-11 tw:p-0.5",
                 switch: cx("tw:size-5", isSelected && "tw:translate-x-5"),
             },
         },
         slim: {
             sm: {
-                root: "h-4 w-8",
+                root: "tw:h-4 tw:w-8",
                 switch: cx("tw:size-4", isSelected && "tw:translate-x-4"),
             },
             md: {
-                root: "h-5 w-10",
+                root: "tw:h-5 tw:w-10",
                 switch: cx("tw:size-5", isSelected && "tw:translate-x-5"),
             },
         },
@@ -84,16 +84,16 @@ interface ToggleProps extends AriaSwitchProps {
 export const Toggle = ({ label, hint, className, size = "sm", slim, ...ariaSwitchProps }: ToggleProps) => {
     const sizes = {
         sm: {
-            root: "gap-2",
+            root: "tw:gap-2",
             textWrapper: "",
-            label: "text-sm font-medium",
-            hint: "text-sm",
+            label: "tw:text-sm tw:font-medium",
+            hint: "tw:text-sm",
         },
         md: {
-            root: "gap-3",
-            textWrapper: "gap-0.5",
-            label: "text-md font-medium",
-            hint: "text-md",
+            root: "tw:gap-3",
+            textWrapper: "tw:gap-0.5",
+            label: "tw:text-md tw:font-medium",
+            hint: "tw:text-md",
         },
     };
 

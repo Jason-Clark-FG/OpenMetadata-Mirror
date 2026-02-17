@@ -7,64 +7,64 @@ import { badgeTypes } from "./badge-types";
 
 export const filledColors: Record<BadgeColors, { root: string; addon: string; addonButton: string }> = {
     gray: {
-        root: "bg-utility-gray-50 text-utility-gray-700 ring-utility-gray-200",
-        addon: "text-utility-gray-500",
-        addonButton: "hover:bg-utility-gray-100 text-utility-gray-400 hover:text-utility-gray-500",
+        root: "tw:bg-utility-gray-50 tw:text-utility-gray-700 tw:ring-utility-gray-200",
+        addon: "tw:text-utility-gray-500",
+        addonButton: "tw:hover:bg-utility-gray-100 tw:text-utility-gray-400 tw:hover:text-utility-gray-500",
     },
     brand: {
-        root: "bg-utility-brand-50 text-utility-brand-700 ring-utility-brand-200",
-        addon: "text-utility-brand-500",
-        addonButton: "hover:bg-utility-brand-100 text-utility-brand-400 hover:text-utility-brand-500",
+        root: "tw:bg-utility-brand-50 tw:text-utility-brand-700 tw:ring-utility-brand-200",
+        addon: "tw:text-utility-brand-500",
+        addonButton: "tw:hover:bg-utility-brand-100 tw:text-utility-brand-400 tw:hover:text-utility-brand-500",
     },
     error: {
-        root: "bg-utility-error-50 text-utility-error-700 ring-utility-error-200",
-        addon: "text-utility-error-500",
-        addonButton: "hover:bg-utility-error-100 text-utility-error-400 hover:text-utility-error-500",
+        root: "tw:bg-utility-error-50 tw:text-utility-error-700 tw:ring-utility-error-200",
+        addon: "tw:text-utility-error-500",
+        addonButton: "tw:hover:bg-utility-error-100 tw:text-utility-error-400 tw:hover:text-utility-error-500",
     },
     warning: {
-        root: "bg-utility-warning-50 text-utility-warning-700 ring-utility-warning-200",
-        addon: "text-utility-warning-500",
-        addonButton: "hover:bg-utility-warning-100 text-utility-warning-400 hover:text-utility-warning-500",
+        root: "tw:bg-utility-warning-50 tw:text-utility-warning-700 tw:ring-utility-warning-200",
+        addon: "tw:text-utility-warning-500",
+        addonButton: "tw:hover:bg-utility-warning-100 tw:text-utility-warning-400 tw:hover:text-utility-warning-500",
     },
     success: {
-        root: "bg-utility-success-50 text-utility-success-700 ring-utility-success-200",
-        addon: "text-utility-success-500",
-        addonButton: "hover:bg-utility-success-100 text-utility-success-400 hover:text-utility-success-500",
+        root: "tw:bg-utility-success-50 tw:text-utility-success-700 tw:ring-utility-success-200",
+        addon: "tw:text-utility-success-500",
+        addonButton: "tw:hover:bg-utility-success-100 tw:text-utility-success-400 tw:hover:text-utility-success-500",
     },
     "gray-blue": {
-        root: "bg-utility-gray-blue-50 text-utility-gray-blue-700 ring-utility-gray-blue-200",
-        addon: "text-utility-gray-blue-500",
-        addonButton: "hover:bg-utility-gray-blue-100 text-utility-gray-blue-400 hover:text-utility-gray-blue-500",
+        root: "tw:bg-utility-gray-blue-50 tw:text-utility-gray-blue-700 tw:ring-utility-gray-blue-200",
+        addon: "tw:text-utility-gray-blue-500",
+        addonButton: "tw:hover:bg-utility-gray-blue-100 tw:text-utility-gray-blue-400 tw:hover:text-utility-gray-blue-500",
     },
     "blue-light": {
-        root: "bg-utility-blue-light-50 text-utility-blue-light-700 ring-utility-blue-light-200",
-        addon: "text-utility-blue-light-500",
-        addonButton: "hover:bg-utility-blue-light-100 text-utility-blue-light-400 hover:text-utility-blue-light-500",
+        root: "tw:bg-utility-blue-light-50 tw:text-utility-blue-light-700 tw:ring-utility-blue-light-200",
+        addon: "tw:text-utility-blue-light-500",
+        addonButton: "tw:hover:bg-utility-blue-light-100 tw:text-utility-blue-light-400 tw:hover:text-utility-blue-light-500",
     },
     blue: {
-        root: "bg-utility-blue-50 text-utility-blue-700 ring-utility-blue-200",
-        addon: "text-utility-blue-500",
-        addonButton: "hover:bg-utility-blue-100 text-utility-blue-400 hover:text-utility-blue-500",
+        root: "tw:bg-utility-blue-50 tw:text-utility-blue-700 tw:ring-utility-blue-200",
+        addon: "tw:text-utility-blue-500",
+        addonButton: "tw:hover:bg-utility-blue-100 tw:text-utility-blue-400 tw:hover:text-utility-blue-500",
     },
     indigo: {
-        root: "bg-utility-indigo-50 text-utility-indigo-700 ring-utility-indigo-200",
-        addon: "text-utility-indigo-500",
-        addonButton: "hover:bg-utility-indigo-100 text-utility-indigo-400 hover:text-utility-indigo-500",
+        root: "tw:bg-utility-indigo-50 tw:text-utility-indigo-700 tw:ring-utility-indigo-200",
+        addon: "tw:text-utility-indigo-500",
+        addonButton: "tw:hover:bg-utility-indigo-100 tw:text-utility-indigo-400 tw:hover:text-utility-indigo-500",
     },
     purple: {
-        root: "bg-utility-purple-50 text-utility-purple-700 ring-utility-purple-200",
-        addon: "text-utility-purple-500",
-        addonButton: "hover:bg-utility-purple-100 text-utility-purple-400 hover:text-utility-purple-500",
+        root: "tw:bg-utility-purple-50 tw:text-utility-purple-700 tw:ring-utility-purple-200",
+        addon: "tw:text-utility-purple-500",
+        addonButton: "tw:hover:bg-utility-purple-100 tw:text-utility-purple-400 tw:hover:text-utility-purple-500",
     },
     pink: {
-        root: "bg-utility-pink-50 text-utility-pink-700 ring-utility-pink-200",
-        addon: "text-utility-pink-500",
-        addonButton: "hover:bg-utility-pink-100 text-utility-pink-400 hover:text-utility-pink-500",
+        root: "tw:bg-utility-pink-50 tw:text-utility-pink-700 tw:ring-utility-pink-200",
+        addon: "tw:text-utility-pink-500",
+        addonButton: "tw:hover:bg-utility-pink-100 tw:text-utility-pink-400 tw:hover:text-utility-pink-500",
     },
     orange: {
-        root: "bg-utility-orange-50 text-utility-orange-700 ring-utility-orange-200",
-        addon: "text-utility-orange-500",
-        addonButton: "hover:bg-utility-orange-100 text-utility-orange-400 hover:text-utility-orange-500",
+        root: "tw:bg-utility-orange-50 tw:text-utility-orange-700 tw:ring-utility-orange-200",
+        addon: "tw:text-utility-orange-500",
+        addonButton: "tw:hover:bg-utility-orange-100 tw:text-utility-orange-400 tw:hover:text-utility-orange-500",
     },
 };
 
@@ -75,20 +75,20 @@ const addonOnlyColors = Object.fromEntries(Object.entries(filledColors).map(([ke
 
 const withPillTypes = {
     [badgeTypes.pillColor]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-full ring-1 ring-inset",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-full tw:ring-1 tw:ring-inset",
         styles: filledColors,
     },
     [badgeTypes.badgeColor]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-md ring-1 ring-inset",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-md tw:ring-1 tw:ring-inset",
         styles: filledColors,
     },
     [badgeTypes.badgeModern]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-md ring-1 ring-inset shadow-xs",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-md tw:ring-1 tw:ring-inset tw:shadow-xs",
         styles: {
             gray: {
-                root: "bg-primary text-secondary ring-primary",
-                addon: "text-gray-500",
-                addonButton: "hover:bg-utility-gray-100 text-utility-gray-400 hover:text-utility-gray-500",
+                root: "tw:bg-primary tw:text-secondary tw:ring-primary",
+                addon: "tw:text-gray-500",
+                addonButton: "tw:hover:bg-utility-gray-100 tw:text-utility-gray-400 tw:hover:text-utility-gray-500",
             },
         },
     },
@@ -96,15 +96,15 @@ const withPillTypes = {
 
 const withBadgeTypes = {
     [badgeTypes.pillColor]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-full ring-1 ring-inset",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-full tw:ring-1 tw:ring-inset",
         styles: filledColors,
     },
     [badgeTypes.badgeColor]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-md ring-1 ring-inset",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-md tw:ring-1 tw:ring-inset",
         styles: filledColors,
     },
     [badgeTypes.badgeModern]: {
-        common: "size-max flex items-center whitespace-nowrap rounded-md ring-1 ring-inset bg-primary text-secondary ring-primary shadow-xs",
+        common: "tw:size-max tw:flex tw:items-center tw:whitespace-nowrap tw:rounded-md tw:ring-1 tw:ring-inset tw:bg-primary tw:text-secondary tw:ring-primary tw:shadow-xs",
         styles: addonOnlyColors,
     },
 };
@@ -124,14 +124,14 @@ export const Badge = <T extends BadgeTypes>(props: BadgeProps<T>) => {
     const colors = withPillTypes[type];
 
     const pillSizes = {
-        sm: "py-0.5 px-2 text-xs font-medium",
-        md: "py-0.5 px-2.5 text-sm font-medium",
-        lg: "py-1 px-3 text-sm font-medium",
+        sm: "tw:py-0.5 tw:px-2 tw:text-xs tw:font-medium",
+        md: "tw:py-0.5 tw:px-2.5 tw:text-sm tw:font-medium",
+        lg: "tw:py-1 tw:px-3 tw:text-sm tw:font-medium",
     };
     const badgeSizes = {
-        sm: "py-0.5 px-1.5 text-xs font-medium",
-        md: "py-0.5 px-2 text-sm font-medium",
-        lg: "py-1 px-2.5 text-sm font-medium rounded-lg",
+        sm: "tw:py-0.5 tw:px-1.5 tw:text-xs tw:font-medium",
+        md: "tw:py-0.5 tw:px-2 tw:text-sm tw:font-medium",
+        lg: "tw:py-1 tw:px-2.5 tw:text-sm tw:font-medium tw:rounded-lg",
     };
 
     const sizes = {
@@ -157,15 +157,15 @@ export const BadgeWithDot = <T extends BadgeTypes>(props: BadgeWithDotProps<T>) 
     const colors = withBadgeTypes[type];
 
     const pillSizes = {
-        sm: "gap-1 py-0.5 pl-1.5 pr-2 text-xs font-medium",
-        md: "gap-1.5 py-0.5 pl-2 pr-2.5 text-sm font-medium",
-        lg: "gap-1.5 py-1 pl-2.5 pr-3 text-sm font-medium",
+        sm: "tw:gap-1 tw:py-0.5 tw:pl-1.5 tw:pr-2 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:pl-2 tw:pr-2.5 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:pl-2.5 tw:pr-3 tw:text-sm tw:font-medium",
     };
 
     const badgeSizes = {
-        sm: "gap-1 py-0.5 px-1.5 text-xs font-medium",
-        md: "gap-1.5 py-0.5 px-2 text-sm font-medium",
-        lg: "gap-1.5 py-1 px-2.5 text-sm font-medium rounded-lg",
+        sm: "tw:gap-1 tw:py-0.5 tw:px-1.5 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:px-2 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:px-2.5 tw:text-sm tw:font-medium tw:rounded-lg",
     };
 
     const sizes = {
@@ -201,30 +201,30 @@ export const BadgeWithIcon = <T extends BadgeTypes>(props: BadgeWithIconProps<T>
 
     const pillSizes = {
         sm: {
-            trailing: "gap-0.5 py-0.5 pl-2 pr-1.5 text-xs font-medium",
-            leading: "gap-0.5 py-0.5 pr-2 pl-1.5 text-xs font-medium",
+            trailing: "tw:gap-0.5 tw:py-0.5 tw:pl-2 tw:pr-1.5 tw:text-xs tw:font-medium",
+            leading: "tw:gap-0.5 tw:py-0.5 tw:pr-2 tw:pl-1.5 tw:text-xs tw:font-medium",
         },
         md: {
-            trailing: "gap-1 py-0.5 pl-2.5 pr-2 text-sm font-medium",
-            leading: "gap-1 py-0.5 pr-2.5 pl-2 text-sm font-medium",
+            trailing: "tw:gap-1 tw:py-0.5 tw:pl-2.5 tw:pr-2 tw:text-sm tw:font-medium",
+            leading: "tw:gap-1 tw:py-0.5 tw:pr-2.5 tw:pl-2 tw:text-sm tw:font-medium",
         },
         lg: {
-            trailing: "gap-1 py-1 pl-3 pr-2.5 text-sm font-medium",
-            leading: "gap-1 py-1 pr-3 pl-2.5 text-sm font-medium",
+            trailing: "tw:gap-1 tw:py-1 tw:pl-3 tw:pr-2.5 tw:text-sm tw:font-medium",
+            leading: "tw:gap-1 tw:py-1 tw:pr-3 tw:pl-2.5 tw:text-sm tw:font-medium",
         },
     };
     const badgeSizes = {
         sm: {
-            trailing: "gap-0.5 py-0.5 pl-2 pr-1.5 text-xs font-medium",
-            leading: "gap-0.5 py-0.5 pr-2 pl-1.5 text-xs font-medium",
+            trailing: "tw:gap-0.5 tw:py-0.5 tw:pl-2 tw:pr-1.5 tw:text-xs tw:font-medium",
+            leading: "tw:gap-0.5 tw:py-0.5 tw:pr-2 tw:pl-1.5 tw:text-xs tw:font-medium",
         },
         md: {
-            trailing: "gap-1 py-0.5 pl-2 pr-1.5 text-sm font-medium",
-            leading: "gap-1 py-0.5 pr-2 pl-1.5 text-sm font-medium",
+            trailing: "tw:gap-1 tw:py-0.5 tw:pl-2 tw:pr-1.5 tw:text-sm tw:font-medium",
+            leading: "tw:gap-1 tw:py-0.5 tw:pr-2 tw:pl-1.5 tw:text-sm tw:font-medium",
         },
         lg: {
-            trailing: "gap-1 py-1 pl-2.5 pr-2 text-sm font-medium rounded-lg",
-            leading: "gap-1 py-1 pr-2.5 pl-2 text-sm font-medium rounded-lg",
+            trailing: "tw:gap-1 tw:py-1 tw:pl-2.5 tw:pr-2 tw:text-sm tw:font-medium tw:rounded-lg",
+            leading: "tw:gap-1 tw:py-1 tw:pr-2.5 tw:pl-2 tw:text-sm tw:font-medium tw:rounded-lg",
         },
     };
 
@@ -257,14 +257,14 @@ export const BadgeWithFlag = <T extends BadgeTypes>(props: BadgeWithFlagProps<T>
     const colors = withPillTypes[type];
 
     const pillSizes = {
-        sm: "gap-1 py-0.5 pl-0.75 pr-2 text-xs font-medium",
-        md: "gap-1.5 py-0.5 pl-1 pr-2.5 text-sm font-medium",
-        lg: "gap-1.5 py-1 pl-1.5 pr-3 text-sm font-medium",
+        sm: "tw:gap-1 tw:py-0.5 tw:pl-0.75 tw:pr-2 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:pl-1 tw:pr-2.5 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:pl-1.5 tw:pr-3 tw:text-sm tw:font-medium",
     };
     const badgeSizes = {
-        sm: "gap-1 py-0.5 pl-1 pr-1.5 text-xs font-medium",
-        md: "gap-1.5 py-0.5 pl-1.5 pr-2 text-sm font-medium",
-        lg: "gap-1.5 py-1 pl-2 pr-2.5 text-sm font-medium rounded-lg",
+        sm: "tw:gap-1 tw:py-0.5 tw:pl-1 tw:pr-1.5 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:pl-1.5 tw:pr-2 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:pl-2 tw:pr-2.5 tw:text-sm tw:font-medium tw:rounded-lg",
     };
 
     const sizes = {
@@ -295,14 +295,14 @@ export const BadgeWithImage = <T extends BadgeTypes>(props: BadgeWithImageProps<
     const colors = withPillTypes[type];
 
     const pillSizes = {
-        sm: "gap-1 py-0.5 pl-0.75 pr-2 text-xs font-medium",
-        md: "gap-1.5 py-0.5 pl-1 pr-2.5 text-sm font-medium",
-        lg: "gap-1.5 py-1 pl-1.5 pr-3 text-sm font-medium",
+        sm: "tw:gap-1 tw:py-0.5 tw:pl-0.75 tw:pr-2 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:pl-1 tw:pr-2.5 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:pl-1.5 tw:pr-3 tw:text-sm tw:font-medium",
     };
     const badgeSizes = {
-        sm: "gap-1 py-0.5 pl-1 pr-1.5 text-xs font-medium",
-        md: "gap-1.5 py-0.5 pl-1.5 pr-2 text-sm font-medium",
-        lg: "gap-1.5 py-1 pl-2 pr-2.5 text-sm font-medium rounded-lg",
+        sm: "tw:gap-1 tw:py-0.5 tw:pl-1 tw:pr-1.5 tw:text-xs tw:font-medium",
+        md: "tw:gap-1.5 tw:py-0.5 tw:pl-1.5 tw:pr-2 tw:text-sm tw:font-medium",
+        lg: "tw:gap-1.5 tw:py-1 tw:pl-2 tw:pr-2.5 tw:text-sm tw:font-medium tw:rounded-lg",
     };
 
     const sizes = {
@@ -341,14 +341,14 @@ export const BadgeWithButton = <T extends BadgeTypes>(props: BadgeWithButtonProp
     const colors = withPillTypes[type];
 
     const pillSizes = {
-        sm: "gap-0.5 py-0.5 pl-2 pr-0.75 text-xs font-medium",
-        md: "gap-0.5 py-0.5 pl-2.5 pr-1 text-sm font-medium",
-        lg: "gap-0.5 py-1 pl-3 pr-1.5 text-sm font-medium",
+        sm: "tw:gap-0.5 tw:py-0.5 tw:pl-2 tw:pr-0.75 tw:text-xs tw:font-medium",
+        md: "tw:gap-0.5 tw:py-0.5 tw:pl-2.5 tw:pr-1 tw:text-sm tw:font-medium",
+        lg: "tw:gap-0.5 tw:py-1 tw:pl-3 tw:pr-1.5 tw:text-sm tw:font-medium",
     };
     const badgeSizes = {
-        sm: "gap-0.5 py-0.5 pl-1.5 pr-0.75 text-xs font-medium",
-        md: "gap-0.5 py-0.5 pl-2 pr-1 text-sm font-medium",
-        lg: "gap-0.5 py-1 pl-2.5 pr-1.5 text-sm font-medium rounded-lg",
+        sm: "tw:gap-0.5 tw:py-0.5 tw:pl-1.5 tw:pr-0.75 tw:text-xs tw:font-medium",
+        md: "tw:gap-0.5 tw:py-0.5 tw:pl-2 tw:pr-1 tw:text-sm tw:font-medium",
+        lg: "tw:gap-0.5 tw:py-1 tw:pl-2.5 tw:pr-1.5 tw:text-sm tw:font-medium tw:rounded-lg",
     };
 
     const sizes = {
@@ -390,15 +390,15 @@ export const BadgeIcon = <T extends BadgeTypes>(props: BadgeIconProps<T>) => {
     const colors = withPillTypes[type];
 
     const pillSizes = {
-        sm: "p-1.25",
-        md: "p-1.5",
-        lg: "p-2",
+        sm: "tw:p-1.25",
+        md: "tw:p-1.5",
+        lg: "tw:p-2",
     };
 
     const badgeSizes = {
-        sm: "p-1.25",
-        md: "p-1.5",
-        lg: "p-2 rounded-lg",
+        sm: "tw:p-1.25",
+        md: "tw:p-1.5",
+        lg: "tw:p-2 tw:rounded-lg",
     };
 
     const sizes = {

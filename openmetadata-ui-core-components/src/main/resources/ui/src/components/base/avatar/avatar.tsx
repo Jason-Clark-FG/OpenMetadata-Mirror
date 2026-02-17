@@ -52,13 +52,13 @@ export interface AvatarProps {
 }
 
 const styles = {
-    xxs: { root: "size-4 outline-[0.5px] -outline-offset-[0.5px]", initials: "text-xs font-semibold", icon: "size-3" },
-    xs: { root: "size-6 outline-[0.5px] -outline-offset-[0.5px]", initials: "text-xs font-semibold", icon: "size-4" },
-    sm: { root: "size-8 outline-[0.75px] -outline-offset-[0.75px]", initials: "text-sm font-semibold", icon: "size-5" },
-    md: { root: "size-10 outline-1 -outline-offset-1", initials: "text-md font-semibold", icon: "size-6" },
-    lg: { root: "size-12 outline-1 -outline-offset-1", initials: "text-lg font-semibold", icon: "size-7" },
-    xl: { root: "size-14 outline-1 -outline-offset-1", initials: "text-xl font-semibold", icon: "size-8" },
-    "2xl": { root: "size-16 outline-1 -outline-offset-1", initials: "text-display-xs font-semibold", icon: "size-8" },
+    xxs: { root: "tw:size-4 tw:outline-[0.5px] tw:-outline-offset-[0.5px]", initials: "tw:text-xs tw:font-semibold", icon: "tw:size-3" },
+    xs: { root: "tw:size-6 tw:outline-[0.5px] tw:-outline-offset-[0.5px]", initials: "tw:text-xs tw:font-semibold", icon: "tw:size-4" },
+    sm: { root: "tw:size-8 tw:outline-[0.75px] tw:-outline-offset-[0.75px]", initials: "tw:text-sm tw:font-semibold", icon: "tw:size-5" },
+    md: { root: "tw:size-10 tw:outline-1 tw:-outline-offset-1", initials: "tw:text-md tw:font-semibold", icon: "tw:size-6" },
+    lg: { root: "tw:size-12 tw:outline-1 tw:-outline-offset-1", initials: "tw:text-lg tw:font-semibold", icon: "tw:size-7" },
+    xl: { root: "tw:size-14 tw:outline-1 tw:-outline-offset-1", initials: "tw:text-xl tw:font-semibold", icon: "tw:size-8" },
+    "2xl": { root: "tw:size-16 tw:outline-1 tw:-outline-offset-1", initials: "tw:text-display-xs tw:font-semibold", icon: "tw:size-8" },
 };
 
 export const Avatar = ({

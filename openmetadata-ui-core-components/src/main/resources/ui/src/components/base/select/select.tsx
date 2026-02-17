@@ -21,7 +21,7 @@ export type SelectItemType = {
     icon?: FC | ReactNode;
 };
 
-export interface CommonProps {
+export interface SelectCommonProps {
     hint?: string;
     label?: string;
     tooltip?: string;
@@ -29,7 +29,7 @@ export interface CommonProps {
     placeholder?: string;
 }
 
-interface SelectProps extends Omit<AriaSelectProps<SelectItemType>, "children" | "items">, RefAttributes<HTMLDivElement>, CommonProps {
+interface SelectProps extends Omit<AriaSelectProps<SelectItemType>, "children" | "items">, RefAttributes<HTMLDivElement>, SelectCommonProps {
     items?: SelectItemType[];
     popoverClassName?: string;
     placeholderIcon?: FC | ReactNode;
@@ -47,8 +47,8 @@ interface SelectValueProps {
 }
 
 export const sizes = {
-    sm: { root: "py-2 px-3", shortcut: "pr-2.5" },
-    md: { root: "py-2.5 px-3.5", shortcut: "pr-3" },
+    sm: { root: "tw:py-2 tw:px-3", shortcut: "tw:pr-2.5" },
+    md: { root: "tw:py-2.5 tw:px-3.5", shortcut: "tw:pr-3" },
 };
 
 const SelectValue = ({ isOpen, isFocused, isDisabled, size, placeholder, placeholderIcon, ref }: SelectValueProps) => {

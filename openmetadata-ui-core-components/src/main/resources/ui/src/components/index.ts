@@ -18,6 +18,7 @@ export * from "./base/buttons/button";
 export * from "./base/checkbox/checkbox";
 export * from "./base/input/input";
 export * from "./base/dropdown/dropdown";
+export * from "./base/select/select";
 export * from "./base/form/form";
 
 // Foundations
