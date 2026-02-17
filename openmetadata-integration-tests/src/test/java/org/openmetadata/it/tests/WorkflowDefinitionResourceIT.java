@@ -5241,7 +5241,7 @@ public class WorkflowDefinitionResourceIT {
                 try {
                   org.openmetadata.schema.entity.domains.DataProduct checkDataProduct =
                       SdkClients.adminClient().dataProducts().get(dataProduct.getId().toString());
-                  return EntityStatus.Approved.equals(checkDataProduct.getEntityStatus());
+                  return EntityStatus.APPROVED.equals(checkDataProduct.getEntityStatus());
                 } catch (Exception e) {
                   LOG.debug("Auto-approval check failed, will retry: {}", e.getMessage());
                   return false;
@@ -6378,6 +6378,9 @@ public class WorkflowDefinitionResourceIT {
                               .anyMatch(tag -> expectedValue.equals(tag.getTagFQN()));
                     }
                     break;
+                  default:
+                    throw new IllegalArgumentException(
+                        "Unsupported entity type for wait: " + entityType);
                 }
                 return false;
               } catch (Exception e) {
