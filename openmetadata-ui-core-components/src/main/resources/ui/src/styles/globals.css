@@ -1,8 +1,9 @@
 @layer theme, base, components, utilities;
 
 /* Bring in Tailwind’s theme + utilities, but skip preflight */
-@import "tailwindcss/theme.css" layer(theme) prefix(tw);
-@import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+/* @import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw); */
+@import "tailwindcss" prefix(tw);
 
 @import "./theme.css";
 
@@ -29,4 +30,11 @@
   transition-property: inherit;
   transition-duration: inherit;
   transition-timing-function: inherit;
+}
+
+/* Add height: revert-layer; to img tag in base layer */
+@layer base {
+  img {
+    height: revert-layer;
+  }
 }

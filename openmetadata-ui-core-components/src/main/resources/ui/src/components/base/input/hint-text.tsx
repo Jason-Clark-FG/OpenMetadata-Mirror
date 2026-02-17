@@ -20,7 +20,7 @@ export const HintText = ({ isInvalid, className, ...props }: HintTextProps) => {
 
                 // Invalid state
                 isInvalid && "tw:text-error-primary",
-                "group-invalid:tw:text-error-primary",
+                "tw:group-invalid:text-error-primary",
 
                 className,
             )}

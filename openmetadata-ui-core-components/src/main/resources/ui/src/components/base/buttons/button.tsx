@@ -17,39 +17,39 @@ import { isReactComponent } from "@/utils/is-react-component";
 export const styles = sortCx({
   common: {
     root: [
-      "tw:group tw:relative tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:justify-center tw:whitespace-nowrap tw:outline-brand tw:transition tw:duration-100 tw:ease-linear before:tw:absolute focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+      "tw:group tw:relative tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:justify-center tw:whitespace-nowrap tw:outline-brand tw:transition tw:duration-100 tw:ease-linear tw:before:absolute tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
       // When button is used within `InputGroup`
-      "in-data-input-wrapper:tw:shadow-xs in-data-input-wrapper:focus:tw:!z-50 in-data-input-wrapper:in-data-leading:tw:-mr-px in-data-input-wrapper:in-data-leading:tw:rounded-r-none in-data-input-wrapper:in-data-leading:before:tw:rounded-r-none in-data-input-wrapper:in-data-trailing:tw:-ml-px in-data-input-wrapper:in-data-trailing:tw:rounded-l-none in-data-input-wrapper:in-data-trailing:before:tw:rounded-l-none",
+      "tw:in-data-input-wrapper:shadow-xs tw:in-data-input-wrapper:focus:!z-50 tw:in-data-input-wrapper:in-data-leading:-mr-px tw:in-data-input-wrapper:in-data-leading:rounded-r-none tw:in-data-input-wrapper:in-data-leading:before:rounded-r-none tw:in-data-input-wrapper:in-data-trailing:-ml-px tw:in-data-input-wrapper:in-data-trailing:rounded-l-none tw:in-data-input-wrapper:in-data-trailing:before:rounded-l-none",
       // Disabled styles
-      "disabled:tw:cursor-not-allowed disabled:tw:text-fg-disabled",
+      "tw:disabled:cursor-not-allowed tw:disabled:text-fg-disabled",
       // Icon styles
-      "disabled:*:data-icon:tw:text-fg-disabled_subtle",
+      "tw:disabled:*:data-icon:text-fg-disabled_subtle",
       // Same as `icon` but for SSR icons that cannot be passed to the client as functions.
-      "*:data-icon:tw:pointer-events-none *:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:transition-inherit-all",
+      "tw:*:data-icon:pointer-events-none tw:*:data-icon:size-5 tw:*:data-icon:shrink-0 tw:*:data-icon:transition-inherit-all",
     ].join(" "),
     icon: "tw:pointer-events-none tw:size-5 tw:shrink-0 tw:transition-inherit-all",
   },
   sizes: {
     sm: {
       root: [
-        "tw:gap-1 tw:rounded-lg tw:px-3 tw:py-2 tw:text-sm tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-2",
-        "in-data-input-wrapper:tw:px-3.5 in-data-input-wrapper:tw:py-2.5 in-data-input-wrapper:data-icon-only:tw:p-2.5",
+        "tw:gap-1 tw:rounded-lg tw:px-3 tw:py-2 tw:text-sm tw:font-semibold tw:before:rounded-[7px] tw:data-icon-only:p-2",
+        "tw:in-data-input-wrapper:px-3.5 tw:in-data-input-wrapper:py-2.5 tw:in-data-input-wrapper:data-icon-only:p-2.5",
       ].join(" "),
       linkRoot: "tw:gap-1",
     },
     md: {
       root: [
-        "tw:gap-1 tw:rounded-lg tw:px-3.5 tw:py-2.5 tw:text-sm tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-2.5",
-        "in-data-input-wrapper:tw:gap-1.5 in-data-input-wrapper:tw:px-4 in-data-input-wrapper:tw:text-md in-data-input-wrapper:data-icon-only:tw:p-3",
+        "tw:gap-1 tw:rounded-lg tw:px-3.5 tw:py-2.5 tw:text-sm tw:font-semibold tw:before:rounded-[7px] tw:data-icon-only:p-2.5",
+        "tw:in-data-input-wrapper:gap-1.5 tw:in-data-input-wrapper:px-4 tw:in-data-input-wrapper:text-md tw:in-data-input-wrapper:data-icon-only:p-3",
       ].join(" "),
       linkRoot: "tw:gap-1",
     },
     lg: {
-      root: "tw:gap-1.5 tw:rounded-lg tw:px-4 tw:py-2.5 tw:text-md tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-3",
+      root: "tw:gap-1.5 tw:rounded-lg tw:px-4 tw:py-2.5 tw:text-md tw:font-semibold tw:before:rounded-[7px] tw:data-icon-only:p-3",
       linkRoot: "tw:gap-1.5",
     },
     xl: {
-      root: "tw:gap-1.5 tw:rounded-lg tw:px-4.5 tw:py-3 tw:text-md tw:font-semibold before:tw:rounded-[7px] data-icon-only:tw:p-3.5",
+      root: "tw:gap-1.5 tw:rounded-lg tw:px-4.5 tw:py-3 tw:text-md tw:font-semibold tw:before:rounded-[7px] tw:data-icon-only:p-3.5",
       linkRoot: "tw:gap-1.5",
     },
   },
@@ -57,83 +57,83 @@ export const styles = sortCx({
   colors: {
     primary: {
       root: [
-        "tw:bg-brand-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset hover:tw:bg-brand-solid_hover data-loading:tw:bg-brand-solid_hover",
+        "tw:bg-brand-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:ring-inset tw:hover:bg-brand-solid_hover tw:data-loading:bg-brand-solid_hover",
         // Inner border gradient
-        "before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0%",
+        "tw:before:absolute tw:before:inset-px tw:before:border tw:before:border-white/12 tw:before:mask-b-from-0%",
         // Disabled styles
-        "disabled:tw:bg-disabled disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
+        "tw:disabled:bg-disabled tw:disabled:shadow-xs tw:disabled:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:tw:text-button-primary-icon hover:*:data-icon:tw:text-button-primary-icon_hover",
+        "tw:*:data-icon:text-button-primary-icon tw:hover:*:data-icon:text-button-primary-icon_hover",
       ].join(" "),
     },
     secondary: {
       root: [
-        "tw:bg-primary tw:text-secondary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-primary tw:ring-inset hover:tw:bg-primary_hover hover:tw:text-secondary_hover data-loading:tw:bg-primary_hover",
+        "tw:bg-primary tw:text-secondary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-primary tw:ring-inset tw:hover:bg-primary_hover tw:hover:text-secondary_hover tw:data-loading:bg-primary_hover",
         // Disabled styles
-        "disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
+        "tw:disabled:shadow-xs tw:disabled:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
+        "tw:*:data-icon:text-fg-quaternary tw:hover:*:data-icon:text-fg-quaternary_hover",
       ].join(" "),
     },
     tertiary: {
       root: [
-        "tw:text-tertiary hover:tw:bg-primary_hover hover:tw:text-tertiary_hover data-loading:tw:bg-primary_hover",
+        "tw:text-tertiary tw:hover:bg-primary_hover tw:hover:text-tertiary_hover tw:data-loading:bg-primary_hover",
         // Icon styles
-        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
+        "tw:*:data-icon:text-fg-quaternary tw:hover:*:data-icon:text-fg-quaternary_hover",
       ].join(" "),
     },
     "link-gray": {
       root: [
-        "tw:justify-normal tw:rounded tw:p-0! tw:text-tertiary hover:tw:text-tertiary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-tertiary tw:hover:text-tertiary_hover",
         // Inner text underline
-        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
+        "tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current",
         // Icon styles
-        "*:data-icon:tw:text-fg-quaternary hover:*:data-icon:tw:text-fg-quaternary_hover",
+        "tw:*:data-icon:text-fg-quaternary tw:hover:*:data-icon:text-fg-quaternary_hover",
       ].join(" "),
     },
     "link-color": {
       root: [
-        "tw:justify-normal tw:rounded tw:p-0! tw:text-brand-secondary hover:tw:text-brand-secondary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-brand-secondary tw:hover:text-brand-secondary_hover",
         // Inner text underline
-        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
+        "tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current",
         // Icon styles
-        "*:data-icon:tw:text-fg-brand-secondary_alt hover:*:data-icon:tw:text-fg-brand-secondary_hover",
+        "tw:*:data-icon:text-fg-brand-secondary_alt tw:hover:*:data-icon:text-fg-brand-secondary_hover",
       ].join(" "),
     },
     "primary-destructive": {
       root: [
-        "tw:bg-error-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:outline-error tw:ring-inset hover:tw:bg-error-solid_hover data-loading:tw:bg-error-solid_hover",
+        "tw:bg-error-solid tw:text-white tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-transparent tw:outline-error tw:ring-inset tw:hover:bg-error-solid_hover tw:data-loading:bg-error-solid_hover",
         // Inner border gradient
-        "before:tw:absolute before:tw:inset-px before:tw:border before:tw:border-white/12 before:tw:mask-b-from-0%",
+        "tw:before:absolute tw:before:inset-px tw:before:border tw:before:border-white/12 tw:before:mask-b-from-0%",
         // Disabled styles
-        "disabled:tw:bg-disabled disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
+        "tw:disabled:bg-disabled tw:disabled:shadow-xs tw:disabled:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:tw:text-button-destructive-primary-icon hover:*:data-icon:tw:text-button-destructive-primary-icon_hover",
+        "tw:*:data-icon:text-button-destructive-primary-icon tw:hover:*:data-icon:text-button-destructive-primary-icon_hover",
       ].join(" "),
     },
     "secondary-destructive": {
       root: [
-        "tw:bg-primary tw:text-error-primary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-error_subtle tw:outline-error tw:ring-inset hover:tw:bg-error-primary hover:tw:text-error-primary_hover data-loading:tw:bg-error-primary",
+        "tw:bg-primary tw:text-error-primary tw:shadow-xs-skeumorphic tw:ring-1 tw:ring-error_subtle tw:outline-error tw:ring-inset tw:hover:bg-error-primary tw:hover:text-error-primary_hover tw:data-loading:bg-error-primary",
         // Disabled styles
-        "disabled:tw:bg-primary disabled:tw:shadow-xs disabled:tw:ring-disabled_subtle",
+        "tw:disabled:bg-primary tw:disabled:shadow-xs tw:disabled:ring-disabled_subtle",
         // Icon styles
-        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
+        "tw:*:data-icon:text-fg-error-secondary tw:hover:*:data-icon:text-fg-error-primary",
       ].join(" "),
     },
     "tertiary-destructive": {
       root: [
-        "tw:text-error-primary tw:outline-error hover:tw:bg-error-primary hover:tw:text-error-primary_hover data-loading:tw:bg-error-primary",
+        "tw:text-error-primary tw:outline-error tw:hover:bg-error-primary tw:hover:text-error-primary_hover tw:data-loading:bg-error-primary",
         // Icon styles
-        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
+        "tw:*:data-icon:text-fg-error-secondary tw:hover:*:data-icon:text-fg-error-primary",
       ].join(" "),
     },
     "link-destructive": {
       root: [
-        "tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-error hover:tw:text-error-primary_hover",
+        "tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-error tw:hover:text-error-primary_hover",
         // Inner text underline
-        "*:data-text:tw:underline *:data-text:tw:decoration-transparent *:data-text:tw:underline-offset-2 hover:*:data-text:tw:decoration-current",
+        "tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current",
         // Icon styles
-        "*:data-icon:tw:text-fg-error-secondary hover:*:data-icon:tw:text-fg-error-primary",
+        "tw:*:data-icon:text-fg-error-secondary tw:hover:*:data-icon:text-fg-error-primary",
       ].join(" "),
     },
   },
@@ -243,12 +243,13 @@ export const Button = ({
         styles.sizes[size].root,
         styles.colors[color].root,
         isLinkType && styles.sizes[size].linkRoot,
-        (loading || (href && (disabled || loading))) && "tw:pointer-events-none",
+        (loading || (href && (disabled || loading))) &&
+          "tw:pointer-events-none",
         // If in `loading` state, hide everything except the loading icon (and text if `showTextWhileLoading` is true).
         loading &&
           (showTextWhileLoading
-            ? "[&>*:not([data-icon=loading]):not([data-text])]:tw:hidden"
-            : "[&>*:not([data-icon=loading])]:tw:invisible"),
+            ? "tw:[&>*:not([data-icon=loading]):not([data-text])]:hidden"
+            : "tw:[&>*:not([data-icon=loading])]:invisible"),
         className,
       )}
     >
@@ -295,7 +296,10 @@ export const Button = ({
       {children && (
         <span
           data-text
-          className={cx("tw:transition-inherit-all", !noTextPadding && "tw:px-0.5")}
+          className={cx(
+            "tw:transition-inherit-all",
+            !noTextPadding && "tw:px-0.5",
+          )}
         >
           {children}
         </span>

@@ -10,6 +10,9 @@
     ui-monospace, "Roboto Mono", SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
+  /* Keep Tailwind scale stable regardless of host/root rem size. */
+  --spacing: 4px;
+
   /* FONT SIZE */
   --text-xs: calc(theme(--spacing) * 3);
   --text-xs--line-height: calc(theme(--spacing) * 4.5);
@@ -152,8 +155,8 @@
   --color-brand-200: #e9d7fe;
   --color-brand-300: #d6bbfb;
   --color-brand-400: #b692f6;
-  --color-brand-500: #9e77ed;
-  --color-brand-600: #7f56d9;
+  --color-brand-500: #175cd3;
+  --color-brand-600: #1570ef;
   --color-brand-700: #6941c6;
   --color-brand-800: #53389e;
   --color-brand-900: #42307d;

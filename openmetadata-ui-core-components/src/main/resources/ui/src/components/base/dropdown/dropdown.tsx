@@ -50,7 +50,7 @@ const DropdownItem = ({ label, children, addon, icon: Icon, unstyled, ...props }
                 <div
                     className={cx(
                         "tw:relative tw:flex tw:items-center tw:rounded-md tw:px-2.5 tw:py-2 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear",
-                        !state.isDisabled && "group-hover:tw:bg-primary_hover",
+                        !state.isDisabled && "tw:group-hover:bg-primary_hover",
                         state.isFocused && "tw:bg-primary_hover",
                         state.isFocusVisible && "tw:outline-2 tw:-outline-offset-2",
                     )}
@@ -114,9 +114,9 @@ const DropdownPopover = (props: DropdownPopoverProps) => {
                 cx(
                     "tw:w-62 tw:origin-(--trigger-anchor-point) tw:overflow-auto tw:rounded-lg tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:will-change-transform",
                     state.isEntering &&
-                        "tw:duration-150 tw:ease-out tw:animate-in tw:fade-in placement-right:tw:slide-in-from-left-0.5 placement-top:tw:slide-in-from-bottom-0.5 placement-bottom:tw:slide-in-from-top-0.5",
+                        "tw:duration-150 tw:ease-out tw:animate-in tw:fade-in tw:placement-right:slide-in-from-left-0.5 tw:placement-top:slide-in-from-bottom-0.5 tw:placement-bottom:slide-in-from-top-0.5",
                     state.isExiting &&
-                        "tw:duration-100 tw:ease-in tw:animate-out tw:fade-out placement-right:tw:slide-out-to-left-0.5 placement-top:tw:slide-out-to-bottom-0.5 placement-bottom:tw:slide-out-to-top-0.5",
+                        "tw:duration-100 tw:ease-in tw:animate-out tw:fade-out tw:placement-right:slide-out-to-left-0.5 tw:placement-top:slide-out-to-bottom-0.5 tw:placement-bottom:slide-out-to-top-0.5",
                     typeof props.className === "function" ? props.className(state) : props.className,
                 )
             }

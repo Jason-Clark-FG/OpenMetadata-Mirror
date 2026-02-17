@@ -63,7 +63,7 @@ const ComboBoxValue = ({ size, shortcut, placeholder, shortcutClassName, ...othe
 
                         <AriaInput
                             placeholder={placeholder}
-                            className="tw:z-10 tw:w-full tw:appearance-none tw:bg-transparent tw:text-md tw:text-transparent tw:caret-alpha-black/90 placeholder:tw:text-placeholder focus:tw:outline-hidden disabled:tw:cursor-not-allowed disabled:tw:text-disabled disabled:placeholder:tw:text-disabled"
+                            className="tw:z-10 tw:w-full tw:appearance-none tw:bg-transparent tw:text-md tw:text-transparent tw:caret-alpha-black/90 tw:placeholder:text-placeholder tw:focus:outline-hidden tw:disabled:cursor-not-allowed tw:disabled:text-disabled tw:disabled:placeholder:text-disabled"
                         />
                     </div>
 

@@ -117,7 +117,7 @@ export const Tag = ({
             textValue={typeof children === "string" ? children : undefined}
             className={(state) =>
                 cx(
-                    "tw:flex tw:cursor-default tw:items-center tw:gap-0.75 tw:rounded-md tw:bg-primary tw:text-secondary tw:ring-1 tw:ring-primary tw:ring-inset focus:tw:outline-hidden focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2 focus-visible:tw:outline-focus-ring",
+                    "tw:flex tw:cursor-default tw:items-center tw:gap-0.75 tw:rounded-md tw:bg-primary tw:text-secondary tw:ring-1 tw:ring-primary tw:ring-inset tw:focus:outline-hidden tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-focus-ring",
                     styles[context.size].root.base,
 
                     // With avatar

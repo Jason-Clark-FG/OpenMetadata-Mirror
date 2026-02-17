@@ -57,27 +57,27 @@ const getSizeClasses = (
 const colorClasses: Record<Theme, Record<Color, { root?: string; addon?: string; icon?: string; dot?: string }>> = sortCx({
     light: {
         brand: {
-            root: "tw:bg-utility-brand-50 tw:text-utility-brand-700 tw:ring-utility-brand-200 hover:tw:bg-utility-brand-100",
+            root: "tw:bg-utility-brand-50 tw:text-utility-brand-700 tw:ring-utility-brand-200 tw:hover:bg-utility-brand-100",
             addon: "tw:bg-primary tw:text-current tw:ring-utility-brand-200",
             icon: "tw:text-utility-brand-500",
         },
         gray: {
-            root: "tw:bg-utility-gray-50 tw:text-utility-gray-700 tw:ring-utility-gray-200 hover:tw:bg-utility-gray-100",
+            root: "tw:bg-utility-gray-50 tw:text-utility-gray-700 tw:ring-utility-gray-200 tw:hover:bg-utility-gray-100",
             addon: "tw:bg-primary tw:text-current tw:ring-utility-gray-200",
             icon: "tw:text-utility-gray-500",
         },
         error: {
-            root: "tw:bg-utility-error-50 tw:text-utility-error-700 tw:ring-utility-error-200 hover:tw:bg-utility-error-100",
+            root: "tw:bg-utility-error-50 tw:text-utility-error-700 tw:ring-utility-error-200 tw:hover:bg-utility-error-100",
             addon: "tw:bg-primary tw:text-current tw:ring-utility-error-200",
             icon: "tw:text-utility-error-500",
         },
         warning: {
-            root: "tw:bg-utility-warning-50 tw:text-utility-warning-700 tw:ring-utility-warning-200 hover:tw:bg-utility-warning-100",
+            root: "tw:bg-utility-warning-50 tw:text-utility-warning-700 tw:ring-utility-warning-200 tw:hover:bg-utility-warning-100",
             addon: "tw:bg-primary tw:text-current tw:ring-utility-warning-200",
             icon: "tw:text-utility-warning-500",
         },
         success: {
-            root: "tw:bg-utility-success-50 tw:text-utility-success-700 tw:ring-utility-success-200 hover:tw:bg-utility-success-100",
+            root: "tw:bg-utility-success-50 tw:text-utility-success-700 tw:ring-utility-success-200 tw:hover:bg-utility-success-100",
             addon: "tw:bg-primary tw:text-current tw:ring-utility-success-200",
             icon: "tw:text-utility-success-500",
         },

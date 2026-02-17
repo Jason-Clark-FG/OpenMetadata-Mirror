@@ -87,15 +87,15 @@ export const InputBase = ({
 
                     // Disabled state styles
                     isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:ring-disabled",
-                    "group-disabled:tw:cursor-not-allowed group-disabled:tw:bg-disabled_subtle group-disabled:tw:ring-disabled",
+                    "tw:group-disabled:cursor-not-allowed tw:group-disabled:bg-disabled_subtle tw:group-disabled:ring-disabled",
 
                     // Invalid state styles
                     isInvalid && "tw:ring-error_subtle",
-                    "group-invalid:tw:ring-error_subtle",
+                    "tw:group-invalid:ring-error_subtle",
 
                     // Invalid state with focus-within styles
                     isInvalid && isFocusWithin && "tw:ring-2 tw:ring-error",
-                    isFocusWithin && "group-invalid:tw:ring-2 group-invalid:tw:ring-error",
+                    isFocusWithin && "tw:group-invalid:ring-2 tw:group-invalid:ring-error",
 
                     context?.wrapperClassName,
                     wrapperClassName,
@@ -121,7 +121,7 @@ export const InputBase = ({
                 ref={ref}
                 placeholder={placeholder}
                 className={cx(
-                    "tw:m-0 tw:w-full tw:bg-transparent tw:text-md tw:text-primary tw:ring-0 tw:outline-hidden placeholder:tw:text-placeholder autofill:tw:rounded-lg autofill:tw:text-primary",
+                    "tw:m-0 tw:w-full tw:bg-transparent tw:text-md tw:text-primary tw:ring-0 tw:outline-hidden tw:placeholder:text-placeholder tw:autofill:rounded-lg tw:autofill:text-primary",
                     isDisabled && "tw:cursor-not-allowed tw:text-disabled",
                     sizes[inputSize].root,
                     context?.inputClassName,
@@ -134,7 +134,7 @@ export const InputBase = ({
                 <Tooltip title={tooltip} placement="top">
                     <TooltipTrigger
                         className={cx(
-                            "tw:absolute tw:cursor-pointer tw:text-fg-quaternary tw:transition tw:duration-200 hover:tw:text-fg-quaternary_hover focus:tw:text-fg-quaternary_hover",
+                            "tw:absolute tw:cursor-pointer tw:text-fg-quaternary tw:transition tw:duration-200 tw:hover:text-fg-quaternary_hover tw:focus:text-fg-quaternary_hover",
                             sizes[inputSize].iconTrailing,
                             context?.tooltipClassName,
                             tooltipClassName,

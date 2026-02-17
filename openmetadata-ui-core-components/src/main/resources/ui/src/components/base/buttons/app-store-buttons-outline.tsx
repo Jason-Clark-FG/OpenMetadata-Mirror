@@ -8,7 +8,7 @@ export const GooglePlayButton = ({ size = "md", ...props }: AnchorHTMLAttributes
             href="#"
             {...props}
             className={cx(
-                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
                 props.className,
             )}
         >
@@ -78,7 +78,7 @@ export const AppStoreButton = ({ size = "md", ...props }: AnchorHTMLAttributes<H
             href="#"
             {...props}
             className={cx(
-                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
                 props.className,
             )}
         >
@@ -184,7 +184,7 @@ export const GalaxyStoreButton = ({ size = "md", ...props }: AnchorHTMLAttribute
             href="#"
             {...props}
             className={cx(
-                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
                 props.className,
             )}
         >
@@ -283,7 +283,7 @@ export const AppGalleryButton = ({ size = "md", ...props }: AnchorHTMLAttributes
             href="#"
             {...props}
             className={cx(
-                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+                "tw:rounded-[7px] tw:text-fg-primary tw:ring-1 tw:ring-fg-primary tw:outline-focus-ring tw:ring-inset tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
                 props.className,
             )}
         >

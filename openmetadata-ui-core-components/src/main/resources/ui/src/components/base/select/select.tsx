@@ -66,7 +66,7 @@ const SelectValue = ({ isOpen, isFocused, isDisabled, size, placeholder, placeho
                     "tw:flex tw:h-max tw:w-full tw:items-center tw:justify-start tw:gap-2 tw:truncate tw:text-left tw:align-middle",
 
                     // Icon styles
-                    "*:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:text-fg-quaternary in-disabled:*:data-icon:tw:text-fg-disabled",
+                    "tw:*:data-icon:size-5 tw:*:data-icon:shrink-0 tw:*:data-icon:text-fg-quaternary tw:in-disabled:*:data-icon:text-fg-disabled",
 
                     sizes[size].root,
                 )}

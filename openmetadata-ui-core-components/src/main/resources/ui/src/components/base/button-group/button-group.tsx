@@ -13,26 +13,26 @@ export const styles = sortCx({
         root: [
             "tw:group/button-group tw:inline-flex tw:h-max tw:cursor-pointer tw:items-center tw:bg-primary tw:font-semibold tw:whitespace-nowrap tw:text-secondary tw:shadow-skeumorphic tw:ring-1 tw:ring-primary tw:outline-brand tw:transition tw:duration-100 tw:ease-linear tw:ring-inset",
             // Hover and focus styles
-            "hover:tw:bg-primary_hover hover:tw:text-secondary_hover focus-visible:tw:z-10 focus-visible:tw:outline-2 focus-visible:tw:outline-offset-2",
+            "tw:hover:bg-primary_hover tw:hover:text-secondary_hover tw:focus-visible:z-10 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2",
             // Disabled styles
-            "disabled:tw:cursor-not-allowed disabled:tw:bg-primary disabled:tw:text-disabled",
+            "tw:disabled:cursor-not-allowed tw:disabled:bg-primary tw:disabled:text-disabled",
             // Selected styles
-            "selected:tw:bg-active selected:tw:text-secondary_hover selected:disabled:tw:bg-disabled_subtle",
+            "tw:selected:bg-active tw:selected:text-secondary_hover tw:selected:disabled:bg-disabled_subtle",
         ].join(" "),
         icon: "tw:pointer-events-none tw:text-fg-quaternary tw:transition-[inherit] group-hover/button-group:tw:text-fg-quaternary_hover group-disabled/button-group:tw:text-fg-disabled_subtle",
     },
 
     sizes: {
         sm: {
-            root: "tw:gap-1.5 tw:px-3.5 tw:py-2 tw:text-sm not-last:tw:pr-[calc(calc(var(--spacing)*3.5)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-3 data-icon-only:tw:p-2",
+            root: "tw:gap-1.5 tw:px-3.5 tw:py-2 tw:text-sm tw:not-last:pr-[calc(calc(var(--spacing)*3.5)+1px)] tw:first:rounded-l-lg tw:last:rounded-r-lg tw:data-icon-leading:pl-3 tw:data-icon-only:p-2",
             icon: "tw:size-5",
         },
         md: {
-            root: "tw:gap-1.5 tw:px-4 tw:py-2.5 tw:text-sm not-last:tw:pr-[calc(calc(var(--spacing)*4)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-3.5 data-icon-only:tw:px-3",
+            root: "tw:gap-1.5 tw:px-4 tw:py-2.5 tw:text-sm tw:not-last:pr-[calc(calc(var(--spacing)*4)+1px)] tw:first:rounded-l-lg tw:last:rounded-r-lg tw:data-icon-leading:pl-3.5 tw:data-icon-only:px-3",
             icon: "tw:size-5",
         },
         lg: {
-            root: "tw:gap-2 tw:px-4.5 tw:py-2.5 tw:text-md not-last:tw:pr-[calc(calc(var(--spacing)*4.5)+1px)] first:tw:rounded-l-lg last:tw:rounded-r-lg data-icon-leading:tw:pl-4 data-icon-only:tw:p-3",
+            root: "tw:gap-2 tw:px-4.5 tw:py-2.5 tw:text-md tw:not-last:pr-[calc(calc(var(--spacing)*4.5)+1px)] tw:first:rounded-l-lg tw:last:rounded-r-lg tw:data-icon-leading:pl-4 tw:data-icon-only:p-3",
             icon: "tw:size-5",
         },
     },

@@ -27,10 +27,10 @@ export const TextAreaBase = ({ className, ...props }: TextAreaBaseProps) => {
             }
             className={(state) =>
                 cx(
-                    "tw:w-full tw:scroll-py-3 tw:rounded-lg tw:bg-primary tw:px-3.5 tw:py-3 tw:text-md tw:text-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:transition tw:duration-100 tw:ease-linear tw:ring-inset placeholder:tw:text-placeholder autofill:tw:rounded-lg autofill:tw:text-primary focus:tw:outline-hidden",
+                    "tw:w-full tw:scroll-py-3 tw:rounded-lg tw:bg-primary tw:px-3.5 tw:py-3 tw:text-md tw:text-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:transition tw:duration-100 tw:ease-linear tw:ring-inset tw:placeholder:text-placeholder tw:autofill:rounded-lg tw:autofill:text-primary tw:focus:outline-hidden",
 
                     // Resize handle
-                    "[&::-webkit-resizer]:tw:bg-(image:--resize-handle-bg) [&::-webkit-resizer]:tw:bg-contain dark:[&::-webkit-resizer]:tw:bg-(image:--resize-handle-bg-dark)",
+                    "tw:[&::-webkit-resizer]:bg-(image:--resize-handle-bg) tw:[&::-webkit-resizer]:bg-contain tw:dark:[&::-webkit-resizer]:bg-(image:--resize-handle-bg-dark)",
 
                     state.isFocused && !state.isDisabled && "tw:ring-2 tw:ring-brand",
                     state.isDisabled && "tw:cursor-not-allowed tw:bg-disabled_subtle tw:text-disabled tw:ring-disabled",

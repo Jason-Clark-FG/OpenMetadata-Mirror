@@ -49,8 +49,8 @@ export const SelectItem = ({ label, id, value, avatarUrl, supportingText, isDisa
                         state.isFocusVisible && "tw:ring-2 tw:ring-focus-ring tw:ring-inset",
 
                         // Icon styles
-                        "*:data-icon:tw:size-5 *:data-icon:tw:shrink-0 *:data-icon:tw:text-fg-quaternary",
-                        state.isDisabled && "*:data-icon:tw:text-fg-disabled",
+                        "tw:*:data-icon:size-5 tw:*:data-icon:shrink-0 tw:*:data-icon:text-fg-quaternary",
+                        state.isDisabled && "tw:*:data-icon:text-fg-disabled",
 
                         sizes[size],
                     )}

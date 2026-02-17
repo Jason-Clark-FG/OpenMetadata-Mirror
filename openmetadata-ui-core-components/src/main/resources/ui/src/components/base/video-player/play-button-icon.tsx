@@ -10,7 +10,7 @@ export const PlayButtonIcon = (props: HTMLAttributes<HTMLDivElement>) => {
         <div
             {...props}
             className={cx(
-                "tw:flex tw:size-20 tw:items-center tw:justify-center tw:rounded-full tw:bg-alpha-white/30 tw:backdrop-blur tw:transition tw:duration-100 tw:ease-linear group-hover:tw:bg-alpha-white/50 hover:tw:bg-alpha-white/50",
+                "tw:flex tw:size-20 tw:items-center tw:justify-center tw:rounded-full tw:bg-alpha-white/30 tw:backdrop-blur tw:transition tw:duration-100 tw:ease-linear tw:group-hover:bg-alpha-white/50 tw:hover:bg-alpha-white/50",
                 props.className,
             )}
         >
