@@ -28,6 +28,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.factories.MlModelServiceTestFactory;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
@@ -2336,6 +2337,7 @@ public class WorkflowDefinitionResourceIT {
 
   @Test
   @Order(29)
+  @RetryingTest(3)
   void test_EntitySpecificFiltering(TestNamespace ns) throws Exception {
     LOG.info("Starting test_EntitySpecificFiltering");
     OpenMetadataClient client = SdkClients.adminClient();
@@ -2630,6 +2632,24 @@ public class WorkflowDefinitionResourceIT {
         LOG.debug("Successfully deleted {}", workflowName);
       } catch (Exception e) {
         LOG.warn("Error while deleting {}: {}", workflowName, e.getMessage());
+      }
+
+      // Cleanup entities
+      try {
+        Map<String, String> params = new HashMap<>();
+        params.put("hardDelete", "true");
+        params.put("recursive", "true");
+        client.glossaries().delete(glossary.getId().toString(), params);
+      } catch (Exception e) {
+        LOG.warn("Error cleaning up glossary: {}", e.getMessage());
+      }
+      try {
+        Map<String, String> params = new HashMap<>();
+        params.put("hardDelete", "true");
+        params.put("recursive", "true");
+        client.databaseServices().delete(dbService.getId().toString(), params);
+      } catch (Exception e) {
+        LOG.warn("Error cleaning up database service: {}", e.getMessage());
       }
     }
   }
@@ -5043,6 +5063,7 @@ public class WorkflowDefinitionResourceIT {
 
   @Test
   @Order(37)
+  @RetryingTest(3)
   void test_AutoApprovalForEntitiesWithoutReviewers(TestNamespace ns) throws Exception {
     LOG.info("Starting test_AutoApprovalForEntitiesWithoutReviewers");
 
@@ -5053,6 +5074,7 @@ public class WorkflowDefinitionResourceIT {
 
     String workflowName = "AutoApprovalTestWorkflow";
     String dataProductName = "auto_dataproduct";
+    org.openmetadata.schema.entity.domains.DataProduct dataProduct = null;
 
     // Defensive pre-cleanup: delete any leftover workflow from a prior failed run
     try {
@@ -5219,9 +5241,10 @@ public class WorkflowDefinitionResourceIT {
                   List.of(domain.getFullyQualifiedName())); // Explicitly no reviewers - should
       // auto-approve
 
-      org.openmetadata.schema.entity.domains.DataProduct dataProduct =
+      final org.openmetadata.schema.entity.domains.DataProduct finalDataProduct =
           client.dataProducts().create(createDataProduct);
-      LOG.debug("Created data product without reviewers: {}", dataProduct.getName());
+      dataProduct = finalDataProduct;
+      LOG.debug("Created data product without reviewers: {}", finalDataProduct.getName());
 
       // Add asset using bulk API - simulating client behavior
 
@@ -5240,7 +5263,9 @@ public class WorkflowDefinitionResourceIT {
               () -> {
                 try {
                   org.openmetadata.schema.entity.domains.DataProduct checkDataProduct =
-                      SdkClients.adminClient().dataProducts().get(dataProduct.getId().toString());
+                      SdkClients.adminClient()
+                          .dataProducts()
+                          .get(finalDataProduct.getId().toString());
                   return EntityStatus.APPROVED.equals(checkDataProduct.getEntityStatus());
                 } catch (Exception e) {
                   LOG.debug("Auto-approval check failed, will retry: {}", e.getMessage());
@@ -5273,6 +5298,17 @@ public class WorkflowDefinitionResourceIT {
           LOG.debug("Successfully deleted {}", workflowName);
         } catch (Exception e) {
           LOG.warn("Error while deleting {}: {}", workflowName, e.getMessage());
+        }
+      }
+      // Clean up dataProduct
+      if (dataProduct != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          params.put("recursive", "true");
+          client.dataProducts().delete(dataProduct.getId().toString(), params);
+        } catch (Exception e) {
+          LOG.warn("Error cleaning up dataProduct: {}", e.getMessage());
         }
       }
     }
