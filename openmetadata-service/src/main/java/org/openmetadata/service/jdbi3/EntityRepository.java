@@ -100,6 +100,7 @@ import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URI;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -7478,12 +7479,22 @@ public abstract class EntityRepository<T extends EntityInterface> {
                 .withRequest(entity.getFullyQualifiedName())
                 .withStatus(Status.OK.getStatusCode()));
       } catch (Exception e) {
-        LOG.warn("Failed to process entity in bulk operation", e);
-        failedRequests.add(
-            new BulkResponse()
-                .withRequest(entity.getFullyQualifiedName())
-                .withStatus(Status.BAD_REQUEST.getStatusCode())
-                .withMessage(e.getMessage()));
+        if (isDuplicateKeyException(e)) {
+          LOG.debug(
+              "Entity already exists (duplicate key), treating as success: {}",
+              entity.getFullyQualifiedName());
+          successRequests.add(
+              new BulkResponse()
+                  .withRequest(entity.getFullyQualifiedName())
+                  .withStatus(Status.OK.getStatusCode()));
+        } else {
+          LOG.warn("Failed to process entity in bulk operation", e);
+          failedRequests.add(
+              new BulkResponse()
+                  .withRequest(entity.getFullyQualifiedName())
+                  .withStatus(Status.BAD_REQUEST.getStatusCode())
+                  .withMessage(e.getMessage()));
+        }
       }
     }
 
@@ -7504,6 +7515,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
         entities.size());
 
     return result;
+  }
+
+  private static boolean isDuplicateKeyException(Exception e) {
+    Throwable cause = e.getCause();
+    if (cause instanceof SQLException sqlEx) {
+      // MySQL: error code 1062 = ER_DUP_ENTRY
+      // PostgreSQL: SQL state "23505" = unique_violation
+      return sqlEx.getErrorCode() == 1062 || "23505".equals(sqlEx.getSQLState());
+    }
+    return false;
   }
 
   public Optional<BulkOperationResult> getBulkJobStatus(String jobId) {
