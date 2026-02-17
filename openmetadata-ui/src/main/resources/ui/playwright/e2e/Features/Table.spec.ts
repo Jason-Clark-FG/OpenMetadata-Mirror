@@ -464,18 +464,28 @@ test.describe('Table & Data Model columns table pagination', () => {
     // Should show expand icon for nested columns
     expect(
       page
-        .locator('[data-row-key="shipping_address"]')
+        .locator(
+          '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shipping_address"]'
+        )
         .getByTestId('expand-icon')
     ).toBeVisible();
 
     // Should not show expand icon for non-nested columns
     expect(
-      page.locator('[data-row-key="customer_id"]').getByTestId('expand-icon')
+      page
+        .locator(
+          '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.customer_id"]'
+        )
+        .getByTestId('expand-icon')
     ).not.toBeVisible();
 
     // Should not show expand icon for non-nested columns
     expect(
-      page.locator('[data-row-key="shop_id"]').getByTestId('expand-icon')
+      page
+        .locator(
+          '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shop_id"]'
+        )
+        .getByTestId('expand-icon')
     ).not.toBeVisible();
   });
 

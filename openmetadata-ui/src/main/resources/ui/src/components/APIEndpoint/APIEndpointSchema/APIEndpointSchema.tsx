@@ -17,7 +17,7 @@ import { cloneDeep, groupBy, isEmpty, isUndefined, uniqBy } from 'lodash';
 import { EntityTags, TagFilterOptions } from 'Models';
 import { FC, Key, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { } from '../../../constants/constants';
+import {} from '../../../constants/constants';
 import { TABLE_SCROLL_VALUE } from '../../../constants/Table.constants';
 import {
   COMMON_STATIC_TABLE_VISIBLE_COLUMNS,
@@ -199,7 +199,9 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
 
   const renderSchemaName = useCallback(
     (_: string, record: Field) => (
-      <div className="d-inline-flex w-max-90 vertical-align-inherit">
+      <div
+        className="d-inline-flex gap-1 hover-icon-group vertical-align-inherit flex-column items-start"
+        style={{ maxWidth: '80%' }}>
         <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
           <span className="break-word">
             {isVersionView ? (

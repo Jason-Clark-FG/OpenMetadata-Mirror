@@ -81,23 +81,29 @@ const DisplayName: React.FC<DisplayNameProps> = ({
   }, [displayName, name, renderNameWithOptionalLink]);
 
   return (
-    <div className="d-inline-flex flex-column hover-icon-group w-max-full vertical-align-inherit">
-      <Typography.Text className="m-b-0 d-block" data-testid="column-name">
-        {renderMainContent}
-      </Typography.Text>
+    <div
+      className="d-inline-flex flex-column hover-icon-group vertical-align-inherit"
+      style={{ maxWidth: '80%' }}>
+      <div className="d-inline-flex items-start gap-1 flex-column">
+        <Typography.Text
+          className="m-b-0 d-block text-link-color"
+          data-testid="column-name">
+          {renderMainContent}
+        </Typography.Text>
 
-      {hasEditPermission ? (
-        <Tooltip placement="right" title={t('label.edit')}>
-          <Button
-            ghost
-            className="hover-cell-icon"
-            data-testid="edit-displayName-button"
-            icon={<IconEdit color={DE_ACTIVE_COLOR} {...ICON_DIMENSION} />}
-            type="text"
-            onClick={() => setIsDisplayNameEditing(true)}
-          />
-        </Tooltip>
-      ) : null}
+        {hasEditPermission ? (
+          <Tooltip placement="right" title={t('label.edit')}>
+            <Button
+              ghost
+              className="hover-cell-icon"
+              data-testid="edit-displayName-button"
+              icon={<IconEdit color={DE_ACTIVE_COLOR} {...ICON_DIMENSION} />}
+              type="text"
+              onClick={() => setIsDisplayNameEditing(true)}
+            />
+          </Tooltip>
+        ) : null}
+      </div>
       {isDisplayNameEditing && (
         <EntityNameModal
           allowRename={allowRename}

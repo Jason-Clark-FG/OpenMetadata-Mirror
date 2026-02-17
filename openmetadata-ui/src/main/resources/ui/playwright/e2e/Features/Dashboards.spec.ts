@@ -210,21 +210,25 @@ test.describe('Data Model', () => {
     await assignTagToChildren({
       page,
       tag: 'PersonalData.Personal',
-      rowId: 'revenue_metrics_0031',
+      rowId:
+        'sample_superset.model.big_analytics_data_model_with_nested_columns.revenue_metrics_0031',
       entityEndpoint: 'dashboard/datamodels',
     });
 
     // Should not show expand icon for non-nested columns
     expect(
       page
-        .locator('[data-row-key="revenue_metrics_0031"]')
+        .locator(
+          '[data-row-key="sample_superset.model.big_analytics_data_model_with_nested_columns.revenue_metrics_0031"]'
+        )
         .getByTestId('expand-icon')
     ).not.toBeVisible();
 
     await removeTagsFromChildren({
       page,
       tags: ['PersonalData.Personal'],
-      rowId: 'revenue_metrics_0031',
+      rowId:
+        'sample_superset.model.big_analytics_data_model_with_nested_columns.revenue_metrics_0031',
       entityEndpoint: 'dashboard/datamodels',
     });
   });

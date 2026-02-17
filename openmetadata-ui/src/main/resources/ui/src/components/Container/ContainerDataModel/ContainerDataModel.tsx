@@ -121,9 +121,15 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
         fixed: 'left',
         width: 300,
         render: (_, record: Column) => (
-          <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
-            <Typography.Text>{getEntityName(record)}</Typography.Text>
-          </Tooltip>
+          <div
+            className="d-inline-flex items-start gap-1 hover-icon-group flex-column"
+            style={{ maxWidth: '80%' }}>
+            <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
+              <Typography.Text className="text-link-color">
+                {getEntityName(record)}
+              </Typography.Text>
+            </Tooltip>
+          </div>
         ),
       },
       {
@@ -248,7 +254,7 @@ const ContainerDataModel: FC<ContainerDataModelProps> = ({
           rowExpandable: (record) => !isEmpty(record.children),
         }}
         pagination={false}
-        rowKey="name"
+        rowKey="fullyQualifiedName"
         scroll={TABLE_SCROLL_VALUE}
         size="small"
         staticVisibleColumns={COMMON_STATIC_TABLE_VISIBLE_COLUMNS}

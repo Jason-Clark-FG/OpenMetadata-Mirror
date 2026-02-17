@@ -134,21 +134,23 @@ test.describe('Container entity specific tests ', () => {
     await assignTagToChildren({
       page,
       tag: 'PersonalData.Personal',
-      rowId: 'budget_executor',
+      rowId: 's3_storage_sample.departments.finance.budget_executor',
       entityEndpoint: 'containers',
     });
 
     // Should not show expand icon for non-nested columns
     expect(
       page
-        .locator('[data-row-key="budget_executor"]')
+        .locator(
+          '[data-row-key="s3_storage_sample.departments.finance.budget_executor"]'
+        )
         .getByTestId('expand-icon')
     ).not.toBeVisible();
 
     await removeTagsFromChildren({
       page,
       tags: ['PersonalData.Personal'],
-      rowId: 'budget_executor',
+      rowId: 's3_storage_sample.departments.finance.budget_executor',
       entityEndpoint: 'containers',
     });
   });

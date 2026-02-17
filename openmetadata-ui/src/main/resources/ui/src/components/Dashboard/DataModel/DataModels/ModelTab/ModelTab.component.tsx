@@ -114,7 +114,7 @@ const ModelTab = () => {
 
         setPaginatedColumns(pruneEmptyChildren(response.data) || []);
         handlePagingChange(response.paging);
-      } catch (error) {
+      } catch {
         setPaginatedColumns([]);
         handlePagingChange({
           offset: 1,
@@ -404,7 +404,7 @@ const ModelTab = () => {
           emptyText: <FilterTablePlaceHolder />,
         }}
         pagination={false}
-        rowKey="name"
+        rowKey="fullyQualifiedName"
         scroll={{ x: 1200 }}
         searchProps={searchProps}
         size="small"

@@ -222,8 +222,10 @@ const SearchIndexFieldsTable = ({
         fixed: 'left',
         sorter: getColumnSorter<SearchIndexField, 'name'>('name'),
         render: (_, record: SearchIndexField) => (
-          <div className="d-inline-flex w-max-90">
-            <span className="break-word">
+          <div
+            className="d-inline-flex items-start gap-1 hover-icon-group flex-column"
+            style={{ maxWidth: '80%' }}>
+            <span className="break-word text-link-color">
               {stringToHTML(
                 highlightSearchText(getEntityName(record), searchText)
               )}

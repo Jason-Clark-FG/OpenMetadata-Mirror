@@ -528,50 +528,54 @@ const SchemaTable = () => {
           const { displayName } = record;
 
           return (
-            <div className="d-inline-flex flex-column hover-icon-group w-max-90">
-              <div className="d-inline-flex items-baseline">
-                {prepareConstraintIcon({
-                  columnName: name,
-                  columnConstraint: record.constraint,
-                  tableConstraints,
-                })}
-                <Typography.Text
-                  className={classNames('m-b-0 d-block break-word', {
-                    'text-grey-600': !isEmpty(displayName),
+            <div
+              className="d-inline-flex flex-column hover-icon-group"
+              style={{ maxWidth: '80%' }}>
+              <div className="d-inline-flex items-start gap-1 flex-column">
+                <div className="d-inline-flex items-baseline">
+                  {prepareConstraintIcon({
+                    columnName: name,
+                    columnConstraint: record.constraint,
+                    tableConstraints,
                   })}
-                  data-testid="column-name">
-                  {stringToHTML(highlightSearchText(name, searchText))}
-                </Typography.Text>
-              </div>
-              {isEmpty(displayName) ? null : (
-                // It will render displayName fallback to name
-                <Typography.Text
-                  className="m-b-0 d-block break-word"
-                  data-testid="column-display-name">
-                  {stringToHTML(
-                    highlightSearchText(getEntityName(record), searchText)
-                  )}
-                </Typography.Text>
-              )}
+                  <Typography.Text
+                    className={classNames('m-b-0 d-block break-word', {
+                      'text-grey-600': !isEmpty(displayName),
+                    })}
+                    data-testid="column-name">
+                    {stringToHTML(highlightSearchText(name, searchText))}
+                  </Typography.Text>
+                </div>
+                {isEmpty(displayName) ? null : (
+                  // It will render displayName fallback to name
+                  <Typography.Text
+                    className="m-b-0 d-block break-word"
+                    data-testid="column-display-name">
+                    {stringToHTML(
+                      highlightSearchText(getEntityName(record), searchText)
+                    )}
+                  </Typography.Text>
+                )}
 
-              {editDisplayNamePermission && (
-                <Tooltip placement="right" title={t('label.edit')}>
-                  <Button
-                    className="cursor-pointer hover-cell-icon w-fit-content"
-                    data-testid="edit-displayName-button"
-                    style={{
-                      color: DE_ACTIVE_COLOR,
-                      padding: 0,
-                      border: 'none',
-                      background: 'transparent',
-                    }}
-                    onClick={() => handleEditDisplayNameClick(record)}>
-                    <IconEdit
-                      style={{ color: DE_ACTIVE_COLOR, ...ICON_DIMENSION }}
-                    />
-                  </Button>
-                </Tooltip>
-              )}
+                {editDisplayNamePermission && (
+                  <Tooltip placement="right" title={t('label.edit')}>
+                    <Button
+                      className="cursor-pointer hover-cell-icon w-fit-content"
+                      data-testid="edit-displayName-button"
+                      style={{
+                        color: DE_ACTIVE_COLOR,
+                        padding: 0,
+                        border: 'none',
+                        background: 'transparent',
+                      }}
+                      onClick={() => handleEditDisplayNameClick(record)}>
+                      <IconEdit
+                        style={{ color: DE_ACTIVE_COLOR, ...ICON_DIMENSION }}
+                      />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
             </div>
           );
         },

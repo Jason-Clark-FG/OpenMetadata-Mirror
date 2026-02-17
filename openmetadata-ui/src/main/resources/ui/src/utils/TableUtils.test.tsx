@@ -15,7 +15,7 @@ import { OperationPermission } from '../context/PermissionProvider/PermissionPro
 import { EntityTabs } from '../enums/entity.enum';
 import { TagLabel } from '../generated/entity/data/container';
 import { Column, DataType } from '../generated/entity/data/table';
-import { LabelType, State, TagSource } from '../generated/tests/testCase';
+import { LabelType, State, TagSource } from '../generated/type/tagLabel';
 import { MOCK_TABLE, MOCK_TABLE_DBT } from '../mocks/TableData.mock';
 import {
   ExtraTableDropdownOptions,
@@ -36,12 +36,6 @@ import {
 } from '../utils/TableUtils';
 import EntityLink from './EntityLink';
 import { TableDetailPageTabProps } from './TableClassBase';
-
-type ParentFieldObject = {
-  fullyQualifiedName?: string;
-  children?: ParentFieldObject[];
-  name?: string;
-};
 
 jest.mock(
   '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component',
@@ -812,7 +806,7 @@ describe('TableUtils', () => {
         {
           name: 'column1',
           dataType: DataType.String,
-          children: null as any,
+          children: null as unknown as Column[],
         } as Column,
       ];
 
@@ -885,33 +879,51 @@ describe('TableUtils', () => {
 
   describe('Schema Performance Functions', () => {
     // Mock field structure for testing
-    type MockField = { name?: string; children?: MockField[] };
+    type MockField = {
+      name?: string;
+      fullyQualifiedName?: string;
+      children?: MockField[];
+    };
 
     const mockNestedFields: MockField[] = [
       {
         name: 'level1_field1',
+        fullyQualifiedName: 'level1_field1',
         children: [
           {
             name: 'level2_field1',
-            children: [{ name: 'level3_field1' }, { name: 'level3_field2' }],
+            fullyQualifiedName: 'level2_field1',
+            children: [
+              { name: 'level3_field1', fullyQualifiedName: 'level3_field1' },
+              { name: 'level3_field2', fullyQualifiedName: 'level3_field2' },
+            ],
           },
           {
             name: 'level2_field2',
-            children: [{ name: 'level3_field3' }],
+            fullyQualifiedName: 'level2_field2',
+            children: [
+              { name: 'level3_field3', fullyQualifiedName: 'level3_field3' },
+            ],
           },
         ],
       },
       {
         name: 'level1_field2',
+        fullyQualifiedName: 'level1_field2',
         children: [
           {
             name: 'level2_field3',
-            children: [{ name: 'level3_field4' }, { name: 'level3_field5' }],
+            fullyQualifiedName: 'level2_field3',
+            children: [
+              { name: 'level3_field4', fullyQualifiedName: 'level3_field4' },
+              { name: 'level3_field5', fullyQualifiedName: 'level3_field5' },
+            ],
           },
         ],
       },
       {
         name: 'level1_field3',
+        fullyQualifiedName: 'level1_field3',
       },
     ];
 
