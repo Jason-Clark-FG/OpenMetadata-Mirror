@@ -100,23 +100,23 @@ jest.mock('../SearchDropdown/SearchDropdown', () =>
     )
 );
 
-jest.mock('../../rest/miscAPI', () => ({
-  searchData: jest.fn().mockResolvedValue({
-    data: {
-      hits: {
-        hits: [
-          {
-            _source: {
-              id: 'user-1',
-              name: 'test_user',
-              displayName: 'Test User',
-            },
-          },
-        ],
-        total: { value: 1 },
+const mockSearchQuery = jest.fn().mockResolvedValue({
+  hits: {
+    hits: [
+      {
+        _source: {
+          id: 'user-1',
+          name: 'test_user',
+          displayName: 'Test User',
+        },
       },
-    },
-  }),
+    ],
+    total: { value: 1 },
+  },
+});
+
+jest.mock('../../rest/searchAPI', () => ({
+  searchQuery: (...args: unknown[]) => mockSearchQuery(...args),
 }));
 
 jest.mock('../../rest/botsAPI', () => ({
@@ -351,8 +351,6 @@ describe('AuditLogFilters', () => {
   });
 
   it('should fetch users when user dropdown is opened', async () => {
-    const { searchData } = require('../../rest/miscAPI');
-
     await act(async () => {
       render(<AuditLogFilters {...defaultProps} />);
     });
@@ -362,13 +360,29 @@ describe('AuditLogFilters', () => {
     });
 
     await waitFor(() => {
-      expect(searchData).toHaveBeenCalled();
+      expect(mockSearchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: '',
+          pageNumber: 1,
+          pageSize: 10,
+          searchIndex: 'user_search_index',
+          queryFilter: expect.objectContaining({
+            query: expect.objectContaining({
+              bool: expect.objectContaining({
+                must: expect.arrayContaining([
+                  expect.objectContaining({
+                    term: { isBot: 'false' },
+                  }),
+                ]),
+              }),
+            }),
+          }),
+        })
+      );
     });
   });
 
   it('should fetch bots when bot dropdown is opened', async () => {
-    const { searchData } = require('../../rest/miscAPI');
-
     await act(async () => {
       render(<AuditLogFilters {...defaultProps} />);
     });
@@ -378,14 +392,24 @@ describe('AuditLogFilters', () => {
     });
 
     await waitFor(() => {
-      expect(searchData).toHaveBeenCalledWith(
-        '',
-        1,
-        10,
-        'isBot:true',
-        '',
-        '',
-        expect.any(String)
+      expect(mockSearchQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: '',
+          pageNumber: 1,
+          pageSize: 10,
+          searchIndex: 'user_search_index',
+          queryFilter: expect.objectContaining({
+            query: expect.objectContaining({
+              bool: expect.objectContaining({
+                must: expect.arrayContaining([
+                  expect.objectContaining({
+                    term: { isBot: 'true' },
+                  }),
+                ]),
+              }),
+            }),
+          }),
+        })
       );
     });
   });
