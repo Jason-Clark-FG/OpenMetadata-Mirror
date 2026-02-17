@@ -3598,37 +3598,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return entities;
   }
 
-  private void nullifyEntityFields(T entity) {
-    entity.setHref(null);
-    entity.setOwners(null);
-    entity.setChildren(null);
-    entity.setTags(null);
-    entity.setDomains(null);
-    entity.setDataProducts(null);
-    entity.setFollowers(null);
-    entity.setExperts(null);
-  }
+  private static final List<String> FIELDS_STORED_AS_RELATIONSHIPS =
+      List.of(
+          "href", "owners", "children", "tags", "domains", "dataProducts", "followers", "experts");
 
   protected String serializeForStorage(T entity) {
-    List<EntityReference> owners = entity.getOwners();
-    List<EntityReference> children = entity.getChildren();
-    List<TagLabel> tags = entity.getTags();
-    List<EntityReference> domains = entity.getDomains();
-    List<EntityReference> dataProducts = entity.getDataProducts();
-    List<EntityReference> followers = entity.getFollowers();
-    List<EntityReference> experts = entity.getExperts();
-    nullifyEntityFields(entity);
-
-    String json = JsonUtils.pojoToJson(entity);
-
-    entity.setOwners(owners);
-    entity.setChildren(children);
-    entity.setTags(tags);
-    entity.setDomains(domains);
-    entity.setDataProducts(dataProducts);
-    entity.setFollowers(followers);
-    entity.setExperts(experts);
-    return json;
+    ObjectNode node = (ObjectNode) JsonUtils.valueToTree(entity);
+    node.remove(FIELDS_STORED_AS_RELATIONSHIPS);
+    return node.toString();
   }
 
   @Transaction

@@ -2,7 +2,9 @@ package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.time.Duration;
 import java.util.List;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -137,7 +139,10 @@ public class RdfResourceIT {
     Tables.delete(
         table.getId().toString(), java.util.Map.of("hardDelete", "true", "recursive", "true"));
 
-    RdfTestUtils.verifyEntityNotInRdf(table.getFullyQualifiedName());
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofMillis(500))
+        .untilAsserted(() -> RdfTestUtils.verifyEntityNotInRdf(table.getFullyQualifiedName()));
   }
 
   @Test
@@ -157,12 +162,18 @@ public class RdfResourceIT {
     Table table = Tables.create(createRequest);
     assertNotNull(table.getId());
 
-    RdfTestUtils.verifyEntityInRdf(table, TABLE_RDF_TYPE);
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofMillis(500))
+        .untilAsserted(() -> RdfTestUtils.verifyEntityInRdf(table, TABLE_RDF_TYPE));
 
     table.setDescription("Updated description for RDF test");
     Table updated = Tables.update(table.getId().toString(), table);
     assertNotNull(updated);
 
-    RdfTestUtils.verifyEntityUpdatedInRdf(updated);
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofMillis(500))
+        .untilAsserted(() -> RdfTestUtils.verifyEntityUpdatedInRdf(updated));
   }
 }

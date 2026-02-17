@@ -248,6 +248,9 @@ public class SearchIndexFieldLimitIT {
       createdCustomPropertyNames.add(propName);
     }
 
+    // Wait for Type metadata cache to reflect all custom properties
+    Thread.sleep(2000);
+
     Table table = createTestTable(ns, "field_limit_test");
 
     Map<String, Object> extension = new HashMap<>();
