@@ -689,9 +689,6 @@ const TestSuiteDetailsPage = () => {
           <Box
             sx={{
               mt: 3,
-              '& .MuiTabPanel-root': {
-                overflowY: 'auto',
-              },
             }}>
             {activeTab === EntityTabs.TEST_CASES && tabs.testCasesTab.children}
             {activeTab === EntityTabs.PIPELINE && tabs.pipelineTab.children}
