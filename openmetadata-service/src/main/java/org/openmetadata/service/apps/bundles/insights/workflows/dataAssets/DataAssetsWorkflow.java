@@ -318,7 +318,7 @@ public class DataAssetsWorkflow {
           break;
         }
       }
-
+    } finally {
       this.executor = null;
     }
 
