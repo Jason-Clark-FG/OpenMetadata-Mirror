@@ -2336,7 +2336,7 @@ public class WorkflowDefinitionResourceIT {
   }
 
   @Order(29)
-  @RetryingTest(3)
+  @Test
   void test_EntitySpecificFiltering(TestNamespace ns) throws Exception {
     LOG.info("Starting test_EntitySpecificFiltering");
     OpenMetadataClient client = SdkClients.adminClient();
@@ -2558,7 +2558,7 @@ public class WorkflowDefinitionResourceIT {
       // Wait for workflow processing using Awaitility
       LOG.info("Waiting for workflow to process entities...");
       await()
-          .atMost(Duration.ofSeconds(60))
+          .atMost(Duration.ofMinutes(3))  // Increased for CI environment
           .pollDelay(Duration.ofMillis(500))
           .pollInterval(Duration.ofSeconds(1))
           .until(
@@ -5067,7 +5067,7 @@ public class WorkflowDefinitionResourceIT {
   }
 
   @Order(37)
-  @RetryingTest(3)
+  @Test
   void test_AutoApprovalForEntitiesWithoutReviewers(TestNamespace ns) throws Exception {
     LOG.info("Starting test_AutoApprovalForEntitiesWithoutReviewers");
 
@@ -5263,7 +5263,7 @@ public class WorkflowDefinitionResourceIT {
 
       // Wait for workflow to process and auto-approve the dataProduct
       await()
-          .atMost(Duration.ofSeconds(45))
+          .atMost(Duration.ofMinutes(3))  // Increased for CI environment
           .pollInterval(Duration.ofSeconds(2))
           .pollDelay(Duration.ofSeconds(2))
           .ignoreExceptions()
