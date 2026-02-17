@@ -1217,8 +1217,9 @@ export interface Pipeline {
      */
     useStatistics?: boolean;
     /**
-     * Language to use for auto classification recognizers. Only recognizers that support this
-     * language will be used.
+     * Language to use for auto classification recognizers. Use 'any' to run all recognizers
+     * regardless of their configured language. For specific languages, only recognizers that
+     * support that language will be used.
      */
     classificationLanguage?: ClassificationLanguage;
     /**
@@ -1260,6 +1261,11 @@ export interface Pipeline {
      * Regex exclude pipelines.
      */
     pipelineFilterPattern?: FilterPattern;
+    /**
+     * Number of days of pipeline run status history to ingest. Only runs within the last N days
+     * will be fetched.
+     */
+    statusLookbackDays?: number;
     /**
      * Optional configuration to soft delete MlModels in OpenMetadata if the source MlModels are
      * deleted. Also, if the MlModel is deleted, all the associated entities like lineage, etc.,
@@ -2542,14 +2548,17 @@ export interface AppLimitsConfig {
 }
 
 /**
- * Language to use for auto classification recognizers. Only recognizers that support this
- * language will be used.
+ * Language to use for auto classification recognizers. Use 'any' to run all recognizers
+ * regardless of their configured language. For specific languages, only recognizers that
+ * support that language will be used.
  *
- * Supported languages for auto classification recognizers (ISO 639-1 codes)
+ * Supported languages for auto classification recognizers (ISO 639-1 codes). Use 'any' to
+ * apply all recognizers regardless of their configured language.
  */
 export enum ClassificationLanguage {
     AF = "af",
     Am = "am",
+    Any = "any",
     Ar = "ar",
     Az = "az",
     Be = "be",
