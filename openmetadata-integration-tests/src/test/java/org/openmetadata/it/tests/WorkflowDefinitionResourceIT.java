@@ -2347,10 +2347,13 @@ public class WorkflowDefinitionResourceIT {
     String workflowName = "EntitySpecificFilterWorkflow";
 
     // Defensive pre-cleanup: delete any leftover workflow from a prior failed run
+    // Use hardDelete to ensure complete removal
     try {
       WorkflowDefinition existing = client.workflowDefinitions().getByName(workflowName, null);
-      client.workflowDefinitions().delete(existing.getId());
-      LOG.info("Deleted leftover workflow '{}' from prior run", workflowName);
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      client.workflowDefinitions().delete(existing.getId().toString(), params);
+      LOG.info("Hard-deleted leftover workflow '{}' from prior run", workflowName);
     } catch (Exception e) {
       // Expected if no leftover exists
     }
@@ -5076,12 +5079,16 @@ public class WorkflowDefinitionResourceIT {
     String workflowName = "AutoApprovalTestWorkflow";
     String dataProductName = "auto_dataproduct";
     org.openmetadata.schema.entity.domains.DataProduct dataProduct = null;
+    DatabaseService dbService = null;
 
     // Defensive pre-cleanup: delete any leftover workflow from a prior failed run
+    // Use hardDelete to ensure complete removal
     try {
       WorkflowDefinition existing = client.workflowDefinitions().getByName(workflowName, null);
-      client.workflowDefinitions().delete(existing.getId());
-      LOG.info("Deleted leftover workflow '{}' from prior run", workflowName);
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      client.workflowDefinitions().delete(existing.getId().toString(), params);
+      LOG.info("Hard-deleted leftover workflow '{}' from prior run", workflowName);
     } catch (Exception e) {
       // Expected if no leftover exists
     }
@@ -5198,7 +5205,7 @@ public class WorkflowDefinitionResourceIT {
                           new org.openmetadata.schema.services.connections.database
                               .MysqlConnection()))
               .withDomains(List.of(domain.getFullyQualifiedName()));
-      DatabaseService dbService = client.databaseServices().create(createDbService);
+      dbService = client.databaseServices().create(createDbService);
       LOG.debug("Created database service: {}", dbService.getName());
 
       CreateDatabase createDatabase =
@@ -5313,6 +5320,17 @@ public class WorkflowDefinitionResourceIT {
           client.dataProducts().delete(dataProduct.getId().toString(), params);
         } catch (Exception e) {
           LOG.warn("Error cleaning up dataProduct: {}", e.getMessage());
+        }
+      }
+      // Clean up dbService (and its database/schema/table via recursive delete)
+      if (dbService != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          params.put("recursive", "true");
+          client.databaseServices().delete(dbService.getId().toString(), params);
+        } catch (Exception e) {
+          LOG.warn("Error cleaning up dbService: {}", e.getMessage());
         }
       }
     }
