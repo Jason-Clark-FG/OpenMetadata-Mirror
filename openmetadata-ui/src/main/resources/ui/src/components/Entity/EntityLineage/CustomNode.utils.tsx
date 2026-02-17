@@ -21,7 +21,6 @@ import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
 import { Column } from '../../../generated/entity/data/table';
 import { ColumnTestSummaryDefinition } from '../../../generated/tests/testCase';
-import { encodeLineageHandles } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getColumnDataTypeIcon } from '../../../utils/TableUtils';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
@@ -258,7 +257,7 @@ export const ColumnContent = ({
         EntityLineageNodeType.DEFAULT,
         isConnectable,
         'lineage-column-node-handle',
-        encodeLineageHandles(fullyQualifiedName ?? '')
+        fullyQualifiedName ?? ''
       )}
       <Row className="items-center" gutter={12}>
         <Col className="custom-node-name-container" flex="1">

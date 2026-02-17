@@ -32,3 +32,8 @@ export type EntityChildrenItem =
   | SearchIndexField;
 
 export type EntityChildren = EntityChildrenItem[];
+
+export interface FlatColumnItem {
+  column: Column;
+  depth: number;
+}

@@ -115,11 +115,9 @@ import {
   createEdgesAndEdgeMaps,
   createNewEdge,
   createNodes,
-  decodeLineageHandles,
   getAllDownstreamEdges,
   getAllTracedColumnEdge,
   getClassifiedEdge,
-  getColumnSourceTargetHandles,
   getConnectedNodesEdges,
   getEdgeDataFromEdge,
   getELKLayoutedElements,
@@ -1163,7 +1161,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setSelectedNode({} as SourceType);
     setIsDrawerOpen(true);
     setTracedNodes([]);
-    const { sourceHandle, targetHandle } = getColumnSourceTargetHandles(edge);
+    const { sourceHandle, targetHandle } = edge;
     if (sourceHandle && targetHandle) {
       setTracedColumns([sourceHandle, targetHandle]);
     }
@@ -1253,9 +1251,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       // Decode the source and target handle. This contains column's fqn.
       // This is further used in the Lineage API for creating the column level lineage.
       if (columnConnection) {
-        params.sourceHandle = decodeLineageHandles(params.sourceHandle);
-        params.targetHandle = decodeLineageHandles(params.targetHandle);
-
         if (!tracedColumns.includes(params.sourceHandle as string)) {
           setTracedColumns((prev) => [...prev, params.sourceHandle as string]);
         }

@@ -22,7 +22,6 @@ import {
   OnConnectEnd,
   OnConnectStart,
   ReactFlowInstance,
-  UpdateNodeInternals,
 } from 'reactflow';
 import { CSVExportResponse } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import { LineageConfig } from '../../components/Entity/EntityLineage/EntityLineage.interface';
@@ -119,7 +118,6 @@ export interface LineageContextType {
   redraw: () => Promise<void>;
   updateEntityFqn: (entityFqn: string) => void;
   dqHighlightedEdges?: Set<string>;
-  useUpdateNodeInternals: () => UpdateNodeInternals;
   columnsInCurrentPages: Record<string, string[]>;
   setColumnsInCurrentPages: Dispatch<SetStateAction<Record<string, string[]>>>;
 }

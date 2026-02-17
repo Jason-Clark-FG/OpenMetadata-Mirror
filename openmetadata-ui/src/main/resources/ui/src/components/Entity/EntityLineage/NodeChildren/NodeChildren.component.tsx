@@ -14,7 +14,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { IconButton, Stack, Typography } from '@mui/material';
-import { Collapse, Input } from 'antd';
+import { Input } from 'antd';
 import classNames from 'classnames';
 import { isEmpty, isUndefined } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -43,113 +43,58 @@ import { ColumnContent } from '../CustomNode.utils';
 import {
   EntityChildren,
   EntityChildrenItem,
+  FlatColumnItem,
   NodeChildrenProps,
 } from './NodeChildren.interface';
 
 interface CustomPaginatedListProps {
-  entityChildren: EntityChildren;
-  isOnlyShowColumnsWithLineageFilterActive?: boolean;
-  items: React.ReactNode[];
+  flatItems: FlatColumnItem[];
+  isConnectable: boolean;
+  isLoading: boolean;
   nodeId?: string;
   page: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
+  showDataObservabilitySummary: boolean;
+  summary?: TestSummary;
 }
 
+const DEPTH_INDENT_PX = 16;
+
 const CustomPaginatedList = ({
-  entityChildren,
-  isOnlyShowColumnsWithLineageFilterActive,
-  items,
+  flatItems,
+  isConnectable,
+  isLoading,
   nodeId,
   page,
   setPage,
+  showDataObservabilitySummary,
+  summary,
 }: CustomPaginatedListProps) => {
-  const currentNodeAllColumns = Object.values(entityChildren ?? {});
   const { t } = useTranslation();
-  const { setColumnsInCurrentPages, useUpdateNodeInternals } =
+  const { setColumnsInCurrentPages, tracedColumns, selectedColumn } =
     useLineageProvider();
-  const updateNodeInternals = useUpdateNodeInternals();
 
-  const getAllNestedChildrenInFlatArray = useCallback(
-    (item: EntityChildrenItem): string[] => {
-      const result: string[] = [];
+  const totalPages = Math.ceil(flatItems.length / LINEAGE_CHILD_ITEMS_PER_PAGE);
+  const startIdx = (page - 1) * LINEAGE_CHILD_ITEMS_PER_PAGE;
+  const endIdx = startIdx + LINEAGE_CHILD_ITEMS_PER_PAGE;
 
-      if (item.fullyQualifiedName) {
-        result.push(item.fullyQualifiedName);
-      }
-
-      if (
-        'children' in item &&
-        Array.isArray(item.children) &&
-        item.children.length > 0
-      ) {
-        for (const child of item.children) {
-          result.push(...getAllNestedChildrenInFlatArray(child));
-        }
-      }
-
-      return result;
-    },
-    []
+  const currentPageFlatItems = useMemo(
+    () => flatItems.slice(startIdx, endIdx),
+    [flatItems, startIdx, endIdx]
   );
 
-  const currentNodeAllPagesItems = useMemo(
-    () =>
-      currentNodeAllColumns.flatMap((item) =>
-        getAllNestedChildrenInFlatArray(item)
-      ),
-    [currentNodeAllColumns, getAllNestedChildrenInFlatArray]
+  const outsidePageFlatItems = useMemo(
+    () => [...flatItems.slice(0, startIdx), ...flatItems.slice(endIdx)],
+    [flatItems, startIdx, endIdx]
   );
 
-  const {
-    totalPages,
-    insideCurrentPageItems,
-    outsideCurrentPageItems,
-    currentNodeCurrentPageItems,
-  } = useMemo(() => {
-    const totalPages = Math.ceil(items.length / LINEAGE_CHILD_ITEMS_PER_PAGE);
-    const startIdx = (page - 1) * LINEAGE_CHILD_ITEMS_PER_PAGE;
-    const endIdx = startIdx + LINEAGE_CHILD_ITEMS_PER_PAGE;
-
-    const insideCurrentPageItems: React.ReactNode[] = [];
-    const outsideCurrentPageItems: React.ReactNode[] = [];
-
-    items.forEach((item, i) => {
-      const wrappedItem = (
-        <div
-          className={
-            i >= startIdx && i < endIdx
-              ? 'inside-current-page-item'
-              : 'outside-current-page-item'
-          }>
-          {item}
-        </div>
-      );
-
-      if (i >= startIdx && i < endIdx) {
-        insideCurrentPageItems.push(wrappedItem);
-      } else {
-        outsideCurrentPageItems.push(wrappedItem);
-      }
-    });
-
-    const currentNodeCurrentPageItems = currentNodeAllColumns
-      .slice(startIdx, endIdx)
-      .filter(Boolean)
-      .flatMap((item) => getAllNestedChildrenInFlatArray(item));
-
-    return {
-      totalPages,
-      insideCurrentPageItems,
-      outsideCurrentPageItems,
-      currentNodeCurrentPageItems,
-    };
-  }, [
-    items,
-    page,
-    currentNodeAllColumns,
-    getAllNestedChildrenInFlatArray,
-    isOnlyShowColumnsWithLineageFilterActive,
-  ]);
+  //   const currentNodeCurrentPageItems = useMemo(
+  //     () =>
+  //       currentPageFlatItems
+  //         .map((fi) => fi.column.fullyQualifiedName)
+  //         .filter((fqn): fqn is string => Boolean(fqn)),
+  //     [currentPageFlatItems]
+  //   );
 
   /**
    * This updates `columnsInCurrentPages` object for current node
@@ -168,23 +113,69 @@ const CustomPaginatedList = ({
     setColumnsInCurrentPages((prev) => {
       const updated = { ...prev };
       if (nodeId) {
-        updated[nodeId] = isOnlyShowColumnsWithLineageFilterActive
-          ? currentNodeAllPagesItems
-          : currentNodeCurrentPageItems;
+        updated[nodeId] = currentPageFlatItems.map(
+          (fi) => fi.column.fullyQualifiedName ?? ''
+        );
       }
 
       return updated;
     });
-  }, [isOnlyShowColumnsWithLineageFilterActive, page]);
+  }, [currentPageFlatItems, page]);
+
+  const getColumnSummary = useCallback(
+    (column: Column) => {
+      const { fullyQualifiedName } = column;
+
+      return summary?.columnTestSummary?.find(
+        (data) =>
+          EntityLink.getEntityColumnFqn(data.entityLink ?? '') ===
+          fullyQualifiedName
+      );
+    },
+    [summary]
+  );
+
+  const renderFlatItem = useCallback(
+    (flatItem: FlatColumnItem, className: string) => {
+      const { column, depth } = flatItem;
+      const isColumnTraced = tracedColumns.includes(
+        column.fullyQualifiedName ?? ''
+      );
+      const columnSummary = getColumnSummary(column);
+
+      return (
+        <div
+          className={className}
+          key={column.fullyQualifiedName}
+          style={{
+            paddingLeft: depth * DEPTH_INDENT_PX,
+          }}>
+          <ColumnContent
+            column={column}
+            isColumnTraced={isColumnTraced}
+            isConnectable={isConnectable}
+            isLoading={isLoading}
+            showDataObservabilitySummary={showDataObservabilitySummary}
+            summary={columnSummary}
+          />
+        </div>
+      );
+    },
+    [
+      tracedColumns,
+      getColumnSummary,
+      isConnectable,
+      isLoading,
+      showDataObservabilitySummary,
+      selectedColumn,
+    ]
+  );
 
   const handlePageChange = useCallback(
     (newPage: number) => {
       setPage(newPage);
-      if (nodeId) {
-        updateNodeInternals(nodeId);
-      }
     },
-    [currentNodeCurrentPageItems, nodeId, updateNodeInternals]
+    [setPage]
   );
 
   const handlePrev = useCallback(
@@ -203,47 +194,45 @@ const CustomPaginatedList = ({
     [page, totalPages, handlePageChange]
   );
 
-  if (isOnlyShowColumnsWithLineageFilterActive) {
-    return items;
-  }
-
   return (
     <>
       <Stack className="inside-current-page-items" spacing={1}>
-        {insideCurrentPageItems}
+        {currentPageFlatItems.map((fi) =>
+          renderFlatItem(fi, 'inside-current-page-item')
+        )}
       </Stack>
       <Stack className="outside-current-page-items" spacing={1}>
-        {outsideCurrentPageItems}
+        {outsidePageFlatItems.map((fi) =>
+          renderFlatItem(fi, 'outside-current-page-item')
+        )}
       </Stack>
 
-      {!isOnlyShowColumnsWithLineageFilterActive && (
-        <Stack
-          alignItems="center"
-          direction="row"
-          justifyContent="center"
-          mt={2}
-          spacing={1}>
-          <IconButton
-            data-testid="prev-btn"
-            disabled={page === 1}
-            size="small"
-            onClick={handlePrev}>
-            <ChevronLeftIcon />
-          </IconButton>
+      <Stack
+        alignItems="center"
+        direction="row"
+        justifyContent="center"
+        mt={2}
+        spacing={1}>
+        <IconButton
+          data-testid="prev-btn"
+          disabled={page === 1}
+          size="small"
+          onClick={handlePrev}>
+          <ChevronLeftIcon />
+        </IconButton>
 
-          <Typography variant="body2">
-            {page} {t('label.slash-symbol')} {totalPages}
-          </Typography>
+        <Typography variant="body2">
+          {page} {t('label.slash-symbol')} {totalPages}
+        </Typography>
 
-          <IconButton
-            data-testid="next-btn"
-            disabled={page === totalPages}
-            size="small"
-            onClick={handleNext}>
-            <ChevronRightIcon />
-          </IconButton>
-        </Stack>
-      )}
+        <IconButton
+          data-testid="next-btn"
+          disabled={page === totalPages}
+          size="small"
+          onClick={handleNext}>
+          <ChevronRightIcon />
+        </IconButton>
+      </Stack>
     </>
   );
 };
@@ -255,21 +244,14 @@ const NodeChildren = ({
   isOnlyShowColumnsWithLineageFilterActive,
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
-  const { Panel } = Collapse;
   const {
-    tracedColumns,
     activeLayer,
-    onColumnClick,
-    onColumnMouseEnter,
-    onColumnMouseLeave,
     columnsHavingLineage,
     isEditMode,
     expandAllColumns,
     selectedColumn,
-    useUpdateNodeInternals,
     isCreatingEdge,
   } = useLineageProvider();
-  const updateNodeInternals = useUpdateNodeInternals();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
@@ -288,19 +270,6 @@ const NodeChildren = ({
       ),
     };
   }, [activeLayer]);
-
-  const getColumnSummary = useCallback(
-    (column: Column) => {
-      const { fullyQualifiedName } = column;
-
-      return summary?.columnTestSummary?.find(
-        (data) =>
-          EntityLink.getEntityColumnFqn(data.entityLink ?? '') ===
-          fullyQualifiedName
-      );
-    },
-    [summary]
-  );
 
   const showDataObservabilitySummary = useMemo(() => {
     return Boolean(
@@ -322,10 +291,7 @@ const NodeChildren = ({
     [node]
   );
 
-  const currentNodeAllColumns = useMemo(
-    () => Object.values(entityChildren ?? {}),
-    [entityChildren]
-  );
+  const currentNodeAllColumns = useMemo(() => entityChildren, [entityChildren]);
 
   const hasLineageInNestedChildren = useCallback(
     (column: EntityChildrenItem): boolean => {
@@ -427,18 +393,6 @@ const NodeChildren = ({
     setShowAllColumns(expandAllColumns);
   }, [expandAllColumns]);
 
-  useEffect(() => {
-    if (node.id) {
-      updateNodeInternals?.(node.id);
-    }
-  }, [
-    selectedColumn,
-    updateNodeInternals,
-    tracedColumns,
-    node.id,
-    isOnlyShowColumnsWithLineageFilterActive,
-  ]);
-
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
     setIsLoading(true);
     try {
@@ -460,142 +414,34 @@ const NodeChildren = ({
     }
   }, [node, showDataObservabilitySummary, summary]);
 
-  const renderRecord = useCallback(
-    (record: Column) => {
-      const isColumnTraced = tracedColumns.includes(
-        record.fullyQualifiedName ?? ''
-      );
-
-      const columnSummary = getColumnSummary(record);
-
-      const headerContent = (
-        <ColumnContent
-          column={record}
-          isColumnTraced={isColumnTraced}
-          isConnectable={isConnectable}
-          isLoading={isLoading}
-          showDataObservabilitySummary={showDataObservabilitySummary}
-          summary={columnSummary}
-        />
-      );
-
-      if (!record.children || record.children.length === 0) {
-        if (!isColumnVisible(record)) {
-          return null;
-        }
-
-        return headerContent;
+  const flattenColumn = useCallback(
+    (column: Column, depth: number): FlatColumnItem[] => {
+      if (!isColumnVisible(column)) {
+        return [];
       }
 
-      const childRecords = record?.children?.map((child) => {
-        const { fullyQualifiedName, dataType } = child;
+      const result: FlatColumnItem[] = [{ column, depth }];
 
-        const columnSummary = getColumnSummary(child);
-
-        if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
-          return renderRecord(child);
-        } else {
-          const isColumnTraced = tracedColumns.includes(
-            fullyQualifiedName ?? ''
-          );
-
-          if (!isColumnVisible(child)) {
-            return null;
-          }
-
-          return (
-            <ColumnContent
-              column={child}
-              isColumnTraced={isColumnTraced}
-              isConnectable={isConnectable}
-              isLoading={isLoading}
-              key={fullyQualifiedName}
-              showDataObservabilitySummary={showDataObservabilitySummary}
-              summary={columnSummary}
-            />
-          );
+      if (
+        DATATYPES_HAVING_SUBFIELDS.includes(column.dataType) &&
+        column.children &&
+        column.children.length > 0
+      ) {
+        for (const child of column.children) {
+          result.push(...flattenColumn(child, depth + 1));
         }
-      });
-
-      const result = childRecords.filter((child) => child !== null);
-
-      if (result.length === 0) {
-        return null;
       }
 
-      return (
-        <Collapse
-          destroyInactivePanel
-          className="lineage-collapse-column"
-          defaultActiveKey={record.fullyQualifiedName}
-          expandIcon={() => null}
-          key={record.fullyQualifiedName}>
-          <Panel header={headerContent} key={record.fullyQualifiedName ?? ''}>
-            {result}
-          </Panel>
-        </Collapse>
-      );
+      return result;
     },
-    [
-      tracedColumns,
-      getColumnSummary,
-      selectedColumn,
-      isConnectable,
-      onColumnClick,
-      onColumnMouseEnter,
-      onColumnMouseLeave,
-      showDataObservabilitySummary,
-      isLoading,
-      Panel,
-      isColumnVisible,
-    ]
-  );
-  const renderColumnsData = useCallback(
-    (column: Column) => {
-      const { fullyQualifiedName, dataType } = column;
-      const columnSummary = getColumnSummary(column);
-
-      if (DATATYPES_HAVING_SUBFIELDS.includes(dataType)) {
-        return renderRecord(column);
-      } else {
-        const isColumnTraced = tracedColumns.includes(fullyQualifiedName ?? '');
-        if (!isColumnVisible(column)) {
-          return null;
-        }
-
-        return (
-          <ColumnContent
-            column={column}
-            isColumnTraced={isColumnTraced}
-            isConnectable={isConnectable}
-            isLoading={isLoading}
-            showDataObservabilitySummary={showDataObservabilitySummary}
-            summary={columnSummary}
-          />
-        );
-      }
-    },
-    [
-      getColumnSummary,
-      renderRecord,
-      tracedColumns,
-      isColumnVisible,
-      selectedColumn,
-      isConnectable,
-      onColumnClick,
-      onColumnMouseEnter,
-      onColumnMouseLeave,
-      showDataObservabilitySummary,
-      isLoading,
-    ]
+    [isColumnVisible]
   );
 
-  // Pre-render column data outside of the return statement
-  const renderedColumns = useMemo(() => {
-    return filteredColumns
-      .map((column) => renderColumnsData(column as Column))
-      .filter(Boolean);
-  }, [filteredColumns, renderColumnsData]);
+  const flatItems = useMemo(
+    () =>
+      filteredColumns.flatMap((column) => flattenColumn(column as Column, 0)),
+    [filteredColumns, flattenColumn]
+  );
 
   if (
     supportsColumns &&
@@ -623,18 +469,18 @@ const NodeChildren = ({
               onClick={(e) => e.stopPropagation()}
             />
 
-            {!isEmpty(renderedColumns) && (
+            {!isEmpty(flatItems) && (
               <section className="m-t-md" id="table-columns">
                 <div className="rounded-4 overflow-hidden">
                   <CustomPaginatedList
-                    entityChildren={entityChildren}
-                    isOnlyShowColumnsWithLineageFilterActive={
-                      isOnlyShowColumnsWithLineageFilterActive
-                    }
-                    items={renderedColumns}
+                    flatItems={flatItems}
+                    isConnectable={isConnectable}
+                    isLoading={isLoading}
                     nodeId={node.id}
                     page={page}
                     setPage={setPage}
+                    showDataObservabilitySummary={showDataObservabilitySummary}
+                    summary={summary}
                   />
                 </div>
               </section>

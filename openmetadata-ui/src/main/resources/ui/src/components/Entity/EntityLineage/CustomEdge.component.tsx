@@ -26,10 +26,7 @@ import { useLineageProvider } from '../../../context/LineageProvider/LineageProv
 import { EntityType } from '../../../enums/entity.enum';
 import { StatusType } from '../../../generated/entity/data/pipeline';
 import { LineageLayer } from '../../../generated/settings/settings';
-import {
-  getColumnSourceTargetHandles,
-  getEdgePathData,
-} from '../../../utils/EntityLineageUtils';
+import { getEdgePathData } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
@@ -142,30 +139,20 @@ export const CustomEdge = ({
       return false;
     }
 
-    const decodedHandles = getColumnSourceTargetHandles({
-      sourceHandle,
-      targetHandle,
-    });
-
     return (
-      tracedColumns.includes(decodedHandles.sourceHandle ?? '') &&
-      tracedColumns.includes(decodedHandles.targetHandle ?? '')
+      tracedColumns.includes(sourceHandle ?? '') &&
+      tracedColumns.includes(targetHandle ?? '')
     );
   }, [isColumnLineage, tracedColumns, sourceHandle, targetHandle]);
 
   const areBothColumnHandlesPresentInCurrentPage = useMemo(() => {
-    const decodedHandles = getColumnSourceTargetHandles({
-      sourceHandle,
-      targetHandle,
-    });
-
     const allColumnsInCurrentPages = new Set(
       Object.values(columnsInCurrentPages).flat()
     );
 
     return (
-      allColumnsInCurrentPages.has(decodedHandles.sourceHandle ?? '') &&
-      allColumnsInCurrentPages.has(decodedHandles.targetHandle ?? '')
+      allColumnsInCurrentPages.has(sourceHandle ?? '') &&
+      allColumnsInCurrentPages.has(targetHandle ?? '')
     );
   }, [columnsInCurrentPages, sourceHandle, targetHandle]);
 

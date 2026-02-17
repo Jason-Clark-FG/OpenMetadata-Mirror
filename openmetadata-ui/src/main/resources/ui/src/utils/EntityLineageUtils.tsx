@@ -120,26 +120,6 @@ interface LayoutedElements {
 
 export const MAX_LINEAGE_LENGTH = 20;
 
-export const encodeLineageHandles = (handle: string) => {
-  return btoa(encodeURIComponent(handle));
-};
-
-export const decodeLineageHandles = (handle?: string | null) => {
-  return handle ? decodeURIComponent(atob(handle)) : handle;
-};
-
-export const getColumnSourceTargetHandles = (obj: {
-  sourceHandle?: string | null;
-  targetHandle?: string | null;
-}) => {
-  const { sourceHandle, targetHandle } = obj;
-
-  return {
-    sourceHandle: decodeLineageHandles(sourceHandle),
-    targetHandle: decodeLineageHandles(targetHandle),
-  };
-};
-
 export const onLoad = (reactFlowInstance: ReactFlowInstance) => {
   reactFlowInstance.fitView();
 };
@@ -320,8 +300,7 @@ export const getELKLayoutedElements = async (
 export const getModalBodyText = (selectedEdge: Edge) => {
   const { data } = selectedEdge;
   const { fromEntity, toEntity } = data.edge as EdgeDetails;
-  const { sourceHandle = '', targetHandle = '' } =
-    getColumnSourceTargetHandles(selectedEdge);
+  const { sourceHandle = '', targetHandle = '' } = selectedEdge;
 
   const { isColumnLineage } = data as CustomEdgeData;
   let sourceEntity = '';
@@ -507,13 +486,13 @@ const getTracedEdge = (
 
   const tracedEdgeIds = edges
     .filter((e) => {
-      const { sourceHandle, targetHandle } = getColumnSourceTargetHandles(e);
+      const { sourceHandle, targetHandle } = e;
       const id = isIncomer ? targetHandle : sourceHandle;
 
       return id === selectedColumn;
     })
     .map((e) => {
-      const { sourceHandle, targetHandle } = getColumnSourceTargetHandles(e);
+      const { sourceHandle, targetHandle } = e;
 
       return isIncomer ? sourceHandle ?? '' : targetHandle ?? '';
     });
@@ -722,7 +701,7 @@ export const getEntityChildrenAndLabel = (
     label: '',
   };
 
-  const { totalHeight, flattened } = calculateHeightAndFlattenNode(
+  const { flattened } = calculateHeightAndFlattenNode(
     data as Column[],
     expandAllColumns,
     columnsHavingLineage
@@ -731,7 +710,7 @@ export const getEntityChildrenAndLabel = (
   return {
     children: data,
     childrenHeading: label,
-    childrenHeight: totalHeight,
+    childrenHeight: 200,
     childrenFlatten: flattened,
   };
 };
@@ -909,9 +888,9 @@ export const createEdgesAndEdgeMaps = (
             columnsHavingLineage.add(fromColumn);
             columnsHavingLineage.add(toColumn);
 
-            const encodedFrom = encodeLineageHandles(fromColumn);
-            const encodedTo = encodeLineageHandles(toColumn);
-            const edgeId = `column-${encodedFrom}-${encodedTo}-edge-${sourceId}-${targetId}`;
+            // const encodedFrom = encodeLineageHandles(fromColumn);
+            // const encodedTo = encodeLineageHandles(toColumn);
+            const edgeId = `column-${fromColumn}-${toColumn}-edge-${sourceId}-${targetId}`;
 
             if (!edgeIds.has(edgeId)) {
               edgeIds.add(edgeId);
@@ -919,17 +898,15 @@ export const createEdgesAndEdgeMaps = (
                 id: edgeId,
                 source: sourceId,
                 target: targetId,
-                targetHandle: encodedTo,
-                sourceHandle: encodedFrom,
+                targetHandle: toColumn,
+                sourceHandle: fromColumn,
                 style: { strokeWidth: '2px' },
                 type: 'buttonedge',
                 markerEnd: { type: MarkerType.ArrowClosed },
                 data: {
                   edge,
                   isColumnLineage: true,
-                  targetHandle: encodedTo,
-                  sourceHandle: encodedFrom,
-                  dataTestId: `column-edge-${encodedFrom}-${encodedTo}`,
+                  dataTestId: `column-edge-${fromColumn}-${toColumn}`,
                 },
                 ...(hidden && { hidden }),
               });
@@ -975,8 +952,8 @@ export const getColumnLineageData = (
   data: Edge
 ) => {
   const columnsLineage = columnsData?.reduce((col, curr) => {
-    const sourceHandle = decodeLineageHandles(data.data?.sourceHandle);
-    const targetHandle = decodeLineageHandles(data.data?.targetHandle);
+    const sourceHandle = data.data?.sourceHandle;
+    const targetHandle = data.data?.targetHandle;
 
     if (curr.toColumn === targetHandle) {
       const newCol = {
