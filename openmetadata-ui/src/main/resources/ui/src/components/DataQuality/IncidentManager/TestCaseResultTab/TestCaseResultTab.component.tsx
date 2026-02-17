@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import type { SxProps, Theme } from '@mui/material';
 import {
   Box,
   Divider,
@@ -70,6 +71,33 @@ import EditTestCaseModal from '../../AddDataQualityTest/EditTestCaseModal';
 import '../incident-manager.style.less';
 import './test-case-result-tab.style.less';
 import testCaseResultTabClassBase from './TestCaseResultTabClassBase';
+
+function ParameterTooltipText({
+  className,
+  title,
+  valueSx,
+}: {
+  className: string;
+  title: string;
+  valueSx?: SxProps<Theme>;
+}) {
+  return (
+    <Tooltip
+      placement="bottom-start"
+      slotProps={{
+        tooltip: {
+          sx: {
+            maxWidth: '100%',
+          },
+        },
+      }}
+      title={title}>
+      <Typography noWrap className={className} sx={valueSx} variant="body2">
+        {title}
+      </Typography>
+    </Tooltip>
+  );
+}
 
 const TestCaseResultTab = () => {
   const { t } = useTranslation();
@@ -344,26 +372,16 @@ const TestCaseResultTab = () => {
                         direction="row"
                         spacing={0.5}
                         sx={{ width: '100%' }}>
-                        <Tooltip
-                          placement="bottom-start"
-                          title={`${item.label}:`}>
-                          <Typography
-                            noWrap
-                            className="parameter-label"
-                            variant="body2">
-                            {`${item.label}:`}
-                          </Typography>
-                        </Tooltip>
+                        <ParameterTooltipText
+                          className="parameter-label"
+                          title={`${item.label}:`}
+                        />
                         {typeof item.value === 'string' ? (
-                          <Tooltip placement="bottom-start" title={item.value}>
-                            <Typography
-                              noWrap
-                              className="parameter-value-text"
-                              sx={{ flex: 1 }}
-                              variant="body2">
-                              {item.value}
-                            </Typography>
-                          </Tooltip>
+                          <ParameterTooltipText
+                            className="parameter-value-text"
+                            title={item.value}
+                            valueSx={{ flex: 1, minWidth: 0 }}
+                          />
                         ) : (
                           item.value
                         )}
