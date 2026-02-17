@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { GlobalSettingOptions } from '../../constant/settings';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { UserClass } from '../../support/user/UserClass';
@@ -259,10 +259,16 @@ test.describe.serial('Settings Navigation Page Tests', () => {
     await navigateToPersonaNavigation(page);
 
     const treeItems = page.locator('.ant-tree-node-content-wrapper');
+
+    // Wait for the tree to be fully ready
+    await expect(treeItems.first()).toBeVisible();
+
     const firstItem = treeItems.first();
     const secondItem = treeItems.nth(1);
 
     const firstItemText = await firstItem.textContent();
+
+    expect(firstItemText).not.toBeNull();
 
     const firstItemBox = await firstItem.boundingBox();
     const secondItemBox = await secondItem.boundingBox();
@@ -272,7 +278,6 @@ test.describe.serial('Settings Navigation Page Tests', () => {
 
     if (firstItemBox && secondItemBox) {
       await firstItem.dragTo(secondItem, {
-        force: true,
         sourcePosition: {
           x: firstItemBox.width / 2,
           y: firstItemBox.height / 2,
@@ -283,14 +288,13 @@ test.describe.serial('Settings Navigation Page Tests', () => {
         },
       });
 
-      // Adding wait so that drop action can complete
-      await page.waitForTimeout(500);
+      await expect(treeItems.first()).not.toHaveText(firstItemText as string);
 
-      await expect(page.getByTestId('save-button')).toBeEnabled();
+      // Now check if save button is enabled
+      const saveButton = page.getByTestId('save-button');
 
-      const newFirstItemText = await treeItems.first().textContent();
-
-      expect(newFirstItemText).not.toBe(firstItemText);
+      await expect(saveButton).toBeVisible();
+      await expect(saveButton).toBeEnabled();
     }
   });
 
@@ -331,10 +335,11 @@ test.describe.serial('Settings Navigation Page Tests', () => {
     await expect(page.getByText('Switch Persona')).toBeVisible();
 
     // Initially should show limited personas (2 by default)
-    const initialPersonaLabels = page.locator(
-      '[data-testid="persona-label"]'
-    ).locator('input[type="radio"]');
+    const initialPersonaLabels = page
+      .locator('[data-testid="persona-label"]')
+      .locator('input[type="radio"]');
     await initialPersonaLabels.first().click();
+
     await expect(page.getByTestId('app-bar-item-explore')).not.toBeVisible();
     await expect(page.getByTestId('app-bar-item-insights')).not.toBeVisible();
 
