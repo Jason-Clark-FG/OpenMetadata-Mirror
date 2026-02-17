@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { isUndefined, omitBy, toString } from 'lodash';
@@ -200,8 +199,9 @@ const ChartDetailsPage = () => {
   };
 
   const versionHandler = () => {
-    version &&
+    if (version) {
       navigate(getVersionPath(EntityType.CHART, chartFQN, toString(version)));
+    }
   };
 
   const handleToggleDelete = (version?: number) => {

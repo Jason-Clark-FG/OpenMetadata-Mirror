@@ -35,7 +35,9 @@ jest.mock('../../rest/alertsAPI', () => ({
       name: 'ActivityFeedAlert',
     })
   ),
-  getResourceFunctions: jest.fn(),
+  getResourceFunctions: jest
+    .fn()
+    .mockImplementation(() => Promise.resolve({ data: [] })),
   updateNotificationAlert: jest.fn().mockImplementation(() =>
     Promise.resolve({
       id: 'ActivityFeedAlert',
