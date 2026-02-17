@@ -60,14 +60,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const yesterdayOption = page.getByText('Yesterday').first();
       await expect(yesterdayOption).toBeVisible();
 
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
 
       // Click on "Yesterday" option
       await yesterdayOption.click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
     });
 
     await test.step(
@@ -86,14 +86,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     );
 
     await test.step('Clear filters', async () => {
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
 
       const clearButton = page.getByTestId('clear-filters');
       await clearButton.click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
 
       // Filter tag should be removed
       const filterTag = page.getByTestId('filter-chip-time');
@@ -132,15 +132,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
           .getByText('Table', { exact: true });
         await expect(tableOption).toBeVisible();
 
-        const auditLogResponse = page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/audit') &&
-            response.status() === 200
+        const auditLogResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
         );
 
         await tableOption.click();
         await page.getByTestId('update-btn').click();
-        await auditLogResponse;
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
 
         // Verify both filters are active (multi-filter behavior)
         const timeFilterTag = page.getByTestId('filter-chip-time');
@@ -192,12 +191,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       const yesterdayOption = page.getByText('Yesterday').first();
       // Wait for API response
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
       await yesterdayOption.click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
     });
 
     await test.step('Verify filter tag is displayed', async () => {
@@ -209,13 +208,13 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const filterTag = page.getByTestId('filter-chip-time');
       const closeIcon = page.getByTestId('remove-filter-time');
 
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
 
       await closeIcon.click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
 
       await expect(filterTag).not.toBeVisible();
     });
@@ -229,12 +228,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await timeFilter.click();
 
       const yesterdayOption = page.getByText('Yesterday').first();
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
       await yesterdayOption.click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
     });
 
     await test.step('Verify Yesterday filter is active', async () => {
@@ -252,14 +251,13 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         const last7DaysOption = page.getByText('Last 7 Days').first();
         await expect(last7DaysOption).toBeVisible();
 
-        const auditLogResponse = page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/audit') &&
-            response.status() === 200
+        const auditLogResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
         );
 
         await last7DaysOption.click();
-        await auditLogResponse;
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
       }
     );
 
@@ -276,6 +274,120 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     );
   });
 
+  test('should apply both User and EntityType filters simultaneously', async ({
+    page,
+  }) => {
+    await test.step('Navigate to audit logs page', async () => {
+      await redirectToHomePage(page);
+      await navigateToAuditLogsPage(page);
+    });
+
+    await test.step('Apply User filter (select admin)', async () => {
+      const userFilter = page.getByTestId('search-dropdown-User');
+      await userFilter.click();
+
+      const searchInput = page.getByTestId('search-input');
+      await searchInput.fill('admin');
+
+      const adminOption = page
+        .locator('.ant-dropdown-menu')
+        .getByText('admin', { exact: true });
+      await expect(adminOption).toBeVisible();
+
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
+      );
+
+      await adminOption.click();
+      await page.getByTestId('update-btn').click();
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
+
+      const userFilterTag = page.getByTestId('filter-chip-user');
+      await expect(userFilterTag).toBeVisible();
+      await expect(userFilterTag).toContainText('admin');
+    });
+
+    await test.step(
+      'Add EntityType filter (should coexist with User filter)',
+      async () => {
+        const entityTypeFilter = page.getByTestId(
+          'search-dropdown-Entity Type'
+        );
+        await entityTypeFilter.click();
+
+        const firstEntityItem = page.locator('.ant-dropdown-menu-item').first();
+        await expect(firstEntityItem).toBeVisible();
+
+        const entityNameSpan = firstEntityItem.locator(
+          '.dropdown-option-label'
+        );
+        const entityText = await entityNameSpan.textContent();
+        const entityType = entityText?.trim() || '';
+
+        const searchInput = page.getByTestId('search-input');
+        await searchInput.fill(entityType);
+
+        await page.waitForTimeout(500);
+
+        const entityOption = page.locator('.ant-dropdown-menu-item').first();
+        await expect(entityOption).toBeVisible();
+
+        const auditLogResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
+        );
+
+        await entityOption.click();
+        await page.getByTestId('update-btn').click();
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
+        const entityFilterTag = page.getByTestId('filter-chip-entityType');
+        await expect(entityFilterTag).toBeVisible();
+        await expect(entityFilterTag).toContainText(entityType);
+
+        const responseUrl = response.url();
+        expect(responseUrl).toContain('userName=');
+        expect(responseUrl).toContain('entityType=');
+      }
+    );
+
+    await test.step(
+      'Verify both User and EntityType filters are active simultaneously',
+      async () => {
+        const userFilterTag = page.getByTestId('filter-chip-user');
+        await expect(userFilterTag).toBeVisible();
+        await expect(userFilterTag).toContainText('admin');
+
+        const entityFilterTag = page.getByTestId('filter-chip-entityType');
+        await expect(entityFilterTag).toBeVisible();
+
+        const clearButton = page.getByTestId('clear-filters');
+        await expect(clearButton).toBeVisible();
+      }
+    );
+
+    await test.step(
+      'Remove User filter and verify EntityType filter remains',
+      async () => {
+        const userFilterTag = page.getByTestId('filter-chip-user');
+        const removeUserButton = page.getByTestId('remove-filter-user');
+
+        const auditLogResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
+        );
+
+        await removeUserButton.click();
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
+
+        await expect(userFilterTag).not.toBeVisible();
+
+        const entityFilterTag = page.getByTestId('filter-chip-entityType');
+        await expect(entityFilterTag).toBeVisible();
+      }
+    );
+  });
+
   test('should search audit logs', async ({ page }) => {
     await test.step('Enter search term and press Enter', async () => {
       const searchInput = page.getByPlaceholder('Search audit logs');
@@ -284,12 +396,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const auditLogResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/audit') &&
-          response.url().includes('q=admin') &&
-          response.status() === 200
+          response.url().includes('q=admin')
       );
 
       await searchInput.press('Enter');
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
     });
 
     await test.step('Verify Clear button appears after search', async () => {
@@ -314,13 +426,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const auditLogResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/audit') &&
-          response.url().includes('q=admin') &&
-          response.status() === 200
+          response.url().includes('q=admin')
       );
 
       await searchInput.press('Enter');
       const response = await auditLogResponse;
-      expect(response.ok()).toBe(true);
+      expect(response.status()).toBe(200);
 
       // Clear search
       const clearButton = page.getByTestId('clear-filters');
@@ -334,13 +445,12 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const auditLogResponse2 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/audit') &&
-          response.url().includes('q=ADMIN') &&
-          response.status() === 200
+          response.url().includes('q=ADMIN')
       );
 
       await searchInput.press('Enter');
       const response2 = await auditLogResponse2;
-      expect(response2.ok()).toBe(true);
+      expect(response2.status()).toBe(200);
     });
   });
 
@@ -388,12 +498,11 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         const auditLogResponse = page.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/audit') &&
-            response.url().includes('limit=50') &&
-            response.status() === 200
+            response.url().includes('limit=50')
         );
         await option50Global.click();
-        await auditLogResponse;
-
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
         // Verify dropdown shows 50
         await expect(pageSizeDropdown).toContainText('50');
       }
@@ -406,14 +515,13 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         (await nextPageButton.isVisible()) &&
         (await nextPageButton.isEnabled())
       ) {
-        const auditLogResponse = page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/audit') &&
-            response.status() === 200
+        const auditLogResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
         );
 
         await nextPageButton.click();
-        await auditLogResponse;
+        const response = await auditLogResponse;
+        expect(response.status()).toBe(200);
 
         const previousPageButton = page.getByTestId('previous-page');
         await expect(previousPageButton).toBeEnabled();
@@ -482,14 +590,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const tableOption = popover.getByText('Table', { exact: true });
       await expect(tableOption).toBeVisible();
 
-      const auditLogResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/audit') && response.status() === 200
+      const auditLogResponse = page.waitForResponse((response) =>
+        response.url().includes('/api/v1/audit')
       );
 
       await tableOption.click();
       await page.getByTestId('update-btn').click();
-      await auditLogResponse;
+      const response = await auditLogResponse;
+      expect(response.status()).toBe(200);
     });
 
     await test.step('Verify entity type badge is displayed', async () => {
@@ -561,14 +669,13 @@ test.describe(
           const searchInput = page.getByPlaceholder('Search audit logs');
           await searchInput.fill('table');
 
-          const auditLogResponse = page.waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/audit') &&
-              response.status() === 200
+          const auditLogResponse = page.waitForResponse((response) =>
+            response.url().includes('/api/v1/audit')
           );
 
           await searchInput.press('Enter');
           const response = await auditLogResponse;
+          expect(response.status()).toBe(200);
           const responseData = await response.json();
 
           // Verify response has expected structure
@@ -681,10 +788,8 @@ test.describe(
         await searchInput.fill('admin');
         await searchInput.press('Enter');
 
-        await page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/audit') &&
-            response.status() === 200
+        await page.waitForResponse((response) =>
+          response.url().includes('/api/v1/audit')
         );
       });
 
@@ -1470,15 +1575,14 @@ test.describe(
           const glossaryTermsOption = popover.getByTestId('glossary');
           await expect(glossaryTermsOption).toBeVisible();
 
-          const auditLogResponse = page.waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/audit') &&
-              response.status() === 200
+          const auditLogResponse = page.waitForResponse((response) =>
+            response.url().includes('/api/v1/audit')
           );
 
           await glossaryTermsOption.click();
           await page.getByTestId('update-btn').click();
-          await auditLogResponse;
+          const response = await auditLogResponse;
+          expect(response.status()).toBe(200);
         });
 
         await test.step(
@@ -1488,14 +1592,13 @@ test.describe(
             const searchInput = page.getByTestId('audit-log-search');
             await searchInput.fill(glossaryName);
 
-            const searchResponse = page.waitForResponse(
-              (response) =>
-                response.url().includes('/api/v1/audit') &&
-                response.status() === 200
+            const searchResponse = page.waitForResponse((response) =>
+              response.url().includes('/api/v1/audit')
             );
 
             await searchInput.press('Enter');
             const response = await searchResponse;
+            expect(response.status()).toBe(200);
             const responseData = await response.json();
 
             // Should find at least one entry
