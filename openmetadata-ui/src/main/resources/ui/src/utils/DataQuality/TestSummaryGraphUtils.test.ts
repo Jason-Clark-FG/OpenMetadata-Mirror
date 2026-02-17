@@ -45,26 +45,6 @@ jest.mock('../ChartUtils', () => ({
   }),
 }));
 
-// jest.mock('../date-time/DateTimeUtils', () => ({
-//   convertSecondsToHumanReadableFormat: jest.fn(
-//     (seconds: number) => {
-//       if (seconds === 0) {
-//         return '0s';
-//       }
-
-//       if (seconds >= 3600) {
-//         return `${Math.floor(seconds / 3600)}h`;
-//       }
-
-//       if (seconds >= 60) {
-//         return `${Math.floor(seconds / 60)}m`;
-//       }
-
-//       return `${seconds}s`;
-//     }
-//   ),
-// }));
-
 describe('prepareChartData', () => {
   it('should prepare chart data correctly', () => {
     const testObj = {
