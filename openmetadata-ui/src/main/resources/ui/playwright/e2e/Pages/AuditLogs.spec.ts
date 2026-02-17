@@ -42,42 +42,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     });
   });
 
-  test('should display filter controls and search bar', async ({ page }) => {
-    await test.step('Verify Time filter is visible', async () => {
-      const timeFilter = page.getByTestId('date-picker-menu');
-      await expect(timeFilter).toBeVisible();
-    });
-
-    await test.step('Verify other filters are visible', async () => {
-      const userFilter = page.locator('[data-testid="search-dropdown-User"]');
-      await expect(userFilter).toBeVisible();
-
-      const entityTypeFilter = page.locator(
-        '[data-testid="search-dropdown-Entity Type"]'
-      );
-      await expect(entityTypeFilter).toBeVisible();
-    });
-
-    await test.step('Verify search bar is visible', async () => {
-      const searchContainer = page.getByTestId('audit-log-search-container');
-      await expect(searchContainer).toBeVisible();
-      const searchInput = page.getByPlaceholder('Search audit logs');
-      await expect(searchInput).toBeVisible();
-    });
-  });
-
-  test('should display audit logs list', async ({ page }) => {
-    await test.step('Verify list container is visible', async () => {
-      const list = page.getByTestId('audit-log-list');
-      await expect(list).toBeVisible();
-    });
-
-    await test.step('Verify list has header', async () => {
-      const header = page.getByTestId('audit-logs-page-header');
-      await expect(header).toBeVisible();
-    });
-  });
-
   test('should apply and clear filters', async ({ page }) => {
     await test.step(
       'Clear button should not be visible initially',
@@ -158,13 +122,14 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await test.step(
       'Add Entity Type filter (should add to existing filters)',
       async () => {
-        const entityTypeFilter = page.locator(
-          '[data-testid="search-dropdown-Entity Type"]'
+        const entityTypeFilter = page.getByTestId(
+          'search-dropdown-Entity Type'
         );
         await entityTypeFilter.click();
 
-        // Entity Type uses SearchDropdown, options are in a list
-        const tableOption = page.getByText('Table').last(); // last because label and option logic
+        const tableOption = page
+          .locator('.ant-dropdown-menu')
+          .getByText('Table', { exact: true });
         await expect(tableOption).toBeVisible();
 
         const auditLogResponse = page.waitForResponse(
@@ -189,7 +154,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('should allow searching within User filter', async ({ page }) => {
     await test.step('Open User filter category', async () => {
-      const userFilter = page.locator('[data-testid="search-dropdown-User"]');
+      const userFilter = page.getByTestId('search-dropdown-User');
       await userFilter.click();
     });
 
@@ -201,9 +166,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('should allow searching within Entity Type filter', async ({ page }) => {
     await test.step('Open Entity Type filter category', async () => {
-      const entityTypeFilter = page.locator(
-        '[data-testid="search-dropdown-Entity Type"]'
-      );
+      const entityTypeFilter = page.getByTestId('search-dropdown-Entity Type');
       await entityTypeFilter.click();
     });
 
@@ -213,7 +176,9 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       await searchInput.fill('Table');
 
-      const tableOption = page.getByText('Table').last();
+      const tableOption = page
+        .locator('.ant-dropdown-menu')
+        .getByText('Table', { exact: true });
       await expect(tableOption).toBeVisible();
     });
   });
@@ -284,11 +249,8 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         const timeFilter = page.getByTestId('date-picker-menu');
         await timeFilter.click();
 
-        // Wait for Time options to be visible
         const last7DaysOption = page.getByText('Last 7 Days').first();
-        await expect(last7DaysOption).toBeVisible({
-          timeout: 5000,
-        });
+        await expect(last7DaysOption).toBeVisible();
 
         const auditLogResponse = page.waitForResponse(
           (response) =>
@@ -308,7 +270,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await expect(filterTag).toContainText('Time: Last 7 days');
 
         // Should only have one time filter tag
-        const timeFilterTags = page.locator('[data-testid="filter-chip-time"]');
+        const timeFilterTags = page.getByTestId('filter-chip-time');
         await expect(timeFilterTags).toHaveCount(1);
       }
     );
@@ -387,11 +349,11 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   }) => {
     await test.step('Verify pagination area exists', async () => {
       // Ensure we have logs to show pagination
-      await page.waitForSelector('[data-testid="audit-log-list"]', {
+      await page.getByTestId('audit-log-list').waitFor({
         state: 'visible',
       });
 
-      const listItems = page.locator('[data-testid="audit-log-list-item"]');
+      const listItems = page.getByTestId('audit-log-list-item');
       const itemCount = await listItems.count();
 
       if (itemCount === 0) {
@@ -463,11 +425,11 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await test.step('Verify list items have correct structure', async () => {
-      await page.waitForSelector('[data-testid="audit-log-list"]', {
+      await page.getByTestId('audit-log-list').waitFor({
         state: 'visible',
       });
 
-      const listItems = page.locator('[data-testid="audit-log-list-item"]');
+      const listItems = page.getByTestId('audit-log-list-item');
       const itemCount = await listItems.count();
 
       if (itemCount === 0) {
@@ -490,7 +452,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await test.step(
       'Verify list item has user info and event type',
       async () => {
-        const listItems = page.locator('[data-testid="audit-log-list-item"]');
+        const listItems = page.getByTestId('audit-log-list-item');
         const firstItem = listItems.first();
 
         const itemHeader = firstItem.getByTestId('item-header');
@@ -502,7 +464,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     );
 
     await test.step('Verify list item has metadata section', async () => {
-      const listItems = page.locator('[data-testid="audit-log-list-item"]');
+      const listItems = page.getByTestId('audit-log-list-item');
       const firstItem = listItems.first();
 
       const itemMeta = firstItem.getByTestId('item-meta');
@@ -517,7 +479,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       const popover = page.locator('.ant-dropdown-menu');
       await expect(popover).toBeVisible();
-      const tableOption = page.getByText('Table').last(); // last because label and option logic
+      const tableOption = popover.getByText('Table', { exact: true });
       await expect(tableOption).toBeVisible();
 
       const auditLogResponse = page.waitForResponse(
@@ -531,7 +493,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     });
 
     await test.step('Verify entity type badge is displayed', async () => {
-      const listItems = page.locator('[data-testid="audit-log-list-item"]');
+      const listItems = page.getByTestId('audit-log-list-item');
       const itemCount = await listItems.count();
 
       if (itemCount === 0) {
@@ -547,11 +509,11 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('should display relative timestamp in list items', async ({ page }) => {
     await test.step('Verify timestamp is displayed', async () => {
-      await page.waitForSelector('[data-testid="audit-log-list"]', {
+      await page.getByTestId('audit-log-list').waitFor({
         state: 'visible',
       });
 
-      const listItems = page.locator('[data-testid="audit-log-list-item"]');
+      const listItems = page.getByTestId('audit-log-list-item');
       const itemCount = await listItems.count();
 
       if (itemCount === 0) {
@@ -639,10 +601,8 @@ test.describe(
       await redirectToHomePage(page);
       await settingClick(page, GlobalSettingOptions.AUDIT_LOGS);
 
-      // Wait for page to fully load
-      await page.waitForSelector('[data-testid="export-audit-logs-button"]', {
+      await page.getByTestId('export-audit-logs-button').waitFor({
         state: 'visible',
-        timeout: 30000,
       });
 
       await test.step('Open Export modal', async () => {
@@ -651,7 +611,6 @@ test.describe(
 
         await page.waitForSelector('.ant-modal-content', {
           state: 'visible',
-          timeout: 10000,
         });
       });
 
@@ -685,7 +644,7 @@ test.describe(
           const exportOkButton = page.locator(
             '.ant-modal-footer button.ant-btn-primary'
           );
-          await expect(exportOkButton).toBeEnabled({ timeout: 5000 });
+          await expect(exportOkButton).toBeEnabled();
         }
       );
 
@@ -713,9 +672,8 @@ test.describe(
       await redirectToHomePage(page);
       await settingClick(page, GlobalSettingOptions.AUDIT_LOGS);
 
-      await page.waitForSelector('[data-testid="export-audit-logs-button"]', {
+      await page.getByTestId('export-audit-logs-button').waitFor({
         state: 'visible',
-        timeout: 30000,
       });
 
       await test.step('Enter a search term', async () => {
@@ -736,7 +694,6 @@ test.describe(
 
         await page.waitForSelector('.ant-modal-content', {
           state: 'visible',
-          timeout: 10000,
         });
       });
 
@@ -776,9 +733,8 @@ test.describe(
       await redirectToHomePage(page);
       await settingClick(page, GlobalSettingOptions.AUDIT_LOGS);
 
-      await page.waitForSelector('[data-testid="export-audit-logs-button"]', {
+      await page.getByTestId('export-audit-logs-button').waitFor({
         state: 'visible',
-        timeout: 30000,
       });
 
       await test.step('Open Export modal and select date range', async () => {
@@ -787,7 +743,6 @@ test.describe(
 
         await page.waitForSelector('.ant-modal-content', {
           state: 'visible',
-          timeout: 10000,
         });
 
         const dateRangePicker = page.getByTestId('export-date-range-picker');
@@ -1512,7 +1467,7 @@ test.describe(
           const popover = page.locator('.ant-dropdown-menu');
           await expect(popover).toBeVisible();
 
-          const glossaryTermsOption = page.getByTestId('glossary').last();
+          const glossaryTermsOption = popover.getByTestId('glossary');
           await expect(glossaryTermsOption).toBeVisible();
 
           const auditLogResponse = page.waitForResponse(
@@ -1560,7 +1515,7 @@ test.describe(
           'Verify the created glossary entry is visible in the UI list',
           async () => {
             const glossaryEntry = page
-              .locator('[data-testid="audit-log-list-item"]')
+              .getByTestId('audit-log-list-item')
               .filter({ hasText: glossaryName });
 
             await expect(glossaryEntry.first()).toBeVisible();

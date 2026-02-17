@@ -11,11 +11,31 @@
  *  limitations under the License.
  */
 
+import { TFunction } from 'i18next';
 import {
   AuditLogActiveFilter,
+  AuditLogFilterCategoryType,
   AuditLogListParams,
   TimeFilterValue,
 } from '../types/auditLogs.interface';
+
+export const getAuditLogCategoryLabel = (
+  category: AuditLogFilterCategoryType,
+  t: TFunction
+): string => {
+  switch (category) {
+    case 'time':
+      return t('label.time');
+    case 'user':
+      return t('label.user');
+    case 'bot':
+      return t('label.bot');
+    case 'entityType':
+      return t('label.entity-type');
+    default:
+      return '';
+  }
+};
 
 export const buildParamsFromFilters = (
   filters: AuditLogActiveFilter[]

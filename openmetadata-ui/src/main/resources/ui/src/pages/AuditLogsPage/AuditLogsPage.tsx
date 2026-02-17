@@ -22,19 +22,14 @@ import {
 import { styled } from '@mui/material/styles';
 import { XClose } from '@untitledui/icons';
 import { defaultColors } from '@openmetadata/ui-core-components';
-import {
-  Button,
-  Modal,
-  Progress,
-  Space,
-  Typography as AntTypography,
-} from 'antd';
+import { Button, Modal, Progress, Space } from 'antd';
 import { AxiosError } from 'axios';
 import dayjs from 'dayjs';
 import { DateTime } from 'luxon';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuditLogFilters, AuditLogList } from '../../components/AuditLog';
+import { useBreadcrumbs } from '../../components/common/atoms/navigation/useBreadcrumbs';
 import { useSearch } from '../../components/common/atoms/navigation/useSearch';
 import Banner from '../../components/common/Banner/Banner';
 import DatePicker from '../../components/common/DatePicker/DatePicker';
@@ -63,7 +58,6 @@ import { buildParamsFromFilters } from '../../utils/AuditLogUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { getSettingPath } from '../../utils/RouterUtils';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
-import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { ReactComponent as ExportIcon } from '../../assets/svg/ic-download.svg';
 import '../../components/common/atoms/filters/FilterSelection.less';
 import './AuditLogsPage.less';
@@ -337,17 +331,17 @@ const AuditLogsPage = () => {
     }
   }, [exportDateRange, searchTerm, filterParams]);
 
-  const breadcrumbs = useMemo(
-    () => [
+  const { breadcrumbs } = useBreadcrumbs({
+    home: { show: false },
+    items: [
       { name: t('label.setting-plural'), url: getSettingPath() },
       {
         name: t('label.access-control'),
         url: getSettingPath(GlobalSettingsMenuCategory.ACCESS),
       },
-      { name: t('label.audit-log-plural'), url: '' },
+      { name: t('label.audit-log-plural'), isActive: true },
     ],
-    [t]
-  );
+  });
 
   const handleExportModalClose = useCallback(() => {
     if (!isExporting) {
@@ -379,7 +373,7 @@ const AuditLogsPage = () => {
           overflow: 'hidden',
         }}>
         <Box sx={{ flexShrink: 0, marginBottom: theme.spacing(2) }}>
-          <TitleBreadcrumb titleLinks={breadcrumbs} />
+          {breadcrumbs}
         </Box>
         {/* Header */}
         <Box
@@ -566,13 +560,16 @@ const AuditLogsPage = () => {
         onCancel={handleExportModalClose}
         onOk={handleExport}>
         <Space className="w-full" direction="vertical" size={16}>
-          <AntTypography.Text type="secondary">
+          <Typography color="text.secondary">
             {t('message.export-audit-logs-description')}
-          </AntTypography.Text>
+          </Typography>
           <div>
-            <AntTypography.Text className="m-b-xs d-block">
-              {t('label.date-range')} <span className="text-red-500">*</span>
-            </AntTypography.Text>
+            <Typography component="span" sx={{ display: 'block', mb: 1 }}>
+              {t('label.date-range')}{' '}
+              <Box component="span" sx={{ color: 'error.main' }}>
+                *
+              </Box>
+            </Typography>
             <DatePicker.RangePicker
               allowClear
               className="w-full"
@@ -604,9 +601,11 @@ const AuditLogsPage = () => {
                 size="small"
                 status="active"
               />
-              <AntTypography.Text className="m-t-xs d-block" type="secondary">
+              <Typography
+                color="text.secondary"
+                sx={{ display: 'block', mt: 1 }}>
                 {exportJob.message ?? t('message.exporting')}
-              </AntTypography.Text>
+              </Typography>
             </div>
           )}
           {exportJob && exportJob.status !== 'IN_PROGRESS' && (

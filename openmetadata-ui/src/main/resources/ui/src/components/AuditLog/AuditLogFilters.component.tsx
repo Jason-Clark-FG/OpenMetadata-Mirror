@@ -14,13 +14,14 @@
 import { DateTime } from 'luxon';
 import { Space } from 'antd';
 import { debounce } from 'lodash';
-import { DateFilterType, DateRangeObject } from 'Models';
+import { DateRangeObject } from 'Models';
 import { FC, useCallback, useMemo, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
+import { AUDIT_LOG_TIME_FILTER_RANGE } from '../../constants/auditLog.constant';
 import { SearchIndex } from '../../enums/search.enum';
 import { User } from '../../generated/entity/teams/user';
-import { searchData } from '../../rest/miscAPI';
+import { searchQuery } from '../../rest/searchAPI';
 import {
   AuditLogActiveFilter,
   AuditLogFilterCategoryType,
@@ -28,6 +29,8 @@ import {
 } from '../../types/auditLogs.interface';
 import { formatUsersResponse } from '../../utils/APIUtils';
 import { getEntityName } from '../../utils/EntityUtils';
+import { getTermQuery } from '../../utils/SearchUtils';
+import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import DatePickerMenu from '../common/DatePickerMenu/DatePickerMenu.component';
 import SearchDropdown from '../SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../SearchDropdown/SearchDropdown.interface';
@@ -35,7 +38,10 @@ import {
   AuditLogFiltersProps,
   FilterOption,
 } from './AuditLogFilters.interface';
-import { buildParamsFromFilters } from '../../utils/AuditLogUtils';
+import {
+  buildParamsFromFilters,
+  getAuditLogCategoryLabel,
+} from '../../utils/AuditLogUtils';
 
 const ENTITY_TYPE_OPTIONS: FilterOption[] = [
   // Data Assets
@@ -105,20 +111,16 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
   const { t } = useTranslation();
 
   const auditTimeFilterRange = useMemo(
-    (): DateFilterType => ({
-      yesterday: {
-        days: 1,
-        title: t('label.yesterday'),
-      },
-      last7days: {
-        days: 7,
-        title: t('label.last-number-of-days', { numberOfDays: 7 }),
-      },
-      last30days: {
-        days: 30,
-        title: t('label.last-number-of-days', { numberOfDays: 30 }),
-      },
-    }),
+    () =>
+      Object.fromEntries(
+        Object.entries(AUDIT_LOG_TIME_FILTER_RANGE).map(([key, value]) => [
+          key,
+          {
+            ...value,
+            title: translateWithNestedKeys(value.title, value.titleData),
+          },
+        ])
+      ),
     [t]
   );
 
@@ -132,32 +134,13 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
 
 
 
-  const getCategoryLabel = useCallback(
-    (category: AuditLogFilterCategoryType): string => {
-      switch (category) {
-        case 'time':
-          return t('label.time');
-        case 'user':
-          return t('label.user');
-        case 'bot':
-          return t('label.bot');
-        case 'entityType':
-          return t('label.entity-type');
-        default:
-          return '';
-      }
-    },
-    [t]
-  );
+  
 
   const getSelectedKeys = useCallback(
     (category: AuditLogFilterCategoryType): SearchDropdownOption[] => {
       const filter = activeFilters.find((f) => f.category === category);
-      if (!filter) {
-        return [];
-      }
 
-      return [{ key: filter.value.key, label: filter.value.label }];
+      return filter ? [{ key: filter.value.key, label: filter.value.label }] : [];
     },
     [activeFilters]
   );
@@ -198,7 +181,7 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
 
       const newFilter: AuditLogActiveFilter = {
         category: 'time',
-        categoryLabel: getCategoryLabel('time'),
+        categoryLabel: getAuditLogCategoryLabel('time', t),
         value: {
           key: dateRange.key ?? 'custom',
           label,
@@ -219,7 +202,7 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
       const params = buildParamsFromFilters(newFilters);
       onFiltersChange(newFilters, params);
     },
-    [activeFilters, getCategoryLabel, onFiltersChange]
+    [activeFilters, onFiltersChange, t]
   );
 
   const handleDropdownChange = useCallback(
@@ -236,7 +219,7 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
         );
         const newFilter: AuditLogActiveFilter = {
           category,
-          categoryLabel: getCategoryLabel(category),
+          categoryLabel: getAuditLogCategoryLabel(category, t),
           value: {
             key: option.key,
             label: option.label,
@@ -255,26 +238,20 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
       const params = buildParamsFromFilters(newFilters);
       onFiltersChange(newFilters, params);
     },
-    [
-      activeFilters,
-      getCategoryLabel,
-      onFiltersChange,
-    ]
+    [activeFilters, onFiltersChange, t]
   );
 
   const fetchUsers = useCallback(async (search: string) => {
     setIsLoadingUsers(true);
     try {
-      const response = await searchData(
-        search,
-        1,
-        10,
-        'isBot:false',
-        '',
-        '',
-        SearchIndex.USER
-      );
-      const users: User[] = formatUsersResponse(response.data.hits.hits);
+      const response = await searchQuery({
+        query: search,
+        pageNumber: 1,
+        pageSize: 10,
+        queryFilter: getTermQuery({ isBot: 'false' }),
+        searchIndex: SearchIndex.USER,
+      });
+      const users: User[] = formatUsersResponse(response.hits.hits);
       setUserOptions(
         users.map((user) => ({
           key: user.name,
@@ -291,16 +268,14 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
   const fetchBots = useCallback(async (search: string) => {
     setIsLoadingBots(true);
     try {
-      const response = await searchData(
-        search,
-        1,
-        10,
-        'isBot:true',
-        '',
-        '',
-        SearchIndex.USER
-      );
-      const bots: User[] = formatUsersResponse(response.data.hits.hits);
+      const response = await searchQuery({
+        query: search,
+        pageNumber: 1,
+        pageSize: 10,
+        queryFilter: getTermQuery({ isBot: 'true' }),
+        searchIndex: SearchIndex.USER,
+      });
+      const bots: User[] = formatUsersResponse(response.hits.hits);
       setBotOptions(
         bots.map((bot) => ({
           key: bot.name,
