@@ -818,8 +818,6 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
       Double previousVersion = persistSuiteUpdate(testSuite, pipeline.getUpdatedBy());
       createTestSuiteCompletionChangeEvent(testSuite, previousVersion);
 
-      updateRelatedSuites(testSuite, pipeline.getUpdatedBy());
-
       LOG.info("Pipeline {} completed with status {}", pipeline.getFullyQualifiedName(), state);
 
       if (testSuite.getDataContract() != null) {
@@ -827,6 +825,8 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
             (DataContractRepository) Entity.getEntityRepository(Entity.DATA_CONTRACT);
         dataContractRepository.updateContractDQResults(testSuite.getDataContract(), testSuite);
       }
+
+      updateRelatedSuites(testSuite, pipeline.getUpdatedBy());
 
     } catch (Exception e) {
       LOG.error(
