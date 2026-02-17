@@ -65,7 +65,7 @@ export function getEdgeCoordinates(
   edge: Edge,
   sourceNode?: Node,
   targetNode?: Node,
-  columnsInCurrentPages?: Record<string, string[]>
+  columnsInCurrentPages?: Map<string, string[]>
 ): EdgeCoordinates | null {
   if (!sourceNode || !targetNode) {
     return null;
@@ -86,8 +86,8 @@ export function getEdgeCoordinates(
   const targetNodeHeight = getNodeHeight(targetNode);
 
   if (isColumnLineage && columnsInCurrentPages) {
-    const sourceIds = columnsInCurrentPages[sourceNode.id] || [];
-    const targetIds = columnsInCurrentPages[targetNode.id] || [];
+    const sourceIds = columnsInCurrentPages.get(sourceNode.id) || [];
+    const targetIds = columnsInCurrentPages.get(targetNode.id) || [];
     const sourceIndex = sourceIds.findIndex((id) => id === edge?.sourceHandle);
     const targetIndex = targetIds.findIndex((id) => id === edge?.targetHandle);
 
@@ -175,7 +175,7 @@ export function isEdgeInViewport(
   viewport: Viewport,
   canvasWidth: number,
   canvasHeight: number,
-  columnsInCurrentPages: Record<string, string[]>
+  columnsInCurrentPages: Map<string, string[]>
 ): boolean {
   const edgeBounds = getEdgeBounds(edge, sourceNode, targetNode);
   if (!edgeBounds) {
@@ -183,8 +183,8 @@ export function isEdgeInViewport(
   }
 
   if (edge.data?.isColumnLineage && columnsInCurrentPages) {
-    const sourceColumnIds = columnsInCurrentPages[edge.source] || [];
-    const targetColumnIds = columnsInCurrentPages[edge.target] || [];
+    const sourceColumnIds = columnsInCurrentPages.get(edge.source) || [];
+    const targetColumnIds = columnsInCurrentPages.get(edge.target) || [];
 
     if (
       !sourceColumnIds.includes(edge.sourceHandle ?? '') ||

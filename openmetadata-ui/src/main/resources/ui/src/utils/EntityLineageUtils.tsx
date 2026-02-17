@@ -23,6 +23,7 @@ import {
   isEqual,
   isNil,
   isUndefined,
+  pick,
   uniqueId,
   uniqWith,
 } from 'lodash';
@@ -68,7 +69,10 @@ import {
 } from '../components/Lineage/Lineage.interface';
 import { LineagePagingInfo } from '../components/LineageTable/LineageTable.interface';
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
-import { NO_DATA_PLACEHOLDER } from '../constants/constants';
+import {
+  LINEAGE_CHILD_ITEMS_PER_PAGE,
+  NO_DATA_PLACEHOLDER,
+} from '../constants/constants';
 import {
   LINEAGE_EXPORT_HEADERS,
   LINEAGE_TABLE_COLUMN_LOCALIZATION_KEYS,
@@ -140,18 +144,6 @@ export const centerNodePosition = (
   );
 };
 
-export const onNodeMouseEnter = (_event: ReactMouseEvent, _node: Node) => {
-  return;
-};
-
-export const onNodeMouseMove = (_event: ReactMouseEvent, _node: Node) => {
-  return;
-};
-
-export const onNodeMouseLeave = (_event: ReactMouseEvent, _node: Node) => {
-  return;
-};
-
 export const onNodeContextMenu = (event: ReactMouseEvent, _node: Node) => {
   event.preventDefault();
 };
@@ -165,7 +157,7 @@ export const getLayoutedElements = (
   direction = EntityLineageDirection.LEFT_RIGHT,
   isExpanded = true,
   expandAllColumns = false,
-  columnsHavingLineage: string[] = []
+  columnsHavingLineage: Set<string> = new Set()
 ): LayoutedElements => {
   const Graph = graphlib.Graph;
   const dagreGraph = new Graph();
@@ -229,28 +221,33 @@ const layoutOptions = {
   'elk.partitioning.activate': 'true',
 };
 
-const elk = new ELK();
+const elk = new ELK({
+  workerFactory: () =>
+    new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
+});
 
 export const getELKLayoutedElements = async (
   nodes: Node[],
   edges: Edge[],
   isExpanded = true,
   expandAllColumns = false,
-  columnsHavingLineage: string[] = []
+  columnsHavingLineage: Set<string> = new Set()
 ) => {
   const elkNodes: ElkNode[] = nodes.map((node) => {
-    const { childrenHeight } = getEntityChildrenAndLabel(
-      node.data.node,
-      expandAllColumns,
-      columnsHavingLineage
-    );
-    const nodeHeight = isExpanded ? childrenHeight + 220 : NODE_HEIGHT;
+    const nodeHeight =
+      node.height && node.height > NODE_HEIGHT
+        ? node.height
+        : isExpanded
+        ? getEntityChildrenAndLabel(
+            node.data.node,
+            expandAllColumns,
+            columnsHavingLineage
+          ).childrenHeight + 220
+        : NODE_HEIGHT;
     const nodeDepth = node.data?.nodeDepth;
 
     return {
-      ...node,
-      targetPosition: 'left',
-      sourcePosition: 'right',
+      id: node.id,
       width: NODE_WIDTH,
       height: nodeHeight,
       ...(nodeDepth !== undefined && {
@@ -276,16 +273,15 @@ export const getELKLayoutedElements = async (
 
   try {
     const layoutedGraph = await elk.layout(graph);
+    const layoutedMap = new Map(
+      (layoutedGraph?.children ?? []).map((n) => [n.id, n])
+    );
     const updatedNodes: Node[] = nodes.map((node) => {
-      const layoutedNode = (layoutedGraph?.children ?? []).find(
-        (elkNode) => elkNode.id === node.id
-      );
+      const layoutedNode = layoutedMap.get(node.id);
 
       return {
         ...node,
         position: { x: layoutedNode?.x ?? 0, y: layoutedNode?.y ?? 0 },
-        // layoutedNode contains the total height of the node including the children height
-        // Needed to calculate the bounds height of the nodes in the export
         height: layoutedNode?.height ?? node.height,
         hidden: false,
       };
@@ -549,11 +545,11 @@ export const getAllTracedColumnEdge = (column: string, columnEdge: Edge[]) => {
   return {
     incomingColumnEdges,
     outGoingColumnEdges,
-    connectedColumnEdges: [
+    connectedColumnEdges: new Set([
       column,
       ...incomingColumnEdges,
       ...outGoingColumnEdges,
-    ],
+    ]),
   };
 };
 
@@ -604,33 +600,40 @@ export const removeLineageHandler = async (data: EdgeData): Promise<void> => {
 const calculateHeightAndFlattenNode = (
   children: Column[],
   expandAllColumns = false,
-  columnsHavingLineage: string[] = []
+  columnsHavingLineage: Set<string> = new Set(),
+  heightCap = Infinity,
+  accumulator: { height: number; flattened: Column[] } = {
+    height: 0,
+    flattened: [],
+  }
 ): { totalHeight: number; flattened: Column[] } => {
-  let totalHeight = 0;
-  let flattened: Column[] = [];
-
-  children.forEach((child) => {
+  for (const child of children) {
     if (
-      expandAllColumns ||
-      columnsHavingLineage.indexOf(child.fullyQualifiedName ?? '') !== -1
+      accumulator.height < heightCap &&
+      (expandAllColumns ||
+        columnsHavingLineage.has(child.fullyQualifiedName ?? ''))
     ) {
-      totalHeight += 31; // Add height for the current child
+      accumulator.height += 31;
     }
-    flattened.push(child);
+
+    accumulator.flattened.push(child);
 
     if (child.children && child.children.length > 0) {
-      totalHeight += 8; // Add child padding
-      const childResult = calculateHeightAndFlattenNode(
+      if (accumulator.height < heightCap) {
+        accumulator.height += 8;
+      }
+
+      calculateHeightAndFlattenNode(
         child.children,
         expandAllColumns,
-        columnsHavingLineage
+        columnsHavingLineage,
+        heightCap,
+        accumulator
       );
-      totalHeight += childResult.totalHeight;
-      flattened = flattened.concat(childResult.flattened);
     }
-  });
+  }
 
-  return { totalHeight, flattened };
+  return { totalHeight: accumulator.height, flattened: accumulator.flattened };
 };
 
 /**
@@ -645,7 +648,7 @@ const calculateHeightAndFlattenNode = (
 export const getEntityChildrenAndLabel = (
   node: SourceType,
   expandAllColumns = false,
-  columnsHavingLineage: string[] = []
+  columnsHavingLineage: Set<string> = new Set()
 ) => {
   if (!node) {
     return {
@@ -701,16 +704,21 @@ export const getEntityChildrenAndLabel = (
     label: '',
   };
 
-  const { flattened } = calculateHeightAndFlattenNode(
+  const heightCap = expandAllColumns
+    ? Infinity
+    : LINEAGE_CHILD_ITEMS_PER_PAGE * 31;
+
+  const { totalHeight, flattened } = calculateHeightAndFlattenNode(
     data as Column[],
     expandAllColumns,
-    columnsHavingLineage
+    columnsHavingLineage,
+    heightCap
   );
 
   return {
     children: data,
     childrenHeading: label,
-    childrenHeight: 200,
+    childrenHeight: totalHeight,
     childrenFlatten: flattened,
   };
 };
@@ -745,35 +753,12 @@ export const checkUpstreamDownstream = (id: string, data: EdgeDetails[]) => {
   return { hasUpstream, hasDownstream };
 };
 
-const getNodeType = (
-  edgesData: EdgeDetails[],
-  id: string
-): EntityLineageNodeType => {
-  const hasDownStreamToEntity = edgesData.find(
-    (down) => down.toEntity.id === id
-  );
-  const hasDownStreamFromEntity = edgesData.find(
-    (down) => down.fromEntity.id === id
-  );
-  const hasUpstreamFromEntity = edgesData.find((up) => up.fromEntity.id === id);
-  const hasUpstreamToEntity = edgesData.find((up) => up.toEntity.id === id);
-
-  if (hasDownStreamToEntity && !hasDownStreamFromEntity) {
-    return EntityLineageNodeType.OUTPUT;
-  }
-  if (hasUpstreamFromEntity && !hasUpstreamToEntity) {
-    return EntityLineageNodeType.INPUT;
-  }
-
-  return EntityLineageNodeType.DEFAULT;
-};
-
 export const positionNodesUsingElk = async (
   nodes: Node[],
   edges: Edge[],
   isColView: boolean,
   expandAllColumns = false,
-  columnsHavingLineage: string[] = []
+  columnsHavingLineage: Set<string> = new Set()
 ) => {
   const obj = await getELKLayoutedElements(
     nodes,
@@ -793,7 +778,9 @@ export const createNodes = (
   incomingMap: Map<string, number>,
   outgoingMap: Map<string, number>,
   isExpanded = false,
-  hidden?: boolean
+  hidden?: boolean,
+  expandAllColumns = false,
+  columnsHavingLineage: Set<string> = new Set()
 ) => {
   const uniqueNodesMap = new Map<string, LineageEntityReference>();
   nodesData.forEach((node) => {
@@ -823,10 +810,18 @@ export const createNodes = (
     const type =
       node.type === EntityLineageNodeType.LOAD_MORE
         ? node.type
-        : getNodeType(edgesData, node.id);
+        : incomingMap.has(node.id) && !outgoingMap.has(node.id)
+        ? EntityLineageNodeType.OUTPUT
+        : !incomingMap.has(node.id) && outgoingMap.has(node.id)
+        ? EntityLineageNodeType.INPUT
+        : EntityLineageNodeType.DEFAULT;
 
     const nodeHeight = isExpanded
-      ? getEntityChildrenAndLabel(node as SourceType).childrenHeight + 220
+      ? getEntityChildrenAndLabel(
+          node as SourceType,
+          expandAllColumns,
+          columnsHavingLineage
+        ).childrenHeight + 220
       : NODE_HEIGHT;
 
     return {
@@ -852,35 +847,81 @@ export const createNodes = (
   });
 };
 
-export const createEdgesAndEdgeMaps = (
+export const createEntityEdgesAndMaps = (
   nodes: EntityReference[],
   edges: EdgeDetails[],
   entityFqn: string,
-  isColumnLayerActive: boolean,
   hidden?: boolean
 ) => {
-  const lineageEdgesV1: Edge[] = [];
-  const edgeIds = new Set<string>();
-  const columnsHavingLineage = new Set<string>();
+  const entityEdges: Edge[] = [];
   const incomingMap = new Map<string, number>();
   const outgoingMap = new Map<string, number>();
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
   edges.forEach((edge) => {
     const sourceId = edge.fromEntity.id;
     const targetId = edge.toEntity.id;
 
-    const sourceType = nodes.find((n) => sourceId === n.id);
-    const targetType = nodes.find((n) => targetId === n.id);
+    const sourceType = nodeById.get(sourceId);
+    const targetType = nodeById.get(targetId);
 
     if (isUndefined(sourceType) || isUndefined(targetType)) {
       return;
     }
 
-    // Update edge maps for fast lookup
     outgoingMap.set(sourceId, (outgoingMap.get(sourceId) ?? 0) + 1);
     incomingMap.set(targetId, (incomingMap.get(targetId) ?? 0) + 1);
 
-    if (!isUndefined(edge.columns) && isColumnLayerActive) {
+    const edgeId = `edge-${sourceId}-${targetId}`;
+    entityEdges.push({
+      id: edgeId,
+      source: sourceId,
+      target: targetId,
+      type: 'buttonedge',
+      animated: !isNil(edge.pipeline),
+      style: { strokeWidth: '2px' },
+      markerEnd: { type: MarkerType.ArrowClosed },
+      data: {
+        edge,
+        isColumnLineage: false,
+        isPipelineRootNode: !isNil(edge.pipeline)
+          ? entityFqn === edge.pipeline?.fullyQualifiedName
+          : false,
+        dataTestId: `edge-${edge.fromEntity.fullyQualifiedName}-${edge.toEntity.fullyQualifiedName}`,
+      },
+      ...(hidden && { hidden }),
+    });
+  });
+
+  return {
+    entityEdges,
+    incomingMap,
+    outgoingMap,
+  };
+};
+
+export const createColumnEdges = (
+  nodes: EntityReference[],
+  edges: EdgeDetails[],
+  hidden?: boolean
+) => {
+  const columnEdges: Edge[] = [];
+  const edgeIds = new Set<string>();
+  const columnsHavingLineage = new Set<string>();
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+  edges.forEach((edge) => {
+    const sourceId = edge.fromEntity.id;
+    const targetId = edge.toEntity.id;
+
+    const sourceType = nodeById.get(sourceId);
+    const targetType = nodeById.get(targetId);
+
+    if (isUndefined(sourceType) || isUndefined(targetType)) {
+      return;
+    }
+
+    if (!isUndefined(edge.columns)) {
       edge.columns?.forEach((e) => {
         const toColumn = e.toColumn ?? '';
         if (toColumn && e.fromColumns?.length) {
@@ -894,7 +935,7 @@ export const createEdgesAndEdgeMaps = (
 
             if (!edgeIds.has(edgeId)) {
               edgeIds.add(edgeId);
-              lineageEdgesV1.push({
+              columnEdges.push({
                 id: edgeId,
                 source: sourceId,
                 target: targetId,
@@ -915,33 +956,46 @@ export const createEdgesAndEdgeMaps = (
         }
       });
     }
-
-    const edgeId = `edge-${sourceId}-${targetId}`;
-    if (!edgeIds.has(edgeId)) {
-      edgeIds.add(edgeId);
-      lineageEdgesV1.push({
-        id: edgeId,
-        source: sourceId,
-        target: targetId,
-        type: 'buttonedge',
-        animated: !isNil(edge.pipeline),
-        style: { strokeWidth: '2px' },
-        markerEnd: { type: MarkerType.ArrowClosed },
-        data: {
-          edge,
-          isColumnLineage: false,
-          isPipelineRootNode: !isNil(edge.pipeline)
-            ? entityFqn === edge.pipeline?.fullyQualifiedName
-            : false,
-          dataTestId: `edge-${edge.fromEntity.fullyQualifiedName}-${edge.toEntity.fullyQualifiedName}`,
-        },
-      });
-    }
   });
 
   return {
-    edges: lineageEdgesV1,
-    columnsHavingLineage: Array.from(columnsHavingLineage),
+    columnEdges,
+    columnsHavingLineage,
+  };
+};
+
+export const createEdgesAndEdgeMaps = (
+  nodes: EntityReference[],
+  edges: EdgeDetails[],
+  entityFqn: string,
+  isColumnLayerActive: boolean,
+  hidden?: boolean
+) => {
+  const { entityEdges, incomingMap, outgoingMap } = createEntityEdgesAndMaps(
+    nodes,
+    edges,
+    entityFqn,
+    hidden
+  );
+
+  if (isColumnLayerActive) {
+    const { columnEdges, columnsHavingLineage } = createColumnEdges(
+      nodes,
+      edges,
+      hidden
+    );
+
+    return {
+      edges: [...entityEdges, ...columnEdges],
+      columnsHavingLineage,
+      incomingMap,
+      outgoingMap,
+    };
+  }
+
+  return {
+    edges: entityEdges,
+    columnsHavingLineage: new Set<string>(),
     incomingMap,
     outgoingMap,
   };
@@ -1428,7 +1482,26 @@ const processNodeArray = (
 ): LineageEntityReference[] => {
   return Object.values(nodes)
     .map((node: NodeData) => ({
-      ...node.entity,
+      ...(pick(node.entity, [
+        'id',
+        'type',
+        'fullyQualifiedName',
+        'name',
+        'displayName',
+        'columns',
+        'upstreamLineage',
+        'entityType',
+        'dataModel',
+        'deleted',
+        'mlFeatures',
+        'charts',
+        'messageSchema',
+        'responseSchema',
+        'requestSchema',
+        'fields',
+        'serviceType',
+        'testSuite',
+      ]) as unknown as LineageEntityReference),
       paging: {
         entityUpstreamCount: node.paging?.entityUpstreamCount ?? 0,
         entityDownstreamCount: node.paging?.entityDownstreamCount ?? 0,

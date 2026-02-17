@@ -12,10 +12,11 @@
  */
 import { useTheme } from '@mui/material';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Edge, Node, Viewport } from 'reactflow';
+import { Edge, Node, useViewport } from 'reactflow';
 import { useBlinkingAnimation } from '../../../hooks/useBlinkingAnimation';
 import { useCanvasEdgeRenderer } from '../../../hooks/useCanvasEdgeRenderer';
 import { useIconSprites } from '../../../hooks/useIconSprites';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import {
   colorToEdgeIndex,
   inverseTransformPoint,
@@ -24,37 +25,33 @@ import {
 export interface CanvasEdgeRendererProps {
   edges: Edge[];
   nodes: Node[];
-  viewport: Viewport;
-  tracedNodes: Set<string>;
-  tracedColumns: Set<string>;
   dqHighlightedEdges: Set<string>;
-  selectedEdge?: Edge;
-  selectedColumn?: string;
-  isEditMode?: boolean;
   onEdgeClick?: (edge: Edge, event: React.MouseEvent) => void;
   onEdgeHover?: (edge: Edge | null) => void;
-  columnsInCurrentPages: Record<string, string[]>;
 }
 
 export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
   edges,
   nodes,
-  viewport,
-  tracedNodes,
-  tracedColumns,
+
   dqHighlightedEdges,
-  selectedEdge,
-  selectedColumn,
-  isEditMode = false,
   onEdgeClick,
   onEdgeHover,
-  columnsInCurrentPages,
 }) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hitCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const {
+    selectedEdge,
+    selectedColumn,
+    isEditMode,
+    columnsInCurrentPages,
+    tracedColumns,
+    tracedNodes,
+  } = useLineageStore();
+  const viewport = useViewport();
 
   const sprites = useIconSprites();
 

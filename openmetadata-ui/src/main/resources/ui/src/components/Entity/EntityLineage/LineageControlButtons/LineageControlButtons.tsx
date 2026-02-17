@@ -35,6 +35,7 @@ import { FULLSCREEN_QUERY_PARAM_KEY } from '../../../../constants/constants';
 import { useLineageProvider } from '../../../../context/LineageProvider/LineageProvider';
 import { LineageLayer } from '../../../../generated/configuration/lineageSettings';
 import useCustomLocation from '../../../../hooks/useCustomLocation/useCustomLocation';
+import { useLineageStore } from '../../../../hooks/useLineageStore';
 import { centerNodePosition } from '../../../../utils/EntityLineageUtils';
 import { StyledMenu } from '../../../LineageTable/LineageTable.styled';
 
@@ -47,16 +48,11 @@ const LineageControlButtons: FC<{
   const [lineageViewOptionsAnchorEl, setLineageViewOptionsAnchorEl] =
     useState<null | HTMLElement>(null);
 
-  const {
-    reactFlowInstance,
-    redraw,
-    activeLayer,
-    isEditMode,
-    expandAllColumns,
-    toggleColumnView,
-  } = useLineageProvider();
+  const { reactFlowInstance, redraw } = useLineageProvider();
   const navigate = useNavigate();
   const location = useCustomLocation();
+  const { isEditMode, activeLayer, expandAllColumns, toggleExpandAllColumns } =
+    useLineageStore();
 
   const isColumnLayerActive = useMemo(() => {
     return activeLayer.includes(LineageLayer.ColumnLevelLineage);
@@ -192,7 +188,7 @@ const LineageControlButtons: FC<{
             className="lineage-button"
             data-testid="expand-column"
             value="expand-column"
-            onClick={toggleColumnView}>
+            onClick={toggleExpandAllColumns}>
             {expandAllColumns ? <ShrinkOutlined /> : <ArrowsAltOutlined />}
           </ToggleButton>
         </Tooltip>

@@ -27,21 +27,18 @@ import ReactFlow, {
   Node,
   Panel,
   ReactFlowProvider,
-  useViewport,
 } from 'reactflow';
 import {
   MAX_ZOOM_VALUE,
   MIN_ZOOM_VALUE,
 } from '../../constants/Lineage.constants';
 import { useLineageProvider } from '../../context/LineageProvider/LineageProvider';
+import { useLineageStore } from '../../hooks/useLineageStore';
 import {
   customEdges,
   dragHandle,
   nodeTypes,
   onNodeContextMenu,
-  onNodeMouseEnter,
-  onNodeMouseLeave,
-  onNodeMouseMove,
 } from '../../utils/EntityLineageUtils';
 import Loader from '../common/Loader/Loader';
 import { CanvasEdgeRenderer } from '../Entity/EntityLineage/CanvasEdgeRenderer.component';
@@ -56,37 +53,23 @@ const CanvasLayerWrapper = ({
   useCanvasEdges,
   edges,
   nodes,
-  tracedNodes,
-  tracedColumns,
   dqHighlightedEdges,
-  selectedEdge,
-  selectedColumn,
   onEdgeClick,
   onEdgeHover,
   onPipelineClick,
   onEdgeRemove,
-  isEditMode,
   hoveredEdge,
-  columnsInCurrentPages,
 }: {
   useCanvasEdges: boolean;
   edges: Edge[];
   nodes: Node[];
-  tracedNodes: Set<string>;
-  tracedColumns: Set<string>;
   dqHighlightedEdges: Set<string>;
-  selectedEdge?: Edge;
-  selectedColumn?: string;
   onEdgeClick?: (edge: Edge, event: React.MouseEvent) => void;
   onEdgeHover?: (edge: Edge | null) => void;
   onPipelineClick?: () => void;
   onEdgeRemove?: () => void;
-  isEditMode: boolean;
   hoveredEdge: Edge | null;
-  columnsInCurrentPages: Record<string, string[]>;
 }) => {
-  const viewport = useViewport();
-
   if (!useCanvasEdges) {
     return null;
   }
@@ -94,25 +77,15 @@ const CanvasLayerWrapper = ({
   return (
     <>
       <CanvasEdgeRenderer
-        columnsInCurrentPages={columnsInCurrentPages}
         dqHighlightedEdges={dqHighlightedEdges}
         edges={edges}
-        isEditMode={isEditMode}
         nodes={nodes}
-        selectedColumn={selectedColumn}
-        selectedEdge={selectedEdge}
-        tracedColumns={tracedColumns}
-        tracedNodes={tracedNodes}
-        viewport={viewport}
         onEdgeClick={onEdgeClick}
         onEdgeHover={onEdgeHover}
       />
       <EdgeInteractionOverlay
         edges={edges}
         hoveredEdge={hoveredEdge}
-        isEditMode={isEditMode}
-        selectedEdge={selectedEdge}
-        viewport={viewport}
         onEdgeRemove={onEdgeRemove}
         onPipelineClick={onPipelineClick}
       />
@@ -138,7 +111,6 @@ const Lineage = ({
   const {
     nodes,
     edges,
-    isEditMode,
     init,
     onNodeClick,
     onEdgeClick,
@@ -147,23 +119,25 @@ const Lineage = ({
     onEdgesChange,
     onPaneClick,
     onConnect,
-    onConnectStart,
-    onConnectEnd,
     onInitReactFlow,
     updateEntityData,
     onAddPipelineClick,
     onColumnEdgeRemove,
     dqHighlightedEdges,
-    selectedColumn,
-    // selectedEdge,
-    tracedColumns,
-    tracedNodes,
-    columnsInCurrentPages,
   } = useLineageProvider();
+  const { isEditMode, setIsCreatingEdge } = useLineageStore();
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onConnectStart = useCallback(() => {
+    setIsCreatingEdge(true);
+  }, []);
+
+  const onConnectEnd = useCallback(() => {
+    setIsCreatingEdge(false);
   }, []);
 
   useEffect(() => {
@@ -293,9 +267,6 @@ const Lineage = ({
                 onNodeDrag={dragHandle}
                 onNodeDragStart={dragHandle}
                 onNodeDragStop={dragHandle}
-                onNodeMouseEnter={onNodeMouseEnter}
-                onNodeMouseLeave={onNodeMouseLeave}
-                onNodeMouseMove={onNodeMouseMove}
                 onNodesChange={onNodesChange}
                 onPaneClick={onPaneClick}>
                 <Background gap={12} size={1} />
@@ -304,21 +275,15 @@ const Lineage = ({
                 )}
 
                 <CanvasLayerWrapper
-                  columnsInCurrentPages={columnsInCurrentPages}
                   dqHighlightedEdges={dqHighlightedEdges ?? new Set<string>()}
                   edges={edges}
                   hoveredEdge={hoveredEdge}
-                  isEditMode={isEditMode}
                   nodes={nodes}
-                  selectedColumn={selectedColumn}
-                  tracedColumns={new Set([...tracedColumns])}
-                  tracedNodes={new Set([...tracedNodes])}
                   useCanvasEdges={useCanvasEdges}
                   onEdgeClick={handleCanvasEdgeClick}
                   onEdgeHover={handleCanvasEdgeHover}
                   onEdgeRemove={onColumnEdgeRemove}
                   onPipelineClick={onAddPipelineClick}
-                  // selectedEdge={selectedEdge}
                 />
 
                 <Panel

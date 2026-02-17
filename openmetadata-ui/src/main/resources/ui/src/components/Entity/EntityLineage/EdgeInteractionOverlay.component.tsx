@@ -14,22 +14,20 @@ import Icon from '@ant-design/icons/lib/components/Icon';
 import { Button, Tag } from 'antd';
 import classNames from 'classnames';
 import React from 'react';
-import { Edge, Viewport } from 'reactflow';
+import { Edge, useViewport, Viewport } from 'reactflow';
 import { ReactComponent as IconEditCircle } from '../../../assets/svg/ic-edit-circle.svg';
 import { ReactComponent as FunctionIcon } from '../../../assets/svg/ic-function.svg';
 import { ReactComponent as IconTimesCircle } from '../../../assets/svg/ic-times-circle.svg';
 import { ReactComponent as PipelineIcon } from '../../../assets/svg/pipeline-grey.svg';
 import { StatusType } from '../../../generated/entity/data/pipeline';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { transformPoint } from '../../../utils/CanvasUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
 export interface EdgeInteractionOverlayProps {
   edges: Edge[];
-  selectedEdge?: Edge;
   hoveredEdge?: Edge | null;
-  isEditMode: boolean;
-  viewport: Viewport;
   onPipelineClick?: () => void;
   onEdgeRemove?: () => void;
 }
@@ -82,13 +80,12 @@ function getBlinkingClass(
 }
 
 export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
-  selectedEdge,
   hoveredEdge,
-  isEditMode,
-  viewport,
   onPipelineClick,
   onEdgeRemove,
 }) => {
+  const { isEditMode, selectedEdge } = useLineageStore();
+  const viewport = useViewport();
   const renderPipelinePopover = (edge: Edge) => {
     const {
       edge: edgeDetails,

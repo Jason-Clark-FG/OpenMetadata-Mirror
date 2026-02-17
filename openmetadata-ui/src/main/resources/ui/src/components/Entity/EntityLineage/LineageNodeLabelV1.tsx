@@ -19,14 +19,13 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconDBTModel } from '../../../assets/svg/dbt-model.svg';
 import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-delete.svg';
 import { ReactComponent as FilterIcon } from '../../../assets/svg/ic-filter.svg';
-import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { ModelType, Table } from '../../../generated/entity/data/table';
-import { LineageLayer } from '../../../generated/settings/settings';
 import {
   EntityReference,
   TestSummary,
 } from '../../../generated/tests/testCase';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../rest/testAPI';
 import { getEntityChildrenAndLabel } from '../../../utils/EntityLineageUtils';
 import {
@@ -155,23 +154,15 @@ const TestSuiteSummaryContainer = ({ node }: LineageNodeLabelPropsExtended) => {
     }
   };
 
-  const { activeLayer } = useLineageProvider();
-
-  const { showDataObservability } = useMemo(() => {
-    return {
-      showDataObservability: activeLayer?.includes(
-        LineageLayer.DataObservability
-      ),
-    };
-  }, [activeLayer]);
+  const { isDQEnabled } = useLineageStore();
 
   const showDataObservabilitySummary = useMemo(() => {
     return Boolean(
-      showDataObservability &&
+      isDQEnabled &&
         entityType === EntityType.TABLE &&
         (node as Table).testSuite
     );
-  }, [node, showDataObservability, entityType]);
+  }, [node, isDQEnabled, entityType]);
 
   useEffect(() => {
     const testSuite = (node as Table)?.testSuite;
@@ -213,7 +204,7 @@ const EntityFooter = ({
     () => getEntityChildrenAndLabel(node),
     [node.id]
   );
-  const { isEditMode } = useLineageProvider();
+  const { isEditMode } = useLineageStore();
 
   const childrenCount = children.length;
 

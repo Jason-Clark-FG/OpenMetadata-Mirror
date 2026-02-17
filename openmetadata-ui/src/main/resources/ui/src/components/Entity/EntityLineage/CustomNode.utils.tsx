@@ -13,7 +13,7 @@
 import { Dataflow01, Plus } from '@untitledui/icons';
 import { Button, Col, Row, Skeleton, Typography } from 'antd';
 import classNames from 'classnames';
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { Handle, HandleProps, HandleType, Position } from 'reactflow';
 import { ReactComponent as MinusIcon } from '../../../assets/svg/control-minus.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
@@ -21,6 +21,7 @@ import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
 import { Column } from '../../../generated/entity/data/table';
 import { ColumnTestSummaryDefinition } from '../../../generated/tests/testCase';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getColumnDataTypeIcon } from '../../../utils/TableUtils';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
@@ -193,7 +194,6 @@ const getColumnNameContent = (column: Column, isLoading: boolean) => {
 
 interface ColumnContentProps {
   column: Column;
-  isColumnTraced: boolean;
   isConnectable: boolean;
   showDataObservabilitySummary: boolean;
   isLoading: boolean;
@@ -202,27 +202,27 @@ interface ColumnContentProps {
 
 export const ColumnContent = ({
   column,
-  isColumnTraced,
   isConnectable,
   showDataObservabilitySummary,
   isLoading,
   summary,
 }: ColumnContentProps) => {
-  const {
-    onColumnClick,
-    onColumnMouseEnter,
-    onColumnMouseLeave,
-    selectedColumn,
-  } = useLineageProvider();
+  const { onColumnMouseEnter } = useLineageProvider();
+  const { selectedColumn, setSelectedColumn, tracedColumns, setTracedColumns } =
+    useLineageStore();
+  const isColumnTraced = useMemo(
+    () => tracedColumns.has(column.fullyQualifiedName ?? ''),
+    [tracedColumns, column.fullyQualifiedName]
+  );
 
   const { fullyQualifiedName } = column;
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onColumnClick(fullyQualifiedName ?? '');
+      setSelectedColumn(fullyQualifiedName ?? '');
     },
-    [fullyQualifiedName, onColumnClick]
+    [fullyQualifiedName, setSelectedColumn]
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -236,8 +236,8 @@ export const ColumnContent = ({
     if (selectedColumn) {
       return;
     }
-    onColumnMouseLeave();
-  }, [selectedColumn, onColumnMouseLeave]);
+    setTracedColumns(new Set());
+  }, [selectedColumn, setTracedColumns]);
 
   const columnNameContentRender = getColumnNameContent(column, isLoading);
 

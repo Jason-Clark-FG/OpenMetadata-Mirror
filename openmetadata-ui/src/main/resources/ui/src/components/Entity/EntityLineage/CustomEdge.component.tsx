@@ -25,7 +25,7 @@ import { FOREIGN_OBJECT_SIZE } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { StatusType } from '../../../generated/entity/data/pipeline';
-import { LineageLayer } from '../../../generated/settings/settings';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getEdgePathData } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
@@ -84,17 +84,20 @@ export const CustomEdge = ({
   const { fromEntity, toEntity, pipeline, pipelineEntityType } = edge;
 
   const {
-    tracedNodes,
-    tracedColumns,
-    isEditMode,
-    activeLayer,
     onAddPipelineClick,
     onColumnEdgeRemove,
     dataQualityLineage,
     dqHighlightedEdges,
+  } = useLineageProvider();
+
+  const {
+    tracedNodes,
+    tracedColumns,
+    isEditMode,
     selectedColumn,
     columnsInCurrentPages,
-  } = useLineageProvider();
+    isDQEnabled,
+  } = useLineageStore();
 
   const theme = useTheme();
 
@@ -123,15 +126,12 @@ export const CustomEdge = ({
 
   // Compute if should show DQ tracing
   const showDqTracing = useMemo(() => {
-    if (
-      !activeLayer.includes(LineageLayer.DataObservability) ||
-      !dataQualityLineage?.nodes
-    ) {
+    if (!isDQEnabled || !dataQualityLineage?.nodes) {
       return false;
     }
 
     return dqHighlightedEdges?.has(id);
-  }, [activeLayer, dataQualityLineage?.nodes, id, dqHighlightedEdges]);
+  }, [isDQEnabled, dataQualityLineage?.nodes, id, dqHighlightedEdges]);
 
   // Determine if column is highlighted based on traced columns
   const isColumnHighlighted = useMemo(() => {
@@ -140,8 +140,8 @@ export const CustomEdge = ({
     }
 
     return (
-      tracedColumns.includes(sourceHandle ?? '') &&
-      tracedColumns.includes(targetHandle ?? '')
+      tracedColumns.has(sourceHandle ?? '') &&
+      tracedColumns.has(targetHandle ?? '')
     );
   }, [isColumnLineage, tracedColumns, sourceHandle, targetHandle]);
 
@@ -159,8 +159,7 @@ export const CustomEdge = ({
   // Calculate edge style with memoization
   const updatedStyle = useMemo(() => {
     const isNodeTraced =
-      tracedNodes.includes(edge.fromEntity.id) &&
-      tracedNodes.includes(edge.toEntity.id);
+      tracedNodes.has(edge.fromEntity.id) && tracedNodes.has(edge.toEntity.id);
 
     let stroke = '';
     let display = 'block';
@@ -169,14 +168,14 @@ export const CustomEdge = ({
     // For nodes edges
     if (isNodeTraced) {
       stroke = theme.palette.primary.main;
-    } else if (!(tracedNodes.length === 0) || !(tracedColumns.length === 0)) {
+    } else if (!(tracedNodes.size === 0) || !(tracedColumns.size === 0)) {
       opacity = 0.3;
     }
 
     // For columns edges
     if (isColumnLineage) {
       display = 'none';
-      const noTracing = tracedNodes.length === 0 && tracedColumns.length === 0;
+      const noTracing = tracedNodes.size === 0 && tracedColumns.size === 0;
 
       if (isColumnHighlighted) {
         display = 'block';
@@ -203,7 +202,7 @@ export const CustomEdge = ({
     tracedNodes,
     edge.fromEntity.id,
     edge.toEntity.id,
-    tracedColumns.length,
+    tracedColumns.size,
     isColumnLineage,
     showDqTracing,
     style,
@@ -242,12 +241,9 @@ export const CustomEdge = ({
 
   // Calculate pipeline status for styling
   const currentPipelineStatus = useMemo(() => {
-    const isPipelineActiveNow = activeLayer.includes(
-      LineageLayer.DataObservability
-    );
     const pipelineData = pipeline?.pipelineStatus;
 
-    if (pipelineData && isPipelineActiveNow) {
+    if (pipelineData && isDQEnabled) {
       switch (pipelineData.executionStatus) {
         case StatusType.Failed:
           return 'red';
@@ -262,7 +258,7 @@ export const CustomEdge = ({
     }
 
     return '';
-  }, [pipeline?.pipelineStatus, activeLayer]);
+  }, [pipeline?.pipelineStatus, isDQEnabled]);
 
   // Calculate blinking class for pipeline nodes
   const blinkingClass = useMemo(() => {

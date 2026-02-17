@@ -41,7 +41,7 @@ interface UseCanvasEdgeRendererProps {
   sprites: IconSprites | null;
   containerWidth: number;
   containerHeight: number;
-  columnsInCurrentPages: Record<string, string[]>;
+  columnsInCurrentPages: Map<string, string[]>;
 }
 
 export function useCanvasEdgeRenderer({

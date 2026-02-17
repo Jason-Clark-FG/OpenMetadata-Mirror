@@ -27,7 +27,6 @@ import {
   DATATYPES_HAVING_SUBFIELDS,
   LINEAGE_COLUMN_NODE_SUPPORTED,
 } from '../../../../constants/Lineage.constants';
-import { useLineageProvider } from '../../../../context/LineageProvider/LineageProvider';
 import { EntityType } from '../../../../enums/entity.enum';
 import { Column, Table } from '../../../../generated/entity/data/table';
 import { LineageLayer } from '../../../../generated/settings/settings';
@@ -35,6 +34,7 @@ import {
   EntityReference,
   TestSummary,
 } from '../../../../generated/tests/testCase';
+import { useLineageStore } from '../../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../../rest/testAPI';
 import { getEntityChildrenAndLabel } from '../../../../utils/EntityLineageUtils';
 import EntityLink from '../../../../utils/EntityLink';
@@ -71,8 +71,7 @@ const CustomPaginatedList = ({
   summary,
 }: CustomPaginatedListProps) => {
   const { t } = useTranslation();
-  const { setColumnsInCurrentPages, tracedColumns, selectedColumn } =
-    useLineageProvider();
+  const { updateColumnsInCurrentPages, selectedColumn } = useLineageStore();
 
   const totalPages = Math.ceil(flatItems.length / LINEAGE_CHILD_ITEMS_PER_PAGE);
   const startIdx = (page - 1) * LINEAGE_CHILD_ITEMS_PER_PAGE;
@@ -110,16 +109,10 @@ const CustomPaginatedList = ({
    *  - `filteredColumns` is updated to include all columns of current node
    */
   useEffect(() => {
-    setColumnsInCurrentPages((prev) => {
-      const updated = { ...prev };
-      if (nodeId) {
-        updated[nodeId] = currentPageFlatItems.map(
-          (fi) => fi.column.fullyQualifiedName ?? ''
-        );
-      }
-
-      return updated;
-    });
+    updateColumnsInCurrentPages(
+      nodeId ?? '',
+      currentPageFlatItems.map((fi) => fi.column.fullyQualifiedName ?? '')
+    );
   }, [currentPageFlatItems, page]);
 
   const getColumnSummary = useCallback(
@@ -138,9 +131,7 @@ const CustomPaginatedList = ({
   const renderFlatItem = useCallback(
     (flatItem: FlatColumnItem, className: string) => {
       const { column, depth } = flatItem;
-      const isColumnTraced = tracedColumns.includes(
-        column.fullyQualifiedName ?? ''
-      );
+
       const columnSummary = getColumnSummary(column);
 
       return (
@@ -152,7 +143,6 @@ const CustomPaginatedList = ({
           }}>
           <ColumnContent
             column={column}
-            isColumnTraced={isColumnTraced}
             isConnectable={isConnectable}
             isLoading={isLoading}
             showDataObservabilitySummary={showDataObservabilitySummary}
@@ -162,7 +152,6 @@ const CustomPaginatedList = ({
       );
     },
     [
-      tracedColumns,
       getColumnSummary,
       isConnectable,
       isLoading,
@@ -251,7 +240,7 @@ const NodeChildren = ({
     expandAllColumns,
     selectedColumn,
     isCreatingEdge,
-  } = useLineageProvider();
+  } = useLineageStore();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
@@ -295,7 +284,7 @@ const NodeChildren = ({
 
   const hasLineageInNestedChildren = useCallback(
     (column: EntityChildrenItem): boolean => {
-      if (columnsHavingLineage.includes(column.fullyQualifiedName ?? '')) {
+      if (columnsHavingLineage.has(column.fullyQualifiedName ?? '')) {
         return true;
       }
 
@@ -364,7 +353,7 @@ const NodeChildren = ({
         return true;
       }
 
-      return columnsHavingLineage.includes(record.fullyQualifiedName ?? '');
+      return columnsHavingLineage.has(record.fullyQualifiedName ?? '');
     },
     [
       isEditMode,
