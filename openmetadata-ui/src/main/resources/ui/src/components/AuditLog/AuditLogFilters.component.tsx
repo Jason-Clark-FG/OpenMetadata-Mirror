@@ -19,9 +19,7 @@ import { FC, useCallback, useMemo, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { SearchIndex } from '../../enums/search.enum';
-import { Bot } from '../../generated/entity/bot';
 import { User } from '../../generated/entity/teams/user';
-import { getBots } from '../../rest/botsAPI';
 import { searchData } from '../../rest/miscAPI';
 import {
   AuditLogActiveFilter,
@@ -126,6 +124,9 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
 
   const [userOptions, setUserOptions] = useState<SearchDropdownOption[]>([]);
   const [botOptions, setBotOptions] = useState<SearchDropdownOption[]>([]);
+  const [filteredEntityTypeOptions, setFilteredEntityTypeOptions] = useState<
+    SearchDropdownOption[]
+  >(ENTITY_TYPE_SEARCH_OPTIONS);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingBots, setIsLoadingBots] = useState(false);
 
@@ -290,19 +291,20 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
   const fetchBots = useCallback(async (search: string) => {
     setIsLoadingBots(true);
     try {
-      const response = await getBots({ limit: 10 });
-      const filteredBots = search
-        ? response.data.filter(
-          (bot: Bot) =>
-            bot.name?.toLowerCase().includes(search.toLowerCase()) ||
-            bot.displayName?.toLowerCase().includes(search.toLowerCase())
-        )
-        : response.data;
-
+      const response = await searchData(
+        search,
+        1,
+        10,
+        'isBot:true',
+        '',
+        '',
+        SearchIndex.USER
+      );
+      const bots: User[] = formatUsersResponse(response.data.hits.hits);
       setBotOptions(
-        filteredBots.map((bot: Bot) => ({
-          key: bot.name || '',
-          label: bot.displayName || bot.name || '',
+        bots.map((bot) => ({
+          key: bot.name,
+          label: getEntityName(bot) || bot.name,
         }))
       );
     } catch {
@@ -328,6 +330,13 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
         debouncedFetchUsers(searchText);
       } else if (searchKey === 'bot') {
         debouncedFetchBots(searchText);
+      } else if (searchKey === 'entityType') {
+        const filtered = searchText
+          ? ENTITY_TYPE_SEARCH_OPTIONS.filter((option) =>
+              option.label.toLowerCase().includes(searchText.toLowerCase())
+            )
+          : ENTITY_TYPE_SEARCH_OPTIONS;
+        setFilteredEntityTypeOptions(filtered);
       }
     },
     [debouncedFetchUsers, debouncedFetchBots]
@@ -339,6 +348,8 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
         fetchUsers('');
       } else if (searchKey === 'bot') {
         fetchBots('');
+      } else if (searchKey === 'entityType') {
+        setFilteredEntityTypeOptions(ENTITY_TYPE_SEARCH_OPTIONS);
       }
     },
     [fetchUsers, fetchBots]
@@ -391,13 +402,13 @@ const AuditLogFilters: FC<AuditLogFiltersProps> = ({
         singleSelect
         isSuggestionsLoading={false}
         label={t('label.entity-type')}
-        options={ENTITY_TYPE_SEARCH_OPTIONS}
+        options={filteredEntityTypeOptions}
         searchKey="entityType"
         selectedKeys={getSelectedKeys('entityType')}
         triggerButtonSize="middle"
         onChange={handleDropdownChange}
-        onGetInitialOptions={() => undefined}
-        onSearch={() => undefined}
+        onGetInitialOptions={handleGetInitialOptions}
+        onSearch={handleSearch}
       />
     </Space>
   );

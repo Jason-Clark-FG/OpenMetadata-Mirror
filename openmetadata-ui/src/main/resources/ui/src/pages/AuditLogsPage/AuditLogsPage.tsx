@@ -123,6 +123,7 @@ const AuditLogsPage = () => {
   const [filterParams, setFilterParams] = useState<Partial<AuditLogListParams>>(
     {}
   );
+  const filterParamsRef = useRef<Partial<AuditLogListParams>>({});
   const [pageSize, setPageSize] = useState(PAGE_SIZE_MEDIUM);
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -145,7 +146,7 @@ const AuditLogsPage = () => {
           after: cursorParams?.after,
           before: cursorParams?.before,
           q: searchTermRef.current || undefined,
-          ...(explicitFilterParams ?? filterParams),
+          ...(explicitFilterParams ?? filterParamsRef.current),
         };
 
         const response: AuditLogListResponse = await getAuditLogs(queryParams);
@@ -157,7 +158,7 @@ const AuditLogsPage = () => {
         setIsLoading(false);
       }
     },
-    [filterParams, pageSize]
+    [pageSize]
   );
 
   useEffect(() => {
@@ -192,6 +193,7 @@ const AuditLogsPage = () => {
     (filters: AuditLogActiveFilter[], params: Partial<AuditLogListParams>) => {
       setActiveFilters(filters);
       setFilterParams(params);
+      filterParamsRef.current = params;
       setCurrentPage(1);
       fetchAuditLogs({ after: undefined, before: undefined }, params);
     },
@@ -217,6 +219,7 @@ const AuditLogsPage = () => {
   const handleClearFilters = useCallback(() => {
     setActiveFilters([]);
     setFilterParams({});
+    filterParamsRef.current = {};
     setSearchTerm('');
     searchTermRef.current = '';
     setCurrentPage(1);
@@ -230,6 +233,7 @@ const AuditLogsPage = () => {
       const params = buildParamsFromFilters(remaining);
       setActiveFilters(remaining);
       setFilterParams(params);
+      filterParamsRef.current = params;
       setCurrentPage(1);
       fetchAuditLogs({ after: undefined, before: undefined }, params);
     },
@@ -482,7 +486,7 @@ const AuditLogsPage = () => {
                           className="filter-selection-value"
                           title={filter.value.label}>
                           {filter.category === 'time' &&
-                          filter.value.key === 'customRange'
+                            filter.value.key === 'customRange'
                             ? t('label.custom-range')
                             : filter.value.label}
                         </span>
