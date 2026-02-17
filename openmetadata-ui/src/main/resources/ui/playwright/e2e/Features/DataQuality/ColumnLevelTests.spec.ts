@@ -15,16 +15,20 @@ import { TableClass } from '../../../support/entity/TableClass';
 import {
   createNewPage,
   descriptionBox,
-  redirectToHomePage
+  redirectToHomePage,
 } from '../../../utils/common';
-import { clickCreateTestCaseButton, clickEditTestCaseButton, clickUpdateButton, visitCreateTestCasePanelFromEntityPage } from '../../../utils/dataQuality';
+import {
+  clickCreateTestCaseButton,
+  clickEditTestCaseButton,
+  clickUpdateButton,
+  visitCreateTestCasePanelFromEntityPage,
+} from '../../../utils/dataQuality';
 import { deleteTestCase } from '../../../utils/testCases';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
 test.describe('Column Level Data Quality Test Cases', () => {
-
   const table = new TableClass();
   test.beforeAll(async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
@@ -54,8 +58,10 @@ test.describe('Column Level Data Quality Test Cases', () => {
     };
 
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -106,7 +112,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -132,11 +137,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValue: '1000',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -188,7 +193,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -201,8 +205,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit display name; delete the test case.
    */
   test('Column Values To Be Unique', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -212,11 +214,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       type: 'columnValuesToBeUnique',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -263,7 +265,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -276,7 +277,7 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit allowed values; delete the test case.
    */
   test('Column Values To Be In Set', async ({ page }) => {
-
+    test.slow();
 
     await redirectToHomePage(page);
 
@@ -286,11 +287,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       type: 'columnValuesToBeInSet',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -319,11 +320,19 @@ test.describe('Column Level Data Quality Test Cases', () => {
       await expect(page.locator(`[data-id="${testCase.type}"]`)).toBeVisible();
 
       await page.fill('#testCaseFormV1_params_allowedValues_0_value', 'active');
-      await page
-        .getByRole('button', { name: 'plus' }).click();
-      await page.fill('#testCaseFormV1_params_allowedValues_1_value', 'inactive');
+      await page.getByRole('button', { name: 'plus' }).click();
+      await page.fill(
+        '#testCaseFormV1_params_allowedValues_1_value',
+        'inactive'
+      );
 
       await page.click('#testCaseFormV1_params_matchEnum');
+      await page
+        .locator('#testCaseFormV1_params_matchEnum[aria-checked="true"]')
+        .waitFor({ state: 'attached' });
+      await expect(
+        page.locator('#testCaseFormV1_params_matchEnum')
+      ).toHaveAttribute('aria-checked', 'true');
 
       await clickCreateTestCaseButton(page, testCase.name);
     });
@@ -335,8 +344,7 @@ test.describe('Column Level Data Quality Test Cases', () => {
         `Edit ${testCase.name}`
       );
 
-      await page
-        .getByRole('button', { name: 'plus' }).click();
+      await page.getByRole('button', { name: 'plus' }).click();
       await page.fill('#tableTestForm_params_allowedValues_2_value', 'open');
       await clickUpdateButton(page);
     });
@@ -344,7 +352,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -357,8 +364,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit forbidden values; delete the test case.
    */
   test('Column Values To Be Not In Set', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -367,11 +372,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       type: 'columnValuesToBeNotInSet',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -400,8 +405,7 @@ test.describe('Column Level Data Quality Test Cases', () => {
       await expect(page.locator(`[data-id="${testCase.type}"]`)).toBeVisible();
 
       await page.fill('#testCaseFormV1_params_forbiddenValues_0_value', '-1');
-      await page
-        .getByRole('button', { name: 'plus' }).click();
+      await page.getByRole('button', { name: 'plus' }).click();
       await page.fill('#testCaseFormV1_params_forbiddenValues_1_value', '-999');
 
       await clickCreateTestCaseButton(page, testCase.name);
@@ -414,8 +418,7 @@ test.describe('Column Level Data Quality Test Cases', () => {
         `Edit ${testCase.name}`
       );
 
-      await page
-        .getByRole('button', { name: 'plus' }).click();
+      await page.getByRole('button', { name: 'plus' }).click();
       await page.fill('#tableTestForm_params_forbiddenValues_2_value', '-9999');
 
       await clickUpdateButton(page);
@@ -424,7 +427,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -437,8 +439,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit regex pattern; delete the test case.
    */
   test('Column Values To Match Regex', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -448,11 +448,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       regex: '^[0-9]+$',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -501,7 +501,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -514,8 +513,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit regex pattern; delete the test case.
    */
   test('Column Values To Not Match Regex', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -525,11 +522,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       regex: '[a-zA-Z]',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -578,7 +575,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -603,11 +599,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForMaxInCol: '10000',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -669,7 +665,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -682,8 +677,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Value Min To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -694,11 +687,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForMinInCol: '100',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -760,7 +753,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -773,8 +765,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Value Mean To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -785,11 +775,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForMeanInCol: '500',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -851,7 +841,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -864,8 +853,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Value Median To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -876,11 +863,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForMedianInCol: '400',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -946,7 +933,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -959,8 +945,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Value StdDev To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -971,11 +955,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForStdDevInCol: '100',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -1041,7 +1025,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -1054,8 +1037,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Values Sum To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -1066,11 +1047,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxValueForSumInCol: '100000',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -1132,7 +1113,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -1145,8 +1125,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit range values; delete the test case.
    */
   test('Column Values Length To Be Between', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -1157,11 +1135,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       maxLength: '50',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -1213,7 +1191,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -1226,8 +1203,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit missing count value; delete the test case.
    */
   test('Column Values Missing Count To Be Equal', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -1237,11 +1212,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       missingCountValue: '0',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -1293,7 +1268,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 
   /**
@@ -1306,8 +1280,6 @@ test.describe('Column Level Data Quality Test Cases', () => {
    * 3. Edit expected value and row number; delete the test case.
    */
   test('Column Value To Be At Expected Location', async ({ page }) => {
-
-
     await redirectToHomePage(page);
 
     const testCase = {
@@ -1316,11 +1288,11 @@ test.describe('Column Level Data Quality Test Cases', () => {
       type: 'columnValuesToBeAtExpectedLocation',
     };
 
-
     await visitCreateTestCasePanelFromEntityPage(page, table);
-    await page.getByTestId('select-table-card').getByText('Column Level').click();
-
-
+    await page
+      .getByTestId('select-table-card')
+      .getByText('Column Level')
+      .click();
 
     await test.step('Create', async () => {
       const testDefinitionResponse = page.waitForResponse(
@@ -1349,17 +1321,22 @@ test.describe('Column Level Data Quality Test Cases', () => {
       // await expect(page.locator(`[data-id="${testCase.type}"]`)).toBeVisible();
 
       await page.click('#testCaseFormV1_params_locationReferenceType');
-      await page.waitForSelector(`.ant-select-dropdown:not(.ant-select-dropdown-hidden) [title="POSTAL_CODE"]`, { state: 'visible' });
-      await page.click(`.ant-select-dropdown:not(.ant-select-dropdown-hidden) [title="POSTAL_CODE"]`)
+      await page.waitForSelector(
+        `.ant-select-dropdown:not(.ant-select-dropdown-hidden) [title="POSTAL_CODE"]`,
+        { state: 'visible' }
+      );
+      await page.click(
+        `.ant-select-dropdown:not(.ant-select-dropdown-hidden) [title="POSTAL_CODE"]`
+      );
       await page.fill(
         '#testCaseFormV1_params_longitudeColumnName',
-        "longitudeColumnName"
+        'longitudeColumnName'
       );
       await page.fill(
         '#testCaseFormV1_params_latitudeColumnName',
-        "latitudeColumnName"
+        'latitudeColumnName'
       );
-      await page.fill('#testCaseFormV1_params_radius', "1000");
+      await page.fill('#testCaseFormV1_params_radius', '1000');
 
       await clickCreateTestCaseButton(page, testCase.name);
     });
@@ -1371,23 +1348,15 @@ test.describe('Column Level Data Quality Test Cases', () => {
         `Edit ${testCase.name}`
       );
 
-
-      await page.fill(
-        '#tableTestForm_params_longitudeColumnName',
-        "Edit"
-      );
-      await page.fill(
-        '#tableTestForm_params_latitudeColumnName',
-        "Edit"
-      );
+      await page.fill('#tableTestForm_params_longitudeColumnName', 'Edit');
+      await page.fill('#tableTestForm_params_latitudeColumnName', 'Edit');
       await page.locator('#tableTestForm_params_radius').clear();
-      await page.fill('#tableTestForm_params_radius', "500");
+      await page.fill('#tableTestForm_params_radius', '500');
       await clickUpdateButton(page);
     });
 
     await test.step('Delete', async () => {
       await deleteTestCase(page, testCase.name);
     });
-
   });
 });
