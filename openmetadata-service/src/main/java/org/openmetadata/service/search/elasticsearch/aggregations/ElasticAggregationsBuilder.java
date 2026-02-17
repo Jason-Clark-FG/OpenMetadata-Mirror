@@ -67,6 +67,7 @@ public class ElasticAggregationsBuilder {
   private ElasticAggregations getAggregation(String aggregationType) {
     return switch (aggregationType) {
       case "bucket_selector" -> new ElasticBucketSelectorAggregations();
+      case "bucket_sort" -> new ElasticBucketSortAggregations();
       case "date_histogram" -> new ElasticDateHistogramAggregations();
       case "terms" -> new ElasticTermsAggregations();
       case "avg" -> new ElasticAvgAggregations();

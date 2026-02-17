@@ -3,6 +3,7 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.service.Entity.getEntityFields;
+import static org.openmetadata.service.search.EntityBuilderConstant.MAX_AGGREGATE_SIZE;
 import static org.openmetadata.service.util.jdbi.JdbiUtils.getAfterOffset;
 import static org.openmetadata.service.util.jdbi.JdbiUtils.getBeforeOffset;
 import static org.openmetadata.service.util.jdbi.JdbiUtils.getOffset;
@@ -392,14 +393,22 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
 
   @SuppressWarnings("unchecked")
   public ResultList<T> listLatestFromSearch(
-      EntityUtil.Fields fields, SearchListFilter contentFilter, String groupBy, String q)
+      EntityUtil.Fields fields,
+      SearchListFilter contentFilter,
+      String groupBy,
+      String q,
+      Integer limit,
+      Integer offset,
+      String sortField,
+      String sortType)
       throws IOException {
     List<T> entityList = new ArrayList<>();
     SearchListFilter searchListFilter = new SearchListFilter();
     setIncludeSearchFields(searchListFilter);
     setExcludeSearchFields(searchListFilter);
     String aggregationPath = "$.sterms#byTerms.buckets";
-    SearchAggregation searchAggregation = buildComplexAggregation(groupBy, contentFilter);
+    SearchAggregation searchAggregation =
+        buildComplexAggregation(groupBy, contentFilter, limit, offset, sortField, sortType);
     JsonObject jsonObjResults =
         searchRepository.aggregate(q, entityType, searchAggregation, searchListFilter);
 
@@ -428,11 +437,30 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
                 });
           }
         });
-    return new ResultList<>(entityList, null, null, entityList.size());
+
+    // Extract total count from cardinality aggregation
+    int totalCount = entityList.size();
+    try {
+      String cardinalityPath = "$.cardinality#total_count.value";
+      Optional<Integer> cardinalityValue =
+          JsonUtils.readJsonAtPath(jsonObjResults.toString(), cardinalityPath, Integer.class);
+      if (cardinalityValue.isPresent()) {
+        totalCount = cardinalityValue.get();
+      }
+    } catch (Exception e) {
+      // Fall back to entityList.size() if cardinality extraction fails
+    }
+
+    return new ResultList<>(entityList, offset, limit, totalCount);
   }
 
   private SearchAggregation buildComplexAggregation(
-      String groupBy, SearchListFilter contentFilter) {
+      String groupBy,
+      SearchListFilter contentFilter,
+      Integer limit,
+      Integer offset,
+      String sortField,
+      String sortType) {
     SearchAggregationNode root = new SearchAggregationNode("root", "root", null);
 
     // Create terms aggregation by groupBy field
@@ -463,8 +491,38 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
             "latest_timestamp,matching_count,matching_timestamp",
             "max_timestamp,with_content_filters>count,with_content_filters>max_matching_timestamp"));
 
+    // Add bucket_sort for pagination if limit is provided
+    if (limit != null && limit > 0) {
+      Integer effectiveLimit = Math.min(limit, MAX_AGGREGATE_SIZE);
+      Integer effectiveOffset = offset != null ? offset : 0;
+
+      // Map sortField to aggregation field name
+      String aggSortField = mapSortFieldToAggregationField(sortField);
+      String aggSortOrder = sortType != null ? sortType.toLowerCase() : "desc";
+
+      termsAgg.addChild(
+          SearchAggregation.bucketSort(
+              "pagination", effectiveLimit, effectiveOffset, aggSortField, aggSortOrder));
+    }
+
     root.addChild(termsAgg);
+
+    // Add cardinality aggregation as sibling to termsAgg for total count
+    root.addChild(SearchAggregation.cardinality("total_count", groupBy));
+
     return SearchAggregation.fromTree(root);
+  }
+
+  private String mapSortFieldToAggregationField(String sortField) {
+    if (sortField == null) {
+      return "max_timestamp";
+    }
+    // Map timestamp-based fields to the max_timestamp aggregation
+    return switch (sortField.toLowerCase()) {
+      case "updatedat", "timestamp", "createdat" -> "max_timestamp";
+      case "_key" -> "_key";
+      default -> "max_timestamp";
+    };
   }
 
   public T latestFromSearch(EntityUtil.Fields fields, SearchListFilter searchListFilter, String q)

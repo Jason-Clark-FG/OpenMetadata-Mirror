@@ -90,6 +90,51 @@ public class SearchAggregation {
     return new SearchAggregationNode("bucket_selector", name, value);
   }
 
+  /**
+   * Static builder method for bucket_sort aggregation.
+   */
+  public static SearchAggregationNode bucketSort(String name, Integer size, Integer from) {
+    Map<String, String> value = new HashMap<>();
+    if (size != null) {
+      value.put("size", String.valueOf(size));
+    }
+    if (from != null) {
+      value.put("from", String.valueOf(from));
+    }
+    return new SearchAggregationNode("bucket_sort", name, value);
+  }
+
+  /**
+   * Static builder method for bucket_sort aggregation with sorting.
+   */
+  public static SearchAggregationNode bucketSort(
+      String name, Integer size, Integer from, String sortField, String sortOrder) {
+    Map<String, String> value = new HashMap<>();
+    if (size != null) {
+      value.put("size", String.valueOf(size));
+    }
+    if (from != null) {
+      value.put("from", String.valueOf(from));
+    }
+    if (sortField != null) {
+      value.put("sort_field", sortField);
+    }
+    if (sortOrder != null) {
+      value.put("sort_order", sortOrder);
+    }
+    return new SearchAggregationNode("bucket_sort", name, value);
+  }
+
+  /**
+   * Static builder method for cardinality aggregation.
+   */
+  public static SearchAggregationNode cardinality(String name, String field) {
+    Map<String, String> value = new HashMap<>();
+    value.put("field", field);
+    value.put("precision_threshold", "3000");
+    return new SearchAggregationNode("cardinality", name, value);
+  }
+
   /*
    * Get the metadata for the aggregation results. We'll use the metadata to build the report and
    * to traverse the aggregation tree. 3 types of metadata are returned:

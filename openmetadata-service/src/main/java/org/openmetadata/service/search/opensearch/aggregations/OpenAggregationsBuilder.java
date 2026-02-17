@@ -67,6 +67,7 @@ public class OpenAggregationsBuilder {
   private OpenAggregations getAggregation(String aggregationType) {
     return switch (aggregationType) {
       case "bucket_selector" -> new OpenBucketSelectorAggregations();
+      case "bucket_sort" -> new OpenBucketSortAggregations();
       case "date_histogram" -> new OpenDateHistogramAggregations();
       case "terms" -> new OpenTermsAggregations();
       case "avg" -> new OpenAvgAggregations();
