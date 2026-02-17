@@ -83,14 +83,14 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s static-checks
+          python -m nox --no-venv -s static-checks
         shell: bash
 
       - name: Run Unit Tests
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s unit-tests
+          python -m nox --no-venv -s unit-tests
         shell: bash
 
       - name: Upload coverage artifact
@@ -171,7 +171,7 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.shard.nox-args }}
+          python -m nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.shard.nox-args }}
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
         shell: bash
@@ -238,7 +238,7 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s combine-coverage
+          python -m nox --no-venv -s combine-coverage
         shell: bash
 
       - name: Remove pom.xml
