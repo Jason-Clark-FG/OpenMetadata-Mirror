@@ -2625,10 +2625,13 @@ public class WorkflowDefinitionResourceIT {
           "test_EntitySpecificFiltering completed successfully - Entity-specific filters working correctly!");
     } finally {
       // Always clean up the workflow to prevent interference with other parallel tests
+      // Use hardDelete to prevent duplicate key violations on @RetryingTest retries
       try {
         WorkflowDefinition wd = client.workflowDefinitions().getByName(workflowName, null);
-        client.workflowDefinitions().delete(wd.getId());
-        LOG.debug("Successfully deleted {}", workflowName);
+        Map<String, String> params = new HashMap<>();
+        params.put("hardDelete", "true");
+        client.workflowDefinitions().delete(wd.getId().toString(), params);
+        LOG.debug("Successfully hard-deleted {}", workflowName);
       } catch (Exception e) {
         LOG.warn("Error while deleting {}: {}", workflowName, e.getMessage());
       }
@@ -5290,10 +5293,13 @@ public class WorkflowDefinitionResourceIT {
       LOG.info("test_AutoApprovalForEntitiesWithoutReviewers completed successfully");
     } finally {
       // Always clean up the workflow to prevent interference with other parallel tests
+      // Use hardDelete to prevent duplicate key violations on @RetryingTest retries
       if (createdWorkflowId != null) {
         try {
-          client.workflowDefinitions().delete(createdWorkflowId);
-          LOG.debug("Successfully deleted {}", workflowName);
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          client.workflowDefinitions().delete(createdWorkflowId.toString(), params);
+          LOG.debug("Successfully hard-deleted {}", workflowName);
         } catch (Exception e) {
           LOG.warn("Error while deleting {}: {}", workflowName, e.getMessage());
         }
