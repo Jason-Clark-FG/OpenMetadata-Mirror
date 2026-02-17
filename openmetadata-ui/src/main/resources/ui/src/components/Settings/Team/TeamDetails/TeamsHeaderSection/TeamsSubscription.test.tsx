@@ -21,6 +21,10 @@ describe('TeamsSubscription', () => {
     updateTeamSubscription: mockUpdateTeamSubscription,
   };
 
+  afterEach(() => {
+    teamProps.hasEditPermission = true;
+  });
+
   it('renders Teams Subscription', async () => {
     await act(async () => {
       render(<TeamsSubscription {...teamProps} />);

@@ -31,10 +31,14 @@ export const closeSubscriptionModal = async (page: Page) => {
 };
 
 export const selectWebhookType = async (page: Page, webhookType: WebhookType) => {
-  await page
+  const webhookInput = page.locator('#webhook');
+  const selectContainer = page
     .getByTestId('subscription-modal')
-    .locator('#webhook')
-    .click({ force: true });
+    .locator('.ant-select-selector')
+    .filter({ has: webhookInput });
+
+  await selectContainer.waitFor({ state: 'visible' });
+  await selectContainer.click();
 
   const dropdown = page.locator('.ant-select-dropdown:visible');
   const webhookOption = dropdown.getByText(webhookType, { exact: true });
