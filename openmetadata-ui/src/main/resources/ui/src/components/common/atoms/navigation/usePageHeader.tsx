@@ -89,6 +89,7 @@ export const usePageHeader = (config: PageHeaderConfig) => {
                   color="primary"
                   data-testid={config.addButtonTestId || 'add-entity-button'}
                   iconLeading={<Plus size={16} />}
+                  size="md"
                   onClick={config.onAddClick}>
                   {displayButtonLabel}
                 </UTButton>
