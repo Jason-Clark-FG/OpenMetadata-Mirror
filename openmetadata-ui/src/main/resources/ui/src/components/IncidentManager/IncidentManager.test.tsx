@@ -242,6 +242,7 @@ describe('IncidentManagerPage', () => {
 
     expect(getListTestCaseIncidentStatusFromSearch).toHaveBeenCalledWith({
       limit: 10,
+      offset: 0,
       latest: true,
       include: 'non-deleted',
       originEntityFQN: undefined,
@@ -387,6 +388,7 @@ describe('IncidentManagerPage', () => {
       endTs: 1710161424255,
       latest: true,
       limit: 10,
+      offset: 0,
       startTs: 1709556624254,
       include: 'non-deleted',
       domain: undefined,
@@ -413,6 +415,7 @@ describe('IncidentManagerPage', () => {
       endTs: 1710161424255,
       latest: true,
       limit: 10,
+      offset: 0,
       startTs: 1709556624254,
       include: 'deleted',
       domain: undefined,
