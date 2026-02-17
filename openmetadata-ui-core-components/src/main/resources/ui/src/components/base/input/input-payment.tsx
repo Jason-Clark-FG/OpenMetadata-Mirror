@@ -107,8 +107,8 @@ export const PaymentInput = ({ onChange, value, defaultValue, className, maxLeng
                         isDisabled={isDisabled}
                         isInvalid={isInvalid}
                         icon={card.icon}
-                        inputClassName="pl-13"
-                        iconClassName="left-2.5 h-6 w-8.5"
+                        inputClassName="tw:pl-13"
+                        iconClassName="tw:left-2.5 tw:h-6 tw:w-8.5"
                     />
 
                     {hint && <HintText isInvalid={isInvalid}>{hint}</HintText>}
