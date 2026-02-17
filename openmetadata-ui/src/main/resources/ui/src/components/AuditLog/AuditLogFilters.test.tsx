@@ -367,7 +367,7 @@ describe('AuditLogFilters', () => {
   });
 
   it('should fetch bots when bot dropdown is opened', async () => {
-    const { getBots } = require('../../rest/botsAPI');
+    const { searchData } = require('../../rest/miscAPI');
 
     await act(async () => {
       render(<AuditLogFilters {...defaultProps} />);
@@ -378,7 +378,15 @@ describe('AuditLogFilters', () => {
     });
 
     await waitFor(() => {
-      expect(getBots).toHaveBeenCalled();
+      expect(searchData).toHaveBeenCalledWith(
+        '',
+        1,
+        10,
+        'isBot:true',
+        '',
+        '',
+        expect.any(String)
+      );
     });
   });
 
@@ -436,5 +444,41 @@ describe('AuditLogFilters', () => {
         actorType: 'BOT',
       })
     );
+  });
+
+  it('should ensure user and bot filters result in correct actor params', async () => {
+    await act(async () => {
+      render(<AuditLogFilters {...defaultProps} />);
+    });
+
+    await act(async () => {
+      capturedOnChange['user'](
+        [{ key: 'test_user', label: 'Test User' }],
+        'user'
+      );
+    });
+
+    const userCall =
+      mockOnFiltersChange.mock.calls[mockOnFiltersChange.mock.calls.length - 1];
+
+    expect(userCall[1]).toMatchObject({
+      userName: 'test_user',
+      actorType: 'USER',
+    });
+
+    await act(async () => {
+      capturedOnChange['bot'](
+        [{ key: 'ingestion-bot', label: 'Ingestion Bot' }],
+        'bot'
+      );
+    });
+
+    const botCall =
+      mockOnFiltersChange.mock.calls[mockOnFiltersChange.mock.calls.length - 1];
+
+    expect(botCall[1]).toMatchObject({
+      userName: 'ingestion-bot',
+      actorType: 'BOT',
+    });
   });
 });
