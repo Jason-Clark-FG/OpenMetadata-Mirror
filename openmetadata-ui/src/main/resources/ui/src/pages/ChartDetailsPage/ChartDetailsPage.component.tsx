@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { isUndefined, omitBy, toString } from 'lodash';
@@ -29,6 +28,7 @@ import { ClientErrors } from '../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType, TabSpecificField } from '../../enums/entity.enum';
 import { Chart } from '../../generated/entity/data/chart';
+import { Operation as PermissionOperation } from '../../generated/entity/policies/accessControl/resourcePermission';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useFqn } from '../../hooks/useFqn';
 import {
@@ -44,7 +44,10 @@ import {
   getEntityMissingError,
 } from '../../utils/CommonUtils';
 import { getEntityName } from '../../utils/EntityUtils';
-import { DEFAULT_ENTITY_PERMISSION } from '../../utils/PermissionsUtils';
+import {
+  DEFAULT_ENTITY_PERMISSION,
+  getPrioritizedViewPermission,
+} from '../../utils/PermissionsUtils';
 import { getVersionPath } from '../../utils/RouterUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 
@@ -91,7 +94,11 @@ const ChartDetailsPage = () => {
   };
 
   const viewUsagePermission = useMemo(
-    () => chartPermissions.ViewAll || chartPermissions.ViewUsage,
+    () =>
+      getPrioritizedViewPermission(
+        chartPermissions,
+        PermissionOperation.ViewUsage
+      ),
     [chartPermissions]
   );
 
@@ -195,8 +202,9 @@ const ChartDetailsPage = () => {
   };
 
   const versionHandler = () => {
-    version &&
+    if (version) {
       navigate(getVersionPath(EntityType.CHART, chartFQN, toString(version)));
+    }
   };
 
   const handleToggleDelete = (version?: number) => {

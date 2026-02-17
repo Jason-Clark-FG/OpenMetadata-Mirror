@@ -64,64 +64,6 @@ const mockColumns = [
   },
 ] as Column[];
 
-const mockColumnsWithNested = [
-  {
-    name: 'comments',
-    dataType: 'STRING',
-    dataLength: 1,
-    dataTypeDisplay: 'string',
-    fullyQualifiedName:
-      'bigquery_gcp.ecommerce.shopify.raw_product_catalog.comments',
-    tags: [],
-    constraint: 'NULL',
-    ordinalPosition: 1,
-  },
-  {
-    name: 'products',
-    dataType: 'ARRAY',
-    arrayDataType: 'STRUCT',
-    dataLength: 1,
-    dataTypeDisplay:
-      'array<struct<product_id:character varying(24),price:int,onsale:boolean>>',
-    fullyQualifiedName:
-      'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products',
-    tags: [],
-    constraint: 'NULL',
-    ordinalPosition: 2,
-    children: [
-      {
-        name: 'product_id',
-        dataType: 'VARCHAR',
-        dataLength: 24,
-        dataTypeDisplay: 'character varying(24)',
-        fullyQualifiedName:
-          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.product_id',
-        tags: [],
-        description: 'Original product ID description',
-        ordinalPosition: 1,
-      },
-      {
-        name: 'price',
-        dataType: 'INT',
-        dataTypeDisplay: 'int',
-        fullyQualifiedName:
-          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.price',
-        tags: [],
-        ordinalPosition: 2,
-      },
-      {
-        name: 'onsale',
-        dataType: 'BOOLEAN',
-        dataTypeDisplay: 'boolean',
-        fullyQualifiedName:
-          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.onsale',
-        tags: [],
-        ordinalPosition: 3,
-      },
-    ],
-  },
-] as Column[];
-
 const mockGenericContextProps = {
   data: {
     ...MOCK_TABLE,
@@ -334,6 +276,7 @@ jest.mock('../../../utils/FeedUtils', () => ({
 
 jest.mock('../../../utils/TableColumn.util', () => ({
   columnFilterIcon: jest.fn().mockReturnValue(<p>ColumnFilterIcon</p>),
+  ownerTableObject: jest.fn().mockReturnValue([]),
 }));
 
 jest.mock('../../../utils/EntityUtilClassBase', () => ({

@@ -233,6 +233,8 @@ export interface ServiceConnection {
  *
  * ServiceNow Connection Config
  *
+ * BurstIQ LifeGraph Database Connection Config
+ *
  * Kafka Connection Config
  *
  * Redpanda Connection Config
@@ -647,6 +649,8 @@ export interface ConfigObject {
      *
      * Password to connect to ServiceNow.
      *
+     * Password to connect to BurstIQ.
+     *
      * password to connect to the Amundsen Neo4j Connection.
      *
      * password to connect  to the Atlas.
@@ -758,6 +762,9 @@ export interface ConfigObject {
      *
      * Username to connect to ServiceNow. This user should have read access to sys_db_object and
      * sys_dictionary tables.
+     *
+     * Username to connect to BurstIQ. This user should have privileges to read all the metadata
+     * in BurstIQ LifeGraph.
      *
      * username to connect to the Amundsen Neo4j Connection.
      *
@@ -1075,6 +1082,8 @@ export interface ConfigObject {
      * Regex to only include/exclude tables that matches the pattern.
      *
      * Regex to include/exclude FHIR resource types
+     *
+     * Regex to only include/exclude dictionaries (tables) that matches the pattern.
      */
     tableFilterPattern?: FilterPattern;
     /**
@@ -1521,6 +1530,18 @@ export interface ConfigObject {
      * admin tables will be fetched.
      */
     includeSystemTables?: boolean;
+    /**
+     * BurstIQ customer name for API requests.
+     */
+    biqCustomerName?: string;
+    /**
+     * BurstIQ Secure Data Zone (SDZ) name for API requests.
+     */
+    biqSdzName?: string;
+    /**
+     * BurstIQ Keycloak realm name (e.g., 'ems' from https://auth.burstiq.com/realms/ems).
+     */
+    realmName?: string;
     /**
      * basic.auth.user.info schema registry config property, Client HTTP credentials in the form
      * of username:password.
@@ -2039,6 +2060,8 @@ export interface UsernamePasswordAuthentication {
  * Regex to include/exclude FHIR resource categories
  *
  * Regex to include/exclude FHIR resource types
+ *
+ * Regex to only include/exclude dictionaries (tables) that matches the pattern.
  *
  * Regex to only fetch topics that matches the pattern.
  *
@@ -4326,6 +4349,7 @@ export enum ConfigType {
     AzureSQL = "AzureSQL",
     BigQuery = "BigQuery",
     BigTable = "BigTable",
+    BurstIQ = "BurstIQ",
     Cassandra = "Cassandra",
     Clickhouse = "Clickhouse",
     Cockroach = "Cockroach",

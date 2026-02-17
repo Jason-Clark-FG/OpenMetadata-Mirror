@@ -35,6 +35,7 @@ import {
   AZURESQL,
   BIGQUERY,
   BIGTABLE,
+  BURSTIQ,
   CASSANDRA,
   CLICKHOUSE,
   COCKROACH,
@@ -515,6 +516,9 @@ class ServiceUtilClassBase {
       case this.DatabaseServiceTypeSmallCase.Synapse:
         return SYNAPSE;
 
+      case this.DatabaseServiceTypeSmallCase.BurstIQ:
+        return BURSTIQ;
+
       case this.MessagingServiceTypeSmallCase.CustomMessaging:
         return TOPIC_DEFAULT;
 
@@ -835,7 +839,7 @@ class ServiceUtilClassBase {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public getInsightsTabWidgets(_: ServiceTypes) {
-    const widgets: Record<string, React.ComponentType<any>> = {
+    const widgets: Record<string, React.ElementType> = {
       AgentsStatusWidget,
       PlatformInsightsWidget,
       TotalDataAssetsWidget,
@@ -881,7 +885,7 @@ class ServiceUtilClassBase {
   }
 
   public getAgentsTabWidgets() {
-    const widgets: Record<string, React.ComponentType<any>> = {
+    const widgets: Record<string, React.ElementType> = {
       MetadataAgentsWidget,
     };
 
