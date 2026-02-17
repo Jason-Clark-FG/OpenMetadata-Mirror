@@ -67,6 +67,7 @@
   "author": "OpenMetadata",
   "license": "Apache-2.0",
   "dependencies": {
+    "@internationalized/date": "^3.11.0",
     "@material/material-color-utilities": "^0.3.0",
     "@react-aria/utils": "^3.33.0",
     "@react-stately/utils": "^3.11.0",
@@ -112,11 +113,7 @@
     "terser": "^5.0.0",
     "typescript": "^4.2.4",
     "vite": "^7.1.11",
-    "vite-plugin-dts": "^4.5.4",
-    "tailwind-merge": "^3.4.0",
-    "tailwindcss": "^4.1.18",
-    "tailwindcss-animate": "^1.0.7",
-    "tailwindcss-react-aria-components": "^2.0.1"
+    "vite-plugin-dts": "^4.5.4"
   },
   "publishConfig": {
     "access": "restricted",
