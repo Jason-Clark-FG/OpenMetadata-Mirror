@@ -77,4 +77,18 @@ describe('TeamsSubscription', () => {
 
     expect(noData).not.toBeInTheDocument();
   });
+
+  it('should render generic webhook subscription', () => {
+    const { getByTestId } = render(
+      <TeamsSubscription
+        {...teamProps}
+        subscription={{
+          generic: { endpoint: 'https://example.com/webhook' },
+        }}
+      />
+    );
+    const genericIcon = getByTestId('generic-icon');
+
+    expect(genericIcon).toBeInTheDocument();
+  });
 });
