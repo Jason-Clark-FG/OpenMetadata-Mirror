@@ -26,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import org.awaitility.Awaitility;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.EntityReference;
@@ -97,17 +98,21 @@ public final class RdfTestUtils {
         entity.getName(),
         rdfType);
 
-    boolean exists = executeSparqlAsk(sparql);
-
-    if (!exists) {
-      logDebugInfo(entity, rdfType);
-    }
-
-    assertTrue(
-        exists,
-        String.format(
-            "Entity '%s' (FQN: %s) should exist in RDF as type %s",
-            entity.getName(), entity.getFullyQualifiedName(), rdfType));
+    Awaitility.await("entity synced to RDF")
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              boolean exists = executeSparqlAsk(sparql);
+              if (!exists) {
+                logDebugInfo(entity, rdfType);
+              }
+              assertTrue(
+                  exists,
+                  String.format(
+                      "Entity '%s' (FQN: %s) should exist in RDF as type %s",
+                      entity.getName(), entity.getFullyQualifiedName(), rdfType));
+            });
   }
 
   /**

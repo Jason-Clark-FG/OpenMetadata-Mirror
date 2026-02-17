@@ -20,6 +20,7 @@ import java.util.UUID;
 import org.apache.hc.core5.http.HttpHost;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -57,6 +58,16 @@ class VectorEmbeddingIntegrationIT {
   private ObjectMapper mapper;
   private Table testTable;
 
+  @BeforeAll
+  void checkPlatformSupport() {
+    try {
+      DjlEmbeddingClient testClient = createTestEmbeddingClient();
+      testClient.close();
+    } catch (Exception e) {
+      Assumptions.assumeTrue(false, "DJL model not available: " + e.getMessage());
+    }
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     HttpHost httpHost = new HttpHost("http", opensearch.getHost(), opensearch.getMappedPort(9200));
@@ -66,12 +77,7 @@ class VectorEmbeddingIntegrationIT {
             .build();
     openSearchClient = new OpenSearchClient(transport);
 
-    try {
-      embeddingClient = createTestEmbeddingClient();
-    } catch (EmbeddingInitializationException e) {
-      Assumptions.assumeTrue(false, "DJL model not available: " + e.getMessage());
-      return;
-    }
+    embeddingClient = createTestEmbeddingClient();
 
     OpenSearchVectorService.init(openSearchClient, embeddingClient, "en");
     vectorService = OpenSearchVectorService.getInstance();

@@ -7,10 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -1112,6 +1114,20 @@ public class ColumnCustomPropertiesIT {
             "/v1/metadata/types/" + columnType.getId().toString(),
             customProperty,
             Type.class);
+
+    Awaitility.await("custom property registered")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofMillis(500))
+        .untilAsserted(
+            () -> {
+              Type refreshed = getColumnType(client, columnTypeName);
+              assertNotNull(
+                  refreshed.getCustomProperties(), "Custom properties should not be null");
+              assertTrue(
+                  refreshed.getCustomProperties().stream()
+                      .anyMatch(cp -> propertyName.equals(cp.getName())),
+                  "Custom property '" + propertyName + "' should be registered");
+            });
   }
 
   private void deleteCustomPropertyFromColumnType(

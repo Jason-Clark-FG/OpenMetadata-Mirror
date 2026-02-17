@@ -460,7 +460,9 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
   protected void postDelete(IngestionPipeline entity, boolean hardDelete) {
     super.postDelete(entity, hardDelete);
     // Delete deployed pipeline in the Pipeline Service Client
-    pipelineServiceClient.deletePipeline(entity);
+    if (pipelineServiceClient != null) {
+      pipelineServiceClient.deletePipeline(entity);
+    }
     // Clean pipeline status
     daoCollection
         .entityExtensionTimeSeriesDao()

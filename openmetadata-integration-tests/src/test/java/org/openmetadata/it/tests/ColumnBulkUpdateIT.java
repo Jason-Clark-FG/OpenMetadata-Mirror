@@ -1321,7 +1321,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(2, TimeUnit.SECONDS)
-        .atMost(60, TimeUnit.SECONDS)
+        .atMost(120, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());

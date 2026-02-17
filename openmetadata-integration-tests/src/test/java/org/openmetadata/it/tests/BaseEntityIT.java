@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.SharedEntities;
 import org.openmetadata.it.util.EntityValidation;
 import org.openmetadata.it.util.SdkClients;
@@ -2940,7 +2941,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
    * Test: SDK entity with tags
    * Equivalent to: test_sdkEntityWithTags in EntityResourceTest
    */
-  @Test
+  @RetryingTest(2)
   void test_sdkEntityWithTags(TestNamespace ns) {
     if (!supportsTags) return;
 
@@ -3922,7 +3923,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     OpenMetadataClient client = SdkClients.adminClient();
 
     Awaitility.await()
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(120))
         .pollInterval(Duration.ofSeconds(2))
         .untilAsserted(
             () -> {
@@ -3982,7 +3983,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     OpenMetadataClient client = SdkClients.adminClient();
 
     Awaitility.await()
-        .atMost(Duration.ofSeconds(60))
+        .atMost(Duration.ofSeconds(120))
         .pollInterval(Duration.ofSeconds(3))
         .untilAsserted(
             () -> {

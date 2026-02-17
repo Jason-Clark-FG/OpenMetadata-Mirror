@@ -11,8 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.classification.AutoClassificationConfig;
@@ -37,7 +35,6 @@ import org.openmetadata.sdk.models.ListResponse;
  *
  * <p>Migrated from: org.openmetadata.service.resources.tags.ClassificationResourceTest
  */
-@Execution(ExecutionMode.CONCURRENT)
 public class ClassificationResourceIT extends BaseEntityIT<Classification, CreateClassification> {
 
   // Disable tests that don't apply to Classification

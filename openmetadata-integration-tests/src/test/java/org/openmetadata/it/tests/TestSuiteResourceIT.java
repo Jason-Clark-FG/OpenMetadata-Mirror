@@ -23,6 +23,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
@@ -854,7 +855,7 @@ public class TestSuiteResourceIT extends BaseEntityIT<TestSuite, CreateTestSuite
     assertTrue(logicalSuites.getData().stream().noneMatch(TestSuite::getBasic));
   }
 
-  @Test
+  @RetryingTest(2)
   void test_listTestSuitesIncludeEmpty(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 

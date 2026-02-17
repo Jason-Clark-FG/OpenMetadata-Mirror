@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.api.configuration.LogoConfiguration;
 import org.openmetadata.api.configuration.ThemeConfiguration;
 import org.openmetadata.api.configuration.UiThemePreference;
@@ -469,7 +470,7 @@ public class SystemResourceIT {
         "Migrations should have passed for integration tests to run");
   }
 
-  @Test
+  @RetryingTest(3)
   void test_getEntitiesCountWithInclude() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 

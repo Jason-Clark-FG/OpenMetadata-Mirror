@@ -44,7 +44,7 @@ import org.openmetadata.sdk.network.HttpMethod;
  *
  * <p>Migrated from: org.openmetadata.service.resources.tags.TagResourceTest
  */
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.SAME_THREAD)
 public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
 
   // Disable tests that don't apply to Tags

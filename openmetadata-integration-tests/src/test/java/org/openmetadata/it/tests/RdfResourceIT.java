@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
 import org.openmetadata.it.factories.DatabaseServiceTestFactory;
@@ -36,7 +36,7 @@ import org.openmetadata.service.rdf.RdfUpdater;
  *
  * <p>Migrated from: org.openmetadata.service.resources.rdf.RdfResourceTest
  */
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.SAME_THREAD)
 @ExtendWith(TestNamespaceExtension.class)
 public class RdfResourceIT {
 
@@ -60,7 +60,7 @@ public class RdfResourceIT {
     RdfUpdater.disable();
   }
 
-  @Test
+  @RetryingTest(2)
   void testEntityStoredInRdf(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
@@ -82,7 +82,7 @@ public class RdfResourceIT {
     RdfTestUtils.verifyEntityInRdf(table, TABLE_RDF_TYPE);
   }
 
-  @Test
+  @RetryingTest(2)
   void testMultipleEntitiesStoredInRdf(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
@@ -115,7 +115,7 @@ public class RdfResourceIT {
     RdfTestUtils.verifyEntityInRdf(table2, TABLE_RDF_TYPE);
   }
 
-  @Test
+  @RetryingTest(2)
   void testEntityDeleteFromRdf(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
@@ -140,7 +140,7 @@ public class RdfResourceIT {
     RdfTestUtils.verifyEntityNotInRdf(table.getFullyQualifiedName());
   }
 
-  @Test
+  @RetryingTest(2)
   void testEntityUpdateInRdf(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);

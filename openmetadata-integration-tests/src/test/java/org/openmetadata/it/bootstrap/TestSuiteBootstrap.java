@@ -201,6 +201,7 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
       mysql.withDatabaseName("openmetadata");
       mysql.withUsername("test");
       mysql.withPassword("test");
+      mysql.withCommand("--sort-buffer-size=16M");
       mysql.withStartupTimeoutSeconds(240);
       mysql.withConnectTimeoutSeconds(240);
       mysql.withTmpFs(java.util.Map.of("/var/lib/mysql", "rw,size=2g"));
@@ -549,7 +550,16 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
   }
 
   private void configurePipelineServiceClient(OpenMetadataApplicationConfig config) {
-    PipelineServiceClientConfiguration pipelineConfig = new PipelineServiceClientConfiguration();
+    PipelineServiceClientConfiguration pipelineConfig =
+        config.getPipelineServiceClientConfiguration();
+    if (pipelineConfig == null) {
+      pipelineConfig = new PipelineServiceClientConfiguration();
+    }
+
+    // Older service artifacts assume this is non-null; keep it explicit in tests.
+    if (pipelineConfig.getVerifySSL() == null) {
+      pipelineConfig.setVerifySSL(org.openmetadata.schema.security.ssl.VerifySSL.NO_SSL);
+    }
 
     if (kubeConfigYaml != null) {
       // K3s was started - configure K8s pipeline client
@@ -557,9 +567,18 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
       pipelineConfig.setEnabled(true);
       pipelineConfig.setClassName(
           "org.openmetadata.service.clients.pipeline.k8s.K8sPipelineClient");
-      pipelineConfig.setMetadataApiEndpoint("http://localhost:8585/api");
+      if (pipelineConfig.getMetadataApiEndpoint() == null
+          || pipelineConfig.getMetadataApiEndpoint().isBlank()) {
+        pipelineConfig.setMetadataApiEndpoint("http://localhost:8585/api");
+      }
+      if (pipelineConfig.getApiEndpoint() == null || pipelineConfig.getApiEndpoint().isBlank()) {
+        pipelineConfig.setApiEndpoint("http://localhost:8080");
+      }
 
-      Parameters params = new Parameters();
+      Parameters params =
+          pipelineConfig.getParameters() == null
+              ? new Parameters()
+              : pipelineConfig.getParameters();
       params.setAdditionalProperty("namespace", K8S_NAMESPACE);
       params.setAdditionalProperty("inCluster", "false");
       params.setAdditionalProperty("kubeConfigContent", kubeConfigYaml);
@@ -568,9 +587,19 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
       params.setAdditionalProperty("imagePullPolicy", "IfNotPresent");
       pipelineConfig.setParameters(params);
     } else {
-      // No K3s - disable pipeline service client
-      pipelineConfig.setEnabled(false);
-      LOG.info("Pipeline service client disabled (K8s not enabled)");
+      // Keep a deterministic in-JVM client in non-K8s mode.
+      pipelineConfig.setEnabled(true);
+      pipelineConfig.setClassName(
+          "org.openmetadata.service.pipelineService.MockPipelineServiceClient");
+      if (pipelineConfig.getMetadataApiEndpoint() == null
+          || pipelineConfig.getMetadataApiEndpoint().isBlank()) {
+        pipelineConfig.setMetadataApiEndpoint("http://localhost:8585/api");
+      }
+      if (pipelineConfig.getApiEndpoint() == null || pipelineConfig.getApiEndpoint().isBlank()) {
+        pipelineConfig.setApiEndpoint("http://localhost:8080");
+      }
+      LOG.info(
+          "Pipeline service client configured with MockPipelineServiceClient (K8s not enabled)");
     }
 
     config.setPipelineServiceClientConfiguration(pipelineConfig);

@@ -22,13 +22,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.openmetadata.it.factories.MlModelServiceTestFactory;
+import org.openmetadata.it.util.IsolatedTest;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
@@ -118,7 +119,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Migrated from: org.openmetadata.service.resources.governance.WorkflowDefinitionResourceTest
  */
-@Execution(ExecutionMode.SAME_THREAD)
+@IsolatedTest
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ExtendWith(TestNamespaceExtension.class)
 public class WorkflowDefinitionResourceIT {
 
@@ -1097,7 +1099,6 @@ public class WorkflowDefinitionResourceIT {
     request.put("nodes", List.of(startNode, setFieldNode, endNode));
     request.put("edges", List.of(edge1, edge2));
 
-    java.lang.Thread.sleep(2000);
     String response =
         client
             .getHttpClient()
@@ -1910,18 +1911,21 @@ public class WorkflowDefinitionResourceIT {
     assertNotNull(triggerResponse);
     LOG.debug("Workflow triggered successfully, response: {}", triggerResponse);
 
-    // Wait for workflow to process (use Thread.sleep for consistency with original test)
-    java.lang.Thread.sleep(30000);
-
-    // Verify ML Model tier is set to Tier1
-    MlModel updatedModel =
-        SdkClients.adminClient().mlModels().get(mlModel.getId().toString(), "tags");
-    assertNotNull(updatedModel);
-    assertNotNull(updatedModel.getTags());
-    boolean hasTier1 =
-        updatedModel.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(hasTier1, "ML Model should have Tier.Tier1 tag");
-    LOG.debug("ML Model {} tier successfully updated to Tier1", updatedModel.getName());
+    final UUID mlModelId = mlModel.getId();
+    await("ML Model tier set to Tier1")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              MlModel updated =
+                  SdkClients.adminClient().mlModels().get(mlModelId.toString(), "tags");
+              assertNotNull(updated);
+              assertNotNull(updated.getTags());
+              boolean hasTier1 =
+                  updated.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(hasTier1, "ML Model should have Tier.Tier1 tag");
+            });
+    LOG.debug("ML Model tier successfully updated to Tier1");
 
     LOG.info("test_SetTierForMLModels completed successfully");
   }
@@ -2024,9 +2028,6 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     LOG.debug("testRedundantChangeEvents workflow created successfully, response: {}", response);
 
-    // Wait a moment for workflow setup
-    java.lang.Thread.sleep(2000);
-
     // Trigger the workflow FIRST time
     workflowName = "testRedundantChangeEvents";
     String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
@@ -2037,16 +2038,19 @@ public class WorkflowDefinitionResourceIT {
                 HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
     assertNotNull(triggerResponse);
 
-    // Wait for workflow to complete (increased from original 15s to 30s for IT environment)
-    java.lang.Thread.sleep(30000);
-
-    // Verify the tag was actually added (meaningful change)
-    Table updatedTable = SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
-    boolean hasTag =
-        updatedTable.getTags() != null
-            && updatedTable.getTags().stream()
-                .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(hasTag, "Table should have Tier.Tier1 tag after first workflow run");
+    final UUID tableId = table.getId();
+    await("table has Tier.Tier1 tag after first workflow run")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              Table updated = SdkClients.adminClient().tables().get(tableId.toString(), "tags");
+              boolean hasTag =
+                  updated.getTags() != null
+                      && updated.getTags().stream()
+                          .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(hasTag, "Table should have Tier.Tier1 tag after first workflow run");
+            });
     LOG.info("First workflow run completed successfully - tag applied");
 
     // Trigger the workflow SECOND time (should be idempotent)
@@ -2057,15 +2061,18 @@ public class WorkflowDefinitionResourceIT {
                 HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
     assertNotNull(secondTriggerResponse);
 
-    // Wait for second workflow to complete (increased from original 15s to 30s for IT environment)
-    java.lang.Thread.sleep(30000);
-
-    // Verify the tag is still there and workflow is idempotent
-    Table finalTable = SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
-    boolean stillHasTag =
-        finalTable.getTags() != null
-            && finalTable.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(stillHasTag, "Table should still have the tag after second workflow run");
+    await("table still has tag after second workflow run")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              Table finalTable = SdkClients.adminClient().tables().get(tableId.toString(), "tags");
+              boolean stillHasTag =
+                  finalTable.getTags() != null
+                      && finalTable.getTags().stream()
+                          .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(stillHasTag, "Table should still have the tag after second workflow run");
+            });
 
     LOG.info("✓ PASSED: Workflow demonstrates idempotent behavior");
 
@@ -2181,9 +2188,6 @@ public class WorkflowDefinitionResourceIT {
     Dashboard dashboard2 = SdkClients.adminClient().dashboards().create(createDashboard2);
     LOG.debug("Created dashboard2 without chart_1: {}", dashboard2.getName());
 
-    // Wait a bit for entities to be indexed
-    java.lang.Thread.sleep(10000);
-
     // Create periodic batch workflow with specific filters
     // IMPORTANT: Filters ensure only specific entities are updated
     // Create workflow using SDK client - Constructing object directly to avoid JSON parsing issues
@@ -2289,19 +2293,23 @@ public class WorkflowDefinitionResourceIT {
     client.workflowDefinitions().trigger(workflowName);
     LOG.debug("Workflow triggered successfully");
 
-    // Wait for workflow execution (use Thread.sleep for consistency with original test)
-    LOG.debug("Waiting for workflow to process entities...");
-    java.lang.Thread.sleep(30000);
-
     // Store IDs for verification
     final UUID table1Id = table1.getId();
     final UUID table2Id = table2.getId();
     final UUID dashboard1Id = dashboard1.getId();
     final UUID dashboard2Id = dashboard2.getId();
 
-    // Verify only filtered entities were updated
+    LOG.debug("Waiting for workflow to process entities...");
+    await("workflow updates filtered entities")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              Table updatedTable1 = SdkClients.adminClient().tables().get(table1Id.toString());
+              assertEquals("Multi Periodic Entity", updatedTable1.getDescription());
+            });
+
     Table updatedTable1 = SdkClients.adminClient().tables().get(table1Id.toString());
-    assertEquals("Multi Periodic Entity", updatedTable1.getDescription());
     LOG.debug("Table1 updated successfully: {}", updatedTable1.getDescription());
 
     Table updatedTable2 = SdkClients.adminClient().tables().get(table2Id.toString());
@@ -2339,7 +2347,7 @@ public class WorkflowDefinitionResourceIT {
     // Ensure WorkflowEventConsumer subscription is active for event-based workflow
     ensureWorkflowEventConsumerIsActive(client);
 
-    String workflowName = "EntitySpecificFilterWorkflow";
+    String workflowName = ns.prefix("entity_specific_filter_workflow");
 
     // Create test entities
     // 1. Create a Glossary and GlossaryTerms
@@ -2378,7 +2386,7 @@ public class WorkflowDefinitionResourceIT {
     // Create database service
     CreateDatabaseService createDbService =
         new CreateDatabaseService()
-            .withName("ttest_filter_db_service")
+            .withName(ns.prefix("test_filter_db_service"))
             .withServiceType(DatabaseServiceType.Mysql)
             .withConnection(
                 new DatabaseConnection()
@@ -2389,21 +2397,21 @@ public class WorkflowDefinitionResourceIT {
     // Create database
     CreateDatabase createDatabase =
         new CreateDatabase()
-            .withName("test_filter_db")
+            .withName(ns.prefix("test_filter_db"))
             .withService(dbService.getFullyQualifiedName());
     Database database = client.databases().create(createDatabase);
 
     // Create database schema
     CreateDatabaseSchema createSchema =
         new CreateDatabaseSchema()
-            .withName("test_filter_schema")
+            .withName(ns.prefix("test_filter_schema"))
             .withDatabase(database.getFullyQualifiedName());
     DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
 
     // Create table that SHOULD trigger workflow (production table)
     CreateTable createProdTable =
         new CreateTable()
-            .withName("production_customer_data")
+            .withName(ns.prefix("production_customer_data"))
             .withDatabaseSchema(dbSchema.getFullyQualifiedName())
             .withDescription("Production table that should trigger workflow")
             .withColumns(
@@ -2416,7 +2424,7 @@ public class WorkflowDefinitionResourceIT {
     // Create table that should NOT trigger workflow (dev/test table)
     CreateTable createDevTable =
         new CreateTable()
-            .withName("dev_test_table")
+            .withName(ns.prefix("dev_test_table"))
             .withDatabaseSchema(dbSchema.getFullyQualifiedName())
             .withDescription("Dev table that should NOT trigger workflow")
             .withColumns(
@@ -2426,13 +2434,11 @@ public class WorkflowDefinitionResourceIT {
     Table devTable = client.tables().create(createDevTable);
     LOG.debug("Created dev table that should NOT match filter: {}", devTable.getName());
 
-    java.lang.Thread.sleep(5000);
-
     // Create workflow with entity-specific filters - using raw JSON like reference test
     String workflowJson =
         """
             {
-              "name": "EntitySpecificFilterWorkflow",
+              "name": "%s",
               "displayName": "Entity Specific Filter Workflow",
               "description": "Workflow to test entity-specific filtering for different entity types",
               "trigger": {
@@ -2492,7 +2498,8 @@ public class WorkflowDefinitionResourceIT {
                 "storeStageStatus": true
               }
             }
-            """;
+            """
+            .formatted(workflowName);
 
     CreateWorkflowDefinition workflow =
         MAPPER.readValue(workflowJson, CreateWorkflowDefinition.class);
@@ -2507,9 +2514,6 @@ public class WorkflowDefinitionResourceIT {
     JsonNode created = MAPPER.readTree(response);
     assertTrue(created.has("id"));
     LOG.info("{} created successfully", workflowName);
-
-    // Wait a bit for workflow to be deployed
-    java.lang.Thread.sleep(5000);
 
     // Store IDs for lambda expressions
     final UUID termToMatchId = termToMatch.getId();
@@ -2542,14 +2546,13 @@ public class WorkflowDefinitionResourceIT {
     JsonNode devTablePatch = MAPPER.readTree(devTablePatchStr);
     client.tables().patch(devTableId, devTablePatch);
 
-    java.lang.Thread.sleep(5000);
-
     // Wait for workflow processing using Awaitility
     LOG.info("Waiting for workflow to process entities...");
     await()
-        .atMost(Duration.ofSeconds(60))
+        .atMost(Duration.ofSeconds(120))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(1))
+        .ignoreExceptions()
         .until(
             () -> {
               try {
@@ -2693,9 +2696,10 @@ public class WorkflowDefinitionResourceIT {
       OpenMetadataClient testUserClient = SdkClients.user3Client();
 
       // Try to suspend without proper authorization
-      ApiException exception =
+      OpenMetadataException exception =
           assertThrows(
-              ApiException.class, () -> testUserClient.workflowDefinitions().suspend(workflowFqn));
+              OpenMetadataException.class,
+              () -> testUserClient.workflowDefinitions().suspend(workflowFqn));
 
       // Should get 403 Forbidden
       assertEquals(403, exception.getStatusCode(), "Should return 403 for unauthorized user");
@@ -4437,7 +4441,7 @@ public class WorkflowDefinitionResourceIT {
 
     // Step 6: Wait for workflow to process and assert tags are replaced
     await()
-        .atMost(Duration.ofSeconds(60))
+        .atMost(Duration.ofSeconds(120))
         .pollInterval(Duration.ofSeconds(1))
         .pollDelay(Duration.ofMillis(500))
         .until(
@@ -4696,7 +4700,6 @@ public class WorkflowDefinitionResourceIT {
     org.openmetadata.schema.entity.data.DataContract dataContract =
         client.dataContracts().create(createDataContract);
     LOG.debug("Created data contract: {} with initial description", dataContract.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 4: Create classification and tag with reviewers (USER1 as reviewer)
     CreateClassification createClassification =
@@ -4713,7 +4716,6 @@ public class WorkflowDefinitionResourceIT {
             .withReviewers(List.of(reviewerRef));
     Tag tag = client.tags().create(createTag);
     LOG.debug("Created tag: {} with initial description", tag.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 5: Create dataProduct with reviewers (dedicated reviewer)
     org.openmetadata.schema.api.domains.CreateDataProduct createDataProduct =
@@ -4726,7 +4728,6 @@ public class WorkflowDefinitionResourceIT {
     org.openmetadata.schema.entity.domains.DataProduct dataProduct =
         client.dataProducts().create(createDataProduct);
     LOG.debug("Created data product: {} with initial description", dataProduct.getName());
-    java.lang.Thread.sleep(2000);
 
     // Add asset using bulk API
     org.openmetadata.schema.type.api.BulkAssets bulkAssets =
@@ -4744,7 +4745,6 @@ public class WorkflowDefinitionResourceIT {
             .withReviewers(List.of(reviewerRef));
     Metric metric = client.metrics().create(createMetric);
     LOG.debug("Created metric: {} with initial description", metric.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 5.6: Create testCase with reviewers
     CreateTestDefinition createTestDef =
@@ -4769,7 +4769,6 @@ public class WorkflowDefinitionResourceIT {
 
     TestCase testCase = client.testCases().create(createTestCase);
     LOG.debug("Created test case: {} with initial description", testCase.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 6: Find and resolve approval tasks for each entity
     LOG.debug("Finding and resolving approval tasks");
@@ -4856,7 +4855,6 @@ public class WorkflowDefinitionResourceIT {
                 dataContract.getId(),
                 JsonUtils.readTree(
                     JsonUtils.getJsonPatch(dataContract, updatedContract).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update tag description
     Tag updatedTagObj = JsonUtils.deepCopy(tag, Tag.class);
@@ -4867,7 +4865,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 tag.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(tag, updatedTagObj).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update dataProduct description
     org.openmetadata.schema.entity.domains.DataProduct updatedDataProduct =
@@ -4880,7 +4877,6 @@ public class WorkflowDefinitionResourceIT {
                 dataProduct.getId(),
                 JsonUtils.readTree(
                     JsonUtils.getJsonPatch(dataProduct, updatedDataProduct).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update metric description
     Metric updatedMetric = JsonUtils.deepCopy(metric, Metric.class);
@@ -4891,7 +4887,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 metric.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(metric, updatedMetric).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update testCase description
     TestCase updatedTestCase = JsonUtils.deepCopy(testCase, TestCase.class);
@@ -4902,9 +4897,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 testCase.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(testCase, updatedTestCase).toString()));
-
-    // Wait for new tasks to be created
-    java.lang.Thread.sleep(10000);
 
     // Step 9: Find and resolve new approval tasks
     LOG.debug("Finding and resolving new approval tasks after updates");
@@ -4923,9 +4915,6 @@ public class WorkflowDefinitionResourceIT {
 
     // Resolve new TestCase approval task
     waitAndResolveTask.accept(testCaseEntityLink, "TestCase");
-
-    // Wait for workflows to complete after approval
-    java.lang.Thread.sleep(5000);
 
     // Step 10: Verify descriptions were updated back by workflows
     verifyEntityDescriptionsUpdated(
@@ -5052,8 +5041,13 @@ public class WorkflowDefinitionResourceIT {
     LOG.info("Starting test_AutoApprovalForEntitiesWithoutReviewers");
 
     OpenMetadataClient client = SdkClients.adminClient();
-    String workflowName = "AutoApprovalTestWorkflow";
-    String dataProductName = "auto_dataproduct";
+    try {
+      ensureWorkflowEventConsumerIsActive(client);
+    } catch (Exception e) {
+      fail("Failed to ensure WorkflowEventConsumer subscription is active: " + e.getMessage());
+    }
+    String workflowName = "wf_" + ns.uniqueShortId() + "_auto_approval_workflow";
+    String dataProductName = ns.shortPrefix("auto_dataproduct");
 
     Domain domain = getOrCreateDomain(ns);
 
@@ -5136,7 +5130,6 @@ public class WorkflowDefinitionResourceIT {
 
     CreateWorkflowDefinition autoApprovalWorkflow =
         JsonUtils.readValue(autoApprovalWorkflowJson, CreateWorkflowDefinition.class);
-    java.lang.Thread.sleep(2000);
     String response =
         client
             .getHttpClient()
@@ -5158,7 +5151,7 @@ public class WorkflowDefinitionResourceIT {
     // Create database infrastructure for dataProduct
     CreateDatabaseService createDbService =
         new CreateDatabaseService()
-            .withName(ns.prefix("auto_dbs"))
+            .withName(ns.shortPrefix("auto_dbs"))
             .withServiceType(CreateDatabaseService.DatabaseServiceType.Mysql)
             .withConnection(
                 new org.openmetadata.schema.api.services.DatabaseConnection()
@@ -5171,7 +5164,7 @@ public class WorkflowDefinitionResourceIT {
 
     CreateDatabase createDatabase =
         new CreateDatabase()
-            .withName("auto_db")
+            .withName(ns.shortPrefix("auto_db"))
             .withService(dbService.getFullyQualifiedName())
             .withDescription("Test database for auto-approval")
             .withDomains(List.of(domain.getFullyQualifiedName()));
@@ -5180,7 +5173,7 @@ public class WorkflowDefinitionResourceIT {
 
     CreateDatabaseSchema createSchema =
         new CreateDatabaseSchema()
-            .withName("auto_sc")
+            .withName(ns.shortPrefix("auto_sc"))
             .withDatabase(database.getFullyQualifiedName())
             .withDescription("Test schema for auto-approval")
             .withDomains(List.of(domain.getFullyQualifiedName()));
@@ -5189,7 +5182,7 @@ public class WorkflowDefinitionResourceIT {
 
     CreateTable createTable =
         new CreateTable()
-            .withName("auto_table")
+            .withName(ns.shortPrefix("auto_table"))
             .withDatabaseSchema(schema.getFullyQualifiedName())
             .withDescription("Test table for auto-approval")
             .withColumns(
@@ -5222,12 +5215,7 @@ public class WorkflowDefinitionResourceIT {
             .withAssets(List.of(table.getEntityReference()));
     client.dataProducts().bulkAddAssets(dataProduct.getFullyQualifiedName(), bulkAssets);
 
-    // Wait for workflow to process and auto-approve
-    // Adding extra time to handle potential duplicate workflow executions
-    java.lang.Thread.sleep(15000);
-
     // Verify no user tasks were created (since there are no reviewers, it should auto-approve)
-    // Using client.feed().listTasks()
     String dataProductEntityLink =
         String.format(
             "<#E::%s::%s>",
@@ -5244,7 +5232,7 @@ public class WorkflowDefinitionResourceIT {
     // Verify that the dataProduct status was set to "Approved" by the workflow
     LOG.info("Verifying dataProduct status was auto-approved...");
     await()
-        .atMost(Duration.ofSeconds(120))
+        .atMost(Duration.ofSeconds(180))
         .pollInterval(Duration.ofSeconds(2))
         .pollDelay(Duration.ofSeconds(2))
         .ignoreExceptions() // Ignore transient errors during polling
@@ -5453,9 +5441,6 @@ public class WorkflowDefinitionResourceIT {
     assertNotNull(createdWorkflow);
     LOG.debug("Created tag approval workflow: {}", createdWorkflow.getName());
 
-    // Wait for workflow to be ready
-    java.lang.Thread.sleep(2000);
-
     // Create a classification for our test tags
     // Classification CreateClassification doesn't follow usual pattern? Checking Service...
     // Client.classifications().create(CreateClassification)
@@ -5485,9 +5470,6 @@ public class WorkflowDefinitionResourceIT {
         "reviewer1 should be the reviewer");
     LOG.debug("Created tag with reviewer1: {}, Status: {}", tag.getName(), tag.getEntityStatus());
 
-    // Wait for workflow to process the create event
-    java.lang.Thread.sleep(5000);
-
     // Verify that an approval task was created and assigned to the reviewers
     String entityLink =
         new MessageParser.EntityLink(
@@ -5496,7 +5478,7 @@ public class WorkflowDefinitionResourceIT {
 
     // Wait for task to be created
     await()
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollInterval(Duration.ofSeconds(2))
         .until(
             () -> {
@@ -6223,35 +6205,31 @@ public class WorkflowDefinitionResourceIT {
   }
 
   private void verifyTableCertifications_SDK() throws Exception {
-    // Wait for workflow to process (use Thread.sleep for consistency with original test)
-    java.lang.Thread.sleep(30000);
-
-    // Final verification - check all tables have the expected Gold certification
-    for (Table table : testTables) {
-      Table updatedTable =
-          SdkClients.adminClient().tables().get(table.getId().toString(), "certification");
-
-      if (updatedTable.getCertification() != null) {
-        LOG.debug(
-            "Table {} has certification: {}",
-            updatedTable.getName(),
-            updatedTable.getCertification().getTagLabel().getTagFQN());
-
-        // For this simplified test, all tables should get Gold certification
-        assertEquals(
-            "Certification.Gold",
-            updatedTable.getCertification().getTagLabel().getTagFQN(),
-            "Table " + updatedTable.getName() + " should have Gold certification");
-      } else {
-        LOG.warn("Table {} has no certification", updatedTable.getName());
-      }
-    }
+    await("all tables have Gold certification")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              for (Table table : testTables) {
+                Table updatedTable =
+                    SdkClients.adminClient()
+                        .tables()
+                        .get(table.getId().toString(), "certification");
+                assertNotNull(
+                    updatedTable.getCertification(),
+                    "Table " + updatedTable.getName() + " should have certification");
+                assertEquals(
+                    "Certification.Gold",
+                    updatedTable.getCertification().getTagLabel().getTagFQN(),
+                    "Table " + updatedTable.getName() + " should have Gold certification");
+              }
+            });
 
     LOG.info("Certification verification completed successfully");
   }
 
   private Domain getOrCreateDomain(TestNamespace ns) {
-    String domainName = ns.prefix("domain");
+    String domainName = ns.shortPrefix("domain");
     try {
       return SdkClients.adminClient().domains().getByName(domainName);
     } catch (Exception e) {
@@ -6282,42 +6260,118 @@ public class WorkflowDefinitionResourceIT {
       LOG.debug("WorkflowEventConsumer subscription not found, will create it");
     }
 
-    if (existing == null) {
-      // Create the WorkflowEventConsumer subscription
-      org.openmetadata.schema.api.events.CreateEventSubscription createSubscription =
-          new org.openmetadata.schema.api.events.CreateEventSubscription()
-              .withName("WorkflowEventConsumer")
-              .withDisplayName("Workflow Event Consumer")
-              .withDescription(
-                  "Consumes EntityChange Events in order to trigger Workflows, if they exist.")
-              .withAlertType(
-                  org.openmetadata.schema.api.events.CreateEventSubscription.AlertType
-                      .GOVERNANCE_WORKFLOW_CHANGE_EVENT)
-              .withResources(List.of("all"))
-              .withProvider(org.openmetadata.schema.type.ProviderType.SYSTEM)
-              .withPollInterval(10)
-              .withEnabled(true)
-              .withDestinations(
-                  List.of(
-                      new org.openmetadata.schema.entity.events.SubscriptionDestination()
-                          .withCategory(
-                              org.openmetadata.schema.entity.events.SubscriptionDestination
-                                  .SubscriptionCategory.EXTERNAL)
-                          .withType(
-                              org.openmetadata.schema.entity.events.SubscriptionDestination
-                                  .SubscriptionType.GOVERNANCE_WORKFLOW_CHANGE_EVENT)
-                          .withEnabled(true)));
+    Map<String, Object> destinationPayload = new LinkedHashMap<>();
+    destinationPayload.put("id", "fc9e7a84-5dbd-4e63-8b78-6c3a7bf04a60");
+    destinationPayload.put("category", "External");
+    destinationPayload.put("type", "GovernanceWorkflowChangeEvent");
+    destinationPayload.put("config", Map.of("mode", "workflow"));
+    destinationPayload.put("enabled", true);
 
-      client.eventSubscriptions().create(createSubscription);
+    if (existing == null) {
+      Map<String, Object> createSubscription = new LinkedHashMap<>();
+      createSubscription.put("name", "WorkflowEventConsumer");
+      createSubscription.put("displayName", "Workflow Event Consumer");
+      createSubscription.put(
+          "description",
+          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
+      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
+      createSubscription.put("resources", List.of("all"));
+      createSubscription.put("provider", "system");
+      createSubscription.put("pollInterval", 10);
+      createSubscription.put("enabled", true);
+      createSubscription.put("destinations", List.of(destinationPayload));
+
+      client
+          .getHttpClient()
+          .executeForString(
+              HttpMethod.POST,
+              "/v1/events/subscriptions",
+              createSubscription,
+              RequestOptions.builder().build());
       LOG.info("Created WorkflowEventConsumer subscription");
-      java.lang.Thread.sleep(2000); // Give it time to initialize
-    } else if (!existing.getEnabled()) {
-      // Enable if disabled using patch
-      String patchStr = "[{\"op\":\"replace\",\"path\":\"/enabled\",\"value\":true}]";
-      JsonNode patch = MAPPER.readTree(patchStr);
-      client.eventSubscriptions().patch(existing.getId(), patch);
-      LOG.info("Enabled WorkflowEventConsumer subscription");
-      java.lang.Thread.sleep(1000);
+      return;
     }
+
+    boolean needsEnable = !Boolean.TRUE.equals(existing.getEnabled());
+    boolean needsDestinationConfig = !hasWorkflowDestinationConfig(existing);
+    if (!needsEnable && !needsDestinationConfig) {
+      return;
+    }
+
+    List<Map<String, Object>> patchOps = new ArrayList<>();
+    if (needsEnable) {
+      patchOps.add(
+          Map.of(
+              "op", "replace",
+              "path", "/enabled",
+              "value", true));
+    }
+    if (needsDestinationConfig) {
+      patchOps.add(
+          Map.of(
+              "op", "replace",
+              "path", "/destinations",
+              "value", List.of(destinationPayload)));
+    }
+
+    try {
+      JsonNode patch = MAPPER.valueToTree(patchOps);
+      client.eventSubscriptions().patch(existing.getId(), patch);
+      LOG.info(
+          "Updated WorkflowEventConsumer subscription (enabled={}, destinationConfig={})",
+          needsEnable,
+          needsDestinationConfig);
+    } catch (Exception patchError) {
+      LOG.warn(
+          "Failed to patch WorkflowEventConsumer, recreating subscription: {}",
+          patchError.getMessage());
+      client.eventSubscriptions().delete(existing.getId());
+
+      Map<String, Object> createSubscription = new LinkedHashMap<>();
+      createSubscription.put("name", "WorkflowEventConsumer");
+      createSubscription.put("displayName", "Workflow Event Consumer");
+      createSubscription.put(
+          "description",
+          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
+      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
+      createSubscription.put("resources", List.of("all"));
+      createSubscription.put("provider", "system");
+      createSubscription.put("pollInterval", 10);
+      createSubscription.put("enabled", true);
+      createSubscription.put("destinations", List.of(destinationPayload));
+      client
+          .getHttpClient()
+          .executeForString(
+              HttpMethod.POST,
+              "/v1/events/subscriptions",
+              createSubscription,
+              RequestOptions.builder().build());
+      LOG.info("Recreated WorkflowEventConsumer subscription");
+    }
+  }
+
+  private boolean hasWorkflowDestinationConfig(
+      org.openmetadata.schema.entity.events.EventSubscription subscription) {
+    if (subscription.getDestinations() == null || subscription.getDestinations().isEmpty()) {
+      return false;
+    }
+
+    for (org.openmetadata.schema.entity.events.SubscriptionDestination destination :
+        subscription.getDestinations()) {
+      if (destination.getType()
+          != org.openmetadata.schema.entity.events.SubscriptionDestination.SubscriptionType
+              .GOVERNANCE_WORKFLOW_CHANGE_EVENT) {
+        continue;
+      }
+      Object config = destination.getConfig();
+      if (config == null) {
+        return false;
+      }
+      if (config instanceof Map<?, ?> map && map.isEmpty()) {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 }

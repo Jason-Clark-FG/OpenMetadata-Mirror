@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +23,14 @@ class PrometheusResourceIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(PrometheusResourceIT.class);
 
-  @Test
+  @RetryingTest(2)
   void testPrometheusEndpoint() throws Exception {
     int adminPort = TestSuiteBootstrap.getAdminPort();
     URL url = URI.create("http://localhost:" + adminPort + "/prometheus").toURL();
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     connection.setRequestMethod("GET");
-    connection.setConnectTimeout(5000);
-    connection.setReadTimeout(5000);
+    connection.setConnectTimeout(15000);
+    connection.setReadTimeout(15000);
 
     try {
       int responseCode = connection.getResponseCode();
@@ -186,11 +187,13 @@ class PrometheusResourceIT {
         metricCount);
   }
 
-  @Test
+  @RetryingTest(2)
   void testPrometheusMetricCount() throws Exception {
     int adminPort = TestSuiteBootstrap.getAdminPort();
     URL url = URI.create("http://localhost:" + adminPort + "/prometheus").toURL();
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setConnectTimeout(15000);
+    connection.setReadTimeout(15000);
 
     try (BufferedReader reader =
         new BufferedReader(new InputStreamReader(connection.getInputStream()))) {

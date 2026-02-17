@@ -9,14 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.SharedEntities;
+import org.openmetadata.it.util.IsolatedTest;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
@@ -36,22 +38,28 @@ import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TagLabelMetadata;
 import org.openmetadata.schema.type.TagLabelRecognizerMetadata;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.sdk.exceptions.ApiException;
 import org.openmetadata.sdk.fluent.DatabaseSchemas;
 import org.openmetadata.sdk.fluent.DatabaseServices;
 import org.openmetadata.sdk.fluent.Databases;
 import org.openmetadata.sdk.network.HttpClient;
 import org.openmetadata.sdk.network.HttpMethod;
+import org.openmetadata.sdk.network.RequestOptions;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.feeds.MessageParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ExtendWith(TestNamespaceExtension.class)
-@Execution(ExecutionMode.SAME_THREAD)
+@IsolatedTest
 public class TagRecognizerFeedbackIT {
-  private static final long TIMEOUT_MINUTES = 5;
+
+  private static final Logger LOG = LoggerFactory.getLogger(TagRecognizerFeedbackIT.class);
+  private static final long TIMEOUT_MINUTES = 1;
   private static final long POLL_INTERVAL_SECONDS = 3;
 
   @BeforeAll
-  protected static void setupWorkflow() {
+  protected static void setupWorkflow() throws Exception {
     org.openmetadata.service.governance.workflows.WorkflowHandler workflowHandler =
         org.openmetadata.service.governance.workflows.WorkflowHandler.getInstance();
     workflowHandler.resumeWorkflow("RecognizerFeedbackReviewWorkflow");
@@ -66,6 +74,136 @@ public class TagRecognizerFeedbackIT {
                       .withName("RecognizerFeedbackReviewWorkflow");
               assertTrue(workflowHandler.isDeployed(wfDef), "Workflow should be deployed");
             });
+
+    ensureWorkflowEventConsumerIsActive(SdkClients.adminClient());
+  }
+
+  private static void ensureWorkflowEventConsumerIsActive(OpenMetadataClient client)
+      throws Exception {
+    LOG.debug("Ensuring WorkflowEventConsumer subscription is active...");
+
+    org.openmetadata.schema.entity.events.EventSubscription existing = null;
+    try {
+      existing = client.eventSubscriptions().getByName("WorkflowEventConsumer");
+      LOG.info("WorkflowEventConsumer subscription found: enabled={}", existing.getEnabled());
+    } catch (ApiException e) {
+      if (e.getStatusCode() != 404) {
+        throw e;
+      }
+      LOG.debug("WorkflowEventConsumer subscription not found, will create it");
+    }
+
+    Map<String, Object> destinationPayload = new LinkedHashMap<>();
+    destinationPayload.put("id", "fc9e7a84-5dbd-4e63-8b78-6c3a7bf04a60");
+    destinationPayload.put("category", "External");
+    destinationPayload.put("type", "GovernanceWorkflowChangeEvent");
+    destinationPayload.put("config", Map.of("mode", "workflow"));
+    destinationPayload.put("enabled", true);
+
+    if (existing == null) {
+      Map<String, Object> createSubscription = new LinkedHashMap<>();
+      createSubscription.put("name", "WorkflowEventConsumer");
+      createSubscription.put("displayName", "Workflow Event Consumer");
+      createSubscription.put(
+          "description",
+          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
+      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
+      createSubscription.put("resources", List.of("all"));
+      createSubscription.put("provider", "system");
+      createSubscription.put("pollInterval", 10);
+      createSubscription.put("enabled", true);
+      createSubscription.put("destinations", List.of(destinationPayload));
+
+      client
+          .getHttpClient()
+          .executeForString(
+              HttpMethod.POST,
+              "/v1/events/subscriptions",
+              createSubscription,
+              RequestOptions.builder().build());
+      LOG.info("Created WorkflowEventConsumer subscription");
+      return;
+    }
+
+    boolean needsEnable = !Boolean.TRUE.equals(existing.getEnabled());
+    boolean needsDestinationConfig = !hasWorkflowDestinationConfig(existing);
+    if (!needsEnable && !needsDestinationConfig) {
+      return;
+    }
+
+    List<Map<String, Object>> patchOps = new ArrayList<>();
+    if (needsEnable) {
+      patchOps.add(
+          Map.of(
+              "op", "replace",
+              "path", "/enabled",
+              "value", true));
+    }
+    if (needsDestinationConfig) {
+      patchOps.add(
+          Map.of(
+              "op", "replace",
+              "path", "/destinations",
+              "value", List.of(destinationPayload)));
+    }
+
+    try {
+      com.fasterxml.jackson.databind.JsonNode patch =
+          new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(patchOps);
+      client.eventSubscriptions().patch(existing.getId(), patch);
+      LOG.info(
+          "Updated WorkflowEventConsumer subscription (enabled={}, destinationConfig={})",
+          needsEnable,
+          needsDestinationConfig);
+    } catch (Exception patchError) {
+      LOG.warn("Failed to patch WorkflowEventConsumer, recreating: {}", patchError.getMessage());
+      client.eventSubscriptions().delete(existing.getId());
+
+      Map<String, Object> createSubscription = new LinkedHashMap<>();
+      createSubscription.put("name", "WorkflowEventConsumer");
+      createSubscription.put("displayName", "Workflow Event Consumer");
+      createSubscription.put(
+          "description",
+          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
+      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
+      createSubscription.put("resources", List.of("all"));
+      createSubscription.put("provider", "system");
+      createSubscription.put("pollInterval", 10);
+      createSubscription.put("enabled", true);
+      createSubscription.put("destinations", List.of(destinationPayload));
+      client
+          .getHttpClient()
+          .executeForString(
+              HttpMethod.POST,
+              "/v1/events/subscriptions",
+              createSubscription,
+              RequestOptions.builder().build());
+      LOG.info("Recreated WorkflowEventConsumer subscription");
+    }
+  }
+
+  private static boolean hasWorkflowDestinationConfig(
+      org.openmetadata.schema.entity.events.EventSubscription subscription) {
+    if (subscription.getDestinations() == null || subscription.getDestinations().isEmpty()) {
+      return false;
+    }
+    for (org.openmetadata.schema.entity.events.SubscriptionDestination destination :
+        subscription.getDestinations()) {
+      if (destination.getType()
+          != org.openmetadata.schema.entity.events.SubscriptionDestination.SubscriptionType
+              .GOVERNANCE_WORKFLOW_CHANGE_EVENT) {
+        continue;
+      }
+      Object config = destination.getConfig();
+      if (config == null) {
+        return false;
+      }
+      if (config instanceof Map<?, ?> map && map.isEmpty()) {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   protected SharedEntities shared() {

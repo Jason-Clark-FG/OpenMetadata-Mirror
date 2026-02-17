@@ -406,39 +406,29 @@ public class AppsResourceIT {
     Map<String, Object> config = new HashMap<>();
     config.put("batchSize", 1234);
 
-    // Retry trigger with backoff in case a previous job is still finishing up
-    int maxTriggerRetries = 10;
-    boolean triggered = false;
-    Exception lastException = null;
+    Awaitility.await("trigger app with custom config")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () ->
+                httpClient.execute(
+                    HttpMethod.POST, "/v1/apps/trigger/" + appName, config, Void.class));
 
-    for (int i = 0; i < maxTriggerRetries && !triggered; i++) {
-      try {
-        httpClient.execute(HttpMethod.POST, "/v1/apps/trigger/" + appName, config, Void.class);
-        triggered = true;
-      } catch (Exception e) {
-        lastException = e;
-        if (e.getMessage() != null && e.getMessage().contains("already running")) {
-          // Job is still running from previous test, wait and retry
-          Thread.sleep(2000);
-        } else {
-          throw e; // Re-throw if it's a different error
-        }
-      }
-    }
-
-    if (!triggered && lastException != null) {
-      throw lastException;
-    }
-
-    Thread.sleep(2000);
-
-    AppRunRecord latestRun =
-        httpClient.execute(
-            HttpMethod.GET, "/v1/apps/name/" + appName + "/runs/latest", null, AppRunRecord.class);
-
-    assertNotNull(latestRun);
-    assertNotNull(latestRun.getConfig());
-    assertEquals(1234, latestRun.getConfig().get("batchSize"));
+    Awaitility.await("app run completes with custom config")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              AppRunRecord latestRun =
+                  httpClient.execute(
+                      HttpMethod.GET,
+                      "/v1/apps/name/" + appName + "/runs/latest",
+                      null,
+                      AppRunRecord.class);
+              assertNotNull(latestRun);
+              assertNotNull(latestRun.getConfig());
+              assertEquals(1234, latestRun.getConfig().get("batchSize"));
+            });
   }
 
   @Test
