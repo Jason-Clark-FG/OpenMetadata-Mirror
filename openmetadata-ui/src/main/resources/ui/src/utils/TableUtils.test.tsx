@@ -15,6 +15,7 @@ import { OperationPermission } from '../context/PermissionProvider/PermissionPro
 import { EntityTabs } from '../enums/entity.enum';
 import { TagLabel } from '../generated/entity/data/container';
 import { Column, DataType } from '../generated/entity/data/table';
+import { LabelType, State, TagSource } from '../generated/tests/testCase';
 import { MOCK_TABLE, MOCK_TABLE_DBT } from '../mocks/TableData.mock';
 import {
   ExtraTableDropdownOptions,

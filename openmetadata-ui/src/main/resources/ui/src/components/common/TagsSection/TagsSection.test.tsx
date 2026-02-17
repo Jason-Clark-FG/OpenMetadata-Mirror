@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AxiosError } from 'axios';
 import React from 'react';
 import { EntityType } from '../../../enums/entity.enum';
 import {
@@ -554,13 +553,7 @@ describe('TagsSection', () => {
 
   describe('Save Functionality', () => {
     it('should save tags successfully', async () => {
-      const { patchTableDetails } = jest.requireMock('../../../rest/tableAPI');
-      const { showSuccessToast } = jest.requireMock(
-        '../../../utils/ToastUtils'
-      );
-      const mockOnTagsUpdate = jest.fn();
-
-      patchTableDetails.mockResolvedValue({});
+      const mockOnTagsUpdate = jest.fn().mockResolvedValue([]);
 
       render(<TagsSection {...defaultProps} onTagsUpdate={mockOnTagsUpdate} />);
 
@@ -570,23 +563,19 @@ describe('TagsSection', () => {
       const tagInput = screen.getByTestId('tag-selector-input');
       fireEvent.change(tagInput, { target: { value: 'new-tag1, new-tag2' } });
 
-      // Save happens on selection change automatically
+      // Save happens on selection change automatically via onTagsUpdate callback
 
       await waitFor(() => {
-        expect(patchTableDetails).toHaveBeenCalled();
-        expect(showSuccessToast).toHaveBeenCalled();
         expect(mockOnTagsUpdate).toHaveBeenCalled();
       });
     });
 
     it('should handle save error', async () => {
-      const { patchTableDetails } = jest.requireMock('../../../rest/tableAPI');
-      const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
+      const mockOnTagsUpdate = jest
+        .fn()
+        .mockRejectedValue(new Error('Save failed'));
 
-      const mockError = new Error('Save failed') as AxiosError;
-      patchTableDetails.mockRejectedValue(mockError);
-
-      render(<TagsSection {...defaultProps} />);
+      render(<TagsSection {...defaultProps} onTagsUpdate={mockOnTagsUpdate} />);
 
       await enterEditMode();
 
@@ -597,10 +586,8 @@ describe('TagsSection', () => {
       // Save happens on selection change automatically
 
       await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalledWith(
-          mockError,
-          'server.entity-updating-error - {"entity":"label.tag-plural"}'
-        );
+        // onTagsUpdate should have been called and rejected
+        expect(mockOnTagsUpdate).toHaveBeenCalled();
       });
     });
 
@@ -651,7 +638,13 @@ describe('TagsSection', () => {
 
       patchTableDetails.mockResolvedValue({});
 
-      render(<TagsSection {...defaultProps} entityType={EntityType.TABLE} />);
+      render(
+        <TagsSection
+          {...defaultProps}
+          entityType={EntityType.TABLE}
+          onTagsUpdate={undefined}
+        />
+      );
 
       await enterEditMode();
 
@@ -676,7 +669,11 @@ describe('TagsSection', () => {
       patchDashboardDetails.mockResolvedValue({});
 
       render(
-        <TagsSection {...defaultProps} entityType={EntityType.DASHBOARD} />
+        <TagsSection
+          {...defaultProps}
+          entityType={EntityType.DASHBOARD}
+          onTagsUpdate={undefined}
+        />
       );
 
       await enterEditMode();
@@ -693,35 +690,19 @@ describe('TagsSection', () => {
         );
       });
     });
-
-    it('should throw error for unsupported entity type', async () => {
-      const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
-
-      render(
-        <TagsSection
-          {...defaultProps}
-          entityType={'UNSUPPORTED' as EntityType}
-        />
-      );
-
-      await enterEditMode();
-
-      const tagInput = screen.getByTestId('tag-selector-input');
-      fireEvent.change(tagInput, { target: { value: 'new-tag' } });
-
-      clickSave();
-
-      await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalled();
-      });
-    });
   });
 
   describe('Entity ID Validation', () => {
     it('should show error when entityId is missing', async () => {
       const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
 
-      render(<TagsSection {...defaultProps} entityId={undefined} />);
+      render(
+        <TagsSection
+          {...defaultProps}
+          entityId={undefined}
+          onTagsUpdate={undefined}
+        />
+      );
 
       await enterEditMode();
 

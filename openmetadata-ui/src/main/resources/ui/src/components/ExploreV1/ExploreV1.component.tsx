@@ -470,6 +470,11 @@ const ExploreV1: React.FC<ExploreProps> = ({
                         },
                         ['description', 'displayName']
                       )}
+                      key={
+                        entityDetails.entityType +
+                        '-' +
+                        entityDetails.fullyQualifiedName
+                      }
                       panelPath="explore"
                     />
                   </Col>

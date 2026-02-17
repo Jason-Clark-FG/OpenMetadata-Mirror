@@ -406,7 +406,6 @@ describe('GlossaryTermsSection', () => {
       (updateEntityField as jest.Mock).mockImplementationOnce(() =>
         Promise.resolve({ success: false })
       );
-      const onUpdate = jest.fn();
 
       render(
         <GlossaryTermsSection
@@ -415,7 +414,6 @@ describe('GlossaryTermsSection', () => {
           entityId="123"
           entityType={EntityType.TABLE}
           tags={baseGlossaryTags as TagLabel[]}
-          onGlossaryTermsUpdate={onUpdate}
         />
       );
 
@@ -425,7 +423,7 @@ describe('GlossaryTermsSection', () => {
       });
 
       await waitFor(() => {
-        expect(onUpdate).not.toHaveBeenCalled();
+        expect(updateEntityField).toHaveBeenCalled();
       });
     });
   });

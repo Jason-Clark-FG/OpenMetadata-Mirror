@@ -655,7 +655,7 @@ describe('Test TagsPage page', () => {
 
     await act(async () => {
       render(<TagsPage {...mockProps} />, {
-        wrapper: Wrapper,
+        wrapper: MemoryRouter,
       });
     });
 

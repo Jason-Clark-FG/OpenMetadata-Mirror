@@ -15,7 +15,7 @@ import { CloseOutlined } from '@mui/icons-material';
 import { Button, Card } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
-import { get } from 'lodash';
+import { get, isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -32,42 +32,44 @@ import { Operation } from '../../../generated/entity/policies/policy';
 import { EntityReference } from '../../../generated/entity/type';
 import { PipelineViewMode } from '../../../generated/settings/settings';
 import { TagLabel } from '../../../generated/tests/testCase';
-import { TagSource } from '../../../generated/type/tagLabel';
 import { EntityData } from '../../../pages/TasksPage/TasksPage.interface';
-import { getSearchIndexDetailsByFQN } from '../../../rest/SearchIndexAPI';
-import { getApiCollectionByFQN } from '../../../rest/apiCollectionsAPI';
-import { getApiEndPointByFQN } from '../../../rest/apiEndpointsAPI';
-import { getChartByFqn } from '../../../rest/chartsAPI';
-import { getDashboardByFqn } from '../../../rest/dashboardAPI';
-import { getDataModelByFqn } from '../../../rest/dataModelsAPI';
-import { getDataProductByName } from '../../../rest/dataProductAPI';
+import { getSearchIndexDetailsByFQN, patchSearchIndexDetails } from '../../../rest/SearchIndexAPI';
+import { getApiCollectionByFQN, patchApiCollection } from '../../../rest/apiCollectionsAPI';
+import { getApiEndPointByFQN, patchApiEndPoint } from '../../../rest/apiEndpointsAPI';
+import { getChartByFqn, patchChartDetails } from '../../../rest/chartsAPI';
+import { getDashboardByFqn, patchDashboardDetails } from '../../../rest/dashboardAPI';
+import { getDataModelByFqn, patchDataModelDetails } from '../../../rest/dataModelsAPI';
+import { getDataProductByName, patchDataProduct } from '../../../rest/dataProductAPI';
 import {
   getDatabaseDetailsByFQN,
   getDatabaseSchemaDetailsByFQN,
+  patchDatabaseDetails,
+  patchDatabaseSchemaDetails,
 } from '../../../rest/databaseAPI';
-import { getDomainByName } from '../../../rest/domainAPI';
-import { getDriveAssetByFqn } from '../../../rest/driveAPI';
-import { getGlossaryTermByFQN } from '../../../rest/glossaryAPI';
+import { getDomainByName, patchDomains } from '../../../rest/domainAPI';
+import { getDriveAssetByFqn, patchDriveAssetDetails } from '../../../rest/driveAPI';
+import { getGlossaryTermByFQN, patchGlossaryTerm } from '../../../rest/glossaryAPI';
 import { getLineageDataByFQN } from '../../../rest/lineageAPI';
 import { getTypeByFQN } from '../../../rest/metadataTypeAPI';
-import { getMetricByFqn } from '../../../rest/metricsAPI';
-import { getMlModelByFQN } from '../../../rest/mlModelAPI';
-import { getPipelineByFqn } from '../../../rest/pipelineAPI';
-import { getContainerByFQN } from '../../../rest/storageAPI';
-import { getStoredProceduresByFqn } from '../../../rest/storedProceduresAPI';
-import { getTableDetailsByFQN } from '../../../rest/tableAPI';
-import { getTopicByFqn } from '../../../rest/topicsAPI';
+import { getMetricByFqn, patchMetric } from '../../../rest/metricsAPI';
+import { getMlModelByFQN, patchMlModelDetails } from '../../../rest/mlModelAPI';
+import { getPipelineByFqn, patchPipelineDetails } from '../../../rest/pipelineAPI';
+import { getContainerByFQN, patchContainerDetails } from '../../../rest/storageAPI';
+import { getStoredProceduresByFqn, patchStoredProceduresDetails } from '../../../rest/storedProceduresAPI';
+import { getTableDetailsByFQN, patchTableDetails } from '../../../rest/tableAPI';
+import { getTopicByFqn, patchTopicDetails } from '../../../rest/topicsAPI';
 import {
   DRAWER_NAVIGATION_OPTIONS,
   getEntityLinkFromType,
 } from '../../../utils/EntityUtils';
 import {
   DEFAULT_ENTITY_PERMISSION,
+  getPrioritizedEditPermission,
   getPrioritizedViewPermission,
 } from '../../../utils/PermissionsUtils';
 import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import searchClassBase from '../../../utils/SearchClassBase';
-import { showErrorToast } from '../../../utils/ToastUtils';
+import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import { DataAssetSummaryPanel } from '../../DataAssetSummaryPanel/DataAssetSummaryPanel';
 import { DataAssetSummaryPanelV1 } from '../../DataAssetSummaryPanelV1/DataAssetSummaryPanelV1';
@@ -83,6 +85,7 @@ import DataQualityTab from './DataQualityTab/DataQualityTab';
 import { EntitySummaryPanelProps } from './EntitySummaryPanel.interface';
 import { LineageTabContent } from './LineageTab';
 import './entity-summary-panel.less';
+import { compare } from 'fast-json-patch';
 
 export default function EntitySummaryPanel({
   entityDetails,
@@ -194,6 +197,53 @@ export default function EntitySummaryPanel({
     } as Record<string, (fqn: string) => Promise<unknown>>;
   }, []);
 
+  const entityUpdateMap = useMemo(() => {
+    return {
+      [EntityType.TABLE]: (id: string, data: any) =>
+        patchTableDetails(id, data),
+      [EntityType.TOPIC]: (id: string, data: any) =>
+        patchTopicDetails(id, data),
+      [EntityType.DASHBOARD]: (id: string, data: any) =>
+        patchDashboardDetails(id, data),
+      [EntityType.PIPELINE]: (id: string, data: any) =>
+        patchPipelineDetails(id, data),
+      [EntityType.MLMODEL]: (id: string, data: any) =>
+        patchMlModelDetails(id, data),
+      [EntityType.DATABASE]: (id: string, data: any) =>
+        patchDatabaseDetails(id, data),
+      [EntityType.DATABASE_SCHEMA]: (id: string, data: any) =>
+        patchDatabaseSchemaDetails(id, data),
+      [EntityType.DASHBOARD_DATA_MODEL]: (id: string, data: any) =>
+        patchDataModelDetails(id, data),
+      [EntityType.SEARCH_INDEX]: (id: string, data: any) =>
+        patchSearchIndexDetails(id, data),
+      [EntityType.STORED_PROCEDURE]: (id: string, data: any) =>
+        patchStoredProceduresDetails(id, data),
+      [EntityType.CONTAINER]: (id: string, data: any) =>
+        patchContainerDetails(id, data),
+      [EntityType.GLOSSARY_TERM]: (id: string, data: any) =>
+        patchGlossaryTerm(id, data),
+      [EntityType.CHART]: (id: string, data: any) =>
+        patchChartDetails(id, data),
+      [EntityType.METRIC]: (id: string, data: any) => patchMetric(id, data),
+      [EntityType.API_ENDPOINT]: (id: string, data: any) =>
+        patchApiEndPoint(id, data),
+      [EntityType.API_COLLECTION]: (id: string, data: any) =>
+        patchApiCollection(id, data),
+      [EntityType.DIRECTORY]: (id: string, data: any) =>
+        patchDriveAssetDetails(id, data, EntityType.DIRECTORY),
+      [EntityType.FILE]: (id: string, data: any) =>
+        patchDriveAssetDetails(id, data, EntityType.FILE),
+      [EntityType.SPREADSHEET]: (id: string, data: any) =>
+        patchDriveAssetDetails(id, data, EntityType.SPREADSHEET),
+      [EntityType.WORKSHEET]: (id: string, data: any) =>
+        patchDriveAssetDetails(id, data, EntityType.WORKSHEET),
+      [EntityType.DATA_PRODUCT]: (id: string, data: any) =>
+        patchDataProduct(id, data),
+      [EntityType.DOMAIN]: (id: string, data: any) => patchDomains(id, data),
+    } as Record<string, (id: string, data: any) => Promise<unknown>>;
+  }, []);
+
   const fetchEntityData = useCallback(async () => {
     if (!entityDetails?.details?.fullyQualifiedName || !entityType) {
       return;
@@ -219,15 +269,15 @@ export default function EntitySummaryPanel({
           fullyQualifiedName: entityDetails.details.fullyQualifiedName,
           id: entityDetails.details.id,
           description: data.description ?? entityDetails.details.description,
-          displayName: entityDetails.details.displayName,
+          displayName: data.displayName,
           name: entityDetails.details.name,
           deleted: entityDetails.details.deleted,
           serviceType: (entityDetails.details as any).serviceType,
           service: data.service ?? entityDetails.details.service,
           // Prefer canonical data; fallback to search result if missing
-          owners: data.owners ?? entityDetails.details.owners,
-          domains: data.domains ?? entityDetails.details.domains,
-          tags: data.tags ?? entityDetails.details.tags,
+          owners: data.owners ?? [],
+          domains: data.domains ?? [],
+          tags: data.tags ?? [],
           dataProducts:
             data.dataProducts ?? (entityDetails.details as any).dataProducts,
           tier: (entityDetails.details as any).tier,
@@ -313,24 +363,14 @@ export default function EntitySummaryPanel({
 
   const updateEntityData = useCallback(
     (updatedData: Partial<EntityData>) => {
-      setEntityData((prevData: EntityData | null) => {
-        // Use entityDetails.details as a fallback if prevData is null.
-        // This handles the initial update before fetchEntityData completes.
-        const baseData = prevData || entityDetails.details;
-
-        // Safety check: If the base data's ID doesn't match the current entity,
-        // abort the update to prevent state corruption.
-        if (baseData.id !== entityDetails.details.id) {
-          return prevData; // Return the original state without changes
-        }
-
-        const newState = { ...baseData, ...updatedData };
-
-        return newState;
-      });
-
       if (onEntityUpdate) {
         onEntityUpdate(updatedData);
+      }
+      else {
+        setEntityData((prev: EntityData) => ({
+          ...(prev || entityDetails.details),
+          ...updatedData,
+        }));
       }
     },
     [entityDetails.details, onEntityUpdate]
@@ -351,20 +391,57 @@ export default function EntitySummaryPanel({
   );
 
   const handleTagsUpdate = useCallback(
-    (updatedTags: TagLabel[]) => {
-      // updatedTags from TagsSection only contains classification tags
-      const currentTags = entityData?.tags ?? [];
-      const glossaryTags = currentTags.filter(
-        (tag: TagLabel) => tag.source === TagSource.Glossary
-      );
-      const tierTags = currentTags.filter((tag: TagLabel) =>
-        tag.tagFQN?.startsWith('Tier.')
-      );
-      updateEntityData({
-        tags: [...updatedTags, ...glossaryTags, ...tierTags],
+    async (updatedTags: TagLabel[]) => {
+      if (onEntityUpdate) {
+        onEntityUpdate({ tags: updatedTags });
+
+        return updatedTags;
+      }
+
+      const baseData = entityData ?? entityDetails.details;
+      const jsonPatch = compare(baseData, {
+        ...baseData,
+        tags: updatedTags,
       });
+
+      if (isEmpty(jsonPatch)) {
+        return updatedTags;
+      }
+
+      try {
+        const apiFunc = entityUpdateMap[entityType];
+        if (apiFunc && id) {
+          const res = await apiFunc(id, jsonPatch);
+          setEntityData((prev: EntityData) => ({
+            ...(prev || entityDetails.details),
+            ...(res as Partial<EntityData>),
+          }));
+
+          showSuccessToast(
+            t('server.update-entity-success', {
+              entity: t('label.tag-plural'),
+            })
+          );
+
+          return (res as EntityData).tags;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        throw error;
+      }
+
+      return undefined;
     },
-    [entityData, updateEntityData]
+    [
+      onEntityUpdate,
+      entityData,
+      entityDetails.details,
+      entityType,
+      id,
+      entityUpdateMap,
+      t,
+    ]
   );
 
   const handleTierUpdate = useCallback(
@@ -390,11 +467,56 @@ export default function EntitySummaryPanel({
 
   const handleGlossaryTermsUpdate = useCallback(
     async (updatedTags: TagLabel[]) => {
-      // The child component (`GlossaryTermsSection`) now handles the API call.
-      // We just need to update the parent's state with the new tags.
-      updateEntityData({ tags: updatedTags });
+      if (onEntityUpdate) {
+        onEntityUpdate({ tags: updatedTags });
+
+        return updatedTags;
+      }
+
+      const baseData = entityData ?? entityDetails.details;
+      const jsonPatch = compare(baseData, {
+        ...baseData,
+        tags: updatedTags,
+      });
+
+      if (isEmpty(jsonPatch)) {
+        return updatedTags;
+      }
+
+      try {
+        const apiFunc = entityUpdateMap[entityType];
+        if (apiFunc && id) {
+          const res = await apiFunc(id, jsonPatch);
+          setEntityData((prev: EntityData) => ({
+            ...(prev || entityDetails.details),
+            ...(res as Partial<EntityData>),
+          }));
+
+          showSuccessToast(
+            t('server.update-entity-success', {
+              entity: t('label.glossary-term-plural'),
+            })
+          );
+
+          return (res as EntityData).tags;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        throw error;
+      }
+
+      return undefined;
     },
-    [updateEntityData]
+    [
+      onEntityUpdate,
+      entityData,
+      entityDetails.details,
+      entityType,
+      id,
+      entityUpdateMap,
+      t,
+    ]
   );
 
   const handleDescriptionUpdate = useCallback(
@@ -427,6 +549,7 @@ export default function EntitySummaryPanel({
 
   // Reset lineage data when entity changes to prevent stale data
   useEffect(() => {
+    setEntityData(null);
     setLineageData(null);
     setIsLineageLoading(false);
   }, [entityDetails?.details?.id]);
@@ -582,24 +705,50 @@ export default function EntitySummaryPanel({
   };
 
   const renderTabContent = () => {
+    if (isPermissionLoading) {
+      return <Loader />;
+    }
+
+    if (!viewPermission) {
+      return (
+        <>
+          {!isSideDrawer && (
+            <EntityTitleSection
+              className="title-section"
+              entityDetails={entityDetails.details}
+              entityLink={entityLink}
+            />
+          )}
+          <ErrorPlaceHolder
+            className="border-none h-min-80"
+            permissionValue={t('label.view-entity', {
+              entity: t('label.data-asset'),
+            })}
+            size={SIZE.MEDIUM}
+            type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+          />
+        </>
+      );
+    }
     switch (activeTab) {
       case EntityRightPanelTab.OVERVIEW:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
                 entityLink={entityLink}
               />
             )}
+
             <div className="overview-tab-content">{summaryComponentV1}</div>
           </>
         );
       case EntityRightPanelTab.SCHEMA:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -619,7 +768,7 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.LINEAGE:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -634,7 +783,7 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.DATA_QUALITY:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -650,7 +799,7 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.CUSTOM_PROPERTIES: {
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -706,13 +855,11 @@ export default function EntitySummaryPanel({
       <div className="d-flex gap-2 w-full h-full">
         <Card
           bordered={false}
-          className={`summary-panel-container ${
-            isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          className={`summary-panel-container ${isSideDrawer ? 'drawer-summary-panel-container' : ''
+            }`}>
           <Card
-            className={`content-area ${
-              isSideDrawer ? 'drawer-content-area' : ''
-            }`}
+            className={`content-area ${isSideDrawer ? 'drawer-content-area' : ''
+              }`}
             style={{ width: '100%', display: 'block' }}>
             {renderTabContent()}
           </Card>
