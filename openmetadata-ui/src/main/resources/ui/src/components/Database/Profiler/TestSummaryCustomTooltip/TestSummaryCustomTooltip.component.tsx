@@ -11,7 +11,12 @@
  *  limitations under the License.
  */
 import { Card, Divider } from 'antd';
-import { entries, isNumber, omit, startCase } from 'lodash';
+import entries from 'lodash/entries';
+import isNumber from 'lodash/isNumber';
+import isUndefined from 'lodash/isUndefined';
+import omit from 'lodash/omit';
+import startCase from 'lodash/startCase';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { TooltipProps } from 'recharts';
@@ -28,89 +33,109 @@ import { getTaskDetailPath } from '../../../../utils/TasksUtils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
 import './test-summary-custom-tooltip.less';
 
+const OMITTED_TOOLTIP_PAYLOAD_KEYS = [
+  'name',
+  'status',
+  'incidentId',
+  'task',
+  'passedRows',
+  'failedRows',
+  'boundArea',
+] as const;
+
+function isThread(value: unknown): value is Thread {
+  return typeof value === 'object' && value !== null && 'task' in value;
+}
+
 const TestSummaryCustomTooltip = (
   props: TooltipProps<string | number, string>
 ) => {
   const { t } = useTranslation();
   const { active, payload = [] } = props;
 
-  if (!active || payload.length === 0) {
-    return null;
-  }
-
-  const payloadData = payload[0].payload;
-  const timestamp = payloadData.name as number;
-  const status = payloadData.status as TestCaseStatus;
-  const passedRows = payloadData.passedRows as number | undefined;
-  const failedRows = payloadData.failedRows as number | undefined;
-  const incidentId = payloadData.incidentId as string | undefined;
-  const task = payloadData.task as Thread | undefined;
-
-  // Calculate total rows
-  const totalRows = (passedRows ?? 0) + (failedRows ?? 0);
-
-  // Format date time using the same format as x-axis
-  const formattedDateTime = formatDateTime(timestamp);
-
-  // Get status color
-  let statusColor: string | undefined;
-  if (status === TestCaseStatus.Failed) {
-    statusColor = RED_3;
-  } else if (status === TestCaseStatus.Success) {
-    statusColor = GREEN_3;
-  }
-
-  // Helper to check if value is a Thread
-  const isThread = (value: unknown): value is Thread => {
-    return typeof value === 'object' && value !== null && 'task' in value;
-  };
-
-  // Get data fields (excluding fields that are displayed explicitly)
-  const data = entries(
-    omit(payloadData, [
-      'name',
-      'status',
-      'incidentId',
-      'task',
-      'passedRows',
-      'failedRows',
-      'boundArea',
-    ])
-  );
-
-  // Render function for tooltip items (previous implementation logic)
-  const tooltipRender = ([key, value]: [
-    key: string,
-    value: string | number | Thread
-  ]) => {
-    // Skip task since it's handled separately (incident and assignee)
-    if (isThread(value)) {
+  const state = useMemo(() => {
+    if (payload.length === 0) {
       return null;
     }
 
-    const tooltipValue = isNumber(value) ? formatNumberWithComma(value) : value;
+    const payloadData = payload[0].payload;
+    const timestamp = payloadData.name as number;
+    const status = payloadData.status as TestCaseStatus;
+    const passedRows = payloadData.passedRows as number | undefined;
+    const failedRows = payloadData.failedRows as number | undefined;
+    const totalRows = (passedRows ?? 0) + (failedRows ?? 0);
+    const formattedDateTime = formatDateTime(timestamp);
+    // Get status color
+    let statusColor: string | undefined;
+    if (status === TestCaseStatus.Failed) {
+      statusColor = RED_3;
+    } else if (status === TestCaseStatus.Success) {
+      statusColor = GREEN_3;
+    }
+    const data = entries(omit(payloadData, [...OMITTED_TOOLTIP_PAYLOAD_KEYS]));
 
-    return (
-      <li
-        className="d-flex items-center justify-between gap-6 p-b-xss text-sm"
-        key={`item-${key}`}>
-        <span className="flex items-center text-grey-muted">
-          {startCase(key)}
-        </span>
-        <span className="font-medium" data-testid={key}>
-          {key === TABLE_FRESHNESS_KEY && isNumber(value)
-            ? // freshness value is in seconds from Python/backend, use dedicated seconds converter
-              convertSecondsToHumanReadableFormat(
-                value,
-                undefined,
-                // negative value will be shown as late by
-                `${t('label.late-by')} `
-              )
-            : tooltipValue}
-        </span>
-      </li>
-    );
-  };
+    return {
+      payloadData,
+      timestamp,
+      status,
+      passedRows,
+      failedRows,
+      incidentId: payloadData.incidentId as string | undefined,
+      task: payloadData.task as Thread | undefined,
+      totalRows,
+      formattedDateTime,
+      statusColor,
+      data,
+    };
+  }, [payload]);
+
+  const tooltipRender = useCallback(
+    ([key, value]: [key: string, value: string | number | Thread]) => {
+      if (isThread(value)) {
+        return null;
+      }
+
+      const tooltipValue = isNumber(value)
+        ? formatNumberWithComma(value)
+        : value;
+
+      return (
+        <li
+          className="d-flex items-center justify-between gap-6 p-b-xss text-sm"
+          key={`item-${key}`}>
+          <span className="flex items-center text-grey-muted">
+            {startCase(key)}
+          </span>
+          <span className="font-medium" data-testid={key}>
+            {key === TABLE_FRESHNESS_KEY && isNumber(value)
+              ? convertSecondsToHumanReadableFormat(
+                  value,
+                  undefined,
+                  `${t('label.late-by')} `
+                )
+              : tooltipValue}
+          </span>
+        </li>
+      );
+    },
+    [t]
+  );
+
+  if (!active || !state) {
+    return null;
+  }
+
+  const {
+    status,
+    passedRows,
+    failedRows,
+    incidentId,
+    task,
+    totalRows,
+    formattedDateTime,
+    statusColor,
+    data,
+  } = state;
 
   return (
     <Card>
@@ -162,7 +187,7 @@ const TestSummaryCustomTooltip = (
             </li>
           )}
           {/* Rows Passed */}
-          {passedRows !== undefined && totalRows > 0 && (
+          {!isUndefined(passedRows) && totalRows > 0 && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
               <span className="flex items-center text-grey-muted">
                 {t('label.passed-rows')}
@@ -175,7 +200,7 @@ const TestSummaryCustomTooltip = (
             </li>
           )}
           {/* Rows Failed */}
-          {failedRows !== undefined && totalRows > 0 && (
+          {!isUndefined(failedRows) && totalRows > 0 && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
               <span className="flex items-center text-grey-muted">
                 {t('label.failed-rows')}

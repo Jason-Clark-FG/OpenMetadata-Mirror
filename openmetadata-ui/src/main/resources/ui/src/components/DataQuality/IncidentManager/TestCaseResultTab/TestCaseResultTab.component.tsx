@@ -344,7 +344,9 @@ const TestCaseResultTab = () => {
                         direction="row"
                         spacing={0.5}
                         sx={{ width: '100%' }}>
-                        <Tooltip placement="bottom" title={`${item.label}:`}>
+                        <Tooltip
+                          placement="bottom-start"
+                          title={`${item.label}:`}>
                           <Typography
                             noWrap
                             className="parameter-label"
@@ -353,7 +355,7 @@ const TestCaseResultTab = () => {
                           </Typography>
                         </Tooltip>
                         {typeof item.value === 'string' ? (
-                          <Tooltip placement="bottom" title={item.value}>
+                          <Tooltip placement="bottom-start" title={item.value}>
                             <Typography
                               noWrap
                               className="parameter-value-text"
