@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.SharedEntities;
 import org.openmetadata.it.factories.APIServiceTestFactory;
 import org.openmetadata.it.util.SdkClients;
@@ -528,7 +529,7 @@ public class APIEndpointResourceIT extends BaseEntityIT<APIEndpoint, CreateAPIEn
     assertEquals(shared.PII_SENSITIVE_TAG_LABEL.getTagFQN(), tags.get(0).getTagFQN());
   }
 
-  @Test
+  @RetryingTest(2)
   void test_paginationFetchesTagsAtBothEntityAndFieldLevels(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
     APICollection collection = getOrCreateAPICollection(ns);

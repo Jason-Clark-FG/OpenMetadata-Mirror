@@ -905,7 +905,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset to be added before rename")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(dataProductId, 10, 0);
@@ -925,7 +925,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset to be present after rename")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(renamedId, 10, 0);
@@ -964,7 +964,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset to be added before rename")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(dataProductId, 10, 0);
@@ -983,7 +983,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset to be present after rename")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(renamedId, 10, 0);
@@ -999,7 +999,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset after consolidation")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(afterDescUpdateId, 10, 0);
@@ -1046,7 +1046,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     Awaitility.await("Wait for asset to be added")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               ResultList<EntityReference> assets = getAssets(dataProductId, 10, 0);
@@ -1067,7 +1067,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
       Awaitility.await("Wait for assets after rename " + iteration)
           .pollDelay(Duration.ofMillis(100))
           .pollInterval(Duration.ofMillis(500))
-          .atMost(Duration.ofSeconds(30))
+          .atMost(Duration.ofSeconds(60))
           .untilAsserted(
               () -> {
                 ResultList<EntityReference> a = getAssets(dpId, 10, 0);
@@ -1083,7 +1083,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
       Awaitility.await("Wait for assets after rename + update " + iteration)
           .pollDelay(Duration.ofMillis(100))
           .pollInterval(Duration.ofMillis(500))
-          .atMost(Duration.ofSeconds(30))
+          .atMost(Duration.ofSeconds(60))
           .untilAsserted(
               () -> {
                 ResultList<EntityReference> a = getAssets(dpId, 10, 0);

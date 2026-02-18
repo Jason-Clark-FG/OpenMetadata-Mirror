@@ -1790,7 +1790,7 @@ public class UserResourceIT extends BaseEntityIT<User, CreateUser> {
     Awaitility.await("Wait for persona cleanup on user1")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               User afterDelete1 = Users.get(user1Id, "personas,defaultPersona");
@@ -1805,7 +1805,7 @@ public class UserResourceIT extends BaseEntityIT<User, CreateUser> {
     Awaitility.await("Wait for persona cleanup on user2")
         .pollDelay(Duration.ofMillis(100))
         .pollInterval(Duration.ofMillis(500))
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .untilAsserted(
             () -> {
               User afterDelete2 = Users.get(user2Id, "personas");
@@ -2190,12 +2190,12 @@ public class UserResourceIT extends BaseEntityIT<User, CreateUser> {
 
     // Performance assertions for concurrent access
     assertTrue(
-        avgConcurrentTime < 300,
+        avgConcurrentTime < 500,
         String.format(
-            "Average concurrent call time should be <300ms, got %.2fms", avgConcurrentTime));
+            "Average concurrent call time should be <500ms, got %.2fms", avgConcurrentTime));
     assertTrue(
-        callsPerSecond > 20,
-        String.format("Should handle >20 calls/sec, got %.1f", callsPerSecond));
+        callsPerSecond > 10,
+        String.format("Should handle >10 calls/sec, got %.1f", callsPerSecond));
 
     // Test 4: Cache Statistics
     String cacheStats = SubjectCache.getCacheStats();

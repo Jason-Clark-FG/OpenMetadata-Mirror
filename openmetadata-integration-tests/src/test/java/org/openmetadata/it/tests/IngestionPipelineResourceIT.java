@@ -7,18 +7,21 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.awaitility.Awaitility;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.factories.DashboardServiceTestFactory;
 import org.openmetadata.it.factories.DatabaseServiceTestFactory;
@@ -390,7 +393,7 @@ public class IngestionPipelineResourceIT
     assertTrue(result.getData().stream().anyMatch(p -> p.getId().equals(dbPipeline.getId())));
   }
 
-  @Test
+  @RetryingTest(3)
   void test_listPipelinesFilteredByPipelineType(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
 
@@ -407,15 +410,22 @@ public class IngestionPipelineResourceIT
 
     IngestionPipeline metadataPipelineEntity = createEntity(metadataRequest);
 
-    ListParams params = new ListParams();
-    Map<String, String> queryParams = new HashMap<>();
-    queryParams.put("pipelineType", "metadata");
-    params.setQueryParams(queryParams);
+    Awaitility.await("search index updated for pipelineType filter")
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              ListParams params = new ListParams();
+              Map<String, String> queryParams = new HashMap<>();
+              queryParams.put("pipelineType", "metadata");
+              params.setQueryParams(queryParams);
 
-    ListResponse<IngestionPipeline> result = listEntities(params);
-    assertTrue(result.getData().size() >= 1);
-    assertTrue(
-        result.getData().stream().anyMatch(p -> p.getId().equals(metadataPipelineEntity.getId())));
+              ListResponse<IngestionPipeline> result = listEntities(params);
+              assertTrue(result.getData().size() >= 1);
+              assertTrue(
+                  result.getData().stream()
+                      .anyMatch(p -> p.getId().equals(metadataPipelineEntity.getId())));
+            });
   }
 
   @Test

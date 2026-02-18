@@ -102,7 +102,7 @@ public class ColumnGridResourceIT {
 
     // Poll until both entities are indexed and the column grid shows 2 occurrences
     await("Wait for column grid to show both occurrences")
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollInterval(Duration.ofSeconds(2))
         .untilAsserted(
             () -> {
@@ -1472,7 +1472,7 @@ public class ColumnGridResourceIT {
   private void waitForColumnToBeIndexed(
       OpenMetadataClient client, String columnName, String serviceName) {
     await()
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollInterval(Duration.ofSeconds(1))
         .until(
             () -> {

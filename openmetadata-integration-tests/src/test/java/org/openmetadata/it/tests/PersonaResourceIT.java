@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.UUID;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -434,10 +436,17 @@ public class PersonaResourceIT extends BaseEntityIT<Persona, CreatePersona> {
     User user1 = client.users().create(userRequest1);
 
     // Test 3: Query user with defaultPersona field - should return system default
-    user1 = client.users().get(user1.getId().toString(), "defaultPersona");
-    assertNotNull(user1.getDefaultPersona());
-    assertEquals(defaultPersona.getId(), user1.getDefaultPersona().getId());
-    assertEquals(defaultPersona.getName(), user1.getDefaultPersona().getName());
+    String user1Id = user1.getId().toString();
+    Awaitility.await("system default persona assigned")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              User fetched = client.users().get(user1Id, "defaultPersona");
+              assertNotNull(fetched.getDefaultPersona());
+              assertEquals(defaultPersona.getId(), fetched.getDefaultPersona().getId());
+              assertEquals(defaultPersona.getName(), fetched.getDefaultPersona().getName());
+            });
 
     // Test 4: Create another persona (non-default)
     CreatePersona createPersona2 =

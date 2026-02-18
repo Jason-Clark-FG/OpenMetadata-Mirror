@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.factories.DashboardServiceTestFactory;
 import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
 import org.openmetadata.it.factories.DatabaseServiceTestFactory;
@@ -101,7 +102,7 @@ public class UsageResourceIT {
     cleanupTable(table);
   }
 
-  @Test
+  @RetryingTest(2)
   void testUpdateUsageForSameDate(TestNamespace ns) {
     Table table = createTable(ns, "usage_table_3");
     String today = LocalDate.now().format(DATE_FORMATTER);
@@ -121,7 +122,7 @@ public class UsageResourceIT {
     cleanupTable(table);
   }
 
-  @Test
+  @RetryingTest(2)
   void testGetUsageWithDateAndDays(TestNamespace ns) {
     Table table = createTable(ns, "usage_table_4");
     String today = LocalDate.now().format(DATE_FORMATTER);

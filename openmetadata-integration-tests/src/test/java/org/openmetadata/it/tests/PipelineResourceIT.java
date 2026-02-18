@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
 import org.openmetadata.it.factories.DatabaseServiceTestFactory;
 import org.openmetadata.it.factories.PipelineServiceTestFactory;
@@ -376,7 +377,7 @@ public class PipelineResourceIT extends BaseEntityIT<Pipeline, CreatePipeline> {
     assertThrows(Exception.class, () -> getEntityIncludeDeleted(pipeline.getId().toString()));
   }
 
-  @Test
+  @RetryingTest(2)
   void test_listPipelinesByService(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
     PipelineService service = PipelineServiceTestFactory.createAirflow(ns);

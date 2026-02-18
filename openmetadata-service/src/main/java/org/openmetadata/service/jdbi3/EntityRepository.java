@@ -1568,10 +1568,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
               .filter(t -> !t.getLabelType().equals(TagLabel.LabelType.DERIVED))
               .toList();
       if (!nonDerivedTags.isEmpty()) {
-        daoCollection.tagUsageDAO().applyTagsBatch(nonDerivedTags, entity.getFullyQualifiedName());
+        String fqn = entity.getFullyQualifiedName();
+        daoCollection.tagUsageDAO().applyTagsBatch(nonDerivedTags, fqn);
         for (TagLabel tagLabel : nonDerivedTags) {
-          org.openmetadata.service.rdf.RdfTagUpdater.applyTag(
-              tagLabel, entity.getFullyQualifiedName());
+          org.openmetadata.service.rdf.RdfTagUpdater.applyTag(tagLabel, fqn);
         }
       }
     }
@@ -3392,41 +3392,25 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  /**
-   * Apply tags {@code tagLabels} to the entity or field identified by {@code targetFQN}
-   */
   @Transaction
   public final void applyTags(List<TagLabel> tagLabels, String targetFQN) {
-    for (TagLabel tagLabel : listOrEmpty(tagLabels)) {
-      if (!tagLabel.getLabelType().equals(TagLabel.LabelType.DERIVED)) {
-        daoCollection
-            .tagUsageDAO()
-            .applyTag(
-                tagLabel.getSource().ordinal(),
-                tagLabel.getTagFQN(),
-                tagLabel.getTagFQN(),
-                targetFQN,
-                tagLabel.getLabelType().ordinal(),
-                tagLabel.getState().ordinal(),
-                tagLabel.getReason(),
-                tagLabel.getAppliedBy(),
-                tagLabel.getMetadata());
-
-        // Update RDF store
+    List<TagLabel> nonDerivedTags =
+        listOrEmpty(tagLabels).stream()
+            .filter(tag -> !tag.getLabelType().equals(TagLabel.LabelType.DERIVED))
+            .toList();
+    if (!nonDerivedTags.isEmpty()) {
+      daoCollection.tagUsageDAO().applyTagsBatch(nonDerivedTags, targetFQN);
+      for (TagLabel tagLabel : nonDerivedTags) {
         org.openmetadata.service.rdf.RdfTagUpdater.applyTag(tagLabel, targetFQN);
       }
     }
   }
 
-  /**
-   * Apply multiple tags in batch to improve performance
-   */
   @Transaction
   public final void applyTagsAdd(List<TagLabel> tagLabels, String targetFQN) {
     if (nullOrEmpty(tagLabels)) {
       return;
     }
-    // Filter out DERIVED tags as they are system-generated
     List<TagLabel> nonDerivedTags =
         tagLabels.stream()
             .filter(tag -> !tag.getLabelType().equals(TagLabel.LabelType.DERIVED))
@@ -3434,23 +3418,17 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     if (!nonDerivedTags.isEmpty()) {
       daoCollection.tagUsageDAO().applyTagsBatch(nonDerivedTags, targetFQN);
-
-      // Update RDF store for each tag
       for (TagLabel tagLabel : nonDerivedTags) {
         org.openmetadata.service.rdf.RdfTagUpdater.applyTag(tagLabel, targetFQN);
       }
     }
   }
 
-  /**
-   * Delete multiple tags in batch to improve performance
-   */
   @Transaction
   public final void applyTagsDelete(List<TagLabel> tagLabels, String targetFQN) {
     if (nullOrEmpty(tagLabels)) {
       return;
     }
-    // Filter out DERIVED tags as they are system-generated
     List<TagLabel> nonDerivedTags =
         tagLabels.stream()
             .filter(tag -> !tag.getLabelType().equals(TagLabel.LabelType.DERIVED))
@@ -3458,8 +3436,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     if (!nonDerivedTags.isEmpty()) {
       daoCollection.tagUsageDAO().deleteTagsBatch(nonDerivedTags, targetFQN);
-
-      // Remove from RDF store for each tag
       for (TagLabel tagLabel : nonDerivedTags) {
         org.openmetadata.service.rdf.RdfTagUpdater.removeTag(tagLabel.getTagFQN(), targetFQN);
       }

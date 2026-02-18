@@ -137,7 +137,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable1 = getTableWithColumns(table1.getId().toString());
@@ -242,7 +242,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -310,7 +310,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -409,7 +409,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable1 = getTableWithColumns(table1.getId().toString());
@@ -432,7 +432,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable2 = getTableWithColumns(table2.getId().toString());
@@ -506,7 +506,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -598,7 +598,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -685,7 +685,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -785,7 +785,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updatedTable = getTableWithColumns(table.getId().toString());
@@ -856,7 +856,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               DashboardDataModel updated =
@@ -909,7 +909,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               DashboardDataModel updated =
@@ -967,7 +967,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -999,7 +999,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1039,7 +1039,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1071,7 +1071,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1127,7 +1127,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1169,7 +1169,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1376,7 +1376,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated1 = getTableWithColumns(table1.getId().toString());
@@ -1476,7 +1476,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());
@@ -1519,7 +1519,7 @@ public class ColumnBulkUpdateIT {
 
     Awaitility.await()
         .pollInterval(1, TimeUnit.SECONDS)
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .until(
             () -> {
               Table updated = getTableWithColumns(table.getId().toString());

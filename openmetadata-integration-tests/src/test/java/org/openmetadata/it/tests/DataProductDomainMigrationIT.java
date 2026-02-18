@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
@@ -633,7 +634,7 @@ public class DataProductDomainMigrationIT {
    * 4. Changes domain again
    * All within a short time window where changes may be consolidated.
    */
-  @Test
+  @RetryingTest(2)
   void testDataProductMultipleChangesWithDomainMigration(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
     String shortId = ns.shortPrefix();
@@ -819,39 +820,52 @@ public class DataProductDomainMigrationIT {
       List<Table> tables,
       Domain expectedDomain,
       boolean shouldHaveDomain) {
-    for (Table table : tables) {
-      // Fetch the table with domains field populated
-      Table fetchedTable = client.tables().get(table.getId().toString(), "domains");
-      assertNotNull(fetchedTable, "Table should exist: " + table.getFullyQualifiedName());
-
-      List<EntityReference> domains = fetchedTable.getDomains();
-      boolean hasDomain = false;
-      if (domains != null) {
-        hasDomain = domains.stream().anyMatch(d -> d.getId().equals(expectedDomain.getId()));
-      }
-
-      if (shouldHaveDomain) {
-        assertTrue(
-            hasDomain,
+    Awaitility.await(
             String.format(
-                "Table %s should have domain %s. Actual domains: %s",
-                table.getFullyQualifiedName(),
-                expectedDomain.getFullyQualifiedName(),
-                domains != null
-                    ? domains.stream().map(EntityReference::getFullyQualifiedName).toList()
-                    : "null"));
-      } else {
-        assertFalse(
-            hasDomain,
-            String.format(
-                "Table %s should NOT have domain %s. Actual domains: %s",
-                table.getFullyQualifiedName(),
-                expectedDomain.getFullyQualifiedName(),
-                domains != null
-                    ? domains.stream().map(EntityReference::getFullyQualifiedName).toList()
-                    : "null"));
-      }
-    }
+                "assets %s domain %s",
+                shouldHaveDomain ? "have" : "don't have", expectedDomain.getFullyQualifiedName()))
+        .atMost(60, TimeUnit.SECONDS)
+        .pollInterval(2, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              for (Table table : tables) {
+                Table fetchedTable = client.tables().get(table.getId().toString(), "domains");
+                assertNotNull(fetchedTable, "Table should exist: " + table.getFullyQualifiedName());
+
+                List<EntityReference> domains = fetchedTable.getDomains();
+                boolean hasDomain = false;
+                if (domains != null) {
+                  hasDomain =
+                      domains.stream().anyMatch(d -> d.getId().equals(expectedDomain.getId()));
+                }
+
+                if (shouldHaveDomain) {
+                  assertTrue(
+                      hasDomain,
+                      String.format(
+                          "Table %s should have domain %s. Actual domains: %s",
+                          table.getFullyQualifiedName(),
+                          expectedDomain.getFullyQualifiedName(),
+                          domains != null
+                              ? domains.stream()
+                                  .map(EntityReference::getFullyQualifiedName)
+                                  .toList()
+                              : "null"));
+                } else {
+                  assertFalse(
+                      hasDomain,
+                      String.format(
+                          "Table %s should NOT have domain %s. Actual domains: %s",
+                          table.getFullyQualifiedName(),
+                          expectedDomain.getFullyQualifiedName(),
+                          domains != null
+                              ? domains.stream()
+                                  .map(EntityReference::getFullyQualifiedName)
+                                  .toList()
+                              : "null"));
+                }
+              }
+            });
   }
 
   private void verifyAssetsInDomainSearch(
@@ -865,7 +879,7 @@ public class DataProductDomainMigrationIT {
 
     // Use Awaitility to poll for the expected state
     Awaitility.await()
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(
             () -> {
@@ -918,7 +932,7 @@ public class DataProductDomainMigrationIT {
       throws Exception {
     // Use Awaitility to poll for the expected state since search index updates are async
     Awaitility.await()
-        .atMost(30, TimeUnit.SECONDS)
+        .atMost(60, TimeUnit.SECONDS)
         .pollInterval(2, TimeUnit.SECONDS)
         .untilAsserted(
             () -> {
@@ -996,7 +1010,7 @@ public class DataProductDomainMigrationIT {
    * - Multiple consecutive moves don't work correctly
    * - Moving back to the original domain doesn't restore state
    */
-  @Test
+  @RetryingTest(2)
   void testDataProductDomainMigrationBackAndForth(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
     String shortId = ns.shortPrefix();

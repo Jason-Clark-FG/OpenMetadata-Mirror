@@ -23,7 +23,6 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
-import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.bootstrap.TestSuiteBootstrap;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
@@ -855,7 +854,7 @@ public class TestSuiteResourceIT extends BaseEntityIT<TestSuite, CreateTestSuite
     assertTrue(logicalSuites.getData().stream().noneMatch(TestSuite::getBasic));
   }
 
-  @RetryingTest(2)
+  @Test
   void test_listTestSuitesIncludeEmpty(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
@@ -883,29 +882,21 @@ public class TestSuiteResourceIT extends BaseEntityIT<TestSuite, CreateTestSuite
     emptySuiteReq.setBasicEntityReference(table2.getFullyQualifiedName());
     TestSuite emptySuite = createBasicTestSuite(emptySuiteReq);
 
-    // List all test suites (including empty)
-    Map<String, String> allParams = new HashMap<>();
-    allParams.put("limit", "100");
-    ListResponse<TestSuite> allSuites = listTestSuites(allParams);
-    long allCount = allSuites.getData().size();
-
     // List non-empty test suites only
     Map<String, String> nonEmptyParams = new HashMap<>();
     nonEmptyParams.put("includeEmptyTestSuites", "false");
     nonEmptyParams.put("limit", "100");
     ListResponse<TestSuite> nonEmptySuites = listTestSuites(nonEmptyParams);
-    long nonEmptyCount = nonEmptySuites.getData().size();
 
-    // Verify that non-empty count is less than or equal to all count
-    assertTrue(nonEmptyCount <= allCount);
+    // Verify the non-empty suite is in the filtered list
+    assertTrue(
+        nonEmptySuites.getData().stream().anyMatch(s -> s.getId().equals(nonEmptySuite.getId())),
+        "Non-empty suite should appear in filtered list");
 
-    // Verify all returned suites in non-empty list have test cases
-    for (TestSuite suite : nonEmptySuites.getData()) {
-      TestSuite detailed = client.testSuites().get(suite.getId().toString(), "tests");
-      if (detailed.getTests() != null) {
-        assertFalse(detailed.getTests().isEmpty());
-      }
-    }
+    // Verify the empty suite is NOT in the filtered list
+    assertTrue(
+        nonEmptySuites.getData().stream().noneMatch(s -> s.getId().equals(emptySuite.getId())),
+        "Empty suite should not appear in filtered list");
   }
 
   // ===================================================================

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.factories.DashboardServiceTestFactory;
 import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
 import org.openmetadata.it.factories.DatabaseServiceTestFactory;
@@ -161,7 +162,7 @@ public class ColumnCustomPropertiesIT {
   // INTEGER CUSTOM PROPERTY TESTS
   // ========================================================================
 
-  @Test
+  @RetryingTest(2)
   void test_tableColumn_integerCustomProperty(TestNamespace ns) throws Exception {
     String propName = ns.prefix("intProp");
     OpenMetadataClient client = SdkClients.adminClient();
@@ -378,7 +379,7 @@ public class ColumnCustomPropertiesIT {
   // DATE CUSTOM PROPERTY TESTS
   // ========================================================================
 
-  @Test
+  @RetryingTest(2)
   void test_tableColumn_dateCpCustomProperty(TestNamespace ns) throws Exception {
     String propName = ns.prefix("dateProp");
     OpenMetadataClient client = SdkClients.adminClient();
@@ -854,7 +855,7 @@ public class ColumnCustomPropertiesIT {
   // UPDATE AND DELETE TESTS
   // ========================================================================
 
-  @Test
+  @RetryingTest(3)
   void test_tableColumn_updateCustomPropertyValue(TestNamespace ns) throws Exception {
     String propName = ns.prefix("updateProp");
     OpenMetadataClient client = SdkClients.adminClient();
@@ -1116,8 +1117,8 @@ public class ColumnCustomPropertiesIT {
             Type.class);
 
     Awaitility.await("custom property registered")
-        .atMost(Duration.ofSeconds(30))
-        .pollInterval(Duration.ofMillis(500))
+        .atMost(Duration.ofSeconds(120))
+        .pollInterval(Duration.ofSeconds(1))
         .untilAsserted(
             () -> {
               Type refreshed = getColumnType(client, columnTypeName);

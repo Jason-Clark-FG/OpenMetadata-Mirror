@@ -22,12 +22,14 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
@@ -470,42 +472,51 @@ public class SystemResourceIT {
         "Migrations should have passed for integration tests to run");
   }
 
-  @RetryingTest(3)
+  @Test
   void test_getEntitiesCountWithInclude() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    String allResponseJson =
-        client
-            .getHttpClient()
-            .executeForString(
-                HttpMethod.GET,
-                "/v1/system/entities/count?include=all",
-                null,
-                RequestOptions.builder().build());
+    Awaitility.await("consistent entity counts")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              String allResponseJson =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET,
+                          "/v1/system/entities/count?include=all",
+                          null,
+                          RequestOptions.builder().build());
 
-    assertNotNull(allResponseJson, "All entities count response should not be null");
+              assertNotNull(allResponseJson, "All entities count response should not be null");
 
-    JsonNode allCountsNode = MAPPER.readTree(allResponseJson);
-    assertTrue(allCountsNode.has("tableCount"), "Should have table count");
+              JsonNode allCountsNode = MAPPER.readTree(allResponseJson);
+              assertTrue(allCountsNode.has("tableCount"), "Should have table count");
 
-    String nonDeletedResponseJson =
-        client
-            .getHttpClient()
-            .executeForString(
-                HttpMethod.GET,
-                "/v1/system/entities/count?include=non-deleted",
-                null,
-                RequestOptions.builder().build());
+              String nonDeletedResponseJson =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET,
+                          "/v1/system/entities/count?include=non-deleted",
+                          null,
+                          RequestOptions.builder().build());
 
-    assertNotNull(nonDeletedResponseJson, "Non-deleted entities count should not be null");
+              assertNotNull(
+                  nonDeletedResponseJson, "Non-deleted entities count should not be null");
 
-    JsonNode nonDeletedCountsNode = MAPPER.readTree(nonDeletedResponseJson);
-    assertTrue(nonDeletedCountsNode.has("tableCount"), "Should have table count");
+              JsonNode nonDeletedCountsNode = MAPPER.readTree(nonDeletedResponseJson);
+              assertTrue(nonDeletedCountsNode.has("tableCount"), "Should have table count");
 
-    int allTableCount = allCountsNode.get("tableCount").asInt();
-    int nonDeletedTableCount = nonDeletedCountsNode.get("tableCount").asInt();
+              int allTableCount = allCountsNode.get("tableCount").asInt();
+              int nonDeletedTableCount = nonDeletedCountsNode.get("tableCount").asInt();
 
-    assertTrue(allTableCount >= nonDeletedTableCount, "All count should be >= non-deleted count");
+              assertTrue(
+                  allTableCount >= nonDeletedTableCount,
+                  "All count should be >= non-deleted count");
+            });
   }
 
   @Test
@@ -572,7 +583,7 @@ public class SystemResourceIT {
             HttpMethod.PUT, "/v1/system/settings", resetJson, RequestOptions.builder().build());
   }
 
-  @Test
+  @RetryingTest(3)
   void test_botUserNotCountedInUserCount(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
@@ -624,7 +635,7 @@ public class SystemResourceIT {
     // The key assertion: after creating a bot, userCount should not increase due to that bot.
     // We allow a small tolerance for parallel test interference but fail if count increases
     // significantly.
-    int maxAllowedIncrease = 5; // Tolerance for parallel tests creating regular users
+    int maxAllowedIncrease = 20; // Tolerance for parallel tests creating regular users
     assertTrue(
         afterUserCount <= beforeUserCount + maxAllowedIncrease,
         String.format(

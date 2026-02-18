@@ -30,6 +30,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -46,6 +47,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementException;
+import org.jdbi.v3.core.transaction.TransactionIsolationLevel;
 import org.jdbi.v3.sqlobject.CreateSqlObject;
 import org.jdbi.v3.sqlobject.config.RegisterRowMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
@@ -5255,6 +5257,13 @@ public interface CollectionDAO {
       }
 
       String targetFQNHash = FullyQualifiedName.buildHash(targetFQN);
+
+      List<TagLabel> sorted =
+          tagLabels.stream()
+              .sorted(
+                  Comparator.comparing((TagLabel t) -> FullyQualifiedName.buildHash(t.getTagFQN())))
+              .toList();
+
       List<Integer> sources = new ArrayList<>();
       List<String> tagFQNs = new ArrayList<>();
       List<String> tagFQNHashes = new ArrayList<>();
@@ -5265,7 +5274,7 @@ public interface CollectionDAO {
       List<String> appliedBys = new ArrayList<>();
       List<String> metadataList = new ArrayList<>();
 
-      for (TagLabel tagLabel : tagLabels) {
+      for (TagLabel tagLabel : sorted) {
         sources.add(tagLabel.getSource().ordinal());
         tagFQNs.add(tagLabel.getTagFQN());
         tagFQNHashes.add(FullyQualifiedName.buildHash(tagLabel.getTagFQN()));
@@ -5298,15 +5307,18 @@ public interface CollectionDAO {
         return;
       }
 
-      List<Integer> sources = new ArrayList<>();
-      List<String> tagFQNs = new ArrayList<>();
-      List<String> tagFQNHashes = new ArrayList<>();
-      List<String> targetFQNHashes = new ArrayList<>();
-      List<Integer> labelTypes = new ArrayList<>();
-      List<Integer> states = new ArrayList<>();
-      List<String> reasons = new ArrayList<>();
-      List<String> appliedBys = new ArrayList<>();
-      List<String> metadataList = new ArrayList<>();
+      record TagRow(
+          int source,
+          String tagFQN,
+          String tagFQNHash,
+          String targetFQNHash,
+          int labelType,
+          int state,
+          String reason,
+          String appliedBy,
+          String metadata) {}
+
+      List<TagRow> rows = new ArrayList<>();
 
       for (Map.Entry<String, List<TagLabel>> entry : tagsByTarget.entrySet()) {
         String targetFQN = entry.getKey();
@@ -5320,33 +5332,61 @@ public interface CollectionDAO {
           if (tagLabel.getLabelType().equals(TagLabel.LabelType.DERIVED)) {
             continue;
           }
-          sources.add(tagLabel.getSource().ordinal());
-          tagFQNs.add(tagLabel.getTagFQN());
-          tagFQNHashes.add(FullyQualifiedName.buildHash(tagLabel.getTagFQN()));
-          targetFQNHashes.add(targetFQNHash);
-          labelTypes.add(tagLabel.getLabelType().ordinal());
-          states.add(tagLabel.getState().ordinal());
-          reasons.add(tagLabel.getReason());
-          appliedBys.add(tagLabel.getAppliedBy());
-          metadataList.add(JsonUtils.pojoToJson(tagLabel.getMetadata()));
+          rows.add(
+              new TagRow(
+                  tagLabel.getSource().ordinal(),
+                  tagLabel.getTagFQN(),
+                  FullyQualifiedName.buildHash(tagLabel.getTagFQN()),
+                  targetFQNHash,
+                  tagLabel.getLabelType().ordinal(),
+                  tagLabel.getState().ordinal(),
+                  tagLabel.getReason(),
+                  tagLabel.getAppliedBy(),
+                  JsonUtils.pojoToJson(tagLabel.getMetadata())));
         }
       }
 
-      if (!sources.isEmpty()) {
-        applyTagsBatchInternal(
-            sources,
-            tagFQNs,
-            tagFQNHashes,
-            targetFQNHashes,
-            labelTypes,
-            states,
-            reasons,
-            appliedBys,
-            metadataList);
+      if (rows.isEmpty()) {
+        return;
       }
+
+      rows.sort(Comparator.comparing(TagRow::tagFQNHash).thenComparing(TagRow::targetFQNHash));
+
+      List<Integer> sources = new ArrayList<>();
+      List<String> tagFQNs = new ArrayList<>();
+      List<String> tagFQNHashes = new ArrayList<>();
+      List<String> targetFQNHashes = new ArrayList<>();
+      List<Integer> labelTypes = new ArrayList<>();
+      List<Integer> states = new ArrayList<>();
+      List<String> reasons = new ArrayList<>();
+      List<String> appliedBys = new ArrayList<>();
+      List<String> metadataList = new ArrayList<>();
+
+      for (TagRow row : rows) {
+        sources.add(row.source());
+        tagFQNs.add(row.tagFQN());
+        tagFQNHashes.add(row.tagFQNHash());
+        targetFQNHashes.add(row.targetFQNHash());
+        labelTypes.add(row.labelType());
+        states.add(row.state());
+        reasons.add(row.reason());
+        appliedBys.add(row.appliedBy());
+        metadataList.add(row.metadata());
+      }
+
+      applyTagsBatchInternal(
+          sources,
+          tagFQNs,
+          tagFQNHashes,
+          targetFQNHashes,
+          labelTypes,
+          states,
+          reasons,
+          appliedBys,
+          metadataList);
     }
 
-    @Transaction
+    @Transaction(TransactionIsolationLevel.READ_COMMITTED)
     @ConnectionAwareSqlBatch(
         value =
             "INSERT INTO tag_usage (source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, reason, appliedBy, metadata) "
@@ -5380,11 +5420,18 @@ public interface CollectionDAO {
       }
 
       String targetFQNHash = FullyQualifiedName.buildHash(targetFQN);
+
+      List<TagLabel> sorted =
+          tagLabels.stream()
+              .sorted(
+                  Comparator.comparing((TagLabel t) -> FullyQualifiedName.buildHash(t.getTagFQN())))
+              .toList();
+
       List<Integer> sources = new ArrayList<>();
       List<String> tagFQNHashes = new ArrayList<>();
       List<String> targetFQNHashes = new ArrayList<>();
 
-      for (TagLabel tagLabel : tagLabels) {
+      for (TagLabel tagLabel : sorted) {
         sources.add(tagLabel.getSource().ordinal());
         tagFQNHashes.add(FullyQualifiedName.buildHash(tagLabel.getTagFQN()));
         targetFQNHashes.add(targetFQNHash);
@@ -5393,7 +5440,7 @@ public interface CollectionDAO {
       deleteTagsBatchInternal(sources, tagFQNHashes, targetFQNHashes);
     }
 
-    @Transaction
+    @Transaction(TransactionIsolationLevel.READ_COMMITTED)
     @ConnectionAwareSqlBatch(
         value =
             "DELETE FROM tag_usage WHERE source = :source AND tagFQNHash = :tagFQNHash AND targetFQNHash = :targetFQNHash",
@@ -5694,6 +5741,7 @@ public interface CollectionDAO {
 
   @RegisterRowMapper(UsageDetailsMapper.class)
   interface UsageDAO {
+    @Transaction(TransactionIsolationLevel.READ_COMMITTED)
     @ConnectionAwareSqlUpdate(
         value =
             "INSERT INTO entity_usage (usageDate, id, entityType, count1, count7, count30) "
@@ -5719,6 +5767,7 @@ public interface CollectionDAO {
         @Bind("entityType") String entityType,
         @Bind("count1") int count1);
 
+    @Transaction(TransactionIsolationLevel.READ_COMMITTED)
     @ConnectionAwareSqlUpdate(
         value =
             "INSERT INTO entity_usage (usageDate, id, entityType, count1, count7, count30) "

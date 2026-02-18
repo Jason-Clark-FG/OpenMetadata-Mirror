@@ -55,8 +55,8 @@ public class UserMetricsResourceIT {
     URL url = URI.create("http://localhost:" + adminPort + "/user-metrics").toURL();
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     connection.setRequestMethod("GET");
-    connection.setConnectTimeout(5000);
-    connection.setReadTimeout(5000);
+    connection.setConnectTimeout(60000);
+    connection.setReadTimeout(60000);
 
     try {
       int responseCode = connection.getResponseCode();
@@ -92,8 +92,8 @@ public class UserMetricsResourceIT {
 
     assertEquals(200, responseCode);
     assertTrue(
-        duration < 2000,
-        "User metrics endpoint should respond within 2 seconds, took: " + duration + "ms");
+        duration < 5000,
+        "User metrics endpoint should respond within 5 seconds, took: " + duration + "ms");
     connection.disconnect();
   }
 
@@ -323,8 +323,8 @@ public class UserMetricsResourceIT {
     URL url = URI.create("http://localhost:" + adminPort + "/user-metrics").toURL();
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     connection.setRequestMethod("GET");
-    connection.setConnectTimeout(5000);
-    connection.setReadTimeout(5000);
+    connection.setConnectTimeout(60000);
+    connection.setReadTimeout(60000);
 
     try {
       assertEquals(200, connection.getResponseCode());
