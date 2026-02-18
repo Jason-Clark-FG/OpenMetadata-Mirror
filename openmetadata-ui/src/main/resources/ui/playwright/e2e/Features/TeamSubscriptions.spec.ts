@@ -172,6 +172,15 @@ test.describe('Team Subscriptions', { tag: ['@Platform', '@Teams'] }, () => {
     });
 
     await test.step('Submit without endpoint and verify error', async () => {
+      const endpointInput = page
+        .getByTestId('subscription-modal')
+        .locator('#endpoint');
+      const endpointValue = await endpointInput.inputValue();
+
+      if (endpointValue) {
+        await endpointInput.clear();
+      }
+
       await page.getByRole('button', { name: 'Confirm' }).click();
 
       await expect(page.getByText('Endpoint are required')).toBeVisible();
@@ -244,7 +253,11 @@ test.describe('Team Subscriptions', { tag: ['@Platform', '@Teams'] }, () => {
     test.slow();
 
     await test.step('Configure Slack webhook', async () => {
-      await configureWebhook(page, 'Slack', 'https://hooks.slack.com/services/test');
+      await configureWebhook(
+        page,
+        'Slack',
+        'https://hooks.slack.com/services/test'
+      );
       await expect(page.getByTestId('slack-icon')).toBeVisible();
     });
 
@@ -274,10 +287,183 @@ test.describe('Team Subscriptions', { tag: ['@Platform', '@Teams'] }, () => {
       await verifyWebhookIcon(page, 'generic-icon', endpoint);
     });
   });
+
+  test('admin can edit subscriptions for any team', async ({ page }) => {
+    test.slow();
+
+    await test.step('Verify admin can see edit button', async () => {
+      const editButton = page.getByTestId('edit-team-subscription');
+      await expect(editButton).toBeVisible();
+      await expect(editButton).toBeEnabled();
+    });
+
+    await test.step('Admin can configure all webhook types', async () => {
+      await openSubscriptionModal(page);
+
+      await selectWebhookType(page, 'MS Teams');
+      await selectWebhookType(page, 'Slack');
+      await selectWebhookType(page, 'G Chat');
+      await selectWebhookType(page, 'Webhook');
+
+      await closeSubscriptionModal(page);
+    });
+  });
 });
 
 test.describe(
-  'Team Subscriptions - Permission Tests',
+  'Team Subscriptions - Owner Permission Tests',
+  { tag: ['@Platform', '@Teams'] },
+  () => {
+    const ownerUser = new UserClass();
+    let ownerTeam: TeamClass;
+
+    test.beforeAll('Setup team with owner', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+
+      await ownerUser.create(apiContext);
+
+      const id = uuid();
+      ownerTeam = new TeamClass({
+        name: `pw-team-owner-${id}`,
+        displayName: `PW Team Owner ${id}`,
+        description: 'Team with owner for subscription tests',
+        teamType: 'Group',
+        owners: [
+          {
+            displayName: ownerUser.responseData.displayName,
+            fullyQualifiedName: ownerUser.responseData.fullyQualifiedName,
+            id: ownerUser.responseData.id,
+            name: ownerUser.responseData.name,
+            type: 'user',
+          },
+        ],
+      });
+
+      await ownerTeam.create(apiContext);
+      await afterAction();
+    });
+
+    test.afterAll('Cleanup', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+      await ownerTeam.delete(apiContext);
+      await ownerUser.delete(apiContext);
+      await afterAction();
+    });
+
+    test('team owner can manage subscriptions', async ({ browser }) => {
+      test.slow();
+
+      const ownerPage = await browser.newPage();
+
+      try {
+        await ownerUser.login(ownerPage);
+        await redirectToHomePage(ownerPage);
+        await ownerTeam.visitTeamPage(ownerPage);
+        await waitForAllLoadersToDisappear(ownerPage);
+
+        await test.step('Owner can see edit button', async () => {
+          await expect(
+            ownerPage.getByTestId('edit-team-subscription')
+          ).toBeVisible();
+        });
+
+        await test.step('Owner can configure webhook', async () => {
+          await configureWebhook(
+            ownerPage,
+            'Webhook',
+            'https://example.com/owner-webhook'
+          );
+          await verifyWebhookIcon(
+            ownerPage,
+            'generic-icon',
+            'https://example.com/owner-webhook'
+          );
+        });
+
+        await test.step('Owner can update webhook type', async () => {
+          await openSubscriptionModal(ownerPage);
+          await selectWebhookType(ownerPage, 'Slack');
+          await ownerPage
+            .getByTestId('subscription-modal')
+            .locator('#endpoint')
+            .clear();
+          await fillEndpointAndSave(
+            ownerPage,
+            'https://hooks.slack.com/services/owner-test'
+          );
+          await verifyWebhookIcon(
+            ownerPage,
+            'slack-icon',
+            'https://hooks.slack.com/services/owner-test'
+          );
+        });
+
+        await test.step('Owner can remove subscription', async () => {
+          await removeSubscription(ownerPage);
+          await verifyNoSubscription(ownerPage);
+        });
+      } finally {
+        await ownerPage.close();
+      }
+    });
+
+    test('team member without owner role cannot edit subscriptions', async ({
+      browser,
+    }) => {
+      test.slow();
+
+      const memberUser = new UserClass();
+      let memberTeam: TeamClass;
+
+      try {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+
+        await test.step('Create team with member (non-owner)', async () => {
+          await memberUser.create(apiContext);
+
+          const id = uuid();
+          memberTeam = new TeamClass({
+            name: `pw-team-member-${id}`,
+            displayName: `PW Team Member ${id}`,
+            description: 'Team with member for subscription tests',
+            teamType: 'Group',
+            users: [memberUser.responseData.id],
+          });
+
+          await memberTeam.create(apiContext);
+        });
+
+        await afterAction();
+
+        await test.step('Verify member cannot edit subscriptions', async () => {
+          const memberPage = await browser.newPage();
+          await memberUser.login(memberPage);
+          await redirectToHomePage(memberPage);
+          await memberTeam.visitTeamPage(memberPage);
+          await waitForAllLoadersToDisappear(memberPage);
+
+          await expect(
+            memberPage.getByTestId('edit-team-subscription')
+          ).not.toBeVisible();
+
+          await memberPage.close();
+        });
+      } finally {
+        await test.step('Cleanup resources', async () => {
+          const { apiContext, afterAction } = await performAdminLogin(browser);
+          if (memberTeam) {
+            await memberTeam.delete(apiContext);
+          }
+          await memberUser.delete(apiContext);
+          await afterAction();
+        });
+      }
+    });
+  }
+);
+
+test.describe(
+  'Team Subscriptions - Data Consumer Tests',
   { tag: ['@Platform', '@Teams'] },
   () => {
     const dataConsumerUser = new UserClass();
@@ -298,81 +484,80 @@ test.describe(
       await afterAction();
     });
 
-    test('should not show edit subscription button for users without permission', async ({
+    test('data consumer cannot edit team subscriptions', async ({
       browser,
     }) => {
+      const page = await browser.newPage();
+
       await test.step(
         'Login as data consumer and visit team page',
         async () => {
-          const page = await browser.newPage();
           await dataConsumerUser.login(page);
           await redirectToHomePage(page);
           await restrictedTeam.visitTeamPage(page);
           await waitForAllLoadersToDisappear(page);
-
-          await expect(
-            page.getByTestId('edit-team-subscription')
-          ).not.toBeVisible();
-
-          await page.close();
         }
       );
+
+      await test.step('Verify edit button is not visible', async () => {
+        await expect(
+          page.getByTestId('edit-team-subscription')
+        ).not.toBeVisible();
+      });
+
+      await test.step(
+        'Verify subscription details are visible (read-only)',
+        async () => {
+          const subscriptionSection = page.getByTestId('teams-subscription');
+          await expect(subscriptionSection).toBeVisible();
+        }
+      );
+
+      await page.close();
+    });
+  }
+);
+
+test.describe(
+  'Team Subscriptions - Data Steward Tests',
+  { tag: ['@Platform', '@Teams'] },
+  () => {
+    const dataStewardUser = new UserClass();
+    let stewardTeam: TeamClass;
+
+    test.beforeAll('Setup pre-requests', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+      await dataStewardUser.create(apiContext);
+      await dataStewardUser.setDataStewardRole(apiContext);
+      stewardTeam = new TeamClass();
+      await stewardTeam.create(apiContext);
+      await afterAction();
     });
 
-    test('should show edit subscription button for team owners', async ({
-      page,
-    }) => {
-      test.slow();
+    test.afterAll('Cleanup', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+      await stewardTeam.delete(apiContext);
+      await dataStewardUser.delete(apiContext);
+      await afterAction();
+    });
 
-      const { apiContext } = await performAdminLogin(page.context().browser()!);
-      const ownerUser = new UserClass();
-      let teamWithOwner: TeamClass;
+    test('data steward cannot edit team subscriptions', async ({ browser }) => {
+      const page = await browser.newPage();
 
-      try {
-        await test.step('Create team with owner', async () => {
-          await ownerUser.create(apiContext);
+      await test.step('Login as data steward and visit team page', async () => {
+        await dataStewardUser.login(page);
+        await redirectToHomePage(page);
+        await stewardTeam.visitTeamPage(page);
+        await waitForAllLoadersToDisappear(page);
+      });
 
-          const id = uuid();
-          teamWithOwner = new TeamClass({
-            name: `pw-team-owner-${id}`,
-            displayName: `PW Team Owner ${id}`,
-            description: 'Team with owner',
-            teamType: 'Group',
-            owners: [
-              {
-                displayName: ownerUser.responseData.displayName,
-                fullyQualifiedName: ownerUser.responseData.fullyQualifiedName,
-                id: ownerUser.responseData.id,
-                name: ownerUser.responseData.name,
-                type: 'user',
-              },
-            ],
-          });
+      await test.step('Verify edit button is not visible', async () => {
+        await expect(
+          page.getByTestId('edit-team-subscription')
+        ).not.toBeVisible();
+      });
 
-          await teamWithOwner.create(apiContext);
-        });
-
-        await test.step('Verify owner can see edit button', async () => {
-          const ownerPage = await page.context().newPage();
-          await ownerUser.login(ownerPage);
-          await redirectToHomePage(ownerPage);
-          await teamWithOwner.visitTeamPage(ownerPage);
-          await waitForAllLoadersToDisappear(ownerPage);
-
-          await expect(
-            ownerPage.getByTestId('edit-team-subscription')
-          ).toBeVisible();
-
-          await ownerPage.close();
-        });
-      } finally {
-        await test.step('Cleanup resources', async () => {
-          if (teamWithOwner) {
-            await teamWithOwner.delete(apiContext);
-          }
-          await ownerUser.delete(apiContext);
-        });
-      }
+      await page.close();
     });
   }
 );
