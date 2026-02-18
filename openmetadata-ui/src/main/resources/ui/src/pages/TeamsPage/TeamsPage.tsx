@@ -199,7 +199,7 @@ const TeamsPage = () => {
 
 
   const fetchAssets = async (selectedTeam: Team) => {
-    if (selectedTeam.id) {
+    if (selectedTeam.id && selectedTeam.teamType !== TeamType.Organization) {
       try {
         // Collect all team IDs (current team + all descendants)
         const teamIds = await collectAllTeamIds(selectedTeam);
@@ -216,6 +216,8 @@ const TeamsPage = () => {
         setAllTeamIds(teamIds);
         setAssets(total);
       } catch (error) {
+        setAllTeamIds([selectedTeam.id]);
+        setAssets(0);
         showErrorToast(
           error as AxiosError,
           t('server.entity-fetch-error', {
