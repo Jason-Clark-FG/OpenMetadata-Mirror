@@ -27,9 +27,10 @@ function getStyleCacheKey(
   tracedColumnsSize: number,
   dqHighlightedEdgesHas: boolean,
   selectedColumn: string | undefined,
-  isColumnHighlighted: boolean
+  isColumnHighlighted: boolean,
+  isHoveredEdge?: boolean
 ): string {
-  return `${edgeId}-${tracedNodesSize}-${tracedColumnsSize}-${dqHighlightedEdgesHas}-${selectedColumn}-${isColumnHighlighted}`;
+  return `${edgeId}-${tracedNodesSize}-${tracedColumnsSize}-${dqHighlightedEdgesHas}-${selectedColumn}-${isColumnHighlighted}-${isHoveredEdge}`;
 }
 
 export function computeEdgeStyle(
@@ -41,7 +42,8 @@ export function computeEdgeStyle(
   theme: Theme,
   isColumnLineage: boolean,
   sourceHandle?: string | null,
-  targetHandle?: string | null
+  targetHandle?: string | null,
+  isEdgeHovered?: boolean
 ): EdgeStyle {
   const isColumnHighlighted =
     isColumnLineage && tracedColumns.size > 0
@@ -59,7 +61,8 @@ export function computeEdgeStyle(
     tracedColumns.size,
     dqHighlightedEdges.has(edge.id),
     selectedColumn,
-    isColumnHighlighted
+    isColumnHighlighted,
+    isEdgeHovered
   );
 
   if (edgeStyleCache.has(cacheKey)) {
@@ -74,7 +77,8 @@ export function computeEdgeStyle(
     selectedColumn,
     theme,
     isColumnLineage,
-    isColumnHighlighted
+    isColumnHighlighted,
+    isEdgeHovered
   );
 
   edgeStyleCache.set(cacheKey, style);
@@ -90,7 +94,8 @@ function calculateEdgeStyle(
   selectedColumn: string | undefined,
   theme: Theme,
   isColumnLineage: boolean,
-  isColumnHighlighted: boolean
+  isColumnHighlighted: boolean,
+  isEdgeHovered?: boolean
 ): EdgeStyle {
   const fromEntityId = edge.data?.edge?.fromEntity?.id;
   const toEntityId = edge.data?.edge?.toEntity?.id;
@@ -101,7 +106,9 @@ function calculateEdgeStyle(
     tracedNodes.has(fromEntityId) &&
     tracedNodes.has(toEntityId);
 
-  let stroke = theme.palette.text.disabled;
+  let stroke = isEdgeHovered
+    ? theme.palette.primary.main
+    : 'rgba(177, 177, 183)';
   let opacity = 1;
   const strokeWidth = 2;
 

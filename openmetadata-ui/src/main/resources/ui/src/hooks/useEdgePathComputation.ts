@@ -18,7 +18,7 @@ import { getEdgePathData } from '../utils/EntityLineageUtils';
 export function useEdgePathComputation(
   edges: Edge[],
   setEdges: (edges: Edge[]) => void,
-  columnsInCurrentPages: Record<string, string[]>
+  columnsInCurrentPages: Map<string, string[]>
 ) {
   const computedEdgeIds = useRef(new Set<string>());
 

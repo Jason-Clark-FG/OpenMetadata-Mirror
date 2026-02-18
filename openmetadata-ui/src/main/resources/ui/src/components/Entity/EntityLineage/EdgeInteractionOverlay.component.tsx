@@ -26,7 +26,6 @@ import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
 export interface EdgeInteractionOverlayProps {
-  edges: Edge[];
   hoveredEdge?: Edge | null;
   onPipelineClick?: () => void;
   onEdgeRemove?: () => void;
@@ -85,6 +84,7 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
   onEdgeRemove,
 }) => {
   const { isEditMode, selectedEdge } = useLineageStore();
+
   const viewport = useViewport();
   const renderPipelinePopover = (edge: Edge) => {
     const {

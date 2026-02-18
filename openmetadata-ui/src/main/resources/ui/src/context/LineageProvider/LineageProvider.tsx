@@ -1208,7 +1208,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setActiveNode(undefined);
     setSelectedNode(undefined);
     setTracedNodes(new Set());
-    const { sourceHandle, targetHandle } = getColumnSourceTargetHandles(edge);
+    const { sourceHandle, targetHandle } = edge;
     if (sourceHandle && targetHandle) {
       setTracedColumns(new Set([sourceHandle, targetHandle]));
     }

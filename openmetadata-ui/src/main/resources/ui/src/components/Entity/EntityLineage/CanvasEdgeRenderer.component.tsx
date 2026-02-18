@@ -11,47 +11,45 @@
  *  limitations under the License.
  */
 import { useTheme } from '@mui/material';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Edge, Node, useViewport } from 'reactflow';
-import { useBlinkingAnimation } from '../../../hooks/useBlinkingAnimation';
+import React, { useEffect, useRef, useState } from 'react';
+import { Edge } from 'reactflow';
+import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { useCanvasEdgeRenderer } from '../../../hooks/useCanvasEdgeRenderer';
 import { useIconSprites } from '../../../hooks/useIconSprites';
 import { useLineageStore } from '../../../hooks/useLineageStore';
-import {
-  colorToEdgeIndex,
-  inverseTransformPoint,
-} from '../../../utils/CanvasUtils';
 
 export interface CanvasEdgeRendererProps {
-  edges: Edge[];
-  nodes: Node[];
   dqHighlightedEdges: Set<string>;
-  onEdgeClick?: (edge: Edge, event: React.MouseEvent) => void;
+  hoverEdge: Edge | null;
+  onEdgeClick?: (edge: Edge, event: MouseEvent) => void;
   onEdgeHover?: (edge: Edge | null) => void;
 }
 
 export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
-  edges,
-  nodes,
-
   dqHighlightedEdges,
   onEdgeClick,
   onEdgeHover,
+  hoverEdge,
 }) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hitCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const {
-    selectedEdge,
-    selectedColumn,
-    isEditMode,
-    columnsInCurrentPages,
-    tracedColumns,
-    tracedNodes,
-  } = useLineageStore();
-  const viewport = useViewport();
+  const { isEditMode } = useLineageStore();
+  const { edges } = useLineageProvider();
+
+  // Keep stable refs for callbacks so the pane event listener effect
+  // doesn't re-run on every render.
+  const onEdgeClickRef = useRef(onEdgeClick);
+  const onEdgeHoverRef = useRef(onEdgeHover);
+
+  useEffect(() => {
+    onEdgeClickRef.current = onEdgeClick;
+  }, [onEdgeClick]);
+
+  useEffect(() => {
+    onEdgeHoverRef.current = onEdgeHover;
+  }, [onEdgeHover]);
 
   const sprites = useIconSprites();
 
@@ -75,29 +73,13 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
     };
   }, []);
 
-  const { redraw } = useCanvasEdgeRenderer({
+  const { redraw, getEdgeAtPoint } = useCanvasEdgeRenderer({
     canvasRef,
-    hitCanvasRef,
     edges,
-    nodes,
-    viewport,
-    tracedNodes,
-    tracedColumns,
     dqHighlightedEdges,
-    selectedEdge,
-    selectedColumn,
     theme,
     sprites,
-    columnsInCurrentPages,
-    containerWidth: containerSize.width,
-    containerHeight: containerSize.height,
-  });
-
-  useBlinkingAnimation({
-    canvasRef,
-    edges,
-    nodes,
-    viewport,
+    hoverEdge,
     containerWidth: containerSize.width,
     containerHeight: containerSize.height,
   });
@@ -106,96 +88,71 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
     redraw();
   }, [redraw]);
 
-  const getEdgeAtPoint = useCallback(
-    (clientX: number, clientY: number): Edge | null => {
-      const hitCanvas = hitCanvasRef.current;
-      if (!hitCanvas || !containerRef.current) {
-        return null;
-      }
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      const ctx = hitCanvas.getContext('2d');
-      if (!ctx) {
-        return null;
-      }
-
-      const dpr = window.devicePixelRatio || 1;
-      const pixelData = ctx.getImageData(x * dpr, y * dpr, 1, 1).data;
-
-      const edgeIndex = colorToEdgeIndex(
-        pixelData[0],
-        pixelData[1],
-        pixelData[2]
-      );
-
-      if (
-        edgeIndex === 0 &&
-        pixelData[0] === 0 &&
-        pixelData[1] === 0 &&
-        pixelData[2] === 0
-      ) {
-        return null;
-      }
-
-      const visibleEdges = edges.filter((_edge) => {
-        inverseTransformPoint(x, y, viewport);
-
-        return true;
-      });
-
-      return visibleEdges[edgeIndex] || null;
-    },
-    [edges, viewport]
-  );
-
-  const handleCanvasClick = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
-      const edge = getEdgeAtPoint(event.clientX, event.clientY);
-      if (edge && onEdgeClick) {
-        onEdgeClick(edge, event);
-      }
-    },
-    [getEdgeAtPoint, onEdgeClick]
-  );
-
-  const handleCanvasMouseMove = useCallback(
-    (event: React.MouseEvent<HTMLCanvasElement>) => {
-      const edge = getEdgeAtPoint(event.clientX, event.clientY);
-      if (onEdgeHover) {
-        onEdgeHover(edge);
-      }
-    },
-    [getEdgeAtPoint, onEdgeHover]
-  );
-
-  const handleCanvasMouseLeave = useCallback(() => {
-    if (onEdgeHover) {
-      onEdgeHover(null);
+  // Attach listeners to the ReactFlow pane element — it sits on top of the
+  // canvas and captures all pointer events before they reach us.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
     }
-  }, [onEdgeHover]);
+
+    // The pane is a sibling rendered by ReactFlow inside the same wrapper.
+    // Walk up to the ReactFlow root and find the pane from there.
+    const flowWrapper = container.closest('.react-flow');
+    if (!flowWrapper) {
+      return;
+    }
+
+    const pane = flowWrapper.querySelector('.react-flow__pane');
+    if (!pane) {
+      return;
+    }
+
+    const handleClick = (event: Event) => {
+      if (isEditMode) {
+        return;
+      }
+      const mouseEvent = event as MouseEvent;
+      const rect = container.getBoundingClientRect();
+      const edge = getEdgeAtPoint(mouseEvent.clientX, mouseEvent.clientY, rect);
+      if (edge) {
+        onEdgeClickRef.current?.(edge, mouseEvent);
+      }
+    };
+
+    const handleMouseMove = (event: Event) => {
+      if (isEditMode) {
+        return;
+      }
+      const mouseEvent = event as MouseEvent;
+      const rect = container.getBoundingClientRect();
+      const edge = getEdgeAtPoint(mouseEvent.clientX, mouseEvent.clientY, rect);
+      onEdgeHoverRef.current?.(edge);
+    };
+
+    const handleMouseLeave = () => {
+      onEdgeHoverRef.current?.(null);
+    };
+
+    pane.addEventListener('click', handleClick);
+    pane.addEventListener('mousemove', handleMouseMove);
+    pane.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      pane.removeEventListener('click', handleClick);
+      pane.removeEventListener('mousemove', handleMouseMove);
+      pane.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [getEdgeAtPoint, isEditMode]);
 
   return (
     <div
       className="lineage-canvas-container"
       ref={containerRef}
-      style={{ pointerEvents: isEditMode ? 'none' : 'all' }}>
+      style={{ pointerEvents: 'none' }}>
       <canvas
-        height={containerSize.height}
         ref={canvasRef}
         style={{ position: 'absolute', top: 0, left: 0 }}
-        width={containerSize.width}
-        onClick={handleCanvasClick}
-        onMouseLeave={handleCanvasMouseLeave}
-        onMouseMove={handleCanvasMouseMove}
-      />
-      <canvas
-        height={containerSize.height}
-        ref={hitCanvasRef}
-        style={{ position: 'absolute', top: 0, left: 0, display: 'none' }}
-        width={containerSize.width}
       />
     </div>
   );

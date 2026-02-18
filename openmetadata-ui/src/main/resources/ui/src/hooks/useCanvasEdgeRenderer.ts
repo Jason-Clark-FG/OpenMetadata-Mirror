@@ -12,11 +12,10 @@
  */
 import { Theme } from '@mui/material';
 import { RefObject, useCallback, useEffect, useRef } from 'react';
-import { Edge, Node, Position, useReactFlow, Viewport } from 'reactflow';
+import { Edge, Position, useReactFlow, useViewport } from 'reactflow';
 import { StatusType } from '../generated/entity/data/pipeline';
 import {
   drawArrowMarker,
-  edgeIndexToColor,
   getEdgeAngle,
   getEdgeCoordinates,
   isEdgeInViewport,
@@ -25,35 +24,29 @@ import {
 import { computeEdgeStyle } from '../utils/EdgeStyleUtils';
 import { getEdgePathData } from '../utils/EntityLineageUtils';
 import { IconSprites } from './useIconSprites';
+import { useLineageStore } from './useLineageStore';
 
 interface UseCanvasEdgeRendererProps {
   canvasRef: RefObject<HTMLCanvasElement>;
-  hitCanvasRef: RefObject<HTMLCanvasElement>;
   edges: Edge[];
-  nodes: Node[];
-  viewport: Viewport;
-  tracedNodes: Set<string>;
-  tracedColumns: Set<string>;
+  hoverEdge?: Edge | null;
   dqHighlightedEdges: Set<string>;
-  selectedEdge?: Edge;
-  selectedColumn?: string;
   theme: Theme;
   sprites: IconSprites | null;
   containerWidth: number;
   containerHeight: number;
-  columnsInCurrentPages: Map<string, string[]>;
+}
+
+interface EdgeHitEntry {
+  edge: Edge;
+  path: Path2D;
 }
 
 export function useCanvasEdgeRenderer({
   canvasRef,
-  hitCanvasRef,
-  tracedNodes,
-  tracedColumns,
   dqHighlightedEdges,
   edges,
-  //   selectedEdge,
-  selectedColumn,
-  columnsInCurrentPages,
+  hoverEdge,
   theme,
   sprites,
   containerWidth,
@@ -61,10 +54,27 @@ export function useCanvasEdgeRenderer({
 }: UseCanvasEdgeRendererProps) {
   const rafIdRef = useRef<number>();
   const isDirtyRef = useRef(false);
-  const { getNode, getNodes, getViewport } = useReactFlow();
-  const nodes = getNodes();
+  const visibleEdgesRef = useRef<Edge[]>([]);
+  // Stores the Path2D for each visible edge so mouse-move hit testing can use
+  // isPointInStroke instead of pixel read-back, which is unreliable due to
+  // anti-aliasing and color-profile transformations on macOS.
+  const edgeHitPathsRef = useRef<EdgeHitEntry[]>([]);
+  // A temporary off-screen canvas used solely for isPointInStroke calls.
+  // Path2D.isPointInStroke requires a CanvasRenderingContext2D to resolve
+  // the current lineWidth and transform, so we keep one around.
+  const hitTestCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const viewport = getViewport();
+  const { getNode, getNodes } = useReactFlow();
+  const nodes = getNodes();
+  const {
+    tracedNodes,
+    tracedColumns,
+    selectedEdge,
+    selectedColumn,
+    columnsInCurrentPages,
+  } = useLineageStore();
+
+  const viewport = useViewport();
 
   const drawEdgeIcons = useCallback(
     (
@@ -120,13 +130,9 @@ export function useCanvasEdgeRenderer({
   );
 
   const drawEdge = useCallback(
-    (
-      ctx: CanvasRenderingContext2D,
-      edge: Edge,
-      isHitCanvas: boolean = false,
-      hitColor?: string
-    ) => {
+    (ctx: CanvasRenderingContext2D, edge: Edge): Path2D | null => {
       const computedPath = edge.data?.computedPath;
+
       if (!computedPath) {
         const coords = getEdgeCoordinates(
           edge,
@@ -135,7 +141,7 @@ export function useCanvasEdgeRenderer({
           columnsInCurrentPages
         );
         if (!coords) {
-          return;
+          return null;
         }
 
         const pathData = getEdgePathData(edge.source, edge.target, {
@@ -156,44 +162,40 @@ export function useCanvasEdgeRenderer({
           theme,
           edge.data?.isColumnLineage ?? false,
           edge.sourceHandle,
-          edge.targetHandle
+          edge.targetHandle,
+          edge.id === hoverEdge?.id || selectedEdge?.id === edge.id
         );
 
-        if (isHitCanvas && hitColor) {
-          ctx.strokeStyle = hitColor;
-          ctx.lineWidth = 8;
-        } else {
-          ctx.strokeStyle = style.stroke;
-          ctx.globalAlpha = style.opacity;
-          ctx.lineWidth = style.strokeWidth;
-        }
+        ctx.strokeStyle = style.stroke;
+        ctx.globalAlpha = style.opacity;
+        ctx.lineWidth = style.strokeWidth;
+        ctx.setLineDash(edge.animated ? [6, 4] : []);
 
         const path = new Path2D(pathData.edgePath);
         ctx.stroke(path);
 
         ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
 
-        if (!isHitCanvas) {
-          const angle = getEdgeAngle(
-            coords.sourceX,
-            coords.sourceY,
-            coords.targetX,
-            coords.targetY
-          );
-          drawArrowMarker(
-            ctx,
-            coords.targetX,
-            coords.targetY,
-            angle,
-            style.stroke
-          );
-        }
+        const angle = getEdgeAngle(
+          coords.sourceX,
+          coords.sourceY,
+          coords.targetX,
+          coords.targetY
+        );
+        drawArrowMarker(
+          ctx,
+          coords.targetX,
+          coords.targetY,
+          angle,
+          style.stroke
+        );
 
-        if (!isHitCanvas && sprites && edge.data) {
+        if (sprites && edge.data) {
           drawEdgeIcons(ctx, edge, pathData.edgeCenterX, pathData.edgeCenterY);
         }
 
-        return;
+        return path;
       }
 
       const pathData = computedPath;
@@ -207,24 +209,22 @@ export function useCanvasEdgeRenderer({
         theme,
         edge.data?.isColumnLineage ?? false,
         edge.sourceHandle,
-        edge.targetHandle
+        edge.targetHandle,
+        edge.id === hoverEdge?.id || selectedEdge?.id === edge.id
       );
 
-      if (isHitCanvas && hitColor) {
-        ctx.strokeStyle = hitColor;
-        ctx.lineWidth = 8;
-      } else {
-        ctx.strokeStyle = style.stroke;
-        ctx.globalAlpha = style.opacity;
-        ctx.lineWidth = style.strokeWidth;
-      }
+      ctx.strokeStyle = style.stroke;
+      ctx.globalAlpha = style.opacity;
+      ctx.lineWidth = style.strokeWidth;
+      ctx.setLineDash(edge.animated ? [6, 4] : []);
 
       const path = new Path2D(pathData.edgePath);
       ctx.stroke(path);
 
       ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
 
-      if (!isHitCanvas && pathData.sourceX && pathData.targetX) {
+      if (pathData.sourceX && pathData.targetX) {
         const angle = getEdgeAngle(
           pathData.sourceX,
           pathData.sourceY,
@@ -240,9 +240,11 @@ export function useCanvasEdgeRenderer({
         );
       }
 
-      if (!isHitCanvas && sprites && edge.data) {
+      if (sprites && edge.data) {
         drawEdgeIcons(ctx, edge, pathData.edgeCenterX, pathData.edgeCenterY);
       }
+
+      return path;
     },
     [
       nodes,
@@ -254,30 +256,24 @@ export function useCanvasEdgeRenderer({
       sprites,
       drawEdgeIcons,
       columnsInCurrentPages,
+      hoverEdge,
     ]
   );
 
   const drawAllEdges = useCallback(() => {
     const canvas = canvasRef.current;
-    const hitCanvas = hitCanvasRef.current;
 
-    if (!canvas || !hitCanvas || !containerWidth || !containerHeight) {
+    if (!canvas || !containerWidth || !containerHeight) {
       return;
     }
 
     const ctx = setupCanvas(canvas, containerWidth, containerHeight);
-    const hitCtx = setupCanvas(hitCanvas, containerWidth, containerHeight);
 
     ctx.clearRect(0, 0, containerWidth, containerHeight);
-    hitCtx.clearRect(0, 0, containerWidth, containerHeight);
 
     ctx.save();
     ctx.translate(viewport.x, viewport.y);
     ctx.scale(viewport.zoom, viewport.zoom);
-
-    hitCtx.save();
-    hitCtx.translate(viewport.x, viewport.y);
-    hitCtx.scale(viewport.zoom, viewport.zoom);
 
     const visibleEdges = edges.filter((edge) =>
       isEdgeInViewport(
@@ -291,22 +287,25 @@ export function useCanvasEdgeRenderer({
       )
     );
 
-    visibleEdges.forEach((edge, index) => {
+    visibleEdgesRef.current = visibleEdges;
+
+    const hitPaths: EdgeHitEntry[] = [];
+
+    visibleEdges.forEach((edge) => {
       ctx.save();
-      drawEdge(ctx, edge, false);
+      const path = drawEdge(ctx, edge);
       ctx.restore();
 
-      hitCtx.save();
-      const hitColor = edgeIndexToColor(index);
-      drawEdge(hitCtx, edge, true, hitColor);
-      hitCtx.restore();
+      if (path) {
+        hitPaths.push({ edge, path });
+      }
     });
 
+    edgeHitPathsRef.current = hitPaths;
+
     ctx.restore();
-    hitCtx.restore();
   }, [
     canvasRef,
-    hitCanvasRef,
     edges,
     nodes,
     viewport,
@@ -315,6 +314,41 @@ export function useCanvasEdgeRenderer({
     drawEdge,
     columnsInCurrentPages,
   ]);
+
+  const getEdgeAtPoint = useCallback(
+    (clientX: number, clientY: number, containerRect: DOMRect): Edge | null => {
+      // Convert screen coordinates to flow-space (same coordinate space the
+      // paths were drawn in, before the viewport transform was applied).
+      const x = (clientX - containerRect.left - viewport.x) / viewport.zoom;
+      const y = (clientY - containerRect.top - viewport.y) / viewport.zoom;
+
+      // Ensure we have a scratch canvas context for isPointInStroke.
+      if (!hitTestCtxRef.current) {
+        const offscreen = new OffscreenCanvas(1, 1);
+        hitTestCtxRef.current = offscreen.getContext(
+          '2d'
+        ) as unknown as CanvasRenderingContext2D;
+      }
+
+      const ctx = hitTestCtxRef.current;
+      if (!ctx) {
+        return null;
+      }
+
+      // Use a hit tolerance that gives a comfortable target regardless of zoom.
+      const hitLineWidth = 12 / viewport.zoom;
+      ctx.lineWidth = hitLineWidth;
+
+      for (const { edge, path } of edgeHitPathsRef.current) {
+        if (ctx.isPointInStroke(path, x, y)) {
+          return edge;
+        }
+      }
+
+      return null;
+    },
+    [viewport]
+  );
 
   const scheduleRedraw = useCallback(() => {
     if (isDirtyRef.current) {
@@ -339,5 +373,5 @@ export function useCanvasEdgeRenderer({
     };
   }, [scheduleRedraw]);
 
-  return { redraw: scheduleRedraw };
+  return { redraw: scheduleRedraw, visibleEdgesRef, getEdgeAtPoint };
 }

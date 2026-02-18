@@ -29,9 +29,10 @@ export interface EdgeCoordinates {
 export function setupCanvas(
   canvas: HTMLCanvasElement,
   width: number,
-  height: number
+  height: number,
+  willReadFrequently = false
 ): CanvasRenderingContext2D {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently });
   if (!ctx) {
     throw new Error('Could not get 2D context from canvas');
   }
@@ -233,18 +234,6 @@ export function inverseTransformPoint(
     x: (screenX - viewport.x) / viewport.zoom,
     y: (screenY - viewport.y) / viewport.zoom,
   };
-}
-
-export function edgeIndexToColor(index: number): string {
-  const r = (index & 0xff0000) >> 16;
-  const g = (index & 0x00ff00) >> 8;
-  const b = index & 0x0000ff;
-
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-export function colorToEdgeIndex(r: number, g: number, b: number): number {
-  return (r << 16) | (g << 8) | b;
 }
 
 export function drawArrowMarker(
