@@ -530,7 +530,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
                 .filter({
                   hasText: `Data Contract - ${DATA_CONTRACT_DETAILS.name}`,
                 })
-            ).toBeVisible({ timeout: 10000 });
+            ).toBeVisible();
           }
         );
 
