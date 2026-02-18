@@ -125,16 +125,16 @@ test.beforeAll('Setup Customize tests', async ({ browser }) => {
   await afterAction();
 });
 
-// test.afterAll('Cleanup Customize tests', async ({ browser }) => {
-//   test.slow();
+test.afterAll('Cleanup Customize tests', async ({ browser }) => {
+  test.slow();
 
-//   const { apiContext, afterAction } = await performAdminLogin(browser);
-//   await adminUser.delete(apiContext);
-//   await user.delete(apiContext);
-//   await persona.delete(apiContext);
-//   await navigationPersona.delete(apiContext);
-//   await afterAction();
-// });
+  const { apiContext, afterAction } = await performAdminLogin(browser);
+  await adminUser.delete(apiContext);
+  await user.delete(apiContext);
+  await persona.delete(apiContext);
+  await navigationPersona.delete(apiContext);
+  await afterAction();
+});
 
 test.describe('Persona customize UI tab', async () => {
   test.beforeEach(async ({ adminPage }) => {
