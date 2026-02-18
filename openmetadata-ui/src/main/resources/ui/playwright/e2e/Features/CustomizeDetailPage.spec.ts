@@ -195,9 +195,8 @@ test.describe(
 
       const personaListResponse =
         adminPage.waitForResponse(`/api/v1/personas?*`);
-      await adminPage.goBack();
+      await settingClick(adminPage, GlobalSettingOptions.PERSONA);
       await personaListResponse;
-      await adminPage.waitForLoadState('networkidle');
       await navigateToPersonaWithPagination(
         adminPage,
         navigationPersona.data.name,
