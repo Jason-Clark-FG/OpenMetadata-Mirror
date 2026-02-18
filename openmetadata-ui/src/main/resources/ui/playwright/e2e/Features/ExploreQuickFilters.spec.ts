@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import test, { expect } from '@playwright/test';
+import { isUndefined } from 'lodash';
 import { SidebarItem } from '../../constant/sidebar';
 import { Domain } from '../../support/domain/Domain';
 import { TableClass } from '../../support/entity/TableClass';
@@ -122,27 +123,37 @@ test('should show correct count for initial options', async ({ page }) => {
     const aggregateAPI = page.waitForResponse(
       '/api/v1/search/aggregate?index=dataAsset&field=tier.tagFQN*'
     );
+    const tierFetchAPI = page.waitForResponse(
+      '/api/v1/tags?parent=Tier&limit=50'
+    );
     await page.click(`[data-testid="search-dropdown-${filter.label}"]`);
 
     const res = await aggregateAPI;
+    const tierRes = await tierFetchAPI;
     const data = await res.json();
+    const tierList = (await tierRes.json()).data;
     const buckets = data.aggregations['sterms#tier.tagFQN'].buckets;
 
     await waitForAllLoadersToDisappear(page);
 
-    for (const bucket of buckets) {
-      const normalizedKey = bucket.key
-        .split('.')
-        .map((seg: string) =>
-          seg ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg
-        )
-        .join('.');
-
-      await expect(
-        page
-          .locator(`[data-menu-id$="-${normalizedKey}"]`)
-          .getByTestId('filter-count')
-      ).toHaveText(bucket.doc_count.toString());
+    // The following logic is required due to special case for tier filter
+    // where we are fetching the tier options from tag API and
+    // the count from aggregation API.
+    // So we need to match the bucket count with the corresponding tier option.
+    for (const tier of tierList) {
+      // Find the corresponding bucket for the tier
+      const bucket = buckets.find(
+        (item: { key: string }) =>
+          item.key.toLowerCase() === tier.fullyQualifiedName?.toLowerCase()
+      );
+      // Check if the tier in the dropdown has a corresponding bucket in elastic search response
+      if (!isUndefined(bucket)) {
+        await expect(
+          page
+            .locator(`[data-menu-id$="-${tier.fullyQualifiedName}"]`)
+            .getByTestId('filter-count')
+        ).toHaveText(bucket.doc_count.toString());
+      }
     }
 
     await clickOutside(page);
