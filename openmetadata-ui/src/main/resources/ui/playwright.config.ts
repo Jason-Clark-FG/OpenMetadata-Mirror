@@ -76,20 +76,10 @@ export default defineConfig({
       dependencies: ['setup'],
     },
     {
-      name: 'glossary-specs',
-      testMatch: [
-        '**/GlossaryImportExport.spec.ts',
-        '**/Glossary.spec.ts',
-      ],
-      use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup', 'entity-data-setup'],
-      fullyParallel: false,
-    },
-    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       // Added admin setup as a dependency. This will authorize the page with an admin user before running the test. doc: https://playwright.dev/docs/auth#multiple-signed-in-roles
-      dependencies: ['setup', 'entity-data-setup', 'glossary-specs'],
+      dependencies: ['setup', 'entity-data-setup'],
       grepInvert: [/@data-insight/, /@ingestion/, /@sample-data/, /@basic/],
       teardown: 'entity-data-teardown',
       testIgnore: [
@@ -97,8 +87,6 @@ export default defineConfig({
         '**/DataAssetRulesEnabled.spec.ts',
         '**/DataAssetRulesDisabled.spec.ts',
         '**/SystemCertificationTags.spec.ts',
-        '**/GlossaryImportExport.spec.ts',
-        '**/Glossary.spec.ts',
       ],
     },
     {
@@ -121,7 +109,7 @@ export default defineConfig({
       name: 'DataAssetRulesEnabled',
       testMatch: '**/DataAssetRulesEnabled.spec.ts',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup', 'glossary-specs'],
+      dependencies: ['setup'],
       fullyParallel: true,
     },
     {
