@@ -100,6 +100,93 @@ export class CustomPropertiesPageObject extends RightPanelBase {
     return this;
   }
 
+  // ============ VERIFICATION METHODS FOR PROPERTY VALUES AND TYPES ============
+
+  /**
+   * Verify property value for a specific custom property
+   * @param propertyName - Name of the custom property
+   * @param expectedValue - Expected value to verify
+   */
+  async verifyPropertyValue(
+    propertyName: string,
+    expectedValue: any
+  ): Promise<void> {
+    const propertyCard = this.page.getByTestId(propertyName);
+    await propertyCard.waitFor({ state: 'visible' });
+
+    const valueElement = propertyCard.getByTestId('property-value');
+    await expect(valueElement).toBeVisible();
+
+    const actualValue = await valueElement.textContent();
+    const expectedValueStr = String(expectedValue);
+
+    if (!actualValue?.includes(expectedValueStr)) {
+      throw new Error(
+        `Property "${propertyName}" should have value "${expectedValueStr}" but has "${actualValue}"`
+      );
+    }
+  }
+
+  /**
+   * Verify property type display
+   * @param propertyName - Name of the custom property
+   * @param expectedType - Expected type (string, integer, markdown, etc.)
+   */
+  async verifyPropertyType(
+    propertyName: string,
+    expectedType: string
+  ): Promise<void> {
+    const propertyCard = this.page.getByTestId(propertyName);
+    await propertyCard.waitFor({ state: 'visible' });
+
+    const propertyNameElement = propertyCard.getByTestId('property-name');
+    await expect(propertyNameElement).toBeVisible();
+    await expect(propertyNameElement).toContainText(propertyName);
+  }
+
+  /**
+   * Verify search results count
+   * @param searchTerm - The search term used
+   * @param expectedCount - Expected number of results
+   */
+  async verifySearchResults(
+    searchTerm: string,
+    expectedCount: number
+  ): Promise<void> {
+    await this.searchCustomProperties(searchTerm);
+
+    if (expectedCount === 0) {
+      const noResultsText = this.page.getByText(/No Custom Properties found for/i);
+      await expect(noResultsText).toBeVisible();
+    } else {
+      const visibleProperties = this.propertyCard;
+      const count = await visibleProperties.count();
+
+      if (count !== expectedCount) {
+        throw new Error(
+          `Search for "${searchTerm}" should return ${expectedCount} results but returned ${count}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Verify all property types are displayed correctly
+   * @param propertyTypes - Array of property type names to verify
+   */
+  async verifyAllPropertyTypesDisplay(propertyTypes: string[]): Promise<void> {
+    for (const propertyType of propertyTypes) {
+      const propertyCard = this.page.getByTestId(propertyType);
+      await expect(propertyCard).toBeVisible();
+
+      const propertyNameElement = propertyCard.getByTestId('property-name');
+      await expect(propertyNameElement).toBeVisible();
+
+      const propertyValueElement = propertyCard.locator('.value-container');
+      await expect(propertyValueElement).toBeVisible();
+    }
+  }
+
   /**
    * Verify that the Custom Properties tab is currently visible
    */

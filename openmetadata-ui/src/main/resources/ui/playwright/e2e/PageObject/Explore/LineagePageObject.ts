@@ -80,6 +80,35 @@ export class LineagePageObject extends RightPanelBase {
     return this;
   }
 
+  /**
+   * Click on a lineage card
+   * @param entityName - Name of the entity card to click
+   * @returns LineagePageObject for method chaining
+   */
+  async clickLineageCard(entityName: string): Promise<LineagePageObject> {
+    const card = this.container
+      .locator('.lineage-item-card')
+      .filter({ hasText: entityName });
+    await card.waitFor({ state: 'visible' });
+    await card.click();
+    await this.page.waitForLoadState('networkidle');
+    return this;
+  }
+
+  /**
+   * Navigate to full lineage page
+   * @returns LineagePageObject for method chaining
+   */
+  async navigateToFullLineage(): Promise<LineagePageObject> {
+    const lineageSection = this.getSummaryPanel().locator(
+      '[data-testid="upstream-lineage"]'
+    );
+    await lineageSection.waitFor({ state: 'visible' });
+    await lineageSection.click();
+    await this.page.waitForURL(/.*\/lineage$/);
+    return this;
+  }
+
 
   // ============ VERIFICATION METHODS (BDD Style) ============
 
@@ -172,6 +201,87 @@ export class LineagePageObject extends RightPanelBase {
     const count = await this.edges.count();
     if (count === 0) {
       throw new Error('Should show lineage connections but shows none');
+    }
+  }
+
+  /**
+   * Verify upstream count in overview tab
+   * @param expectedCount - Expected number of upstream entities
+   */
+  async verifyUpstreamCount(expectedCount: number): Promise<void> {
+    const summaryPanel = this.getSummaryPanel();
+    const upstreamCountElement = summaryPanel.locator('[data-testid="upstream-count"]');
+    await expect(upstreamCountElement).toBeVisible();
+    await expect(upstreamCountElement).toHaveText(expectedCount.toString());
+  }
+
+  /**
+   * Verify downstream count in overview tab
+   * @param expectedCount - Expected number of downstream entities
+   */
+  async verifyDownstreamCount(expectedCount: number): Promise<void> {
+    const summaryPanel = this.getSummaryPanel();
+    const downstreamCountElement = summaryPanel.locator(
+      '[data-testid="downstream-count"]'
+    );
+    await expect(downstreamCountElement).toBeVisible();
+    await expect(downstreamCountElement).toHaveText(expectedCount.toString());
+  }
+
+  /**
+   * Verify a lineage card exists for an entity
+   * @param entityName - Name of the entity
+   * @param direction - Direction ('upstream' or 'downstream')
+   */
+  async verifyLineageCard(
+    entityName: string,
+    direction: 'upstream' | 'downstream'
+  ): Promise<void> {
+    const card = this.container
+      .locator('.lineage-item-card')
+      .filter({ hasText: entityName });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText(entityName);
+  }
+
+  /**
+   * Verify lineage card details (service icon, entity name, type, owner)
+   * @param entityName - Name of the entity
+   * @param details - Object containing expected details
+   */
+  async verifyLineageCardDetails(
+    entityName: string,
+    details: {
+      hasServiceIcon?: boolean;
+      entityType?: string;
+      hasOwner?: boolean;
+      hasLink?: boolean;
+    }
+  ): Promise<void> {
+    const card = this.container
+      .locator('.lineage-item-card')
+      .filter({ hasText: entityName });
+    await expect(card).toBeVisible();
+
+    if (details.hasServiceIcon) {
+      const serviceIcon = card.locator('.service-icon');
+      await expect(serviceIcon).toBeVisible();
+    }
+
+    if (details.entityType) {
+      const typeText = card.locator('.item-entity-type-text');
+      await expect(typeText).toBeVisible();
+      await expect(typeText).toContainText(new RegExp(details.entityType, 'i'));
+    }
+
+    if (details.hasOwner) {
+      const ownerSection = card.locator('.lineage-info-container');
+      await expect(ownerSection).toBeVisible();
+    }
+
+    if (details.hasLink) {
+      const cardLink = card.locator('.breadcrumb-menu-button');
+      await expect(cardLink).toBeVisible();
     }
   }
 

@@ -67,6 +67,30 @@ interface EntityWithChildren extends EntityClass {
   children: unknown[];
 }
 
+// Page context enum for reusability across different pages
+export enum PageContext {
+  EXPLORE = 'explore',
+  ENTITY_DETAILS = 'entity-details',
+  LINEAGE = 'lineage',
+  SERVICE_DETAILS = 'service-details',
+}
+
+// Role permissions interface for role-based testing
+export interface RolePermissions {
+  canEditDescription: boolean;
+  canEditOwners: boolean;
+  canEditTags: boolean;
+  canEditGlossaryTerms: boolean;
+  canEditTier: boolean;
+  canEditDomains: boolean;
+  canEditDataProducts: boolean;
+  canEditCustomProperties: boolean;
+  canViewDataQuality: boolean;
+  canViewLineage: boolean;
+  canViewSchema: boolean;
+  canViewCustomProperties: boolean;
+}
+
 // Configuration for different data asset types and their right panel characteristics
 export interface DataAssetConfig {
   entityType: string;
@@ -86,6 +110,8 @@ export class RightPanelPageObject {
   public readonly page: Page;
   private readonly summaryPanel = '.entity-summary-panel-container';
   private entityConfig?: DataAssetConfig;
+  private rolePermissions?: RolePermissions;
+  private pageContext: PageContext = PageContext.EXPLORE;
 
   // Section page objects
   public readonly overview: OverviewPageObject;
@@ -358,6 +384,107 @@ export class RightPanelPageObject {
         supportsCustomProperties: true,
       };
     }
+  }
+
+  /**
+   * Set role permissions for permission-based testing
+   * @param role - User role (Admin, DataSteward, DataConsumer)
+   */
+  public setRolePermissions(
+    role: 'Admin' | 'DataSteward' | 'DataConsumer'
+  ): void {
+    switch (role) {
+      case 'Admin':
+        this.rolePermissions = {
+          canEditDescription: true,
+          canEditOwners: true,
+          canEditTags: true,
+          canEditGlossaryTerms: true,
+          canEditTier: true,
+          canEditDomains: true,
+          canEditDataProducts: true,
+          canEditCustomProperties: true,
+          canViewDataQuality: true,
+          canViewLineage: true,
+          canViewSchema: true,
+          canViewCustomProperties: true,
+        };
+        break;
+      case 'DataSteward':
+        this.rolePermissions = {
+          canEditDescription: true,
+          canEditOwners: true,
+          canEditTags: true,
+          canEditGlossaryTerms: true,
+          canEditTier: true,
+          canEditDomains: false,
+          canEditDataProducts: false,
+          canEditCustomProperties: true,
+          canViewDataQuality: true,
+          canViewLineage: true,
+          canViewSchema: true,
+          canViewCustomProperties: true,
+        };
+        break;
+      case 'DataConsumer':
+        this.rolePermissions = {
+          canEditDescription: true,
+          canEditOwners: false,
+          canEditTags: true,
+          canEditGlossaryTerms: true,
+          canEditTier: true,
+          canEditDomains: false,
+          canEditDataProducts: false,
+          canEditCustomProperties: false,
+          canViewDataQuality: true,
+          canViewLineage: true,
+          canViewSchema: true,
+          canViewCustomProperties: true,
+        };
+        break;
+    }
+  }
+
+  /**
+   * Verify that UI elements match role permissions
+   * Checks visibility of edit buttons based on configured role
+   */
+  public async verifyPermissions(): Promise<void> {
+    if (!this.rolePermissions) {
+      throw new Error('Role permissions not set. Call setRolePermissions first.');
+    }
+
+    const summaryPanel = this.page.locator(this.summaryPanel);
+
+    if (this.rolePermissions.canEditDomains) {
+      await expect(summaryPanel.getByTestId('add-domain')).toBeVisible();
+    } else {
+      await expect(summaryPanel.getByTestId('add-domain')).not.toBeVisible();
+    }
+
+    if (this.rolePermissions.canEditDataProducts) {
+      await expect(summaryPanel.getByTestId('edit-data-products')).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.getByTestId('edit-data-products')
+      ).not.toBeVisible();
+    }
+  }
+
+  /**
+   * Set the page context for context-aware behavior
+   * @param context - Page context (explore, entity-details, lineage, etc.)
+   */
+  public setPageContext(context: PageContext): void {
+    this.pageContext = context;
+  }
+
+  /**
+   * Get the current page context
+   * @returns Current page context
+   */
+  public getPageContext(): PageContext {
+    return this.pageContext;
   }
 
   /**

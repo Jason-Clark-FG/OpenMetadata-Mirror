@@ -113,6 +113,32 @@ export class DataQualityPageObject extends RightPanelBase {
     return this;
   }
 
+  /**
+   * Click on a test case link to navigate to its details page
+   * @param testCaseName - Name of the test case
+   * @returns DataQualityPageObject for method chaining
+   */
+  async clickTestCaseLink(testCaseName: string): Promise<DataQualityPageObject> {
+    const testCaseLink = this.container
+      .locator(`.test-case-name[data-testid="test-case-${testCaseName}"]`)
+      .first();
+    await testCaseLink.waitFor({ state: 'visible' });
+    await testCaseLink.click();
+    await this.page.waitForLoadState('networkidle');
+    return this;
+  }
+
+  /**
+   * Filter test cases or incidents by clicking stat cards
+   * @param statType - Type of stat to filter by
+   * @returns DataQualityPageObject for method chaining
+   */
+  async filterByStatus(
+    statType: 'success' | 'failed' | 'aborted'
+  ): Promise<DataQualityPageObject> {
+    return this.clickStatCard(statType);
+  }
+
   // ============ PRIVATE HELPERS ============
 
   /**
@@ -168,6 +194,96 @@ export class DataQualityPageObject extends RightPanelBase {
       throw new Error(
         `Stat card ${statType} should show "${expectedText}" but shows "${statCardText}"`
       );
+    }
+  }
+
+  /**
+   * Verify a stat card shows specific count
+   * @param statType - Type of stat card
+   * @param expectedCount - Expected count to verify
+   */
+  async verifyStatCardCount(
+    statType: 'success' | 'failed' | 'aborted',
+    expectedCount: number
+  ): Promise<void> {
+    const statCard = this.getStatCardLocator(statType);
+    await statCard.waitFor({ state: 'visible' });
+    await expect(statCard).toContainText(expectedCount.toString());
+  }
+
+  /**
+   * Verify a test case card with specific name and status
+   * @param testCaseName - Expected test case name
+   * @param expectedStatus - Expected status
+   */
+  async verifyTestCaseCard(
+    testCaseName: string,
+    expectedStatus: string
+  ): Promise<void> {
+    const cards = this.testCaseCards;
+    const card = cards.filter({ hasText: testCaseName }).first();
+    await card.waitFor({ state: 'visible' });
+
+    const statusBadge = card.locator('.status-badge-label, .status-badge, [class*="status"]');
+    await statusBadge.waitFor({ state: 'visible' });
+    await expect(statusBadge).toContainText(new RegExp(expectedStatus, 'i'));
+  }
+
+  /**
+   * Verify test case details (column name, entity link, etc.)
+   * @param testCaseName - Name of the test case
+   * @param details - Object containing expected details
+   */
+  async verifyTestCaseDetails(
+    testCaseName: string,
+    details: { columnName?: string; entityLink?: string }
+  ): Promise<void> {
+    const card = this.testCaseCards.filter({ hasText: testCaseName }).first();
+    await card.waitFor({ state: 'visible' });
+
+    if (details.columnName) {
+      const columnDetail = card
+        .locator('.test-case-detail-item, [class*="detail"]')
+        .filter({ hasText: /column name/i })
+        .filter({ hasText: details.columnName });
+      await expect(columnDetail).toBeVisible();
+      await expect(columnDetail).toContainText(details.columnName);
+    }
+
+    if (details.entityLink) {
+      const testCaseLink = card.locator('.test-case-name');
+      await expect(testCaseLink).toHaveAttribute('href', new RegExp(details.entityLink));
+    }
+  }
+
+  /**
+   * Verify incident card details
+   * @param incidentData - Object containing expected incident data
+   */
+  async verifyIncidentCard(incidentData: {
+    status?: string;
+    hasAssignee?: boolean;
+  }): Promise<void> {
+    const incidentsTabContent = this.container.locator('.incidents-tab-content');
+    await incidentsTabContent.waitFor({ state: 'visible' });
+
+    const incidentCard = incidentsTabContent.locator('.test-case-card').first();
+    await expect(incidentCard).toBeVisible();
+
+    if (incidentData.status) {
+      await expect(incidentCard).toContainText(incidentData.status);
+    }
+
+    if (incidentData.hasAssignee !== undefined) {
+      const assigneeSection = incidentCard
+        .locator('.test-case-detail-item')
+        .filter({ hasText: /assignee/i });
+
+      if (incidentData.hasAssignee) {
+        await expect(assigneeSection).toBeVisible();
+      } else {
+        await expect(assigneeSection).not.toBeVisible();
+      }
     }
   }
 
