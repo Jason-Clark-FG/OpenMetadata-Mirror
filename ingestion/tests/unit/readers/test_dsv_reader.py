@@ -401,6 +401,33 @@ class TestDSVReader(unittest.TestCase):
 
             os.unlink(tmp_path)
 
+    def test_field_larger_than_default_csv_limit(self):
+        """
+        Verify that a CSV with a single field exceeding Python's default
+        csv.field_size_limit (131072 bytes) is read successfully.
+        """
+        large_value = "a" * 131073  # one byte over the default limit
+        csv_content = f"id,data\n1,{large_value}\n"
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as tmp:
+            tmp.write(csv_content)
+            tmp_path = tmp.name
+
+        try:
+            config = LocalConfig()
+            reader = CSVDataFrameReader(config, None)
+
+            result = reader._read(key=tmp_path, bucket_name="")
+            chunks = list(result.dataframes())
+
+            self.assertEqual(len(chunks), 1)
+            self.assertEqual(chunks[0].shape, (1, 2))
+            self.assertEqual(len(chunks[0].iloc[0]["data"]), 131073)
+        finally:
+            import os
+
+            os.unlink(tmp_path)
+
 
 if __name__ == "__main__":
     unittest.main()
