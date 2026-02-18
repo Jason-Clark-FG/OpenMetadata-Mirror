@@ -38,5 +38,6 @@
 @layer base {
   img {
     height: revert-layer;
+    display: inline;
   }
 }
