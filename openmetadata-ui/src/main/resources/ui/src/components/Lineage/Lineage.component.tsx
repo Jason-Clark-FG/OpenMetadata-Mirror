@@ -136,6 +136,7 @@ const Lineage = ({
           {init ? (
             <ReactFlow
               elevateEdgesOnSelect
+              onlyRenderVisibleElements
               className="custom-react-flow"
               data-testid="react-flow-component"
               deleteKeyCode={null}
