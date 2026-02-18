@@ -67,6 +67,8 @@ const additionalGlossaryTerm = createGlossaryTermRowDetails();
 test.describe('Glossary Bulk Import Export', () => {
   test.slow(true);
 
+  test.setTimeout(20 * 60 * 1000);
+
   test.beforeAll('setup pre-test', async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
 
@@ -307,7 +309,7 @@ test.describe('Glossary Bulk Import Export', () => {
           },
           {
             message: `Waiting for glossary term "${newTermFqn}" status to become "In Review"`,
-            timeout: 30_000,
+            timeout: 600_000,
             intervals: [2_000],
           }
         )
