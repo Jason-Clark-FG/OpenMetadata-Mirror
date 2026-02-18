@@ -90,6 +90,7 @@ public final class JsonUtils {
   public static final String JSON_FILE_EXTENSION = ".json";
   private static final ObjectMapper OBJECT_MAPPER;
   private static final ObjectMapper OBJECT_MAPPER_LENIENT;
+  private static final ObjectMapper OBJECT_MAPPER_IGNORE_NULL;
   private static final ObjectMapper EXPOSED_OBJECT_MAPPER;
   private static final ObjectMapper MASKER_OBJECT_MAPPER;
   private static final SchemaRegistry schemaFactory =
@@ -118,6 +119,9 @@ public final class JsonUtils {
     // Lenient ObjectMapper to ignore unknown properties
     OBJECT_MAPPER_LENIENT = OBJECT_MAPPER.copy();
     OBJECT_MAPPER_LENIENT.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    OBJECT_MAPPER_IGNORE_NULL = OBJECT_MAPPER.copy();
+    OBJECT_MAPPER_IGNORE_NULL.setSerializationInclusion(JsonInclude.Include.NON_NULL);
   }
 
   static {
@@ -154,10 +158,7 @@ public final class JsonUtils {
       return null;
     }
     try {
-      ObjectMapper objectMapperIgnoreNull = OBJECT_MAPPER.copy();
-      objectMapperIgnoreNull.setSerializationInclusion(
-          JsonInclude.Include.NON_NULL); // Ignore null values
-      return objectMapperIgnoreNull.writeValueAsString(o);
+      return OBJECT_MAPPER_IGNORE_NULL.writeValueAsString(o);
     } catch (JsonProcessingException e) {
       throw new JsonParsingException(FAILED_TO_PROCESS_JSON, e);
     }

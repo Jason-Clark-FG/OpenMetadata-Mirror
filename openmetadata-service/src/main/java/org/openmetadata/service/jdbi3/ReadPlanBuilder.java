@@ -80,6 +80,13 @@ final class ReadPlanBuilder {
     return this;
   }
 
+  ReadPlanBuilder addEntitySpecificPrefetch(ReadPrefetchKey key) {
+    if (key != null) {
+      addEntitySpecificPrefetch(key.value());
+    }
+    return this;
+  }
+
   ReadPlan build() {
     if (entityId == null) {
       return ReadPlan.empty();

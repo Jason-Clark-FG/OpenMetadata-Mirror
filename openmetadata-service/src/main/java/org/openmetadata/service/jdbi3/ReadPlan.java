@@ -111,6 +111,10 @@ final class ReadPlan {
     return entitySpecificPrefetchKeys;
   }
 
+  boolean hasEntitySpecificPrefetch(ReadPrefetchKey key) {
+    return key != null && entitySpecificPrefetchKeys.contains(key.value());
+  }
+
   boolean isEmpty() {
     return entityId == null
         || (toRelationsByInclude.isEmpty()

@@ -159,6 +159,8 @@ public class JwtFilter implements ContainerRequestFilter {
     }
 
     Timer.Sample authSample = RequestLatencyContext.startAuthOperation();
+    // Ensure stale thread-local state from a prior request is not reused on early failures.
+    ImpersonationContext.clear();
     try {
       String tokenFromHeader = extractToken(requestContext.getHeaders());
       LOG.debug("Token from header:{}", tokenFromHeader);
@@ -311,13 +313,10 @@ public class JwtFilter implements ContainerRequestFilter {
 
   private void validatePersonalAccessToken(
       Map<String, Claim> claims, String tokenFromHeader, String userName) {
+    Claim tokenTypeClaim = claims.get(TOKEN_TYPE);
+    String tokenType = tokenTypeClaim == null ? StringUtils.EMPTY : tokenTypeClaim.asString();
     if (claims.containsKey(TOKEN_TYPE)
-        && ServiceTokenType.PERSONAL_ACCESS
-            .value()
-            .equals(
-                claims.get(TOKEN_TYPE) != null
-                    ? StringUtils.EMPTY
-                    : claims.get(TOKEN_TYPE).asString())) {
+        && ServiceTokenType.PERSONAL_ACCESS.value().equals(tokenType)) {
       Set<String> userTokens = UserTokenCache.getToken(userName);
       if (userTokens != null && userTokens.contains(tokenFromHeader)) {
         return;

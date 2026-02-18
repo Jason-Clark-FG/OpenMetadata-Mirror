@@ -424,6 +424,7 @@ public class RequestLatencyContext {
   private static final class ActivePhase {
     private final long startNanos;
     private final long dbTimeAtStartNanos;
+    // Phase state is thread-confined via phaseStack ThreadLocal and never propagated cross-thread.
     private long childNanos;
     private long childDbNanos;
 
@@ -439,6 +440,7 @@ public class RequestLatencyContext {
     RequestContext ctx = getContext();
     if (ctx == null) return task;
     return () -> {
+      // Intentionally propagate only request counters, not phaseStack hierarchy.
       setContext(ctx);
       try {
         task.run();
@@ -452,6 +454,7 @@ public class RequestLatencyContext {
     RequestContext ctx = getContext();
     if (ctx == null) return task;
     return () -> {
+      // Intentionally propagate only request counters, not phaseStack hierarchy.
       setContext(ctx);
       try {
         return task.get();

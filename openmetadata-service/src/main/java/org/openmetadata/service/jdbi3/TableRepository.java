@@ -149,7 +149,8 @@ public class TableRepository extends EntityRepository<Table> {
   public static final String TABLE_EXTENSION = "table.table";
   public static final String CUSTOM_METRICS_EXTENSION = "customMetrics.";
   public static final String TABLE_PROFILER_CONFIG = "tableProfilerConfig";
-  private static final String PREFETCH_DEFAULT_FIELDS = "table.defaultFields";
+  private static final ReadPrefetchKey PREFETCH_DEFAULT_FIELDS =
+      ReadPrefetchKey.TABLE_DEFAULT_FIELDS;
   private static final String DEFAULT_SCHEMA_FIELDS = "database,service,serviceType";
 
   public static final String COLUMN_FIELD = "columns";
@@ -429,7 +430,7 @@ public class TableRepository extends EntityRepository<Table> {
     if (table == null
         || table.getId() == null
         || hasDefaultFields(table)
-        || !readPlan.getEntitySpecificPrefetchKeys().contains(PREFETCH_DEFAULT_FIELDS)) {
+        || !readPlan.hasEntitySpecificPrefetch(PREFETCH_DEFAULT_FIELDS)) {
       return;
     }
     setDefaultFields(table);
@@ -691,7 +692,7 @@ public class TableRepository extends EntityRepository<Table> {
     try (var ignored = phase("tableSampleDataFind")) {
       table = find(tableId, NON_DELETED);
     }
-    TableData sampleData = JsonUtils.readValue(null, TableData.class);
+    TableData sampleData;
     try (var ignored = phase("tableSampleDataLoad")) {
       sampleData =
           JsonUtils.readValue(

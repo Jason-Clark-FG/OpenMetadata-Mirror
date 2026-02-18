@@ -136,6 +136,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -280,6 +281,7 @@ import software.amazon.awssdk.utils.Either;
 public abstract class EntityRepository<T extends EntityInterface> {
 
   public static final String BULK_IMPORT = "bulkImport";
+  private static final int RELATION_DELETE_BATCH_SIZE = 500;
 
   public record EntityHistoryWithOffset(EntityHistory entityHistory, int nextOffset) {}
 
@@ -585,13 +587,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected void deleteToMany(
       List<UUID> toIds, String toEntity, Relationship relationship, String fromEntity) {
     if (toIds.isEmpty()) return;
-    List<String> idStrings = toIds.stream().map(UUID::toString).toList();
-    if (fromEntity != null) {
-      daoCollection
-          .relationshipDAO()
-          .deleteToMany(idStrings, toEntity, relationship.ordinal(), fromEntity);
-    } else {
-      daoCollection.relationshipDAO().deleteToMany(idStrings, toEntity, relationship.ordinal());
+    for (int i = 0; i < toIds.size(); i += RELATION_DELETE_BATCH_SIZE) {
+      List<String> idBatch =
+          toIds.subList(i, Math.min(i + RELATION_DELETE_BATCH_SIZE, toIds.size())).stream()
+              .map(UUID::toString)
+              .toList();
+      if (fromEntity != null) {
+        daoCollection
+            .relationshipDAO()
+            .deleteToMany(idBatch, toEntity, relationship.ordinal(), fromEntity);
+      } else {
+        daoCollection.relationshipDAO().deleteToMany(idBatch, toEntity, relationship.ordinal());
+      }
     }
   }
 
@@ -602,13 +609,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected void deleteFromMany(
       List<UUID> fromIds, String fromEntity, Relationship relationship, String toEntity) {
     if (fromIds.isEmpty()) return;
-    List<String> idStrings = fromIds.stream().map(UUID::toString).toList();
-    if (toEntity != null) {
-      daoCollection
-          .relationshipDAO()
-          .deleteFromMany(idStrings, fromEntity, relationship.ordinal(), toEntity);
-    } else {
-      daoCollection.relationshipDAO().deleteFromMany(idStrings, fromEntity, relationship.ordinal());
+    for (int i = 0; i < fromIds.size(); i += RELATION_DELETE_BATCH_SIZE) {
+      List<String> idBatch =
+          fromIds.subList(i, Math.min(i + RELATION_DELETE_BATCH_SIZE, fromIds.size())).stream()
+              .map(UUID::toString)
+              .toList();
+      if (toEntity != null) {
+        daoCollection
+            .relationshipDAO()
+            .deleteFromMany(idBatch, fromEntity, relationship.ordinal(), toEntity);
+      } else {
+        daoCollection.relationshipDAO().deleteFromMany(idBatch, fromEntity, relationship.ordinal());
+      }
     }
   }
 
@@ -735,7 +747,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (inheritableFields == null || inheritableFields.isBlank()) {
       return "";
     }
-    if (fields == null || fields.getFieldList().isEmpty()) {
+    if (fields == null || nullOrEmpty(fields.getFieldList())) {
       return inheritableFields;
     }
 
@@ -1164,52 +1176,51 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (!fromCache) {
       CACHE_WITH_ID.invalidate(new ImmutablePair<>(entityType, id));
     }
-    T entity;
-    try (var ignored = phase("entityLookup")) {
-      entity = find(id, relationIncludes.getDefaultInclude(), fromCache);
-    }
-    ReadPlan readPlan;
-    try (var ignored = phase("readCreatePlan")) {
-      readPlan = createReadPlan(entity, fields, relationIncludes);
-    }
-    ReadBundle readBundle;
-    try (var ignored = phase("buildReadBundle")) {
-      readBundle = buildReadBundle(entity, readPlan);
-    }
+    T entity =
+        withPhase("entityLookup", () -> find(id, relationIncludes.getDefaultInclude(), fromCache));
+    ReadPlan readPlan =
+        withPhase("readCreatePlan", () -> createReadPlan(entity, fields, relationIncludes));
+    ReadBundle readBundle = withPhase("buildReadBundle", () -> buildReadBundle(entity, readPlan));
     ReadBundleContext.push(readBundle);
     try {
-      try (var ignored = phase("setFields")) {
-        setFieldsInternal(entity, fields, relationIncludes);
-      }
-      try (var ignored = phase("setInheritedFields")) {
-        setInheritedFields(entity, fields);
-      }
+      withPhase("setFields", () -> setFieldsInternal(entity, fields, relationIncludes));
+      withPhase("setInheritedFields", () -> setInheritedFields(entity, fields));
     } finally {
       ReadBundleContext.pop();
     }
-    try (var ignored = phase("readClearFields")) {
-      clearFieldsInternal(entity, fields);
+    withPhase("readClearFields", () -> clearFieldsInternal(entity, fields));
+    T hydratedEntity = withPhase("readWithHref", () -> withHref(uriInfo, entity));
+    withPhase(
+        "requestCachePutById",
+        () ->
+            RequestEntityCache.putById(
+                entityType, id, fields, relationIncludes, fromCache, hydratedEntity, entityClass));
+    if (hydratedEntity.getFullyQualifiedName() != null) {
+      withPhase(
+          "requestCachePutByName",
+          () ->
+              RequestEntityCache.putByName(
+                  entityType,
+                  hydratedEntity.getFullyQualifiedName(),
+                  fields,
+                  relationIncludes,
+                  fromCache,
+                  hydratedEntity,
+                  entityClass));
     }
-    try (var ignored = phase("readWithHref")) {
-      entity = withHref(uriInfo, entity);
+    return hydratedEntity;
+  }
+
+  private <R> R withPhase(String phaseName, Supplier<R> operation) {
+    try (var ignored = phase(phaseName)) {
+      return operation.get();
     }
-    try (var ignored = phase("requestCachePutById")) {
-      RequestEntityCache.putById(
-          entityType, id, fields, relationIncludes, fromCache, entity, entityClass);
+  }
+
+  private void withPhase(String phaseName, Runnable operation) {
+    try (var ignored = phase(phaseName)) {
+      operation.run();
     }
-    if (entity.getFullyQualifiedName() != null) {
-      try (var ignored = phase("requestCachePutByName")) {
-        RequestEntityCache.putByName(
-            entityType,
-            entity.getFullyQualifiedName(),
-            fields,
-            relationIncludes,
-            fromCache,
-            entity,
-            entityClass);
-      }
-    }
-    return entity;
   }
 
   public final List<T> get(UriInfo uriInfo, List<UUID> ids, Fields fields, Include include) {
@@ -1373,22 +1384,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private ReadPlan createReadPlan(T entity, Fields fields, RelationIncludes relationIncludes) {
     ReadPlanBuilder builder =
-        readPlanner.newBuilder(
-            entity,
-            fields,
-            entityType,
-            relationIncludes,
-            supportsOwners,
-            supportsDomains,
-            supportsFollower,
-            supportsReviewers,
-            supportsDataProducts,
-            supportsExperts,
-            supportsExtension,
-            supportsTags,
-            supportsVotes);
+        readPlanner.newBuilder(entity, fields, relationIncludes, readPlannerConfig());
     augmentReadPlan(builder, entity, fields, relationIncludes);
     return builder.build();
+  }
+
+  private ReadPlanner.ReadPlannerConfig readPlannerConfig() {
+    return new ReadPlanner.ReadPlannerConfig(
+        entityType,
+        supportsOwners,
+        supportsDomains,
+        supportsFollower,
+        supportsReviewers,
+        supportsDataProducts,
+        supportsExperts,
+        supportsExtension,
+        supportsTags,
+        supportsVotes);
   }
 
   /**
@@ -2836,12 +2848,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String ifMatchHeader,
       String impersonatedBy) {
     Set<String> patchedFieldNames = JsonUtils.extractPatchedFields(patch);
-    Fields optimizedFields = planFieldsForPatch(patchedFieldNames);
 
     // Get only the fields relevant to this patch operation
     T original;
     try (var ignored = phase("patchLoadOriginal")) {
-      original = get(null, id, optimizedFields, NON_DELETED, false);
+      original = get(null, id, patchFields, NON_DELETED, false);
     }
 
     // Validate ETag if If-Match header is provided
@@ -2899,12 +2910,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String ifMatchHeader,
       String impersonatedBy) {
     Set<String> patchedFieldNames = JsonUtils.extractPatchedFields(patch);
-    Fields optimizedFields = planFieldsForPatch(patchedFieldNames);
 
     // Get only the fields relevant to this patch operation
     T original;
     try (var ignored = phase("patchLoadOriginalByName")) {
-      original = getByName(null, fqn, optimizedFields, NON_DELETED, false);
+      original = getByName(null, fqn, patchFields, NON_DELETED, false);
     }
 
     // Validate ETag if If-Match header is provided
@@ -2929,12 +2939,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
         changeSource,
         useOptimisticLocking,
         impersonatedBy);
-  }
-
-  private Fields planFieldsForPatch(Set<String> patchedFieldNames) {
-    // Always load all patchFields — prepare() depends on relationship fields being present.
-    // The optimization is in shouldCompare() which skips field comparisons in updateInternal().
-    return patchFields;
   }
 
   private PatchResponse<T> patchCommonWithOptimisticLocking(
@@ -2996,10 +3000,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     }
 
-    Fields optimizedInheritedFields = planFieldsForPatch(patchedFieldNames);
     if (entityUpdater.fieldsChanged()) {
       try (var ignored = phase("patchSetInheritedFields")) {
-        setInheritedFields(updated, optimizedInheritedFields);
+        setInheritedFields(updated, patchFields);
       }
     }
     updated.setChangeDescription(entityUpdater.getIncrementalChangeDescription());
@@ -6297,7 +6300,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
           .toList();
     }
 
-    protected final void applyTagsAddInFlushAndDeferRdf(List<TagLabel> tagLabels, String targetFqn) {
+    protected final void applyTagsAddInFlushAndDeferRdf(
+        List<TagLabel> tagLabels, String targetFqn) {
       List<TagLabel> nonDerivedTags = getNonDerivedTags(tagLabels);
       if (nonDerivedTags.isEmpty()) {
         return;
@@ -8391,6 +8395,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
           results.add(Either.left(entity));
         }
       } catch (Exception e) {
+        LOG.warn("setFieldsInBulk failed in serializeJsons, falling back to per-entity loading", e);
         for (T entity : entities) {
           try {
             setFieldsInternal(entity, fields);

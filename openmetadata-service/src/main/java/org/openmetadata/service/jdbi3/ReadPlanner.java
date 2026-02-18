@@ -23,11 +23,8 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 /** Builds a consolidated read plan for a single-entity fetch. */
 final class ReadPlanner {
 
-  ReadPlanBuilder newBuilder(
-      EntityInterface entity,
-      Fields fields,
+  record ReadPlannerConfig(
       String entityType,
-      RelationIncludes relationIncludes,
       boolean supportsOwners,
       boolean supportsDomains,
       boolean supportsFollowers,
@@ -36,8 +33,18 @@ final class ReadPlanner {
       boolean supportsExperts,
       boolean supportsExtension,
       boolean supportsTags,
-      boolean supportsVotes) {
-    if (entity == null || entity.getId() == null || fields == null || entityType == null) {
+      boolean supportsVotes) {}
+
+  ReadPlanBuilder newBuilder(
+      EntityInterface entity,
+      Fields fields,
+      RelationIncludes relationIncludes,
+      ReadPlannerConfig config) {
+    if (entity == null
+        || entity.getId() == null
+        || fields == null
+        || config == null
+        || config.entityType() == null) {
       return new ReadPlanBuilder(null);
     }
 
@@ -45,22 +52,22 @@ final class ReadPlanner {
         relationIncludes == null ? RelationIncludes.fromInclude(ALL) : relationIncludes;
     ReadPlanBuilder builder = new ReadPlanBuilder(entity.getId());
 
-    if (fields.contains(FIELD_OWNERS) && supportsOwners) {
+    if (fields.contains(FIELD_OWNERS) && config.supportsOwners()) {
       builder.addToRelationField(
           FIELD_OWNERS, includes.getIncludeFor(FIELD_OWNERS), Relationship.OWNS, null);
     }
 
-    if (fields.contains(FIELD_FOLLOWERS) && supportsFollowers) {
+    if (fields.contains(FIELD_FOLLOWERS) && config.supportsFollowers()) {
       builder.addToRelationField(
           FIELD_FOLLOWERS, includes.getIncludeFor(FIELD_FOLLOWERS), Relationship.FOLLOWS, USER);
     }
 
-    if (fields.contains(FIELD_DOMAINS) && supportsDomains) {
+    if (fields.contains(FIELD_DOMAINS) && config.supportsDomains()) {
       builder.addToRelationField(
           FIELD_DOMAINS, includes.getIncludeFor(FIELD_DOMAINS), Relationship.HAS, DOMAIN);
     }
 
-    if (fields.contains(FIELD_DATA_PRODUCTS) && supportsDataProducts) {
+    if (fields.contains(FIELD_DATA_PRODUCTS) && config.supportsDataProducts()) {
       builder.addToRelationField(
           FIELD_DATA_PRODUCTS,
           includes.getIncludeFor(FIELD_DATA_PRODUCTS),
@@ -68,7 +75,7 @@ final class ReadPlanner {
           DATA_PRODUCT);
     }
 
-    if (fields.contains(FIELD_REVIEWERS) && supportsReviewers) {
+    if (fields.contains(FIELD_REVIEWERS) && config.supportsReviewers()) {
       builder.addToRelationField(
           FIELD_REVIEWERS, includes.getIncludeFor(FIELD_REVIEWERS), Relationship.REVIEWS, null);
     }
@@ -78,22 +85,22 @@ final class ReadPlanner {
           FIELD_CHILDREN,
           includes.getIncludeFor(FIELD_CHILDREN),
           Relationship.CONTAINS,
-          entityType);
+          config.entityType());
     }
 
-    if (fields.contains(FIELD_EXPERTS) && supportsExperts) {
+    if (fields.contains(FIELD_EXPERTS) && config.supportsExperts()) {
       builder.addFromRelationField(
           FIELD_EXPERTS, includes.getIncludeFor(FIELD_EXPERTS), Relationship.EXPERT, USER);
     }
 
-    if (fields.contains(FIELD_EXTENSION) && supportsExtension) {
+    if (fields.contains(FIELD_EXTENSION) && config.supportsExtension()) {
       builder.requestExtension();
     }
 
-    if (fields.contains(FIELD_TAGS) && supportsTags) {
+    if (fields.contains(FIELD_TAGS) && config.supportsTags()) {
       builder.requestTags();
     }
-    if (fields.contains(FIELD_VOTES) && supportsVotes) {
+    if (fields.contains(FIELD_VOTES) && config.supportsVotes()) {
       builder.requestVotes();
     }
 
@@ -103,31 +110,8 @@ final class ReadPlanner {
   ReadPlan build(
       EntityInterface entity,
       Fields fields,
-      String entityType,
       RelationIncludes relationIncludes,
-      boolean supportsOwners,
-      boolean supportsDomains,
-      boolean supportsFollowers,
-      boolean supportsReviewers,
-      boolean supportsDataProducts,
-      boolean supportsExperts,
-      boolean supportsExtension,
-      boolean supportsTags,
-      boolean supportsVotes) {
-    return newBuilder(
-            entity,
-            fields,
-            entityType,
-            relationIncludes,
-            supportsOwners,
-            supportsDomains,
-            supportsFollowers,
-            supportsReviewers,
-            supportsDataProducts,
-            supportsExperts,
-            supportsExtension,
-            supportsTags,
-            supportsVotes)
-        .build();
+      ReadPlannerConfig config) {
+    return newBuilder(entity, fields, relationIncludes, config).build();
   }
 }

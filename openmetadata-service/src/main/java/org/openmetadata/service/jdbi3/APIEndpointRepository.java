@@ -60,7 +60,8 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
-  private static final String PREFETCH_DEFAULT_FIELDS = "apiEndpoint.defaultFields";
+  private static final ReadPrefetchKey PREFETCH_DEFAULT_FIELDS =
+      ReadPrefetchKey.API_ENDPOINT_DEFAULT_FIELDS;
 
   public APIEndpointRepository() {
     super(
@@ -452,7 +453,7 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     if (entity == null
         || entity.getId() == null
         || hasDefaultFields(entity)
-        || !readPlan.getEntitySpecificPrefetchKeys().contains(PREFETCH_DEFAULT_FIELDS)) {
+        || !readPlan.hasEntitySpecificPrefetch(PREFETCH_DEFAULT_FIELDS)) {
       return;
     }
     fetchAndSetDefaultFields(List.of(entity));

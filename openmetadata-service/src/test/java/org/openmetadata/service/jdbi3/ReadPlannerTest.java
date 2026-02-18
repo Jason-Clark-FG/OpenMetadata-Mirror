@@ -252,19 +252,7 @@ class ReadPlannerTest {
 
     ReadPlan nullEntityPlan =
         planner.build(
-            null,
-            fields,
-            "table",
-            RelationIncludes.fromInclude(NON_DELETED),
-            supports.owners,
-            supports.domains,
-            supports.followers,
-            supports.reviewers,
-            supports.dataProducts,
-            supports.experts,
-            supports.extension,
-            supports.tags,
-            supports.votes);
+            null, fields, RelationIncludes.fromInclude(NON_DELETED), toConfig("table", supports));
     assertTrue(nullEntityPlan.isEmpty());
 
     Table missingIdEntity = new Table();
@@ -272,17 +260,8 @@ class ReadPlannerTest {
         planner.build(
             missingIdEntity,
             fields,
-            "table",
             RelationIncludes.fromInclude(NON_DELETED),
-            supports.owners,
-            supports.domains,
-            supports.followers,
-            supports.reviewers,
-            supports.dataProducts,
-            supports.experts,
-            supports.extension,
-            supports.tags,
-            supports.votes);
+            toConfig("table", supports));
     assertTrue(missingIdPlan.isEmpty());
   }
 
@@ -297,17 +276,8 @@ class ReadPlannerTest {
             .newBuilder(
                 entity,
                 new Fields(Set.of(FIELD_OWNERS)),
-                "table",
                 RelationIncludes.fromInclude(NON_DELETED),
-                supports.owners,
-                supports.domains,
-                supports.followers,
-                supports.reviewers,
-                supports.dataProducts,
-                supports.experts,
-                supports.extension,
-                supports.tags,
-                supports.votes)
+                toConfig("table", supports))
             .addToRelationField("customAssets", ALL, Relationship.USES, "metric")
             .addEntitySpecificPrefetch("table.columns")
             .build();
@@ -330,11 +300,12 @@ class ReadPlannerTest {
     Table entity = new Table();
     entity.setId(UUID.randomUUID());
     Fields fields = new Fields(requestedFields);
-    return planner.build(
-        entity,
-        fields,
-        "table",
-        includes,
+    return planner.build(entity, fields, includes, toConfig("table", supports));
+  }
+
+  private ReadPlanner.ReadPlannerConfig toConfig(String entityType, SupportFlags supports) {
+    return new ReadPlanner.ReadPlannerConfig(
+        entityType,
         supports.owners,
         supports.domains,
         supports.followers,

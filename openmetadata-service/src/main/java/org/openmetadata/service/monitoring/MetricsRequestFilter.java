@@ -41,9 +41,10 @@ public class MetricsRequestFilter implements ContainerRequestFilter, ContainerRe
       if (responseContext.hasEntity() && responseContext.getLength() > 0) {
         metrics.recordHttpResponseSize(responseContext.getLength());
       }
-      RequestLatencyContext.endRequest();
     } catch (Exception e) {
       LOG.warn("Error recording HTTP metrics", e);
+    } finally {
+      RequestLatencyContext.endRequest();
     }
   }
 

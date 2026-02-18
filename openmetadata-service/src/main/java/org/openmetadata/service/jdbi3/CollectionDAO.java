@@ -6447,14 +6447,20 @@ public interface CollectionDAO {
         connectionType = POSTGRES)
     void insert(@Bind("json") String json);
 
-    @Transaction
-    @ConnectionAwareSqlBatch(
-        value = "INSERT INTO change_event (json) VALUES (:json)",
-        connectionType = MYSQL)
-    @ConnectionAwareSqlBatch(
-        value = "INSERT INTO change_event (json) VALUES (:json :: jsonb)",
-        connectionType = POSTGRES)
-    void insertBatch(@Bind("json") List<String> jsons);
+    /**
+     * NOTE:
+     * We intentionally route batch writes through single-row insert to preserve
+     * connection-aware JSON/JSONB binding semantics consistently across DB types.
+     * A broken SQLBatch path can pick the wrong dialect statement for Postgres.
+     */
+    default void insertBatch(List<String> jsons) {
+      if (nullOrEmpty(jsons)) {
+        return;
+      }
+      for (String json : jsons) {
+        insert(json);
+      }
+    }
 
     @SqlUpdate("DELETE FROM change_event WHERE entityType = :entityType")
     void deleteAll(@Bind("entityType") String entityType);
