@@ -81,7 +81,7 @@ import {
   assignGlossaryTerm,
   assignTag,
   assignTier,
-  waitForAllLoadersToDisappear
+  waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import { navigateToPersonaWithPagination } from '../../utils/persona';
 import { settingClick } from '../../utils/sidebar';
@@ -522,6 +522,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           'Validate inside the Observability, bundle test suites, that data contract test suite is present',
           async () => {
             await validateDataContractInsideBundleTestSuites(page);
+
             await expect(
               page
                 .getByTestId('test-suite-table')
@@ -1952,7 +1953,8 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await expect(
           page.getByTestId(`contract-security-rowFilter-0-${filter.index}`)
         ).toContainText(
-          `${table.columnsName[filter.index]} = ${filter.values[0]},${filter.values[1]
+          `${table.columnsName[filter.index]} = ${filter.values[0]},${
+            filter.values[1]
           }`
         );
       }
@@ -2030,7 +2032,8 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           await expect(
             page.getByTestId(`contract-security-rowFilter-0-${filter.index}`)
           ).toContainText(
-            `${table.columnsName[filter.index]} = ${filter.values[0]},${filter.values[1]
+            `${table.columnsName[filter.index]} = ${filter.values[0]},${
+              filter.values[1]
             },${filter.values[2]},${filter.values[3]}`
           );
         }

@@ -76,7 +76,8 @@ export const validateDataContractInsideBundleTestSuites = async (
   const bundleSuitesResponse = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/dataQuality/testSuites/search/list') &&
-      response.request().method() === 'GET' && response.status() === 200
+      response.request().method() === 'GET' &&
+      response.status() === 200
   );
 
   await page
