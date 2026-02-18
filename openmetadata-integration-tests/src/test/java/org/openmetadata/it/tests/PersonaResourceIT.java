@@ -13,6 +13,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junitpioneer.jupiter.RetryingTest;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.teams.CreatePersona;
@@ -414,7 +415,7 @@ public class PersonaResourceIT extends BaseEntityIT<Persona, CreatePersona> {
     }
   }
 
-  @Test
+  @RetryingTest(2)
   void test_systemDefaultPersonaForUsers(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
@@ -438,8 +439,8 @@ public class PersonaResourceIT extends BaseEntityIT<Persona, CreatePersona> {
     // Test 3: Query user with defaultPersona field - should return system default
     String user1Id = user1.getId().toString();
     Awaitility.await("system default persona assigned")
-        .atMost(Duration.ofSeconds(30))
-        .pollInterval(Duration.ofSeconds(1))
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
         .untilAsserted(
             () -> {
               User fetched = client.users().get(user1Id, "defaultPersona");

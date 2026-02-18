@@ -33,6 +33,7 @@ import org.openmetadata.it.util.IsolatedTest;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
+import org.openmetadata.it.util.WorkflowEventConsumerUtils;
 import org.openmetadata.schema.api.classification.CreateClassification;
 import org.openmetadata.schema.api.classification.CreateTag;
 import org.openmetadata.schema.api.data.CreateAPICollection;
@@ -2345,7 +2346,7 @@ public class WorkflowDefinitionResourceIT {
     OpenMetadataClient client = SdkClients.adminClient();
 
     // Ensure WorkflowEventConsumer subscription is active for event-based workflow
-    ensureWorkflowEventConsumerIsActive(client);
+    WorkflowEventConsumerUtils.ensureActive(client);
 
     String workflowName = ns.prefix("entity_specific_filter_workflow");
 
@@ -2380,7 +2381,7 @@ public class WorkflowDefinitionResourceIT {
     LOG.debug("Created glossary term that should NOT match filter: {}", termNotToMatch.getName());
 
     // Ensure WorkflowEventConsumer is active
-    ensureWorkflowEventConsumerIsActive(client);
+    WorkflowEventConsumerUtils.ensureActive(client);
 
     // 2. Create Tables for testing
     // Create database service
@@ -5042,7 +5043,7 @@ public class WorkflowDefinitionResourceIT {
 
     OpenMetadataClient client = SdkClients.adminClient();
     try {
-      ensureWorkflowEventConsumerIsActive(client);
+      WorkflowEventConsumerUtils.ensureActive(client);
     } catch (Exception e) {
       fail("Failed to ensure WorkflowEventConsumer subscription is active: " + e.getMessage());
     }
@@ -6240,138 +6241,5 @@ public class WorkflowDefinitionResourceIT {
               .withDomainType(CreateDomain.DomainType.AGGREGATE);
       return SdkClients.adminClient().domains().create(createDomain);
     }
-  }
-
-  /**
-   * Ensures the WorkflowEventConsumer subscription is active for event-based workflow tests.
-   * This subscription is required for workflows to receive change events and trigger.
-   */
-  private void ensureWorkflowEventConsumerIsActive(OpenMetadataClient client) throws Exception {
-    LOG.debug("Ensuring WorkflowEventConsumer subscription is active...");
-
-    org.openmetadata.schema.entity.events.EventSubscription existing = null;
-    try {
-      existing = client.eventSubscriptions().getByName("WorkflowEventConsumer");
-      LOG.info("WorkflowEventConsumer subscription found: enabled={}", existing.getEnabled());
-    } catch (ApiException e) {
-      if (e.getStatusCode() != 404) {
-        throw e;
-      }
-      LOG.debug("WorkflowEventConsumer subscription not found, will create it");
-    }
-
-    Map<String, Object> destinationPayload = new LinkedHashMap<>();
-    destinationPayload.put("id", "fc9e7a84-5dbd-4e63-8b78-6c3a7bf04a60");
-    destinationPayload.put("category", "External");
-    destinationPayload.put("type", "GovernanceWorkflowChangeEvent");
-    destinationPayload.put("config", Map.of("mode", "workflow"));
-    destinationPayload.put("enabled", true);
-
-    if (existing == null) {
-      Map<String, Object> createSubscription = new LinkedHashMap<>();
-      createSubscription.put("name", "WorkflowEventConsumer");
-      createSubscription.put("displayName", "Workflow Event Consumer");
-      createSubscription.put(
-          "description",
-          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
-      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
-      createSubscription.put("resources", List.of("all"));
-      createSubscription.put("provider", "system");
-      createSubscription.put("pollInterval", 10);
-      createSubscription.put("enabled", true);
-      createSubscription.put("destinations", List.of(destinationPayload));
-
-      client
-          .getHttpClient()
-          .executeForString(
-              HttpMethod.POST,
-              "/v1/events/subscriptions",
-              createSubscription,
-              RequestOptions.builder().build());
-      LOG.info("Created WorkflowEventConsumer subscription");
-      return;
-    }
-
-    boolean needsEnable = !Boolean.TRUE.equals(existing.getEnabled());
-    boolean needsDestinationConfig = !hasWorkflowDestinationConfig(existing);
-    if (!needsEnable && !needsDestinationConfig) {
-      return;
-    }
-
-    List<Map<String, Object>> patchOps = new ArrayList<>();
-    if (needsEnable) {
-      patchOps.add(
-          Map.of(
-              "op", "replace",
-              "path", "/enabled",
-              "value", true));
-    }
-    if (needsDestinationConfig) {
-      patchOps.add(
-          Map.of(
-              "op", "replace",
-              "path", "/destinations",
-              "value", List.of(destinationPayload)));
-    }
-
-    try {
-      JsonNode patch = MAPPER.valueToTree(patchOps);
-      client.eventSubscriptions().patch(existing.getId(), patch);
-      LOG.info(
-          "Updated WorkflowEventConsumer subscription (enabled={}, destinationConfig={})",
-          needsEnable,
-          needsDestinationConfig);
-    } catch (Exception patchError) {
-      LOG.warn(
-          "Failed to patch WorkflowEventConsumer, recreating subscription: {}",
-          patchError.getMessage());
-      client.eventSubscriptions().delete(existing.getId());
-
-      Map<String, Object> createSubscription = new LinkedHashMap<>();
-      createSubscription.put("name", "WorkflowEventConsumer");
-      createSubscription.put("displayName", "Workflow Event Consumer");
-      createSubscription.put(
-          "description",
-          "Consumes EntityChange Events in order to trigger Workflows, if they exist.");
-      createSubscription.put("alertType", "GovernanceWorkflowChangeEvent");
-      createSubscription.put("resources", List.of("all"));
-      createSubscription.put("provider", "system");
-      createSubscription.put("pollInterval", 10);
-      createSubscription.put("enabled", true);
-      createSubscription.put("destinations", List.of(destinationPayload));
-      client
-          .getHttpClient()
-          .executeForString(
-              HttpMethod.POST,
-              "/v1/events/subscriptions",
-              createSubscription,
-              RequestOptions.builder().build());
-      LOG.info("Recreated WorkflowEventConsumer subscription");
-    }
-  }
-
-  private boolean hasWorkflowDestinationConfig(
-      org.openmetadata.schema.entity.events.EventSubscription subscription) {
-    if (subscription.getDestinations() == null || subscription.getDestinations().isEmpty()) {
-      return false;
-    }
-
-    for (org.openmetadata.schema.entity.events.SubscriptionDestination destination :
-        subscription.getDestinations()) {
-      if (destination.getType()
-          != org.openmetadata.schema.entity.events.SubscriptionDestination.SubscriptionType
-              .GOVERNANCE_WORKFLOW_CHANGE_EVENT) {
-        continue;
-      }
-      Object config = destination.getConfig();
-      if (config == null) {
-        return false;
-      }
-      if (config instanceof Map<?, ?> map && map.isEmpty()) {
-        return false;
-      }
-      return true;
-    }
-    return false;
   }
 }
