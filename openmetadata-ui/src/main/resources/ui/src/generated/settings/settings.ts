@@ -1394,8 +1394,13 @@ export interface SamlSSOClientConfig {
      */
     debugMode?: boolean;
     idp:        Idp;
-    security?:  Security;
-    sp:         SP;
+    /**
+     * Ordered list of SAML attribute names to check for display name. First available attribute
+     * wins. Defaults to common OIDC/SAML attribute names.
+     */
+    samlDisplayNameAttributes?: string[];
+    security?:                  Security;
+    sp:                         SP;
 }
 
 /**
@@ -2126,6 +2131,10 @@ export interface NaturalLanguageSearch {
      * Fully qualified class name of the NLQService implementation to use
      */
     providerClass?: string;
+    /**
+     * Enable or disable semantic search using vector embeddings
+     */
+    semanticSearchEnabled?: boolean;
 }
 
 /**
