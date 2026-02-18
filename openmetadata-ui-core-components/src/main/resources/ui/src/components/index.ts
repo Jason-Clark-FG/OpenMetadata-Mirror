@@ -75,6 +75,7 @@ export * from "./base/toggle/toggle";
 export * from "./base/tooltip/tooltip";
 export * from "./base/video-player/icons";
 export * from "./base/video-player/play-button-icon";
+export * from "./application/modals/modal";
 
 // Application components
 export * from "./application/date-picker/calendar";
