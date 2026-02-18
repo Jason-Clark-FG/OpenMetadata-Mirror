@@ -522,7 +522,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           'Validate inside the Observability, bundle test suites, that data contract test suite is present',
           async () => {
             await validateDataContractInsideBundleTestSuites(page);
-
+            await waitForAllLoadersToDisappear(page);
             await expect(
               page
                 .getByTestId('test-suite-table')
@@ -530,7 +530,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
                 .filter({
                   hasText: `Data Contract - ${DATA_CONTRACT_DETAILS.name}`,
                 })
-            ).toBeVisible();
+            ).toBeVisible({ timeout: 10000 });
           }
         );
 
