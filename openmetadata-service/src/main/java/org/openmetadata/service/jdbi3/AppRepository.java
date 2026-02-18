@@ -40,6 +40,7 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 @Slf4j
 public class AppRepository extends EntityRepository<App> {
   public static final String APP_BOT_ROLE = "ApplicationBotRole";
+  public static final String APP_BOT_IMPERSONATION_ROLE = "ApplicationBotImpersonationRole";
 
   public static final String UPDATE_FIELDS = "appConfiguration,appSchedule";
 
@@ -98,6 +99,10 @@ public class AppRepository extends EntityRepository<App> {
   }
 
   public EntityReference createNewAppBot(App application) {
+    return createNewAppBot(application, false);
+  }
+
+  public EntityReference createNewAppBot(App application, boolean allowImpersonation) {
     String botName = String.format("%sBot", application.getName());
     BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
     UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
@@ -106,9 +111,10 @@ public class AppRepository extends EntityRepository<App> {
     try {
       botUser = userRepository.getByName(null, botName, userRepository.getFields("id"));
     } catch (EntityNotFoundException ex) {
-      // Get Bot Role
+      // Get Bot Role - use impersonation role if allowImpersonation is true
+      String roleName = allowImpersonation ? APP_BOT_IMPERSONATION_ROLE : APP_BOT_ROLE;
       EntityReference roleRef =
-          Entity.getEntityReferenceByName(Entity.ROLE, APP_BOT_ROLE, Include.NON_DELETED);
+          Entity.getEntityReferenceByName(Entity.ROLE, roleName, Include.NON_DELETED);
       // Create Bot User
       AuthenticationMechanism authMechanism =
           new AuthenticationMechanism()
@@ -127,6 +133,7 @@ public class AppRepository extends EntityRepository<App> {
 
       // Set User Ownership to the application creator
       user.setOwners(application.getOwners());
+      user.setAllowImpersonation(allowImpersonation);
 
       // Set Auth Mechanism in Bot
       JWTAuthMechanism jwtAuthMechanism = (JWTAuthMechanism) authMechanism.getConfig();
