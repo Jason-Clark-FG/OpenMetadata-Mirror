@@ -11,13 +11,11 @@
  *  limitations under the License.
  */
 
-import { AxiosError } from 'axios';
 import { TabSpecificField } from '../../../../enums/entity.enum';
 import { Team } from '../../../../generated/entity/teams/team';
 import { Include } from '../../../../generated/type/include';
 import { getTeams } from '../../../../rest/teamsAPI';
 import i18n from '../../../../utils/i18next/LocalUtil';
-import { showErrorToast } from '../../../../utils/ToastUtils';
 import { TeamsPageTab, TeamTab } from './team.interface';
 
 export const getTabs = (
@@ -81,25 +79,16 @@ export const collectAllTeamIds = async (team: Team): Promise<string[]> => {
   const teamIds: string[] = [team.id];
 
   if (team.childrenCount && team.childrenCount > 0) {
-    try {
-      const { data: childTeams } = await getTeams({
-        parentTeam: team.name,
-        include: Include.NonDeleted,
-        fields: [TabSpecificField.CHILDREN_COUNT],
-      });
+    const { data: childTeams } = await getTeams({
+      parentTeam: team.name,
+      include: Include.NonDeleted,
+      fields: [TabSpecificField.CHILDREN_COUNT],
+    });
 
-      const childResults = await Promise.all(
-        childTeams.map((child) => collectAllTeamIds(child))
-      );
-      childResults.forEach((ids) => teamIds.push(...ids));
-    } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        i18n.t('server.entity-fetch-error', {
-          entity: i18n.t('label.team-plural-lowercase'),
-        })
-      );
-    }
+    const childResults = await Promise.all(
+      childTeams.map((child) => collectAllTeamIds(child))
+    );
+    childResults.forEach((ids) => teamIds.push(...ids));
   }
 
   return teamIds;

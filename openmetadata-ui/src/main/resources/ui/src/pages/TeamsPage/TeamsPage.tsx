@@ -215,8 +215,13 @@ const TeamsPage = () => {
         const total = res?.hits?.total.value ?? 0;
         setAllTeamIds(teamIds);
         setAssets(total);
-      } catch {
-        // Error
+      } catch (error) {
+        showErrorToast(
+          error as AxiosError,
+          t('server.entity-fetch-error', {
+            entity: t('label.team-plural-lowercase'),
+          })
+        );
       }
     }
   };
