@@ -11,54 +11,13 @@
  *  limitations under the License.
  */
 import { Skeleton, Typography } from 'antd';
-import { useEffect, useState } from 'react';
-import { SearchIndex } from '../../../../enums/search.enum';
-import { Team } from '../../../../generated/entity/teams/team';
-import { searchQuery } from '../../../../rest/searchAPI';
-import { getTermQuery } from '../../../../utils/SearchUtils';
-import { collectAllTeamIds } from './TeamDetailsV1.utils';
 
 interface TeamAssetCountProps {
-  team: Team;
+  count: number | null;
+  isLoading: boolean;
 }
 
-export const TeamAssetCount = ({ team }: TeamAssetCountProps) => {
-  const [count, setCount] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchAggregatedCount = async () => {
-      setIsLoading(true);
-      try {
-        // For teams with children, collect all descendant IDs.
-        // For leaf teams, just use the team's own ID.
-        const teamIds =
-          team.childrenCount && team.childrenCount > 0
-            ? await collectAllTeamIds(team)
-            : [team.id];
-
-        // Query assets owned by any of these teams using 'should' (OR)
-        const queryFilter = getTermQuery({ 'owners.id': teamIds }, 'should', 1);
-
-        const res = await searchQuery({
-          query: '',
-          pageNumber: 0,
-          pageSize: 0,
-          queryFilter,
-          searchIndex: SearchIndex.ALL,
-        });
-        setCount(res.hits.total.value);
-      } catch (error) {
-        // Fallback to direct ownership count on error
-        setCount(team.owns?.length ?? 0);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAggregatedCount();
-  }, [team.id, team.fullyQualifiedName, team.childrenCount, team.owns?.length]);
-
+export const TeamAssetCount = ({ count, isLoading }: TeamAssetCountProps) => {
   if (isLoading) {
     return <Skeleton.Input active size="small" style={{ width: 30, height: 20 }} />;
   }
