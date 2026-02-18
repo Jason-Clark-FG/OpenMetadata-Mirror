@@ -64,13 +64,11 @@ export class FileClass extends EntityClass {
       },
     },
   };
-  children: FileChildrenDetails[];
   entity: {
     name: string;
     displayName: string;
     service: string;
     description: string;
-    columns?: FileChildrenDetails[];
   };
 
   serviceResponseData: ResponseDataType = {} as ResponseDataType;
@@ -84,42 +82,11 @@ export class FileClass extends EntityClass {
     this.serviceCategory = SERVICE_TYPE.DriveService;
     this.serviceType = ServiceTypes.DRIVE_SERVICES;
     this.childrenSelectorId = `${this.service.name}.${this.fileName}`;
-    this.children = [
-      {
-        name: 'sample_column_1',
-        dataType: 'BITMAP',
-      },
-      {
-        name: 'sample_column_2',
-        dataType: 'BITMAP',
-        children: [
-          {
-            name: 'nested_column_1',
-            dataType: 'BITMAP',
-            children: [
-              {
-                name: 'deeply_nested_column_1',
-                dataType: 'BIGINT',
-              },
-              {
-                name: 'deeply_nested_column_2',
-                dataType: 'BIGINT',
-              },
-            ],
-          },
-          {
-            name: 'nested_column_2',
-            dataType: 'BIGINT',
-          },
-        ],
-      },
-    ];
     this.entity = {
       name: this.fileName,
       displayName: this.fileName,
       service: this.service.name,
       description: 'description',
-      columns: this.children,
     };
   }
 
