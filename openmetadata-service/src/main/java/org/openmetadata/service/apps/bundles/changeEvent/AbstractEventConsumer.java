@@ -113,6 +113,7 @@ public abstract class AbstractEventConsumer
       this.alertMetrics = loadInitialMetrics();
       this.destinationMap = loadDestinationsMap(context);
 
+      // We do not log warning for custom alert type. eg: Reverse Metadata
       if (this.destinationMap.isEmpty()
           && this.eventSubscription.getAlertType() != CreateEventSubscription.AlertType.CUSTOM) {
         LOG.warn(
@@ -205,6 +206,9 @@ public abstract class AbstractEventConsumer
 
   private Map<UUID, Destination<ChangeEvent>> loadDestinationsMap(JobExecutionContext context) {
     Map<UUID, Destination<ChangeEvent>> dMap = new HashMap<>();
+    if (eventSubscription.getDestinations() == null) {
+      return dMap;
+    }
     for (SubscriptionDestination subscriptionDest : eventSubscription.getDestinations()) {
       dMap.put(
           subscriptionDest.getId(), AlertFactory.getAlert(eventSubscription, subscriptionDest));
