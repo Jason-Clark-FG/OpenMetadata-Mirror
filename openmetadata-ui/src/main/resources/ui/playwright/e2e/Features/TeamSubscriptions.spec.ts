@@ -326,28 +326,31 @@ test.describe(
 
       const { apiContext } = await performAdminLogin(page.context().browser()!);
       const ownerUser = new UserClass();
+      let teamWithOwner: TeamClass;
 
-      await test.step('Create team with owner', async () => {
-        await ownerUser.create(apiContext);
+      try {
+        await test.step('Create team with owner', async () => {
+          await ownerUser.create(apiContext);
 
-        const id = uuid();
-        const teamWithOwner = new TeamClass({
-          name: `pw-team-owner-${id}`,
-          displayName: `PW Team Owner ${id}`,
-          description: 'Team with owner',
-          teamType: 'Group',
-          owners: [
-            {
-              displayName: ownerUser.responseData.displayName,
-              fullyQualifiedName: ownerUser.responseData.fullyQualifiedName,
-              id: ownerUser.responseData.id,
-              name: ownerUser.responseData.name,
-              type: 'user',
-            },
-          ],
+          const id = uuid();
+          teamWithOwner = new TeamClass({
+            name: `pw-team-owner-${id}`,
+            displayName: `PW Team Owner ${id}`,
+            description: 'Team with owner',
+            teamType: 'Group',
+            owners: [
+              {
+                displayName: ownerUser.responseData.displayName,
+                fullyQualifiedName: ownerUser.responseData.fullyQualifiedName,
+                id: ownerUser.responseData.id,
+                name: ownerUser.responseData.name,
+                type: 'user',
+              },
+            ],
+          });
+
+          await teamWithOwner.create(apiContext);
         });
-
-        await teamWithOwner.create(apiContext);
 
         await test.step('Verify owner can see edit button', async () => {
           const ownerPage = await page.context().newPage();
@@ -362,10 +365,14 @@ test.describe(
 
           await ownerPage.close();
         });
-
-        await teamWithOwner.delete(apiContext);
-        await ownerUser.delete(apiContext);
-      });
+      } finally {
+        await test.step('Cleanup resources', async () => {
+          if (teamWithOwner) {
+            await teamWithOwner.delete(apiContext);
+          }
+          await ownerUser.delete(apiContext);
+        });
+      }
     });
   }
 );
