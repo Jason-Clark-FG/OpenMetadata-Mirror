@@ -2383,14 +2383,20 @@ public class TableRepository extends EntityRepository<Table> {
       }
 
       if (hasRenames) {
-        searchRepository
-            .getSearchClient()
-            .updateColumnsInUpstreamLineage(GLOBAL_SEARCH_ALIAS, originalUpdatedColumnFqnMap);
+        HashMap<String, String> renames = new HashMap<>(originalUpdatedColumnFqnMap);
+        deferReactOperation(
+            () ->
+                searchRepository
+                    .getSearchClient()
+                    .updateColumnsInUpstreamLineage(GLOBAL_SEARCH_ALIAS, renames));
       }
       if (hasDeletes) {
-        searchRepository
-            .getSearchClient()
-            .deleteColumnsInUpstreamLineage(GLOBAL_SEARCH_ALIAS, deletedColumns);
+        List<String> deletedColumnsCopy = List.copyOf(deletedColumns);
+        deferReactOperation(
+            () ->
+                searchRepository
+                    .getSearchClient()
+                    .deleteColumnsInUpstreamLineage(GLOBAL_SEARCH_ALIAS, deletedColumnsCopy));
       }
     }
   }

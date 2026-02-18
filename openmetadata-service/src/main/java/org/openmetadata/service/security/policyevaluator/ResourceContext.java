@@ -120,7 +120,8 @@ public class ResourceContext<T extends EntityInterface> implements ResourceConte
     }
 
     // Check for parents owners'
-    List<EntityReference> owners = entity.getOwners();
+    List<EntityReference> owners =
+        nullOrEmpty(entity.getOwners()) ? null : new ArrayList<>(entity.getOwners());
     List<EntityInterface> parentEntities = resolveParentEntities(entity);
     if (!nullOrEmpty(parentEntities)) {
       for (EntityInterface parentEntity : parentEntities) {

@@ -2400,12 +2400,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     clearFields(entity, fields);
   }
 
-  @Transaction
   public final PutResponse<T> createOrUpdate(UriInfo uriInfo, T updated, String updatedBy) {
     return createOrUpdate(uriInfo, updated, updatedBy, null);
   }
 
-  @Transaction
   public final PutResponse<T> createOrUpdate(
       UriInfo uriInfo, T updated, String updatedBy, String impersonatedBy) {
     // Check if parent entity is being deleted
@@ -2436,12 +2434,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  @Transaction
   public PutResponse<T> createOrUpdateForImport(UriInfo uriInfo, T updated, String updatedBy) {
     return createOrUpdateForImport(uriInfo, updated, updatedBy, null);
   }
 
-  @Transaction
   public PutResponse<T> createOrUpdateForImport(
       UriInfo uriInfo, T updated, String updatedBy, String impersonatedBy) {
     T original;
@@ -3556,18 +3552,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return new ResultList<>(entities, errors, beforeCursor, afterCursor, total);
   }
 
-  @Transaction
   protected T createNewEntity(T entity) {
-    try (var ignored = phase("createStoreEntity")) {
-      storeEntity(entity, false);
-      storeExtension(entity);
-    }
-    try (var ignored = phase("createStoreRelationships")) {
-      storeRelationshipsInternal(entity);
-    }
-    try (var ignored = phase("createSetInheritedFields")) {
-      setInheritedFields(entity, new Fields(allowedFields));
-    }
+    createNewEntityFlush(entity);
     try (var ignored = phase("createPostCreate")) {
       postCreate(entity);
     }
@@ -3581,7 +3567,30 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   @Transaction
+  private void createNewEntityFlush(T entity) {
+    try (var ignored = phase("createStoreEntity")) {
+      storeEntity(entity, false);
+      storeExtension(entity);
+    }
+    try (var ignored = phase("createStoreRelationships")) {
+      storeRelationshipsInternal(entity);
+    }
+    try (var ignored = phase("createSetInheritedFields")) {
+      setInheritedFields(entity, new Fields(allowedFields));
+    }
+  }
+
   private List<T> createManyEntities(List<T> entities) {
+    createManyEntitiesFlush(entities);
+    try (var ignored = phase("postCreate")) {
+      postCreate(entities);
+    }
+
+    return entities;
+  }
+
+  @Transaction
+  private void createManyEntitiesFlush(List<T> entities) {
     try (var ignored = phase("storeEntities")) {
       storeEntities(entities);
       storeExtensions(entities);
@@ -3592,11 +3601,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
     try (var ignored = phase("setInheritedFields")) {
       setInheritedFields(entities, new Fields(allowedFields));
     }
-    try (var ignored = phase("postCreate")) {
-      postCreate(entities);
-    }
-
-    return entities;
   }
 
   private static final List<String> FIELDS_STORED_AS_RELATIONSHIPS =
@@ -5657,6 +5661,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     private ChangeSource changeSource;
     private final boolean useOptimisticLocking;
     @Setter private Set<String> patchedFields;
+    private final List<Runnable> deferredReactOperations = new ArrayList<>();
+    private boolean deferredReactExecuted;
 
     // Store the original FQN at construction time, before any modifications or revert.
     // This is needed because during change consolidation, revert() reassigns 'original' to
@@ -5698,6 +5704,31 @@ public abstract class EntityRepository<T extends EntityInterface> {
       this.updatingUser = updatingUser;
       this.changeSource = changeSource;
       this.useOptimisticLocking = useOptimisticLocking;
+      this.deferredReactExecuted = false;
+    }
+
+    protected final void deferReactOperation(Runnable operation) {
+      if (operation != null) {
+        deferredReactOperations.add(operation);
+      }
+    }
+
+    public final void runDeferredReactOperations() {
+      if (deferredReactExecuted || deferredReactOperations.isEmpty()) {
+        return;
+      }
+      deferredReactExecuted = true;
+      for (Runnable operation : deferredReactOperations) {
+        try {
+          operation.run();
+        } catch (Exception e) {
+          LOG.warn(
+              "Deferred react operation failed for {}:{}",
+              EntityRepository.this.entityType,
+              updated != null ? updated.getId() : null,
+              e);
+        }
+      }
     }
 
     /** Compare original and updated entities and persist update. */
@@ -5812,6 +5843,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
       try (var ignored = phase("entityUpdatePostUpdate")) {
         postUpdate(original, updated);
+      }
+      try (var ignored = phase("entityUpdateDeferredReact")) {
+        runDeferredReactOperations();
       }
     }
 
@@ -6218,10 +6252,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
       // Apply differential updates - only modify what changed
       if (!deletedTags.isEmpty()) {
-        applyTagsDelete(deletedTags, fqn);
+        applyTagsDeleteInFlushAndDeferRdf(deletedTags, fqn);
       }
       if (!addedTags.isEmpty()) {
-        applyTagsAdd(
+        applyTagsAddInFlushAndDeferRdf(
             addedTags.stream().map(tag -> tag.withAppliedBy(updatingUser.getName())).toList(), fqn);
       }
 
@@ -6251,7 +6285,63 @@ public abstract class EntityRepository<T extends EntityInterface> {
       List<TagLabel> deletedTags = new ArrayList<>();
       recordListChange(fieldName, origTags, updatedTags, addedTags, deletedTags, tagLabelMatch);
       updatedTags.sort(compareTagLabel);
-      applyTags(updatedTags, fqn);
+      applyTagsReplaceInFlushAndDeferRdf(origTags, updatedTags, fqn);
+    }
+
+    private List<TagLabel> getNonDerivedTags(List<TagLabel> tags) {
+      if (nullOrEmpty(tags)) {
+        return Collections.emptyList();
+      }
+      return tags.stream()
+          .filter(tag -> !tag.getLabelType().equals(TagLabel.LabelType.DERIVED))
+          .toList();
+    }
+
+    protected final void applyTagsAddInFlushAndDeferRdf(List<TagLabel> tagLabels, String targetFqn) {
+      List<TagLabel> nonDerivedTags = getNonDerivedTags(tagLabels);
+      if (nonDerivedTags.isEmpty()) {
+        return;
+      }
+      daoCollection.tagUsageDAO().applyTagsBatch(nonDerivedTags, targetFqn);
+      List<TagLabel> tagsForRdf = List.copyOf(nonDerivedTags);
+      deferReactOperation(
+          () -> {
+            for (TagLabel tagLabel : tagsForRdf) {
+              org.openmetadata.service.rdf.RdfTagUpdater.applyTag(tagLabel, targetFqn);
+            }
+          });
+    }
+
+    protected final void applyTagsDeleteInFlushAndDeferRdf(
+        List<TagLabel> tagLabels, String targetFqn) {
+      List<TagLabel> nonDerivedTags = getNonDerivedTags(tagLabels);
+      if (nonDerivedTags.isEmpty()) {
+        return;
+      }
+      daoCollection.tagUsageDAO().deleteTagsBatch(nonDerivedTags, targetFqn);
+      List<TagLabel> tagsForRdf = List.copyOf(nonDerivedTags);
+      deferReactOperation(
+          () -> {
+            for (TagLabel tagLabel : tagsForRdf) {
+              org.openmetadata.service.rdf.RdfTagUpdater.removeTag(tagLabel.getTagFQN(), targetFqn);
+            }
+          });
+    }
+
+    private void applyTagsReplaceInFlushAndDeferRdf(
+        List<TagLabel> originalTags, List<TagLabel> updatedTags, String targetFqn) {
+      List<TagLabel> originalNonDerived = getNonDerivedTags(originalTags);
+      if (!originalNonDerived.isEmpty()) {
+        List<TagLabel> tagsToRemove = List.copyOf(originalNonDerived);
+        deferReactOperation(
+            () -> {
+              for (TagLabel tagLabel : tagsToRemove) {
+                org.openmetadata.service.rdf.RdfTagUpdater.removeTag(
+                    tagLabel.getTagFQN(), targetFqn);
+              }
+            });
+      }
+      applyTagsAddInFlushAndDeferRdf(updatedTags, targetFqn);
     }
 
     private void updateExtension(boolean consolidatingChanges) {
@@ -7305,7 +7395,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
       // Add tags related to newly added columns
       for (Column added : addedColumns) {
-        applyTags(
+        applyTagsAddInFlushAndDeferRdf(
             added.getTags().stream().map(tag -> tag.withAppliedBy(updatingUser.getName())).toList(),
             added.getFullyQualifiedName());
       }
@@ -8848,6 +8938,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
           List<String> changeEventJsons = new ArrayList<>();
           for (var updater : changedUpdaters) {
             postUpdate(updater.getOriginal(), updater.getUpdated());
+            updater.runDeferredReactOperations();
             var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
             buildChangeEventJsonForBulkOperation(updater.getUpdated(), changeType, userName)
                 .ifPresent(changeEventJsons::add);
@@ -8903,6 +8994,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         for (var updater : succeededUpdaters) {
           if (updater.isVersionChanged() || updater.isEntityChanged()) {
             postUpdate(updater.getOriginal(), updater.getUpdated());
+            updater.runDeferredReactOperations();
             var changeType = updater.incrementalFieldsChanged() ? ENTITY_UPDATED : ENTITY_NO_CHANGE;
             buildChangeEventJsonForBulkOperation(updater.getUpdated(), changeType, userName)
                 .ifPresent(changeEventJsons::add);

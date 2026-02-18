@@ -18,7 +18,7 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
  * (entity + include + field set + relation include set) within one HTTP request.
  */
 public final class RequestEntityCache {
-  private static final ThreadLocal<Map<EntityCacheKey, EntityInterface>> REQUEST_CACHE =
+  private static final ThreadLocal<Map<EntityCacheKey, String>> REQUEST_CACHE =
       ThreadLocal.withInitial(HashMap::new);
 
   private RequestEntityCache() {}
@@ -113,15 +113,15 @@ public final class RequestEntityCache {
   }
 
   private static <T extends EntityInterface> T get(EntityCacheKey key, Class<T> entityClass) {
-    EntityInterface cached;
+    String cached;
     try (var ignored = phase("requestCacheGet")) {
       cached = REQUEST_CACHE.get().get(key);
     }
     if (cached == null) {
       return null;
     }
-    try (var ignored = phase("requestCacheCopy")) {
-      return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
+    try (var ignored = phase("requestCacheDeserialize")) {
+      return JsonUtils.readValue(cached, entityClass);
     }
   }
 
@@ -129,8 +129,12 @@ public final class RequestEntityCache {
     if (entity == null) {
       return;
     }
+    String serializedEntity;
+    try (var ignored = phase("requestCacheSerialize")) {
+      serializedEntity = JsonUtils.pojoToJson(entity);
+    }
     try (var ignored = phase("requestCachePut")) {
-      REQUEST_CACHE.get().put(key, entity);
+      REQUEST_CACHE.get().put(key, serializedEntity);
     }
   }
 

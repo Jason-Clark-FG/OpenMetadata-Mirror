@@ -6452,16 +6452,9 @@ public interface CollectionDAO {
         value = "INSERT INTO change_event (json) VALUES (:json)",
         connectionType = MYSQL)
     @ConnectionAwareSqlBatch(
-        value = "INSERT INTO change_event (json) VALUES (CAST(:json AS jsonb))",
+        value = "INSERT INTO change_event (json) VALUES (:json :: jsonb)",
         connectionType = POSTGRES)
-    void insertBatchInternal(@Bind("json") List<String> jsons);
-
-    default void insertBatch(List<String> jsons) {
-      if (jsons == null || jsons.isEmpty()) {
-        return;
-      }
-      insertBatchInternal(jsons);
-    }
+    void insertBatch(@Bind("json") List<String> jsons);
 
     @SqlUpdate("DELETE FROM change_event WHERE entityType = :entityType")
     void deleteAll(@Bind("entityType") String entityType);

@@ -29,10 +29,12 @@ class RequestEntityCacheTest {
     Table table = new Table().withId(id).withName("orders");
 
     RequestEntityCache.putById(Entity.TABLE, id, fields, includes, true, table, Table.class);
+    table.withName("orders_mutated_after_put");
 
     Table first = RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class);
     assertNotSame(table, first);
-    first.withName("orders_mutated");
+    assertEquals("orders", first.getName());
+    first.withName("orders_mutated_after_get");
 
     Table second =
         RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class);
