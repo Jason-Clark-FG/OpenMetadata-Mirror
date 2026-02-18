@@ -15,6 +15,7 @@ import { isUndefined } from 'lodash';
 import { SidebarItem } from '../../constant/sidebar';
 import { Domain } from '../../support/domain/Domain';
 import { TableClass } from '../../support/entity/TableClass';
+import { TagClass } from '../../support/tag/TagClass';
 import {
   clickOutside,
   createNewPage,
@@ -29,6 +30,9 @@ test.use({ storageState: 'playwright/.auth/admin.json' });
 
 const domain = new Domain();
 const table = new TableClass();
+const tier = new TagClass({
+  classification: 'Tier',
+});
 
 test.beforeAll('Setup pre-requests', async ({ browser }) => {
   test.slow();
@@ -36,6 +40,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
   const { apiContext, afterAction } = await createNewPage(browser);
   await table.create(apiContext);
   await domain.create(apiContext);
+  await tier.create(apiContext);
 
   await table.patch({
     apiContext,
@@ -50,7 +55,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
       {
         op: 'add',
         value: {
-          tagFQN: 'Tier.Tier5',
+          tagFQN: tier.responseData.fullyQualifiedName,
         },
         path: '/tags/1',
       },
