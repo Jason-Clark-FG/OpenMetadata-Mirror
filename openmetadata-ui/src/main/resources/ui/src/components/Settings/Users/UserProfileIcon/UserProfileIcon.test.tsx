@@ -26,9 +26,31 @@ jest.mock('../../../../hooks/authHooks', () => ({
     onLogoutHandler: jest.fn(),
   }),
 }));
+const translationState = {
+  language: 'en',
+};
+
+const getTranslation = (key: string) => {
+  if (translationState.language === 'de') {
+    const germanTranslations: Record<string, string> = {
+      'label.role-plural': 'Rollen',
+      'label.team-plural': 'Teams',
+      'label.logout': 'Abmelden',
+      'label.switch-persona': 'Persona wechseln',
+      'label.inherited-role-plural': 'Geerbte Rollen',
+      'label.default': 'Standard',
+      'label.more': 'mehr',
+    };
+
+    return germanTranslations[key] || key;
+  }
+
+  return key;
+};
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => getTranslation(key),
   }),
 }));
 
@@ -95,6 +117,7 @@ describe('UserProfileIcon', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseApplicationStore.mockReturnValue(createMockStoreData());
+    translationState.language = 'en';
   });
 
   const openDropdown = () => {
@@ -195,5 +218,39 @@ describe('UserProfileIcon', () => {
 
     expect(screen.queryByTestId('default-persona-tag')).not.toBeInTheDocument();
     expect(screen.getAllByRole('radio').length).toBeGreaterThan(0);
+  });
+
+  it('should render dropdown items with English translations', async () => {
+    translationState.language = 'en';
+
+    render(
+      <MockWrapper>
+        <UserProfileIcon />
+      </MockWrapper>
+    );
+
+    openDropdown();
+    await screen.findByText('label.switch-persona');
+
+    expect(screen.getByText('label.role-plural')).toBeInTheDocument();
+    expect(screen.getByText('label.team-plural')).toBeInTheDocument();
+    expect(screen.getByText('label.logout')).toBeInTheDocument();
+  });
+
+  it('should render dropdown items with German translations', async () => {
+    translationState.language = 'de';
+
+    render(
+      <MockWrapper>
+        <UserProfileIcon />
+      </MockWrapper>
+    );
+
+    openDropdown();
+    await screen.findByText('Persona wechseln');
+
+    expect(screen.getByText('Rollen')).toBeInTheDocument();
+    expect(screen.getByText('Teams')).toBeInTheDocument();
+    expect(screen.getByText('Abmelden')).toBeInTheDocument();
   });
 });
