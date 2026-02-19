@@ -53,6 +53,6 @@ import './components/step.less';
 import './components/tags.less';
 import './fonts.less';
 import './modal.less';
-import './tailwind.css';
+import './tailwind.less';
 import './temp.css';
 import './tree.less';
