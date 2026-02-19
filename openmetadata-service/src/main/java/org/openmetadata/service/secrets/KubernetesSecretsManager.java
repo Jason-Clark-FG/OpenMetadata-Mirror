@@ -21,7 +21,6 @@ import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.Config;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,8 +97,7 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
       } else {
         String kubeconfigPath =
             Objects.toString(
-                getSecretsConfig().parameters().getAdditionalProperties().get(KUBECONFIG_PATH),
-                "");
+                getSecretsConfig().parameters().getAdditionalProperties().get(KUBECONFIG_PATH), "");
         if (StringUtils.isNotBlank(kubeconfigPath)) {
           client = Config.fromConfig(kubeconfigPath);
           LOG.info("Using kubeconfig from path: {}", kubeconfigPath);
