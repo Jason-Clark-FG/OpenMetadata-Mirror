@@ -135,6 +135,7 @@ class DbtSource(DbtServiceSource):
         self.omd_custom_properties = {}
         self.extracted_custom_properties = {}
         self.extracted_domains = {}
+        self._ingested_tags: set = set()
         self._load_omd_custom_properties()
 
     @classmethod
@@ -415,6 +416,62 @@ class DbtSource(DbtServiceSource):
             logger.warning(f"Failed to update dbt domain for {table_fqn}: {exc}")
             logger.debug(traceback.format_exc())
 
+    def process_dbt_tags(
+        self, data_model_link: DataModelLink
+    ) -> Iterable[Either[PatchRequest]]:
+        """
+        Sync DBT tags to the table entity: add tags present in the manifest and
+        remove dbt classification tags that have been removed from the manifest.
+        """
+        table_entity: Table = data_model_link.table_entity
+        if not table_entity or not self.source_config.includeTags:
+            return
+
+        table_fqn = table_entity.fullyQualifiedName.root
+        logger.debug(f"Processing DBT tags for: {table_fqn}")
+
+        try:
+            table_with_tags = self.metadata.get_by_id(
+                entity=Table, entity_id=table_entity.id, fields=["tags"]
+            )
+            if not table_with_tags:
+                return
+
+            current_tags = table_with_tags.tags or []
+            manifest_tag_fqns = {
+                label.tagFQN.root for label in (data_model_link.datamodel.tags or [])
+            }
+            current_tag_fqns = {tag.tagFQN.root for tag in current_tags}
+
+            if current_tag_fqns == manifest_tag_fqns:
+                return
+
+            dbt_classification_prefix = f"{self.tag_classification_name}."
+            non_dbt_tags = [
+                tag
+                for tag in current_tags
+                if not tag.tagFQN.root.startswith(dbt_classification_prefix)
+            ]
+
+            new_entity = deepcopy(table_with_tags)
+            new_entity.tags = non_dbt_tags + list(data_model_link.datamodel.tags or [])
+
+            yield Either(
+                right=PatchRequest(
+                    original_entity=table_with_tags,
+                    new_entity=new_entity,
+                    override_metadata=True,
+                )
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            yield Either(
+                left=StackTraceError(
+                    name=table_fqn,
+                    error=f"Failed to sync DBT tags for {table_fqn}: {exc}",
+                    stackTrace=traceback.format_exc(),
+                )
+            )
+
     def process_dbt_custom_properties(self, data_model_link: DataModelLink):
         """
         Method to process DBT custom properties using new patch_custom_properties method
@@ -601,7 +658,7 @@ class DbtSource(DbtServiceSource):
                 **dbt_objects.dbt_manifest.sources,
             }
             logger.debug("Processing DBT Tags")
-            dbt_tags_list = []
+            new_tags = set()
             for key, manifest_node in manifest_entities.items():
                 try:
                     if manifest_node.resource_type in [
@@ -609,16 +666,18 @@ class DbtSource(DbtServiceSource):
                     ]:
                         continue
 
-                    # Add the tags from the model
                     model_tags = manifest_node.tags
                     if model_tags:
-                        dbt_tags_list.extend(self.filter_tags(model_tags))
+                        for tag in self.filter_tags(model_tags):
+                            if tag not in self._ingested_tags:
+                                new_tags.add(tag)
 
-                    # Add the tags from the columns
                     for _, column in manifest_node.columns.items():
                         column_tags = column.tags
                         if column_tags:
-                            dbt_tags_list.extend(self.filter_tags(column_tags))
+                            for tag in self.filter_tags(column_tags):
+                                if tag not in self._ingested_tags:
+                                    new_tags.add(tag)
                 except Exception as exc:
                     yield Either(
                         left=StackTraceError(
@@ -628,10 +687,6 @@ class DbtSource(DbtServiceSource):
                         )
                     )
             try:
-                # Deduplicate tags before building FQNs
-                dbt_tags_list = list(set(dbt_tags_list)) if dbt_tags_list else []
-
-                # Create all the tags added
                 dbt_tag_labels = [
                     fqn.build(
                         self.metadata,
@@ -639,7 +694,7 @@ class DbtSource(DbtServiceSource):
                         classification_name=self.tag_classification_name,
                         tag_name=tag_name,
                     )
-                    for tag_name in dbt_tags_list
+                    for tag_name in new_tags
                 ]
                 yield from get_ometa_tag_and_classification(
                     tags=[fqn.split(tag_label)[1] for tag_label in dbt_tag_labels],
@@ -647,6 +702,7 @@ class DbtSource(DbtServiceSource):
                     tag_description="dbt Tags",
                     classification_description="dbt classification",
                 )
+                self._ingested_tags.update(new_tags)
             except Exception as exc:
                 yield Either(
                     left=StackTraceError(
