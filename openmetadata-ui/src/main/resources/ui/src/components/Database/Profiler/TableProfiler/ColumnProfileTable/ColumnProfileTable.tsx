@@ -303,7 +303,7 @@ const ColumnProfileTable = () => {
         },
       },
     ];
-  }, [testCaseSummary]);
+  }, [testCaseSummary, searchData, tableFqn, activeTab]);
 
   const handleSearchAction = (searchText: string) => {
     setSearchText(searchText);

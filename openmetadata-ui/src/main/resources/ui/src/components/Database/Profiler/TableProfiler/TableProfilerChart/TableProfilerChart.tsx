@@ -221,7 +221,7 @@ const TableProfilerChart = ({
       )}
       <div
         className="tw:flex tw:flex-col tw:gap-[30px]"
-        data-testid="table-profiler-chart-container">
+        data-testid="table-profiler-chart-metrics">
         <div data-testid="row-metrics">
           <ProfilerDetailsCard
             chartCollection={rowCountMetrics}

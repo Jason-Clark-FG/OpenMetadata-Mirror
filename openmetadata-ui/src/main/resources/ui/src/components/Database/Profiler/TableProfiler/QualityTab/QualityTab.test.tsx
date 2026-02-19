@@ -18,14 +18,26 @@ jest.mock('../../../../../utils/PermissionsUtils', () => ({
 }));
 
 jest.mock('@openmetadata/ui-core-components', () => {
-  const MockTabPanel = ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  );
+  const MockTabPanel = ({
+    children,
+    id,
+  }: {
+    children: React.ReactNode;
+    id?: string;
+  }) => <div data-testid={`tab-panel-${id}`}>{children}</div>;
   const MockTabList = ({ children }: { children: React.ReactNode }) => (
     <div role="tablist">{children}</div>
   );
-  const MockTabItem = ({ children }: { children: React.ReactNode }) => (
-    <button role="tab">{children}</button>
+  const MockTabItem = ({
+    children,
+    id,
+  }: {
+    children: React.ReactNode;
+    id?: string;
+  }) => (
+    <button data-testid={`tab-${id}`} role="tab">
+      {children}
+    </button>
   );
   const MockTabs = ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
