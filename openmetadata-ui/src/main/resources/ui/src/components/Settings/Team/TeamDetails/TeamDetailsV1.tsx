@@ -715,20 +715,22 @@ const TeamDetailsV1 = ({
   );
 
   const assetTabRender = useMemo(
-    () => (
-      <AssetsTabs
-        isSummaryPanelOpen
-        assetCount={assetsCount}
-        isEntityDeleted={isTeamDeleted}
-        noDataPlaceholder={t('message.adding-new-asset-to-team')}
-        permissions={entityPermissions}
-        // Hierarchical Asset View: Query assets owned by the current team OR any of its descendants
-        queryFilter={getTermQuery({ 'owners.id': allTeamIds }, 'should', 1)}
-        type={AssetsOfEntity.TEAM}
-        onAddAsset={() => navigate(ROUTES.EXPLORE)}
-        onAssetClick={setPreviewAsset}
-      />
-    ),
+    () =>
+      allTeamIds.length === 0 ? (
+        <Loader />
+      ) : (
+        <AssetsTabs
+          isSummaryPanelOpen
+          assetCount={assetsCount}
+          isEntityDeleted={isTeamDeleted}
+          noDataPlaceholder={t('message.adding-new-asset-to-team')}
+          permissions={entityPermissions}
+          queryFilter={getTermQuery({ 'owners.id': allTeamIds }, 'should', 1)}
+          type={AssetsOfEntity.TEAM}
+          onAddAsset={() => navigate(ROUTES.EXPLORE)}
+          onAssetClick={setPreviewAsset}
+        />
+      ),
     [entityPermissions, assetsCount, setPreviewAsset, isTeamDeleted, allTeamIds]
   );
 
