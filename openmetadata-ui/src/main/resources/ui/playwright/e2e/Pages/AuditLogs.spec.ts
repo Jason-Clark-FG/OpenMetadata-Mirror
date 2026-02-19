@@ -30,9 +30,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
     await navigateToAuditLogsPage(page);
-    await page.waitForSelector('.ant-skeleton', {
-      state: 'detached',
-    });
   });
 
   test('should display page header with correct title and subtitle', async ({
@@ -289,9 +286,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await test.step('Navigate to audit logs page', async () => {
       await redirectToHomePage(page);
       await navigateToAuditLogsPage(page);
-      await page.waitForSelector('.ant-skeleton', {
-        state: 'detached',
-      });
     });
 
     await test.step('Apply User filter (select admin)', async () => {
