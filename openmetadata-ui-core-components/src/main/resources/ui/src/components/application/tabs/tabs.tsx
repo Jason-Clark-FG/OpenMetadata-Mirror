@@ -87,25 +87,41 @@ const getColorStyles = ({ isSelected, isHovered }: Partial<AriaTabRenderProps>) 
     line: isSelected || isHovered ? "brand" : "gray",
 });
 
-interface TabListComponentProps<T extends object, K extends Orientation> extends AriaTabListProps<T> {
+type TabListBaseProps<K extends Orientation> = {
     /** The size of the tab list. */
     size?: keyof typeof sizes;
     /** The type of the tab list. */
     type?: TabTypeColors<K>;
     /** The orientation of the tab list. */
     orientation?: K;
-    /** The items of the tab list. */
-    items: T[];
     /** Whether the tab list is full width. */
     fullWidth?: boolean;
-}
+};
 
-const TabListContext = createContext<Omit<TabListComponentProps<TabComponentProps, Orientation>, "items">>({
+/** Dynamic variant: provide an items array and a render function as children. */
+type TabListWithItemsProps<K extends Orientation> = TabListBaseProps<K> &
+    Omit<AriaTabListProps<TabComponentProps>, "children"> & {
+        items: TabComponentProps[];
+        children?: (item: TabComponentProps) => ReactNode;
+    };
+
+/** Static variant: provide children directly as JSX elements. */
+type TabListWithChildrenProps<K extends Orientation> = TabListBaseProps<K> &
+    Omit<AriaTabListProps<TabComponentProps>, "items" | "children"> & {
+        items?: never;
+        children: ReactNode;
+    };
+
+type TabListComponentProps<K extends Orientation> =
+    | TabListWithItemsProps<K>
+    | TabListWithChildrenProps<K>;
+
+const TabListContext = createContext<TabListBaseProps<Orientation> & { orientation?: Orientation }>({
     size: "sm",
     type: "button-brand",
 });
 
-export const TabList = <T extends Orientation>({
+export const TabList = <K extends Orientation>({
     size = "sm",
     type = "button-brand",
     orientation: orientationProp,
@@ -113,7 +129,7 @@ export const TabList = <T extends Orientation>({
     className,
     children,
     ...otherProps
-}: TabListComponentProps<TabComponentProps, T>) => {
+}: TabListComponentProps<K>) => {
     const context = useSlottedContext(TabsContext);
 
     const orientation = orientationProp ?? context?.orientation ?? "horizontal";
@@ -121,7 +137,7 @@ export const TabList = <T extends Orientation>({
     return (
         <TabListContext.Provider value={{ size, type, orientation, fullWidth }}>
             <AriaTabList
-                {...otherProps}
+                {...(otherProps as AriaTabListProps<TabComponentProps>)}
                 className={(state) =>
                     cx(
                         "tw:group tw:flex",
