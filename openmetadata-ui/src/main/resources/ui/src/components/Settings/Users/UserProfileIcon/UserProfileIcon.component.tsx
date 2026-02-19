@@ -377,6 +377,8 @@ export const UserProfileIcon = () => {
       roles,
       personas,
       showAllPersona,
+      sortedPersonas,
+      inheritedRoles,
       t,
     ]
   );
