@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Skeleton, Typography } from 'antd';
+import { Skeleton, Typography } from '@mui/material';
 
 interface TeamAssetCountProps {
   count: number | null;
@@ -19,8 +19,8 @@ interface TeamAssetCountProps {
 
 export const TeamAssetCount = ({ count, isLoading }: TeamAssetCountProps) => {
   if (isLoading) {
-    return <Skeleton.Input active size="small" style={{ width: 30, height: 20 }} />;
+    return <Skeleton height={20} variant="rectangular" width={30} />;
   }
 
-  return <Typography.Text data-testid="asset-count">{count ?? 0}</Typography.Text>;
+  return <Typography data-testid="asset-count" variant="body2">{count ?? 0}</Typography>;
 };

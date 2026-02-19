@@ -225,9 +225,8 @@ test.describe('Verify Asset Count Aggregation', () => {
     await getOrganizationResponse;
 
     // Step 3: Verify asset count for the BU in the Organization-level table
-    // Wait for skeleton in the BU row to resolve and verify aggregated count
+    // Wait for asset count to resolve and verify aggregated count
     const buRow = page.locator(`[data-row-key="${aggBUName}"]`);
-    await buRow.locator('.ant-skeleton-active').waitFor({ state: 'hidden' });
     await expect(buRow.getByTestId('asset-count')).toHaveText('1');
 
     // Click on the BU team to see its children
@@ -238,12 +237,7 @@ test.describe('Verify Asset Count Aggregation', () => {
     await permissionResponse;
 
     // Step 4: Verify asset count shown in the hierarchy table for the Group child
-    // Wait for the skeleton loader to disappear, then assert the count
-    const groupRow = page.locator(
-      `[data-row-key="${aggGroupName}"]`
-    );
-
-    await groupRow.locator('.ant-skeleton-active').waitFor({ state: 'hidden' });
+    const groupRow = page.locator(`[data-row-key="${aggGroupName}"]`);
 
     await expect(groupRow.getByTestId('asset-count')).toHaveText('1');
 
