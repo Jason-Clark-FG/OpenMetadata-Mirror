@@ -462,9 +462,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         );
         await clearButton.click();
         await auditLogResponseClear;
-        await page.waitForSelector('.ant-skeleton', {
-          state: 'detached',
-        });
       }
 
       // Search with uppercase term - should return similar results
