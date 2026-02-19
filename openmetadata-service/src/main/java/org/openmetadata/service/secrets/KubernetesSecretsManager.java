@@ -62,11 +62,11 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
     // Check if we should skip initialization (for testing)
     boolean skipInit =
         Boolean.parseBoolean(
-            (String)
+            String.valueOf(
                 secretsConfig
                     .parameters()
                     .getAdditionalProperties()
-                    .getOrDefault(SKIP_INIT, "false"));
+                    .getOrDefault(SKIP_INIT, "false")));
 
     if (!skipInit) {
       initializeKubernetesClient();
@@ -86,11 +86,11 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
 
       boolean inCluster =
           Boolean.parseBoolean(
-              (String)
+              String.valueOf(
                   getSecretsConfig()
                       .parameters()
                       .getAdditionalProperties()
-                      .getOrDefault(IN_CLUSTER, "false"));
+                      .getOrDefault(IN_CLUSTER, "false")));
 
       if (inCluster) {
         client = ClientBuilder.cluster().build();
