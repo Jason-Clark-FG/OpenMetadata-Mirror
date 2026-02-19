@@ -32,6 +32,7 @@ import {
   PolicyRulesType,
 } from '../../support/access-control/PoliciesClass';
 import {
+  closeFirstPopupAlert,
   descriptionBox,
   getApiContext,
   redirectToHomePage,
@@ -303,6 +304,9 @@ test.describe(
           page,
           ERROR_MESSAGE_VALIDATION.lastRuleCannotBeRemoved
         );
+
+        // Close the toast to prevent it from interfering with the next step
+        await closeFirstPopupAlert(page);
       });
 
       await test.step('Delete created policy', async () => {
@@ -316,9 +320,11 @@ test.describe(
         await getElementWithPagination(page, policyElement, false);
 
         // Click on delete action button
-        await page
-          .locator(`[data-testid="delete-action-${UPDATED_POLICY_NAME}"]`)
-          .click({ force: true });
+        const deleteButton = page.locator(
+          `[data-testid="delete-action-${UPDATED_POLICY_NAME}"]`
+        );
+        await deleteButton.waitFor({ state: 'visible' });
+        await deleteButton.click();
 
         await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
