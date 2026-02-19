@@ -17,6 +17,29 @@ jest.mock('../../../../../utils/PermissionsUtils', () => ({
   checkPermission: jest.fn().mockReturnValue(true),
 }));
 
+jest.mock('@openmetadata/ui-core-components', () => {
+  const MockTabPanel = ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  );
+  const MockTabList = ({ children }: { children: React.ReactNode }) => (
+    <div role="tablist">{children}</div>
+  );
+  const MockTabItem = ({
+    children,
+  }: {
+    children: React.ReactNode;
+    id?: string;
+  }) => <button role="tab">{children}</button>;
+  const MockTabs = ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  );
+  MockTabs.Panel = MockTabPanel;
+  MockTabs.List = MockTabList;
+  MockTabs.Item = MockTabItem;
+
+  return { Tabs: MockTabs };
+});
+
 import { render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { MOCK_TABLE } from '../../../../../mocks/TableData.mock';
