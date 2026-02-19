@@ -695,6 +695,33 @@ export const validateGlossaryTerm = async (
   status: 'Draft' | 'In Review' | 'Approved',
   isGlossaryTermPage = false
 ) => {
+  if (status === 'Approved' || status === 'In Review') {
+    const { apiContext } = await getApiContext(page);
+
+    await expect
+      .poll(
+        async () => {
+          try {
+            const response = await apiContext
+              .get(
+                `/api/v1/glossaryTerms/name/${encodeURIComponent(term.fullyQualifiedName)}?fields=entityStatus`
+              )
+              .then((res) => res.json());
+
+            return response?.entityStatus;
+          } catch {
+            return null;
+          }
+        },
+        {
+          message: `Wait for glossary term "${term.fullyQualifiedName}" to reach status "${status}"`,
+          timeout: 180_000,
+          intervals: [3_000, 5_000, 10_000, 15_000, 20_000],
+        }
+      )
+      .toBe(status);
+  }
+
   // eslint-disable-next-line no-useless-escape
   const escapedFqn = term.fullyQualifiedName.replace(/\"/g, '\\"');
   const termSelector = `[data-row-key="${escapedFqn}"]`;
