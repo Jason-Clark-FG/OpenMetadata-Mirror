@@ -52,6 +52,10 @@ const containerEntity = new ContainerClass();
 const searchIndexEntity = new SearchIndexClass();
 const domainEntity = new Domain();
 const user1 = new UserClass();
+// Dedicated entity for the DataConsumer owner-restriction test.
+// Keeping it separate prevents race conditions with parallel tests that add/remove
+// owners on the shared entityMap entities.
+const dcOwnerTestTable = new TableClass();
 
 const testClassification = new ClassificationClass();
 const testTag = new TagClass({
@@ -137,6 +141,7 @@ test.describe('Right Panel Test Suite', () => {
       await testGlossaryTerm.create(apiContext);
       await domainEntity.create(apiContext);
       await user1.create(apiContext);
+      await dcOwnerTestTable.create(apiContext);
     } finally {
       await afterAction();
     }
@@ -169,6 +174,7 @@ test.describe('Right Panel Test Suite', () => {
       await testGlossary.delete(apiContext);
       await user1.delete(apiContext);
       await domainEntity.delete(apiContext);
+      await dcOwnerTestTable.delete(apiContext);
     } finally {
       await afterAction();
     }
@@ -1317,52 +1323,61 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanelDC.verifyPermissions();
         });
 
-        test(`Should NOT allow Data Consumer to edit owners when entity has owner for ${entityType}`, async ({
+      });
+    });
+
+    // Standalone test using a dedicated entity (dcOwnerTestTable) that no other
+    // parallel test touches. This prevents the race condition where a parallel
+    // "remove owner" test strips the owner between admin assignment and the
+    // DataConsumer navigation, making the entity ownerless and granting
+    // EditOwners to all users again.
+    test.describe('Data Consumer User - Owner Restriction', () => {
+      test('Should NOT allow Data Consumer to edit owners when entity has owner', async ({
+        adminPage,
+        dataConsumerPage,
+      }) => {
+        const fqn = getEntityFqn(dcOwnerTestTable);
+
+        // Admin assigns user1 as owner so the entity is no longer ownerless.
+        // When an entity has an owner, EditOwners is no longer granted to all
+        // users — DataConsumer (which lacks EditOwners / EditAll) cannot see
+        // the edit-owners button.
+        await navigateToExploreAndSelectEntity(
           adminPage,
+          dcOwnerTestTable.entity.name,
+          dcOwnerTestTable.endpoint,
+          fqn
+        );
+        await adminPage.waitForSelector(
+          '[data-testid="entity-summary-panel-container"]',
+          { state: 'visible' }
+        );
+        const adminRightPanel = new RightPanelPageObject(adminPage);
+        adminRightPanel.setEntityConfig(dcOwnerTestTable);
+        const adminOverview = new OverviewPageObject(adminRightPanel);
+        await adminOverview.addOwnerWithoutValidation(
+          user1.getUserDisplayName()
+        );
+        await adminOverview.shouldShowOwner(user1.getUserDisplayName());
+
+        // DataConsumer navigates to the same entity and verifies that the
+        // edit-owners button is NOT visible (restricted by role).
+        await navigateToExploreAndSelectEntity(
           dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-
-          // Step 1: Admin assigns user1 as owner so the entity is no longer ownerless.
-          // When an entity has an owner, EditOwners is no longer granted to all users —
-          // DataConsumer (which lacks EditOwners and EditAll) cannot see the edit-owners button.
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await adminPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-          const adminRightPanel = new RightPanelPageObject(adminPage);
-          adminRightPanel.setEntityConfig(entityInstance);
-          const adminOverview = new OverviewPageObject(adminRightPanel);
-          await adminOverview.addOwnerWithoutValidation(
-            user1.getUserDisplayName()
-          );
-          await adminOverview.shouldShowOwner(user1.getUserDisplayName());
-
-          // Step 2: DataConsumer navigates to the same entity and verifies
-          // that the edit-owners button is NOT visible (restricted by role).
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-          const dcSummaryPanel = dataConsumerPage.locator(
-            '.entity-summary-panel-container'
-          );
-          await expect(
-            dcSummaryPanel.getByTestId('edit-owners')
-          ).not.toBeVisible();
-        });
+          dcOwnerTestTable.entity.name,
+          dcOwnerTestTable.endpoint,
+          fqn
+        );
+        await dataConsumerPage.waitForSelector(
+          '[data-testid="entity-summary-panel-container"]',
+          { state: 'visible' }
+        );
+        const dcSummaryPanel = dataConsumerPage.locator(
+          '.entity-summary-panel-container'
+        );
+        await expect(
+          dcSummaryPanel.getByTestId('edit-owners')
+        ).not.toBeVisible();
       });
     });
 
@@ -1392,6 +1407,8 @@ test.describe('Right Panel Test Suite', () => {
           await emptyOverview.navigateToOverviewTab();
           const ownersSection = adminPage.locator('.owners-section');
           await expect(ownersSection).toBeVisible();
+          // No owner chips should be present for a freshly-created entity
+          await expect(adminPage.getByTestId('user-tag')).not.toBeVisible();
 
           await testEntity.delete(apiContext);
         } finally {
@@ -1422,10 +1439,10 @@ test.describe('Right Panel Test Suite', () => {
 
           const emptyOverview = new OverviewPageObject(rightPanel);
           await emptyOverview.navigateToOverviewTab();
-          const tagsSection = adminPage.locator(
-            '.tags-section, [data-testid="tags-container"]'
-          );
+          const tagsSection = adminPage.locator('.tags-section');
           await expect(tagsSection).toBeVisible();
+          // Verified from test output: empty tags section shows this placeholder text
+          await expect(tagsSection).toContainText('No Tags assigned');
 
           await testEntity.delete(apiContext);
         } finally {
@@ -1458,6 +1475,13 @@ test.describe('Right Panel Test Suite', () => {
           await emptyOverview.navigateToOverviewTab();
           const tierSection = adminPage.locator('.tier-section');
           await expect(tierSection).toBeVisible();
+          // The tier chip only renders when a tier is assigned — verify it is absent
+          await expect(
+            adminPage
+              .locator('[data-testid="entity-summary-panel-container"]')
+              .getByTestId('Tier')
+              .locator('.ant-tag')
+          ).not.toBeVisible();
 
           await testEntity.delete(apiContext);
         } finally {
@@ -1488,10 +1512,12 @@ test.describe('Right Panel Test Suite', () => {
 
           const emptyOverview = new OverviewPageObject(rightPanel);
           await emptyOverview.navigateToOverviewTab();
-          const domainSection = adminPage.locator(
-            '.domains-section, [data-testid="domain-container"]'
-          );
+          const domainSection = adminPage.locator('.domains-section');
           await expect(domainSection).toBeVisible();
+          // Verified from test output: empty domains section shows this placeholder text
+          await expect(adminPage.locator('.domains-content')).toContainText(
+            'No Domains assigned'
+          );
 
           await testEntity.delete(apiContext);
         } finally {
@@ -1524,6 +1550,10 @@ test.describe('Right Panel Test Suite', () => {
           await emptyOverview.navigateToOverviewTab();
           const glossarySection = adminPage.locator('.glossary-terms-section');
           await expect(glossarySection).toBeVisible();
+          // No glossary term chips should be present; the container holds only the empty state
+          await expect(
+            adminPage.getByTestId('glossary-container').locator('.no-data-placeholder')
+          ).toBeVisible();
 
           await testEntity.delete(apiContext);
         } finally {

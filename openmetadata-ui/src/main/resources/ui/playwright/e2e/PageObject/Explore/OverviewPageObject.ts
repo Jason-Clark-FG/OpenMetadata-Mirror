@@ -418,8 +418,6 @@ export class OverviewPageObject extends RightPanelBase {
       .waitFor({ state: 'visible' });
     await this.page.getByRole('tab', { name: type }).click();
 
-    const patchPromise = this.waitForPatchResponse();
-
     for (const ownerName of ownerNames) {
       const searchBarDataTestId =
         type === 'Users'
@@ -429,25 +427,19 @@ export class OverviewPageObject extends RightPanelBase {
 
       if (await searchBar.isVisible()) {
         await searchBar.fill(ownerName);
-        const ownerItem = this.page
-          .locator('.ant-list-item')
-          .filter({ hasText: ownerName });
-        await ownerItem.waitFor({ state: 'visible' });
-        await ownerItem.click();
-      } else {
-        const ownerItem = this.page
-          .locator('.ant-list-item')
-          .filter({ hasText: ownerName });
-        await ownerItem.waitFor({ state: 'visible' });
-        await ownerItem.click();
       }
+
+      const ownerItem = this.page
+        .locator('.ant-list-item')
+        .filter({ hasText: ownerName });
+      await ownerItem.waitFor({ state: 'visible' });
+      await ownerItem.click();
     }
 
     const updateButton = this.page.getByTestId('selectable-list-update-btn');
-    if (await updateButton.isVisible()) {
-      await updateButton.click();
-    }
-
+    await updateButton.waitFor({ state: 'visible' });
+    const patchPromise = this.waitForPatchResponse();
+    await updateButton.click();
     await patchPromise;
     return this;
   }
