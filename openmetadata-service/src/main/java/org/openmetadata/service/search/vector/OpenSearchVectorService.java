@@ -102,7 +102,8 @@ public class OpenSearchVectorService implements VectorIndexService {
       float[] queryVector = embeddingClient.embed(query);
       int overFetchSize = size * OVER_FETCH_MULTIPLIER;
 
-      String queryJson = VectorSearchQueryBuilder.build(queryVector, overFetchSize, k, filters);
+      String queryJson =
+          VectorSearchQueryBuilder.build(queryVector, overFetchSize, k, filters, threshold);
       String indexName = getClusteredIndexName();
       String responseBody = executeGenericRequest("POST", "/" + indexName + "/_search", queryJson);
 

@@ -15,18 +15,44 @@ public class VectorSearchQueryBuilder {
   private static final String ANY = "__ANY__";
   private static final String NONE = "__NONE__";
 
-  public static String build(float[] vector, int size, int k, Map<String, List<String>> filters) {
-
+  /** Build a full search request body (size + _source + query) for standalone vector search. */
+  public static String build(
+      float[] vector, int size, int k, Map<String, List<String>> filters, double threshold) {
     StringBuilder sb =
         new StringBuilder(512)
             .append("{\"size\":")
             .append(size)
             .append(",\"_source\":{\"excludes\":[\"embedding\"]}")
-            .append(",\"query\":{")
-            .append("\"knn\":{\"embedding\":{\"vector\":")
-            .append(Arrays.toString(vector))
-            .append(",\"k\":")
-            .append(k);
+            .append(",\"query\":");
+    appendKnnQuery(sb, vector, k, filters, threshold);
+    sb.append('}');
+    return sb.toString();
+  }
+
+  /**
+   * Build only the KNN query JSON (no size/_source wrapper). Used by hybrid search to embed as a
+   * sub-query inside a hybrid query.
+   */
+  public static String buildQuery(
+      float[] vector, int k, Map<String, List<String>> filters, double threshold) {
+    StringBuilder sb = new StringBuilder(512);
+    appendKnnQuery(sb, vector, k, filters, threshold);
+    return sb.toString();
+  }
+
+  private static void appendKnnQuery(
+      StringBuilder sb,
+      float[] vector,
+      int k,
+      Map<String, List<String>> filters,
+      double threshold) {
+    sb.append("{\"knn\":{\"embedding\":{\"vector\":").append(Arrays.toString(vector));
+
+    if (threshold > 0.0) {
+      sb.append(",\"min_score\":").append(threshold);
+    } else {
+      sb.append(",\"k\":").append(k);
+    }
 
     // Build filter inside knn for efficient k-NN filtering
     sb.append(",\"filter\":{\"bool\":{\"must\":[");
@@ -74,6 +100,14 @@ public class VectorSearchQueryBuilder {
             sb.append(',');
             appendFlat(sb, "serviceType", values);
           }
+          case "service" -> {
+            sb.append(',');
+            appendFlatOr(sb, "service.name", "service.displayName", values);
+          }
+          case "database" -> {
+            sb.append(',');
+            appendFlatOr(sb, "database.name", "database.displayName", values);
+          }
           default -> LOG.debug("Ignoring unrecognized filter key: {}", field);
         }
       }
@@ -81,8 +115,7 @@ public class VectorSearchQueryBuilder {
 
     sb.append("]}}"); // close must array and bool
 
-    sb.append("}}}}"); // close embedding, knn, query
-    return sb.toString();
+    sb.append("}}}"); // close embedding, knn, wrapper
   }
 
   private static void appendNested(StringBuilder sb, String path, String field, List<String> vals) {
@@ -152,6 +185,25 @@ public class VectorSearchQueryBuilder {
           .append(escape(val))
           .append("\"}}");
     }
+  }
+
+  private static void appendFlatOr(
+      StringBuilder sb, String nameField, String displayNameField, List<String> vals) {
+    sb.append("{\"bool\":{\"should\":[");
+    boolean first = true;
+    for (String v : vals) {
+      if (!first) sb.append(',');
+      first = false;
+      sb.append("{\"bool\":{\"should\":[");
+      sb.append("{\"term\":{\"").append(nameField).append("\":\"").append(escape(v)).append("\"}},");
+      sb.append("{\"match\":{\"")
+          .append(displayNameField)
+          .append("\":\"")
+          .append(escape(v))
+          .append("\"}}");
+      sb.append("]}}");
+    }
+    sb.append("]}}");
   }
 
   public static String escape(String s) {

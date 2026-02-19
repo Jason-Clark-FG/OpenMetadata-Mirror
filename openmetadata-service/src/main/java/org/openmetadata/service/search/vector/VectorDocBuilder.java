@@ -65,6 +65,8 @@ public class VectorDocBuilder {
       doc.put("name", stringOrEmpty(entity.getName()));
       doc.put("displayName", stringOrEmpty(entity.getDisplayName()));
       doc.put("serviceType", extractServiceType(entity));
+      doc.put("service", extractRefMap(entity.getService()));
+      doc.put("database", extractDatabase(entity));
       doc.put("deleted", entity.getDeleted() != null && entity.getDeleted());
       doc.put("fingerprint", fingerprint);
       doc.put("chunk_index", i);
@@ -421,6 +423,21 @@ public class VectorDocBuilder {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private static Map<String, Object> extractRefMap(EntityReference ref) {
+    if (ref == null) return null;
+    Map<String, Object> m = new HashMap<>();
+    m.put("name", ref.getName());
+    m.put("displayName", ref.getDisplayName());
+    return m;
+  }
+
+  private static Map<String, Object> extractDatabase(EntityInterface entity) {
+    if (entity instanceof Table table) {
+      return extractRefMap(table.getDatabase());
+    }
+    return null;
   }
 
   static String extractTierLabel(EntityInterface entity) {
