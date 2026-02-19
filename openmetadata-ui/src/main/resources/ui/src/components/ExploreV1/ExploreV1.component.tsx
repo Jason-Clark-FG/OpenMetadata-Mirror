@@ -102,6 +102,7 @@ const IndexNotFoundBanner = () => {
 const ExploreV1: React.FC<ExploreProps> = ({
   aggregations,
   activeTabKey,
+  activeMenuKey,
   tabItems = [],
   searchResults,
   onChangeAdvancedSearchQuickFilters,
@@ -123,6 +124,12 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const [selectedQuickFilters, setSelectedQuickFilters] = useState<
     ExploreQuickFilterField[]
   >([] as ExploreQuickFilterField[]);
+  // Tracks whether the current quickFilter was set by the filter bar (true) or
+  // by ExploreTree navigation (false). Unlike selectedQuickFilters, this is not
+  // derived from the URL — it's set directly in the handlers that originate the
+  // filter change, which is the only reliable way to tell the two apart (the
+  // ExploreTree can set Service/ServiceType which overlap with filter bar fields).
+  const [isBarFilterMode, setIsBarFilterMode] = useState(false);
   const [showSummaryPanel, setShowSummaryPanel] = useState(false);
   const [entityDetails, setEntityDetails] =
     useState<SearchedDataProps['data'][number]['_source']>();
@@ -183,9 +190,18 @@ const ExploreV1: React.FC<ExploreProps> = ({
   );
 
   const clearFilters = () => {
-    // onChangeAdvancedSearchQuickFilters(undefined);
+    setIsBarFilterMode(false);
     onResetAllFilters();
   };
+
+  // When the quickFilter is fully removed from the URL (e.g. user deselects all
+  // items in a dropdown without clicking "Clear filters"), exit bar-filter mode
+  // so the left panel switches back to ExploreTree instead of staying on Menu.
+  useEffect(() => {
+    if (isEmpty(parsedSearch.quickFilter)) {
+      setIsBarFilterMode(false);
+    }
+  }, [parsedSearch.quickFilter]);
 
   const handleQuickFiltersChange = (data: ExploreQuickFilterField[]) => {
     const must = getExploreQueryFilterMust(data);
@@ -194,16 +210,19 @@ const ExploreV1: React.FC<ExploreProps> = ({
       isEmpty(must)
         ? undefined
         : {
-            query: {
-              bool: {
-                must,
-              },
+          query: {
+            bool: {
+              must,
             },
-          }
+          },
+        }
     );
   };
 
+  // Called exclusively by the filter bar dropdowns — marks bar-filter mode so
+  // the left panel switches to the entity-count Menu.
   const handleQuickFiltersValueSelect = (field: ExploreQuickFilterField) => {
+    setIsBarFilterMode(true);
     setSelectedQuickFilters((pre) => {
       const data = pre.map((preField) => {
         if (preField.key === field.key) {
@@ -219,7 +238,17 @@ const ExploreV1: React.FC<ExploreProps> = ({
     });
   };
 
+  // Called exclusively by the ExploreTree — keeps left panel as ExploreTree.
+  const handleTreeFiltersChange = (data: ExploreQuickFilterField[]) => {
+    setIsBarFilterMode(false);
+    handleQuickFiltersChange(data);
+  };
+
   const exploreLeftPanel = useMemo(() => {
+    if (!(searchQueryParam || isBarFilterMode || sqlQuery)) {
+      return null;
+    }
+
     if (tabItems.length === 0) {
       return loading ? (
         <Loader />
@@ -231,27 +260,30 @@ const ExploreV1: React.FC<ExploreProps> = ({
       );
     }
 
-    if (searchQueryParam) {
-      return (
-        <Menu
-          className="custom-menu"
-          data-testid="explore-left-panel"
-          items={tabItems}
-          mode="inline"
-          rootClassName="left-container"
-          selectedKeys={[activeTabKey]}
-          onClick={(info) => {
-            if (info && info.key !== activeTabKey) {
-              onChangeSearchIndex(info.key as ExploreSearchIndex);
-              setShowSummaryPanel(false);
-            }
-          }}
-        />
-      );
-    }
-
-    return <ExploreTree onFieldValueSelect={handleQuickFiltersChange} />;
-  }, [searchQueryParam, tabItems]);
+    return (
+      <Menu
+        className="custom-menu"
+        data-testid="explore-left-panel"
+        items={tabItems}
+        mode="inline"
+        rootClassName="left-container"
+        selectedKeys={[activeMenuKey]}
+        onClick={(info) => {
+          if (info && info.key !== activeMenuKey) {
+            onChangeSearchIndex(info.key as ExploreSearchIndex);
+            setShowSummaryPanel(false);
+          }
+        }}
+      />
+    );
+  }, [
+    searchQueryParam,
+    isBarFilterMode,
+    sqlQuery,
+    tabItems,
+    loading,
+    activeMenuKey,
+  ]);
 
   useEffect(() => {
     const escapeKeyHandler = (e: KeyboardEvent) => {
@@ -299,7 +331,12 @@ const ExploreV1: React.FC<ExploreProps> = ({
     }
   }, [searchResults]);
 
-  if (tabItems.length === 0 && !searchQueryParam) {
+  if (
+    tabItems.length === 0 &&
+    !searchQueryParam &&
+    !isBarFilterMode &&
+    !sqlQuery
+  ) {
     return <Loader />;
   }
 
@@ -313,7 +350,20 @@ const ExploreV1: React.FC<ExploreProps> = ({
           flex: 0.2,
           minWidth: 280,
           title: t('label.data-asset-plural'),
-          children: <div className="p-x-sm">{exploreLeftPanel}</div>,
+          children: (
+            <div className="p-x-sm">
+              {exploreLeftPanel}
+              <div
+                style={{
+                  display:
+                    searchQueryParam || isBarFilterMode || sqlQuery
+                      ? 'none'
+                      : undefined,
+                }}>
+                <ExploreTree onFieldValueSelect={handleTreeFiltersChange} />
+              </div>
+            </div>
+          ),
         }}
         secondPanel={{
           className: 'content-height-with-resizable-panel',
@@ -486,7 +536,9 @@ const ExploreV1: React.FC<ExploreProps> = ({
         }}
       />
 
-      {searchQueryParam && tabItems.length === 0 && loading && <Loader />}
+      {(searchQueryParam || isBarFilterMode || sqlQuery) &&
+        tabItems.length === 0 &&
+        loading && <Loader />}
     </div>
   );
 };

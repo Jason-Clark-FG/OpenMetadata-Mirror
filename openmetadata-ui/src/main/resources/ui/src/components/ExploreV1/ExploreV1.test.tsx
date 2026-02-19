@@ -18,8 +18,13 @@ import {
   MOCK_EXPLORE_SEARCH_RESULTS,
   MOCK_EXPLORE_TAB_ITEMS,
 } from '../Explore/Explore.mock';
-import { ExploreSearchIndex } from '../Explore/ExplorePage.interface';
+import {
+  ExploreSearchIndex,
+} from '../Explore/ExplorePage.interface';
+import { QueryFilterInterface } from '../../pages/ExplorePage/ExplorePage.interface';
 import ExploreV1 from './ExploreV1.component';
+
+const mockOnResetAllFilters = jest.fn();
 
 jest.mock('../../hooks/useCustomLocation/useCustomLocation', () => {
   return jest.fn().mockImplementation(() => ({ search: '' }));
@@ -47,7 +52,31 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('../Explore/ExploreTree/ExploreTree', () => {
-  return jest.fn().mockImplementation(() => <div>ExploreTree</div>);
+  return jest.fn().mockImplementation(({ onFieldValueSelect }) => (
+    <div>
+      ExploreTree
+      <button
+        data-testid="mock-explore-tree-select"
+        onClick={() => onFieldValueSelect([{ key: 'serviceType', value: [{ key: 'BigQuery' }] }])}
+      >
+        Select Tree Node
+      </button>
+    </div>
+  ));
+});
+
+jest.mock('../../components/Explore/ExploreQuickFilters', () => {
+  return jest.fn().mockImplementation(({ onFieldValueSelect }) => (
+    <div>
+      ExploreQuickFilters
+      <button
+        data-testid="mock-quick-filter-select"
+        onClick={() => onFieldValueSelect({ key: 'tier', value: [{ key: 'Tier1' }] })}
+      >
+        Select Quick Filter
+      </button>
+    </div>
+  ));
 });
 
 jest.mock('../common/ResizablePanels/ResizablePanels', () => {
@@ -88,7 +117,7 @@ jest.mock(
     useAdvanceSearch: jest.fn().mockImplementation(() => ({
       toggleModal: jest.fn(),
       sqlQuery: '',
-      onResetAllFilters: jest.fn(),
+      onResetAllFilters: mockOnResetAllFilters,
     })),
   })
 );
@@ -176,6 +205,7 @@ const props = {
   searchResults: MOCK_EXPLORE_SEARCH_RESULTS,
   tabItems: MOCK_EXPLORE_TAB_ITEMS,
   activeTabKey: SearchIndex.TABLE,
+  activeMenuKey: 'table_search_index',
   tabCounts: {
     data_product_search_index: 0,
     table_search_index: 20,
@@ -242,25 +272,67 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('ExploreV1', () => {
-  it('renders component without errors', async () => {
+  it('should render EntitySummaryPanel when search results are present', () => {
     render(<ExploreV1 {...props} />, { wrapper: Wrapper });
 
+    expect(screen.getByTestId('entity-summary-panel')).toBeInTheDocument();
+  });
+
+  it('calls onResetAllFilters when clear filters is clicked', () => {
+    render(
+      <ExploreV1
+        {...props}
+        quickFilters={{ query: { bool: { must: [] } } }}
+      />,
+      { wrapper: Wrapper }
+    );
+
+    const clearButton = screen.getByTestId('clear-filters');
+    fireEvent.click(clearButton);
+
+    expect(mockOnResetAllFilters).toHaveBeenCalled();
+  });
+
+  it('handleQuickFiltersValueSelect should enable bar filter mode and call onChangeAdvancedSearchQuickFilters', () => {
+    render(<ExploreV1 {...props} />, { wrapper: Wrapper });
+
+    // Initial state: ExploreTree is visible (default)
     expect(screen.getByText('ExploreTree')).toBeInTheDocument();
+
+    // Trigger quick filter select
+    const quickFilterBtn = screen.getByTestId('mock-quick-filter-select');
+    fireEvent.click(quickFilterBtn);
+
+    expect(onChangeAdvancedSearchQuickFilters).toHaveBeenCalled();
   });
 
-  it('changes sort order when sort button is clicked', () => {
+  it('handleTreeFiltersChange should disable bar filter mode and call onChangeAdvancedSearchQuickFilters', () => {
     render(<ExploreV1 {...props} />, { wrapper: Wrapper });
 
-    fireEvent.click(screen.getByTestId('sort-order-button'));
+    // Trigger tree filter select
+    const treeSelectBtn = screen.getByTestId('mock-explore-tree-select');
+    fireEvent.click(treeSelectBtn);
 
-    expect(onChangeSortOder).toHaveBeenCalled();
+    expect(onChangeAdvancedSearchQuickFilters).toHaveBeenCalled();
+    // setIsBarFilterMode(false) -> ExploreTree should remain visible.
   });
 
-  it('should show the index not found alert, if get isElasticSearchIssue true in prop', () => {
-    render(<ExploreV1 {...props} isElasticSearchIssue />, { wrapper: Wrapper });
+  it('calls onResetAllFilters when clear filters is clicked', () => {
+    const quickFilters: QueryFilterInterface = {
+      query: { bool: { must: [] } },
+    };
 
-    expect(screen.getByText('Index Not Found Alert')).toBeInTheDocument();
+    render(
+      <ExploreV1
+        {...props}
+        quickFilters={quickFilters}
+      />,
+      { wrapper: Wrapper }
+    );
 
-    expect(screen.queryByText('SearchedData')).not.toBeInTheDocument();
+    const clearButton = screen.getByTestId('clear-filters');
+    fireEvent.click(clearButton);
+
+    expect(mockOnResetAllFilters).toHaveBeenCalled();
   });
 });

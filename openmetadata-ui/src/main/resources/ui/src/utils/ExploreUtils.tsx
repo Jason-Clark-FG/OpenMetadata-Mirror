@@ -94,11 +94,11 @@ export const getParseValueFromLocation = (
         label: !customLabel
           ? value
           : t('label.no-entity', {
-              entity: translateWithNestedKeys(
-                dataCategory.label,
-                dataCategory.labelKeyOptions
-              ),
-            }),
+            entity: translateWithNestedKeys(
+              dataCategory.label,
+              dataCategory.labelKeyOptions
+            ),
+          }),
       });
     }
   }
@@ -181,8 +181,8 @@ export const getQuickFilterQuery = (data: ExploreQuickFilterField[]) => {
   const quickFilterQuery = isEmpty(must)
     ? undefined
     : {
-        query: { bool: { must } },
-      };
+      query: { bool: { must } },
+    };
 
   return quickFilterQuery;
 };
@@ -264,16 +264,16 @@ export const getSubLevelHierarchyKey = (
 
   const bucketMapping = isDatabaseHierarchy
     ? {
-        [EntityFields.SERVICE_TYPE]: EntityFields.SERVICE,
-        [EntityFields.SERVICE]: EntityFields.DATABASE_DISPLAY_NAME,
-        [EntityFields.DATABASE_DISPLAY_NAME]:
-          EntityFields.DATABASE_SCHEMA_DISPLAY_NAME,
-        [EntityFields.DATABASE_SCHEMA_DISPLAY_NAME]: EntityFields.ENTITY_TYPE,
-      }
+      [EntityFields.SERVICE_TYPE]: EntityFields.SERVICE,
+      [EntityFields.SERVICE]: EntityFields.DATABASE_DISPLAY_NAME,
+      [EntityFields.DATABASE_DISPLAY_NAME]:
+        EntityFields.DATABASE_SCHEMA_DISPLAY_NAME,
+      [EntityFields.DATABASE_SCHEMA_DISPLAY_NAME]: EntityFields.ENTITY_TYPE,
+    }
     : {
-        [EntityFields.SERVICE_TYPE]: EntityFields.SERVICE,
-        [EntityFields.SERVICE]: EntityFields.ENTITY_TYPE,
-      };
+      [EntityFields.SERVICE_TYPE]: EntityFields.SERVICE,
+      [EntityFields.SERVICE]: EntityFields.ENTITY_TYPE,
+    };
 
   return {
     bucket: bucketMapping[key as DatabaseFields] ?? EntityFields.SERVICE_TYPE,
@@ -366,12 +366,12 @@ export const getAggregationOptions = async (
 ) => {
   return isIndependent
     ? postAggregateFieldOptions({
-        index: Array.isArray(index) ? index.join(',') : index,
-        fieldName: key,
-        fieldValue: value,
-        query: filter,
-        size,
-      })
+      index: Array.isArray(index) ? index.join(',') : index,
+      fieldName: key,
+      fieldValue: value,
+      query: filter,
+      size,
+    })
     : getAggregateFieldOptions(index, key, value, filter, undefined, deleted);
 };
 
@@ -518,10 +518,10 @@ export const generateTabItems = (
           <span>
             {!isNil(searchHitCounts)
               ? getCountBadge(
-                  searchHitCounts[tabSearchIndex as ExploreSearchIndex],
-                  '',
-                  tabSearchIndex === searchIndex
-                )
+                searchHitCounts[tabSearchIndex as ExploreSearchIndex],
+                '',
+                tabSearchIndex === searchIndex
+              )
               : getCountBadge()}
           </span>
         </div>
@@ -663,7 +663,45 @@ export const fetchEntityData = async ({
         }
       }
     } else {
-      // If no searchQueryParam, make searchAPICall with current searchIndex
+      // If filters are applied without a text search, fetch per-entity hit counts
+      // so the left panel can display them just like a text search would
+      if (!isEmpty(combinedQueryFilter)) {
+        try {
+          const countPayload = {
+            query: '',
+            pageNumber: 0,
+            pageSize: 0,
+            queryFilter: combinedQueryFilter,
+            searchIndex: SearchIndex.DATA_ASSET,
+            includeDeleted: showDeleted,
+            trackTotalHits: true,
+            fetchSource: false,
+            filters: '',
+          };
+
+          const countRes = await searchRequest(countPayload);
+          const buckets = countRes.aggregations['entityType'].buckets;
+          const counts: Record<string, number> = {};
+
+          buckets.forEach((item) => {
+            const searchIndexKey =
+              item && EntityTypeSearchIndexMapping[item.key as EntityType];
+
+            if (TABS_SEARCH_INDEXES.includes(searchIndexKey)) {
+              counts[searchIndexKey ?? ''] = item.doc_count;
+            }
+          });
+
+          setSearchHitCounts(counts as SearchHitCounts);
+        } catch (error) {
+          if (isElasticsearchError(error)) {
+            setShowIndexNotFoundAlert(true);
+          } else {
+            showErrorToast(error as AxiosError);
+          }
+        }
+      }
+
       const searchPayload = {
         query: '',
         searchIndex,

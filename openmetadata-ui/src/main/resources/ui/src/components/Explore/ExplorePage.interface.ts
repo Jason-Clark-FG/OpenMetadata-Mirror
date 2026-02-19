@@ -86,6 +86,7 @@ export type SearchHitCounts = Record<ExploreSearchIndex, number>;
 export interface ExploreProps {
   aggregations?: Aggregations;
   activeTabKey: SearchIndex;
+  activeMenuKey: string;
   tabItems: ItemType[];
 
   searchResults?: SearchResponse<ExploreSearchIndex>;

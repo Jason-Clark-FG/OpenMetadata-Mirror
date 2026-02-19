@@ -10,12 +10,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { ExploreQuickFilterField } from '../components/Explore/ExplorePage.interface';
+import {
+  ExploreQuickFilterField,
+  ExploreSearchIndex,
+} from '../components/Explore/ExplorePage.interface';
 import { EntityFields } from '../enums/AdvancedSearch.enum';
 import { EntityType } from '../enums/entity.enum';
-import { QueryFieldInterface } from '../pages/ExplorePage/ExplorePage.interface';
+import { SearchIndex } from '../enums/search.enum';
+import {
+  QueryFieldInterface,
+  QueryFilterInterface,
+  TabsInfoData,
+} from '../pages/ExplorePage/ExplorePage.interface';
+import { searchQuery } from '../rest/searchAPI';
 import {
   extractTermKeys,
+  fetchEntityData,
   getExploreQueryFilterMust,
   getQuickFilterObjectForEntities,
   getQuickFilterQuery,
@@ -23,6 +33,20 @@ import {
   getSubLevelHierarchyKey,
   updateTreeData,
 } from './ExploreUtils';
+import { showErrorToast } from './ToastUtils';
+
+jest.mock('../rest/searchAPI', () => ({
+  searchQuery: jest.fn(),
+  nlqSearch: jest.fn(),
+}));
+
+jest.mock('./ToastUtils', () => ({
+  showErrorToast: jest.fn(),
+}));
+
+jest.mock('./ExplorePage/ExplorePageUtils', () => ({
+  getCombinedQueryFilterObject: jest.fn((q1, q2) => ({ ...q1, ...q2 })),
+}));
 
 describe('Explore Utils', () => {
   it('should return undefined if data is empty', () => {
@@ -687,6 +711,146 @@ describe('Explore Utils', () => {
           { key: 'table', label: 'table' },
           { key: 'storedProcedure', label: 'storedProcedure' },
         ],
+      });
+    });
+
+    describe('fetchEntityData', () => {
+      const mockTabsInfo = {
+        [SearchIndex.TABLE]: {
+          label: 'Tables',
+          path: 'tables',
+          icon: jest.fn(),
+        },
+        [SearchIndex.TOPIC]: {
+          label: 'Topics',
+          path: 'topics',
+          icon: jest.fn(),
+        },
+      } as unknown as Record<ExploreSearchIndex, TabsInfoData>;
+
+      const mockSetSearchHitCounts = jest.fn();
+      const mockSetSearchResults = jest.fn();
+      const mockSetUpdatedAggregations = jest.fn();
+      const mockSetShowIndexNotFoundAlert = jest.fn();
+
+      const defaultProps = {
+        searchQueryParam: '',
+        tabsInfo: mockTabsInfo,
+        updatedQuickFilters: undefined,
+        queryFilter: undefined,
+        searchIndex: SearchIndex.TABLE as ExploreSearchIndex,
+        showDeleted: false,
+        sortValue: 'name',
+        sortOrder: 'asc',
+        page: 1,
+        size: 10,
+        isNLPRequestEnabled: false,
+        tab: 'tables',
+        TABS_SEARCH_INDEXES: [
+          SearchIndex.TABLE,
+          SearchIndex.TOPIC,
+        ] as ExploreSearchIndex[],
+        EntityTypeSearchIndexMapping: {
+          [EntityType.TABLE]: SearchIndex.TABLE,
+          [EntityType.TOPIC]: SearchIndex.TOPIC,
+        } as Record<EntityType, ExploreSearchIndex>,
+        setSearchHitCounts: mockSetSearchHitCounts,
+        setSearchResults: mockSetSearchResults,
+        setUpdatedAggregations: mockSetUpdatedAggregations,
+        setShowIndexNotFoundAlert: mockSetShowIndexNotFoundAlert,
+      };
+
+      beforeEach(() => {
+        jest.clearAllMocks();
+      });
+
+      it('should handle text search correctly', async () => {
+        (searchQuery as jest.Mock).mockResolvedValueOnce({
+          aggregations: {
+            entityType: {
+              buckets: [
+                { key: EntityType.TABLE, doc_count: 5 },
+                { key: EntityType.TOPIC, doc_count: 3 },
+              ],
+            },
+          },
+        });
+
+        (searchQuery as jest.Mock).mockResolvedValueOnce({
+          hits: { hits: [] },
+          aggregations: {},
+        });
+
+        await fetchEntityData({
+          ...defaultProps,
+          searchQueryParam: 'test',
+        });
+
+        expect(searchQuery).toHaveBeenCalledTimes(2);
+        expect(mockSetSearchHitCounts).toHaveBeenCalledWith({
+          [SearchIndex.TABLE]: 5,
+          [SearchIndex.TOPIC]: 3,
+        });
+        expect(mockSetSearchResults).toHaveBeenCalled();
+      });
+
+      it('should handle filters without text search correctly (Regression Fix)', async () => {
+        (searchQuery as jest.Mock).mockResolvedValueOnce({
+          aggregations: {
+            entityType: {
+              buckets: [{ key: EntityType.TABLE, doc_count: 2 }],
+            },
+          },
+        });
+
+        (searchQuery as jest.Mock).mockResolvedValueOnce({
+          hits: { hits: [] },
+          aggregations: {},
+        });
+
+        await fetchEntityData({
+          ...defaultProps,
+          searchQueryParam: '',
+          updatedQuickFilters: {
+            query: { bool: { must: [{ term: { 'tags.tagFQN': 'Tier1' } }] } },
+          } as unknown as QueryFilterInterface,
+        });
+
+        // Should call count API first (for left panel), then search API
+        expect(searchQuery).toHaveBeenCalledTimes(2);
+        expect(mockSetSearchHitCounts).toHaveBeenCalledWith({
+          [SearchIndex.TABLE]: 2,
+        });
+        expect(mockSetSearchResults).toHaveBeenCalled();
+      });
+
+      it('should skip count API if no text search and no filters', async () => {
+        (searchQuery as jest.Mock).mockResolvedValueOnce({
+          hits: { hits: [] },
+          aggregations: {},
+        });
+
+        await fetchEntityData({
+          ...defaultProps,
+          searchQueryParam: '',
+          updatedQuickFilters: undefined,
+        });
+
+        expect(searchQuery).toHaveBeenCalledTimes(1); // Only search API
+        expect(mockSetSearchHitCounts).not.toHaveBeenCalled();
+        expect(mockSetSearchResults).toHaveBeenCalled();
+      });
+
+      it('should handle errors gracefully', async () => {
+        const error = new Error('Network Error');
+        (searchQuery as jest.Mock).mockRejectedValue(error);
+
+        await fetchEntityData({
+          ...defaultProps,
+          searchQueryParam: 'test',
+        });
+
+        expect(showErrorToast).toHaveBeenCalledWith(error);
       });
     });
   });

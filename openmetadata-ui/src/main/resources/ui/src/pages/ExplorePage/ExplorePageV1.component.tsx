@@ -172,17 +172,21 @@ const ExplorePageV1: FC<unknown> = () => {
     return isEmpty(must)
       ? undefined
       : {
-          query: {
-            bool: {
-              must,
-            },
+        query: {
+          bool: {
+            must,
           },
-        };
+        },
+      };
   }, [advancedSearchQuickFilters]);
 
   const handleSearchIndexChange: (nSearchIndex: ExploreSearchIndex) => void =
     useCallback(
       (nSearchIndex) => {
+        const filterForNav = searchQueryParam
+          ? commonQuickFilters
+          : advancedSearchQuickFilters;
+
         navigate(
           getExplorePath({
             tab: tabsInfo[nSearchIndex].path,
@@ -191,8 +195,8 @@ const ExplorePageV1: FC<unknown> = () => {
                 ? '_score'
                 : tabsInfo[nSearchIndex].sortField,
               page: '1',
-              quickFilter: commonQuickFilters
-                ? JSON.stringify(commonQuickFilters)
+              quickFilter: filterForNav
+                ? JSON.stringify(filterForNav)
                 : undefined,
               sortOrder: tabsInfo[nSearchIndex]?.sortOrder ?? SORT_ORDER.DESC,
             },
@@ -200,7 +204,7 @@ const ExplorePageV1: FC<unknown> = () => {
           })
         );
       },
-      [commonQuickFilters, searchQueryParam]
+      [commonQuickFilters, advancedSearchQuickFilters, searchQueryParam]
     );
 
   const handleQuickFilterChange = useCallback(
@@ -239,14 +243,18 @@ const ExplorePageV1: FC<unknown> = () => {
   };
 
   const searchIndex = useMemo(() => {
-    if (!searchQueryParam) {
-      return SearchIndex.DATA_ASSET as unknown as ExploreSearchIndex;
-    }
-
     const tabInfo = Object.entries(tabsInfo).find(
       ([, tabInfo]) => tabInfo.path === tab
     );
-    if (searchHitCounts && isNil(tabInfo)) {
+
+    // When a specific tab is in the URL, always use it
+    if (!isNil(tabInfo)) {
+      return tabInfo[0] as ExploreSearchIndex;
+    }
+
+    // No tab in URL + text search: pick the entity type with most results
+    // (preserves original text-search auto-selection behaviour)
+    if (searchQueryParam && searchHitCounts) {
       const activeKey = findActiveSearchIndex(searchHitCounts, tabsInfo);
 
       return (
@@ -254,26 +262,56 @@ const ExplorePageV1: FC<unknown> = () => {
       );
     }
 
-    return !isNil(tabInfo)
-      ? (tabInfo[0] as ExploreSearchIndex)
-      : (SearchIndex.DATA_ASSET as unknown as ExploreSearchIndex);
+    // Browse mode or filter-only with no specific tab: keep DATA_ASSET so the
+    // filter bar retains DATA_ASSET_DROPDOWN_ITEMS (including "Data Assets")
+    return SearchIndex.DATA_ASSET as unknown as ExploreSearchIndex;
   }, [tab, searchHitCounts, searchQueryParam]);
 
   // Use the utility function to generate tab items
   const tabItems = useMemo(() => {
     const items = generateTabItems(tabsInfo, searchHitCounts, searchIndex);
+    const hasActiveSearch =
+      searchQueryParam || parsedSearch.quickFilter || queryFilter;
 
-    return searchQueryParam
+    return hasActiveSearch
       ? items.filter((tabItem) => {
-          return tabItem.count > 0 || tabItem.key === searchCriteria;
-        })
+        return tabItem.count > 0 || tabItem.key === searchCriteria;
+      })
       : items;
   }, [
     tabsInfo,
     searchHitCounts,
     searchIndex,
     searchQueryParam,
+    parsedSearch.quickFilter,
+    queryFilter,
     searchCriteria,
+  ]);
+
+  // When on the all-assets view (searchIndex = DATA_ASSET, no specific tab in URL)
+  // with filters active, highlight the first entity type that has results —
+  // matching text-search behaviour. For all other cases, use searchIndex directly.
+  const activeMenuKey = useMemo(() => {
+    const hasActiveSearch =
+      searchQueryParam || parsedSearch.quickFilter || queryFilter;
+
+    if (
+      hasActiveSearch &&
+      searchIndex === (SearchIndex.DATA_ASSET as unknown as ExploreSearchIndex) &&
+      searchHitCounts
+    ) {
+      const activeKey = findActiveSearchIndex(searchHitCounts, tabsInfo);
+
+      return activeKey ?? searchIndex;
+    }
+
+    return searchIndex;
+  }, [
+    searchIndex,
+    searchHitCounts,
+    searchQueryParam,
+    parsedSearch.quickFilter,
+    queryFilter,
   ]);
 
   useEffect(() => {
@@ -382,6 +420,7 @@ const ExplorePageV1: FC<unknown> = () => {
 
   return (
     <ExploreV1
+      activeMenuKey={activeMenuKey}
       activeTabKey={searchIndex}
       aggregations={updatedAggregations}
       isElasticSearchIssue={showIndexNotFoundAlert}

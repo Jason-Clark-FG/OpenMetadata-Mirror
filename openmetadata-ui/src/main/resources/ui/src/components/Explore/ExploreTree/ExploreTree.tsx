@@ -97,6 +97,15 @@ const ExploreTree = ({ onFieldValueSelect }: ExploreTreeProps) => {
     return searchClassBase.getExploreTreeKey(tab as ExplorePageTabs);
   }, [tab]);
 
+  const [expandedKeys, setExpandedKeys] = useState<Key[]>(defaultExpandedKeys);
+
+  const handleExpand = useCallback<NonNullable<TreeProps['onExpand']>>(
+    (keys) => {
+      setExpandedKeys(keys as Key[]);
+    },
+    []
+  );
+
   const [parsedSearch, searchQueryParam, defaultServiceType] = useMemo(() => {
     const parsedSearch = Qs.parse(
       location.search.startsWith('?')
@@ -135,17 +144,17 @@ const ExploreTree = ({ onFieldValueSelect }: ExploreTreeProps) => {
         const { bucket: bucketToFind, queryFilter } =
           searchQueryParam !== ''
             ? {
-                bucket: EntityFields.ENTITY_TYPE,
-                queryFilter: {
-                  query: { bool: {} },
-                },
-              }
+              bucket: EntityFields.ENTITY_TYPE,
+              queryFilter: {
+                query: { bool: {} },
+              },
+            }
             : getSubLevelHierarchyKey(
-                rootIndex === SearchIndex.DATABASE,
-                (treeNode as ExploreTreeNode)?.data?.filterField,
-                currentBucketKey as EntityFields,
-                currentBucketValue
-              );
+              rootIndex === SearchIndex.DATABASE,
+              (treeNode as ExploreTreeNode)?.data?.filterField,
+              currentBucketKey as EntityFields,
+              currentBucketValue
+            );
 
         const res = await searchQuery({
           query: searchQueryParam ?? '',
@@ -329,6 +338,7 @@ const ExploreTree = ({ onFieldValueSelect }: ExploreTreeProps) => {
     // Tree works on the quickFilter, so we need to reset the selectedKeys when the quickFilter is empty
     if (isEmpty(parsedSearch.quickFilter)) {
       setSelectedKeys([]);
+      setExpandedKeys(defaultExpandedKeys);
     }
   }, [parsedSearch]);
 
@@ -377,7 +387,7 @@ const ExploreTree = ({ onFieldValueSelect }: ExploreTreeProps) => {
       showIcon
       className="explore-tree"
       data-testid="explore-tree"
-      defaultExpandedKeys={defaultExpandedKeys}
+      expandedKeys={expandedKeys}
       loadData={onLoadData}
       selectedKeys={selectedKeys}
       switcherIcon={switcherIcon}
@@ -385,6 +395,7 @@ const ExploreTree = ({ onFieldValueSelect }: ExploreTreeProps) => {
         <ExploreTreeTitle node={node as ExploreTreeNode} />
       )}
       treeData={treeData as DataNode[]}
+      onExpand={handleExpand}
       onSelect={onNodeSelect}
     />
   );
