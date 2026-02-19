@@ -12,6 +12,7 @@
  */
 
 @import 'tailwindcss' prefix(tw);
+@import '../../../../../../../openmetadata-ui-core-components/src/main/resources/ui/src/styles/theme.css';
 
 @source '../';
 
