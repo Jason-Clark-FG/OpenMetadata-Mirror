@@ -97,11 +97,9 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
         LOG.info("Using in-cluster Kubernetes configuration");
       } else {
         String kubeconfigPath =
-            String.valueOf(
-                getSecretsConfig()
-                    .parameters()
-                    .getAdditionalProperties()
-                    .getOrDefault(KUBECONFIG_PATH, ""));
+            Objects.toString(
+                getSecretsConfig().parameters().getAdditionalProperties().get(KUBECONFIG_PATH),
+                "");
         if (StringUtils.isNotBlank(kubeconfigPath)) {
           client = Config.fromConfig(kubeconfigPath);
           LOG.info("Using kubeconfig from path: {}", kubeconfigPath);
@@ -115,11 +113,9 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
       this.apiClient = new CoreV1Api(client);
 
       this.namespace =
-          String.valueOf(
-              getSecretsConfig()
-                  .parameters()
-                  .getAdditionalProperties()
-                  .getOrDefault(NAMESPACE, DEFAULT_NAMESPACE));
+          Objects.toString(
+              getSecretsConfig().parameters().getAdditionalProperties().get(NAMESPACE),
+              DEFAULT_NAMESPACE);
       LOG.info("Kubernetes SecretsManager initialized with namespace: {}", namespace);
 
     } catch (Exception e) {
