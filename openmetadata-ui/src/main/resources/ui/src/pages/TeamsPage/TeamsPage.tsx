@@ -200,6 +200,7 @@ const TeamsPage = () => {
 
   const fetchAssets = async (selectedTeam: Team) => {
     if (selectedTeam.id && selectedTeam.teamType !== TeamType.Organization) {
+      setAllTeamIds([selectedTeam.id]);
       try {
         // Collect all team IDs (current team + all descendants)
         const teamIds = await collectAllTeamIds(selectedTeam);

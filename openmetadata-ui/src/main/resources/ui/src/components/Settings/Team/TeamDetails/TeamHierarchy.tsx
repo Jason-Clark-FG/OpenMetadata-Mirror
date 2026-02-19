@@ -73,6 +73,12 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   const fetchedTeamIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    fetchedTeamIdsRef.current = new Set();
+    setAssetCounts({});
+    setLoadingCountIds(new Set());
+  }, [currentTeam?.id]);
+
+  useEffect(() => {
     if (isFetchingAllTeamAdvancedDetails) {
       return;
     }
