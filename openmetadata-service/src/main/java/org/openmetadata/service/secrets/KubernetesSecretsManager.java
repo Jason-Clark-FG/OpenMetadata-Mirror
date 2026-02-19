@@ -97,12 +97,15 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
         LOG.info("Using in-cluster Kubernetes configuration");
       } else {
         String kubeconfigPath =
-            (String) getSecretsConfig().parameters().getAdditionalProperties().get(KUBECONFIG_PATH);
+            String.valueOf(
+                getSecretsConfig()
+                    .parameters()
+                    .getAdditionalProperties()
+                    .getOrDefault(KUBECONFIG_PATH, ""));
         if (StringUtils.isNotBlank(kubeconfigPath)) {
           client = Config.fromConfig(kubeconfigPath);
           LOG.info("Using kubeconfig from path: {}", kubeconfigPath);
         } else {
-          // Default to ~/.kube/config
           client = Config.defaultClient();
           LOG.info("Using default kubeconfig");
         }
@@ -111,16 +114,15 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
       Configuration.setDefaultApiClient(client);
       this.apiClient = new CoreV1Api(client);
 
-      // Set namespace
       this.namespace =
-          (String)
+          String.valueOf(
               getSecretsConfig()
                   .parameters()
                   .getAdditionalProperties()
-                  .getOrDefault(NAMESPACE, DEFAULT_NAMESPACE);
+                  .getOrDefault(NAMESPACE, DEFAULT_NAMESPACE));
       LOG.info("Kubernetes SecretsManager initialized with namespace: {}", namespace);
 
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new SecretsManagerException("Failed to initialize Kubernetes client", e);
     }
   }
