@@ -712,7 +712,8 @@
         "normalizer": "lowercase_normalizer"
       },
       "lifeCycle": {
-        "type": "keyword"
+        "type": "object",
+        "dynamic": false
       },
       "totalVotes": {
         "type": "long",
