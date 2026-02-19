@@ -373,7 +373,7 @@ public class ElasticSearchBulkSink implements BulkSink {
                                       .action(
                                           a -> a.doc(EsUtils.toJsonData(json)).docAsUpsert(true))));
             }
-            bulkProcessor.add(operation, docId, Entity.TABLE_COLUMN);
+            bulkProcessor.add(operation);
             columnIndexed.incrementAndGet();
           } catch (Exception e) {
             columnFailed.incrementAndGet();

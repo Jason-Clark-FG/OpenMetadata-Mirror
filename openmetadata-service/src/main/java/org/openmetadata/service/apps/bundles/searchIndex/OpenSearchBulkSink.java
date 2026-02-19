@@ -428,7 +428,7 @@ public class OpenSearchBulkSink implements BulkSink {
                                       .document(OsUtils.toJsonData(json))
                                       .docAsUpsert(true)));
             }
-            bulkProcessor.add(operation, docId, Entity.TABLE_COLUMN);
+            bulkProcessor.add(operation);
             columnIndexed.incrementAndGet();
           } catch (Exception e) {
             columnFailed.incrementAndGet();
