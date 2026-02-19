@@ -138,6 +138,16 @@ const CustomiseLandingPageHeader = ({
     [updateActiveDomain, navigate]
   );
 
+  const domainDisplayName = useMemo(() => {
+    if (activeDomainEntityRef) {
+      return getEntityName(activeDomainEntityRef);
+    }
+
+    return activeDomain === DEFAULT_DOMAIN_VALUE
+      ? t('label.all-domain-plural')
+      : activeDomain;
+  }, [activeDomainEntityRef, activeDomain, t]);
+
   const navigateToEntity = (data: {
     entityType: string;
     fullyQualifiedName: string;
@@ -221,9 +231,7 @@ const CustomiseLandingPageHeader = ({
                     width={22}
                   />
                   <Typography.Text className="text-sm font-medium domain-title">
-                    {activeDomainEntityRef
-                      ? getEntityName(activeDomainEntityRef)
-                      : activeDomain}
+                    {domainDisplayName}
                   </Typography.Text>
                   <DropdownIcon
                     className="dropdown-icon"

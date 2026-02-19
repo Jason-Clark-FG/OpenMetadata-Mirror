@@ -429,6 +429,18 @@ const NavBar = () => {
     []
   );
 
+  // Extracted domain display name logic to avoid nested ternary in JSX
+  const domainDisplayName = useMemo(() => {
+    if (activeDomainEntityRef) {
+      return getEntityName(activeDomainEntityRef);
+    }
+    if (activeDomain === DEFAULT_DOMAIN_VALUE) {
+      return t('label.all-domain-plural');
+    }
+
+    return activeDomain;
+  }, [activeDomainEntityRef, activeDomain, t]);
+
   const handleLanguageChange = useCallback(({ key }: MenuInfo) => {
     i18next.changeLanguage(key);
     setPreference({ language: key as SupportedLocales });
@@ -496,9 +508,7 @@ const NavBar = () => {
                       width={20}
                     />
                     <Typography.Text ellipsis className="domain-text">
-                      {activeDomainEntityRef
-                        ? getEntityName(activeDomainEntityRef)
-                        : activeDomain}
+                      {domainDisplayName}
                     </Typography.Text>
                     <DropDownIcon width={12} />
                   </Button>
