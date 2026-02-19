@@ -485,6 +485,8 @@ export const DataAssetSummaryPanelV1 = ({
             )}
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -601,6 +603,8 @@ export const DataAssetSummaryPanelV1 = ({
             <span className="d-none" data-testid="KnowledgePageSummary" />
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -648,6 +652,8 @@ export const DataAssetSummaryPanelV1 = ({
           <>
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -734,6 +740,8 @@ export const DataAssetSummaryPanelV1 = ({
           <>
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />

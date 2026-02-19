@@ -96,6 +96,7 @@ import {
   patchTableDetails,
 } from '../../../rest/tableAPI';
 import { getTopicByFqn, patchTopicDetails } from '../../../rest/topicsAPI';
+import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import {
   DRAWER_NAVIGATION_OPTIONS,
   getEntityLinkFromType,
@@ -107,7 +108,7 @@ import {
 } from '../../../utils/PermissionsUtils';
 import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import searchClassBase from '../../../utils/SearchClassBase';
-import { showErrorToast } from '../../../utils/ToastUtils';
+import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import EntityDetailsSection from '../../common/EntityDetailsSection/EntityDetailsSection';
 import { EntityTitleSection } from '../../common/EntityTitleSection/EntityTitleSection';
@@ -325,7 +326,7 @@ export default function EntitySummaryPanel({
           fullyQualifiedName: entityDetails.details.fullyQualifiedName,
           id: entityDetails.details.id,
           description: data.description ?? entityDetails.details.description,
-          displayName: entityDetails.details.displayName,
+          displayName: data.displayName,
           name: entityDetails.details.name,
           deleted: entityDetails.details.deleted,
           serviceType: (entityDetails.details as any).serviceType,
@@ -475,11 +476,57 @@ export default function EntitySummaryPanel({
   );
 
   const handleTagsUpdate = useCallback(
-    (updatedTags: TagLabel[]) => {
-      // TagsSection already includes all tags (glossary, tier, and classification)
-      updateEntityData({ tags: updatedTags });
+    async (updatedTags: TagLabel[]) => {
+      if (onEntityUpdate) {
+        onEntityUpdate({ tags: updatedTags });
+
+        return updatedTags;
+      }
+
+      const baseData = entityData ?? entityDetails.details;
+      const jsonPatch = compare(baseData, {
+        ...baseData,
+        tags: updatedTags,
+      });
+
+      if (isEmpty(jsonPatch)) {
+        return updatedTags;
+      }
+
+      try {
+        const apiFunc = entityUpdateMap[entityType];
+        if (apiFunc && id) {
+          const res = await apiFunc(id, jsonPatch);
+          setEntityData((prev: EntityData) => ({
+            ...(prev || entityDetails.details),
+            ...(res as Partial<EntityData>),
+          }));
+
+          showSuccessToast(
+            t('server.update-entity-success', {
+              entity: t('label.tag-plural'),
+            })
+          );
+
+          return (res as EntityData).tags;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        throw error;
+      }
+
+      return undefined;
     },
-    [updateEntityData]
+    [
+      onEntityUpdate,
+      entityData,
+      entityDetails.details,
+      entityType,
+      id,
+      entityUpdateMap,
+      t,
+    ]
   );
 
   const handleTierUpdate = useCallback(
@@ -505,11 +552,56 @@ export default function EntitySummaryPanel({
 
   const handleGlossaryTermsUpdate = useCallback(
     async (updatedTags: TagLabel[]) => {
-      // The child component (`GlossaryTermsSection`) now handles the API call.
-      // We just need to update the parent's state with the new tags.
-      updateEntityData({ tags: updatedTags });
+      if (onEntityUpdate) {
+        onEntityUpdate({ tags: updatedTags });
+
+        return updatedTags;
+      }
+
+      const baseData = entityData ?? entityDetails.details;
+      const jsonPatch = compare(baseData, {
+        ...baseData,
+        tags: updatedTags,
+      });
+
+      if (isEmpty(jsonPatch)) {
+        return updatedTags;
+      }
+
+      try {
+        const apiFunc = entityUpdateMap[entityType];
+        if (apiFunc && id) {
+          const res = await apiFunc(id, jsonPatch);
+          setEntityData((prev: EntityData) => ({
+            ...(prev || entityDetails.details),
+            ...(res as Partial<EntityData>),
+          }));
+
+          showSuccessToast(
+            t('server.update-entity-success', {
+              entity: t('label.glossary-term-plural'),
+            })
+          );
+
+          return (res as EntityData).tags;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        throw error;
+      }
+
+      return undefined;
     },
-    [updateEntityData]
+    [
+      onEntityUpdate,
+      entityData,
+      entityDetails.details,
+      entityType,
+      id,
+      entityUpdateMap,
+      t,
+    ]
   );
 
   const handleDescriptionUpdate = useCallback(
@@ -517,6 +609,13 @@ export default function EntitySummaryPanel({
       updateEntityData({ description: updatedDescription });
     },
     [updateEntityData]
+  );
+
+  const handleDisplayNameUpdate = useCallback(
+    (updatedDisplayName: string) => {
+      updateEntityData({ displayName: updatedDisplayName });
+    },
+    [entityData, updateEntityData]
   );
 
   const handleExtensionUpdate = useCallback(
@@ -739,24 +838,64 @@ export default function EntitySummaryPanel({
   };
 
   const renderTabContent = () => {
+    if (isPermissionLoading) {
+      return <Loader />;
+    }
+
+    if (!viewPermission) {
+      return (
+        <>
+          {!isSideDrawer && (
+            <EntityTitleSection
+              className="title-section"
+              entityDetails={entityDetails.details}
+              entityDisplayName={entityData?.displayName}
+              entityLink={entityLink}
+              entityType={entityType}
+              hasEditPermission={getPrioritizedEditPermission(
+                entityPermissions,
+                Operation.EditDisplayName
+              )}
+              onDisplayNameUpdate={handleDisplayNameUpdate}
+            />
+          )}
+          <ErrorPlaceHolder
+            className="border-none h-min-80"
+            permissionValue={t('label.view-entity', {
+              entity: t('label.data-asset'),
+            })}
+            size={SIZE.MEDIUM}
+            type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+          />
+        </>
+      );
+    }
     switch (activeTab) {
       case EntityRightPanelTab.OVERVIEW:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
+                entityDisplayName={entityData?.displayName}
                 entityLink={entityLink}
+                entityType={entityType}
+                hasEditPermission={getPrioritizedEditPermission(
+                  entityPermissions,
+                  Operation.EditDisplayName
+                )}
+                onDisplayNameUpdate={handleDisplayNameUpdate}
               />
             )}
+
             <div className="overview-tab-content">{summaryComponentV1}</div>
           </>
         );
       case EntityRightPanelTab.SCHEMA:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -776,11 +915,17 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.LINEAGE:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
                 entityLink={entityLink}
+                entityType={entityType}
+                hasEditPermission={getPrioritizedEditPermission(
+                  entityPermissions,
+                  Operation.EditDisplayName
+                )}
+                onDisplayNameUpdate={handleDisplayNameUpdate}
               />
             )}
             <div className="entity-summary-panel-tab-content">
@@ -791,7 +936,7 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.DATA_QUALITY:
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -807,7 +952,7 @@ export default function EntitySummaryPanel({
       case EntityRightPanelTab.CUSTOM_PROPERTIES: {
         return (
           <>
-            {viewPermission && !isSideDrawer && (
+            {!isSideDrawer && (
               <EntityTitleSection
                 className="title-section"
                 entityDetails={entityDetails.details}
@@ -815,6 +960,9 @@ export default function EntitySummaryPanel({
               />
             )}
             <CustomPropertiesSection
+              emptyStateMessage={entityUtilClassBase.getFormattedEntityType(
+                entityType
+              )}
               entityData={entityData}
               entityDetails={entityDetails}
               entityType={entityType}
@@ -851,9 +999,16 @@ export default function EntitySummaryPanel({
           <EntityTitleSection
             className="drawer-title-section"
             entityDetails={entityDetails.details}
+            entityDisplayName={entityData?.displayName}
             entityLink={entityLink}
+            entityType={entityType}
+            hasEditPermission={getPrioritizedEditPermission(
+              entityPermissions,
+              Operation.EditDisplayName
+            )}
             testId="entity-header-title"
             tooltipPlacement="bottomLeft"
+            onDisplayNameUpdate={handleDisplayNameUpdate}
           />
           <Button
             aria-label={t('label.close')}
