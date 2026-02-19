@@ -127,8 +127,24 @@ public class FetchEntitiesImpl implements JavaDelegate {
   private SearchResultListMapper fetchEntities(
       List<Object> searchAfterList, String entityType, String searchFilter, int batchSize) {
     SearchRepository searchRepository = Entity.getSearchRepository();
-    SearchSortFilter searchSortFilter =
-        new SearchSortFilter("fullyQualifiedName", null, null, null);
+
+    // Skip entity types that don't have search indices (e.g., dataContract, dataInsightChart,
+    // report)
+    if (!searchRepository.checkIfIndexingIsSupported(entityType)) {
+      LOG.warn(
+          "Entity type '{}' does not have a search index. Skipping fetch for this type.",
+          entityType);
+      return new SearchResultListMapper(List.of(), 0);
+    }
+
+    // Use .keyword suffix for entities with text fields
+    String sortField = "fullyQualifiedName";
+    if (entityType.equals("testCase")
+        || entityType.equals("user")
+        || entityType.equals("team")) {
+      sortField = "fullyQualifiedName.keyword";
+    }
+    SearchSortFilter searchSortFilter = new SearchSortFilter(sortField, null, null, null);
     Object[] searchAfter = searchAfterList.isEmpty() ? null : searchAfterList.toArray();
 
     try {

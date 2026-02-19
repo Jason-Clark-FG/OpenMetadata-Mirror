@@ -7,9 +7,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -274,6 +276,54 @@ public class WorkflowHandler {
             triggerWorkflowKey,
             e.getMessage());
       }
+
+      // Step 3: Delete old deployments (cascade=false) to remove orphaned process definitions.
+      // cascade=false preserves act_hi_* history tables which can have millions of rows.
+      // Two-pass approach: multiple process definitions can share the same deployment,
+      // so we must clean up ALL runtime job FK references first, then delete deployments.
+      try {
+        List<ProcessDefinition> oldTriggerDefinitions =
+            repositoryService
+                .createProcessDefinitionQuery()
+                .processDefinitionKeyLike(triggerWorkflowKey + "%")
+                .list();
+
+        List<ProcessDefinition> oldMainDefinitions =
+            repositoryService
+                .createProcessDefinitionQuery()
+                .processDefinitionKey(workflowName)
+                .list();
+
+        // Pass 1: Clean up runtime jobs for ALL process definitions first.
+        for (ProcessDefinition pd : oldTriggerDefinitions) {
+          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+        }
+        for (ProcessDefinition pd : oldMainDefinitions) {
+          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+        }
+
+        // Pass 2: Delete deployments (deduplicated — multiple PDs can share one deployment).
+        Set<String> deletedDeployments = new HashSet<>();
+        for (ProcessDefinition pd : oldTriggerDefinitions) {
+          if (deletedDeployments.add(pd.getDeploymentId())) {
+            LOG.info(
+                "Removing old trigger deployment: {} (key: {})", pd.getDeploymentId(), pd.getKey());
+            repositoryService.deleteDeployment(pd.getDeploymentId(), false);
+          }
+        }
+        for (ProcessDefinition pd : oldMainDefinitions) {
+          if (deletedDeployments.add(pd.getDeploymentId())) {
+            LOG.info(
+                "Removing old main workflow deployment: {} (key: {})",
+                pd.getDeploymentId(),
+                pd.getKey());
+            repositoryService.deleteDeployment(pd.getDeploymentId(), false);
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn(
+            "Error removing old deployments for workflow {}: {}", workflowName, e.getMessage());
+      }
     }
 
     // Deploy Main Workflow
@@ -309,24 +359,73 @@ public class WorkflowHandler {
 
   public void deleteWorkflowDefinition(WorkflowDefinition wf) {
     RepositoryService repositoryService = processEngine.getRepositoryService();
+    ManagementService managementService = processEngine.getManagementService();
+
     List<ProcessDefinition> processDefinitions =
         repositoryService.createProcessDefinitionQuery().processDefinitionKey(wf.getName()).list();
 
-    for (ProcessDefinition processDefinition : processDefinitions) {
-      String deploymentId = processDefinition.getDeploymentId();
-      repositoryService.deleteDeployment(deploymentId, true);
-    }
-
-    // Also Delete the Trigger
-    List<ProcessDefinition> triggerProcessDefinition =
+    String triggerWorkflowId = getTriggerWorkflowId(wf.getName());
+    List<ProcessDefinition> triggerProcessDefinitions =
         repositoryService
             .createProcessDefinitionQuery()
-            .processDefinitionKey(getTriggerWorkflowId(wf.getName()))
+            .processDefinitionKeyLike(triggerWorkflowId + "%")
             .list();
 
-    for (ProcessDefinition processDefinition : triggerProcessDefinition) {
-      String deploymentId = processDefinition.getDeploymentId();
-      repositoryService.deleteDeployment(deploymentId, true);
+    // Pass 1: Clean up runtime jobs for ALL process definitions first.
+    for (ProcessDefinition pd : processDefinitions) {
+      deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+    }
+    for (ProcessDefinition pd : triggerProcessDefinitions) {
+      deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+    }
+
+    // Pass 2: Delete deployments (deduplicated — multiple PDs can share one deployment).
+    Set<String> deletedDeployments = new HashSet<>();
+    for (ProcessDefinition pd : processDefinitions) {
+      if (deletedDeployments.add(pd.getDeploymentId())) {
+        repositoryService.deleteDeployment(pd.getDeploymentId(), false);
+      }
+    }
+    for (ProcessDefinition pd : triggerProcessDefinitions) {
+      if (deletedDeployments.add(pd.getDeploymentId())) {
+        repositoryService.deleteDeployment(pd.getDeploymentId(), false);
+      }
+    }
+  }
+
+  private void deleteRuntimeJobsForProcessDefinition(
+      ManagementService managementService, String processDefinitionId) {
+    RuntimeService runtimeService = processEngine.getRuntimeService();
+    for (ProcessInstance instance :
+        runtimeService
+            .createProcessInstanceQuery()
+            .processDefinitionId(processDefinitionId)
+            .list()) {
+      LOG.info(
+          "Deleting process instance {} for procDef {}", instance.getId(), processDefinitionId);
+      runtimeService.deleteProcessInstance(instance.getId(), "Cleanup before redeployment");
+    }
+    for (Job job :
+        managementService
+            .createDeadLetterJobQuery()
+            .processDefinitionId(processDefinitionId)
+            .list()) {
+      managementService.deleteDeadLetterJob(job.getId());
+    }
+    for (Job job :
+        managementService.createTimerJobQuery().processDefinitionId(processDefinitionId).list()) {
+      managementService.deleteTimerJob(job.getId());
+    }
+    for (Job job :
+        managementService
+            .createSuspendedJobQuery()
+            .processDefinitionId(processDefinitionId)
+            .list()) {
+      managementService.deleteSuspendedJob(job.getId());
+    }
+    for (Job job :
+        managementService.createJobQuery().processDefinitionId(processDefinitionId).list()) {
+      managementService.deleteJob(job.getId());
     }
   }
 
