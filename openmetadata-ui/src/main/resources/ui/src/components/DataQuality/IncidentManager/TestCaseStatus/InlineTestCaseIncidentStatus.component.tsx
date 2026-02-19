@@ -56,7 +56,7 @@ import {
   getEntityReferenceFromEntity,
 } from '../../../../utils/EntityUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
-import Loader from '../../../common/Loader/Loader';
+import { ProgressBarCircle } from '@openmetadata/ui-core-components';
 import { RequiredLabel } from '../../../common/MuiComponents/RequiredLabel/RequiredLabel.styled';
 import { UserTag } from '../../../common/UserTag/UserTag.component';
 import { InlineTestCaseIncidentStatusProps } from './TestCaseIncidentManagerStatus.interface';
@@ -372,7 +372,11 @@ const InlineTestCaseIncidentStatus = ({
     if (isLoadingUsers) {
       return (
         <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-          <Loader size="small" />
+          <ProgressBarCircle
+            size="xxs"
+            value={75}
+            valueFormatter={() => ''}
+          />
         </Box>
       );
     }

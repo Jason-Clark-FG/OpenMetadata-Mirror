@@ -29,6 +29,8 @@ import {
   convertSecondsToHumanReadableFormat,
   formatDateTime,
 } from '../../../../utils/date-time/DateTimeUtils';
+import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
+import { getTestCaseDetailPagePath } from '../../../../utils/RouterUtils';
 import { getTaskDetailPath } from '../../../../utils/TasksUtils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
 import './test-summary-custom-tooltip.less';
@@ -38,6 +40,7 @@ const OMITTED_TOOLTIP_PAYLOAD_KEYS = [
   'status',
   'incidentId',
   'task',
+  'testCaseFqn',
   'passedRows',
   'failedRows',
   'boundArea',
@@ -81,6 +84,7 @@ const TestSummaryCustomTooltip = (
       passedRows,
       failedRows,
       incidentId: payloadData.incidentId as string | undefined,
+      testCaseFqn: payloadData.testCaseFqn as string | undefined,
       task: payloadData.task as Thread | undefined,
       totalRows,
       formattedDateTime,
@@ -130,6 +134,7 @@ const TestSummaryCustomTooltip = (
     passedRows,
     failedRows,
     incidentId,
+    testCaseFqn,
     task,
     totalRows,
     formattedDateTime,
@@ -168,21 +173,32 @@ const TestSummaryCustomTooltip = (
               </span>
               <span className="font-medium" data-testid="incident">
                 <Link
-                  className="font-medium cursor-pointer"
+                  className="tooltip-incident-link font-medium cursor-pointer"
                   to={getTaskDetailPath(task)}>
                   {`#${task.task.id}`}
                 </Link>
               </span>
             </li>
           )}
-          {/* Incident ID (if task not present) */}
+          {/* Incident ID (if task not present) - show as link when testCaseFqn available */}
           {incidentId && !task?.task && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
               <span className="flex items-center text-grey-muted">
                 {t('label.incident')}
               </span>
               <span className="font-medium" data-testid="incident">
-                {`#${incidentId}`}
+                {testCaseFqn ? (
+                  <Link
+                    className="tooltip-incident-link font-medium cursor-pointer"
+                    to={getTestCaseDetailPagePath(
+                      testCaseFqn,
+                      TestCasePageTabs.ISSUES
+                    )}>
+                    {`#${incidentId}`}
+                  </Link>
+                ) : (
+                  `#${incidentId}`
+                )}
               </span>
             </li>
           )}

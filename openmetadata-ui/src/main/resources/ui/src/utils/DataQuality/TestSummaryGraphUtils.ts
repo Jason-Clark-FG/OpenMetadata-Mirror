@@ -30,12 +30,14 @@ export type PrepareChartDataType = {
   testCaseParameterValue: TestCaseParameterValue[];
   testCaseResults: TestCaseResult[];
   entityThread: Thread[];
+  testCaseFqn?: string;
 };
 
 export const prepareChartData = ({
   testCaseParameterValue,
   testCaseResults,
   entityThread,
+  testCaseFqn,
 }: PrepareChartDataType) => {
   // Bond will only be shown if params length is 2 and both values are present
   const params =
@@ -89,6 +91,7 @@ export const prepareChartData = ({
       ...omitBy(metric, isUndefined),
       boundArea,
       incidentId: result.incidentId,
+      testCaseFqn,
       task: entityThread.find(
         (task) => task.task?.testCaseResolutionStatusId === result.incidentId
       ),

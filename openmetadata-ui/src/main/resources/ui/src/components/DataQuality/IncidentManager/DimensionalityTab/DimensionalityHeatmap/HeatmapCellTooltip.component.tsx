@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Box, Card, Divider, Stack, Typography } from '@mui/material';
 import { isUndefined } from 'lodash';
 import { FC, ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,24 +27,12 @@ interface TooltipRowProps {
 
 const TooltipRow: FC<TooltipRowProps> = ({ label, value }) => {
   return (
-    <Box className="d-flex items-center justify-between " gap={20}>
-      <Typography
-        sx={(theme) => ({
-          color: theme.palette.allShades.gray[700],
-          fontSize: theme.typography.pxToRem(TOOLTIP_STYLES.CONTENT_FONT_SIZE),
-          whiteSpace: 'nowrap',
-        })}>
-        {label}
-      </Typography>
-      <Typography
-        sx={(theme) => ({
-          color: theme.palette.allShades.gray[900],
-          fontWeight: theme.typography.fontWeightMedium,
-          fontSize: theme.typography.pxToRem(TOOLTIP_STYLES.CONTENT_FONT_SIZE),
-        })}>
-        {value}
-      </Typography>
-    </Box>
+    <div
+      className="d-flex items-center justify-between tw:flex tw:items-center tw:justify-between tw:gap-5"
+      style={{ fontSize: TOOLTIP_STYLES.CONTENT_FONT_SIZE }}>
+      <span className="tw:whitespace-nowrap tw:text-gray-700">{label}</span>
+      <span className="tw:font-medium tw:text-gray-900">{value}</span>
+    </div>
   );
 };
 
@@ -94,27 +81,23 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
   );
 
   return (
-    <Card
-      sx={(theme) => ({
-        p: TOOLTIP_STYLES.CARD_PADDING,
-        bgcolor: theme.palette.allShades.white,
-      })}>
-      <Typography
-        sx={(theme) => ({
-          color: theme.palette.allShades.gray[900],
-          fontWeight: theme.typography.fontWeightMedium,
-          fontSize: theme.typography.pxToRem(TOOLTIP_STYLES.HEADER_FONT_SIZE),
-        })}>
+    <div
+      className="tw:rounded-lg tw:bg-white tw:shadow-sm"
+      style={{ padding: TOOLTIP_STYLES.CARD_PADDING }}>
+      <span
+        className="tw:block tw:text-gray-900 tw:font-medium"
+        style={{ fontSize: TOOLTIP_STYLES.HEADER_FONT_SIZE }}>
         {cell.date}
-      </Typography>
-      <Divider
-        sx={(theme) => ({
-          my: TOOLTIP_STYLES.DIVIDER_MARGIN,
-          borderStyle: 'dashed',
-          borderColor: theme.palette.allShades.gray[300],
-        })}
+      </span>
+      <div
+        aria-hidden
+        className="tw:my-2 tw:border-b tw:border-dashed tw:border-gray-300"
+        role="separator"
+        style={{ marginTop: TOOLTIP_STYLES.DIVIDER_MARGIN, marginBottom: TOOLTIP_STYLES.DIVIDER_MARGIN }}
       />
-      <Stack spacing={TOOLTIP_STYLES.STACK_SPACING}>
+      <div
+        className="tw:flex tw:flex-col tw:gap-2"
+        style={{ gap: TOOLTIP_STYLES.STACK_SPACING }}>
         {rows.map(
           (row) =>
             !isUndefined(row.value) && (
@@ -130,7 +113,7 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
               value={resultValue.value || '-'}
             />
           ))}
-      </Stack>
-    </Card>
+      </div>
+    </div>
   );
 };

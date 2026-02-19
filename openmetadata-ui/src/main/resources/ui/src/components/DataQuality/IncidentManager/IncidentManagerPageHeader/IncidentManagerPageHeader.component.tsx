@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Box } from '@mui/material';
 import { Divider, Skeleton, Space, Tooltip, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
@@ -301,7 +300,7 @@ const IncidentManagerPageHeader = ({
           />
         </Typography.Text>
         <Divider className="self-center m-x-sm" type="vertical" />
-        <Box data-testid="assignee">
+        <div className="tw:w-full" data-testid="assignee">
           <OwnerLabel
             hasPermission={hasEditStatusPermission}
             isCompactView={false}
@@ -316,7 +315,7 @@ const IncidentManagerPageHeader = ({
             })}
             onUpdate={handleAssigneeUpdate}
           />
-        </Box>
+        </div>
         <Divider className="self-center m-x-sm" type="vertical" />
         <Typography.Text className="d-flex flex-col  gap-2 whitespace-nowrap">
           <Severity

@@ -11,16 +11,7 @@
  *  limitations under the License.
  */
 
-import type { SxProps, Theme } from '@mui/material';
-import {
-  Box,
-  Divider,
-  Grid,
-  Stack,
-  SvgIcon,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Tooltip } from 'antd';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import chunk from 'lodash/chunk';
@@ -75,26 +66,17 @@ import testCaseResultTabClassBase from './TestCaseResultTabClassBase';
 function ParameterTooltipText({
   className,
   title,
-  valueSx,
+  valueClassName,
 }: {
   className: string;
   title: string;
-  valueSx?: SxProps<Theme>;
+  valueClassName?: string;
 }) {
+  const combinedClassName = valueClassName ?? className;
+
   return (
-    <Tooltip
-      placement="bottom-start"
-      slotProps={{
-        tooltip: {
-          sx: {
-            maxWidth: '100%',
-          },
-        },
-      }}
-      title={title}>
-      <Typography noWrap className={className} sx={valueSx} variant="body2">
-        {title}
-      </Typography>
+    <Tooltip placement="bottomLeft" title={title}>
+      <span className={combinedClassName}>{title}</span>
     </Tooltip>
   );
 }
@@ -310,10 +292,9 @@ const TestCaseResultTab = () => {
         label: t('label.dynamic-assertion'),
         value: (
           <label
-            className="d-inline-flex items-center gap-2 parameter-value-text"
+            className="d-inline-flex items-center gap-2 parameter-value-text tw:inline-flex tw:items-center tw:gap-2"
             data-testid="dynamic-assertion">
-            <SvgIcon component={StarIcon} fontSize="small" />{' '}
-            {t('label.dynamic-assertion')}
+            <StarIcon aria-hidden className="tw:h-4 tw:w-4" />
           </label>
         ),
       });
@@ -347,50 +328,53 @@ const TestCaseResultTab = () => {
     (items: Array<{ label: string; value: string | React.ReactNode }>) => {
       if (items.length === 0) {
         return (
-          <Typography color="text.secondary" variant="body2">
+          <span className="tw:text-body tw:text-tertiary">
             {t('label.no-parameter-available')}
-          </Typography>
+          </span>
         );
       }
 
-      // Group items into rows of 2
       const rows = chunk(items, 2);
 
       return (
         <div className="parameter-rows-container">
           {rows.map((row, rowIndex) => {
-            // Create a stable key from the row items' labels
             const rowKey = row.map((item) => item.label).join('-');
 
             return (
               <div key={rowKey}>
-                <Grid container className="parameter-row" spacing={2}>
+                <div className="parameter-row">
                   {row.map((item) => (
-                    <Grid key={item.label} size={row.length === 1 ? 8 : 6}>
-                      <Stack
-                        alignItems="flex-start"
-                        direction="row"
-                        spacing={0.5}
-                        sx={{ width: '100%' }}>
+                    <div
+                      className={
+                        row.length === 1
+                          ? 'parameter-row-cell parameter-row-cell--full'
+                          : 'parameter-row-cell parameter-row-cell--half'
+                      }
+                      key={item.label}>
+                      <div className="parameter-row-cell-content">
                         <ParameterTooltipText
                           className="parameter-label"
                           title={`${item.label}:`}
                         />
                         {typeof item.value === 'string' ? (
                           <ParameterTooltipText
-                            className="parameter-value-text"
+                            className="parameter-value-text parameter-value-text-flex"
                             title={item.value}
-                            valueSx={{ flex: 1, minWidth: 0 }}
                           />
                         ) : (
                           item.value
                         )}
-                      </Stack>
-                    </Grid>
+                      </div>
+                    </div>
                   ))}
-                </Grid>
+                </div>
                 {rowIndex < rows.length - 1 && (
-                  <Divider className="parameter-row-divider" />
+                  <div
+                    aria-hidden
+                    className="parameter-row-divider"
+                    role="separator"
+                  />
                 )}
               </div>
             );
@@ -424,7 +408,11 @@ const TestCaseResultTab = () => {
         return (
           <div>
             {versionParams}
-            <Divider className="parameter-row-divider" />
+            <div
+              aria-hidden
+              className="parameter-row-divider"
+              role="separator"
+            />
             {renderParameterRows(computeRowCountItem)}
           </div>
         );
@@ -435,9 +423,9 @@ const TestCaseResultTab = () => {
 
     if (!parameterItems || parameterItems.length === 0) {
       return (
-        <Typography color="text.secondary" variant="body2">
+        <span className="tw:text-body tw:text-tertiary">
           {t('label.no-parameter-available')}
-        </Typography>
+        </span>
       );
     }
 
@@ -453,14 +441,15 @@ const TestCaseResultTab = () => {
   ]);
 
   return (
-    <Grid
-      container
-      className="p-md test-case-result-tab"
-      data-testid="test-case-result-tab-container"
-      spacing={2.5}>
-      <Grid className="transition-all-200ms" size={isTabExpanded ? 9 : 12}>
-        <Stack spacing={2.5} sx={{ width: '100%' }}>
-          <Box sx={{ width: '100%' }}>
+    <div
+      className="p-md test-case-result-tab tw:grid tw:w-full tw:grid-cols-12 tw:gap-2.5"
+      data-testid="test-case-result-tab-container">
+      <div
+        className={`transition-all-200ms ${
+          isTabExpanded ? 'tw:col-span-9' : 'tw:col-span-12'
+        }`}>
+        <div className="tw:flex tw:w-full tw:flex-col tw:gap-2.5">
+          <div className="tw:w-full">
             <DescriptionV1
               wrapInCard
               description={description}
@@ -469,21 +458,15 @@ const TestCaseResultTab = () => {
               showCommentsIcon={false}
               onDescriptionUpdate={handleDescriptionChange}
             />
-          </Box>
+          </div>
 
-          <Box data-testid="parameter-container" sx={{ width: '100%' }}>
+          <div className="tw:w-full" data-testid="parameter-container">
             <div className="parameter-container">
-              <Stack spacing={1} sx={{ width: '100%' }}>
-                <Stack
-                  alignItems="center"
-                  direction="row"
-                  spacing={1}
-                  sx={(theme) => ({
-                    marginBottom: `${theme.spacing(4)} !important`,
-                  })}>
-                  <Typography className="parameter-title" variant="body2">
+              <div className="tw:flex tw:w-full tw:flex-col tw:gap-1">
+                <div className="tw:mb-4 tw:flex tw:flex-row tw:items-center tw:gap-1">
+                  <span className="parameter-title tw:text-body">
                     {t('label.parameter')}
-                  </Typography>
+                  </span>
                   {hasEditPermission &&
                     Boolean(
                       testCaseData?.parameterValues?.length ||
@@ -500,25 +483,25 @@ const TestCaseResultTab = () => {
                         onClick={() => setIsParameterEdit(true)}
                       />
                     )}
-                </Stack>
+                </div>
 
                 {testCaseParams}
-              </Stack>
+              </div>
             </div>
-          </Box>
+          </div>
 
           {!isUndefined(withSqlParams) && !isVersionPage ? (
-            <Box sx={{ width: '100%' }}>
+            <div className="tw:w-full">
               {withSqlParams.map((param) => (
                 <div
                   className="sql-expression-container"
                   data-testid="sql-expression-container"
                   key={param.name}>
-                  <Stack spacing={1} sx={{ width: '100%' }}>
-                    <Stack alignItems="center" direction="row" spacing={1}>
-                      <Typography className="parameter-title" variant="body2">
+                  <div className="tw:flex tw:w-full tw:flex-col tw:gap-1">
+                    <div className="tw:flex tw:flex-row tw:items-center tw:gap-1">
+                      <span className="parameter-title tw:text-body">
                         {startCase(param.name)}
-                      </Typography>
+                      </span>
                       {hasEditPermission && (
                         <EditIconButton
                           newLook
@@ -530,7 +513,7 @@ const TestCaseResultTab = () => {
                           onClick={() => setIsParameterEdit(true)}
                         />
                       )}
-                    </Stack>
+                    </div>
                     <SchemaEditor
                       className="custom-code-mirror-theme query-editor-min-h-60"
                       editorClass="table-query-editor"
@@ -541,23 +524,23 @@ const TestCaseResultTab = () => {
                       }}
                       value={param.value ?? ''}
                     />
-                  </Stack>
+                  </div>
                 </div>
               ))}
-            </Box>
+            </div>
           ) : null}
 
           {showAILearningBanner &&
             testCaseData?.useDynamicAssertion &&
             AlertComponent && (
-              <Box sx={{ width: '100%' }}>
+              <div className="tw:w-full">
                 <AlertComponent />
-              </Box>
+              </div>
             )}
           {testCaseData && (
-            <Box className="test-case-result-tab-graph" sx={{ width: '100%' }}>
+            <div className="test-case-result-tab-graph tw:w-full">
               <TestSummary data={testCaseData} />
-            </Box>
+            </div>
           )}
 
           {!isEmpty(additionalComponent) &&
@@ -574,12 +557,12 @@ const TestCaseResultTab = () => {
               onUpdate={setTestCase}
             />
           )}
-        </Stack>
-      </Grid>
+        </div>
+      </div>
       {isTabExpanded && (
-        <Grid className="transition-all-200ms" size={3}>
-          <Stack spacing={2.5} sx={{ width: '100%' }}>
-            <Box sx={{ width: '100%' }}>
+        <div className="transition-all-200ms tw:col-span-3">
+          <div className="tw:flex tw:w-full tw:flex-col tw:gap-2.5">
+            <div className="tw:w-full">
               <TagsContainerV2
                 newLook
                 displayType={DisplayType.READ_MORE}
@@ -591,8 +574,8 @@ const TestCaseResultTab = () => {
                 tagType={TagSource.Classification}
                 onSelectionChange={handleTagSelection}
               />
-            </Box>
-            <Box sx={{ width: '100%' }}>
+            </div>
+            <div className="tw:w-full">
               <TagsContainerV2
                 newLook
                 displayType={DisplayType.READ_MORE}
@@ -604,11 +587,11 @@ const TestCaseResultTab = () => {
                 tagType={TagSource.Glossary}
                 onSelectionChange={handleTagSelection}
               />
-            </Box>
-          </Stack>
-        </Grid>
+            </div>
+          </div>
+        </div>
       )}
-    </Grid>
+    </div>
   );
 };
 

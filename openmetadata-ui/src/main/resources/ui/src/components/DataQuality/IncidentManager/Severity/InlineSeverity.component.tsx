@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Box, Chip, Divider, Menu, MenuItem } from '@mui/material';
+import { Dropdown } from '@openmetadata/ui-core-components';
 import {
   ChevronDown as ArrowDownIcon,
   ChevronUp as ArrowUpIcon,
@@ -30,8 +30,6 @@ const InlineSeverity = ({
   onSubmit,
 }: InlineSeverityProps) => {
   const { t } = useTranslation();
-  const chipRef = React.useRef<HTMLDivElement>(null);
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,28 +37,9 @@ const InlineSeverity = ({
     ? SEVERITY_COLORS[severity] || SEVERITY_COLORS.NoSeverity
     : SEVERITY_COLORS.NoSeverity;
 
-  const handleSeverityClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (!hasEditPermission) {
-      return;
-    }
-    event.stopPropagation();
-    event.preventDefault();
-
-    if (chipRef.current) {
-      setAnchorEl(chipRef.current);
-      setShowMenu(true);
-    }
-  };
-
-  const handleCloseMenu = useCallback(() => {
-    setShowMenu(false);
-    setAnchorEl(null);
-  }, []);
-
   const handleSeverityChange = useCallback(
     async (newSeverity: Severities | undefined) => {
       setShowMenu(false);
-      setAnchorEl(null);
       setIsLoading(true);
 
       try {
@@ -74,103 +53,75 @@ const InlineSeverity = ({
 
   const dropdownIcon = useMemo(() => {
     if (!hasEditPermission) {
-      return undefined;
+      return null;
     }
 
-    return showMenu ? <ArrowUpIcon /> : <ArrowDownIcon />;
+    return showMenu ? (
+      <ArrowUpIcon className="tw:size-4 tw:shrink-0" />
+    ) : (
+      <ArrowDownIcon className="tw:size-4 tw:shrink-0" />
+    );
   }, [hasEditPermission, showMenu]);
 
-  return (
-    <Box ref={chipRef} sx={{ display: 'inline-flex', alignItems: 'center' }}>
-      <Chip
-        className={classNames('severity', severity && toLower(severity))}
-        deleteIcon={dropdownIcon}
-        disabled={isLoading}
-        label={severity ? startCase(severity) : 'No Severity'}
-        sx={{
-          px: 1,
-          backgroundColor: severityColor.bg,
-          color: severityColor.color,
-          border: `1px solid ${severityColor.color}`,
-          borderRadius: '16px',
-          fontWeight: 500,
-          fontSize: '12px',
-          cursor: hasEditPermission ? 'pointer' : 'default',
-          '& .MuiChip-label': {
-            px: 1,
-          },
-          '& .MuiChip-deleteIcon': {
-            color: severityColor.color,
-            fontSize: '16px',
-            margin: '0 4px 0 -4px',
-            height: '16px',
-            width: '16px',
-          },
-          '&:hover': {
-            backgroundColor: severityColor.bg,
-            color: severityColor.color,
-            opacity: 0.8,
-          },
-        }}
-        onClick={handleSeverityClick}
-        onDelete={hasEditPermission ? handleSeverityClick : undefined}
-      />
+  const chipButton = (
+    <button
+      className={classNames(
+        'severity tw:inline-flex tw:items-center tw:gap-1 tw:rounded-2xl tw:border tw:px-2 tw:py-0.5 tw:text-xs tw:font-medium',
+        severity && toLower(severity)
+      )}
+      data-testid="severity-chip"
+      disabled={!hasEditPermission || isLoading}
+      style={{
+        backgroundColor: severityColor.bg,
+        borderColor: severityColor.color,
+        color: severityColor.color,
+        cursor: hasEditPermission && !isLoading ? 'pointer' : 'default',
+      }}
+      type="button">
+      <span className="tw:px-0.5">
+        {severity ? startCase(severity) : 'No Severity'}
+      </span>
+      {hasEditPermission && dropdownIcon}
+    </button>
+  );
 
-      <Menu
-        anchorEl={anchorEl}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        open={showMenu}
-        sx={{
-          '.MuiPaper-root': {
-            width: 'max-content',
-          },
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        onClose={handleCloseMenu}>
-        <MenuItem
-          selected={!severity}
-          sx={{
-            minWidth: 150,
-            fontWeight: severity ? 400 : 600,
-            '&.Mui-selected': {
-              backgroundColor: 'primary.main',
-              color: 'primary.contrastText',
-              '&:hover': {
-                backgroundColor: 'primary.dark',
-              },
-            },
-          }}
-          onClick={() => handleSeverityChange(undefined)}>
-          {t('label.no-entity', { entity: t('label.severity') })}
-        </MenuItem>
-        <Divider />
-        {Object.values(Severities).map((sev) => (
-          <MenuItem
-            key={sev}
-            selected={sev === severity}
-            sx={{
-              minWidth: 150,
-              fontWeight: sev === severity ? 600 : 400,
-              '&.Mui-selected': {
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              },
-            }}
-            onClick={() => handleSeverityChange(sev)}>
-            {startCase(sev)}
-          </MenuItem>
-        ))}
-      </Menu>
-    </Box>
+  if (!hasEditPermission) {
+    return (
+      <div className="tw:inline-flex tw:items-center">
+        {chipButton}
+      </div>
+    );
+  }
+
+  return (
+    <div className="tw:inline-flex tw:items-center">
+      <Dropdown.Root onOpenChange={setShowMenu}>
+        {chipButton}
+        <Dropdown.Popover className="tw:w-max">
+          <Dropdown.Menu
+            onAction={(key) =>
+              handleSeverityChange(
+                key === 'none' ? undefined : (key as Severities)
+              )
+            }
+            selectedKeys={severity ? [severity] : ['none']}
+            selectionMode="single">
+            <Dropdown.Item
+              id="none"
+              label={t('label.no-entity', { entity: t('label.severity') })}
+            />
+            <Dropdown.Separator />
+            {Object.values(Severities).map((sev) => (
+              <Dropdown.Item
+                id={sev}
+                key={sev}
+                label={startCase(sev)}
+              />
+            ))}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown.Root>
+    </div>
   );
 };
 

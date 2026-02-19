@@ -61,7 +61,37 @@
   }
 
   .parameter-row {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: @size-sm;
     padding: @size-xs 0;
+    width: 100%;
+  }
+
+  .parameter-row-cell {
+    &--full {
+      grid-column: span 8;
+    }
+    &--half {
+      grid-column: span 6;
+    }
+  }
+
+  .parameter-row-cell-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: @size-xs;
+    width: 100%;
+  }
+
+  .parameter-value-text-flex {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
   }
 
   .parameter-row-divider {
