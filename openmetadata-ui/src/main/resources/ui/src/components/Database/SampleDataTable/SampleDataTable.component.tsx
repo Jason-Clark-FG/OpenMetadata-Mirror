@@ -11,15 +11,16 @@
  *  limitations under the License.
  */
 
-import { Button, Dropdown, Space, Tooltip, Typography } from 'antd';
+import { Button, Dropdown, Select, Space, Tooltip, Typography } from 'antd';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 
-import { isEmpty, lowerCase } from 'lodash';
+import { isEmpty, isObject, lowerCase } from 'lodash';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg';
+import { ReactComponent as IconDownload } from '../../../assets/svg/ic-download.svg';
 import { ReactComponent as IconDropdown } from '../../../assets/svg/menu.svg';
 import { AUTO_CLASSIFICATION_DOCS } from '../../../constants/docs.constants';
 import { mockDatasetData } from '../../../constants/mockTourData.constants';
@@ -63,6 +64,7 @@ const SampleDataTable: FC<SampleDataProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [showActions, setShowActions] = useState(false);
+  const [rowLimit, setRowLimit] = useState<number>(100);
 
   const isCurrentUserTableOwner = useMemo(() => {
     return owners?.some((owner) => owner.id === currentUser?.id);
@@ -80,6 +82,45 @@ const SampleDataTable: FC<SampleDataProps> = ({
     () => setIsDeleteModalOpen((prev) => !prev),
     []
   );
+
+  const stringifyValue = (value: SampleDataType): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (isObject(value)) {
+      return JSON.stringify(value);
+    }
+
+    return String(value);
+  };
+
+  const exportToCSV = () => {
+    if (!sampleData?.rows || !sampleData?.columns) {
+      return;
+    }
+
+    const limitedRows = sampleData.rows.slice(0, rowLimit);
+    const columnNames = sampleData.columns.map((col) => col.name);
+    const csvHeader = columnNames.join(',');
+    const csvRows = limitedRows.map((row) => {
+      return columnNames.map((col) => {
+        const value = stringifyValue(row[col]);
+
+        return `"${value.replace(/"/g, '""')}"`;
+      }).join(',');
+    });
+
+    const csvContent = [csvHeader, ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `sample_data_${rowLimit}_rows.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getSampleDataWithType = (table: Table) => {
     const { sampleData, columns } = table;
@@ -151,21 +192,43 @@ const SampleDataTable: FC<SampleDataProps> = ({
     {
       label: (
         <ManageButtonItemLabel
-          description={t('message.delete-entity-type-action-description', {
-            entityType: t('label.sample-data'),
+          description={t('message.download-entity-data', {
+            entity: t('label.sample-data'),
           })}
-          icon={IconDelete}
-          id="delete-button"
-          name={t('label.delete')}
+          icon={IconDownload}
+          id="export-button"
+          name={t('label.export')}
         />
       ),
-      key: 'delete-button',
+      key: 'export-button',
       onClick: (e) => {
         e.domEvent.stopPropagation();
         setShowActions(false);
-        handleDeleteModal();
+        exportToCSV();
       },
     },
+    ...(hasPermission
+      ? [
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.delete-entity-type-action-description', {
+                  entityType: t('label.sample-data'),
+                })}
+                icon={IconDelete}
+                id="delete-button"
+                name={t('label.delete')}
+              />
+            ),
+            key: 'delete-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setShowActions(false);
+              handleDeleteModal();
+            },
+          },
+        ]
+      : []),
   ];
 
   useEffect(() => {
@@ -219,32 +282,44 @@ const SampleDataTable: FC<SampleDataProps> = ({
       })}
       data-testid="sample-data"
       id="sampleDataDetails">
-      <Space className="m-y-xss justify-end w-full">
-        {hasPermission && (
-          <Dropdown
-            menu={{
-              items: manageButtonContent,
-            }}
-            open={showActions}
-            overlayClassName="manage-dropdown-list-container"
-            overlayStyle={{ width: '350px' }}
-            placement="bottomRight"
-            trigger={['click']}
-            onOpenChange={setShowActions}>
-            <Tooltip
-              placement="topLeft"
-              title={t('label.manage-entity', {
-                entity: t('label.sample-data'),
-              })}>
-              <Button
-                className="flex-center px-1.5"
-                data-testid="sample-data-manage-button"
-                onClick={() => setShowActions(true)}>
-                <IconDropdown className="anticon self-center " />
-              </Button>
-            </Tooltip>
-          </Dropdown>
-        )}
+      <Space className="m-y-xss justify-between w-full">
+        <Space>
+          <Typography.Text className="text-grey-muted">
+            {t('label.row-limit')}:
+          </Typography.Text>
+          <Select
+            className="w-28"
+            data-testid="row-limit-select"
+            value={rowLimit}
+            onChange={setRowLimit}>
+            <Select.Option value={10}>10</Select.Option>
+            <Select.Option value={100}>100</Select.Option>
+            <Select.Option value={1000}>1000</Select.Option>
+          </Select>
+        </Space>
+        <Dropdown
+          menu={{
+            items: manageButtonContent,
+          }}
+          open={showActions}
+          overlayClassName="manage-dropdown-list-container"
+          overlayStyle={{ width: '350px' }}
+          placement="bottomRight"
+          trigger={['click']}
+          onOpenChange={setShowActions}>
+          <Tooltip
+            placement="topLeft"
+            title={t('label.manage-entity', {
+              entity: t('label.sample-data'),
+            })}>
+            <Button
+              className="flex-center px-1.5"
+              data-testid="sample-data-manage-button"
+              onClick={() => setShowActions(true)}>
+              <IconDropdown className="anticon self-center " />
+            </Button>
+          </Tooltip>
+        </Dropdown>
       </Space>
 
       <TableComponent
