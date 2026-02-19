@@ -128,6 +128,12 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
     return () => {
       cancelled = true;
       newTeams.forEach((team) => fetchedTeamIdsRef.current.delete(team.id));
+      setLoadingCountIds((prev) => {
+        const next = new Set(prev);
+        newTeams.forEach((t) => next.delete(t.id));
+
+        return next;
+      });
     };
   }, [data, isFetchingAllTeamAdvancedDetails]);
 
