@@ -149,7 +149,7 @@ test.describe('Container entity specific tests ', () => {
       });
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="s3_storage_sample.departments.finance.budget_executor"]'
@@ -217,8 +217,8 @@ test.describe('Container entity specific tests ', () => {
     await expect(sidePanel).toBeVisible();
 
     // Verify the correct column is showing in the panel
-    const columnName = (container.entityResponseData as any)?.dataModel
-      ?.columns?.[0]?.name;
+    const columnName =
+      container.entityResponseData?.dataModel?.columns?.[0]?.name;
     if (columnName) {
       await expect(sidePanel).toContainText(columnName);
     }
