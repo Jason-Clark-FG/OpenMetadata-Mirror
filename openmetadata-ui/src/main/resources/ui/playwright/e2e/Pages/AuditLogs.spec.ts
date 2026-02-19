@@ -183,7 +183,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await expect(searchInput).toBeVisible();
 
       await searchInput.fill('Table');
-      await page.waitForTimeout(500); // Wait for client-side filtering
 
       const tableOption = page
         .locator('.ant-dropdown-menu')
