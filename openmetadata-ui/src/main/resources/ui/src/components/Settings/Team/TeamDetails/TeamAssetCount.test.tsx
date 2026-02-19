@@ -12,11 +12,15 @@
  */
 import { render, screen } from '@testing-library/react';
 
-jest.mock('@mui/material', () => ({
-  Skeleton: jest.fn().mockImplementation(() => <div data-testid="skeleton" />),
-  Typography: jest
-    .fn()
-    .mockImplementation(({ children, ...props }) => <span {...props}>{children}</span>),
+jest.mock('antd', () => ({
+  Skeleton: {
+    Input: jest.fn().mockImplementation(() => <div data-testid="skeleton" />),
+  },
+  Typography: {
+    Text: jest
+      .fn()
+      .mockImplementation(({ children, ...props }) => <span {...props}>{children}</span>),
+  },
 }));
 
 import { TeamAssetCount } from './TeamAssetCount.component';
