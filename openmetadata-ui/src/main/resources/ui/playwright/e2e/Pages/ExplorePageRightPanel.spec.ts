@@ -1291,8 +1291,53 @@ test.describe('Right Panel Test Suite', () => {
           const overviewDC = new OverviewPageObject(rightPanelDC);
           await overviewDC.navigateToOverviewTab();
 
-          // DataConsumer: canEditOwners=false, canEditDomains=false, canEditDataProducts=false
+          // DataConsumer: canEditDomains=false, canEditDataProducts=false
           await rightPanelDC.verifyPermissions();
+        });
+
+        test(`Should NOT allow Data Consumer to edit owners when entity has owner for ${entityType}`, async ({
+          adminPage,
+          dataConsumerPage,
+        }) => {
+          const fqn = getEntityFqn(entityInstance);
+
+          // Step 1: Admin assigns user1 as owner so the entity is no longer ownerless.
+          // When an entity has an owner, EditOwners is no longer granted to all users —
+          // DataConsumer (which lacks EditOwners and EditAll) cannot see the edit-owners button.
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            entityInstance.entity.name,
+            entityInstance.endpoint,
+            fqn
+          );
+          await adminPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
+          const adminRightPanel = new RightPanelPageObject(adminPage);
+          adminRightPanel.setEntityConfig(entityInstance);
+          const adminOverview = new OverviewPageObject(adminRightPanel);
+          await adminOverview.addOwnerWithoutValidation(
+            user1.getUserDisplayName()
+          );
+          await adminOverview.shouldShowOwner(user1.getUserDisplayName());
+
+          // Step 2: DataConsumer navigates to the same entity and verifies
+          // that the edit-owners button is NOT visible (restricted by role).
+          await navigateToExploreAndSelectEntity(
+            dataConsumerPage,
+            entityInstance.entity.name,
+            entityInstance.endpoint,
+            fqn
+          );
+          await dataConsumerPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
+          const dcSummaryPanel = dataConsumerPage.locator(
+            '.entity-summary-panel-container'
+          );
+          await expect(dcSummaryPanel.getByTestId('edit-owners')).not.toBeVisible();
         });
       });
     });

@@ -329,7 +329,9 @@ export class OverviewPageObject extends RightPanelBase {
         await usersTab.click();
       }
     }
-
+    await this.page.waitForSelector('[data-testid="loader"]', {
+      state: 'detached',
+    });
     await this.userSearchBar.waitFor({ state: 'visible' });
 
     const searchUser = this.page.waitForResponse(
