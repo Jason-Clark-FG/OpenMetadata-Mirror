@@ -152,20 +152,14 @@ export class LineagePageObject extends RightPanelBase {
    * @param expectedCount - Expected number of data assets in lineage
    */
   async shouldShowDataAssetsCount(expectedCount: number): Promise<void> {
-    const actualCount = await this.nodes.count();
-    if (actualCount !== expectedCount) {
-      throw new Error(`Should show ${expectedCount} data assets in lineage, but shows ${actualCount}`);
-    }
+    await expect(this.nodes).toHaveCount(expectedCount);
   }
 
   /**
    * Verify lineage contains at least one data asset
    */
   async shouldShowDataAssets(): Promise<void> {
-    const count = await this.nodes.count();
-    if (count === 0) {
-      throw new Error('Should show at least one data asset in lineage but shows none');
-    }
+    await expect(this.nodes).not.toHaveCount(0);
   }
 
   async hasUpstreamButton(): Promise<boolean> {
@@ -188,20 +182,14 @@ export class LineagePageObject extends RightPanelBase {
    * Verify lineage is empty (no data assets visible)
    */
   async shouldShowEmptyLineage(): Promise<void> {
-    const count = await this.nodes.count();
-    if (count > 0) {
-      throw new Error(`Should show empty lineage but shows ${count} data assets`);
-    }
+    await expect(this.nodes).toHaveCount(0);
   }
 
   /**
    * Verify lineage shows connections between data assets
    */
   async shouldShowLineageConnections(): Promise<void> {
-    const count = await this.edges.count();
-    if (count === 0) {
-      throw new Error('Should show lineage connections but shows none');
-    }
+    await expect(this.edges).not.toHaveCount(0);
   }
 
   /**

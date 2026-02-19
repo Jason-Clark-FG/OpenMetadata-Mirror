@@ -166,6 +166,7 @@ test.describe('Right Panel Test Suite', () => {
       await testTag.delete(apiContext);
       await testClassification.delete(apiContext);
       await testGlossaryTerm.delete(apiContext);
+      await testGlossary.delete(apiContext);
       await user1.delete(apiContext);
       await domainEntity.delete(apiContext);
     } finally {
@@ -1082,6 +1083,32 @@ test.describe('Right Panel Test Suite', () => {
             await customPropertiesDS.shouldShowCustomPropertiesContainer();
           }
         });
+
+        test(`Should NOT show restricted edit buttons for Data Steward for ${entityType}`, async ({
+          dataStewardPage,
+        }) => {
+          const fqn = getEntityFqn(entityInstance);
+          await navigateToExploreAndSelectEntity(
+            dataStewardPage,
+            entityInstance.entity.name,
+            entityInstance.endpoint,
+            fqn
+          );
+          await dataStewardPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
+
+          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+          rightPanelDS.setEntityConfig(entityInstance);
+          rightPanelDS.setRolePermissions('DataSteward');
+
+          const overviewDS = new OverviewPageObject(rightPanelDS);
+          await overviewDS.navigateToOverviewTab();
+
+          // DataSteward: canEditDomains=false, canEditDataProducts=false
+          await rightPanelDS.verifyPermissions();
+        });
       });
     });
 
@@ -1240,6 +1267,32 @@ test.describe('Right Panel Test Suite', () => {
             await customPropertiesDC.navigateToCustomPropertiesTab();
             await customPropertiesDC.shouldShowCustomPropertiesContainer();
           }
+        });
+
+        test(`Should NOT show restricted edit buttons for Data Consumer for ${entityType}`, async ({
+          dataConsumerPage,
+        }) => {
+          const fqn = getEntityFqn(entityInstance);
+          await navigateToExploreAndSelectEntity(
+            dataConsumerPage,
+            entityInstance.entity.name,
+            entityInstance.endpoint,
+            fqn
+          );
+          await dataConsumerPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
+
+          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+          rightPanelDC.setEntityConfig(entityInstance);
+          rightPanelDC.setRolePermissions('DataConsumer');
+
+          const overviewDC = new OverviewPageObject(rightPanelDC);
+          await overviewDC.navigateToOverviewTab();
+
+          // DataConsumer: canEditOwners=false, canEditDomains=false, canEditDataProducts=false
+          await rightPanelDC.verifyPermissions();
         });
       });
     });

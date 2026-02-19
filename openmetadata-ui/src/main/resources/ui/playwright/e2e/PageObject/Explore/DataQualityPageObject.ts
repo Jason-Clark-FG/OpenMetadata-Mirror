@@ -189,12 +189,7 @@ export class DataQualityPageObject extends RightPanelBase {
   ): Promise<void> {
     const statCard = this.getStatCardLocator(statType);
     await statCard.waitFor({ state: 'visible' });
-    const statCardText = await statCard.textContent();
-    if (!statCardText?.includes(expectedText)) {
-      throw new Error(
-        `Stat card ${statType} should show "${expectedText}" but shows "${statCardText}"`
-      );
-    }
+    await expect(statCard).toContainText(expectedText);
   }
 
   /**
@@ -292,14 +287,7 @@ export class DataQualityPageObject extends RightPanelBase {
    * @param expectedCount - Expected number of test case cards
    */
   async shouldShowTestCaseCardsCount(expectedCount: number): Promise<void> {
-    // Use semantic selectors - count all test case card elements
-    const cards = this.testCaseCards;
-    const actualCount = await cards.count();
-    if (actualCount !== expectedCount) {
-      throw new Error(
-        `Should show ${expectedCount} test case cards, but shows ${actualCount}`
-      );
-    }
+    await expect(this.testCaseCards).toHaveCount(expectedCount);
   }
 
   /**
@@ -317,12 +305,7 @@ export class DataQualityPageObject extends RightPanelBase {
     await card.waitFor({ state: 'visible' });
     const nameElement = this.nameLink.nth(cardIndex);
     await nameElement.waitFor({ state: 'visible' });
-    const nameText = await nameElement.textContent();
-    if (!nameText?.includes(testCaseName)) {
-      throw new Error(
-        `Test case card ${cardIndex} should show name "${testCaseName}" but shows "${nameText}"`
-      );
-    }
+    await expect(nameElement).toContainText(testCaseName);
   }
 
   /**
@@ -342,13 +325,7 @@ export class DataQualityPageObject extends RightPanelBase {
       '.status-badge, .badge, [class*="status"]'
     );
     await statusBadge.waitFor({ state: 'visible' });
-    const statusText = await statusBadge.textContent();
-    const expectedStatusText = status.toLowerCase();
-    if (!statusText?.toLowerCase().includes(expectedStatusText)) {
-      throw new Error(
-        `Test case card ${cardIndex} should show status "${expectedStatusText}" but shows "${statusText}"`
-      );
-    }
+    await expect(statusBadge).toContainText(new RegExp(status, 'i'));
   }
 
   /**
@@ -381,12 +358,7 @@ export class DataQualityPageObject extends RightPanelBase {
     const card = cards.nth(cardIndex);
     await card.waitFor({ state: 'visible' });
     await this.nameLink.nth(cardIndex).waitFor({ state: 'visible' });
-    const href = await this.nameLink.nth(cardIndex).getAttribute('href');
-    if (!href) {
-      throw new Error(
-        `Test case card ${cardIndex} should have a working link but doesn't`
-      );
-    }
+    await expect(this.nameLink.nth(cardIndex)).toHaveAttribute('href', /.+/);
   }
 
   /**

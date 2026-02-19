@@ -116,15 +116,7 @@ export class CustomPropertiesPageObject extends RightPanelBase {
 
     const valueElement = propertyCard.getByTestId('property-value');
     await expect(valueElement).toBeVisible();
-
-    const actualValue = await valueElement.textContent();
-    const expectedValueStr = String(expectedValue);
-
-    if (!actualValue?.includes(expectedValueStr)) {
-      throw new Error(
-        `Property "${propertyName}" should have value "${expectedValueStr}" but has "${actualValue}"`
-      );
-    }
+    await expect(valueElement).toContainText(String(expectedValue));
   }
 
   /**
@@ -142,6 +134,8 @@ export class CustomPropertiesPageObject extends RightPanelBase {
     const propertyNameElement = propertyCard.getByTestId('property-name');
     await expect(propertyNameElement).toBeVisible();
     await expect(propertyNameElement).toContainText(propertyName);
+
+    await expect(propertyCard).toContainText(expectedType);
   }
 
   /**
@@ -159,14 +153,7 @@ export class CustomPropertiesPageObject extends RightPanelBase {
       const noResultsText = this.page.getByText(/No Custom Properties found for/i);
       await expect(noResultsText).toBeVisible();
     } else {
-      const visibleProperties = this.propertyCard;
-      const count = await visibleProperties.count();
-
-      if (count !== expectedCount) {
-        throw new Error(
-          `Search for "${searchTerm}" should return ${expectedCount} results but returned ${count}`
-        );
-      }
+      await expect(this.propertyCard).toHaveCount(expectedCount);
     }
   }
 
@@ -237,12 +224,7 @@ export class CustomPropertiesPageObject extends RightPanelBase {
       '.value, [class*="value"], [data-testid="value"]'
     );
     await valueElement.waitFor({ state: 'visible' });
-    const actualValue = await valueElement.textContent();
-    if (!actualValue?.includes(expectedValue)) {
-      throw new Error(
-        `Custom property "${propertyName}" should show value "${expectedValue}" but shows "${actualValue}"`
-      );
-    }
+    await expect(valueElement).toContainText(expectedValue);
   }
 
   /**
@@ -250,14 +232,7 @@ export class CustomPropertiesPageObject extends RightPanelBase {
    * @param expectedCount - Expected number of custom properties
    */
   async shouldShowCustomPropertiesCount(expectedCount: number): Promise<void> {
-    // Use semantic selectors - count all property elements
-    const cards = this.propertyCard;
-    const actualCount = await cards.count();
-    if (actualCount !== expectedCount) {
-      throw new Error(
-        `Should show ${expectedCount} custom properties, but shows ${actualCount}`
-      );
-    }
+    await expect(this.propertyCard).toHaveCount(expectedCount);
   }
 
   /**
@@ -273,12 +248,7 @@ export class CustomPropertiesPageObject extends RightPanelBase {
    */
   async shouldShowSearchText(expectedText: string): Promise<void> {
     await this.searchBar.waitFor({ state: 'visible' });
-    const actualText = await this.searchBar.inputValue();
-    if (actualText !== expectedText) {
-      throw new Error(
-        `Search bar should show "${expectedText}" but shows "${actualText}"`
-      );
-    }
+    await expect(this.searchBar).toHaveValue(expectedText);
   }
 
   /**
