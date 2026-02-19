@@ -301,7 +301,9 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await searchInput.fill('admin');
       await userSearchResponse;
 
-      const adminOption = page.locator('.ant-dropdown-menu').getByText('admin');
+      const adminOption = page
+        .locator('.ant-dropdown-menu')
+        .getByText('admin', { exact: true });
       await expect(adminOption).toBeVisible();
 
       const auditLogResponse = page.waitForResponse((response) =>
