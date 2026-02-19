@@ -75,6 +75,7 @@ public class EventSubscriptionScheduler {
   private static EventSubscriptionScheduler instance;
   private static volatile boolean initialized = false;
   @Getter private final Scheduler alertsScheduler;
+  private static final String DEFAULT_JOB_STORE_CLASS = "org.quartz.impl.jdbcjobstore.JobStoreTX";
   private static final String SCHEDULER_NAME = "OMEventSubScheduler";
   private static final int SCHEDULER_THREAD_COUNT = 10;
 
@@ -103,7 +104,7 @@ public class EventSubscriptionScheduler {
     properties.put("org.quartz.scheduler.instanceName", SCHEDULER_NAME);
     properties.put("org.quartz.scheduler.instanceId", "AUTO");
     properties.put("org.quartz.threadPool.threadCount", String.valueOf(SCHEDULER_THREAD_COUNT));
-    properties.put("org.quartz.jobStore.class", "org.quartz.simpl.RAMJobStore");
+    properties.put("org.quartz.jobStore.class", System.getProperty("openmetadata.quartz.jobStoreClass", DEFAULT_JOB_STORE_CLASS));
 
     StdSchedulerFactory factory = new StdSchedulerFactory();
     factory.initialize(properties);
