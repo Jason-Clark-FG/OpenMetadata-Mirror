@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -739,12 +740,11 @@ public class TestSuiteResourceIT extends BaseEntityIT<TestSuite, CreateTestSuite
 
   @Test
   void test_deleteLogicalTestSuiteWithPipeline(TestNamespace ns) {
-    OpenMetadataClient client = SdkClients.adminClient();
+    Assumptions.assumeTrue(
+        TestSuiteBootstrap.isK8sEnabled(),
+        "Skipping - requires K8s pipeline service client to validate cascade deletion");
 
-    // Require K8s for this test
-    if (!TestSuiteBootstrap.isK8sEnabled()) {
-      TestSuiteBootstrap.setupK8s();
-    }
+    OpenMetadataClient client = SdkClients.adminClient();
 
     // Create a logical test suite
     CreateTestSuite logicalSuiteReq = new CreateTestSuite();
