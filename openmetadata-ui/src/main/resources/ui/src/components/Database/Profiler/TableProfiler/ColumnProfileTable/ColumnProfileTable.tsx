@@ -11,13 +11,12 @@
  *  limitations under the License.
  */
 
-import { Grid, Stack, Typography, useTheme } from '@mui/material';
 import { ColumnsType } from 'antd/lib/table';
 import { isEmpty, isUndefined } from 'lodash';
 import Qs from 'qs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { PAGE_SIZE_LARGE } from '../../../../../constants/constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../../../enums/common.enum';
 import {
@@ -62,9 +61,7 @@ import { useTableProfiler } from '../TableProfilerProvider';
 
 const ColumnProfileTable = () => {
   const location = useCustomLocation();
-  const theme = useTheme();
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { fqn } = useFqn();
   const { subTab: activeTab } = useParams<{ subTab: ProfilerTabPath }>();
   const tableFqn = useMemo(() => getTableFQNFromColumnFQN(fqn), [fqn]);
@@ -109,21 +106,6 @@ const ColumnProfileTable = () => {
 
   const { activeColumnFqn } = searchData;
 
-  const updateActiveColumnFqn = (key: string) => {
-    navigate({
-      pathname: getEntityDetailsPath(
-        EntityType.TABLE,
-        tableFqn,
-        EntityTabs.PROFILER,
-        activeTab
-      ),
-      search: Qs.stringify({
-        ...searchData,
-        activeColumnFqn: key,
-      }),
-    });
-  };
-
   const tableColumn: ColumnsType<ModifiedColumn> = useMemo(() => {
     return [
       {
@@ -139,21 +121,22 @@ const ColumnProfileTable = () => {
               style={{ maxWidth: '75%' }}>
               <div className="d-inline-flex items-start gap-1 flex-column">
                 <div className="d-inline-flex items-baseline">
-                  <Typography
-                    className="break-word p-0 d-block text-link-color"
-                    component="span"
-                    sx={{
-                      color: theme.palette.primary.main,
-                      fontSize: theme.typography.pxToRem(14),
-                      fontWeight: theme.typography.fontWeightMedium,
-                      cursor: 'pointer',
-                      '&:hover': { textDecoration: 'underline' },
-                    }}
-                    onClick={() =>
-                      updateActiveColumnFqn(record.fullyQualifiedName || '')
-                    }>
+                  <Link
+                    className="break-word p-0 d-block text-link-color tw:font-medium hover:tw:underline"
+                    to={{
+                      pathname: getEntityDetailsPath(
+                        EntityType.TABLE,
+                        tableFqn,
+                        EntityTabs.PROFILER,
+                        activeTab
+                      ),
+                      search: Qs.stringify({
+                        ...searchData,
+                        activeColumnFqn: record.fullyQualifiedName || '',
+                      }),
+                    }}>
                     {getEntityName(record)}
-                  </Typography>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -167,15 +150,7 @@ const ColumnProfileTable = () => {
         key: 'dataType',
         width: 200,
         render: (dataTypeDisplay: string) => {
-          return (
-            <Typography
-              className="break-word"
-              sx={{
-                fontSize: theme.typography.pxToRem(14),
-              }}>
-              {dataTypeDisplay || 'N/A'}
-            </Typography>
-          );
+          return <span className="break-word">{dataTypeDisplay || 'N/A'}</span>;
         },
         sorter: (col1, col2) => col1.dataType.localeCompare(col2.dataType),
       },
@@ -258,9 +233,9 @@ const ColumnProfileTable = () => {
                 EntityTabs.PROFILER,
                 ProfilerTabPath.DATA_QUALITY
               )}>
-              <Typography sx={{ color: theme.palette.success.main }}>
+              <span className="tw:text-success-primary">
                 {testCounts?.success}
-              </Typography>
+              </span>
             </Link>
           );
         },
@@ -289,9 +264,9 @@ const ColumnProfileTable = () => {
                 EntityTabs.PROFILER,
                 ProfilerTabPath.DATA_QUALITY
               )}>
-              <Typography sx={{ color: theme.palette.error.main }}>
+              <span className="tw:text-error-primary">
                 {testCounts?.failed}
-              </Typography>
+              </span>
             </Link>
           );
         },
@@ -320,9 +295,9 @@ const ColumnProfileTable = () => {
                 EntityTabs.PROFILER,
                 ProfilerTabPath.DATA_QUALITY
               )}>
-              <Typography sx={{ color: theme.palette.warning.main }}>
+              <span className="tw:text-warning-primary">
                 {testCounts?.aborted}
-              </Typography>
+              </span>
             </Link>
           );
         },
@@ -418,22 +393,23 @@ const ColumnProfileTable = () => {
   }
 
   return (
-    <Stack data-testid="column-profile-table-container" spacing="30px">
+    <div
+      className="tw:flex tw:flex-col tw:gap-[30px]"
+      data-testid="column-profile-table-container">
       {!isLoading && !isProfilingEnabled && <NoProfilerBanner />}
 
-      <Grid container spacing={5}>
+      <div className="tw:grid tw:grid-cols-5 tw:gap-6">
         {overallSummary?.map((summary) => (
-          <Grid key={summary.title} size="grow">
-            <SummaryCardV1
-              extra={summary.extra}
-              icon={summary.icon}
-              isLoading={isLoading}
-              title={summary.title}
-              value={summary.value}
-            />
-          </Grid>
+          <SummaryCardV1
+            extra={summary.extra}
+            icon={summary.icon}
+            isLoading={isLoading}
+            key={summary.title}
+            title={summary.title}
+            value={summary.value}
+          />
         ))}
-      </Grid>
+      </div>
 
       {isEmpty(activeColumnFqn) ? (
         <Table
@@ -456,7 +432,7 @@ const ColumnProfileTable = () => {
           tableDetails={tableDetailsWithColumns}
         />
       )}
-    </Stack>
+    </div>
   );
 };
 
