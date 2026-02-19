@@ -343,7 +343,6 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
         const searchInput = page.getByTestId('search-input');
         await searchInput.fill(entityType);
-        await page.waitForTimeout(500); // Wait for client-side filtering
 
         const entityOption = page.locator('.ant-dropdown-menu-item').first();
         await expect(entityOption).toBeVisible();
