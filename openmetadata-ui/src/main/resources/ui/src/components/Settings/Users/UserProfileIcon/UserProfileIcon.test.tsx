@@ -30,28 +30,41 @@ const translationState = {
   language: 'en',
 };
 
-const getTranslation = (key: string) => {
-  if (translationState.language === 'de') {
-    const germanTranslations: Record<string, string> = {
-      'label.role-plural': 'Rollen',
-      'label.team-plural': 'Teams',
-      'label.logout': 'Abmelden',
-      'label.switch-persona': 'Persona wechseln',
-      'label.inherited-role-plural': 'Geerbte Rollen',
-      'label.default': 'Standard',
-      'label.more': 'mehr',
-    };
+const germanTranslations: Record<string, string> = {
+  'label.role-plural': 'Rollen',
+  'label.team-plural': 'Teams',
+  'label.logout': 'Abmelden',
+  'label.switch-persona': 'Persona wechseln',
+  'label.inherited-role-plural': 'Geerbte Rollen',
+  'label.default': 'Standard',
+  'label.more': 'mehr',
+};
 
-    return germanTranslations[key] || key;
-  }
+const mockChangeLanguage = jest.fn((lng: string) => {
+  translationState.language = lng;
+});
 
-  return key;
+const mockI18n = {
+  changeLanguage: mockChangeLanguage,
+  language: translationState.language,
 };
 
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => getTranslation(key),
-  }),
+  useTranslation: () => {
+    const currentLanguage = translationState.language;
+    const getTranslation = (key: string) => {
+      if (currentLanguage === 'de') {
+        return germanTranslations[key] || key;
+      }
+
+      return key;
+    };
+
+    return {
+      t: getTranslation,
+      i18n: mockI18n,
+    };
+  },
 }));
 
 const mockPersonas: EntityReference[] = [
@@ -220,10 +233,8 @@ describe('UserProfileIcon', () => {
     expect(screen.getAllByRole('radio').length).toBeGreaterThan(0);
   });
 
-  it('should render dropdown items with English translations', async () => {
-    translationState.language = 'en';
-
-    render(
+  it('should update dropdown labels when language changes', async () => {
+    const { rerender } = render(
       <MockWrapper>
         <UserProfileIcon />
       </MockWrapper>
@@ -235,20 +246,15 @@ describe('UserProfileIcon', () => {
     expect(screen.getByText('label.role-plural')).toBeInTheDocument();
     expect(screen.getByText('label.team-plural')).toBeInTheDocument();
     expect(screen.getByText('label.logout')).toBeInTheDocument();
-  });
 
-  it('should render dropdown items with German translations', async () => {
-    translationState.language = 'de';
-
-    render(
+    mockChangeLanguage('de');
+    rerender(
       <MockWrapper>
         <UserProfileIcon />
       </MockWrapper>
     );
 
-    openDropdown();
-    await screen.findByText('Persona wechseln');
-
+    expect(screen.getByText('Persona wechseln')).toBeInTheDocument();
     expect(screen.getByText('Rollen')).toBeInTheDocument();
     expect(screen.getByText('Teams')).toBeInTheDocument();
     expect(screen.getByText('Abmelden')).toBeInTheDocument();
