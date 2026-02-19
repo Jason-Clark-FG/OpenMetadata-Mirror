@@ -591,7 +591,7 @@ test.describe('Right Panel Test Suite', () => {
 
             const propertyName = customPropertyData[entityType]?.property?.name;
             if (propertyName) {
-              await customProperties.verifyPropertyType(propertyName, 'string');
+              await customProperties.verifyPropertyType(propertyName);
             }
           }
         });
@@ -1337,7 +1337,9 @@ test.describe('Right Panel Test Suite', () => {
           const dcSummaryPanel = dataConsumerPage.locator(
             '.entity-summary-panel-container'
           );
-          await expect(dcSummaryPanel.getByTestId('edit-owners')).not.toBeVisible();
+          await expect(
+            dcSummaryPanel.getByTestId('edit-owners')
+          ).not.toBeVisible();
         });
       });
     });

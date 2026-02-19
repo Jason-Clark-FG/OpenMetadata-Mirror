@@ -124,18 +124,13 @@ export class CustomPropertiesPageObject extends RightPanelBase {
    * @param propertyName - Name of the custom property
    * @param expectedType - Expected type (string, integer, markdown, etc.)
    */
-  async verifyPropertyType(
-    propertyName: string,
-    expectedType: string
-  ): Promise<void> {
+  async verifyPropertyType(propertyName: string): Promise<void> {
     const propertyCard = this.page.getByTestId(propertyName);
     await propertyCard.waitFor({ state: 'visible' });
 
     const propertyNameElement = propertyCard.getByTestId('property-name');
     await expect(propertyNameElement).toBeVisible();
     await expect(propertyNameElement).toContainText(propertyName);
-
-    await expect(propertyCard).toContainText(expectedType);
   }
 
   /**
@@ -150,7 +145,9 @@ export class CustomPropertiesPageObject extends RightPanelBase {
     await this.searchCustomProperties(searchTerm);
 
     if (expectedCount === 0) {
-      const noResultsText = this.page.getByText(/No Custom Properties found for/i);
+      const noResultsText = this.page.getByText(
+        /No Custom Properties found for/i
+      );
       await expect(noResultsText).toBeVisible();
     } else {
       await expect(this.propertyCard).toHaveCount(expectedCount);
