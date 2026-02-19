@@ -90,7 +90,7 @@ public class VectorSearchQueryBuilder {
           }
           case "certification" -> {
             sb.append(',');
-            appendFlat(sb, "certification.tagFQN", values);
+            appendFlat(sb, "certification.tagLabel.tagFQN", values);
           }
           case "entityType" -> {
             sb.append(',');
