@@ -43,8 +43,8 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.exception.SearchIndexException;
 import org.openmetadata.service.search.ReindexContext;
 import org.openmetadata.service.search.SearchRepository;
-import org.openmetadata.service.search.indexes.ColumnSearchIndex;
 import org.openmetadata.service.search.VectorBulkProcessor;
+import org.openmetadata.service.search.indexes.ColumnSearchIndex;
 import org.openmetadata.service.search.opensearch.OpenSearchClient;
 import org.openmetadata.service.search.opensearch.OsUtils;
 import org.openmetadata.service.search.vector.OpenSearchVectorService;
@@ -211,10 +211,10 @@ public class OpenSearchBulkSink implements BulkSink {
         for (EntityInterface entity : entityInterfaces) {
           addEntity(entity, indexName, recreateIndex, reindexContext, tracker);
         }
-          // Index columns separately when processing table entities
-          if (Entity.TABLE.equals(entityType)) {
-              indexTableColumns(entityInterfaces, recreateIndex, reindexContext);
-          }
+        // Index columns separately when processing table entities
+        if (Entity.TABLE.equals(entityType)) {
+          indexTableColumns(entityInterfaces, recreateIndex, reindexContext);
+        }
 
         // Process vector embeddings in batch (no-op in base class)
         if (embeddingsEnabled) {
