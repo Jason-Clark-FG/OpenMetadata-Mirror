@@ -200,12 +200,10 @@ const TeamsPage = () => {
 
   const fetchAssets = async (selectedTeam: Team) => {
     if (selectedTeam.id && selectedTeam.teamType !== TeamType.Organization) {
+      setAllTeamIds([selectedTeam.id]);
       try {
-        setAllTeamIds([selectedTeam.id]);
-        // Collect all team IDs (current team + all descendants)
         const teamIds = await collectAllTeamIds(selectedTeam);
 
-        // Query assets owned by any of these teams using 'should' (OR)
         const res = await searchQuery({
           query: '',
           pageNumber: 0,
@@ -217,7 +215,6 @@ const TeamsPage = () => {
         setAllTeamIds(teamIds);
         setAssets(total);
       } catch (error) {
-        setAllTeamIds([selectedTeam.id]);
         setAssets(0);
         showErrorToast(
           error as AxiosError,
@@ -501,6 +498,8 @@ const TeamsPage = () => {
   }, [fqn]);
 
   useEffect(() => {
+    setAllTeamIds([]);
+    setAssets(0);
     init();
   }, [fqn]);
 
