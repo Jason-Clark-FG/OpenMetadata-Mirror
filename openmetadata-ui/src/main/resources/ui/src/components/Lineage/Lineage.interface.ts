@@ -11,15 +11,23 @@
  *  limitations under the License.
  */
 import { EntityType } from '../../enums/entity.enum';
+import { EsLineageData } from '../../generated/api/lineage/esLineageData';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
+import { Chart } from '../../generated/entity/data/chart';
+import { MlFeature } from '../../generated/entity/data/mlmodel';
+import { SearchIndexField } from '../../generated/entity/data/searchIndex';
+import { Column, DataModel } from '../../generated/entity/data/table';
+import { MessageSchemaObject } from '../../generated/entity/data/topic';
 import { EntityReference } from '../../generated/entity/type';
 import { TagLabel } from '../../generated/tests/testCase';
+import { APISchema } from '../../generated/type/apiSchema';
 import { ColumnLineage } from '../../generated/type/entityLineage';
 import {
   SearchSourceAlias,
   TableSearchSource,
 } from '../../interface/search.interface';
 import { FormattedDatabaseServiceType } from '../../utils/EntityUtils.interface';
+import { Flatten } from '../Entity/EntityLineage/NodeChildren/NodeChildren.interface';
 import { SourceType } from '../SearchedData/SearchedData.interface';
 
 export interface LineageProps {
@@ -33,8 +41,8 @@ export interface LineageProps {
 }
 
 export interface EntityLineageResponse {
-  entity: LineageEntityReference;
-  nodes?: LineageEntityReference[];
+  entity: LineageNodeType;
+  nodes?: LineageNodeType[];
   edges?: EdgeDetails[];
   downstreamEdges?: EdgeDetails[];
   upstreamEdges?: EdgeDetails[];
@@ -125,3 +133,33 @@ export type LineageNode = SearchSourceAlias & {
     entityUpstreamCount?: number;
   };
 };
+
+export interface LineageNodeType
+  extends Exclude<EntityReference, 'type'>,
+    Pick<
+      TableSearchSource,
+      'entityType' | 'deleted' | 'serviceType' | 'testSuite'
+    > {
+  nodeDepth?: number;
+  paging?: {
+    entityDownstreamCount?: number;
+    entityUpstreamCount?: number;
+  };
+  pagination_data?: {
+    index: number;
+    parentId: string;
+    childrenLength: number;
+  };
+  direction?: LineageDirection;
+  upstreamExpandPerformed?: boolean;
+  downstreamExpandPerformed?: boolean;
+  upstreamLineage?: EsLineageData[];
+  columns?: Flatten<Column>[];
+  dataModel?: DataModel;
+  mlFeatures?: MlFeature[];
+  charts?: Chart[];
+  messageSchema?: MessageSchemaObject;
+  responseSchema?: APISchema;
+  requestSchema?: APISchema;
+  fields?: SearchIndexField[];
+}

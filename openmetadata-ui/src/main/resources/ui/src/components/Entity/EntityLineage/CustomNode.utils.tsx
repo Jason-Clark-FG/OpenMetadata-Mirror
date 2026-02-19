@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 import { Dataflow01, Plus } from '@untitledui/icons';
-import { Button, Col, Row, Skeleton, Typography } from 'antd';
+import { Button, Skeleton, Typography } from 'antd';
 import classNames from 'classnames';
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, memo, useCallback, useMemo, useState } from 'react';
 import { Handle, HandleProps, HandleType, Position } from 'reactflow';
 import { ReactComponent as MinusIcon } from '../../../assets/svg/control-minus.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
@@ -25,6 +25,8 @@ import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getColumnDataTypeIcon } from '../../../utils/TableUtils';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
+
+const DEPTH_INDENT_PX = 16;
 
 export const getHandleByType = (
   isConnectable: HandleProps['isConnectable'],
@@ -198,22 +200,20 @@ interface ColumnContentProps {
   showDataObservabilitySummary: boolean;
   isLoading: boolean;
   summary?: ColumnTestSummaryDefinition;
+  depth?: number;
 }
 
-export const ColumnContent = ({
+const ColumnContentInner = ({
   column,
   isConnectable,
   showDataObservabilitySummary,
   isLoading,
   summary,
+  depth = 0,
 }: ColumnContentProps) => {
   const { onColumnMouseEnter } = useLineageProvider();
-  const { selectedColumn, setSelectedColumn, tracedColumns, setTracedColumns } =
+  const { selectedColumn, setSelectedColumn, setTracedColumns, isEditMode } =
     useLineageStore();
-  const isColumnTraced = useMemo(
-    () => tracedColumns.has(column.fullyQualifiedName ?? ''),
-    [tracedColumns, column.fullyQualifiedName]
-  );
 
   const { fullyQualifiedName } = column;
 
@@ -239,56 +239,74 @@ export const ColumnContent = ({
     setTracedColumns(new Set());
   }, [selectedColumn, setTracedColumns]);
 
-  const columnNameContentRender = getColumnNameContent(column, isLoading);
+  const columnNameContentRender = useMemo(
+    () => getColumnNameContent(column, isLoading),
+    [column, isLoading]
+  );
+
+  const handles = useMemo(
+    () =>
+      isEditMode
+        ? getColumnHandle(
+            EntityLineageNodeType.DEFAULT,
+            isConnectable,
+            'lineage-column-node-handle',
+            fullyQualifiedName ?? ''
+          )
+        : null,
+    [isEditMode, isConnectable, fullyQualifiedName]
+  );
 
   return (
     <div
-      className={classNames(
-        'custom-node-column-container',
-        isColumnTraced && 'custom-node-header-column-tracing'
-      )}
+      className="custom-node-column-container"
       data-testid={`column-${fullyQualifiedName}`}
-      key={fullyQualifiedName}
+      style={{
+        paddingLeft: depth * DEPTH_INDENT_PX,
+      }}
       onClick={handleClick}
       onMouseDown={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
-      {getColumnHandle(
-        EntityLineageNodeType.DEFAULT,
-        isConnectable,
-        'lineage-column-node-handle',
-        fullyQualifiedName ?? ''
-      )}
-      <Row className="items-center" gutter={12}>
-        <Col className="custom-node-name-container" flex="1">
-          {/* Use isLoading to show skeleton, to avoid flickering and typography truncation issue, 
-          due to showDataObservabilitySummary conditional rendering */}
+      {handles}
+      <div className="custom-node-column-row">
+        <div className="custom-node-name-container">
           {columnNameContentRender}
-        </Col>
+        </div>
 
         {column.constraint && (
-          <Col
-            className={classNames(
-              'custom-node-constraint',
-              showDataObservabilitySummary ? 'text-left' : 'text-right'
-            )}
-            flex="80px">
+          <div
+            className={
+              showDataObservabilitySummary
+                ? 'custom-node-constraint text-left'
+                : 'custom-node-constraint text-right'
+            }>
             {column.constraint}
-          </Col>
+          </div>
         )}
         {showDataObservabilitySummary && (
-          <Col flex="80px">
+          <div className="custom-node-summary">
             <TestSuiteSummaryWidget
               isLoading={isLoading}
               size="small"
               summary={summary}
             />
-          </Col>
+          </div>
         )}
-      </Row>
+      </div>
     </div>
   );
 };
+
+export const ColumnContent = memo(
+  ColumnContentInner,
+  (prev, next) =>
+    prev.column === next.column &&
+    prev.isConnectable === next.isConnectable &&
+    prev.isLoading === next.isLoading &&
+    prev.showDataObservabilitySummary === next.showDataObservabilitySummary &&
+    prev.summary === next.summary
+);
 
 export function getNodeClassNames({
   isSelected,

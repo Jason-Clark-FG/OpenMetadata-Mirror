@@ -12,11 +12,11 @@
  */
 import { Theme } from '@mui/material';
 import { RefObject, useCallback, useEffect, useRef } from 'react';
-import { Edge, Position, useReactFlow, useViewport } from 'reactflow';
+import { Edge, Position, useNodes, useReactFlow, useViewport } from 'reactflow';
 import { StatusType } from '../generated/entity/data/pipeline';
 import {
   drawArrowMarker,
-  getEdgeAngle,
+  getBezierEndTangentAngle,
   getEdgeCoordinates,
   isEdgeInViewport,
   setupCanvas,
@@ -64,13 +64,15 @@ export function useCanvasEdgeRenderer({
   // the current lineWidth and transform, so we keep one around.
   const hitTestCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const { getNode, getNodes } = useReactFlow();
-  const nodes = getNodes();
+  const { getNode } = useReactFlow();
+  const nodes = useNodes();
+
   const {
     tracedNodes,
     tracedColumns,
     selectedEdge,
     selectedColumn,
+
     columnsInCurrentPages,
   } = useLineageStore();
 
@@ -177,7 +179,8 @@ export function useCanvasEdgeRenderer({
         ctx.globalAlpha = 1;
         ctx.setLineDash([]);
 
-        const angle = getEdgeAngle(
+        const angle = getBezierEndTangentAngle(
+          pathData.edgePath,
           coords.sourceX,
           coords.sourceY,
           coords.targetX,
@@ -225,7 +228,8 @@ export function useCanvasEdgeRenderer({
       ctx.setLineDash([]);
 
       if (pathData.sourceX && pathData.targetX) {
-        const angle = getEdgeAngle(
+        const angle = getBezierEndTangentAngle(
+          pathData.edgePath,
           pathData.sourceX,
           pathData.sourceY,
           pathData.targetX,
@@ -275,16 +279,26 @@ export function useCanvasEdgeRenderer({
     ctx.translate(viewport.x, viewport.y);
     ctx.scale(viewport.zoom, viewport.zoom);
 
-    const visibleEdges = edges.filter((edge) =>
-      isEdgeInViewport(
-        edge,
-        getNode(edge.source),
-        getNode(edge.target),
-        viewport,
-        containerWidth,
-        containerHeight,
-        columnsInCurrentPages
-      )
+    const isEdgeTraced = (edge: Edge, tracedColumns: Set<string>) => {
+      return (
+        edge.data.isColumnLineage &&
+        (tracedColumns.has(edge.sourceHandle ?? '') ||
+          tracedColumns.has(edge.targetHandle ?? ''))
+      );
+    };
+
+    const visibleEdges = edges.filter(
+      (edge) =>
+        isEdgeTraced(edge, tracedColumns) ||
+        isEdgeInViewport(
+          edge,
+          getNode(edge.source),
+          getNode(edge.target),
+          viewport,
+          containerWidth,
+          containerHeight,
+          columnsInCurrentPages
+        )
     );
 
     visibleEdgesRef.current = visibleEdges;
@@ -312,6 +326,8 @@ export function useCanvasEdgeRenderer({
     containerWidth,
     containerHeight,
     drawEdge,
+    tracedColumns,
+    tracedNodes,
     columnsInCurrentPages,
   ]);
 

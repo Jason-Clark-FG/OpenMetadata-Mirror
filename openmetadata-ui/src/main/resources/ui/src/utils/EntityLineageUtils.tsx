@@ -23,6 +23,7 @@ import {
   isEqual,
   isNil,
   isUndefined,
+  omit,
   pick,
   uniqueId,
   uniqWith,
@@ -59,21 +60,23 @@ import {
   EdgeData,
 } from '../components/Entity/EntityLineage/EntityLineage.interface';
 import LoadMoreNode from '../components/Entity/EntityLineage/LoadMoreNode/LoadMoreNode';
-import { EntityChildren } from '../components/Entity/EntityLineage/NodeChildren/NodeChildren.interface';
+import {
+  EntityChildren,
+  Flatten,
+} from '../components/Entity/EntityLineage/NodeChildren/NodeChildren.interface';
 import {
   EdgeDetails,
   LineageData,
   LineageEntityReference,
+  LineageNodeType,
   LineageSourceType,
   NodeData,
 } from '../components/Lineage/Lineage.interface';
 import { LineagePagingInfo } from '../components/LineageTable/LineageTable.interface';
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
+import { NO_DATA_PLACEHOLDER } from '../constants/constants';
 import {
-  LINEAGE_CHILD_ITEMS_PER_PAGE,
-  NO_DATA_PLACEHOLDER,
-} from '../constants/constants';
-import {
+  DATATYPES_HAVING_SUBFIELDS,
   LINEAGE_EXPORT_HEADERS,
   LINEAGE_TABLE_COLUMN_LOCALIZATION_KEYS,
   NODE_HEIGHT,
@@ -91,14 +94,8 @@ import {
 import { AddLineage, EntitiesEdge } from '../generated/api/lineage/addLineage';
 import { LineageDirection } from '../generated/api/lineage/lineageDirection';
 import { PipelineViewMode } from '../generated/configuration/lineageSettings';
-import { APIEndpoint } from '../generated/entity/data/apiEndpoint';
-import { Container } from '../generated/entity/data/container';
-import { Dashboard } from '../generated/entity/data/dashboard';
-import { Mlmodel } from '../generated/entity/data/mlmodel';
 import { Pipeline } from '../generated/entity/data/pipeline';
-import { SearchIndex as SearchIndexEntity } from '../generated/entity/data/searchIndex';
-import { Column, Table } from '../generated/entity/data/table';
-import { Topic } from '../generated/entity/data/topic';
+import { Column } from '../generated/entity/data/table';
 import { ColumnLineage, LineageDetails } from '../generated/type/entityLineage';
 import { EntityReference } from '../generated/type/entityReference';
 import { TagSource } from '../generated/type/tagLabel';
@@ -155,9 +152,7 @@ export const dragHandle = (event: ReactMouseEvent) => {
 export const getLayoutedElements = (
   elements: CustomElement,
   direction = EntityLineageDirection.LEFT_RIGHT,
-  isExpanded = true,
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set()
+  isExpanded = true
 ): LayoutedElements => {
   const Graph = graphlib.Graph;
   const dagreGraph = new Graph();
@@ -168,12 +163,7 @@ export const getLayoutedElements = (
   const nodeSet = new Set(elements.node.map((item) => item.id));
 
   const nodeData = elements.node.map((el) => {
-    const { childrenHeight } = getEntityChildrenAndLabel(
-      el.data.node,
-      expandAllColumns,
-      columnsHavingLineage
-    );
-    const nodeHeight = isExpanded ? childrenHeight + 220 : NODE_HEIGHT;
+    const nodeHeight = isExpanded ? 550 : NODE_HEIGHT;
 
     dagreGraph.setNode(el.id, {
       width: NODE_WIDTH,
@@ -183,7 +173,6 @@ export const getLayoutedElements = (
     return {
       ...el,
       nodeHeight,
-      childrenHeight,
     };
   });
 
@@ -216,7 +205,7 @@ const layoutOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.spacing.nodeNode': 100,
-  'elk.layered.spacing.nodeNodeBetweenLayers': 50,
+  'elk.layered.spacing.nodeNodeBetweenLayers': 150,
   'elk.layered.nodePlacement.strategy': 'SIMPLE',
   'elk.partitioning.activate': 'true',
 };
@@ -229,20 +218,14 @@ const elk = new ELK({
 export const getELKLayoutedElements = async (
   nodes: Node[],
   edges: Edge[],
-  isExpanded = true,
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set()
+  isExpanded = true
 ) => {
   const elkNodes: ElkNode[] = nodes.map((node) => {
     const nodeHeight =
       node.height && node.height > NODE_HEIGHT
         ? node.height
         : isExpanded
-        ? getEntityChildrenAndLabel(
-            node.data.node,
-            expandAllColumns,
-            columnsHavingLineage
-          ).childrenHeight + 220
+        ? 550
         : NODE_HEIGHT;
     const nodeDepth = node.data?.nodeDepth;
 
@@ -597,45 +580,6 @@ export const removeLineageHandler = async (data: EdgeData): Promise<void> => {
   }
 };
 
-const calculateHeightAndFlattenNode = (
-  children: Column[],
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set(),
-  heightCap = Infinity,
-  accumulator: { height: number; flattened: Column[] } = {
-    height: 0,
-    flattened: [],
-  }
-): { totalHeight: number; flattened: Column[] } => {
-  for (const child of children) {
-    if (
-      accumulator.height < heightCap &&
-      (expandAllColumns ||
-        columnsHavingLineage.has(child.fullyQualifiedName ?? ''))
-    ) {
-      accumulator.height += 31;
-    }
-
-    accumulator.flattened.push(child);
-
-    if (child.children && child.children.length > 0) {
-      if (accumulator.height < heightCap) {
-        accumulator.height += 8;
-      }
-
-      calculateHeightAndFlattenNode(
-        child.children,
-        expandAllColumns,
-        columnsHavingLineage,
-        heightCap,
-        accumulator
-      );
-    }
-  }
-
-  return { totalHeight: accumulator.height, flattened: accumulator.flattened };
-};
-
 /**
  * This function returns all the columns as children as well flattened children for subfield columns.
  * It also returns the label for the children and the total height of the children.
@@ -645,17 +589,11 @@ const calculateHeightAndFlattenNode = (
  * @return {{ nodes: Node[]; edges: Edge[], nodeIds: string[], edgeIds: string[] }} -
  * An object containing the downstream nodes and edges.
  */
-export const getEntityChildrenAndLabel = (
-  node: SourceType,
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set()
-) => {
+export const getEntityChildrenAndLabel = (node: LineageNodeType) => {
   if (!node) {
     return {
       children: [],
       childrenHeading: '',
-      childrenHeight: 0,
-      childrenFlatten: [],
     };
   }
   const entityMappings: Record<
@@ -663,38 +601,38 @@ export const getEntityChildrenAndLabel = (
     { data: EntityChildren; label: string }
   > = {
     [EntityType.TABLE]: {
-      data: (node as Table).columns ?? [],
+      data: node.columns ?? [],
       label: t('label.column-plural'),
     },
     [EntityType.DASHBOARD]: {
-      data: (node as Dashboard).charts ?? [],
+      data: node.charts ?? [],
       label: t('label.chart-plural'),
     },
     [EntityType.MLMODEL]: {
-      data: (node as Mlmodel).mlFeatures ?? [],
+      data: node.mlFeatures ?? [],
       label: t('label.feature-plural'),
     },
     [EntityType.DASHBOARD_DATA_MODEL]: {
-      data: (node as Table).columns ?? [],
+      data: node.columns ?? [],
       label: t('label.column-plural'),
     },
     [EntityType.CONTAINER]: {
-      data: (node as Container).dataModel?.columns ?? [],
+      data: node.dataModel?.columns ?? [],
       label: t('label.column-plural'),
     },
     [EntityType.TOPIC]: {
-      data: (node as Topic).messageSchema?.schemaFields ?? [],
+      data: node.messageSchema?.schemaFields ?? [],
       label: t('label.field-plural'),
     },
     [EntityType.API_ENDPOINT]: {
       data:
-        (node as APIEndpoint)?.responseSchema?.schemaFields ??
-        (node as APIEndpoint)?.requestSchema?.schemaFields ??
+        node?.responseSchema?.schemaFields ??
+        node?.requestSchema?.schemaFields ??
         [],
       label: t('label.field-plural'),
     },
     [EntityType.SEARCH_INDEX]: {
-      data: (node as SearchIndexEntity).fields ?? [],
+      data: node.fields ?? [],
       label: t('label.field-plural'),
     },
   };
@@ -704,22 +642,9 @@ export const getEntityChildrenAndLabel = (
     label: '',
   };
 
-  const heightCap = expandAllColumns
-    ? Infinity
-    : LINEAGE_CHILD_ITEMS_PER_PAGE * 31;
-
-  const { totalHeight, flattened } = calculateHeightAndFlattenNode(
-    data as Column[],
-    expandAllColumns,
-    columnsHavingLineage,
-    heightCap
-  );
-
   return {
     children: data,
     childrenHeading: label,
-    childrenHeight: totalHeight,
-    childrenFlatten: flattened,
   };
 };
 
@@ -756,33 +681,23 @@ export const checkUpstreamDownstream = (id: string, data: EdgeDetails[]) => {
 export const positionNodesUsingElk = async (
   nodes: Node[],
   edges: Edge[],
-  isColView: boolean,
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set()
+  isColView: boolean
 ) => {
-  const obj = await getELKLayoutedElements(
-    nodes,
-    edges,
-    isColView,
-    expandAllColumns,
-    columnsHavingLineage
-  );
+  const obj = await getELKLayoutedElements(nodes, edges, isColView);
 
   return obj;
 };
 
 export const createNodes = (
-  nodesData: LineageEntityReference[],
+  nodesData: LineageNodeType[],
   edgesData: EdgeDetails[],
   entityFqn: string,
   incomingMap: Map<string, number>,
   outgoingMap: Map<string, number>,
   isExpanded = false,
-  hidden?: boolean,
-  expandAllColumns = false,
-  columnsHavingLineage: Set<string> = new Set()
+  hidden?: boolean
 ) => {
-  const uniqueNodesMap = new Map<string, LineageEntityReference>();
+  const uniqueNodesMap = new Map<string, LineageNodeType>();
   nodesData.forEach((node) => {
     if (node?.fullyQualifiedName) {
       uniqueNodesMap.set(node.fullyQualifiedName, node);
@@ -816,13 +731,7 @@ export const createNodes = (
         ? EntityLineageNodeType.INPUT
         : EntityLineageNodeType.DEFAULT;
 
-    const nodeHeight = isExpanded
-      ? getEntityChildrenAndLabel(
-          node as SourceType,
-          expandAllColumns,
-          columnsHavingLineage
-        ).childrenHeight + 220
-      : NODE_HEIGHT;
+    const nodeHeight = isExpanded ? 550 : NODE_HEIGHT;
 
     return {
       id: `${node.id}`,
@@ -907,7 +816,7 @@ export const createColumnEdges = (
 ) => {
   const columnEdges: Edge[] = [];
   const edgeIds = new Set<string>();
-  const columnsHavingLineage = new Set<string>();
+  const columnsHavingLineage = new Map<string, Set<string>>();
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
   edges.forEach((edge) => {
@@ -916,6 +825,14 @@ export const createColumnEdges = (
 
     const sourceType = nodeById.get(sourceId);
     const targetType = nodeById.get(targetId);
+
+    if (!columnsHavingLineage.has(sourceId)) {
+      columnsHavingLineage.set(sourceId, new Set<string>());
+    }
+
+    if (!columnsHavingLineage.has(targetId)) {
+      columnsHavingLineage.set(targetId, new Set());
+    }
 
     if (isUndefined(sourceType) || isUndefined(targetType)) {
       return;
@@ -926,11 +843,9 @@ export const createColumnEdges = (
         const toColumn = e.toColumn ?? '';
         if (toColumn && e.fromColumns?.length) {
           e.fromColumns.forEach((fromColumn) => {
-            columnsHavingLineage.add(fromColumn);
-            columnsHavingLineage.add(toColumn);
+            columnsHavingLineage.get(sourceId)?.add(fromColumn);
+            columnsHavingLineage.get(targetId)?.add(toColumn);
 
-            // const encodedFrom = encodeLineageHandles(fromColumn);
-            // const encodedTo = encodeLineageHandles(toColumn);
             const edgeId = `column-${fromColumn}-${toColumn}-edge-${sourceId}-${targetId}`;
 
             if (!edgeIds.has(edgeId)) {
@@ -995,7 +910,7 @@ export const createEdgesAndEdgeMaps = (
 
   return {
     edges: entityEdges,
-    columnsHavingLineage: new Set<string>(),
+    columnsHavingLineage: new Map<string, Set<string>>(),
     incomingMap,
     outgoingMap,
   };
@@ -1396,11 +1311,11 @@ export const getColumnFunctionValue = (
 };
 
 const createLoadMoreNode = (
-  parentNode: LineageEntityReference,
+  parentNode: LineageNodeType,
   currentCount: number,
   totalCount: number,
   direction: LineageDirection
-): LineageEntityReference => {
+): LineageNodeType => {
   const uniqueNodeId = uniqueId('node');
   const newNodeId = `loadmore_${uniqueNodeId}`;
 
@@ -1415,6 +1330,7 @@ const createLoadMoreNode = (
       parentId: parentNode.id,
       childrenLength: totalCount - currentCount,
     },
+    entityType: 'load_more',
     direction,
   };
 };
@@ -1443,10 +1359,10 @@ const createLoadMoreEdge = (
 };
 
 const handleNodePagination = (
-  node: LineageEntityReference,
+  node: LineageNodeType,
   edges: Record<string, EdgeDetails>,
   isDownstream: boolean
-): { newNode?: LineageEntityReference; newEdge?: EdgeDetails } => {
+): { newNode?: LineageNodeType; newEdge?: EdgeDetails } => {
   const { paging } = node;
   const totalCount = isDownstream
     ? paging?.entityDownstreamCount
@@ -1476,49 +1392,73 @@ const handleNodePagination = (
   return { newNode: loadMoreNode, newEdge: loadMoreEdge };
 };
 
+const flattenColumn = (column: Column, depth: number): Flatten<Column>[] => {
+  const result: Flatten<Column>[] = [
+    { ...omit<Column>(column, ['children']), depth },
+  ];
+
+  if (
+    DATATYPES_HAVING_SUBFIELDS.includes(column.dataType) &&
+    column.children &&
+    column.children.length > 0
+  ) {
+    for (const child of column.children) {
+      result.push(...flattenColumn(child, depth + 1));
+    }
+  }
+
+  return result;
+};
+
+const flatItems = (columns: Column[]) =>
+  columns.flatMap((column) => flattenColumn(column as Column, 0));
+
 const processNodeArray = (
   nodes: Record<string, NodeData>,
   entityFqn: string
-): LineageEntityReference[] => {
-  return Object.values(nodes)
-    .map((node: NodeData) => ({
-      ...(pick(node.entity, [
-        'id',
-        'type',
-        'fullyQualifiedName',
-        'name',
-        'displayName',
-        'columns',
-        'upstreamLineage',
-        'entityType',
-        'dataModel',
-        'deleted',
-        'mlFeatures',
-        'charts',
-        'messageSchema',
-        'responseSchema',
-        'requestSchema',
-        'fields',
-        'serviceType',
-        'testSuite',
-      ]) as unknown as LineageEntityReference),
-      paging: {
-        entityUpstreamCount: node.paging?.entityUpstreamCount ?? 0,
-        entityDownstreamCount: node.paging?.entityDownstreamCount ?? 0,
-      },
-      nodeDepth: node.nodeDepth,
-      upstreamExpandPerformed:
-        (node.entity as LineageEntityReference).upstreamExpandPerformed !==
-        undefined
-          ? (node.entity as LineageEntityReference).upstreamExpandPerformed
-          : node.entity.fullyQualifiedName === entityFqn,
-      downstreamExpandPerformed:
-        (node.entity as LineageEntityReference).downstreamExpandPerformed !==
-        undefined
-          ? (node.entity as LineageEntityReference).downstreamExpandPerformed
-          : node.entity.fullyQualifiedName === entityFqn,
-    }))
-    .flat();
+): LineageNodeType[] => {
+  return Object.values(nodes).map(
+    (node: NodeData) =>
+      ({
+        ...(pick(node.entity, [
+          'id',
+          'type',
+          'fullyQualifiedName',
+          'name',
+          'displayName',
+          'upstreamLineage',
+          'entityType',
+          'dataModel',
+          'deleted',
+          'mlFeatures',
+          'charts',
+          'messageSchema',
+          'responseSchema',
+          'requestSchema',
+          'fields',
+          'serviceType',
+          'testSuite',
+        ]) as unknown as LineageEntityReference),
+        ...('columns' in node.entity
+          ? { columns: flatItems(node.entity.columns as Column[]) }
+          : {}),
+        paging: {
+          entityUpstreamCount: node.paging?.entityUpstreamCount ?? 0,
+          entityDownstreamCount: node.paging?.entityDownstreamCount ?? 0,
+        },
+        nodeDepth: node.nodeDepth,
+        upstreamExpandPerformed:
+          (node.entity as LineageEntityReference).upstreamExpandPerformed !==
+          undefined
+            ? (node.entity as LineageEntityReference).upstreamExpandPerformed
+            : node.entity.fullyQualifiedName === entityFqn,
+        downstreamExpandPerformed:
+          (node.entity as LineageEntityReference).downstreamExpandPerformed !==
+          undefined
+            ? (node.entity as LineageEntityReference).downstreamExpandPerformed
+            : node.entity.fullyQualifiedName === entityFqn,
+      } as LineageNodeType)
+  );
 };
 
 const processPipelineEdge = (edge: EdgeDetails, pipelineNode: Pipeline) => {
@@ -1550,7 +1490,7 @@ const processPipelineEdge = (edge: EdgeDetails, pipelineNode: Pipeline) => {
 
 const processEdges = (
   edges: EdgeDetails[],
-  nodesArray: LineageEntityReference[]
+  nodesArray: LineageNodeType[]
 ): EdgeDetails[] => {
   return edges.reduce<EdgeDetails[]>(
     (acc: EdgeDetails[], edge: EdgeDetails) => {
@@ -1580,20 +1520,20 @@ const processEdges = (
 };
 
 const processPagination = (
-  nodesArray: LineageEntityReference[],
+  nodesArray: LineageNodeType[],
   downstreamEdges: Record<string, EdgeDetails>,
   upstreamEdges: Record<string, EdgeDetails>
 ): {
-  newNodes: LineageEntityReference[];
+  newNodes: LineageNodeType[];
   newEdges: EdgeDetails[];
 } => {
-  const newNodes: LineageEntityReference[] = [];
+  const newNodes: LineageNodeType[] = [];
   const newEdges: EdgeDetails[] = [];
 
   const eligibleNodes = nodesArray.filter(
     (node) =>
       ![EntityType.PIPELINE, EntityType.STORED_PROCEDURE].includes(
-        get(node, 'entityType')
+        get(node, 'entityType') as EntityType
       )
   );
 
@@ -1622,16 +1562,16 @@ export const parseLineageData = (
   rootFqn: string, // This contains the fqn of the entity that is being viewed in lineage page,
   pipelineViewMode: PipelineViewMode = PipelineViewMode.Node
 ): {
-  nodes: LineageEntityReference[];
+  nodes: LineageNodeType[];
   edges: EdgeDetails[];
-  entity: LineageEntityReference;
+  entity: LineageNodeType;
 } => {
   const { nodes, downstreamEdges, upstreamEdges } = data;
 
   // Process nodes
   const nodesArray = uniqWith(processNodeArray(nodes, rootFqn), isEqual);
 
-  const processedNodes: LineageEntityReference[] = [...nodesArray];
+  const processedNodes: LineageNodeType[] = [...nodesArray];
 
   // Process edges
   const allEdges = [
@@ -1660,7 +1600,7 @@ export const parseLineageData = (
   // Find the main entity
   const entity = nodesArray.find(
     (node) => node.fullyQualifiedName === entityFqn
-  ) as EntityReference;
+  ) as LineageNodeType;
 
   return {
     nodes: finalNodes,

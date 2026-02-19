@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { Edge, Node, Viewport } from 'reactflow';
+import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../constants/constants';
 
 export interface BoundingBox {
   minX: number;
@@ -62,6 +63,19 @@ export function getNodeHeight(node: Node) {
   return height;
 }
 
+const getNodeYPadding = (node: Node): number => {
+  const columnsLength = node.data.node.columns?.length ?? 0;
+  let sourceYPadding = columnsLength > 0 ? 48 : 0;
+
+  const needsNavigation = columnsLength > LINEAGE_CHILD_ITEMS_PER_PAGE;
+  if (needsNavigation) {
+    sourceYPadding += 28;
+  }
+
+  // Add padding for the node's border
+  return sourceYPadding + 32.85 / 2;
+};
+
 export function getEdgeCoordinates(
   edge: Edge,
   sourceNode?: Node,
@@ -96,31 +110,35 @@ export function getEdgeCoordinates(
       return null;
     }
 
-    const sourceColumnPosition = 32.85 * sourceIndex + 32.85 / 2;
-    const targetColumnPosition = 32.85 * targetIndex + 32.85 / 2;
+    const sourceColumnPosition =
+      32.85 * sourceIndex + (sourceIndex >= 10 ? 17 : 0);
+    const targetColumnPosition =
+      32.85 * targetIndex + (targetIndex >= 10 ? 17 : 0);
+
+    const sourceYPadding = getNodeYPadding(sourceNode);
+    const targetYPadding = getNodeYPadding(targetNode);
 
     return {
-      sourceX: sourceNode.position.x + 291,
+      sourceX: sourceNode.position.x + 400,
       sourceY:
         sourceNode.position.y +
         sourceColumnPosition +
-        48 +
-        sourceNodeHeight +
-        4,
+        sourceYPadding +
+        sourceNodeHeight,
+      // reduce 20 for NodeHandles
       targetX: targetNode.position.x,
       targetY:
         targetNode.position.y +
         targetColumnPosition +
-        48 +
-        targetNodeHeight +
-        4,
+        targetYPadding +
+        targetNodeHeight,
     };
   }
 
   return {
     sourceX: sourceNode.position.x + (sourceNode.width ?? 0),
     sourceY: sourceNode.position.y + sourceNodeHeight / 2,
-    targetX: targetNode.position.x,
+    targetX: targetNode.position.x - 10, // reduce 20 for NodeHandles
     targetY: targetNode.position.y + targetNodeHeight / 2,
   };
 }
@@ -236,27 +254,43 @@ export function inverseTransformPoint(
   };
 }
 
+/**
+ * Draws an arrowhead that matches ReactFlow's built-in ArrowClosed marker:
+ *   <polyline points="-5,-4 0,0 -5,4 -5,-4"
+ *             stroke-linecap="round" stroke-linejoin="round"
+ *             style="stroke: <color>; fill: <color>; stroke-width: 1;" />
+ * The marker viewBox is "-10 -10 20 20" with refX=0, refY=0, so the tip
+ * sits exactly at the path endpoint.
+ */
 export function drawArrowMarker(
   ctx: CanvasRenderingContext2D,
   targetX: number,
   targetY: number,
   angle: number,
-  color: string,
-  size: number = 10
+  color: string
 ) {
   ctx.save();
 
   ctx.translate(targetX, targetY);
   ctx.rotate(angle);
 
+  // Scale factor 1 matches ReactFlow's effective marker size when
+  // markerUnits="strokeWidth" is combined with strokeWidth=2.
+  const s = 1;
   ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(-size, -size / 2);
-  ctx.lineTo(-size, size / 2);
+  ctx.moveTo(-5 * s, -4 * s);
+  ctx.lineTo(0, 0);
+  ctx.lineTo(-5 * s, 4 * s);
+  ctx.lineTo(-5 * s, -4 * s);
   ctx.closePath();
 
+  ctx.strokeStyle = color;
   ctx.fillStyle = color;
+  ctx.lineWidth = s;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.fill();
+  ctx.stroke();
 
   ctx.restore();
 }
@@ -268,4 +302,54 @@ export function getEdgeAngle(
   targetY: number
 ): number {
   return Math.atan2(targetY - sourceY, targetX - sourceX);
+}
+
+/**
+ * Computes the arrival tangent angle at the end of a bezier SVG path string.
+ *
+ * ReactFlow's markerEnd arrow is oriented along the tangent of the bezier curve
+ * at t=1, which is the direction from the last control point (c2) to the end
+ * point. Using the raw source→target chord angle (getEdgeAngle) diverges from
+ * this whenever nodes are at different Y positions.
+ *
+ * For a cubic bezier "M sx sy C c1x c1y c2x c2y tx ty" the tangent at t=1
+ * is (tx - c2x, ty - c2y).
+ *
+ * Falls back to the chord angle when the path cannot be parsed (e.g.
+ * self-connecting arc paths).
+ */
+export function getBezierEndTangentAngle(
+  pathString: string,
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number
+): number {
+  // Match a cubic bezier command: C c1x c1y c2x c2y tx ty
+  // Numbers may be negative / decimal.
+  const cubicRe =
+    /[Cc]\s*([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)/g;
+
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+  while ((match = cubicRe.exec(pathString)) !== null) {
+    lastMatch = match;
+  }
+
+  if (lastMatch) {
+    const c2x = parseFloat(lastMatch[3]);
+    const c2y = parseFloat(lastMatch[4]);
+    const tx = parseFloat(lastMatch[5]);
+    const ty = parseFloat(lastMatch[6]);
+    const dx = tx - c2x;
+    const dy = ty - c2y;
+
+    // Only use the bezier tangent if the control point isn't collapsed onto
+    // the endpoint (degenerate bezier).
+    if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+      return Math.atan2(dy, dx);
+    }
+  }
+
+  return getEdgeAngle(sourceX, sourceY, targetX, targetY);
 }

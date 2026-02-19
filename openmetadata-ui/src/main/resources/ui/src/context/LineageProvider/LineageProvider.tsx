@@ -57,7 +57,7 @@ import {
   EdgeDetails,
   EntityLineageResponse,
   LineageData,
-  LineageEntityReference,
+  LineageNodeType,
   NodeData,
 } from '../../components/Lineage/Lineage.interface';
 import LineageNodeRemoveButton from '../../components/Lineage/LineageNodeRemoveButton';
@@ -185,7 +185,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const [entityLineage, setEntityLineage] = useState<EntityLineageResponse>({
     nodes: [],
     edges: [],
-    entity: {} as EntityReference,
+    entity: {} as LineageNodeType,
   });
   const [lineageData, setLineageData] = useState<LineageData>();
   const [entity, setEntity] = useState<SourceType>();
@@ -286,7 +286,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     if (!isColumnLevelLineage) {
       return {
         columnEdges: [],
-        columnsHavingLineage: new Set<string>(),
+        columnsHavingLineage: new Map<string, Set<string>>(),
       };
     }
 
@@ -314,8 +314,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   }, [cachedEntityEdgesAndMaps, cachedColumnEdges]);
 
   const cachedNodes = useMemo(() => {
-    const { allNodes, incomingMap, outgoingMap, columnsHavingLineage } =
-      cachedEdgesAndMaps;
+    const { allNodes, incomingMap, outgoingMap } = cachedEdgesAndMaps;
 
     return createNodes(
       allNodes,
@@ -324,9 +323,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       incomingMap,
       outgoingMap,
       isColumnLevelLineage,
-      undefined,
-      isEditMode || expandAllColumns,
-      columnsHavingLineage
+      undefined
     );
   }, [
     cachedEdgesAndMaps,
@@ -381,11 +378,13 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
       const isSameLineageData =
         lineageData === entityLineage &&
-        allNodes.length === cachedEdgesAndMaps.allNodes.length;
+        allNodes.length === cachedEdgesAndMaps.allNodes.length &&
+        cachedEdgesAndMaps.columnsHavingLineage.size === 0 &&
+        isColumnLevelLineage;
 
       let updatedEdges: Edge[];
       let initialNodes: Node[];
-      let columnsLineageSet: Set<string>;
+      let columnsLineageSet: Map<string, Set<string>>;
 
       if (isSameLineageData) {
         updatedEdges = isFirstTime
@@ -422,9 +421,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
           edgesAndMaps.incomingMap,
           edgesAndMaps.outgoingMap,
           isColumnLevelLineage,
-          isFirstTime ? true : undefined,
-          isEditMode || expandAllColumns,
-          columnsLineageSet
+          isFirstTime ? true : undefined
         );
       }
 
@@ -438,9 +435,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       const positionedNodesEdges = await positionNodesUsingElk(
         initialNodes,
         updatedEdges,
-        activeLayer.includes(LineageLayer.ColumnLevelLineage),
-        isEditMode || expandAllColumns,
-        columnsLineageSet
+        activeLayer.includes(LineageLayer.ColumnLevelLineage)
       );
 
       const visibleNodes = positionedNodesEdges.nodes.map((node) => ({
@@ -950,7 +945,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
     // Recompute columnsHavingLineage after removing the column edge
     const seenIds = new Set<string>();
-    const allNodes: LineageEntityReference[] = [
+    const allNodes: LineageNodeType[] = [
       ...(entityLineage.nodes ?? []),
       ...(entityLineage.entity ? [entityLineage.entity] : []),
     ].filter((n) => {
@@ -1325,8 +1320,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
               (entityLineage.nodes ?? []).map((n) => n.id)
             );
             const nodesToAdd = [
-              sourceNode?.data.node as EntityReference,
-              targetNode?.data.node as EntityReference,
+              sourceNode?.data.node as LineageNodeType,
+              targetNode?.data.node as LineageNodeType,
             ].filter((n) => !existingNodeIds.has(n.id));
 
             const allNodes = [...(entityLineage.nodes ?? []), ...nodesToAdd];
@@ -1720,7 +1715,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
       setEntityLineage({
         ...updatedEntityLineage,
-        nodes: updatedNodes as EntityReference[],
+        nodes: updatedNodes,
       });
     }
   }, [isEditMode, updatedEntityLineage, entityFqn]);

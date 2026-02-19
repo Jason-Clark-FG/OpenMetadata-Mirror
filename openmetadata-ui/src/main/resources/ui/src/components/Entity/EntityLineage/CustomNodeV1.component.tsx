@@ -11,8 +11,9 @@
  *  limitations under the License.
  */
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
+import { NODE_WIDTH } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
@@ -165,7 +166,8 @@ const CustomNodeV1 = (props: NodeProps) => {
   const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
     useState(true);
 
-  const [columnsExpanded, setColumnsExpanded] = useState<boolean>(false);
+  const [columnsExpanded, setColumnsExpanded] =
+    useState<boolean>(isColumnLevelLineage);
 
   const {
     label,
@@ -177,23 +179,6 @@ const CustomNodeV1 = (props: NodeProps) => {
     isUpstreamNode = false,
     isDownstreamNode = false,
   } = data;
-
-  // Expand column on ColumnLevelLineage change
-  useEffect(() => {
-    if (isEditMode) {
-      setShowColumnsWithLineageOnly(false);
-    } else if (isColumnLevelLineage) {
-      setShowColumnsWithLineageOnly(true);
-    } else {
-      setShowColumnsWithLineageOnly(false);
-    }
-
-    setColumnsExpanded(isColumnLevelLineage);
-  }, [isColumnLevelLineage, isEditMode]);
-
-  useEffect(() => {
-    setColumnsExpanded(isEditMode);
-  }, [isEditMode]);
 
   const toggleColumnsExpanded = useCallback(() => {
     setColumnsExpanded((prev) => !prev);
@@ -221,7 +206,8 @@ const CustomNodeV1 = (props: NodeProps) => {
     showDqTracing: showDqTracing ?? false,
     isTraced: tracedNodes.has(id),
     isBaseNode: isRootNode,
-    isChildrenListExpanded: columnsExpanded,
+    isChildrenListExpanded:
+      columnsExpanded || isColumnLevelLineage || expandAllColumns,
   });
 
   const onExpand = useCallback(
@@ -318,10 +304,35 @@ const CustomNodeV1 = (props: NodeProps) => {
     [expandCollapseProps]
   );
 
+  const childElement = useMemo(() => {
+    if (!columnsExpanded && !isColumnLevelLineage) {
+      return null;
+    }
+
+    return (
+      <NodeChildren
+        isChildrenListExpanded={
+          columnsExpanded || expandAllColumns || isColumnLevelLineage
+        }
+        isConnectable={isConnectable}
+        isOnlyShowColumnsWithLineageFilterActive={showColumnsWithLineageOnly}
+        node={node}
+      />
+    );
+  }, [
+    columnsExpanded,
+    expandAllColumns,
+    isConnectable,
+    showColumnsWithLineageOnly,
+    node,
+    isColumnLevelLineage,
+  ]);
+
   return (
     <div
       className={containerClass}
-      data-testid={`lineage-node-${fullyQualifiedName}`}>
+      data-testid={`lineage-node-${fullyQualifiedName}`}
+      style={{ width: NODE_WIDTH }}>
       {isRootNode && (
         <div className="lineage-node-badge-container">
           <div className="lineage-node-badge" />
@@ -335,12 +346,7 @@ const CustomNodeV1 = (props: NodeProps) => {
           isConnectable={isConnectable}
           nodeType={nodeType}
         />
-        <NodeChildren
-          isChildrenListExpanded={columnsExpanded || expandAllColumns}
-          isConnectable={isConnectable}
-          isOnlyShowColumnsWithLineageFilterActive={showColumnsWithLineageOnly}
-          node={node}
-        />
+        {childElement}
       </div>
     </div>
   );

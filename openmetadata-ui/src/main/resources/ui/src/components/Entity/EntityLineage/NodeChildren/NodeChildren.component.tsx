@@ -11,24 +11,14 @@
  *  limitations under the License.
  */
 import { SearchOutlined } from '@ant-design/icons';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { IconButton, Stack, Typography } from '@mui/material';
 import { Input } from 'antd';
 import classNames from 'classnames';
 import { isEmpty, isUndefined } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  BORDER_COLOR,
-  LINEAGE_CHILD_ITEMS_PER_PAGE,
-} from '../../../../constants/constants';
-import {
-  DATATYPES_HAVING_SUBFIELDS,
-  LINEAGE_COLUMN_NODE_SUPPORTED,
-} from '../../../../constants/Lineage.constants';
+import { BORDER_COLOR } from '../../../../constants/constants';
+import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../../constants/Lineage.constants';
 import { EntityType } from '../../../../enums/entity.enum';
-import { Column, Table } from '../../../../generated/entity/data/table';
 import { LineageLayer } from '../../../../generated/settings/settings';
 import {
   EntityReference,
@@ -37,194 +27,9 @@ import {
 import { useLineageStore } from '../../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../../rest/testAPI';
 import { getEntityChildrenAndLabel } from '../../../../utils/EntityLineageUtils';
-import EntityLink from '../../../../utils/EntityLink';
 import { getEntityName } from '../../../../utils/EntityUtils';
-import { ColumnContent } from '../CustomNode.utils';
-import {
-  EntityChildren,
-  EntityChildrenItem,
-  FlatColumnItem,
-  NodeChildrenProps,
-} from './NodeChildren.interface';
-
-interface CustomPaginatedListProps {
-  flatItems: FlatColumnItem[];
-  isConnectable: boolean;
-  isLoading: boolean;
-  nodeId?: string;
-  page: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-  showDataObservabilitySummary: boolean;
-  summary?: TestSummary;
-}
-
-const DEPTH_INDENT_PX = 16;
-
-const CustomPaginatedList = ({
-  flatItems,
-  isConnectable,
-  isLoading,
-  nodeId,
-  page,
-  setPage,
-  showDataObservabilitySummary,
-  summary,
-}: CustomPaginatedListProps) => {
-  const { t } = useTranslation();
-  const { updateColumnsInCurrentPages, selectedColumn } = useLineageStore();
-
-  const totalPages = Math.ceil(flatItems.length / LINEAGE_CHILD_ITEMS_PER_PAGE);
-  const startIdx = (page - 1) * LINEAGE_CHILD_ITEMS_PER_PAGE;
-  const endIdx = startIdx + LINEAGE_CHILD_ITEMS_PER_PAGE;
-
-  const currentPageFlatItems = useMemo(
-    () => flatItems.slice(startIdx, endIdx),
-    [flatItems, startIdx, endIdx]
-  );
-
-  const outsidePageFlatItems = useMemo(
-    () => [...flatItems.slice(0, startIdx), ...flatItems.slice(endIdx)],
-    [flatItems, startIdx, endIdx]
-  );
-
-  //   const currentNodeCurrentPageItems = useMemo(
-  //     () =>
-  //       currentPageFlatItems
-  //         .map((fi) => fi.column.fullyQualifiedName)
-  //         .filter((fqn): fqn is string => Boolean(fqn)),
-  //     [currentPageFlatItems]
-  //   );
-
-  /**
-   * This updates `columnsInCurrentPages` object for current node
-   *
-   * When page or filter is changed, this effect is called
-   * When filter is activated
-   *  - entry for nodeid is updated with `currentNodeAllPagesItems`
-   *  - `currentNodeAllPagesItems` is updated using `filteredColumns`
-   *  - `filteredColumns` is updated to only include columns having lineage
-   * When filter is deactivated
-   *  - entry is updated with `currentNodeCurrentPageItems`.
-   *  - `currentNodeCurrentPageItems` is updated using `filteredColumns`
-   *  - `filteredColumns` is updated to include all columns of current node
-   */
-  useEffect(() => {
-    updateColumnsInCurrentPages(
-      nodeId ?? '',
-      currentPageFlatItems.map((fi) => fi.column.fullyQualifiedName ?? '')
-    );
-  }, [currentPageFlatItems, page]);
-
-  const getColumnSummary = useCallback(
-    (column: Column) => {
-      const { fullyQualifiedName } = column;
-
-      return summary?.columnTestSummary?.find(
-        (data) =>
-          EntityLink.getEntityColumnFqn(data.entityLink ?? '') ===
-          fullyQualifiedName
-      );
-    },
-    [summary]
-  );
-
-  const renderFlatItem = useCallback(
-    (flatItem: FlatColumnItem, className: string) => {
-      const { column, depth } = flatItem;
-
-      const columnSummary = getColumnSummary(column);
-
-      return (
-        <div
-          className={className}
-          key={column.fullyQualifiedName}
-          style={{
-            paddingLeft: depth * DEPTH_INDENT_PX,
-          }}>
-          <ColumnContent
-            column={column}
-            isConnectable={isConnectable}
-            isLoading={isLoading}
-            showDataObservabilitySummary={showDataObservabilitySummary}
-            summary={columnSummary}
-          />
-        </div>
-      );
-    },
-    [
-      getColumnSummary,
-      isConnectable,
-      isLoading,
-      showDataObservabilitySummary,
-      selectedColumn,
-    ]
-  );
-
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      setPage(newPage);
-    },
-    [setPage]
-  );
-
-  const handlePrev = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      handlePageChange(Math.max(page - 1, 1));
-    },
-    [page, handlePageChange]
-  );
-
-  const handleNext = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      handlePageChange(Math.min(page + 1, totalPages));
-    },
-    [page, totalPages, handlePageChange]
-  );
-
-  return (
-    <>
-      <Stack className="inside-current-page-items" spacing={1}>
-        {currentPageFlatItems.map((fi) =>
-          renderFlatItem(fi, 'inside-current-page-item')
-        )}
-      </Stack>
-      <Stack className="outside-current-page-items" spacing={1}>
-        {outsidePageFlatItems.map((fi) =>
-          renderFlatItem(fi, 'outside-current-page-item')
-        )}
-      </Stack>
-
-      <Stack
-        alignItems="center"
-        direction="row"
-        justifyContent="center"
-        mt={2}
-        spacing={1}>
-        <IconButton
-          data-testid="prev-btn"
-          disabled={page === 1}
-          size="small"
-          onClick={handlePrev}>
-          <ChevronLeftIcon />
-        </IconButton>
-
-        <Typography variant="body2">
-          {page} {t('label.slash-symbol')} {totalPages}
-        </Typography>
-
-        <IconButton
-          data-testid="next-btn"
-          disabled={page === totalPages}
-          size="small"
-          onClick={handleNext}>
-          <ChevronRightIcon />
-        </IconButton>
-      </Stack>
-    </>
-  );
-};
+import { EntityChildren, NodeChildrenProps } from './NodeChildren.interface';
+import VirtualColumnList from './VirtualColumnList.component';
 
 const NodeChildren = ({
   node,
@@ -233,21 +38,13 @@ const NodeChildren = ({
   isOnlyShowColumnsWithLineageFilterActive,
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
-  const {
-    activeLayer,
-    columnsHavingLineage,
-    isEditMode,
-    expandAllColumns,
-    selectedColumn,
-    isCreatingEdge,
-  } = useLineageStore();
+  const { activeLayer, columnsHavingLineage, selectedColumn, isCreatingEdge } =
+    useLineageStore();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
-  const [showAllColumns, setShowAllColumns] = useState(false);
   const [summary, setSummary] = useState<TestSummary>();
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
 
   const { isColumnLayerEnabled, showDataObservability } = useMemo(() => {
     return {
@@ -262,9 +59,7 @@ const NodeChildren = ({
 
   const showDataObservabilitySummary = useMemo(() => {
     return Boolean(
-      showDataObservability &&
-        entityType === EntityType.TABLE &&
-        (node as Table).testSuite
+      showDataObservability && entityType === EntityType.TABLE && node.testSuite
     );
   }, [node, showDataObservability, entityType]);
 
@@ -280,35 +75,12 @@ const NodeChildren = ({
     [node]
   );
 
-  const currentNodeAllColumns = useMemo(() => entityChildren, [entityChildren]);
-
-  const hasLineageInNestedChildren = useCallback(
-    (column: EntityChildrenItem): boolean => {
-      if (columnsHavingLineage.has(column.fullyQualifiedName ?? '')) {
-        return true;
-      }
-
-      if (
-        'children' in column &&
-        Array.isArray(column.children) &&
-        column.children.length > 0
-      ) {
-        return column.children.some((child) =>
-          hasLineageInNestedChildren(child)
-        );
-      }
-
-      return false;
-    },
-    [columnsHavingLineage]
-  );
-
   const currentNodeColumnsWithLineage = useMemo(
     () =>
-      currentNodeAllColumns.filter((column) =>
-        hasLineageInNestedChildren(column)
+      entityChildren.filter((column) =>
+        columnsHavingLineage.get(node.id)?.has(column.fullyQualifiedName ?? '')
       ),
-    [currentNodeAllColumns, hasLineageInNestedChildren]
+    [entityChildren, columnsHavingLineage, node.id]
   );
 
   const handleSearchChange = useCallback(
@@ -319,11 +91,10 @@ const NodeChildren = ({
       const currentNodeColumnsToSearch =
         isOnlyShowColumnsWithLineageFilterActive
           ? currentNodeColumnsWithLineage
-          : currentNodeAllColumns;
+          : entityChildren;
 
       if (searchQuery.trim() === '') {
         setFilteredColumns(currentNodeColumnsToSearch);
-        setShowAllColumns(false);
       } else {
         const currentNodeMatchedColumns = currentNodeColumnsToSearch.filter(
           (column) =>
@@ -332,35 +103,12 @@ const NodeChildren = ({
               .includes(searchQuery.toLowerCase())
         );
         setFilteredColumns(currentNodeMatchedColumns);
-        setShowAllColumns(true);
       }
     },
     [
-      currentNodeAllColumns,
+      entityChildren,
       currentNodeColumnsWithLineage,
       isOnlyShowColumnsWithLineageFilterActive,
-    ]
-  );
-
-  const isColumnVisible = useCallback(
-    (record: Column) => {
-      if (
-        expandAllColumns ||
-        isEditMode ||
-        showAllColumns ||
-        isChildrenListExpanded
-      ) {
-        return true;
-      }
-
-      return columnsHavingLineage.has(record.fullyQualifiedName ?? '');
-    },
-    [
-      isEditMode,
-      columnsHavingLineage,
-      expandAllColumns,
-      showAllColumns,
-      isChildrenListExpanded,
     ]
   );
 
@@ -369,18 +117,14 @@ const NodeChildren = ({
       if (isOnlyShowColumnsWithLineageFilterActive) {
         setFilteredColumns(currentNodeColumnsWithLineage);
       } else {
-        setFilteredColumns(currentNodeAllColumns);
+        setFilteredColumns(entityChildren);
       }
     }
   }, [
-    currentNodeAllColumns,
+    entityChildren,
     currentNodeColumnsWithLineage,
     isOnlyShowColumnsWithLineageFilterActive,
   ]);
-
-  useEffect(() => {
-    setShowAllColumns(expandAllColumns);
-  }, [expandAllColumns]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
     setIsLoading(true);
@@ -395,42 +139,13 @@ const NodeChildren = ({
   };
 
   useEffect(() => {
-    const testSuite = (node as Table)?.testSuite;
+    const testSuite = node?.testSuite;
     if (showDataObservabilitySummary && testSuite && isUndefined(summary)) {
       fetchTestSuiteSummary(testSuite);
     } else {
       setIsLoading(false);
     }
   }, [node, showDataObservabilitySummary, summary]);
-
-  const flattenColumn = useCallback(
-    (column: Column, depth: number): FlatColumnItem[] => {
-      if (!isColumnVisible(column)) {
-        return [];
-      }
-
-      const result: FlatColumnItem[] = [{ column, depth }];
-
-      if (
-        DATATYPES_HAVING_SUBFIELDS.includes(column.dataType) &&
-        column.children &&
-        column.children.length > 0
-      ) {
-        for (const child of column.children) {
-          result.push(...flattenColumn(child, depth + 1));
-        }
-      }
-
-      return result;
-    },
-    [isColumnVisible]
-  );
-
-  const flatItems = useMemo(
-    () =>
-      filteredColumns.flatMap((column) => flattenColumn(column as Column, 0)),
-    [filteredColumns, flattenColumn]
-  );
 
   if (
     supportsColumns &&
@@ -458,22 +173,18 @@ const NodeChildren = ({
               onClick={(e) => e.stopPropagation()}
             />
 
-            {!isEmpty(flatItems) && (
-              <section className="m-t-md" id="table-columns">
-                <div className="rounded-4 overflow-hidden">
-                  <CustomPaginatedList
-                    flatItems={flatItems}
-                    isConnectable={isConnectable}
-                    isLoading={isLoading}
-                    nodeId={node.id}
-                    page={page}
-                    setPage={setPage}
-                    showDataObservabilitySummary={showDataObservabilitySummary}
-                    summary={summary}
-                  />
-                </div>
-              </section>
-            )}
+            <section className="m-t-md" id="table-columns">
+              <div className="rounded-4 overflow-hidden">
+                <VirtualColumnList
+                  flatItems={filteredColumns}
+                  isConnectable={isConnectable}
+                  isLoading={isLoading}
+                  nodeId={node.id}
+                  showDataObservabilitySummary={showDataObservabilitySummary}
+                  summary={summary}
+                />
+              </div>
+            </section>
           </div>
         </div>
       )

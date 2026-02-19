@@ -241,21 +241,21 @@
         margin-top: 0px;
         display: block;
 
-        .custom-node-header-column-tracing {
-          display: block;
-        }
+        // .custom-node-header-column-tracing {
+        //   display: block;
+        // }
       }
 
-      .outside-current-page-item:has(.custom-node-column-container) {
-        display: none;
-      }
+      //   .outside-current-page-item:has(.custom-node-column-container) {
+      //     display: none;
+      //   }
 
-      .outside-current-page-item:has(.custom-node-header-column-tracing) {
-        display: block;
-        margin-top: 0px;
-      }
+      //   .outside-current-page-item:has(.custom-node-header-column-tracing) {
+      //     display: block;
+      //     margin-top: 0px;
+      //   }
 
-      .outside-current-page-items:has(.custom-node-header-column-tracing) {
+      .outside-current-page-items:has(.custom-node-column-container) {
         border-top: 1px solid silver;
         margin-top: 8px;
         padding-top: 8px;
@@ -293,7 +293,18 @@
         border-top-left-radius: 6px;
         border-bottom-left-radius: 6px;
 
+        .custom-node-column-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .custom-node-summary {
+          flex: 0 0 80px;
+        }
+
         .custom-node-name-container {
+          flex: 1;
           min-width: 0;
           display: flex;
           align-items: center;

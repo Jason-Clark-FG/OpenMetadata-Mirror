@@ -26,7 +26,7 @@ interface LineageState {
   tracedColumns: Set<string>;
   tracedNodes: Set<string>;
   zoomValue: number;
-  columnsHavingLineage: Set<string>;
+  columnsHavingLineage: Map<string, Set<string>>;
   expandAllColumns: boolean;
   activeLayer: LineageLayer[];
   platformView: LineagePlatformView;
@@ -49,7 +49,10 @@ interface LineageState {
   setTracedNodes: (tracedNodes: Set<string>) => void;
   addTracedNodes: (newNode: string) => void;
   setZoomValue: (zoomValue: number) => void;
-  setColumnsHavingLineage: (columnsHavingLineage: Set<string>) => void;
+  setColumnsHavingLineage: (
+    columnsHavingLineage: Map<string, Set<string>>
+  ) => void;
+  updateColumnsHavingLineageById: (id: string, columnFqns: Set<string>) => void;
   setExpandAllColumns: (expandAllColumns: boolean) => void;
   toggleExpandAllColumns: () => void;
   setActiveLayer: (activeLayer: LineageLayer[]) => void;
@@ -81,7 +84,7 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   tracedColumns: new Set(),
   tracedNodes: new Set(),
   zoomValue: ZOOM_VALUE,
-  columnsHavingLineage: new Set(),
+  columnsHavingLineage: new Map<string, Set<string>>(),
   expandAllColumns: false,
   activeLayer: [],
   platformView: LineagePlatformView.None,
@@ -136,8 +139,17 @@ export const useLineageStore = create<LineageState>((set, get) => ({
 
   setZoomValue: (zoomValue: number) => set({ zoomValue }),
 
-  setColumnsHavingLineage: (columnsHavingLineage: Set<string>) =>
+  setColumnsHavingLineage: (columnsHavingLineage: Map<string, Set<string>>) =>
     set({ columnsHavingLineage }),
+
+  updateColumnsHavingLineageById: (id: string, columnFqns: Set<string>) => {
+    set((state) => {
+      const updated = new Map(state.columnsHavingLineage);
+      updated.set(id, columnFqns);
+
+      return { columnsHavingLineage: updated };
+    });
+  },
 
   setExpandAllColumns: (expandAllColumns: boolean) => set({ expandAllColumns }),
 

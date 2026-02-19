@@ -15,17 +15,17 @@ import { SearchIndexField } from '../../../../generated/entity/data/searchIndex'
 import { Column } from '../../../../generated/entity/data/table';
 import { Field } from '../../../../generated/entity/data/topic';
 import { EntityReference } from '../../../../generated/entity/type';
-import { SearchedDataProps } from '../../../SearchedData/SearchedData.interface';
+import { LineageNodeType } from '../../../Lineage/Lineage.interface';
 
 export interface NodeChildrenProps {
-  node: SearchedDataProps['data'][number]['_source'];
+  node: LineageNodeType;
   isConnectable: boolean;
   isChildrenListExpanded: boolean;
   isOnlyShowColumnsWithLineageFilterActive?: boolean;
 }
 
 export type EntityChildrenItem =
-  | Column
+  | Flatten<Column>
   | EntityReference
   | MlFeature
   | Field
@@ -33,7 +33,6 @@ export type EntityChildrenItem =
 
 export type EntityChildren = EntityChildrenItem[];
 
-export interface FlatColumnItem {
-  column: Column;
+export type Flatten<T> = T & {
   depth: number;
-}
+};

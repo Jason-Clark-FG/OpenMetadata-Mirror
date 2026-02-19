@@ -51,24 +51,21 @@ import { LineageProps } from './Lineage.interface';
 
 const CanvasLayerWrapper = ({
   useCanvasEdges,
-  edges,
-  nodes,
   dqHighlightedEdges,
   onEdgeClick,
   onEdgeHover,
   onPipelineClick,
   onEdgeRemove,
-  hoveredEdge,
+  hoverEdge,
 }: {
   useCanvasEdges: boolean;
-  edges: Edge[];
   nodes: Node[];
   dqHighlightedEdges: Set<string>;
-  onEdgeClick?: (edge: Edge, event: React.MouseEvent) => void;
+  onEdgeClick?: (edge: Edge, event: MouseEvent) => void;
   onEdgeHover?: (edge: Edge | null) => void;
   onPipelineClick?: () => void;
   onEdgeRemove?: () => void;
-  hoveredEdge: Edge | null;
+  hoverEdge: Edge | null;
 }) => {
   if (!useCanvasEdges) {
     return null;
@@ -78,14 +75,12 @@ const CanvasLayerWrapper = ({
     <>
       <CanvasEdgeRenderer
         dqHighlightedEdges={dqHighlightedEdges}
-        edges={edges}
-        nodes={nodes}
+        hoverEdge={hoverEdge}
         onEdgeClick={onEdgeClick}
         onEdgeHover={onEdgeHover}
       />
       <EdgeInteractionOverlay
-        edges={edges}
-        hoveredEdge={hoveredEdge}
+        hoveredEdge={hoverEdge}
         onEdgeRemove={onEdgeRemove}
         onPipelineClick={onPipelineClick}
       />
@@ -186,7 +181,7 @@ const Lineage = ({
   //   }, []);
 
   const handleCanvasEdgeClick = useCallback(
-    (edge: Edge, event: React.MouseEvent) => {
+    (edge: Edge, event: MouseEvent) => {
       onEdgeClick(edge);
       event.stopPropagation();
     },
@@ -276,8 +271,7 @@ const Lineage = ({
 
                 <CanvasLayerWrapper
                   dqHighlightedEdges={dqHighlightedEdges ?? new Set<string>()}
-                  edges={edges}
-                  hoveredEdge={hoveredEdge}
+                  hoverEdge={hoveredEdge}
                   nodes={nodes}
                   useCanvasEdges={useCanvasEdges}
                   onEdgeClick={handleCanvasEdgeClick}
