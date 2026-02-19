@@ -67,12 +67,10 @@ export class OverviewPageObject extends RightPanelBase {
   private readonly domainSearchBar: Locator;
   private readonly domainList: Locator;
   private readonly glossaryTermSearchBar: Locator;
-  private readonly tagListItem: Locator;
   private readonly tagListContainer: Locator;
   private readonly tierListContainer: Locator;
   private readonly updateTierButton: Locator;
   private readonly tierList: Locator;
-  private readonly glossaryTermListItem: Locator;
   private readonly glossaryTermListContainer: Locator;
   private readonly userSearchBar: Locator;
   private readonly userListItem: Locator;
@@ -110,12 +108,10 @@ export class OverviewPageObject extends RightPanelBase {
     this.glossaryTermSearchBar = this.searchBar.getByTestId(
       'glossary-term-select-search-bar'
     );
-    this.tagListItem = this.selectableList.locator('.ant-list-item-main');
     this.tagListContainer = this.page.locator('.tags-section');
     this.tierListContainer = this.page.getByTestId('cards');
     this.updateTierButton = this.page.getByTestId('update-tier-card');
-    this.tierList = this.page.getByTestId('Tier');
-    this.glossaryTermListItem = this.page.locator('.ant-list-item-main');
+    this.tierList = this.getSummaryPanel().getByTestId('Tier');
     this.glossaryTermListContainer =
       this.page.getByTestId('glossary-container');
     this.userSearchBar = this.page.getByTestId('owner-select-users-search-bar');
@@ -187,21 +183,27 @@ export class OverviewPageObject extends RightPanelBase {
     // Wait for loader to disappear
     await this.loader.waitFor({ state: 'hidden' });
 
-    // Find and click the   tag option
+    // Use getByTitle to target the outer .selectable-list-item wrapper, which carries the
+    // 'active' CSS class when the tag is already selected.
+    const tagItem = this.selectableList.getByTitle(tagName);
+    await tagItem.waitFor({ state: 'visible' });
+    await tagItem.scrollIntoViewIfNeeded();
 
-    await this.tagListItem
-      .filter({ hasText: tagName })
-      .waitFor({ state: 'visible' });
-    await this.tagListItem
-      .filter({ hasText: tagName })
-      .scrollIntoViewIfNeeded();
-    await this.tagListItem.filter({ hasText: tagName }).click();
+    // Only click if not already active — in parallel test runs another test may have added
+    // this tag already. Clicking an already-active item would deselect (remove) it.
+    const isAlreadySelected = await tagItem.evaluate((el) =>
+      el.classList.contains('active')
+    );
+    if (!isAlreadySelected) {
+      await tagItem.click();
+    }
+
     await this.updateButton.waitFor({ state: 'visible' });
     await this.updateButton.click();
 
     await this.loader.waitFor({ state: 'hidden' });
     await this.tagListContainer.waitFor({ state: 'visible' });
-    expect(this.tagListContainer).toContainText(tagName);
+    await expect(this.tagListContainer).toContainText(tagName);
 
     return this;
   }
@@ -214,8 +216,6 @@ export class OverviewPageObject extends RightPanelBase {
   async editGlossaryTerms(termName: string): Promise<OverviewPageObject> {
     await this.editGlossaryTermsIcon.click();
 
-    // Wait for the glossary term selection modal
-
     await this.selectableList.waitFor({ state: 'visible' });
 
     // Use semantic search bar selector
@@ -224,16 +224,26 @@ export class OverviewPageObject extends RightPanelBase {
     // Wait for loader to disappear
     await this.loader.waitFor({ state: 'hidden' });
 
-    // Find and click the glossary term option
-    await this.glossaryTermListItem
-      .filter({ hasText: termName })
-      .waitFor({ state: 'visible' });
-    await this.glossaryTermListItem.filter({ hasText: termName }).click();
+    // Use getByTitle to target the outer .selectable-list-item wrapper, which carries the
+    // 'active' CSS class when the term is already selected.
+    const termItem = this.selectableList.getByTitle(termName);
+    await termItem.waitFor({ state: 'visible' });
+    await termItem.scrollIntoViewIfNeeded();
+
+    // Only click if not already active — parallel tests may have added this term already.
+    // Clicking an already-active item would deselect (remove) it.
+    const isAlreadySelected = await termItem.evaluate((el) =>
+      el.classList.contains('active')
+    );
+    if (!isAlreadySelected) {
+      await termItem.click();
+    }
+
     await this.updateButton.waitFor({ state: 'visible' });
     await this.updateButton.click();
     await this.loader.waitFor({ state: 'hidden' });
     await this.glossaryTermListContainer.waitFor({ state: 'visible' });
-    expect(this.glossaryTermListContainer).toContainText(termName);
+    await expect(this.glossaryTermListContainer).toContainText(termName);
     return this;
   }
 
@@ -265,7 +275,7 @@ export class OverviewPageObject extends RightPanelBase {
     // Wait for loader to disappear
     await this.loader.waitFor({ state: 'hidden' });
     await this.tierList.waitFor({ state: 'visible' });
-    expect(this.tierList).toContainText(tierName);
+    await expect(this.tierList).toContainText(tierName);
     return this;
   }
 
@@ -275,30 +285,38 @@ export class OverviewPageObject extends RightPanelBase {
    * @returns OverviewPageObject for method chaining
    */
   async editDomain(domainName: string): Promise<OverviewPageObject> {
-    await this.addDomainIcon.click();
+    // Pre-flight: if domain is already displayed, skip the tree interaction.
+    // In parallel test runs another test may have assigned this domain already.
+    // Clicking an already-selected AntD tree node (isClearable=true) deselects it,
+    // which would remove the domain instead of adding it.
+    const alreadyAssigned = await this.domainList
+      .getByText(domainName, { exact: false })
+      .isVisible();
 
-    // Wait for loader to disappear
-    await this.loader.waitFor({ state: 'detached' });
-    // Use semantic search bar selector
-    await this.domainSearchBar.waitFor({ state: 'visible' });
-    await this.domainSearchBar.scrollIntoViewIfNeeded();
-    await this.domainSearchBar.fill(domainName);
+    if (!alreadyAssigned) {
+      await this.addDomainIcon.click();
 
-    await this.loader.waitFor({ state: 'detached' });
+      await this.loader.waitFor({ state: 'detached' });
+      await this.domainSearchBar.waitFor({ state: 'visible' });
+      await this.domainSearchBar.scrollIntoViewIfNeeded();
+      await this.domainSearchBar.fill(domainName);
 
-    await this.page
-      .locator('.ant-tree-treenode')
-      .filter({ hasText: domainName })
-      .waitFor({ state: 'visible' });
-    await this.page
-      .locator('.ant-tree-treenode')
-      .filter({ hasText: domainName })
-      .click();
+      await this.loader.waitFor({ state: 'detached' });
 
-    // Wait for loader to disappear
-    await this.loader.waitFor({ state: 'hidden' });
+      await this.page
+        .locator('.ant-tree-treenode')
+        .filter({ hasText: domainName })
+        .waitFor({ state: 'visible' });
+      await this.page
+        .locator('.ant-tree-treenode')
+        .filter({ hasText: domainName })
+        .click();
+
+      await this.loader.waitFor({ state: 'hidden' });
+    }
+
     await this.domainList.waitFor({ state: 'visible' });
-    expect(this.domainList).toContainText(domainName);
+    await expect(this.domainList).toContainText(domainName);
     return this;
   }
 
@@ -376,7 +394,7 @@ export class OverviewPageObject extends RightPanelBase {
     await this.updateButton.click();
     await this.loader.waitFor({ state: 'hidden' });
     await this.userListContainer.waitFor({ state: 'visible' });
-    expect(this.userListContainer).toContainText(ownerName);
+    await expect(this.userListContainer).toContainText(ownerName);
     return this;
   }
 
@@ -537,15 +555,12 @@ export class OverviewPageObject extends RightPanelBase {
     await domainTree.getByTestId('searchbar').fill(domainName);
     await searchDomainPromise;
 
-    const domainItem = domainTree.getByText(domainName);
+    const domainItem = domainTree
+      .locator('.ant-tree-treenode')
+      .filter({ hasText: domainName });
     const patchPromise = this.waitForPatchResponse();
 
     await domainItem.click();
-
-    const updateButton = this.page.getByRole('button', { name: 'Update' });
-    if (await updateButton.isVisible()) {
-      await updateButton.click();
-    }
 
     await patchPromise;
     return this;

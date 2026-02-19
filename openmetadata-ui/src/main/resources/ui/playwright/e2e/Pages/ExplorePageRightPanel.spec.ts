@@ -295,6 +295,12 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should display and verify schema fields for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('schema'),
+            `Schema tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -303,12 +309,8 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('schema')) {
-            await schema.navigateToSchemaTab();
-            await schema.shouldBeVisible();
-          }
+          await schema.navigateToSchemaTab();
+          await schema.shouldBeVisible();
         });
       });
     });
@@ -336,6 +338,12 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should navigate to lineage and test controls for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('lineage'),
+            `Lineage tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -344,18 +352,20 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('lineage')) {
-            await lineage.navigateToLineageTab();
-            await lineage.shouldBeVisible();
-            await lineage.shouldShowLineageControls();
-          }
+          await lineage.navigateToLineageTab();
+          await lineage.shouldBeVisible();
+          await lineage.shouldShowLineageControls();
         });
 
         test(`Should handle lineage expansion buttons for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('lineage'),
+            `Lineage tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -365,19 +375,15 @@ test.describe('Right Panel Test Suite', () => {
           );
           await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          await lineage.navigateToLineageTab();
+          const hasUpstreamButton = await lineage.hasUpstreamButton();
+          if (hasUpstreamButton) {
+            await lineage.clickUpstreamButton();
+          }
 
-          if (rightPanel.isTabAvailable('lineage')) {
-            await lineage.navigateToLineageTab();
-            const hasUpstreamButton = await lineage.hasUpstreamButton();
-            if (hasUpstreamButton) {
-              await lineage.clickUpstreamButton();
-            }
-
-            const hasDownstreamButton = await lineage.hasDownstreamButton();
-            if (hasDownstreamButton) {
-              await lineage.clickDownstreamButton();
-            }
+          const hasDownstreamButton = await lineage.hasDownstreamButton();
+          if (hasDownstreamButton) {
+            await lineage.clickDownstreamButton();
           }
         });
       });
@@ -388,6 +394,12 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should navigate to data quality and verify tab structure for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('data quality'),
+            `Data Quality tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -397,17 +409,19 @@ test.describe('Right Panel Test Suite', () => {
           );
           await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('data quality')) {
-            await dataQuality.navigateToDataQualityTab();
-            await dataQuality.shouldBeVisible();
-          }
+          await dataQuality.navigateToDataQualityTab();
+          await dataQuality.shouldBeVisible();
         });
 
         test(`Should display incidents tab for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('data quality'),
+            `Data Quality tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -417,19 +431,21 @@ test.describe('Right Panel Test Suite', () => {
           );
           await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('data quality')) {
-            await dataQuality.navigateToDataQualityTab();
-            await dataQuality.shouldBeVisible();
-            await dataQuality.navigateToIncidentsTab();
-            await dataQuality.shouldShowIncidentsTab();
-          }
+          await dataQuality.navigateToDataQualityTab();
+          await dataQuality.shouldBeVisible();
+          await dataQuality.navigateToIncidentsTab();
+          await dataQuality.shouldShowIncidentsTab();
         });
 
         test(`Should verify empty state when no test cases for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('data quality'),
+            `Data Quality tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -439,13 +455,9 @@ test.describe('Right Panel Test Suite', () => {
           );
           await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('data quality')) {
-            await dataQuality.navigateToDataQualityTab();
-            await dataQuality.shouldBeVisible();
-            await dataQuality.shouldShowTestCaseCardsCount(0);
-          }
+          await dataQuality.navigateToDataQualityTab();
+          await dataQuality.shouldBeVisible();
+          await dataQuality.shouldShowTestCaseCardsCount(0);
         });
       });
     });
@@ -455,6 +467,12 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should navigate to custom properties and show interface for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('custom property'),
+            `Custom Property tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -463,17 +481,19 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
-
-          if (rightPanel.isTabAvailable('custom property')) {
-            await customProperties.navigateToCustomPropertiesTab();
-            await customProperties.shouldShowCustomPropertiesContainer();
-          }
+          await customProperties.navigateToCustomPropertiesTab();
+          await customProperties.shouldShowCustomPropertiesContainer();
         });
 
         test(`Should display custom properties for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('custom property'),
+            `Custom Property tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -482,22 +502,24 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          await customProperties.navigateToCustomPropertiesTab();
+          await customProperties.shouldShowCustomPropertiesContainer();
 
-          if (rightPanel.isTabAvailable('custom property')) {
-            await customProperties.navigateToCustomPropertiesTab();
-            await customProperties.shouldShowCustomPropertiesContainer();
-
-            const propertyName = customPropertyData[entityType]?.property?.name;
-            if (propertyName) {
-              await customProperties.shouldShowCustomProperty(propertyName);
-            }
+          const propertyName = customPropertyData[entityType]?.property?.name;
+          if (propertyName) {
+            await customProperties.shouldShowCustomProperty(propertyName);
           }
         });
 
         test(`Should search custom properties for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('custom property'),
+            `Custom Property tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -506,23 +528,25 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          await customProperties.navigateToCustomPropertiesTab();
+          await customProperties.shouldShowCustomPropertiesContainer();
 
-          if (rightPanel.isTabAvailable('custom property')) {
-            await customProperties.navigateToCustomPropertiesTab();
-            await customProperties.shouldShowCustomPropertiesContainer();
-
-            const propertyName = customPropertyData[entityType]?.property?.name;
-            if (propertyName) {
-              await customProperties.searchCustomProperties(propertyName);
-              await customProperties.shouldShowCustomProperty(propertyName);
-            }
+          const propertyName = customPropertyData[entityType]?.property?.name;
+          if (propertyName) {
+            await customProperties.searchCustomProperties(propertyName);
+            await customProperties.shouldShowCustomProperty(propertyName);
           }
         });
 
         test(`Should clear search and show all properties for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('custom property'),
+            `Custom Property tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -531,20 +555,16 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          await customProperties.navigateToCustomPropertiesTab();
+          await customProperties.shouldShowCustomPropertiesContainer();
 
-          if (rightPanel.isTabAvailable('custom property')) {
-            await customProperties.navigateToCustomPropertiesTab();
+          const propertyName = customPropertyData[entityType]?.property?.name;
+          if (propertyName) {
+            await customProperties.searchCustomProperties(propertyName);
+            await customProperties.shouldShowCustomProperty(propertyName);
+
+            await customProperties.clearSearch();
             await customProperties.shouldShowCustomPropertiesContainer();
-
-            const propertyName = customPropertyData[entityType]?.property?.name;
-            if (propertyName) {
-              await customProperties.searchCustomProperties(propertyName);
-              await customProperties.shouldShowCustomProperty(propertyName);
-
-              await customProperties.clearSearch();
-              await customProperties.shouldShowCustomPropertiesContainer();
-            }
           }
         });
         // TODO: Remove skip once the we have search support for custom properties to avoid flakiness
@@ -575,6 +595,12 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should verify property name is visible for ${entityType}`, async ({
           adminPage,
         }) => {
+          rightPanel.setEntityConfig(entityInstance);
+          test.skip(
+            !rightPanel.isTabAvailable('custom property'),
+            `Custom Property tab not available for ${entityType}`
+          );
+
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -583,16 +609,12 @@ test.describe('Right Panel Test Suite', () => {
             fqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          await customProperties.navigateToCustomPropertiesTab();
+          await customProperties.shouldShowCustomPropertiesContainer();
 
-          if (rightPanel.isTabAvailable('custom property')) {
-            await customProperties.navigateToCustomPropertiesTab();
-            await customProperties.shouldShowCustomPropertiesContainer();
-
-            const propertyName = customPropertyData[entityType]?.property?.name;
-            if (propertyName) {
-              await customProperties.verifyPropertyType(propertyName);
-            }
+          const propertyName = customPropertyData[entityType]?.property?.name;
+          if (propertyName) {
+            await customProperties.verifyPropertyType(propertyName);
           }
         });
       });
