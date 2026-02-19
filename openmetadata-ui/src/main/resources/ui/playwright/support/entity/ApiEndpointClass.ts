@@ -12,26 +12,19 @@
  */
 import { APIRequestContext, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
+import {
+  APIEndpoint,
+  DataTypeTopic,
+  Field,
+} from '../../../src/generated/entity/data/apiEndpoint';
 import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { EntityType } from '../../enum/entity.enum';
 import { uuid } from '../../utils/common';
 import { visitEntityPage } from '../../utils/entity';
-import {
-  EntityTypeEndpoint,
-  ResponseDataType,
-  ResponseDataWithServiceType,
-} from './Entity.interface';
+import { EntityTypeEndpoint, ResponseDataType } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
-export interface ApiEndpointChildren {
-  name: string;
-  dataType: string;
-  description?: string;
-  fullyQualifiedName: string;
-  tags: unknown[];
-  children?: ApiEndpointChildren[];
-}
 export class ApiEndpointClass extends EntityClass {
   private readonly serviceName: string;
   private readonly apiCollectionName: string;
@@ -56,7 +49,7 @@ export class ApiEndpointClass extends EntityClass {
   private readonly apiEndpointName: string;
   private readonly fqn: string;
 
-  children: ApiEndpointChildren[];
+  children: Field[];
 
   entity: {
     name: string;
@@ -66,19 +59,17 @@ export class ApiEndpointClass extends EntityClass {
     endpointURL: string;
     requestSchema: {
       schemaType: string;
-      schemaFields: unknown[];
+      schemaFields: Field[];
     };
     responseSchema: {
       schemaType: string;
-      schemaFields: unknown[];
+      schemaFields: Field[];
     };
   };
 
   serviceResponseData: ResponseDataType = {} as ResponseDataType;
-  apiCollectionResponseData: ResponseDataWithServiceType =
-    {} as ResponseDataWithServiceType;
-  entityResponseData: ResponseDataWithServiceType =
-    {} as ResponseDataWithServiceType;
+  apiCollectionResponseData: APIEndpoint = {} as APIEndpoint;
+  entityResponseData: APIEndpoint = {} as APIEndpoint;
 
   constructor(name?: string, apiEndpointName?: string) {
     super(EntityTypeEndpoint.API_ENDPOINT, EntityType.API_ENDPOINT);
@@ -111,26 +102,26 @@ export class ApiEndpointClass extends EntityClass {
     this.children = [
       {
         name: 'default',
-        dataType: 'RECORD',
+        dataType: DataTypeTopic.Record,
         fullyQualifiedName: `${this.fqn}.default`,
         tags: [],
         children: [
           {
             name: 'name',
-            dataType: 'RECORD',
+            dataType: DataTypeTopic.Record,
             fullyQualifiedName: `${this.fqn}.default.name`,
             tags: [],
             children: [
               {
                 name: 'first_name',
-                dataType: 'STRING',
+                dataType: DataTypeTopic.String,
                 description: 'Description for schema field first_name',
                 fullyQualifiedName: `${this.fqn}.default.name.first_name`,
                 tags: [],
               },
               {
                 name: 'last_name',
-                dataType: 'STRING',
+                dataType: DataTypeTopic.String,
                 fullyQualifiedName: `${this.fqn}.default.name.last_name`,
                 tags: [],
               },
@@ -138,13 +129,13 @@ export class ApiEndpointClass extends EntityClass {
           },
           {
             name: 'age',
-            dataType: 'INT',
+            dataType: DataTypeTopic.Int,
             fullyQualifiedName: `${this.fqn}.default.age`,
             tags: [],
           },
           {
             name: 'club_name',
-            dataType: 'STRING',
+            dataType: DataTypeTopic.String,
             fullyQualifiedName: `${this.fqn}.default.club_name`,
             tags: [],
           },
@@ -167,25 +158,25 @@ export class ApiEndpointClass extends EntityClass {
         schemaFields: [
           {
             name: 'default',
-            dataType: 'RECORD',
+            dataType: DataTypeTopic.Record,
             fullyQualifiedName: `${this.fqn}.default`,
             tags: [],
             children: [
               {
                 name: 'name',
-                dataType: 'RECORD',
+                dataType: DataTypeTopic.Record,
                 fullyQualifiedName: `${this.fqn}.default.name`,
                 tags: [],
                 children: [
                   {
                     name: 'first_name',
-                    dataType: 'STRING',
+                    dataType: DataTypeTopic.String,
                     fullyQualifiedName: `${this.fqn}.default.name.first_name`,
                     tags: [],
                   },
                   {
                     name: 'last_name',
-                    dataType: 'STRING',
+                    dataType: DataTypeTopic.String,
                     fullyQualifiedName: `${this.fqn}.default.name.last_name`,
                     tags: [],
                   },
@@ -193,13 +184,13 @@ export class ApiEndpointClass extends EntityClass {
               },
               {
                 name: 'age',
-                dataType: 'INT',
+                dataType: DataTypeTopic.Int,
                 fullyQualifiedName: `${this.fqn}.default.age`,
                 tags: [],
               },
               {
                 name: 'club_name',
-                dataType: 'STRING',
+                dataType: DataTypeTopic.String,
                 fullyQualifiedName: `${this.fqn}.default.club_name`,
                 tags: [],
               },
@@ -213,7 +204,7 @@ export class ApiEndpointClass extends EntityClass {
     this.serviceType = ServiceTypes.API_SERVICES;
     this.type = 'ApiEndpoint';
     this.childrenTabId = 'schema';
-    this.childrenSelectorId = this.children[0].fullyQualifiedName;
+    this.childrenSelectorId = this.children[0].fullyQualifiedName ?? '';
   }
 
   async create(apiContext: APIRequestContext) {
@@ -239,6 +230,10 @@ export class ApiEndpointClass extends EntityClass {
     this.apiCollectionResponseData = await apiCollectionResponse.json();
     this.entityResponseData = await entityResponse.json();
 
+    this.childrenSelectorId =
+      this.entityResponseData.requestSchema?.schemaFields?.[0]
+        .fullyQualifiedName ?? '';
+
     return {
       service: serviceResponse.body,
       apiCollection: apiCollectionResponse.body,
@@ -254,7 +249,7 @@ export class ApiEndpointClass extends EntityClass {
     patchData: Operation[];
   }) {
     const response = await apiContext.patch(
-      `/api/v1/apiEndpoints/name/${this.entityResponseData?.['fullyQualifiedName']}`,
+      `/api/v1/apiEndpoints/name/${this.entityResponseData?.fullyQualifiedName}`,
       {
         data: patchData,
         headers: {
@@ -279,9 +274,9 @@ export class ApiEndpointClass extends EntityClass {
   }
 
   public set(data: {
-    entity: ResponseDataWithServiceType;
+    entity: APIEndpoint;
     service: ResponseDataType;
-    apiCollection: ResponseDataWithServiceType;
+    apiCollection: APIEndpoint;
   }): void {
     this.entityResponseData = data.entity;
     this.serviceResponseData = data.service;
@@ -291,9 +286,9 @@ export class ApiEndpointClass extends EntityClass {
   async visitEntityPage(page: Page) {
     await visitEntityPage({
       page,
-      searchTerm: this.entityResponseData?.['fullyQualifiedName'],
+      searchTerm: this.entityResponseData?.fullyQualifiedName ?? '',
       dataTestId: `${
-        this.entityResponseData.service.name ?? this.service.name
+        this.entityResponseData.service?.name ?? this.service.name
       }-${this.entityResponseData.name ?? this.entity.name}`,
     });
   }
@@ -301,7 +296,7 @@ export class ApiEndpointClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/apiServices/name/${encodeURIComponent(
-        this.serviceResponseData?.['fullyQualifiedName']
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 
