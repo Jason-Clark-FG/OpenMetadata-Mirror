@@ -27,6 +27,7 @@ import {
 import {
   DRAWER_NAVIGATION_OPTIONS,
   getEntityOverview,
+  getEntityReferenceFromEntity,
 } from '../../utils/EntityUtils';
 
 import { useTranslation } from 'react-i18next';
@@ -81,7 +82,12 @@ export const DataAssetSummaryPanel = ({
     return getEntityChildDetails(
       entityType,
       entityType === EntityType.DASHBOARD
-        ? ({ ...dataAsset, charts } as any)
+        ? {
+            ...dataAsset,
+            charts: charts.map((chart) =>
+              getEntityReferenceFromEntity(chart, EntityType.CHART)
+            ),
+          }
         : dataAsset,
       highlights,
       entityType === EntityType.DASHBOARD ? chartsDetailsLoading : false
@@ -243,7 +249,7 @@ export const DataAssetSummaryPanel = ({
               <Col className="d-flex flex-wrap gap-2" span={24}>
                 <DomainLabel
                   multiple
-                  domains={dataAsset.domains}
+                  domains={dataAsset.domains as EntityReference[]}
                   entityFqn={dataAsset.fullyQualifiedName ?? ''}
                   entityId={dataAsset.id ?? ''}
                   entityType={entityType}

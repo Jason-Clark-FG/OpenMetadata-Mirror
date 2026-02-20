@@ -115,7 +115,10 @@ import { TagLabel } from '../generated/type/tagLabel';
 import { UsageDetails } from '../generated/type/usageDetails';
 import { Votes } from '../generated/type/votes';
 import { DataInsightTabs } from '../interface/data-insight.interface';
-import { SearchSourceAlias } from '../interface/search.interface';
+import {
+  SearchSourceAlias,
+  TableColumnSearchSource,
+} from '../interface/search.interface';
 import { DataQualityPageTabs } from '../pages/DataQuality/DataQualityPage.interface';
 import {
   formatNumberWithComma,
@@ -2665,7 +2668,7 @@ export const getEntityBreadcrumbs = (
 
     case EntityType.TABLE_COLUMN: {
       // Column breadcrumb: Service > Database > Schema > Table > Column
-      const columnData = entity as SearchSourceAlias;
+      const columnData = entity as TableColumnSearchSource;
       const service = columnData.service;
       const database = columnData.database;
       const databaseSchema = columnData.databaseSchema;

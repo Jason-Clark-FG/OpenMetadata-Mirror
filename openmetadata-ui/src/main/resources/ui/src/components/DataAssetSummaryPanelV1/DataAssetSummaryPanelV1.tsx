@@ -41,6 +41,7 @@ import { EntityReference } from '../../generated/entity/type';
 import { TagLabel, TestCaseStatus } from '../../generated/tests/testCase';
 import { TagSource } from '../../generated/type/tagLabel';
 import { getListTestCaseIncidentStatus } from '../../rest/incidentManagerAPI';
+import { updateTableColumn } from '../../rest/tableAPI';
 import { listTestCases } from '../../rest/testAPI';
 import { fetchCharts } from '../../utils/DashboardDetailsUtils';
 import entityUtilClassBase from '../../utils/EntityUtilClassBase';
@@ -98,6 +99,17 @@ export const DataAssetSummaryPanelV1 = ({
         if (!dataAsset.id) {
           return;
         }
+        if (entityType === EntityType.TABLE_COLUMN) {
+          const res = await updateTableColumn(
+            dataAsset.fullyQualifiedName ?? '',
+            {
+              description: newDescription,
+            }
+          );
+          onDescriptionUpdate?.(res.description || newDescription);
+
+          return;
+        }
 
         // Create the JSON patch for description update
         const jsonPatch = [
@@ -132,7 +144,14 @@ export const DataAssetSummaryPanelV1 = ({
         );
       }
     },
-    [dataAsset.id, dataAsset.description, entityType, t, onDescriptionUpdate]
+    [
+      dataAsset.id,
+      dataAsset.fullyQualifiedName,
+      dataAsset.description,
+      entityType,
+      t,
+      onDescriptionUpdate,
+    ]
   );
 
   const [additionalInfo, setAdditionalInfo] = useState<

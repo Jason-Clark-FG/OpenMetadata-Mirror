@@ -69,7 +69,10 @@ import { EntityType } from '../enums/entity.enum';
 import { ExplorePageTabs } from '../enums/Explore.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { TestSuite } from '../generated/tests/testCase';
-import { SearchSourceAlias } from '../interface/search.interface';
+import {
+  SearchSourceAlias,
+  TableSearchSource,
+} from '../interface/search.interface';
 import { TabsInfoData } from '../pages/ExplorePage/ExplorePage.interface';
 import {
   getEntityBreadcrumbs,
@@ -659,18 +662,14 @@ class SearchClassBase {
     }
 
     if (entity.entityType === EntityType.TABLE_COLUMN) {
-      const columnEntity = entity as SearchSourceAlias & {
-        table?: { fullyQualifiedName?: string };
-      };
-      if (columnEntity.table?.fullyQualifiedName) {
+      const columnEntity = entity as TableSearchSource;
+      if (columnEntity?.fullyQualifiedName) {
         const tablePath = getEntityLinkFromType(
-          columnEntity.table.fullyQualifiedName,
-          EntityType.TABLE,
-          entity
+          columnEntity.fullyQualifiedName,
+          EntityType.TABLE
         );
-        const columnName = entity.name ?? '';
 
-        return `${tablePath}?activeColumn=${encodeURIComponent(columnName)}`;
+        return tablePath;
       }
     }
 
