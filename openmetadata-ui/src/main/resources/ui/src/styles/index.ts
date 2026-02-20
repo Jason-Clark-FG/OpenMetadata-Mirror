@@ -25,7 +25,6 @@ import '@fontsource/inter/700.css'; // Font 700
 import '@fontsource/inter/800.css'; // Font 800
 import '@fontsource/inter/900.css'; // Font 900
 
-import '@openmetadata/ui-core-components/styles.css';
 import '@react-awesome-query-builder/antd/css/styles.css';
 import 'reactflow/dist/base.css';
 import 'reactflow/dist/style.css';
