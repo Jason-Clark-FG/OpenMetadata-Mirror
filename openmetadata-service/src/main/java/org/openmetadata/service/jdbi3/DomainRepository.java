@@ -101,8 +101,11 @@ public class DomainRepository extends EntityRepository<Domain> {
   @Override
   public void setFieldsInBulk(Fields fields, List<Domain> entities) {
     fetchAndSetFields(entities, fields);
-    setInheritedFields(entities, fields);
-    entities.forEach(entity -> clearFieldsInternal(entity, fields));
+    entities.forEach(
+        entity -> {
+          setInheritedFields(entity, fields);
+          clearFieldsInternal(entity, fields);
+        });
   }
 
   private void fetchAndSetParents(List<Domain> domains, Fields fields) {

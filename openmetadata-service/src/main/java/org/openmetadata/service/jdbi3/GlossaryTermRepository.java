@@ -20,7 +20,10 @@ import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.schema.type.EventType.ENTITY_CREATED;
 import static org.openmetadata.schema.type.Include.ALL;
+import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.FIELD_ENTITY_STATUS;
+import static org.openmetadata.service.Entity.FIELD_OWNERS;
+import static org.openmetadata.service.Entity.FIELD_REVIEWERS;
 import static org.openmetadata.service.Entity.GLOSSARY;
 import static org.openmetadata.service.Entity.GLOSSARY_TERM;
 import static org.openmetadata.service.Entity.TEAM;
@@ -229,13 +232,109 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   @Override
   public void setFieldsInBulk(Fields fields, List<GlossaryTerm> entities) {
-    // Set default fields (parent and glossary) for all entities first
-    entities.forEach(
-        entity -> entity.withParent(getParent(entity)).withGlossary(getGlossary(entity)));
+    if (entities == null || entities.isEmpty()) {
+      return;
+    }
+    // Resolve parent/glossary references in batch to avoid per-entity relationship lookups.
+    populateParentAndGlossaryReferencesInBulk(entities);
 
     fetchAndSetFields(entities, fields);
     setInheritedFields(entities, fields);
     entities.forEach(entity -> clearFieldsInternal(entity, fields));
+  }
+
+  private void populateParentAndGlossaryReferencesInBulk(List<GlossaryTerm> entities) {
+    Map<UUID, GlossaryTerm> termById =
+        entities.stream()
+            .filter(term -> term.getId() != null)
+            .collect(Collectors.toMap(GlossaryTerm::getId, term -> term, (a, b) -> a));
+    if (termById.isEmpty()) {
+      return;
+    }
+
+    List<String> termIds = termById.keySet().stream().map(UUID::toString).toList();
+    List<CollectionDAO.EntityRelationshipObject> containsRecords =
+        daoCollection
+            .relationshipDAO()
+            .findFromBatch(termIds, Relationship.CONTAINS.ordinal(), Include.ALL);
+    List<CollectionDAO.EntityRelationshipObject> hasGlossaryRecords =
+        daoCollection
+            .relationshipDAO()
+            .findFromBatch(termIds, Relationship.HAS.ordinal(), GLOSSARY, Include.ALL);
+
+    Set<UUID> parentIds = new HashSet<>();
+    Set<UUID> glossaryIds = new HashSet<>();
+    for (CollectionDAO.EntityRelationshipObject record : containsRecords) {
+      if (GLOSSARY_TERM.equals(record.getFromEntity())) {
+        parentIds.add(UUID.fromString(record.getFromId()));
+      } else if (GLOSSARY.equals(record.getFromEntity())) {
+        glossaryIds.add(UUID.fromString(record.getFromId()));
+      }
+    }
+    for (CollectionDAO.EntityRelationshipObject record : hasGlossaryRecords) {
+      glossaryIds.add(UUID.fromString(record.getFromId()));
+    }
+
+    Map<String, EntityReference> parentRefById =
+        Entity.getEntityReferencesByIds(GLOSSARY_TERM, new ArrayList<>(parentIds), Include.ALL)
+            .stream()
+            .collect(Collectors.toMap(ref -> ref.getId().toString(), ref -> ref));
+    Map<String, EntityReference> glossaryRefById =
+        Entity.getEntityReferencesByIds(GLOSSARY, new ArrayList<>(glossaryIds), Include.ALL)
+            .stream()
+            .collect(Collectors.toMap(ref -> ref.getId().toString(), ref -> ref));
+
+    Map<UUID, EntityReference> parentByTermId = new HashMap<>();
+    Map<UUID, EntityReference> glossaryFromContainsByTermId = new HashMap<>();
+    for (CollectionDAO.EntityRelationshipObject record : containsRecords) {
+      UUID termId = UUID.fromString(record.getToId());
+      if (GLOSSARY_TERM.equals(record.getFromEntity())) {
+        EntityReference parentRef = parentRefById.get(record.getFromId());
+        if (parentRef != null) {
+          parentByTermId.put(termId, parentRef);
+        }
+      } else if (GLOSSARY.equals(record.getFromEntity())) {
+        EntityReference glossaryRef = glossaryRefById.get(record.getFromId());
+        if (glossaryRef != null) {
+          glossaryFromContainsByTermId.put(termId, glossaryRef);
+        }
+      }
+    }
+
+    Map<UUID, EntityReference> glossaryFromHasByTermId = new HashMap<>();
+    for (CollectionDAO.EntityRelationshipObject record : hasGlossaryRecords) {
+      UUID termId = UUID.fromString(record.getToId());
+      EntityReference glossaryRef = glossaryRefById.get(record.getFromId());
+      if (glossaryRef != null) {
+        glossaryFromHasByTermId.put(termId, glossaryRef);
+      }
+    }
+
+    for (GlossaryTerm term : entities) {
+      if (term.getId() == null) {
+        continue;
+      }
+
+      if (term.getParent() == null) {
+        EntityReference parentRef = parentByTermId.get(term.getId());
+        if (parentRef != null) {
+          term.setParent(parentRef);
+        }
+      }
+
+      if (term.getGlossary() == null) {
+        boolean hasParent = term.getParent() != null;
+        EntityReference glossaryRef =
+            hasParent
+                ? glossaryFromHasByTermId.getOrDefault(
+                    term.getId(), glossaryFromContainsByTermId.get(term.getId()))
+                : glossaryFromContainsByTermId.getOrDefault(
+                    term.getId(), glossaryFromHasByTermId.get(term.getId()));
+        if (glossaryRef != null) {
+          term.setGlossary(glossaryRef);
+        }
+      }
+    }
   }
 
   @Override
@@ -247,29 +346,33 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   @Override
   public void setInheritedFields(GlossaryTerm glossaryTerm, Fields fields) {
-    EntityInterface parent = getParentEntity(glossaryTerm, "owners,domains,reviewers");
-    inheritOwners(glossaryTerm, fields, parent);
-    inheritDomains(glossaryTerm, fields, parent);
-    inheritReviewers(glossaryTerm, fields, parent);
+    super.setInheritedFields(glossaryTerm, fields);
   }
 
   @Override
   public void setInheritedFields(List<GlossaryTerm> glossaryTerms, Fields fields) {
-    List<? extends EntityInterface> parents =
-        getParentEntities(glossaryTerms, "owners,domains,reviewers");
-    Map<UUID, EntityInterface> parentMap =
-        parents.stream().collect(Collectors.toMap(EntityInterface::getId, e -> e));
-    for (GlossaryTerm glossaryTerm : glossaryTerms) {
-      EntityInterface parent = null;
-      if (glossaryTerm.getParent() != null) {
-        parent = parentMap.get(glossaryTerm.getParent().getId());
-      } else if (glossaryTerm.getGlossary() != null) {
-        parent = parentMap.get(glossaryTerm.getGlossary().getId());
-      }
-      inheritOwners(glossaryTerm, fields, parent);
-      inheritDomains(glossaryTerm, fields, parent);
-      inheritReviewers(glossaryTerm, fields, parent);
-    }
+    super.setInheritedFields(glossaryTerms, fields);
+  }
+
+  @Override
+  protected String getInheritableFields() {
+    return "owners,domains,reviewers";
+  }
+
+  @Override
+  protected boolean requiresParentForInheritance(GlossaryTerm glossaryTerm, Fields fields) {
+    boolean needsOwners = fields.contains(FIELD_OWNERS) && nullOrEmpty(glossaryTerm.getOwners());
+    boolean needsDomains = fields.contains(FIELD_DOMAINS) && nullOrEmpty(glossaryTerm.getDomains());
+    boolean needsReviewers = fields.contains(FIELD_REVIEWERS);
+    return needsOwners || needsDomains || needsReviewers;
+  }
+
+  @Override
+  protected void applyInheritance(
+      GlossaryTerm glossaryTerm, Fields fields, EntityInterface parent) {
+    inheritOwners(glossaryTerm, fields, parent);
+    inheritDomains(glossaryTerm, fields, parent);
+    inheritReviewers(glossaryTerm, fields, parent);
   }
 
   private Integer getUsageCount(GlossaryTerm term) {

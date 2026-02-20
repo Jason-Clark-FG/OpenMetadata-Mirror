@@ -446,6 +446,18 @@ public final class Entity {
     return Collections.unmodifiableSet(ENTITY_LIST);
   }
 
+  /**
+   * Clears per-request ThreadLocal caches held by repositories.
+   *
+   * <p>This is a request-boundary safety net to avoid stale ThreadLocal state leaking when a
+   * request terminates unexpectedly before repository-level finally blocks run.
+   */
+  public static void clearRepositoryThreadLocals() {
+    for (EntityRepository<? extends EntityInterface> repository : ENTITY_REPOSITORY_MAP.values()) {
+      repository.clearParentCache();
+    }
+  }
+
   public static EntityReference getEntityReference(EntityReference ref, Include include) {
     if (ref == null) {
       return null;

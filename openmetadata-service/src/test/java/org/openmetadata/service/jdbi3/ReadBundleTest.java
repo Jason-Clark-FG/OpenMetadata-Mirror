@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openmetadata.schema.type.Include.ALL;
+import static org.openmetadata.schema.type.Include.DELETED;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.type.EntityReference;
@@ -65,5 +67,18 @@ class ReadBundleTest {
     assertTrue(loadedVotes.isPresent());
     assertEquals(2, loadedVotes.orElseThrow().getUpVotes());
     assertEquals(1, loadedVotes.orElseThrow().getDownVotes());
+  }
+
+  @Test
+  void relationTracksLoadedIncludesPerField() {
+    ReadBundle bundle = new ReadBundle();
+    UUID entityId = UUID.randomUUID();
+
+    bundle.putRelations(entityId, "owners", NON_DELETED, List.of());
+    bundle.putRelations(entityId, "owners", DELETED, List.of());
+
+    assertTrue(bundle.hasLoadedRelationForField(entityId, "owners"));
+    assertEquals(
+        Set.of(NON_DELETED, DELETED), bundle.getLoadedIncludesForField(entityId, "owners"));
   }
 }

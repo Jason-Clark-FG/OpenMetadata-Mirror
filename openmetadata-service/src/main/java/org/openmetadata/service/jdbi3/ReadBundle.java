@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
@@ -50,6 +51,18 @@ final class ReadBundle {
       return Optional.empty();
     }
     return Optional.of(relationValues.getOrDefault(key, Collections.emptyList()));
+  }
+
+  boolean hasLoadedRelationForField(UUID entityId, String field) {
+    return loadedRelations.stream()
+        .anyMatch(key -> key.entityId().equals(entityId) && key.field().equals(field));
+  }
+
+  Set<Include> getLoadedIncludesForField(UUID entityId, String field) {
+    return loadedRelations.stream()
+        .filter(key -> key.entityId().equals(entityId) && key.field().equals(field))
+        .map(RelationKey::include)
+        .collect(Collectors.toSet());
   }
 
   void putTags(UUID entityId, List<TagLabel> tags) {

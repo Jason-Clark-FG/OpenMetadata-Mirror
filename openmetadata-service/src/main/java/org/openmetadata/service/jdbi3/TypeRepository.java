@@ -23,6 +23,7 @@ import static org.openmetadata.service.util.EntityUtil.customFieldMatch;
 import static org.openmetadata.service.util.EntityUtil.getCustomField;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.util.concurrent.Striped;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.core.UriInfo;
 import java.time.format.DateTimeFormatter;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Triple;
@@ -63,6 +65,7 @@ import org.openmetadata.service.util.RestUtil.PutResponse;
 public class TypeRepository extends EntityRepository<Type> {
   private static final String UPDATE_FIELDS = "customProperties";
   private static final String PATCH_FIELDS = "customProperties";
+  private static final Striped<Lock> CUSTOM_PROPERTY_UPDATE_LOCKS = Striped.lazyWeakLock(64);
 
   public TypeRepository() {
     super(
@@ -161,31 +164,37 @@ public class TypeRepository extends EntityRepository<Type> {
 
   public PutResponse<Type> addCustomProperty(
       UriInfo uriInfo, String updatedBy, UUID id, CustomProperty property) {
-    Type type = find(id, Include.NON_DELETED);
-    property.setPropertyType(
-        Entity.getEntityReferenceById(
-            Entity.TYPE, property.getPropertyType().getId(), NON_DELETED));
-    validateProperty(property);
-    if (type.getCategory().equals(Category.Field)) {
-      throw new IllegalArgumentException(
-          "Only entity types can be extended and field types can't be extended");
-    }
-    setFieldsInternal(type, putFields);
-
-    find(property.getPropertyType().getId(), NON_DELETED); // Validate customProperty type exists
-
-    // If property already exists, then update it. Else add the new property.
-    List<CustomProperty> updatedProperties = new ArrayList<>(List.of(property));
-    for (CustomProperty existing : type.getCustomProperties()) {
-      if (!existing.getName().equals(property.getName())) {
-        updatedProperties.add(existing);
+    Lock lock = CUSTOM_PROPERTY_UPDATE_LOCKS.get(id);
+    lock.lock();
+    try {
+      Type type = find(id, Include.NON_DELETED);
+      property.setPropertyType(
+          Entity.getEntityReferenceById(
+              Entity.TYPE, property.getPropertyType().getId(), NON_DELETED));
+      validateProperty(property);
+      if (type.getCategory().equals(Category.Field)) {
+        throw new IllegalArgumentException(
+            "Only entity types can be extended and field types can't be extended");
       }
-    }
+      setFieldsInternal(type, putFields);
 
-    type.setCustomProperties(updatedProperties);
-    type.setUpdatedBy(updatedBy);
-    type.setUpdatedAt(System.currentTimeMillis());
-    return createOrUpdate(uriInfo, type, updatedBy);
+      find(property.getPropertyType().getId(), NON_DELETED); // Validate customProperty type exists
+
+      // If property already exists, then update it. Else add the new property.
+      List<CustomProperty> updatedProperties = new ArrayList<>(List.of(property));
+      for (CustomProperty existing : type.getCustomProperties()) {
+        if (!existing.getName().equals(property.getName())) {
+          updatedProperties.add(existing);
+        }
+      }
+
+      type.setCustomProperties(updatedProperties);
+      type.setUpdatedBy(updatedBy);
+      type.setUpdatedAt(System.currentTimeMillis());
+      return createOrUpdate(uriInfo, type, updatedBy);
+    } finally {
+      lock.unlock();
+    }
   }
 
   private List<CustomProperty> getCustomProperties(Type type) {

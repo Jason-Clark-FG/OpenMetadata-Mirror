@@ -18,7 +18,7 @@ import org.openmetadata.service.util.EntityUtil.RelationIncludes;
  * (entity + include + field set + relation include set) within one HTTP request.
  */
 public final class RequestEntityCache {
-  private static final ThreadLocal<Map<EntityCacheKey, String>> REQUEST_CACHE =
+  private static final ThreadLocal<Map<EntityCacheKey, EntityInterface>> REQUEST_CACHE =
       ThreadLocal.withInitial(HashMap::new);
 
   private RequestEntityCache() {}
@@ -113,7 +113,7 @@ public final class RequestEntityCache {
   }
 
   private static <T extends EntityInterface> T get(EntityCacheKey key, Class<T> entityClass) {
-    String cached;
+    EntityInterface cached;
     try (var ignored = phase("requestCacheGet")) {
       cached = REQUEST_CACHE.get().get(key);
     }
@@ -121,7 +121,7 @@ public final class RequestEntityCache {
       return null;
     }
     try (var ignored = phase("requestCacheDeserialize")) {
-      return JsonUtils.readValue(cached, entityClass);
+      return JsonUtils.deepCopy(entityClass.cast(cached), entityClass);
     }
   }
 
@@ -129,12 +129,16 @@ public final class RequestEntityCache {
     if (entity == null) {
       return;
     }
-    String serializedEntity;
+    T cachedCopy = null;
     try (var ignored = phase("requestCacheSerialize")) {
-      serializedEntity = JsonUtils.pojoToJson(entity);
+      @SuppressWarnings("unchecked")
+      Class<T> entityClass = (Class<T>) entity.getClass();
+      cachedCopy = JsonUtils.deepCopy(entity, entityClass);
     }
     try (var ignored = phase("requestCachePut")) {
-      REQUEST_CACHE.get().put(key, serializedEntity);
+      if (cachedCopy != null) {
+        REQUEST_CACHE.get().put(key, cachedCopy);
+      }
     }
   }
 

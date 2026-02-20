@@ -4208,9 +4208,32 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     ReadBundle readBundle = ReadBundleContext.getCurrent();
     if (readBundle == null) {
+      recordReadBundleFallback(field, "no_bundle");
       return Optional.empty();
     }
-    return readBundle.getRelations(entity.getId(), field, include);
+    Optional<List<EntityReference>> relationRefs =
+        readBundle.getRelations(entity.getId(), field, include);
+    if (relationRefs.isPresent()) {
+      return relationRefs;
+    }
+
+    Include requestedInclude = include == null ? ALL : include;
+    if (readBundle.hasLoadedRelationForField(entity.getId(), field)) {
+      Set<Include> loadedIncludes = readBundle.getLoadedIncludesForField(entity.getId(), field);
+      if (!loadedIncludes.isEmpty() && !loadedIncludes.contains(requestedInclude)) {
+        LOG.debug(
+            "ReadBundle include mismatch for {}:{} field={} requestedInclude={} loadedIncludes={}. Falling back to DAO.",
+            entityType,
+            entity.getId(),
+            field,
+            requestedInclude,
+            loadedIncludes);
+        recordReadBundleFallback(field, "include_mismatch");
+        return Optional.empty();
+      }
+    }
+    recordReadBundleFallback(field, "not_loaded");
+    return Optional.empty();
   }
 
   private Optional<List<TagLabel>> getTagsFromReadBundle(T entity) {
@@ -4219,9 +4242,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     ReadBundle readBundle = ReadBundleContext.getCurrent();
     if (readBundle == null) {
+      recordReadBundleFallback(FIELD_TAGS, "no_bundle");
       return Optional.empty();
     }
-    return readBundle.getTags(entity.getId());
+    Optional<List<TagLabel>> tags = readBundle.getTags(entity.getId());
+    if (tags.isEmpty()) {
+      recordReadBundleFallback(FIELD_TAGS, "not_loaded");
+    }
+    return tags;
   }
 
   private Optional<Votes> getVotesFromReadBundle(T entity) {
@@ -4230,9 +4258,26 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     ReadBundle readBundle = ReadBundleContext.getCurrent();
     if (readBundle == null) {
+      recordReadBundleFallback(FIELD_VOTES, "no_bundle");
       return Optional.empty();
     }
-    return readBundle.getVotes(entity.getId());
+    Optional<Votes> votes = readBundle.getVotes(entity.getId());
+    if (votes.isEmpty()) {
+      recordReadBundleFallback(FIELD_VOTES, "not_loaded");
+    }
+    return votes;
+  }
+
+  private void recordReadBundleFallback(String field, String reason) {
+    Metrics.counter(
+            "readbundle.fallback",
+            "entity",
+            entityType,
+            "field",
+            field == null ? "unknown" : field,
+            "reason",
+            reason == null ? "unknown" : reason)
+        .increment();
   }
 
   protected List<TagLabel> getTags(T entity) {
@@ -7736,7 +7781,299 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    fieldFetchers.values().forEach(fetcher -> fetcher.accept(entities, fields));
+    Set<String> relationshipFieldsHandled = fetchAndSetRelationshipFieldsInBulk(entities, fields);
+    for (Entry<String, BiConsumer<List<T>, Fields>> entry : fieldFetchers.entrySet()) {
+      if (relationshipFieldsHandled.contains(entry.getKey())) {
+        continue;
+      }
+      entry.getValue().accept(entities, fields);
+    }
+  }
+
+  private Set<String> fetchAndSetRelationshipFieldsInBulk(List<T> entities, Fields fields) {
+    if (nullOrEmpty(entities) || fields == null) {
+      return Collections.emptySet();
+    }
+
+    boolean loadOwners = supportsOwners && fields.contains(FIELD_OWNERS);
+    boolean loadFollowers = supportsFollower && fields.contains(FIELD_FOLLOWERS);
+    boolean loadDomains = supportsDomains && fields.contains(FIELD_DOMAINS);
+    boolean loadReviewers = supportsReviewers && fields.contains(FIELD_REVIEWERS);
+    boolean loadDataProducts = supportsDataProducts && fields.contains(FIELD_DATA_PRODUCTS);
+    boolean loadVotes = supportsVotes && fields.contains(FIELD_VOTES);
+    boolean loadChildren = supportsChildren && fields.contains(FIELD_CHILDREN);
+    boolean loadExperts = supportsExperts && fields.contains(FIELD_EXPERTS);
+
+    if (!loadOwners
+        && !loadFollowers
+        && !loadDomains
+        && !loadReviewers
+        && !loadDataProducts
+        && !loadVotes
+        && !loadChildren
+        && !loadExperts) {
+      return Collections.emptySet();
+    }
+
+    List<Integer> incomingRelations = new ArrayList<>();
+    if (loadOwners) {
+      incomingRelations.add(Relationship.OWNS.ordinal());
+    }
+    if (loadFollowers) {
+      incomingRelations.add(Relationship.FOLLOWS.ordinal());
+    }
+    if (loadDomains || loadDataProducts) {
+      incomingRelations.add(Relationship.HAS.ordinal());
+    }
+    if (loadReviewers) {
+      incomingRelations.add(Relationship.REVIEWS.ordinal());
+    }
+    if (loadVotes) {
+      incomingRelations.add(Relationship.VOTED.ordinal());
+    }
+
+    List<Integer> outgoingRelations = new ArrayList<>();
+    if (loadChildren) {
+      outgoingRelations.add(Relationship.CONTAINS.ordinal());
+    }
+    if (loadExperts) {
+      outgoingRelations.add(Relationship.EXPERT.ordinal());
+    }
+
+    List<String> entityIds = entityListToStrings(entities);
+    List<CollectionDAO.EntityRelationshipObject> incomingRecords =
+        incomingRelations.isEmpty()
+            ? Collections.emptyList()
+            : daoCollection
+                .relationshipDAO()
+                .findFromBatchWithRelations(entityIds, entityType, incomingRelations, ALL);
+    List<CollectionDAO.EntityRelationshipObject> outgoingRecords =
+        outgoingRelations.isEmpty()
+            ? Collections.emptyList()
+            : daoCollection
+                .relationshipDAO()
+                .findToBatchWithRelations(entityIds, entityType, outgoingRelations, ALL);
+
+    Map<String, Map<UUID, EntityReference>> incomingRefsByType =
+        resolveRelationshipEntityReferencesByType(incomingRecords, true);
+    Map<String, Map<UUID, EntityReference>> outgoingRefsByType =
+        resolveRelationshipEntityReferencesByType(outgoingRecords, false);
+
+    Map<UUID, List<EntityReference>> ownersByEntity = loadOwners ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> followersByEntity = loadFollowers ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> domainsByEntity = loadDomains ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> reviewersByEntity = loadReviewers ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> dataProductsByEntity =
+        loadDataProducts ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> upVotersByEntity = loadVotes ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> downVotersByEntity = loadVotes ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> childrenByEntity = loadChildren ? new HashMap<>() : null;
+    Map<UUID, List<EntityReference>> expertsByEntity = loadExperts ? new HashMap<>() : null;
+
+    for (CollectionDAO.EntityRelationshipObject record : incomingRecords) {
+      UUID entityId = UUID.fromString(record.getToId());
+      UUID sourceId = UUID.fromString(record.getFromId());
+      String sourceType = record.getFromEntity();
+      EntityReference sourceRef = lookupRelationshipRef(incomingRefsByType, sourceType, sourceId);
+      if (sourceRef == null) {
+        continue;
+      }
+
+      Relationship relationship = relationshipFromOrdinal(record.getRelation());
+      if (relationship == null) {
+        continue;
+      }
+      switch (relationship) {
+        case OWNS -> {
+          if (loadOwners) {
+            ownersByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(sourceRef);
+          }
+        }
+        case FOLLOWS -> {
+          if (loadFollowers && USER.equals(sourceType)) {
+            followersByEntity
+                .computeIfAbsent(entityId, ignored -> new ArrayList<>())
+                .add(sourceRef);
+          }
+        }
+        case HAS -> {
+          if (loadDomains && DOMAIN.equals(sourceType)) {
+            domainsByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(sourceRef);
+          } else if (loadDataProducts && DATA_PRODUCT.equals(sourceType)) {
+            dataProductsByEntity
+                .computeIfAbsent(entityId, ignored -> new ArrayList<>())
+                .add(sourceRef);
+          }
+        }
+        case REVIEWS -> {
+          if (loadReviewers) {
+            reviewersByEntity
+                .computeIfAbsent(entityId, ignored -> new ArrayList<>())
+                .add(sourceRef);
+          }
+        }
+        case VOTED -> {
+          if (loadVotes && USER.equals(sourceType)) {
+            VoteType voteType = JsonUtils.readValue(record.getJson(), VoteType.class);
+            if (voteType == VoteType.VOTED_UP) {
+              upVotersByEntity
+                  .computeIfAbsent(entityId, ignored -> new ArrayList<>())
+                  .add(sourceRef);
+            } else if (voteType == VoteType.VOTED_DOWN) {
+              downVotersByEntity
+                  .computeIfAbsent(entityId, ignored -> new ArrayList<>())
+                  .add(sourceRef);
+            }
+          }
+        }
+        default -> {
+          // no-op
+        }
+      }
+    }
+
+    for (CollectionDAO.EntityRelationshipObject record : outgoingRecords) {
+      UUID entityId = UUID.fromString(record.getFromId());
+      UUID targetId = UUID.fromString(record.getToId());
+      String targetType = record.getToEntity();
+      EntityReference targetRef = lookupRelationshipRef(outgoingRefsByType, targetType, targetId);
+      if (targetRef == null) {
+        continue;
+      }
+
+      Relationship relationship = relationshipFromOrdinal(record.getRelation());
+      if (relationship == null) {
+        continue;
+      }
+      switch (relationship) {
+        case CONTAINS -> {
+          if (loadChildren && entityType.equals(targetType)) {
+            childrenByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(targetRef);
+          }
+        }
+        case EXPERT -> {
+          if (loadExperts && USER.equals(targetType)) {
+            expertsByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(targetRef);
+          }
+        }
+        default -> {
+          // no-op
+        }
+      }
+    }
+
+    Set<String> handledFields = new HashSet<>();
+    for (T entity : entities) {
+      UUID entityId = entity.getId();
+      if (loadOwners) {
+        entity.setOwners(ownersByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+      if (loadFollowers) {
+        entity.setFollowers(followersByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+      if (loadDomains) {
+        entity.setDomains(domainsByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+      if (loadReviewers) {
+        entity.setReviewers(reviewersByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+      if (loadDataProducts) {
+        entity.setDataProducts(
+            dataProductsByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+      if (loadVotes) {
+        List<EntityReference> upVoters =
+            upVotersByEntity.getOrDefault(entityId, Collections.emptyList());
+        List<EntityReference> downVoters =
+            downVotersByEntity.getOrDefault(entityId, Collections.emptyList());
+        entity.setVotes(
+            new Votes()
+                .withUpVotes(upVoters.size())
+                .withDownVotes(downVoters.size())
+                .withUpVoters(upVoters)
+                .withDownVoters(downVoters));
+      }
+      if (loadChildren) {
+        entity.setChildren(childrenByEntity.get(entityId));
+      }
+      if (loadExperts) {
+        entity.setExperts(expertsByEntity.getOrDefault(entityId, Collections.emptyList()));
+      }
+    }
+
+    if (loadOwners) {
+      handledFields.add(FIELD_OWNERS);
+    }
+    if (loadFollowers) {
+      handledFields.add(FIELD_FOLLOWERS);
+    }
+    if (loadDomains) {
+      handledFields.add(FIELD_DOMAINS);
+    }
+    if (loadReviewers) {
+      handledFields.add(FIELD_REVIEWERS);
+    }
+    if (loadDataProducts) {
+      handledFields.add(FIELD_DATA_PRODUCTS);
+    }
+    if (loadVotes) {
+      handledFields.add(FIELD_VOTES);
+    }
+    if (loadChildren) {
+      handledFields.add(FIELD_CHILDREN);
+    }
+    if (loadExperts) {
+      handledFields.add(FIELD_EXPERTS);
+    }
+    return handledFields;
+  }
+
+  private Map<String, Map<UUID, EntityReference>> resolveRelationshipEntityReferencesByType(
+      List<CollectionDAO.EntityRelationshipObject> records, boolean fromSide) {
+    if (records == null || records.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<String, Set<UUID>> idsByType = new HashMap<>();
+    for (CollectionDAO.EntityRelationshipObject record : records) {
+      String entityTypeForRef = fromSide ? record.getFromEntity() : record.getToEntity();
+      String entityId = fromSide ? record.getFromId() : record.getToId();
+      if (nullOrEmpty(entityTypeForRef) || nullOrEmpty(entityId)) {
+        continue;
+      }
+      idsByType
+          .computeIfAbsent(entityTypeForRef, ignored -> new HashSet<>())
+          .add(UUID.fromString(entityId));
+    }
+
+    if (idsByType.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<String, Map<UUID, EntityReference>> refsByType = new HashMap<>();
+    for (Entry<String, Set<UUID>> entry : idsByType.entrySet()) {
+      List<EntityReference> refs =
+          Entity.getEntityReferencesByIds(entry.getKey(), new ArrayList<>(entry.getValue()), ALL);
+      refsByType.put(
+          entry.getKey(),
+          refs.stream()
+              .collect(Collectors.toMap(EntityReference::getId, Function.identity(), (a, b) -> a)));
+    }
+    return refsByType;
+  }
+
+  private EntityReference lookupRelationshipRef(
+      Map<String, Map<UUID, EntityReference>> refsByType, String entityType, UUID id) {
+    if (refsByType == null || nullOrEmpty(entityType) || id == null) {
+      return null;
+    }
+    Map<UUID, EntityReference> refs = refsByType.get(entityType);
+    return refs == null ? null : refs.get(id);
+  }
+
+  private Relationship relationshipFromOrdinal(int relationOrdinal) {
+    Relationship[] values = Relationship.values();
+    return relationOrdinal >= 0 && relationOrdinal < values.length ? values[relationOrdinal] : null;
   }
 
   private void fetchAndSetOwners(List<T> entities, Fields fields) {

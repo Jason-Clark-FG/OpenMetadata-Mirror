@@ -133,7 +133,9 @@ public class SearchIndexHandler implements EntityLifecycleEventHandler {
 
   @Override
   public boolean isAsync() {
-    return true;
+    // Search indexing must be visible to follow-up operations in the same request flow
+    // (e.g., postCreate hooks that immediately update the indexed document).
+    return false;
   }
 
   public void onEntitiesCreated(List<EntityInterface> entities, SubjectContext subjectContext) {

@@ -291,6 +291,26 @@ class ReadPlannerTest {
     assertTrue(plan.getEntitySpecificPrefetchKeys().contains("table.columns"));
   }
 
+  @Test
+  void prefetchOnlyPlanIsNotEmpty() {
+    Table entity = new Table();
+    entity.setId(UUID.randomUUID());
+    SupportFlags supports = SupportFlags.allEnabled();
+
+    ReadPlan plan =
+        planner
+            .newBuilder(
+                entity,
+                new Fields(Set.of()),
+                RelationIncludes.fromInclude(NON_DELETED),
+                toConfig("table", supports))
+            .addEntitySpecificPrefetch("table.columns")
+            .build();
+
+    assertFalse(plan.isEmpty());
+    assertTrue(plan.getEntitySpecificPrefetchKeys().contains("table.columns"));
+  }
+
   private ReadPlan buildPlan(Set<String> requestedFields, RelationIncludes includes) {
     return buildPlan(requestedFields, includes, SupportFlags.allEnabled());
   }

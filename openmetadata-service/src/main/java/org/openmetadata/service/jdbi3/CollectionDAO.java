@@ -1775,12 +1775,30 @@ public interface CollectionDAO {
             + "FROM entity_relationship "
             + "WHERE fromId IN (<fromIds>) "
             + "AND fromEntity = :fromEntity "
-            + "AND relation IN (<relations>)")
+            + "AND relation IN (<relations>) "
+            + "<cond>")
     @UseRowMapper(RelationshipObjectMapper.class)
-    List<EntityRelationshipObject> findToBatchWithRelations(
+    List<EntityRelationshipObject> findToBatchWithRelationsAndCondition(
         @BindList("fromIds") List<String> fromIds,
         @Bind("fromEntity") String fromEntity,
-        @BindList("relations") List<Integer> relations);
+        @BindList("relations") List<Integer> relations,
+        @Define("cond") String condition);
+
+    default List<EntityRelationshipObject> findToBatchWithRelations(
+        List<String> fromIds, String fromEntity, List<Integer> relations, Include include) {
+      String condition = "";
+      if (include == null || include == Include.NON_DELETED) {
+        condition = "AND deleted = FALSE";
+      } else if (include == Include.DELETED) {
+        condition = "AND deleted = TRUE";
+      }
+      return findToBatchWithRelationsAndCondition(fromIds, fromEntity, relations, condition);
+    }
+
+    default List<EntityRelationshipObject> findToBatchWithRelations(
+        List<String> fromIds, String fromEntity, List<Integer> relations) {
+      return findToBatchWithRelations(fromIds, fromEntity, relations, Include.ALL);
+    }
 
     @SqlQuery(
         "SELECT toId, toEntity, json FROM entity_relationship "
@@ -1928,6 +1946,36 @@ public interface CollectionDAO {
         condition = "AND deleted = TRUE";
       }
       return findFromBatchWithEntityTypeAndCondition(toIds, relation, fromEntityType, condition);
+    }
+
+    @SqlQuery(
+        "SELECT fromId, toId, fromEntity, toEntity, relation, json, jsonSchema "
+            + "FROM entity_relationship "
+            + "WHERE toId IN (<toIds>) "
+            + "AND toEntity = :toEntityType "
+            + "AND relation IN (<relations>) "
+            + "<cond>")
+    @UseRowMapper(RelationshipObjectMapper.class)
+    List<EntityRelationshipObject> findFromBatchWithRelationsAndCondition(
+        @BindList("toIds") List<String> toIds,
+        @Bind("toEntityType") String toEntityType,
+        @BindList("relations") List<Integer> relations,
+        @Define("cond") String condition);
+
+    default List<EntityRelationshipObject> findFromBatchWithRelations(
+        List<String> toIds, String toEntityType, List<Integer> relations, Include include) {
+      String condition = "";
+      if (include == null || include == Include.NON_DELETED) {
+        condition = "AND deleted = FALSE";
+      } else if (include == Include.DELETED) {
+        condition = "AND deleted = TRUE";
+      }
+      return findFromBatchWithRelationsAndCondition(toIds, toEntityType, relations, condition);
+    }
+
+    default List<EntityRelationshipObject> findFromBatchWithRelations(
+        List<String> toIds, String toEntityType, List<Integer> relations) {
+      return findFromBatchWithRelations(toIds, toEntityType, relations, Include.ALL);
     }
 
     @SqlQuery(
@@ -6447,19 +6495,20 @@ public interface CollectionDAO {
         connectionType = POSTGRES)
     void insert(@Bind("json") String json);
 
-    /**
-     * NOTE:
-     * We intentionally route batch writes through single-row insert to preserve
-     * connection-aware JSON/JSONB binding semantics consistently across DB types.
-     * A broken SQLBatch path can pick the wrong dialect statement for Postgres.
-     */
+    @Transaction
+    @ConnectionAwareSqlBatch(
+        value = "INSERT INTO change_event (json) VALUES (:json)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlBatch(
+        value = "INSERT INTO change_event (json) VALUES (CAST(:json AS jsonb))",
+        connectionType = POSTGRES)
+    void insertBatchRows(@Bind("json") List<String> jsons);
+
     default void insertBatch(List<String> jsons) {
       if (nullOrEmpty(jsons)) {
         return;
       }
-      for (String json : jsons) {
-        insert(json);
-      }
+      insertBatchRows(jsons);
     }
 
     @SqlUpdate("DELETE FROM change_event WHERE entityType = :entityType")
