@@ -261,13 +261,25 @@ public class VectorDocBuilder {
     AssetCertification cert = entity.getCertification();
     if (cert != null && cert.getTagLabel() != null) {
       Map<String, Object> certDoc = new HashMap<>();
+      certDoc.put("appliedDate", cert.getAppliedDate());
+      certDoc.put("expiryDate", cert.getExpiryDate());
+
       TagLabel tag = cert.getTagLabel();
-      certDoc.put("tagFQN", tag.getTagFQN());
-      certDoc.put("name", tag.getName());
-      certDoc.put("labelType", tag.getLabelType() != null ? tag.getLabelType().value() : null);
-      certDoc.put("description", tag.getDescription());
-      certDoc.put("source", tag.getSource() != null ? tag.getSource().value() : null);
-      certDoc.put("state", tag.getState() != null ? tag.getState().value() : null);
+      Map<String, Object> tagLabelDoc = new HashMap<>();
+      tagLabelDoc.put("tagFQN", tag.getTagFQN());
+      tagLabelDoc.put("name", tag.getName());
+      tagLabelDoc.put("labelType", tag.getLabelType() != null ? tag.getLabelType().value() : null);
+      tagLabelDoc.put("description", tag.getDescription());
+      tagLabelDoc.put("source", tag.getSource() != null ? tag.getSource().value() : null);
+      tagLabelDoc.put("state", tag.getState() != null ? tag.getState().value() : null);
+      if (tag.getStyle() != null) {
+        Map<String, Object> styleDoc = new HashMap<>();
+        styleDoc.put("color", tag.getStyle().getColor());
+        styleDoc.put("iconURL", tag.getStyle().getIconURL());
+        tagLabelDoc.put("style", styleDoc);
+      }
+      certDoc.put("tagLabel", tagLabelDoc);
+
       doc.put("certification", certDoc);
     }
   }

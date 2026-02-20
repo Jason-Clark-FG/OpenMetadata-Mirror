@@ -195,7 +195,11 @@ public class VectorSearchQueryBuilder {
       if (!first) sb.append(',');
       first = false;
       sb.append("{\"bool\":{\"should\":[");
-      sb.append("{\"term\":{\"").append(nameField).append("\":\"").append(escape(v)).append("\"}},");
+      sb.append("{\"term\":{\"")
+          .append(nameField)
+          .append("\":\"")
+          .append(escape(v))
+          .append("\"}},");
       sb.append("{\"match\":{\"")
           .append(displayNameField)
           .append("\":\"")
