@@ -17,6 +17,15 @@ import '../../../../test/unit/mocks/mui.mock';
 import InlineSeverity from './InlineSeverity.component';
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  Typography: ({
+    as: Component = 'span',
+    children,
+    ...props
+  }: {
+    as?: React.ElementType;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => <Component {...props}>{children}</Component>,
   Dropdown: {
     Root: ({
       children,

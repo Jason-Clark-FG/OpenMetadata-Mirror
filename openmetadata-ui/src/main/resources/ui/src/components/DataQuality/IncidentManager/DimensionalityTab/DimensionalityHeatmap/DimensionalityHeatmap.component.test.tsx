@@ -39,6 +39,15 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  Typography: ({
+    as: Component = 'span',
+    children,
+    ...props
+  }: {
+    as?: React.ElementType;
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => <Component {...props}>{children}</Component>,
   ProgressBarCircle: ({
     valueFormatter: _vf,
     ...props
