@@ -226,8 +226,16 @@ export class LineagePageObject extends RightPanelBase {
     direction: 'upstream' | 'downstream'
   ): Promise<void> {
     const card = this.container
-      .locator('.lineage-item-card')
+      .locator('.lineage-item-card') 
       .filter({ hasText: entityName });
+
+    // Verify visibility based on direction
+    if (direction === 'upstream') {
+      await this.shouldShowExpandUpstreamButton();
+    } else {
+       await this.shouldShowExpandDownstreamButton();
+    }
+
     await expect(card).toBeVisible();
     await expect(card).toContainText(entityName);
   }

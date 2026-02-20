@@ -465,7 +465,13 @@ export class OverviewPageObject extends RightPanelBase {
     for (const tagName of tagDisplayNames) {
       const tagOption = this.page.getByTitle(tagName);
       await tagOption.waitFor({ state: 'visible' });
-      await tagOption.click();
+      // Only click if it's currently active (selected)
+      const isActive = await tagOption.evaluate((el) =>
+        el.classList.contains('active')
+      );
+      if (isActive) {
+        await tagOption.click();
+      }
     }
 
     const patchPromise = this.waitForPatchResponse();
@@ -500,7 +506,14 @@ export class OverviewPageObject extends RightPanelBase {
         .locator('.ant-list-item')
         .filter({ hasText: termName });
       await termItem.waitFor({ state: 'visible' });
-      await termItem.click();
+
+      // Only click if it's currently active (selected)
+      const isActive = await termItem.evaluate((el) =>
+        el.classList.contains('active')
+      );
+      if (isActive) {
+        await termItem.click();
+      }
 
       await searchBar.clear();
     }

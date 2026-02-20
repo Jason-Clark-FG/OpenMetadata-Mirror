@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 
-import { expect, test } from '../../support/fixtures/userPages';
-import { RightPanelPageObject } from '../PageObject/Explore/RightPanelPageObject';
-import { OverviewPageObject } from '../PageObject/Explore/OverviewPageObject';
-import { SchemaPageObject } from '../PageObject/Explore/SchemaPageObject';
-import { LineagePageObject } from '../PageObject/Explore/LineagePageObject';
-import { DataQualityPageObject } from '../PageObject/Explore/DataQualityPageObject';
+import { expect, test as baseTest } from '../../support/fixtures/userPages';
 import { CustomPropertiesPageObject } from '../PageObject/Explore/CustomPropertiesPageObject';
+import { DataQualityPageObject } from '../PageObject/Explore/DataQualityPageObject';
+import { LineagePageObject } from '../PageObject/Explore/LineagePageObject';
+import { OverviewPageObject } from '../PageObject/Explore/OverviewPageObject';
+import { RightPanelPageObject } from '../PageObject/Explore/RightPanelPageObject';
+import { SchemaPageObject } from '../PageObject/Explore/SchemaPageObject';
 import { TableClass } from '../../support/entity/TableClass';
 import { ClassificationClass } from '../../support/tag/ClassificationClass';
 import { TagClass } from '../../support/tag/TagClass';
@@ -78,13 +78,34 @@ const entityMap = {
   searchIndex: searchIndexEntity,
 };
 
-// Page object instances
-let rightPanel: RightPanelPageObject;
-let overview: OverviewPageObject;
-let schema: SchemaPageObject;
-let lineage: LineagePageObject;
-let dataQuality: DataQualityPageObject;
-let customProperties: CustomPropertiesPageObject;
+// Define local fixture using test.extend
+const test = baseTest.extend<{
+  rightPanel: RightPanelPageObject;
+  overview: OverviewPageObject;
+  schema: SchemaPageObject;
+  lineage: LineagePageObject;
+  dataQuality: DataQualityPageObject;
+  customProperties: CustomPropertiesPageObject;
+}>({
+  rightPanel: async ({ adminPage }, use) => {
+    await use(new RightPanelPageObject(adminPage));
+  },
+  overview: async ({ rightPanel }, use) => {
+    await use(new OverviewPageObject(rightPanel));
+  },
+  schema: async ({ rightPanel }, use) => {
+    await use(new SchemaPageObject(rightPanel));
+  },
+  lineage: async ({ rightPanel }, use) => {
+    await use(new LineagePageObject(rightPanel));
+  },
+  dataQuality: async ({ rightPanel }, use) => {
+    await use(new DataQualityPageObject(rightPanel));
+  },
+  customProperties: async ({ rightPanel }, use) => {
+    await use(new CustomPropertiesPageObject(rightPanel));
+  },
+});
 
 const domainToUpdate =
   domainEntity.responseData?.displayName ?? domainEntity.data.displayName;
@@ -147,15 +168,9 @@ test.describe('Right Panel Test Suite', () => {
     }
   });
 
-  // Setup page objects before each test
-  test.beforeEach(async ({ adminPage }) => {
+  // No need for explicit beforeEach instantiation as fixtures handle it
+  test.beforeEach(async () => {
     test.slow(true);
-    rightPanel = new RightPanelPageObject(adminPage);
-    overview = new OverviewPageObject(rightPanel);
-    schema = new SchemaPageObject(rightPanel);
-    lineage = new LineagePageObject(rightPanel);
-    dataQuality = new DataQualityPageObject(rightPanel);
-    customProperties = new CustomPropertiesPageObject(rightPanel);
   });
 
   // Cleanup test data
@@ -185,6 +200,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should update description for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -207,6 +224,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should update/edit tags for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -225,6 +244,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should update/edit tier for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -243,6 +264,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should update/edit glossary terms for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -260,6 +283,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should update owners for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -278,6 +303,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should update domain for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -300,6 +327,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should display and verify schema fields for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          schema,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -325,6 +354,7 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`validates visible/hidden tabs and tab content for ${entityType}`, async ({
           adminPage,
+          rightPanel,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -343,6 +373,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should navigate to lineage and test controls for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          lineage,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -365,6 +397,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should handle lineage expansion buttons for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          lineage,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -399,6 +433,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should navigate to data quality and verify tab structure for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          dataQuality,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -421,6 +457,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should display incidents tab for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          dataQuality,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -445,6 +483,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should verify empty state when no test cases for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          dataQuality,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -472,6 +512,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should navigate to custom properties and show interface for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -493,6 +535,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should display custom properties for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -519,6 +563,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should search custom properties for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -546,6 +592,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should clear search and show all properties for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -576,6 +624,8 @@ test.describe('Right Panel Test Suite', () => {
         // TODO: Remove skip once the we have search support for custom properties to avoid flakiness
         test.skip(`Should show no results for invalid search for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -600,6 +650,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should verify property name is visible for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          customProperties,
         }) => {
           rightPanel.setEntityConfig(entityInstance);
           test.skip(
@@ -628,7 +680,11 @@ test.describe('Right Panel Test Suite', () => {
 
     test.describe('Overview panel - Removal operations', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should remove tag for ${entityType}`, async ({ adminPage }) => {
+        test(`Should remove tag for ${entityType}`, async ({
+          adminPage,
+          rightPanel,
+          overview,
+        }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -660,7 +716,11 @@ test.describe('Right Panel Test Suite', () => {
           await expect(tagElement).not.toBeVisible();
         });
 
-        test(`Should remove tier for ${entityType}`, async ({ adminPage }) => {
+        test(`Should remove tier for ${entityType}`, async ({
+          adminPage,
+          rightPanel,
+          overview,
+        }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
             adminPage,
@@ -694,6 +754,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should remove glossary term for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -727,6 +789,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should remove domain for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -761,6 +825,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should remove user owner for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
           await navigateToExploreAndSelectEntity(
@@ -798,6 +864,8 @@ test.describe('Right Panel Test Suite', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should verify deleted user not visible in owner selection for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
           browser,
         }) => {
           const deletedUser = new UserClass();
@@ -838,6 +906,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should verify deleted tag not visible in tag selection for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
           browser,
         }) => {
           const deletedClassification = new ClassificationClass();
@@ -883,6 +953,8 @@ test.describe('Right Panel Test Suite', () => {
 
         test(`Should verify deleted glossary term not visible in selection for ${entityType}`, async ({
           adminPage,
+          rightPanel,
+          overview,
           browser,
         }) => {
           const deletedGlossary = new Glossary();
@@ -1383,6 +1455,8 @@ test.describe('Right Panel Test Suite', () => {
     test.describe('Empty State Scenarios - Comprehensive Coverage', () => {
       test('Should show appropriate message when no owners assigned', async ({
         adminPage,
+        rightPanel,
+        overview,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1402,8 +1476,7 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyOverview = new OverviewPageObject(rightPanel);
-          await emptyOverview.navigateToOverviewTab();
+          await overview.navigateToOverviewTab();
           const ownersSection = adminPage.locator('.owners-section');
           await expect(ownersSection).toBeVisible();
           // No owner chips should be present for a freshly-created entity
@@ -1416,6 +1489,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show appropriate message when no tags assigned', async ({
         adminPage,
+        rightPanel,
+        overview,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1435,8 +1510,7 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyOverview = new OverviewPageObject(rightPanel);
-          await emptyOverview.navigateToOverviewTab();
+          await overview.navigateToOverviewTab();
           const tagsSection = adminPage.locator('.tags-section');
           await expect(tagsSection).toBeVisible();
           // Verified from test output: empty tags section shows this placeholder text
@@ -1449,6 +1523,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show appropriate message when no tier assigned', async ({
         adminPage,
+        rightPanel,
+        overview,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1468,8 +1544,7 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyOverview = new OverviewPageObject(rightPanel);
-          await emptyOverview.navigateToOverviewTab();
+          await overview.navigateToOverviewTab();
           const tierSection = adminPage.locator('.tier-section');
           await expect(tierSection).toBeVisible();
           // The tier chip only renders when a tier is assigned — verify it is absent
@@ -1487,6 +1562,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show appropriate message when no domain assigned', async ({
         adminPage,
+        rightPanel,
+        overview,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1506,8 +1583,7 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyOverview = new OverviewPageObject(rightPanel);
-          await emptyOverview.navigateToOverviewTab();
+          await overview.navigateToOverviewTab();
           const domainSection = adminPage.locator('.domains-section');
           await expect(domainSection).toBeVisible();
           // Verified from test output: empty domains section shows this placeholder text
@@ -1522,6 +1598,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show appropriate message when no glossary terms assigned', async ({
         adminPage,
+        rightPanel,
+        overview,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1541,8 +1619,7 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyOverview = new OverviewPageObject(rightPanel);
-          await emptyOverview.navigateToOverviewTab();
+          await overview.navigateToOverviewTab();
           const glossarySection = adminPage.locator('.glossary-terms-section');
           await expect(glossarySection).toBeVisible();
           // No glossary term chips should be present; the container holds only the empty state
@@ -1559,6 +1636,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show lineage not found when no lineage exists', async ({
         adminPage,
+        rightPanel,
+        lineage,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1578,9 +1657,8 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyLineage = new LineagePageObject(rightPanel);
-          await emptyLineage.navigateToLineageTab();
-          await emptyLineage.shouldBeVisible();
+          await lineage.navigateToLineageTab();
+          await lineage.shouldBeVisible();
         } finally {
           await testEntity.delete(apiContext);
           await afterAction();
@@ -1589,6 +1667,8 @@ test.describe('Right Panel Test Suite', () => {
 
       test('Should show no test cases message when data quality tab is empty', async ({
         adminPage,
+        rightPanel,
+        dataQuality,
       }) => {
         const testEntity = new TableClass();
         const { apiContext, afterAction } = await performAdminLogin(
@@ -1608,10 +1688,9 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(testEntity);
 
-          const emptyDataQuality = new DataQualityPageObject(rightPanel);
-          await emptyDataQuality.navigateToDataQualityTab();
-          await emptyDataQuality.shouldBeVisible();
-          await emptyDataQuality.shouldShowTestCaseCardsCount(0);
+          await dataQuality.navigateToDataQualityTab();
+          await dataQuality.shouldBeVisible();
+          await dataQuality.shouldShowTestCaseCardsCount(0);
         } finally {
           await testEntity.delete(apiContext);
           await afterAction();
