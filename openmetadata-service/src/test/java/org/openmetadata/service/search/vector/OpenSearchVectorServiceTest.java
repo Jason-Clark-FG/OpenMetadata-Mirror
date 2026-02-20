@@ -88,7 +88,7 @@ class OpenSearchVectorServiceTest {
     mockOpenSearchResponse(openSearchResponse);
 
     // Search with threshold 0.5 - should filter out chunks with score < 0.5
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 100, 0.5);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 0, 100, 0.5);
 
     assertNotNull(results);
     assertEquals(2, results.hits.size(), "Should return 2 results (scores 0.9 and 0.7)");
@@ -123,7 +123,7 @@ class OpenSearchVectorServiceTest {
 
     mockOpenSearchResponse(openSearchResponse);
 
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 100, 0.0);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 0, 100, 0.0);
 
     assertEquals(1, results.hits.size());
     assertTrue(results.hits.get(0).containsKey("_score"), "Result should contain _score field");
@@ -155,7 +155,7 @@ class OpenSearchVectorServiceTest {
     mockOpenSearchResponse(openSearchResponse);
 
     // Request 2 distinct parents
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 2, 100, 0.0);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 2, 0, 100, 0.0);
 
     // Should return all chunks from first 2 parents (parent1: 3 chunks, parent2: 2 chunks = 5
     // total)
@@ -187,7 +187,7 @@ class OpenSearchVectorServiceTest {
 
     mockOpenSearchResponse(openSearchResponse);
 
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 100, 0.0);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 0, 100, 0.0);
 
     assertEquals(3, results.hits.size(), "With threshold 0.0, should return all 3 results");
   }
@@ -210,7 +210,7 @@ class OpenSearchVectorServiceTest {
 
     mockOpenSearchResponse(openSearchResponse);
 
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 100, 0.9);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 0, 100, 0.9);
 
     assertEquals(0, results.hits.size(), "With threshold 0.9, all results should be filtered out");
   }
@@ -233,7 +233,7 @@ class OpenSearchVectorServiceTest {
 
     mockOpenSearchResponse(openSearchResponse);
 
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 100, 0.0);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 10, 0, 100, 0.0);
 
     assertEquals(2, results.hits.size(), "Chunks without parent_id should be skipped");
   }
@@ -264,7 +264,7 @@ class OpenSearchVectorServiceTest {
 
     mockOpenSearchResponse(openSearchResponse);
 
-    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 3, 100, 0.0);
+    DTOs.VectorSearchResponse results = vectorService.search("test query", Map.of(), 3, 0, 100, 0.0);
 
     assertEquals(3, results.hits.size(), "Should limit to 3 distinct parents");
 

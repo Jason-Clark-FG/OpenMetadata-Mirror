@@ -17,11 +17,13 @@ public class VectorSearchQueryBuilder {
 
   /** Build a full search request body (size + _source + query) for standalone vector search. */
   public static String build(
-      float[] vector, int size, int k, Map<String, List<String>> filters, double threshold) {
+      float[] vector, int size, int from, int k, Map<String, List<String>> filters, double threshold) {
     StringBuilder sb =
         new StringBuilder(512)
             .append("{\"size\":")
             .append(size)
+            .append(",\"from\":")
+            .append(from)
             .append(",\"_source\":{\"excludes\":[\"embedding\"]}")
             .append(",\"query\":");
     appendKnnQuery(sb, vector, k, filters, threshold);
@@ -194,18 +196,22 @@ public class VectorSearchQueryBuilder {
     for (String v : vals) {
       if (!first) sb.append(',');
       first = false;
-      sb.append("{\"bool\":{\"should\":[");
-      sb.append("{\"term\":{\"")
-          .append(nameField)
-          .append("\":\"")
-          .append(escape(v))
-          .append("\"}},");
-      sb.append("{\"match\":{\"")
-          .append(displayNameField)
-          .append("\":\"")
-          .append(escape(v))
-          .append("\"}}");
-      sb.append("]}}");
+      if (ANY.equals(v) || NONE.equals(v)) {
+        appendOneFlat(sb, nameField, v);
+      } else {
+        sb.append("{\"bool\":{\"should\":[");
+        sb.append("{\"term\":{\"")
+            .append(nameField)
+            .append("\":\"")
+            .append(escape(v))
+            .append("\"}},");
+        sb.append("{\"match\":{\"")
+            .append(displayNameField)
+            .append("\":\"")
+            .append(escape(v))
+            .append("\"}}");
+        sb.append("]}}");
+      }
     }
     sb.append("]}}");
   }

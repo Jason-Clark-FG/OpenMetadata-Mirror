@@ -46,7 +46,7 @@ public interface VectorIndexService {
   void restoreEmbeddings(EntityInterface entity);
 
   VectorSearchResponse search(
-      String query, Map<String, List<String>> filters, int size, int k, double threshold);
+      String query, Map<String, List<String>> filters, int size, int from, int k, double threshold);
 
   void createOrUpdateIndex(int dimension);
 

@@ -96,14 +96,14 @@ public class OpenSearchVectorService implements VectorIndexService {
   @Override
   @SuppressWarnings("unchecked")
   public VectorSearchResponse search(
-      String query, Map<String, List<String>> filters, int size, int k, double threshold) {
+      String query, Map<String, List<String>> filters, int size, int from, int k, double threshold) {
     long start = System.currentTimeMillis();
     try {
       float[] queryVector = embeddingClient.embed(query);
       int overFetchSize = size * OVER_FETCH_MULTIPLIER;
 
       String queryJson =
-          VectorSearchQueryBuilder.build(queryVector, overFetchSize, k, filters, threshold);
+          VectorSearchQueryBuilder.build(queryVector, overFetchSize, from, k, filters, threshold);
       String indexName = getClusteredIndexName();
       String responseBody = executeGenericRequest("POST", "/" + indexName + "/_search", queryJson);
 

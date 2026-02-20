@@ -115,7 +115,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -141,7 +141,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -168,7 +168,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -209,7 +209,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -249,7 +249,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -276,7 +276,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -301,7 +301,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -327,7 +327,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();
@@ -347,7 +347,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenThrow(new RuntimeException("Connection refused"));
 
       Map<String, Object> params = new HashMap<>();
@@ -370,7 +370,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> filters = new HashMap<>();
@@ -397,7 +397,7 @@ class SemanticSearchToolTest {
     try (MockedStatic<OpenSearchVectorService> vectorMock =
         mockStatic(OpenSearchVectorService.class)) {
       vectorMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
-      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyDouble()))
+      when(vectorService.search(anyString(), anyMap(), anyInt(), anyInt(), anyInt(), anyDouble()))
           .thenReturn(response);
 
       Map<String, Object> params = new HashMap<>();

@@ -50,6 +50,9 @@ public class SemanticSearchTool implements McpTool {
     int size = parseIntParam(params, "size", DEFAULT_SIZE);
     size = Math.min(Math.max(size, 1), MAX_SIZE);
 
+    int from = parseIntParam(params, "from", 0);
+    from = Math.max(from, 0);
+
     int k = parseIntParam(params, "k", DEFAULT_K);
     k = Math.min(Math.max(k, 1), MAX_K);
 
@@ -59,7 +62,7 @@ public class SemanticSearchTool implements McpTool {
     Map<String, List<String>> filters = parseFilters(params);
 
     try {
-      VectorSearchResponse response = vectorService.search(query, filters, size, k, threshold);
+      VectorSearchResponse response = vectorService.search(query, filters, size, from, k, threshold);
       return buildResponse(query, response, size);
     } catch (Exception e) {
       LOG.error("Semantic search failed: {}", e.getMessage(), e);

@@ -84,12 +84,14 @@ public class VectorSearchResource {
 
     try {
       int effectiveSize = Math.min(Math.max(request.size, 1), MAX_SIZE);
+      int effectiveFrom = Math.max(request.from != null ? request.from : 0, 0);
       int effectiveK = Math.min(Math.max(request.k, 1), MAX_K);
       VectorSearchResponse response =
           vectorService.search(
               request.query,
               request.filters != null ? request.filters : Collections.emptyMap(),
               effectiveSize,
+              effectiveFrom,
               effectiveK,
               request.threshold);
       return Response.ok(response).build();
