@@ -83,7 +83,7 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
   }
 
   @VisibleForTesting
-  public static String sanitizeForK8s(String name) {
+  static String sanitizeForK8s(String name) {
     String sanitized = name.replaceAll("-{2,}", "-");
     sanitized = sanitized.replaceAll("^-+", "");
     sanitized = sanitized.replaceAll("-+$", "");

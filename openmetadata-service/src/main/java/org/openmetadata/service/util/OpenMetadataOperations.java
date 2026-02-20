@@ -47,8 +47,6 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -129,7 +127,6 @@ import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.search.SearchRepositoryFactory;
 import org.openmetadata.service.search.elasticsearch.ElasticSearchClient;
 import org.openmetadata.service.search.opensearch.OpenSearchClient;
-import org.openmetadata.service.secrets.KubernetesSecretsManager;
 import org.openmetadata.service.secrets.SecretsManager;
 import org.openmetadata.service.secrets.SecretsManagerFactory;
 import org.openmetadata.service.secrets.SecretsManagerUpdateService;
@@ -174,7 +171,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
   public Integer call() {
     LOG.info(
         "Subcommand needed: 'info', 'validate', 'repair', 'check-connection', "
-            + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'fix-k8s-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
+            + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
             + "'dbServiceCleanup', 'relationshipCleanup', 'tagUsageCleanup', 'drop-indexes', 'remove-security-config', 'create-indexes', "
             + "'setOpenMetadataUrl', 'configureEmailSettings', 'get-security-config', 'update-security-config', 'install-app', 'delete-app', 'create-user', 'reset-password', "
             + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history'");
@@ -2233,154 +2230,6 @@ public class OpenMetadataOperations implements Callable<Integer> {
       LOG.error("Failed to migrate secrets due to ", e);
       return 1;
     }
-  }
-
-  @Command(
-      name = "fix-k8s-secrets",
-      description =
-          "Migrates Kubernetes secret references in the database from the old path format "
-              + "(secret:/cluster/type/name/field) to the new K8s-compatible format "
-              + "(secret:cluster-type-name-field). Only updates DB references; "
-              + "the actual K8s secrets do not need to be renamed.")
-  public Integer fixK8sSecrets(
-      @Option(
-              names = {"--dry-run"},
-              defaultValue = "true",
-              description =
-                  "Preview changes without modifying the database. Set to false to apply changes.")
-          boolean dryRun) {
-    try {
-      LOG.info("Fixing Kubernetes secret references in database. Dry run: {}", dryRun);
-      parseConfig();
-
-      ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
-
-      List<String> entityTables =
-          List.of(
-              "dbservice_entity",
-              "dashboard_service_entity",
-              "messaging_service_entity",
-              "pipeline_service_entity",
-              "mlmodel_service_entity",
-              "storage_service_entity",
-              "search_service_entity",
-              "metadata_service_entity",
-              "api_service_entity",
-              "security_service_entity",
-              "drive_service_entity",
-              "llm_service_entity",
-              "user_entity",
-              "ingestion_pipeline_entity",
-              "automations_workflow",
-              "bot_entity");
-
-      Pattern secretPattern = Pattern.compile("secret:/([^\"]+)");
-      int totalUpdated = 0;
-
-      for (String table : entityTables) {
-        try {
-          totalUpdated += migrateK8sSecretsInTable(table, secretPattern, connType, dryRun);
-        } catch (Exception e) {
-          LOG.warn("Skipping table {} (may not exist): {}", table, e.getMessage());
-        }
-      }
-
-      if (dryRun) {
-        LOG.info(
-            "Dry run complete. {} rows would be updated. "
-                + "Run with --dry-run=false to apply changes.",
-            totalUpdated);
-      } else {
-        LOG.info("Migration complete. {} rows updated.", totalUpdated);
-      }
-      return 0;
-    } catch (Exception e) {
-      LOG.error("Failed to fix K8s secrets due to ", e);
-      return 1;
-    }
-  }
-
-  private int migrateK8sSecretsInTable(
-      String table, Pattern secretPattern, ConnectionType connType, boolean dryRun) {
-    String selectSql;
-    String updateSql;
-    int batchSize = 50;
-
-    if (connType == ConnectionType.MYSQL) {
-      selectSql =
-          String.format(
-              "SELECT id, json FROM %s WHERE json LIKE '%%\"secret:/%%' ORDER BY id", table);
-      updateSql = String.format("UPDATE %s SET json = :json WHERE id = :id", table);
-    } else {
-      selectSql =
-          String.format(
-              "SELECT id, json::text as json FROM %s"
-                  + " WHERE json::text LIKE '%%\"secret:/%%' ORDER BY id",
-              table);
-      updateSql = String.format("UPDATE %s SET json = (:json :: jsonb) WHERE id = :id", table);
-    }
-
-    List<Map.Entry<String, String>> pendingUpdates = new ArrayList<>();
-    int offset = 0;
-
-    while (true) {
-      String batchSql = selectSql + " LIMIT " + batchSize + " OFFSET " + offset;
-      List<Map<String, Object>> batch =
-          jdbi.withHandle(handle -> handle.createQuery(batchSql).mapToMap().list());
-
-      if (batch.isEmpty()) {
-        break;
-      }
-
-      for (Map<String, Object> row : batch) {
-        String id = row.get("id").toString();
-        String json = row.get("json").toString();
-
-        Matcher matcher = secretPattern.matcher(json);
-        StringBuilder sb = new StringBuilder();
-        boolean found = false;
-
-        while (matcher.find()) {
-          found = true;
-          String oldPath = matcher.group(1);
-          String newPath =
-              KubernetesSecretsManager.sanitizeForK8s(
-                  oldPath.toLowerCase().replaceAll("[^a-z0-9\\-]", "-"));
-          if (dryRun) {
-            LOG.info("  [{}] secret:/{} -> secret:{}", table, oldPath, newPath);
-          }
-          matcher.appendReplacement(sb, "secret:" + Matcher.quoteReplacement(newPath));
-        }
-        matcher.appendTail(sb);
-
-        if (found) {
-          pendingUpdates.add(Map.entry(id, sb.toString()));
-        }
-      }
-
-      offset += batchSize;
-    }
-
-    if (pendingUpdates.isEmpty()) {
-      return 0;
-    }
-
-    LOG.info("Found {} rows with old-format secret references in {}", pendingUpdates.size(), table);
-
-    if (!dryRun) {
-      jdbi.useTransaction(
-          handle -> {
-            for (Map.Entry<String, String> entry : pendingUpdates) {
-              handle
-                  .createUpdate(updateSql)
-                  .bind("json", entry.getValue())
-                  .bind("id", entry.getKey())
-                  .execute();
-            }
-          });
-    }
-
-    return pendingUpdates.size();
   }
 
   @Command(name = "drop-indexes", description = "Drop all indexes from Elasticsearch/OpenSearch.")
