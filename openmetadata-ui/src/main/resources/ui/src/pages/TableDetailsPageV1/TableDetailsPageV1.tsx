@@ -83,7 +83,6 @@ import {
 } from '../../utils/CustomizePage/CustomizePageUtils';
 import {
   defaultFields,
-  defaultFieldsWithColumns,
 } from '../../utils/DatasetDetailsUtils';
 import { mergeEntityStateUpdate } from '../../utils/EntityUpdateUtils';
 import entityUtilClassBase from '../../utils/EntityUtilClassBase';
@@ -203,7 +202,7 @@ const TableDetailsPageV1: React.FC = () => {
         setLoading(true);
       }
       try {
-        let fields = defaultFieldsWithColumns;
+        let fields = defaultFields;
         if (viewUsagePermission) {
           fields += `,${TabSpecificField.USAGE_SUMMARY}`;
         }
