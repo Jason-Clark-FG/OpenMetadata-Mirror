@@ -96,7 +96,12 @@ public class OpenSearchVectorService implements VectorIndexService {
   @Override
   @SuppressWarnings("unchecked")
   public VectorSearchResponse search(
-      String query, Map<String, List<String>> filters, int size, int from, int k, double threshold) {
+      String query,
+      Map<String, List<String>> filters,
+      int size,
+      int from,
+      int k,
+      double threshold) {
     long start = System.currentTimeMillis();
     try {
       float[] queryVector = embeddingClient.embed(query);

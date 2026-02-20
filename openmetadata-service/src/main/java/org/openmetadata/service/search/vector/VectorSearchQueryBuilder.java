@@ -17,7 +17,12 @@ public class VectorSearchQueryBuilder {
 
   /** Build a full search request body (size + _source + query) for standalone vector search. */
   public static String build(
-      float[] vector, int size, int from, int k, Map<String, List<String>> filters, double threshold) {
+      float[] vector,
+      int size,
+      int from,
+      int k,
+      Map<String, List<String>> filters,
+      double threshold) {
     StringBuilder sb =
         new StringBuilder(512)
             .append("{\"size\":")

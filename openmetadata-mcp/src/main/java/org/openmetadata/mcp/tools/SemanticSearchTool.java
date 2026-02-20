@@ -62,7 +62,8 @@ public class SemanticSearchTool implements McpTool {
     Map<String, List<String>> filters = parseFilters(params);
 
     try {
-      VectorSearchResponse response = vectorService.search(query, filters, size, from, k, threshold);
+      VectorSearchResponse response =
+          vectorService.search(query, filters, size, from, k, threshold);
       return buildResponse(query, response, size);
     } catch (Exception e) {
       LOG.error("Semantic search failed: {}", e.getMessage(), e);
