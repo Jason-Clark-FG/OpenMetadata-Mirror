@@ -11,7 +11,8 @@
  *  limitations under the License.
  */
 import Icon from '@ant-design/icons';
-import { Button, Col, Row, Tabs, TabsProps, Tooltip, Typography } from 'antd';
+import { Typography } from '@openmetadata/ui-core-components';
+import { Button, Col, Row, Tabs, TabsProps, Tooltip } from 'antd';
 import ButtonGroup from 'antd/lib/button/button-group';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -475,7 +476,7 @@ const IncidentManagerDetailPage = ({
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
                       onClick={onVersionClick}>
-                      <Typography.Text>{testCase?.version}</Typography.Text>
+                      <Typography as="span">{testCase?.version}</Typography>
                     </Button>
                   </Tooltip>
                 )}

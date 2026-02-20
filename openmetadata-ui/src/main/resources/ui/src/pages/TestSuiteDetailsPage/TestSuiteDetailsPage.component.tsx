@@ -17,6 +17,7 @@ import {
   Modal,
   ModalOverlay,
   Tabs,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
@@ -654,11 +655,13 @@ const TestSuiteDetailsPage = () => {
             onOpenChange={setIsTestCaseModalOpen}>
             <Modal className="tw:max-w-2xl tw:rounded-xl">
               <Dialog className="tw:flex tw:max-h-[90vh] tw:w-full tw:flex-col tw:overflow-hidden tw:rounded-xl tw:bg-background-paper tw:p-6">
-                <h2 className="tw:mb-4 tw:text-lg tw:font-semibold tw:text-body">
+                <Typography
+                  as="h2"
+                  className="tw:mb-4 tw:text-lg tw:font-semibold tw:text-body">
                   {t('label.add-entity', {
                     entity: t('label.test-case-plural'),
                   })}
-                </h2>
+                </Typography>
                 <div className="tw:flex-1 tw:overflow-y-auto">
                   <AddTestCaseList
                     existingTest={testSuite?.tests ?? []}

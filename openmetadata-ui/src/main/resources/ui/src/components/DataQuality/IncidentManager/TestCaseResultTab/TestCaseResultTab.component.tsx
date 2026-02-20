@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Typography } from '@openmetadata/ui-core-components';
 import { Tooltip } from 'antd';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
@@ -325,9 +326,9 @@ const TestCaseResultTab = () => {
     (items: Array<{ label: string; value: string | React.ReactNode }>) => {
       if (items.length === 0) {
         return (
-          <span className="tw:text-body tw:text-tertiary">
+          <Typography as="span" className="tw:text-body tw:text-tertiary">
             {t('label.no-parameter-available')}
-          </span>
+          </Typography>
         );
       }
 
@@ -420,9 +421,9 @@ const TestCaseResultTab = () => {
 
     if (!parameterItems || parameterItems.length === 0) {
       return (
-        <span className="tw:text-body tw:text-tertiary">
+        <Typography as="span" className="tw:text-body tw:text-tertiary">
           {t('label.no-parameter-available')}
-        </span>
+        </Typography>
       );
     }
 
@@ -461,9 +462,11 @@ const TestCaseResultTab = () => {
             <div className="parameter-container">
               <div className="tw:flex tw:w-full tw:flex-col tw:gap-1">
                 <div className="tw:mb-4 tw:flex tw:flex-row tw:items-center tw:gap-1">
-                  <span className="parameter-title tw:text-body">
+                  <Typography
+                    as="span"
+                    className="parameter-title tw:text-body">
                     {t('label.parameter')}
-                  </span>
+                  </Typography>
                   {hasEditPermission &&
                     Boolean(
                       testCaseData?.parameterValues?.length ||
@@ -496,9 +499,11 @@ const TestCaseResultTab = () => {
                   key={param.name}>
                   <div className="tw:flex tw:w-full tw:flex-col tw:gap-1">
                     <div className="tw:flex tw:flex-row tw:items-center tw:gap-1">
-                      <span className="parameter-title tw:text-body">
+                      <Typography
+                        as="span"
+                        className="parameter-title tw:text-body">
                         {startCase(param.name)}
-                      </span>
+                      </Typography>
                       {hasEditPermission && (
                         <EditIconButton
                           newLook

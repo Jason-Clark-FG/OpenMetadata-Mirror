@@ -11,14 +11,14 @@
  *  limitations under the License.
  */
 
-import { Dropdown } from '@openmetadata/ui-core-components';
+import { Dropdown, Typography } from '@openmetadata/ui-core-components';
 import {
   ChevronDown as ArrowDownIcon,
   ChevronUp as ArrowUpIcon,
 } from '@untitledui/icons';
 import classNames from 'classnames';
 import { startCase, toLower } from 'lodash';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SEVERITY_COLORS } from '../../../../constants/Color.constants';
 import { Severities } from '../../../../generated/tests/testCaseResolutionStatus';
@@ -66,7 +66,7 @@ const InlineSeverity = ({
   const chipButton = (
     <button
       className={classNames(
-        'severity tw:inline-flex tw:items-center tw:gap-1 tw:rounded-2xl tw:border tw:px-2 tw:py-0.5 tw:text-xs tw:font-medium',
+        'severity tw:inline-flex tw:items-center tw:gap-1 tw:rounded-2xl tw:border tw:px-2 tw:py-0.5',
         severity && toLower(severity)
       )}
       data-testid="severity-chip"
@@ -78,19 +78,15 @@ const InlineSeverity = ({
         cursor: hasEditPermission && !isLoading ? 'pointer' : 'default',
       }}
       type="button">
-      <span className="tw:px-0.5">
+      <Typography as="span" className="tw:px-0.5 tw:text-xs tw:font-medium">
         {severity ? startCase(severity) : 'No Severity'}
-      </span>
+      </Typography>
       {hasEditPermission && dropdownIcon}
     </button>
   );
 
   if (!hasEditPermission) {
-    return (
-      <div className="tw:inline-flex tw:items-center">
-        {chipButton}
-      </div>
-    );
+    return <div className="tw:inline-flex tw:items-center">{chipButton}</div>;
   }
 
   return (
@@ -99,24 +95,20 @@ const InlineSeverity = ({
         {chipButton}
         <Dropdown.Popover className="tw:w-max">
           <Dropdown.Menu
+            selectedKeys={severity ? [severity] : ['none']}
+            selectionMode="single"
             onAction={(key) =>
               handleSeverityChange(
                 key === 'none' ? undefined : (key as Severities)
               )
-            }
-            selectedKeys={severity ? [severity] : ['none']}
-            selectionMode="single">
+            }>
             <Dropdown.Item
               id="none"
               label={t('label.no-entity', { entity: t('label.severity') })}
             />
             <Dropdown.Separator />
             {Object.values(Severities).map((sev) => (
-              <Dropdown.Item
-                id={sev}
-                key={sev}
-                label={startCase(sev)}
-              />
+              <Dropdown.Item id={sev} key={sev} label={startCase(sev)} />
             ))}
           </Dropdown.Menu>
         </Dropdown.Popover>

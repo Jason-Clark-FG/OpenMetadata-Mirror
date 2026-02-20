@@ -11,7 +11,11 @@
  *  limitations under the License.
  */
 
-import { ProgressBarCircle, Tooltip } from '@openmetadata/ui-core-components';
+import {
+  ProgressBarCircle,
+  Tooltip,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as RightArrowIcon } from '../../../../../assets/svg/right-arrow.svg';
@@ -61,19 +65,17 @@ const DimensionalityHeatmap = ({
   if (isLoading) {
     return (
       <div className="dimensionality-heatmap__loading tw:flex tw:items-center tw:justify-center tw:p-8">
-        <ProgressBarCircle
-          size="xxs"
-          value={75}
-          valueFormatter={() => ''}
-        />
+        <ProgressBarCircle size="xxs" value={75} valueFormatter={() => ''} />
       </div>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="dimensionality-heatmap__empty tw:py-8 tw:text-center tw:text-body tw:text-tertiary">
-        {t('message.no-data-available')}
+      <div className="dimensionality-heatmap__empty tw:py-8 tw:text-center">
+        <Typography as="span" className="tw:text-body tw:text-tertiary">
+          {t('message.no-data-available')}
+        </Typography>
       </div>
     );
   }
@@ -167,19 +169,27 @@ const DimensionalityHeatmap = ({
       <div className="dimensionality-heatmap__legend tw:mt-4 tw:flex tw:flex-wrap tw:gap-4">
         <div className="dimensionality-heatmap__legend-item tw:flex tw:items-center tw:gap-2">
           <div className="dimensionality-heatmap__legend-box dimensionality-heatmap__legend-box--success tw:shrink-0" />
-          <span className="tw:text-body">{t('label.success')}</span>
+          <Typography as="span" className="tw:text-body">
+            {t('label.success')}
+          </Typography>
         </div>
         <div className="dimensionality-heatmap__legend-item tw:flex tw:items-center tw:gap-2">
           <div className="dimensionality-heatmap__legend-box dimensionality-heatmap__legend-box--failed tw:shrink-0" />
-          <span className="tw:text-body">{t('label.failed')}</span>
+          <Typography as="span" className="tw:text-body">
+            {t('label.failed')}
+          </Typography>
         </div>
         <div className="dimensionality-heatmap__legend-item tw:flex tw:items-center tw:gap-2">
           <div className="dimensionality-heatmap__legend-box dimensionality-heatmap__legend-box--aborted tw:shrink-0" />
-          <span className="tw:text-body">{t('label.aborted')}</span>
+          <Typography as="span" className="tw:text-body">
+            {t('label.aborted')}
+          </Typography>
         </div>
         <div className="dimensionality-heatmap__legend-item tw:flex tw:items-center tw:gap-2">
           <div className="dimensionality-heatmap__legend-box dimensionality-heatmap__legend-box--no-data tw:shrink-0" />
-          <span className="tw:text-body">{t('label.no-data')}</span>
+          <Typography as="span" className="tw:text-body">
+            {t('label.no-data')}
+          </Typography>
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Typography } from '@openmetadata/ui-core-components';
 import { isUndefined } from 'lodash';
 import { FC, ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,8 +31,12 @@ const TooltipRow: FC<TooltipRowProps> = ({ label, value }) => {
     <div
       className="tw:flex tw:items-center tw:justify-between tw:gap-5"
       style={{ fontSize: TOOLTIP_STYLES.CONTENT_FONT_SIZE }}>
-      <span className="tw:whitespace-nowrap tw:text-gray-700">{label}</span>
-      <span className="tw:font-medium tw:text-gray-900">{value}</span>
+      <Typography as="span" className="tw:whitespace-nowrap tw:text-gray-700">
+        {label}
+      </Typography>
+      <Typography as="span" className="tw:font-medium tw:text-gray-900">
+        {value}
+      </Typography>
     </div>
   );
 };
@@ -84,11 +89,12 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
     <div
       className="tw:rounded-lg tw:bg-white tw:shadow-sm"
       style={{ padding: TOOLTIP_STYLES.CARD_PADDING }}>
-      <span
+      <Typography
+        as="span"
         className="tw:block tw:text-gray-900 tw:font-medium"
         style={{ fontSize: TOOLTIP_STYLES.HEADER_FONT_SIZE }}>
         {cell.date}
-      </span>
+      </Typography>
       <div
         aria-hidden
         className="tw:my-2 tw:border-b tw:border-dashed tw:border-gray-300"
