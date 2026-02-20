@@ -63,19 +63,26 @@ const mockReactFlowInstance = {
 };
 
 const defaultMockProps = {
-  activeLayer: [LineageLayer.ColumnLevelLineage],
   nodes: mockedNodes,
   onNodeClick: mockNodeClick,
   onColumnClick: mockColumnClick,
-  platformView: LineagePlatformView.None,
   reactFlowInstance: mockReactFlowInstance,
-  zoomValue: 1,
-  isEditMode: false,
-  isPlatformLineage: false,
 };
 
 jest.mock('../../../../context/LineageProvider/LineageProvider', () => ({
   useLineageProvider: jest.fn(),
+}));
+
+jest.mock('../../../../hooks/useLineageStore', () => ({
+  useLineageStore: jest.fn().mockImplementation(() => ({
+    activeLayer: [LineageLayer.ColumnLevelLineage],
+    platformView: LineagePlatformView.None,
+    setPlatformView: jest.fn(),
+    isPlatformLineage: false,
+    setActiveLayer: jest.fn(),
+    zoomValue: 1,
+    isEditMode: false,
+  })),
 }));
 
 describe('LineageSearchSelect', () => {
