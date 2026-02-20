@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Typography } from '@openmetadata/ui-core-components';
 import { ColumnsType } from 'antd/lib/table';
 import { isEmpty, isUndefined } from 'lodash';
 import Qs from 'qs';
@@ -150,7 +151,11 @@ const ColumnProfileTable = () => {
         key: 'dataType',
         width: 200,
         render: (dataTypeDisplay: string) => {
-          return <span className="break-word">{dataTypeDisplay || 'N/A'}</span>;
+          return (
+            <Typography>
+              <span className="break-word">{dataTypeDisplay || 'N/A'}</span>
+            </Typography>
+          );
         },
         sorter: (col1, col2) => col1.dataType.localeCompare(col2.dataType),
       },
