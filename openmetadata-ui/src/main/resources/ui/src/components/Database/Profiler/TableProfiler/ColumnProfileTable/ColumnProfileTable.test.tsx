@@ -14,7 +14,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { MOCK_TABLE } from '../../../../../mocks/TableData.mock';
-import '../../../../../test/unit/mocks/mui.mock';
 import { useTableProfiler } from '../TableProfilerProvider';
 import ColumnProfileTable from './ColumnProfileTable';
 
