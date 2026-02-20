@@ -117,7 +117,13 @@ export async function navigateToTeamAssetsAndOpenPanel(
 ): Promise<void> {
   await redirectToHomePage(page);
   await team.visitTeamPage(page);
+  const assetsRes = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/search/query') &&
+      response.status() === 200
+  );
   await page.getByTestId('assets').click();
+  await assetsRes;
   await waitForAllLoadersToDisappear(page);
   const teamCard = page.getByTestId(`table-data-card_${entityFqn}`);
   await teamCard.waitFor({ state: 'visible' });
