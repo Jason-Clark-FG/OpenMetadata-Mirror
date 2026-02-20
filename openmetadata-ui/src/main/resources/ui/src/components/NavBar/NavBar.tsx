@@ -66,7 +66,7 @@ import {
 } from '../../utils/BrowserNotificationUtils';
 import { getCustomPropertyEntityPathname } from '../../utils/CustomProperty.utils';
 import entityUtilClassBase from '../../utils/EntityUtilClassBase';
-import { getEntityName } from '../../utils/EntityUtils';
+import { getDomainDisplayName } from '../../utils/EntityUtils';
 import {
   getEntityFQN,
   getEntityType,
@@ -430,16 +430,10 @@ const NavBar = () => {
   );
 
   // Extracted domain display name logic to avoid nested ternary in JSX
-  const domainDisplayName = useMemo(() => {
-    if (activeDomainEntityRef) {
-      return getEntityName(activeDomainEntityRef);
-    }
-    if (activeDomain === DEFAULT_DOMAIN_VALUE) {
-      return t('label.all-domain-plural');
-    }
-
-    return activeDomain;
-  }, [activeDomainEntityRef, activeDomain, t]);
+  const domainDisplayName = getDomainDisplayName(
+    activeDomainEntityRef,
+    activeDomain
+  );
 
   const handleLanguageChange = useCallback(({ key }: MenuInfo) => {
     i18next.changeLanguage(key);
