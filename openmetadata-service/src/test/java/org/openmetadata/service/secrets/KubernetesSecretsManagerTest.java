@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -42,6 +43,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openmetadata.schema.security.secrets.Parameters;
+import org.openmetadata.service.exception.SecretsManagerException;
 
 @ExtendWith(MockitoExtension.class)
 class KubernetesSecretsManagerTest {
@@ -331,6 +333,13 @@ class KubernetesSecretsManagerTest {
     String result = KubernetesSecretsManager.sanitizeForK8s(longName);
     assertTrue(result.length() <= 253);
     assertEquals("a".repeat(253), result);
+  }
+
+  @Test
+  void testSanitizeForK8sThrowsOnEmptyResult() {
+    assertThrows(
+        SecretsManagerException.class, () -> KubernetesSecretsManager.sanitizeForK8s("---"));
+    assertThrows(SecretsManagerException.class, () -> KubernetesSecretsManager.sanitizeForK8s("-"));
   }
 
   @Test

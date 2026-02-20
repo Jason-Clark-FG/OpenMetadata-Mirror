@@ -91,6 +91,10 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
       sanitized = sanitized.substring(0, K8S_SECRET_NAME_MAX_LENGTH);
       sanitized = sanitized.replaceAll("-+$", "");
     }
+    if (sanitized.isEmpty()) {
+      throw new SecretsManagerException(
+          "Cannot create K8s secret with empty name after sanitization: " + name);
+    }
     return sanitized;
   }
 
