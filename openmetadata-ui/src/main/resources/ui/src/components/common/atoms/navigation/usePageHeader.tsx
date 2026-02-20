@@ -52,7 +52,11 @@ export const usePageHeader = (config: PageHeaderConfig) => {
             )}
           </div>
           {displayDescription && (
-            <p className="tw:text-sm tw:text-gray-500">{displayDescription}</p>
+            <div className="prose">
+              <p className="tw:text-sm tw:text-gray-500">
+                {displayDescription}
+              </p>
+            </div>
           )}
         </div>
         {config.actions ||
