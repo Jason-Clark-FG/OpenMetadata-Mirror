@@ -110,6 +110,8 @@ async function findTagInPaginatedList(
   options?: { click?: boolean }
 ): Promise<void> {
   const tagLocator = page.getByTestId(tagName);
+  const MAX_PAGES = 50;
+  let pageCount = 0;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -124,6 +126,13 @@ async function findTagInPaginatedList(
     const nextButton = page.getByTestId('next');
 
     if ((await nextButton.isVisible()) && (await nextButton.isEnabled())) {
+      pageCount++;
+      if (pageCount >= MAX_PAGES) {
+        throw new Error(
+          `Tag "${tagName}" not found after checking ${MAX_PAGES} pages`
+        );
+      }
+
       const nextResponsePromise = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/tags?') &&
