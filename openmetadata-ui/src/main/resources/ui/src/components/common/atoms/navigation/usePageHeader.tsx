@@ -11,7 +11,10 @@
  *  limitations under the License.
  */
 
-import { Button as UTButton } from '@openmetadata/ui-core-components';
+import {
+  Button as UTButton,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { Plus } from '@untitledui/icons';
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,19 +47,17 @@ export const usePageHeader = (config: PageHeaderConfig) => {
         data-testid="page-header">
         <div>
           <div className="tw:flex tw:items-center tw:gap-2 tw:mb-0.5">
-            <div className="prose">
+            <Typography>
               <h4>{displayTitle}</h4>
-            </div>
+            </Typography>
             {config.learningPageId && (
               <LearningIcon pageId={config.learningPageId} />
             )}
           </div>
           {displayDescription && (
-            <div className="prose">
-              <p className="tw:text-sm tw:text-gray-500">
-                {displayDescription}
-              </p>
-            </div>
+            <Typography>
+              <p className="tw:text-gray-500">{displayDescription}</p>
+            </Typography>
           )}
         </div>
         {config.actions ||
