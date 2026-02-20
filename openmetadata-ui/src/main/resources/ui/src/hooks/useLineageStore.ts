@@ -27,7 +27,6 @@ interface LineageState {
   tracedNodes: Set<string>;
   zoomValue: number;
   columnsHavingLineage: Map<string, Set<string>>;
-  expandAllColumns: boolean;
   activeLayer: LineageLayer[];
   platformView: LineagePlatformView;
   isPlatformLineage: boolean;
@@ -53,8 +52,6 @@ interface LineageState {
     columnsHavingLineage: Map<string, Set<string>>
   ) => void;
   updateColumnsHavingLineageById: (id: string, columnFqns: Set<string>) => void;
-  setExpandAllColumns: (expandAllColumns: boolean) => void;
-  toggleExpandAllColumns: () => void;
   setActiveLayer: (activeLayer: LineageLayer[]) => void;
   updateActiveLayer: (layer: LineageLayer | LineageLayer[]) => void;
   setPlatformView: (platformView: LineagePlatformView) => void;
@@ -85,7 +82,6 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   tracedNodes: new Set(),
   zoomValue: ZOOM_VALUE,
   columnsHavingLineage: new Map<string, Set<string>>(),
-  expandAllColumns: false,
   activeLayer: [],
   platformView: LineagePlatformView.None,
   isPlatformLineage: false,
@@ -149,13 +145,6 @@ export const useLineageStore = create<LineageState>((set, get) => ({
 
       return { columnsHavingLineage: updated };
     });
-  },
-
-  setExpandAllColumns: (expandAllColumns: boolean) => set({ expandAllColumns }),
-
-  toggleExpandAllColumns: () => {
-    const { expandAllColumns } = get();
-    set({ expandAllColumns: !expandAllColumns });
   },
 
   setActiveLayer: (activeLayer: LineageLayer[]) => {
@@ -235,7 +224,6 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       tracedColumns: new Set(),
       tracedNodes: new Set(),
       zoomValue: ZOOM_VALUE,
-      expandAllColumns: false,
       activeLayer: [],
       platformView: LineagePlatformView.None,
       isPlatformLineage: false,

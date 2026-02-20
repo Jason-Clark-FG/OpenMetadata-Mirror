@@ -252,7 +252,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     return (
       <>
         <LineageNodeLabelV1
-          isChildrenListExpanded={columnsExpanded || expandAllColumns}
+          isChildrenListExpanded={columnsExpanded}
           isOnlyShowColumnsWithLineageFilterActive={showColumnsWithLineageOnly}
           node={node}
           toggleColumnsList={toggleColumnsExpanded}
@@ -271,6 +271,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     label,
     isSelected,
     isRootNode,
+    columnsExpanded,
     showColumnsWithLineageOnly,
     toggleShowColumnsWithLineageOnly,
     handleNodeRemove,

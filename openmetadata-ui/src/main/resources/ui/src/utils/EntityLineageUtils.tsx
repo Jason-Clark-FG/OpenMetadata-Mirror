@@ -16,7 +16,7 @@ import { graphlib, layout } from '@dagrejs/dagre';
 import { Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { AxiosError } from 'axios';
-import ELK, { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
+import { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import {
   get,
   isEmpty,
@@ -106,6 +106,7 @@ import { getPartialNameFromTableFQN, isDeleted } from './CommonUtils';
 import { getEntityName, getEntityReferenceFromEntity } from './EntityUtils';
 import Fqn from './Fqn';
 import { t } from './i18next/LocalUtil';
+import ELKLayout from './Lineage/Layout/ELKUtil/ELKUtil';
 import { jsonToCSV } from './StringsUtils';
 import { showErrorToast } from './ToastUtils';
 
@@ -200,21 +201,6 @@ export const getLayoutedElements = (
   return { node: uNode, edge: edgesRequired };
 };
 
-// Layout options for the elk graph https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-mrtree.html
-const layoutOptions = {
-  'elk.algorithm': 'layered',
-  'elk.direction': 'RIGHT',
-  'elk.spacing.nodeNode': 100,
-  'elk.layered.spacing.nodeNodeBetweenLayers': 150,
-  'elk.layered.nodePlacement.strategy': 'SIMPLE',
-  'elk.partitioning.activate': 'true',
-};
-
-const elk = new ELK({
-  workerFactory: () =>
-    new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
-});
-
 export const getELKLayoutedElements = async (
   nodes: Node[],
   edges: Edge[],
@@ -247,15 +233,8 @@ export const getELKLayoutedElements = async (
     targets: [edge.target],
   }));
 
-  const graph = {
-    id: 'root',
-    layoutOptions: layoutOptions,
-    children: elkNodes,
-    edges: elkEdges,
-  };
-
   try {
-    const layoutedGraph = await elk.layout(graph);
+    const layoutedGraph = await ELKLayout.layoutGraph(elkNodes, elkEdges);
     const layoutedMap = new Map(
       (layoutedGraph?.children ?? []).map((n) => [n.id, n])
     );
