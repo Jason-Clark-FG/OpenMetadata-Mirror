@@ -97,6 +97,7 @@ export * from "./application/tabs/tabs";
 // Foundations
 export * from "./foundations/dot-icon";
 export * from "./foundations/payment-icons";
+export * from "./foundations/typography";
 
 // Other components
 export * from "./checkbox-icons";
