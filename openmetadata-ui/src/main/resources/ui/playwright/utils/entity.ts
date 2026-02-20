@@ -675,6 +675,7 @@ export const updateDescriptionForChildren = async (
   const modalEditor = modal.locator(descriptionBox);
   await expect(modalEditor).toBeVisible();
   await modalEditor.click();
+  await modalEditor.clear();
   await modalEditor.fill(description);
 
   // REMOVED: toHaveText check - rich text editor may have formatting that makes exact match unreliable
@@ -708,13 +709,18 @@ export const updateDescriptionForChildren = async (
   });
 
   // Verify the description was updated in the UI
-
-  await expect(
-    page
-      .locator(`[${rowSelector}="${rowId}"]`)
-      .getByTestId('viewer-container')
-      .getByRole('paragraph')
-  ).toContainText(description);
+  if (isEmpty(description)) {
+    await expect(
+      page.locator(`[${rowSelector}="${rowId}"]`).getByTestId('description')
+    ).toContainText('No Description');
+  } else {
+    await expect(
+      page
+        .locator(`[${rowSelector}="${rowId}"]`)
+        .getByTestId('viewer-container')
+        .getByRole('paragraph')
+    ).toContainText(description);
+  }
 };
 
 export const assignTag = async (

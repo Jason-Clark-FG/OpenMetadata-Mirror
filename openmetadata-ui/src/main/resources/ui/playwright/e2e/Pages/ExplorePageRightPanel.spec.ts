@@ -25,6 +25,7 @@ import { Glossary } from '../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../support/glossary/GlossaryTerm';
 import { uuid } from '../../utils/common';
 import { performAdminLogin } from '../../utils/admin';
+import { performUserLogin } from '../../utils/user';
 import { DashboardClass } from '../../support/entity/DashboardClass';
 import { DatabaseClass } from '../../support/entity/DatabaseClass';
 import { TopicClass } from '../../support/entity/TopicClass';
@@ -1369,30 +1370,39 @@ test.describe('Right Panel Test Suite', () => {
           }
         });
 
-        test(`Should NOT show restricted edit buttons for Data Consumer for ${entityType}`, async ({
-          dataConsumerPage,
+        test(`Should follow Data Consumer role policies for ownerless ${entityType}`, async ({
+          browser,
         }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
+          const { page: dataConsumerPage, afterAction } = await performUserLogin(
+            browser,
+            user1
           );
 
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
+          try {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              { state: 'visible' }
+            );
 
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.navigateToOverviewTab();
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
 
-          // DataConsumer: canEditDomains=false, canEditDataProducts=false
-          await rightPanelDC.verifyPermissions();
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.navigateToOverviewTab();
+
+            // DataConsumer: canEditDomains=false, canEditDataProducts=false
+            await rightPanelDC.verifyPermissions();
+          } finally {
+            await afterAction();
+          }
         });
       });
     });
@@ -1405,9 +1415,15 @@ test.describe('Right Panel Test Suite', () => {
     test.describe('Data Consumer User - Owner Restriction', () => {
       test('Should NOT allow Data Consumer to edit owners when entity has owner', async ({
         adminPage,
-        dataConsumerPage,
+        browser,
       }) => {
-        const fqn = getEntityFqn(dcOwnerTestTable);
+        const { page: dataConsumerPage, afterAction } = await performUserLogin(
+          browser,
+          user1
+        );
+
+        try {
+          const fqn = getEntityFqn(dcOwnerTestTable);
 
         // Admin assigns user1 as owner so the entity is no longer ownerless.
         // When an entity has an owner, EditOwners is no longer granted to all
@@ -1443,12 +1459,15 @@ test.describe('Right Panel Test Suite', () => {
           '[data-testid="entity-summary-panel-container"]',
           { state: 'visible' }
         );
-        const dcSummaryPanel = dataConsumerPage.locator(
-          '.entity-summary-panel-container'
-        );
-        await expect(
-          dcSummaryPanel.getByTestId('edit-owners')
-        ).not.toBeVisible();
+          const dcSummaryPanel = dataConsumerPage.locator(
+            '.entity-summary-panel-container'
+          );
+          await expect(
+            dcSummaryPanel.getByTestId('edit-owners')
+          ).not.toBeVisible();
+        } finally {
+          await afterAction();
+        }
       });
     });
 
@@ -1691,6 +1710,176 @@ test.describe('Right Panel Test Suite', () => {
           await dataQuality.navigateToDataQualityTab();
           await dataQuality.shouldBeVisible();
           await dataQuality.shouldShowTestCaseCardsCount(0);
+        } finally {
+          await testEntity.delete(apiContext);
+          await afterAction();
+        }
+      });
+    });
+
+    test.describe('Overview panel - Description removal', () => {
+      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+        test(`Should clear description for ${entityType}`, async ({
+          adminPage,
+        }) => {
+          const {
+            page: authenticatedPage,
+            afterAction,
+          } = await performAdminLogin(adminPage.context().browser()!);
+          const rightPanel = new RightPanelPageObject(authenticatedPage);
+          const localOverview = new OverviewPageObject(rightPanel);
+
+          // Use the shared entity instance from entityMap which is already created in beforeAll
+          try {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              authenticatedPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+
+            // First, ensure there is a description
+            const descriptionText = `Description to remove - ${uuid()}`;
+            await localOverview.editDescription(descriptionText);
+            await localOverview.shouldShowDescriptionWithText(descriptionText);
+
+            // Clear the description
+            await localOverview.editDescription('');
+
+            // Reload the entity panel and verify description is gone
+            await navigateToExploreAndSelectEntity(
+              authenticatedPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+
+            // The description text should no longer be present
+            const descElement = authenticatedPage
+              .locator('.description-section')
+              .getByText(descriptionText);
+            await expect(descElement).not.toBeVisible();
+          } finally {
+            await afterAction();
+          }
+        });
+      });
+    });
+
+    test.describe('Entity switch - Panel content reload', () => {
+      test('Should update panel content when switching between entities', async ({
+        adminPage,
+      }) => {
+        const {
+          page: authenticatedPage,
+          afterAction,
+        } = await performAdminLogin(adminPage.context().browser()!);
+        const rightPanel = new RightPanelPageObject(authenticatedPage);
+        const localOverview = new OverviewPageObject(rightPanel);
+
+        try {
+          // Navigate to the first entity (table)
+          const tableFqn = getEntityFqn(tableEntity);
+          await navigateToExploreAndSelectEntity(
+            authenticatedPage,
+            tableEntity.entity.name,
+            tableEntity.endpoint,
+            tableFqn
+          );
+          await rightPanel.waitForPanelVisible();
+          rightPanel.setEntityConfig(tableEntity);
+          await localOverview.navigateToOverviewTab();
+          await localOverview.shouldBeVisible();
+
+          // Verify table-specific content is visible
+          const panelContainer = authenticatedPage.locator(
+            '[data-testid="entity-summary-panel-container"]'
+          );
+          await expect(panelContainer).toBeVisible();
+          const tableNameInPanel = panelContainer.getByText(
+            tableEntity.entity.name
+          );
+          await expect(tableNameInPanel).toBeVisible();
+
+          // Switch to a different entity (dashboard)
+          const dashboardFqn = getEntityFqn(dashboardEntity);
+          await navigateToExploreAndSelectEntity(
+            authenticatedPage,
+            dashboardEntity.entity.name,
+            dashboardEntity.endpoint,
+            dashboardFqn
+          );
+          await rightPanel.waitForPanelVisible();
+          rightPanel.setEntityConfig(dashboardEntity);
+
+          // Verify dashboard-specific content is now visible (not stale table data)
+          const updatedPanel = authenticatedPage.locator(
+            '[data-testid="entity-summary-panel-container"]'
+          );
+          await expect(updatedPanel).toBeVisible();
+          const dashboardNameInPanel = updatedPanel.getByText(
+            dashboardEntity.entity.name
+          );
+          await expect(dashboardNameInPanel).toBeVisible();
+
+          // Verify the old entity name is no longer visible in the panel
+          const staleTableName = updatedPanel.getByText(
+            tableEntity.entity.name,
+            { exact: true }
+          );
+          await expect(staleTableName).not.toBeVisible();
+        } finally {
+          await afterAction();
+        }
+      });
+    });
+
+    test.describe('Overview panel - Multi-tag operations', () => {
+      test('Should add multiple tags simultaneously', async ({
+        adminPage,
+      }) => {
+        const testEntity = new TableClass();
+        const {
+          page: authenticatedPage,
+          apiContext,
+          afterAction,
+        } = await performAdminLogin(adminPage.context().browser()!);
+        const rightPanel = new RightPanelPageObject(authenticatedPage);
+        const localOverview = new OverviewPageObject(rightPanel);
+
+        try {
+          await testEntity.create(apiContext);
+
+          const fqn = getEntityFqn(testEntity);
+          await navigateToExploreAndSelectEntity(
+            authenticatedPage,
+            testEntity.entity.name,
+            testEntity.endpoint,
+            fqn
+          );
+          await rightPanel.waitForPanelVisible();
+          rightPanel.setEntityConfig(testEntity);
+
+          // Add first tag
+          await localOverview.editTags(tagToUpdate);
+          await localOverview.shouldShowTag(tagToUpdate);
+
+          // Add second tag (via edit)
+          const secondTag = 'PII.Sensitive';
+          await localOverview.editTags(secondTag);
+          await localOverview.shouldShowTag(secondTag);
+
+          // Both tags should be visible
+          await localOverview.shouldShowTag(tagToUpdate);
+          await localOverview.shouldShowTag(secondTag);
+
+          // Cleanup: remove both tags
+          await localOverview.removeTag([secondTag]);
+          await localOverview.removeTag([tagToUpdate]);
         } finally {
           await testEntity.delete(apiContext);
           await afterAction();

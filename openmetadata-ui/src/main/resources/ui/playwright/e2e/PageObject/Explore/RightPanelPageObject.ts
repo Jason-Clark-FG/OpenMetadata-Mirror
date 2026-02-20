@@ -449,7 +449,7 @@ export class RightPanelPageObject {
    * Verify that UI elements match role permissions
    * Checks visibility of edit buttons based on configured role
    */
-  public async verifyPermissions(): Promise<void> {
+  public async verifyPermissions(isOwnerless: boolean = true): Promise<void> {
     if (!this.rolePermissions) {
       throw new Error('Role permissions not set. Call setRolePermissions first.');
     }
@@ -473,9 +473,14 @@ export class RightPanelPageObject {
         summaryPanel.locator('[data-testid="edit-owners"]')
       ).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-owners"]')
-      ).not.toBeVisible();
+      // In OpenMetadata, if an entity has no owner, any user can claim it.
+      // Therefore, the edit-owners button will be visible even if the user
+      // lacks EditOwners permission, provided the entity is ownerless.
+      if (!isOwnerless) {
+        await expect(
+          summaryPanel.locator('[data-testid="edit-owners"]')
+        ).not.toBeVisible();
+      }
     }
 
     // 3. Tags
