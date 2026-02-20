@@ -52,7 +52,6 @@ import { ReactComponent as TableIcon } from '../assets/svg/table-grey.svg';
 import { ReactComponent as TopicIcon } from '../assets/svg/topic-grey.svg';
 import Loader from '../components/common/Loader/Loader';
 import { ExportViewport } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
-import { CustomEdge } from '../components/Entity/EntityLineage/CustomEdge.component';
 import CustomNodeV1 from '../components/Entity/EntityLineage/CustomNodeV1.component';
 import {
   CustomEdgeData,
@@ -250,7 +249,10 @@ export const getELKLayoutedElements = async (
     });
 
     return { nodes: updatedNodes, edges: edges ?? [] };
-  } catch {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error occurred while layouting graph:', error);
+
     return { nodes: [], edges: [] };
   }
 };
@@ -521,8 +523,6 @@ export const nodeTypes = {
   default: CustomNodeV1,
   'load-more': LoadMoreNode,
 };
-
-export const customEdges = { buttonedge: CustomEdge };
 
 export const addLineageHandler = async (edge: AddLineage): Promise<void> => {
   try {

@@ -43,18 +43,28 @@ jest.mock('./TestSuiteSummaryWidget/TestSuiteSummaryWidget.component', () => ({
     ),
 }));
 
-const mockOnColumnClick = jest.fn();
+const mockSetSelectedColumn = jest.fn();
 const mockOnColumnMouseEnter = jest.fn();
 const mockOnColumnMouseLeave = jest.fn();
 
 jest.mock('../../../context/LineageProvider/LineageProvider', () => ({
   useLineageProvider: jest.fn(() => ({
-    onColumnClick: mockOnColumnClick,
     onColumnMouseEnter: mockOnColumnMouseEnter,
     onColumnMouseLeave: mockOnColumnMouseLeave,
     selectedColumn: '',
   })),
 }));
+
+jest.mock('../../../hooks/useLineageStore', () => {
+  return {
+    useLineageStore: jest.fn(() => ({
+      setSelectedColumn: mockSetSelectedColumn,
+      selectedColumn: '',
+      setTracedColumns: jest.fn(),
+      isEditMode: false,
+    })),
+  };
+});
 
 describe('Custom Node Utils', () => {
   it('getColumnHandle should return null when nodeType is NOT_CONNECTED', () => {
@@ -151,7 +161,6 @@ describe('Custom Node Utils', () => {
           <ColumnContent
             isConnectable
             column={mockColumn}
-            isColumnTraced={false}
             isLoading={false}
             showDataObservabilitySummary={false}
           />
@@ -167,7 +176,6 @@ describe('Custom Node Utils', () => {
       const { getByTestId } = render(
         <ReactFlowProvider>
           <ColumnContent
-            isColumnTraced
             isConnectable
             column={mockColumn}
             isLoading={false}
@@ -196,7 +204,6 @@ describe('Custom Node Utils', () => {
             isLoading
             showDataObservabilitySummary
             column={mockColumn}
-            isColumnTraced={false}
             summary={mockSummary}
           />
         </ReactFlowProvider>
@@ -219,7 +226,6 @@ describe('Custom Node Utils', () => {
             isConnectable
             showDataObservabilitySummary
             column={mockColumn}
-            isColumnTraced={false}
             isLoading={false}
             summary={mockSummary}
           />
@@ -235,7 +241,6 @@ describe('Custom Node Utils', () => {
           <ColumnContent
             isConnectable
             column={mockColumn}
-            isColumnTraced={false}
             isLoading={false}
             showDataObservabilitySummary={false}
           />
@@ -244,7 +249,7 @@ describe('Custom Node Utils', () => {
 
       fireEvent.click(getByTestId('column-test.column'));
 
-      expect(mockOnColumnClick).toHaveBeenCalledWith('test.column');
+      expect(mockSetSelectedColumn).toHaveBeenCalledWith('test.column');
     });
   });
 });

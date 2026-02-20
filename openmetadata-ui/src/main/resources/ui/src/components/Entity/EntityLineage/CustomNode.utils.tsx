@@ -305,7 +305,8 @@ export const ColumnContent = memo(
     prev.isConnectable === next.isConnectable &&
     prev.isLoading === next.isLoading &&
     prev.showDataObservabilitySummary === next.showDataObservabilitySummary &&
-    prev.summary === next.summary
+    prev.summary === next.summary &&
+    prev.depth === next.depth
 );
 
 export function getNodeClassNames({

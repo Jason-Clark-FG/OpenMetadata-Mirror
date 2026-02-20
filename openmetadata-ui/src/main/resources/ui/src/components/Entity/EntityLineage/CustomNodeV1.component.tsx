@@ -159,7 +159,6 @@ const CustomNodeV1 = (props: NodeProps) => {
     selectedNode,
     isColumnLevelLineage,
     isDQEnabled,
-    expandAllColumns,
   } = useLineageStore();
 
   // by default it will be enabled
@@ -218,8 +217,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     showDqTracing: showDqTracing ?? false,
     isTraced: tracedNodes.has(id),
     isBaseNode: isRootNode,
-    isChildrenListExpanded:
-      columnsExpanded || isColumnLevelLineage || expandAllColumns,
+    isChildrenListExpanded: columnsExpanded || isColumnLevelLineage,
   });
 
   const onExpand = useCallback(
@@ -320,9 +318,7 @@ const CustomNodeV1 = (props: NodeProps) => {
 
     return (
       <NodeChildren
-        isChildrenListExpanded={
-          columnsExpanded || expandAllColumns || isColumnLevelLineage
-        }
+        isChildrenListExpanded={columnsExpanded || isColumnLevelLineage}
         isConnectable={isConnectable}
         isOnlyShowColumnsWithLineageFilterActive={showColumnsWithLineageOnly}
         node={node}
@@ -330,7 +326,7 @@ const CustomNodeV1 = (props: NodeProps) => {
     );
   }, [
     columnsExpanded,
-    expandAllColumns,
+
     isConnectable,
     showColumnsWithLineageOnly,
     node,

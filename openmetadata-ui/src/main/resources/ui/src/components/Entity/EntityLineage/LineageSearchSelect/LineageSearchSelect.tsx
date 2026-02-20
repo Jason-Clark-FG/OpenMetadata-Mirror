@@ -72,7 +72,7 @@ const LineageSearchSelect = () => {
       };
       options.push(nodeOption);
 
-      const { childrenFlatten = [] } = getEntityChildrenAndLabel(node);
+      const { children: childrenFlatten } = getEntityChildrenAndLabel(node);
 
       childrenFlatten.forEach((column: Column) => {
         const columnOption = {

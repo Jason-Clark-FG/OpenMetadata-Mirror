@@ -10,11 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import ELKGraph, { ELK, ElkExtendedEdge, ElkNode, LayoutOptions } from 'elkjs';
 
 class ELKLayout {
-  static elk: ELK;
-  static layoutOptions: LayoutOptions = {
+  static elk = null;
+  static layoutOptions = {
     'elk.algorithm': 'layered',
     'elk.direction': 'RIGHT',
     'elk.spacing.nodeNode': '100',
@@ -23,30 +22,37 @@ class ELKLayout {
     'elk.partitioning.activate': 'true',
   };
 
-  constructor() {}
-
   static getElk() {
-    if (!this.elk) {
-      if (process.env.NODE_ENV === 'test') {
-        this.elk = new ELKGraph();
-      } else {
-        this.elk = new ELKGraph({
-          workerFactory: () =>
-            new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
-        });
-      }
-    }
-
-    return this.elk;
+    return {
+      layout: jest.fn().mockResolvedValue({
+        id: 'root',
+        children: [],
+        edges: [],
+      }),
+    };
   }
 
-  static async layoutGraph(nodes: ElkNode[], edges: ElkExtendedEdge[]) {
-    return ELKLayout.getElk().layout({
+  static async layoutGraph(nodes, edges) {
+    return {
       id: 'root',
       layoutOptions: this.layoutOptions,
-      children: nodes,
-      edges: edges,
-    });
+      children: nodes.map((node) => ({
+        ...node,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        width: 100,
+        height: 50,
+      })),
+      edges: edges.map((edge) => ({
+        ...edge,
+        sections: [
+          {
+            startPoint: { x: 0, y: 0 },
+            endPoint: { x: 100, y: 100 },
+          },
+        ],
+      })),
+    };
   }
 }
 

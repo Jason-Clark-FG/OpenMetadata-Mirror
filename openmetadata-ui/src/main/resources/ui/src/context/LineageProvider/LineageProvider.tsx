@@ -161,7 +161,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setTracedNodes,
     zoomValue,
     setColumnsHavingLineage,
-    expandAllColumns,
     activeLayer,
     setActiveLayer,
     updateActiveLayer,
@@ -331,7 +330,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     entityFqn,
     isColumnLevelLineage,
     isEditMode,
-    expandAllColumns,
   ]);
 
   const fetchDataQualityLineage = async (
@@ -467,7 +465,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       isEditMode,
       reactFlowInstance,
       zoomValue,
-      expandAllColumns,
       isColumnLevelLineage,
       entityLineage,
       cachedEdgesAndMaps,
