@@ -32,7 +32,8 @@
       "import": "./dist/utils/index.es.js",
       "require": "./dist/utils/index.cjs.js"
     },
-    "./styles.css": "./dist/ui-core-components.css"
+    "./styles.css": "./dist/ui-core-components.css",
+    "./theme.css": "./src/styles/theme.css"
   },
   "files": [
     "dist",
