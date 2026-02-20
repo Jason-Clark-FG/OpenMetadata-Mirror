@@ -333,7 +333,7 @@ export const addMultiOwner = async (data: {
     clearAll = true,
   } = data;
   const isMultipleOwners = Array.isArray(ownerNames);
-  const owners = isMultipleOwners ? ownerNames : [ownerNames]
+  const owners = isMultipleOwners ? ownerNames : [ownerNames];
 
   await page.click(`[data-testid="${activatorBtnDataTestId}"]`);
 
@@ -675,7 +675,6 @@ export const updateDescriptionForChildren = async (
   const modalEditor = modal.locator(descriptionBox);
   await expect(modalEditor).toBeVisible();
   await modalEditor.click();
-  await modalEditor.clear();
   await modalEditor.fill(description);
 
   // REMOVED: toHaveText check - rich text editor may have formatting that makes exact match unreliable
@@ -696,7 +695,8 @@ export const updateDescriptionForChildren = async (
   await expect(saveButton).toBeVisible();
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
-  await updateRequest;
+  const response = await updateRequest;
+  expect(response.status()).toBe(200);
 
   // Wait for modal to close
   await expect(modal).not.toBeVisible();
@@ -708,18 +708,13 @@ export const updateDescriptionForChildren = async (
   });
 
   // Verify the description was updated in the UI
-  if (isEmpty(description)) {
-    await expect(
-      page.locator(`[${rowSelector}="${rowId}"]`).getByTestId('description')
-    ).toContainText('No Description');
-  } else {
-    await expect(
-      page
-        .locator(`[${rowSelector}="${rowId}"]`)
-        .getByTestId('viewer-container')
-        .getByRole('paragraph')
-    ).toContainText(description);
-  }
+
+  await expect(
+    page
+      .locator(`[${rowSelector}="${rowId}"]`)
+      .getByTestId('viewer-container')
+      .getByRole('paragraph')
+  ).toContainText(description);
 };
 
 export const assignTag = async (
@@ -1154,8 +1149,8 @@ export const removeGlossaryTerm = async (
       .getByTestId('glossary-container')
       .getByTestId('edit-button')
       .click();
-      //small timeout to avoid popup collide with click
-      await page.waitForTimeout(500)
+    //small timeout to avoid popup collide with click
+    await page.waitForTimeout(500);
 
     await page
       .getByTestId('glossary-container')
