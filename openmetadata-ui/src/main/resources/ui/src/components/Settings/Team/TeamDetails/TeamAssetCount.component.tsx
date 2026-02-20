@@ -1,5 +1,5 @@
 /*
- *  Copyright 2022 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -10,14 +10,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { Skeleton, Typography } from 'antd';
 
-.test-suite-description {
-  .description-inner-main-container {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .rich-text-editor-container {
-    padding-left: 0;
-  }
+interface TeamAssetCountProps {
+  count: number | null;
+  isLoading: boolean;
 }
+
+export const TeamAssetCount = ({ count, isLoading }: TeamAssetCountProps) => {
+  if (isLoading) {
+    return <Skeleton.Input active size="small" style={{ width: 30, height: 20 }} />;
+  }
+
+  return <Typography.Text data-testid="asset-count">{count ?? 0}</Typography.Text>;
+};
