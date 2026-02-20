@@ -404,19 +404,24 @@ public class AuditLogRepository {
       }
     }
 
-    int total =
-        auditLogDAO.count(
-            baseCondition,
-            userName,
-            actorType,
-            serviceName,
-            entityType,
-            entityFqn,
-            entityFqnHash,
-            eventType,
-            startTs,
-            endTs,
-            searchPattern);
+    // Skip the expensive COUNT query when a search term is present since it would
+    // repeat the same unindexed LIKE scan. The UI can rely on cursor-based hasMore.
+    int total = 0;
+    if (nullOrEmpty(searchTerm)) {
+      total =
+          auditLogDAO.count(
+              baseCondition,
+              userName,
+              actorType,
+              serviceName,
+              entityType,
+              entityFqn,
+              entityFqnHash,
+              eventType,
+              startTs,
+              endTs,
+              searchPattern);
+    }
 
     List<AuditLogEntry> resultEntries = records.stream().map(this::toAuditLogEntry).toList();
 
@@ -444,9 +449,14 @@ public class AuditLogRepository {
 
   private AuditLogEntry toAuditLogEntry(AuditLogRecord record) {
     ChangeEvent changeEvent = deserializeChangeEvent(record);
-    EntityReference resolvedRef = resolveEntityReference(record);
 
-    enrichWithResolvedReference(record, changeEvent, resolvedRef);
+    // Only resolve entity reference when entityFQN is missing.
+    // Most records already have entityFQN populated from the write path,
+    // so this avoids an extra DB query per result row.
+    if (record.getEntityFQN() == null) {
+      EntityReference resolvedRef = resolveEntityReference(record);
+      enrichWithResolvedReference(record, changeEvent, resolvedRef);
+    }
 
     return AuditLogEntry.builder()
         .id(record.getId())
@@ -650,17 +660,13 @@ public class AuditLogRepository {
                 + "AND (:startTs IS NULL OR event_ts >= :startTs) "
                 + "AND (:endTs IS NULL OR event_ts <= :endTs)");
 
-    // Add search condition if searchTerm is provided
-    // Uses LOWER() + LIKE for case-insensitive search across multiple columns
-    // Works consistently on both MySQL and PostgreSQL
     if (!nullOrEmpty(searchTerm)) {
       condition.append(
           " AND (:searchPattern IS NULL OR "
-              + "LOWER(user_name) LIKE :searchPattern OR "
-              + "LOWER(entity_fqn) LIKE :searchPattern OR "
-              + "LOWER(service_name) LIKE :searchPattern OR "
-              + "LOWER(entity_type) LIKE :searchPattern OR "
-              + "LOWER(event_json) LIKE :searchPattern)");
+              + "user_name LIKE :searchPattern OR "
+              + "entity_fqn LIKE :searchPattern OR "
+              + "service_name LIKE :searchPattern OR "
+              + "entity_type LIKE :searchPattern)");
     }
     return condition.toString();
   }
