@@ -239,7 +239,7 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       activeLayer: [],
       platformView: LineagePlatformView.None,
       isPlatformLineage: false,
-      columnsHavingLineage: new Set(),
+      columnsHavingLineage: new Map(),
       activeNode: undefined,
       selectedNode: undefined,
       selectedEdge: undefined,

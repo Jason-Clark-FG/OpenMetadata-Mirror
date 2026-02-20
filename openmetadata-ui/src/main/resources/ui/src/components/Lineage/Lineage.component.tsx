@@ -35,58 +35,17 @@ import {
 import { useLineageProvider } from '../../context/LineageProvider/LineageProvider';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import {
-  customEdges,
   dragHandle,
   nodeTypes,
   onNodeContextMenu,
 } from '../../utils/EntityLineageUtils';
 import Loader from '../common/Loader/Loader';
-import { CanvasEdgeRenderer } from '../Entity/EntityLineage/CanvasEdgeRenderer.component';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
-import { EdgeInteractionOverlay } from '../Entity/EntityLineage/EdgeInteractionOverlay.component';
 import LineageControlButtons from '../Entity/EntityLineage/LineageControlButtons/LineageControlButtons';
 import LineageLayers from '../Entity/EntityLineage/LineageLayers/LineageLayers';
 import { SourceType } from '../SearchedData/SearchedData.interface';
+import { CanvasLayerWrapper } from './Edges/CanvasLayerWrapper/CanvasLayerWrapper';
 import { LineageProps } from './Lineage.interface';
-
-const CanvasLayerWrapper = ({
-  useCanvasEdges,
-  dqHighlightedEdges,
-  onEdgeClick,
-  onEdgeHover,
-  onPipelineClick,
-  onEdgeRemove,
-  hoverEdge,
-}: {
-  useCanvasEdges: boolean;
-  nodes: Node[];
-  dqHighlightedEdges: Set<string>;
-  onEdgeClick?: (edge: Edge, event: MouseEvent) => void;
-  onEdgeHover?: (edge: Edge | null) => void;
-  onPipelineClick?: () => void;
-  onEdgeRemove?: () => void;
-  hoverEdge: Edge | null;
-}) => {
-  if (!useCanvasEdges) {
-    return null;
-  }
-
-  return (
-    <>
-      <CanvasEdgeRenderer
-        dqHighlightedEdges={dqHighlightedEdges}
-        hoverEdge={hoverEdge}
-        onEdgeClick={onEdgeClick}
-        onEdgeHover={onEdgeHover}
-      />
-      <EdgeInteractionOverlay
-        hoveredEdge={hoverEdge}
-        onEdgeRemove={onEdgeRemove}
-        onPipelineClick={onPipelineClick}
-      />
-    </>
-  );
-};
 
 const Lineage = ({
   deleted,
@@ -100,18 +59,13 @@ const Lineage = ({
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [hoveredEdge, setHoveredEdge] = useState<Edge | null>(null);
 
-  const useCanvasEdges =
-    localStorage.getItem('useCanvasEdges') === 'true' || true;
-
   const {
     nodes,
-    edges,
     init,
     onNodeClick,
     onEdgeClick,
     onNodeDrop,
     onNodesChange,
-    onEdgesChange,
     onPaneClick,
     onConnect,
     onInitReactFlow,
@@ -139,15 +93,6 @@ const Lineage = ({
     updateEntityData(entityType, entity as SourceType, isPlatformLineage);
   }, [entity, entityType, isPlatformLineage]);
 
-  // Memoize callback for onEdgeClick to prevent unnecessary re-renders
-  const handleEdgeClick = useCallback(
-    (_e: React.MouseEvent, data: Edge) => {
-      onEdgeClick(data);
-      _e.stopPropagation();
-    },
-    [onEdgeClick]
-  );
-
   // Memoize callback for onNodeClick to prevent unnecessary re-renders
   const handleNodeClick = useCallback(
     (_e: React.MouseEvent, node: Node) => {
@@ -172,14 +117,6 @@ const Lineage = ({
     setShowMiniMap((show) => !show);
   }, []);
 
-  //   const onConnectStart = useCallback(() => {
-  //     setIsCreatingEdge(true);
-  //   }, []);
-
-  //   const onConnectEnd = useCallback(() => {
-  //     setIsCreatingEdge(false);
-  //   }, []);
-
   const handleCanvasEdgeClick = useCallback(
     (edge: Edge, event: MouseEvent) => {
       onEdgeClick(edge);
@@ -192,15 +129,11 @@ const Lineage = ({
     setHoveredEdge(edge);
   }, []);
 
-  const memoizedEdgeTypes = useMemo(
-    () => (useCanvasEdges ? {} : customEdges),
-    [useCanvasEdges]
-  );
+  // We don't want to pass edge or edgeType to reactflow as we are using a custom edge renderer
+  // Canvas based edge rendering to prevent DOM to become heavy
+  const memoizedEdgeTypes = useMemo(() => ({}), []);
 
-  const memoizedEdges = useMemo(
-    () => (useCanvasEdges ? [] : edges),
-    [useCanvasEdges, edges]
-  );
+  const memoizedEdges = useMemo(() => [], []);
 
   // Loading the react flow component after the nodes and edges are initialised improves performance
   // considerably. So added an init state for showing loader.
@@ -254,8 +187,6 @@ const Lineage = ({
                 onConnectStart={onConnectStart}
                 onDragOver={onDragOver}
                 onDrop={handleNodeDrop}
-                onEdgeClick={handleEdgeClick}
-                onEdgesChange={onEdgesChange}
                 onInit={onInitReactFlow}
                 onNodeClick={handleNodeClick}
                 onNodeContextMenu={onNodeContextMenu}
@@ -269,22 +200,23 @@ const Lineage = ({
                   <MiniMap pannable zoomable position="bottom-right" />
                 )}
 
+                {/* Canvas based edge rendering to prevent DOM from becoming heavy */}
                 <CanvasLayerWrapper
                   dqHighlightedEdges={dqHighlightedEdges ?? new Set<string>()}
                   hoverEdge={hoveredEdge}
-                  nodes={nodes}
-                  useCanvasEdges={useCanvasEdges}
                   onEdgeClick={handleCanvasEdgeClick}
                   onEdgeHover={handleCanvasEdgeHover}
                   onEdgeRemove={onColumnEdgeRemove}
                   onPipelineClick={onAddPipelineClick}
                 />
 
+                {/* Render lineage layer to */}
                 <Panel
                   className={classNames({ 'edit-mode': isEditMode })}
                   position="bottom-left">
                   <LineageLayers entity={entity} entityType={entityType} />
                 </Panel>
+                {/* Lineage control buttons */}
                 <Panel position="bottom-right">
                   <LineageControlButtons
                     miniMapVisible={showMiniMap}

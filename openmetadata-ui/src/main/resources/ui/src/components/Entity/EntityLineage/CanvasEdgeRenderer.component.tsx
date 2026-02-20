@@ -17,6 +17,7 @@ import { useLineageProvider } from '../../../context/LineageProvider/LineageProv
 import { useCanvasEdgeRenderer } from '../../../hooks/useCanvasEdgeRenderer';
 import { useIconSprites } from '../../../hooks/useIconSprites';
 import { useLineageStore } from '../../../hooks/useLineageStore';
+import { clearEdgeStyleCache } from '../../../utils/EdgeStyleUtils';
 
 export interface CanvasEdgeRendererProps {
   dqHighlightedEdges: Set<string>;
@@ -70,6 +71,12 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
 
     return () => {
       resizeObserver.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearEdgeStyleCache();
     };
   }, []);
 

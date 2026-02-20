@@ -33,26 +33,18 @@ import {
   getEntityName,
 } from '../../../utils/EntityUtils';
 import { getEntityTypeIcon, getServiceIcon } from '../../../utils/TableUtils';
-import { SourceType } from '../../SearchedData/SearchedData.interface';
+import { LineageNodeType } from '../../Lineage/Lineage.interface';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
 
 interface LineageNodeLabelProps {
-  node: SourceType;
+  node: LineageNodeType;
   isChildrenListExpanded?: boolean;
   toggleColumnsList?: () => void;
   toggleOnlyShowColumnsWithLineageFilterActive?: () => void;
   isOnlyShowColumnsWithLineageFilterActive?: boolean;
 }
 
-interface LineageNodeLabelPropsExtended
-  extends Omit<LineageNodeLabelProps, 'node'> {
-  node: LineageNodeLabelProps['node'] & {
-    serviceType?: string;
-    columnNames?: string[];
-  };
-}
-
-const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
+const EntityLabel = ({ node }: LineageNodeLabelProps) => {
   const { showDeletedIcon, showDbtIcon } = useMemo(() => {
     return {
       showDbtIcon:
@@ -137,7 +129,7 @@ const EntityLabel = ({ node }: LineageNodeLabelPropsExtended) => {
   );
 };
 
-const TestSuiteSummaryContainer = ({ node }: LineageNodeLabelPropsExtended) => {
+const TestSuiteSummaryContainer = ({ node }: LineageNodeLabelProps) => {
   const { entityType } = node;
   const [summary, setSummary] = useState<TestSummary>();
   const [isLoading, setIsLoading] = useState(true);
@@ -198,13 +190,13 @@ const EntityFooter = ({
   toggleColumnsList,
   toggleOnlyShowColumnsWithLineageFilterActive,
   isOnlyShowColumnsWithLineageFilterActive,
-}: LineageNodeLabelPropsExtended) => {
+}: LineageNodeLabelProps) => {
   const { t } = useTranslation();
+  const { isEditMode, isColumnLevelLineage } = useLineageStore();
   const { children, childrenHeading } = useMemo(
     () => getEntityChildrenAndLabel(node),
     [node.id]
   );
-  const { isEditMode } = useLineageStore();
 
   const childrenCount = children.length;
 
@@ -259,20 +251,22 @@ const EntityFooter = ({
       </div>
       <div className="entity-footer__test-summary-and-filter">
         <TestSuiteSummaryContainer node={node} />
-        <Tooltip
-          placement="right"
-          title={t('message.only-show-columns-with-lineage')}>
-          <IconButton
-            className={classNames(
-              'only-show-columns-with-lineage-filter-button',
-              isOnlyShowColumnsWithLineageFilterActive && 'active'
-            )}
-            data-testid="lineage-filter-button"
-            disabled={isEditMode}
-            onClick={handleOnlyShowColumnsWithLineage}>
-            <FilterIcon height={20} width={20} />
-          </IconButton>
-        </Tooltip>
+        {isColumnLevelLineage && (
+          <Tooltip
+            placement="right"
+            title={t('message.only-show-columns-with-lineage')}>
+            <IconButton
+              className={classNames(
+                'only-show-columns-with-lineage-filter-button',
+                isOnlyShowColumnsWithLineageFilterActive && 'active'
+              )}
+              data-testid="lineage-filter-button"
+              disabled={isEditMode}
+              onClick={handleOnlyShowColumnsWithLineage}>
+              <FilterIcon height={20} width={20} />
+            </IconButton>
+          </Tooltip>
+        )}
       </div>
     </div>
   );

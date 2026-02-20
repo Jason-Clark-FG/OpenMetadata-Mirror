@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
 import { NODE_WIDTH } from '../../../constants/Lineage.constants';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
@@ -166,8 +166,20 @@ const CustomNodeV1 = (props: NodeProps) => {
   const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
     useState(true);
 
-  const [columnsExpanded, setColumnsExpanded] =
-    useState<boolean>(isColumnLevelLineage);
+  const [columnsExpanded, setColumnsExpanded] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setColumnsExpanded(true);
+      setShowColumnsWithLineageOnly(false);
+    }
+
+    // reset on unmount
+    return () => {
+      setColumnsExpanded(false);
+      setShowColumnsWithLineageOnly(true);
+    };
+  }, [isEditMode]);
 
   const {
     label,
@@ -258,13 +270,9 @@ const CustomNodeV1 = (props: NodeProps) => {
     isNewNode,
     label,
     isSelected,
-    isEditMode,
     isRootNode,
     showColumnsWithLineageOnly,
-    toggleColumnsExpanded,
     toggleShowColumnsWithLineageOnly,
-    removeNodeHandler,
-    props,
     handleNodeRemove,
     toggleColumnsExpanded,
     isEditMode,

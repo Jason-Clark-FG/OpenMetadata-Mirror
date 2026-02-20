@@ -21,75 +21,10 @@ export interface EdgeStyle {
 
 const edgeStyleCache = new Map<string, EdgeStyle>();
 
-function getStyleCacheKey(
-  edgeId: string,
-  tracedNodesSize: number,
-  tracedColumnsSize: number,
-  dqHighlightedEdgesHas: boolean,
-  selectedColumn: string | undefined,
-  isColumnHighlighted: boolean,
-  isHoveredEdge?: boolean
-): string {
-  return `${edgeId}-${tracedNodesSize}-${tracedColumnsSize}-${dqHighlightedEdgesHas}-${selectedColumn}-${isColumnHighlighted}-${isHoveredEdge}`;
-}
-
-export function computeEdgeStyle(
-  edge: Edge,
-  tracedNodes: Set<string>,
-  tracedColumns: Set<string>,
-  dqHighlightedEdges: Set<string>,
-  selectedColumn: string | undefined,
-  theme: Theme,
-  isColumnLineage: boolean,
-  sourceHandle?: string | null,
-  targetHandle?: string | null,
-  isEdgeHovered?: boolean
-): EdgeStyle {
-  const isColumnHighlighted =
-    isColumnLineage && tracedColumns.size > 0
-      ? (() => {
-          return (
-            tracedColumns.has(sourceHandle ?? '') &&
-            tracedColumns.has(targetHandle ?? '')
-          );
-        })()
-      : false;
-
-  const cacheKey = getStyleCacheKey(
-    edge.id,
-    tracedNodes.size,
-    tracedColumns.size,
-    dqHighlightedEdges.has(edge.id),
-    selectedColumn,
-    isColumnHighlighted,
-    isEdgeHovered
-  );
-
-  if (edgeStyleCache.has(cacheKey)) {
-    return edgeStyleCache.get(cacheKey)!;
-  }
-
-  const style = calculateEdgeStyle(
-    edge,
-    tracedNodes,
-    tracedColumns,
-    dqHighlightedEdges,
-    selectedColumn,
-    theme,
-    isColumnLineage,
-    isColumnHighlighted,
-    isEdgeHovered
-  );
-
-  edgeStyleCache.set(cacheKey, style);
-
-  return style;
-}
-
 function calculateEdgeStyle(
   edge: Edge,
-  tracedNodes: Set<string>,
-  tracedColumns: Set<string>,
+  isNodeTraced: boolean,
+  hasTracedContext: boolean,
   dqHighlightedEdges: Set<string>,
   selectedColumn: string | undefined,
   theme: Theme,
@@ -97,15 +32,6 @@ function calculateEdgeStyle(
   isColumnHighlighted: boolean,
   isEdgeHovered?: boolean
 ): EdgeStyle {
-  const fromEntityId = edge.data?.edge?.fromEntity?.id;
-  const toEntityId = edge.data?.edge?.toEntity?.id;
-
-  const isNodeTraced =
-    fromEntityId &&
-    toEntityId &&
-    tracedNodes.has(fromEntityId) &&
-    tracedNodes.has(toEntityId);
-
   let stroke = isEdgeHovered
     ? theme.palette.primary.main
     : 'rgba(177, 177, 183)';
@@ -114,7 +40,7 @@ function calculateEdgeStyle(
 
   if (isNodeTraced) {
     stroke = theme.palette.primary.main;
-  } else if (tracedNodes.size > 0 || tracedColumns.size > 0) {
+  } else if (hasTracedContext) {
     opacity = 0.3;
   }
 
@@ -135,6 +61,82 @@ function calculateEdgeStyle(
     opacity,
     strokeWidth,
   };
+}
+
+function getStyleCacheKey(
+  edgeId: string,
+  isNodeTraced: boolean,
+  hasTracedContext: boolean,
+  dqHighlightedEdgesHas: boolean,
+  selectedColumn: string | undefined,
+  isColumnHighlighted: boolean,
+  isHoveredEdge?: boolean
+): string {
+  return `${edgeId}-${isNodeTraced}-${hasTracedContext}-${dqHighlightedEdgesHas}-${selectedColumn}-${isColumnHighlighted}-${isHoveredEdge}`;
+}
+
+export function computeEdgeStyle(
+  edge: Edge,
+  tracedNodes: Set<string>,
+  tracedColumns: Set<string>,
+  dqHighlightedEdges: Set<string>,
+  selectedColumn: string | undefined,
+  theme: Theme,
+  isColumnLineage: boolean,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
+  isEdgeHovered?: boolean
+): EdgeStyle {
+  const fromEntityId = edge.data?.edge?.fromEntity?.id;
+  const toEntityId = edge.data?.edge?.toEntity?.id;
+
+  const isNodeTraced =
+    fromEntityId &&
+    toEntityId &&
+    tracedNodes.has(fromEntityId) &&
+    tracedNodes.has(toEntityId);
+
+  const isColumnHighlighted =
+    isColumnLineage && tracedColumns.size > 0
+      ? (() => {
+          return (
+            tracedColumns.has(sourceHandle ?? '') &&
+            tracedColumns.has(targetHandle ?? '')
+          );
+        })()
+      : false;
+
+  const hasTracedContext = tracedNodes.size > 0 || tracedColumns.size > 0;
+
+  const cacheKey = getStyleCacheKey(
+    edge.id,
+    isNodeTraced,
+    hasTracedContext,
+    dqHighlightedEdges.has(edge.id),
+    selectedColumn,
+    isColumnHighlighted,
+    isEdgeHovered
+  );
+
+  if (edgeStyleCache.has(cacheKey)) {
+    return edgeStyleCache.get(cacheKey)!;
+  }
+
+  const style = calculateEdgeStyle(
+    edge,
+    isNodeTraced,
+    hasTracedContext,
+    dqHighlightedEdges,
+    selectedColumn,
+    theme,
+    isColumnLineage,
+    isColumnHighlighted,
+    isEdgeHovered
+  );
+
+  edgeStyleCache.set(cacheKey, style);
+
+  return style;
 }
 
 export function clearEdgeStyleCache(): void {

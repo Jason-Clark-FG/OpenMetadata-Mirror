@@ -146,9 +146,15 @@ export function getEdgeCoordinates(
 export function getEdgeBounds(
   edge: Edge,
   sourceNode: Node | undefined,
-  targetNode: Node | undefined
+  targetNode: Node | undefined,
+  columnsInCurrentPages?: Map<string, string[]>
 ): BoundingBox | null {
-  const coords = getEdgeCoordinates(edge, sourceNode, targetNode);
+  const coords = getEdgeCoordinates(
+    edge,
+    sourceNode,
+    targetNode,
+    columnsInCurrentPages
+  );
   if (!coords) {
     return null;
   }
@@ -196,7 +202,12 @@ export function isEdgeInViewport(
   canvasHeight: number,
   columnsInCurrentPages: Map<string, string[]>
 ): boolean {
-  const edgeBounds = getEdgeBounds(edge, sourceNode, targetNode);
+  const edgeBounds = getEdgeBounds(
+    edge,
+    sourceNode,
+    targetNode,
+    columnsInCurrentPages
+  );
   if (!edgeBounds) {
     return false;
   }
