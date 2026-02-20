@@ -441,7 +441,16 @@ export class OverviewPageObject extends RightPanelBase {
         .locator('.ant-list-item')
         .filter({ hasText: ownerName });
       await ownerItem.waitFor({ state: 'visible' });
-      await ownerItem.click();
+
+      // Check if it's currently selected (active) before clicking
+      // If it's not active, another parallel test may have already removed it
+      const isActive = await ownerItem.evaluate((el) =>
+        el.classList.contains('active')
+      );
+
+      if (isActive) {
+        await ownerItem.click();
+      }
     }
 
     const updateButton = this.page.getByTestId('selectable-list-update-btn');

@@ -1373,10 +1373,8 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should follow Data Consumer role policies for ownerless ${entityType}`, async ({
           browser,
         }) => {
-          const { page: dataConsumerPage, afterAction } = await performUserLogin(
-            browser,
-            user1
-          );
+          const { page: dataConsumerPage, afterAction } =
+            await performUserLogin(browser, user1);
 
           try {
             const fqn = getEntityFqn(entityInstance);
@@ -1425,40 +1423,40 @@ test.describe('Right Panel Test Suite', () => {
         try {
           const fqn = getEntityFqn(dcOwnerTestTable);
 
-        // Admin assigns user1 as owner so the entity is no longer ownerless.
-        // When an entity has an owner, EditOwners is no longer granted to all
-        // users — DataConsumer (which lacks EditOwners / EditAll) cannot see
-        // the edit-owners button.
-        await navigateToExploreAndSelectEntity(
-          adminPage,
-          dcOwnerTestTable.entity.name,
-          dcOwnerTestTable.endpoint,
-          fqn
-        );
-        await adminPage.waitForSelector(
-          '[data-testid="entity-summary-panel-container"]',
-          { state: 'visible' }
-        );
-        const adminRightPanel = new RightPanelPageObject(adminPage);
-        adminRightPanel.setEntityConfig(dcOwnerTestTable);
-        const adminOverview = new OverviewPageObject(adminRightPanel);
-        await adminOverview.addOwnerWithoutValidation(
-          user1.getUserDisplayName()
-        );
-        await adminOverview.shouldShowOwner(user1.getUserDisplayName());
+          // Admin assigns user1 as owner so the entity is no longer ownerless.
+          // When an entity has an owner, EditOwners is no longer granted to all
+          // users — DataConsumer (which lacks EditOwners / EditAll) cannot see
+          // the edit-owners button.
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            dcOwnerTestTable.entity.name,
+            dcOwnerTestTable.endpoint,
+            fqn
+          );
+          await adminPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
+          const adminRightPanel = new RightPanelPageObject(adminPage);
+          adminRightPanel.setEntityConfig(dcOwnerTestTable);
+          const adminOverview = new OverviewPageObject(adminRightPanel);
+          await adminOverview.addOwnerWithoutValidation(
+            user1.getUserDisplayName()
+          );
+          await adminOverview.shouldShowOwner(user1.getUserDisplayName());
 
-        // DataConsumer navigates to the same entity and verifies that the
-        // edit-owners button is NOT visible (restricted by role).
-        await navigateToExploreAndSelectEntity(
-          dataConsumerPage,
-          dcOwnerTestTable.entity.name,
-          dcOwnerTestTable.endpoint,
-          fqn
-        );
-        await dataConsumerPage.waitForSelector(
-          '[data-testid="entity-summary-panel-container"]',
-          { state: 'visible' }
-        );
+          // DataConsumer navigates to the same entity and verifies that the
+          // edit-owners button is NOT visible (restricted by role).
+          await navigateToExploreAndSelectEntity(
+            dataConsumerPage,
+            dcOwnerTestTable.entity.name,
+            dcOwnerTestTable.endpoint,
+            fqn
+          );
+          await dataConsumerPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
           const dcSummaryPanel = dataConsumerPage.locator(
             '.entity-summary-panel-container'
           );
@@ -1722,10 +1720,8 @@ test.describe('Right Panel Test Suite', () => {
         test(`Should clear description for ${entityType}`, async ({
           adminPage,
         }) => {
-          const {
-            page: authenticatedPage,
-            afterAction,
-          } = await performAdminLogin(adminPage.context().browser()!);
+          const { page: authenticatedPage, afterAction } =
+            await performAdminLogin(adminPage.context().browser()!);
           const rightPanel = new RightPanelPageObject(authenticatedPage);
           const localOverview = new OverviewPageObject(rightPanel);
 
@@ -1774,10 +1770,8 @@ test.describe('Right Panel Test Suite', () => {
       test('Should update panel content when switching between entities', async ({
         adminPage,
       }) => {
-        const {
-          page: authenticatedPage,
-          afterAction,
-        } = await performAdminLogin(adminPage.context().browser()!);
+        const { page: authenticatedPage, afterAction } =
+          await performAdminLogin(adminPage.context().browser()!);
         const rightPanel = new RightPanelPageObject(authenticatedPage);
         const localOverview = new OverviewPageObject(rightPanel);
 
@@ -1839,9 +1833,7 @@ test.describe('Right Panel Test Suite', () => {
     });
 
     test.describe('Overview panel - Multi-tag operations', () => {
-      test('Should add multiple tags simultaneously', async ({
-        adminPage,
-      }) => {
+      test('Should add multiple tags simultaneously', async ({ adminPage }) => {
         const testEntity = new TableClass();
         const {
           page: authenticatedPage,
