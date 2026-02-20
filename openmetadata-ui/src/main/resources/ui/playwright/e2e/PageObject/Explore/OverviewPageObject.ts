@@ -84,15 +84,17 @@ export class OverviewPageObject extends RightPanelBase {
     this.container = this.getSummaryPanel();
 
     // Scoped locators for action elements
-    this.editDescriptionIcon = this.page.locator(
+    this.editDescriptionIcon = this.getSummaryPanel().locator(
       '[data-testid="edit-description"]'
     );
-    this.editTagsIcon = this.page.locator('[data-testid="edit-icon-tags"]');
-    this.editGlossaryTermsIcon = this.page.locator(
+    this.editTagsIcon = this.getSummaryPanel().locator(
+      '[data-testid="edit-icon-tags"]'
+    );
+    this.editGlossaryTermsIcon = this.getSummaryPanel().locator(
       '[data-testid="edit-glossary-terms"]'
     );
-    this.editTierIcon = this.page.getByTestId('edit-icon-tier');
-    this.addDomainIcon = this.page.getByTestId('add-domain');
+    this.editTierIcon = this.getSummaryPanel().getByTestId('edit-icon-tier');
+    this.addDomainIcon = this.getSummaryPanel().getByTestId('add-domain');
     this.markdownEditor = this.page.locator(
       '.om-block-editor[contenteditable="true"]'
     );
@@ -100,10 +102,14 @@ export class OverviewPageObject extends RightPanelBase {
     this.updateButton = this.page.getByTestId('selectable-list-update-btn');
     this.loader = this.page.getByTestId('loader');
     this.selectableList = this.page.getByTestId('selectable-list');
-    this.descriptionSection = this.page.locator('.description-section');
+    this.descriptionSection = this.getSummaryPanel().locator(
+      '.description-section'
+    );
     this.searchBar = this.page.getByTestId('search-bar-container');
     this.tagSearchBar = this.searchBar.getByTestId('tag-select-search-bar');
-    this.domainSearchBar = this.page.getByTestId('searchbar');
+    this.domainSearchBar = this.page
+      .getByTestId('domain-selectable-tree')
+      .getByTestId('searchbar');
     this.domainList = this.page.locator('.domains-content');
     this.glossaryTermSearchBar = this.searchBar.getByTestId(
       'glossary-term-select-search-bar'
@@ -117,7 +123,7 @@ export class OverviewPageObject extends RightPanelBase {
     this.userSearchBar = this.page.getByTestId('owner-select-users-search-bar');
     this.userListItem = this.page.locator('.ant-list-item-main');
     this.userListContainer = this.page.getByTestId('user-tag');
-    this.editOwnersIcon = this.page.getByTestId('edit-owners');
+    this.editOwnersIcon = this.getSummaryPanel().getByTestId('edit-owners');
     this.updateOwnersButton = this.page.getByTestId(
       'selectable-list-update-btn'
     );
