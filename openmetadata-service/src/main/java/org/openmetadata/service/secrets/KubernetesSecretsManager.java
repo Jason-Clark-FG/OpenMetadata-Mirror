@@ -45,6 +45,7 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
   private static final String SKIP_INIT = "skipInit";
   private static final String DEFAULT_NAMESPACE = "default";
   private static final String SECRET_KEY = "value";
+  private static final int K8S_SECRET_NAME_MAX_LENGTH = 253;
 
   private static KubernetesSecretsManager instance = null;
   @Getter private CoreV1Api apiClient;
@@ -73,6 +74,24 @@ public class KubernetesSecretsManager extends ExternalSecretsManager {
     // This way the DB stores names like "openmetadata-bot-name-config-jwttoken"
     // which can be used as-is by any client (Java, Python) without sanitization.
     return new SecretsIdConfig("-", Boolean.FALSE, "-", Pattern.compile("[^A-Za-z0-9\\-]"));
+  }
+
+  @Override
+  protected String buildSecretId(boolean addClusterPrefix, String... secretIdValues) {
+    String secretId = super.buildSecretId(addClusterPrefix, secretIdValues);
+    return sanitizeForK8s(secretId);
+  }
+
+  @VisibleForTesting
+  public static String sanitizeForK8s(String name) {
+    String sanitized = name.replaceAll("-{2,}", "-");
+    sanitized = sanitized.replaceAll("^-+", "");
+    sanitized = sanitized.replaceAll("-+$", "");
+    if (sanitized.length() > K8S_SECRET_NAME_MAX_LENGTH) {
+      sanitized = sanitized.substring(0, K8S_SECRET_NAME_MAX_LENGTH);
+      sanitized = sanitized.replaceAll("-+$", "");
+    }
+    return sanitized;
   }
 
   public static KubernetesSecretsManager getInstance(SecretsConfig secretsConfig) {

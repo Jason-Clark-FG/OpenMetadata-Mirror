@@ -245,14 +245,17 @@ class KubernetesSecretsManagerTest {
   void testBuildSecretIdProducesK8sCompatibleNames() throws ApiException {
     // Verify that buildSecretId produces names with '-' separator instead of '/'
     // This is the key behavior change: names stored in DB are directly usable as K8s secret names
-    testStoreValueProducesExpectedName("openmetadata-bot-mybot", "config", "openmetadata-bot-mybot-config");
-    testStoreValueProducesExpectedName("openmetadata-database-mydb", "password", "openmetadata-database-mydb-password");
+    testStoreValueProducesExpectedName(
+        "openmetadata-bot-mybot", "config", "openmetadata-bot-mybot-config");
+    testStoreValueProducesExpectedName(
+        "openmetadata-database-mydb", "password", "openmetadata-database-mydb-password");
   }
 
   @Test
   void testBuildSecretIdHandlesSpecialCharacters() throws ApiException {
     // Special characters in input should be replaced with '-'
-    testStoreValueProducesExpectedName("openmetadata-service-my_service", "password", "openmetadata-service-my-service-password");
+    testStoreValueProducesExpectedName(
+        "openmetadata-service-my_service", "password", "openmetadata-service-my-service-password");
   }
 
   @Test
@@ -277,6 +280,66 @@ class KubernetesSecretsManagerTest {
         ExternalSecretsManager.NULL_SECRET_STRING,
         new String(data.get("value"), StandardCharsets.UTF_8),
         "Empty string should be stored as 'null' to prevent secrets manager rejection");
+  }
+
+  @Test
+  void testBuildSecretIdSanitizesLeadingSpecialChars() throws ApiException {
+    // Component "_mybot" → "-mybot" which creates consecutive hyphens with separator
+    testStoreValueProducesExpectedName(
+        "openmetadata-bot--mybot", "config", "openmetadata-bot-mybot-config");
+  }
+
+  @Test
+  void testBuildSecretIdSanitizesTrailingSpecialChars() throws ApiException {
+    // Component "myservice_" → "myservice-" which creates trailing hyphen before separator
+    testStoreValueProducesExpectedName(
+        "openmetadata-database-myservice-", "password", "openmetadata-database-myservice-password");
+  }
+
+  @Test
+  void testBuildSecretIdSanitizesConsecutiveSpecialChars() throws ApiException {
+    // Component "my__service" → "my--service" which creates consecutive hyphens
+    testStoreValueProducesExpectedName(
+        "openmetadata-service-my--service", "password", "openmetadata-service-my-service-password");
+  }
+
+  @Test
+  void testBuildSecretIdWithProblematicComponents() {
+    assertEquals("openmetadata-bot-mybot", secretsManager.buildSecretId(true, "bot", "_mybot"));
+    assertEquals(
+        "openmetadata-service-mydb", secretsManager.buildSecretId(true, "service", "mydb_"));
+    assertEquals(
+        "openmetadata-service-my-db", secretsManager.buildSecretId(true, "service", "my__db"));
+  }
+
+  @Test
+  void testSanitizeForK8sCollapsesConsecutiveHyphens() {
+    assertEquals("a-b", KubernetesSecretsManager.sanitizeForK8s("a--b"));
+    assertEquals("a-b-c", KubernetesSecretsManager.sanitizeForK8s("a---b---c"));
+  }
+
+  @Test
+  void testSanitizeForK8sRemovesLeadingTrailingHyphens() {
+    assertEquals("abc", KubernetesSecretsManager.sanitizeForK8s("-abc"));
+    assertEquals("abc", KubernetesSecretsManager.sanitizeForK8s("abc-"));
+    assertEquals("abc", KubernetesSecretsManager.sanitizeForK8s("--abc--"));
+  }
+
+  @Test
+  void testSanitizeForK8sTruncatesLongNames() {
+    String longName = "a".repeat(300);
+    String result = KubernetesSecretsManager.sanitizeForK8s(longName);
+    assertTrue(result.length() <= 253);
+    assertEquals("a".repeat(253), result);
+  }
+
+  @Test
+  void testSanitizeForK8sTruncatesAndRemovesTrailingHyphen() {
+    String name = "a".repeat(252) + "-b";
+    String result = KubernetesSecretsManager.sanitizeForK8s(name);
+    assertTrue(result.length() <= 253);
+    assertFalse(result.endsWith("-"));
+    assertEquals("a".repeat(252), result);
   }
 
   private V1Secret createMockSecret(String value) {
