@@ -66,17 +66,13 @@ import testCaseResultTabClassBase from './TestCaseResultTabClassBase';
 function ParameterTooltipText({
   className,
   title,
-  valueClassName,
 }: {
   className: string;
   title: string;
-  valueClassName?: string;
 }) {
-  const combinedClassName = valueClassName ?? className;
-
   return (
     <Tooltip placement="bottomLeft" title={title}>
-      <span className={combinedClassName}>{title}</span>
+      <span className={className}>{title}</span>
     </Tooltip>
   );
 }
@@ -292,9 +288,10 @@ const TestCaseResultTab = () => {
         label: t('label.dynamic-assertion'),
         value: (
           <label
-            className="d-inline-flex items-center gap-2 parameter-value-text tw:inline-flex tw:items-center tw:gap-2"
+            className="parameter-value-text tw:inline-flex tw:items-center tw:gap-2"
             data-testid="dynamic-assertion">
-            <StarIcon aria-hidden className="tw:h-4 tw:w-4" />
+            <StarIcon aria-hidden className="tw:h-4 tw:w-4" />{' '}
+            {t('label.dynamic-assertion')}
           </label>
         ),
       });

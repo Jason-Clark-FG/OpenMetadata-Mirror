@@ -28,7 +28,7 @@ interface TooltipRowProps {
 const TooltipRow: FC<TooltipRowProps> = ({ label, value }) => {
   return (
     <div
-      className="d-flex items-center justify-between tw:flex tw:items-center tw:justify-between tw:gap-5"
+      className="tw:flex tw:items-center tw:justify-between tw:gap-5"
       style={{ fontSize: TOOLTIP_STYLES.CONTENT_FONT_SIZE }}>
       <span className="tw:whitespace-nowrap tw:text-gray-700">{label}</span>
       <span className="tw:font-medium tw:text-gray-900">{value}</span>
@@ -93,7 +93,10 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
         aria-hidden
         className="tw:my-2 tw:border-b tw:border-dashed tw:border-gray-300"
         role="separator"
-        style={{ marginTop: TOOLTIP_STYLES.DIVIDER_MARGIN, marginBottom: TOOLTIP_STYLES.DIVIDER_MARGIN }}
+        style={{
+          marginTop: TOOLTIP_STYLES.DIVIDER_MARGIN,
+          marginBottom: TOOLTIP_STYLES.DIVIDER_MARGIN,
+        }}
       />
       <div
         className="tw:flex tw:flex-col tw:gap-2"

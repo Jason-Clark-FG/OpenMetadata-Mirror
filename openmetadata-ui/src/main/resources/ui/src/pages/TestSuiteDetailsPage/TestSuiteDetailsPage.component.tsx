@@ -527,13 +527,6 @@ const TestSuiteDetailsPage = () => {
     return testCaseResult.map((test) => test.name);
   }, [testCaseResult]);
 
-  const handleTabChange = useCallback(
-    (_event: React.SyntheticEvent, newValue: string) => {
-      setActiveTab(newValue);
-    },
-    []
-  );
-
   if (isLoading) {
     return <Loader />;
   }
@@ -641,10 +634,12 @@ const TestSuiteDetailsPage = () => {
             className="tw:bg-transparent"
             selectedKey={activeTab}
             onSelectionChange={(key) => setActiveTab(key as string)}>
-            <Tabs.List>
-              <Tabs.Item id={EntityTabs.TEST_CASES} label={tabs.testCasesTab.label} />
-              <Tabs.Item id={EntityTabs.PIPELINE} label={tabs.pipelineTab.label} />
-            </Tabs.List>
+            <Tabs.List
+              items={[
+                { id: EntityTabs.TEST_CASES, label: tabs.testCasesTab.label },
+                { id: EntityTabs.PIPELINE, label: tabs.pipelineTab.label },
+              ]}
+            />
             <Tabs.Panel id={EntityTabs.TEST_CASES}>
               {tabs.testCasesTab.children}
             </Tabs.Panel>

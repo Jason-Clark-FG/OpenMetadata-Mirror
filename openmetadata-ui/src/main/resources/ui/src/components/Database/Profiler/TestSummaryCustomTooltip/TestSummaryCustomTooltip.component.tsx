@@ -19,17 +19,16 @@ import startCase from 'lodash/startCase';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { TooltipProps } from 'recharts';
 import { GREEN_3, RED_3 } from '../../../../constants/Color.constants';
 import { TABLE_FRESHNESS_KEY } from '../../../../constants/TestSuite.constant';
 import { Thread } from '../../../../generated/entity/feed/thread';
 import { TestCaseStatus } from '../../../../generated/tests/testCase';
+import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
 import { formatNumberWithComma } from '../../../../utils/CommonUtils';
 import {
   convertSecondsToHumanReadableFormat,
   formatDateTime,
 } from '../../../../utils/date-time/DateTimeUtils';
-import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
 import { getTestCaseDetailPagePath } from '../../../../utils/RouterUtils';
 import { getTaskDetailPath } from '../../../../utils/TasksUtils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
@@ -50,11 +49,15 @@ function isThread(value: unknown): value is Thread {
   return typeof value === 'object' && value !== null && 'task' in value;
 }
 
-const TestSummaryCustomTooltip = (
-  props: TooltipProps<string | number, string>
-) => {
+interface TestSummaryCustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: Record<string, unknown> }>;
+  testCaseFqn?: string;
+}
+
+const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
   const { t } = useTranslation();
-  const { active, payload = [] } = props;
+  const { active, payload = [], testCaseFqn: testCaseFqnProp } = props;
 
   const state = useMemo(() => {
     if (payload.length === 0) {
@@ -68,7 +71,6 @@ const TestSummaryCustomTooltip = (
     const failedRows = payloadData.failedRows as number | undefined;
     const totalRows = (passedRows ?? 0) + (failedRows ?? 0);
     const formattedDateTime = formatDateTime(timestamp);
-    // Get status color
     let statusColor: string | undefined;
     if (status === TestCaseStatus.Failed) {
       statusColor = RED_3;
@@ -84,7 +86,6 @@ const TestSummaryCustomTooltip = (
       passedRows,
       failedRows,
       incidentId: payloadData.incidentId as string | undefined,
-      testCaseFqn: payloadData.testCaseFqn as string | undefined,
       task: payloadData.task as Thread | undefined,
       totalRows,
       formattedDateTime,
@@ -134,7 +135,6 @@ const TestSummaryCustomTooltip = (
     passedRows,
     failedRows,
     incidentId,
-    testCaseFqn,
     task,
     totalRows,
     formattedDateTime,
@@ -187,11 +187,11 @@ const TestSummaryCustomTooltip = (
                 {t('label.incident')}
               </span>
               <span className="font-medium" data-testid="incident">
-                {testCaseFqn ? (
+                {testCaseFqnProp ? (
                   <Link
                     className="tooltip-incident-link font-medium cursor-pointer"
                     to={getTestCaseDetailPagePath(
-                      testCaseFqn,
+                      testCaseFqnProp,
                       TestCasePageTabs.ISSUES
                     )}>
                     {`#${incidentId}`}
@@ -229,7 +229,9 @@ const TestSummaryCustomTooltip = (
             </li>
           )}
           {/* Other test result values */}
-          {data.map(tooltipRender)}
+          {data.map((entry) =>
+            tooltipRender(entry as [string, string | number | Thread])
+          )}
           {/* Assignee (at the bottom) */}
           {task?.task && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">

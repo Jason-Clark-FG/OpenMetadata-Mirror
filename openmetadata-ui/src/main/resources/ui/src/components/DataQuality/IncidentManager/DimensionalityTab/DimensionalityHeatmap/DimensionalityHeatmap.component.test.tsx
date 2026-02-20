@@ -12,7 +12,7 @@
  */
 
 import { createTheme, Theme, ThemeProvider } from '@mui/material/styles';
-import { ThemeColors } from '@openmetadata/ui-core-components';
+import type { ThemeColors } from '@openmetadata/ui-core-components';
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { TestCaseStatus } from '../../../../../generated/tests/dimensionResult';
@@ -37,6 +37,31 @@ const theme: Theme = createTheme({
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={theme}>{children}</ThemeProvider>
 );
+
+jest.mock('@openmetadata/ui-core-components', () => ({
+  ProgressBarCircle: ({
+    valueFormatter: _vf,
+    ...props
+  }: Record<string, unknown>) => (
+    <div data-testid="progress-bar-circle" role="progressbar" {...props} />
+  ),
+  Tooltip: ({
+    children,
+    title,
+    ...props
+  }: {
+    children: React.ReactNode;
+    title: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <div
+      data-testid="tooltip"
+      title={typeof title === 'string' ? title : undefined}
+      {...props}>
+      {children}
+    </div>
+  ),
+}));
 
 jest.mock('./useScrollIndicator.hook', () => ({
   useScrollIndicator: jest.fn(() => ({

@@ -245,7 +245,17 @@ function TestSummaryGraph({
           width={80}
         />
         <Tooltip
-          content={<TestSummaryCustomTooltip />}
+          content={({ active, payload }) => (
+            <TestSummaryCustomTooltip
+              active={active}
+              payload={
+                payload as
+                  | Array<{ payload: Record<string, unknown> }>
+                  | undefined
+              }
+              testCaseFqn={chartData?.testCaseFqn}
+            />
+          )}
           offset={tooltipOffset}
           position={{ y: 100 }}
           wrapperStyle={{ pointerEvents: 'auto' }}

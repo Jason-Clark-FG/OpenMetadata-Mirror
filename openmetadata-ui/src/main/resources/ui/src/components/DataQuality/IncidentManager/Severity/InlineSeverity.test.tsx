@@ -11,9 +11,48 @@
  *  limitations under the License.
  */
 import { render, screen } from '@testing-library/react';
+import React from 'react';
 import { Severities } from '../../../../generated/tests/testCaseResolutionStatus';
 import '../../../../test/unit/mocks/mui.mock';
 import InlineSeverity from './InlineSeverity.component';
+
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Dropdown: {
+    Root: ({
+      children,
+      onOpenChange: _onOpenChange,
+    }: {
+      children: React.ReactNode;
+      onOpenChange: (open: boolean) => void;
+    }) => <div data-testid="dropdown-root">{children}</div>,
+    Popover: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+    }) => (
+      <div className={className} data-testid="dropdown-popover">
+        {children}
+      </div>
+    ),
+    Menu: ({
+      children,
+      onAction: _onAction,
+      selectedKeys: _selectedKeys,
+      selectionMode: _selectionMode,
+    }: {
+      children: React.ReactNode;
+      onAction?: (key: React.Key) => void;
+      selectedKeys?: React.Key[];
+      selectionMode?: string;
+    }) => <div data-testid="dropdown-menu">{children}</div>,
+    Item: ({ id, label }: { id: string; label: React.ReactNode }) => (
+      <div data-testid={`dropdown-item-${id}`}>{label}</div>
+    ),
+    Separator: () => <hr data-testid="dropdown-separator" />,
+  },
+}));
 
 describe('InlineSeverity Component', () => {
   const mockOnSubmit = jest.fn();
@@ -31,7 +70,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 1' })
+    ).toBeInTheDocument();
   });
 
   it('should render "No Severity" when severity is undefined', () => {
@@ -43,7 +84,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('No Severity')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'No Severity' })
+    ).toBeInTheDocument();
   });
 
   it('should render all severity levels correctly', () => {
@@ -64,7 +107,7 @@ describe('InlineSeverity Component', () => {
         />
       );
 
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
 
       unmount();
     });
@@ -79,7 +122,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 1' })
+    ).toBeInTheDocument();
   });
 
   it('should render with hasEditPermission false', () => {
@@ -91,7 +136,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 1' })
+    ).toBeInTheDocument();
   });
 
   it('should handle onSubmit prop correctly', () => {
@@ -116,7 +163,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 1' })
+    ).toBeInTheDocument();
   });
 
   it('should render component when severity changes', () => {
@@ -128,7 +177,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 1' })
+    ).toBeInTheDocument();
 
     rerender(
       <InlineSeverity
@@ -138,7 +189,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 3')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 3' })
+    ).toBeInTheDocument();
   });
 
   it('should switch between No Severity and actual severity', () => {
@@ -150,7 +203,9 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('No Severity')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'No Severity' })
+    ).toBeInTheDocument();
 
     rerender(
       <InlineSeverity
@@ -160,6 +215,8 @@ describe('InlineSeverity Component', () => {
       />
     );
 
-    expect(screen.getByText('Severity 2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Severity 2' })
+    ).toBeInTheDocument();
   });
 });

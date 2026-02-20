@@ -91,7 +91,6 @@ export const prepareChartData = ({
       ...omitBy(metric, isUndefined),
       boundArea,
       incidentId: result.incidentId,
-      testCaseFqn,
       task: entityThread.find(
         (task) => task.task?.testCaseResolutionStatusId === result.incidentId
       ),
@@ -100,7 +99,6 @@ export const prepareChartData = ({
 
   dataPoints.reverse();
 
-  // get params from the result
   const testCaseResultParams = testCaseResults.find(
     (result) => result.testResultValue?.length
   );
@@ -117,6 +115,7 @@ export const prepareChartData = ({
     })),
     data: dataPoints,
     showAILearningBanner,
+    testCaseFqn,
   };
 };
 
