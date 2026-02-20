@@ -47,9 +47,13 @@ import org.openmetadata.schema.security.secrets.Parameters;
 class KubernetesSecretsManagerTest {
   private static final String CLUSTER_NAME = "openmetadata";
   private static final String NAMESPACE = "default";
-  private static final String SECRET_NAME = "/openmetadata/database/password";
+  // With the K8s-compatible builSecretsIdConfig, buildSecretId produces names with '-' separator
+  // and no leading separator. This simulates what buildSecretId(true, "database", "myservice")
+  // would produce.
+  private static final String SECRET_ID = "openmetadata-database-myservice";
+  // The full K8s secret name after storeValue appends the field name
+  private static final String K8S_SECRET_NAME = "openmetadata-database-myservice-password";
   private static final String SECRET_VALUE = "test-password";
-  private static final String K8S_SECRET_NAME = "openmetadata-database-password";
 
   private KubernetesSecretsManager secretsManager;
 
@@ -92,15 +96,14 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.createNamespacedSecret(eq(NAMESPACE), any(V1Secret.class)))
         .thenReturn(createRequest);
     when(createRequest.execute()).thenReturn(new V1Secret());
-    secretsManager.storeValue("password", SECRET_VALUE, SECRET_NAME, true);
+    secretsManager.storeValue("password", SECRET_VALUE, SECRET_ID, true);
 
     verify(mockApiClient).createNamespacedSecret(eq(NAMESPACE), secretCaptor.capture());
     verify(createRequest).execute();
 
     V1Secret createdSecret = secretCaptor.getValue();
     assertNotNull(createdSecret);
-    String expectedName = "openmetadata-database-password-password";
-    assertEquals(expectedName, Objects.requireNonNull(createdSecret.getMetadata()).getName());
+    assertEquals(K8S_SECRET_NAME, Objects.requireNonNull(createdSecret.getMetadata()).getName());
     assertEquals(NAMESPACE, createdSecret.getMetadata().getNamespace());
 
     Map<String, String> labels = createdSecret.getMetadata().getLabels();
@@ -120,7 +123,8 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE)).thenReturn(readRequest);
     when(readRequest.execute()).thenReturn(mockSecret);
 
-    String retrievedValue = secretsManager.getSecret(SECRET_NAME);
+    // getSecret now uses the name directly (no sanitization)
+    String retrievedValue = secretsManager.getSecret(K8S_SECRET_NAME);
 
     assertEquals(SECRET_VALUE, retrievedValue);
     verify(mockApiClient).readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE);
@@ -132,7 +136,7 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE)).thenReturn(readRequest);
     when(readRequest.execute()).thenThrow(new ApiException(404, "Not Found"));
 
-    String retrievedValue = secretsManager.getSecret(SECRET_NAME);
+    String retrievedValue = secretsManager.getSecret(K8S_SECRET_NAME);
 
     assertNull(retrievedValue);
     verify(mockApiClient).readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE);
@@ -152,7 +156,7 @@ class KubernetesSecretsManagerTest {
         .thenReturn(replaceRequest);
     when(replaceRequest.execute()).thenReturn(new V1Secret());
 
-    secretsManager.updateSecret(SECRET_NAME, SECRET_VALUE);
+    secretsManager.updateSecret(K8S_SECRET_NAME, SECRET_VALUE);
 
     verify(mockApiClient)
         .replaceNamespacedSecret(eq(K8S_SECRET_NAME), eq(NAMESPACE), secretCaptor.capture());
@@ -173,7 +177,7 @@ class KubernetesSecretsManagerTest {
         .thenReturn(createRequest);
     when(createRequest.execute()).thenReturn(new V1Secret());
 
-    secretsManager.updateSecret(SECRET_NAME, SECRET_VALUE);
+    secretsManager.updateSecret(K8S_SECRET_NAME, SECRET_VALUE);
 
     verify(mockApiClient).createNamespacedSecret(eq(NAMESPACE), any(V1Secret.class));
     verify(createRequest).execute();
@@ -186,7 +190,7 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE)).thenReturn(readRequest);
     when(readRequest.execute()).thenReturn(mockSecret);
 
-    boolean exists = secretsManager.existSecret(SECRET_NAME);
+    boolean exists = secretsManager.existSecret(K8S_SECRET_NAME);
 
     assertTrue(exists);
     verify(mockApiClient).readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE);
@@ -198,7 +202,7 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE)).thenReturn(readRequest);
     when(readRequest.execute()).thenThrow(new ApiException(404, "Not Found"));
 
-    boolean exists = secretsManager.existSecret(SECRET_NAME);
+    boolean exists = secretsManager.existSecret(K8S_SECRET_NAME);
 
     assertFalse(exists);
     verify(mockApiClient).readNamespacedSecret(K8S_SECRET_NAME, NAMESPACE);
@@ -207,12 +211,10 @@ class KubernetesSecretsManagerTest {
 
   @Test
   void testDeleteSecret() throws Exception {
-    // Use reflection to test protected method
     when(mockApiClient.deleteNamespacedSecret(K8S_SECRET_NAME, NAMESPACE))
         .thenReturn(deleteRequest);
     when(deleteRequest.execute()).thenReturn(new V1Status());
 
-    // Call deleteSecretInternal via reflection
     java.lang.reflect.Method deleteMethod =
         KubernetesSecretsManager.class.getDeclaredMethod("deleteSecretInternal", String.class);
     deleteMethod.setAccessible(true);
@@ -228,7 +230,6 @@ class KubernetesSecretsManagerTest {
         .thenReturn(deleteRequest);
     when(deleteRequest.execute()).thenThrow(new ApiException(404, "Not Found"));
 
-    // Call deleteSecretInternal via reflection
     java.lang.reflect.Method deleteMethod =
         KubernetesSecretsManager.class.getDeclaredMethod("deleteSecretInternal", String.class);
     deleteMethod.setAccessible(true);
@@ -241,22 +242,17 @@ class KubernetesSecretsManagerTest {
   }
 
   @Test
-  void testSanitizeSecretName() throws ApiException {
-    // Test various secret name patterns
-    // The storeValue returns "secret:" + original secretId + "/" + fieldName
-    testSanitizedName(
-        "/prefix/cluster/service/password",
-        "prefix-cluster-service-password-field",
-        "secret:/prefix/cluster/service/password/field");
-    testSanitizedName(
-        "///leading-slashes", "leading-slashes-field", "secret:///leading-slashes/field");
-    testSanitizedName("UPPERCASE-NAME", "uppercase-name-field", "secret:uppercase-name/field");
-    testSanitizedName(
-        "special@#$%characters", "special-characters-field", "secret:special____characters/field");
-    testSanitizedName(
-        "consecutive---hyphens", "consecutive-hyphens-field", "secret:consecutive---hyphens/field");
-    testSanitizedName("-leading-hyphen", "leading-hyphen-field", "secret:-leading-hyphen/field");
-    testSanitizedName("trailing-hyphen-", "trailing-hyphen-field", "secret:trailing-hyphen-/field");
+  void testBuildSecretIdProducesK8sCompatibleNames() throws ApiException {
+    // Verify that buildSecretId produces names with '-' separator instead of '/'
+    // This is the key behavior change: names stored in DB are directly usable as K8s secret names
+    testStoreValueProducesExpectedName("openmetadata-bot-mybot", "config", "openmetadata-bot-mybot-config");
+    testStoreValueProducesExpectedName("openmetadata-database-mydb", "password", "openmetadata-database-mydb-password");
+  }
+
+  @Test
+  void testBuildSecretIdHandlesSpecialCharacters() throws ApiException {
+    // Special characters in input should be replaced with '-'
+    testStoreValueProducesExpectedName("openmetadata-service-my_service", "password", "openmetadata-service-my-service-password");
   }
 
   @Test
@@ -269,7 +265,7 @@ class KubernetesSecretsManagerTest {
         .thenReturn(createRequest);
     when(createRequest.execute()).thenReturn(new V1Secret());
 
-    secretsManager.storeValue("field", "", SECRET_NAME, true);
+    secretsManager.storeValue("field", "", SECRET_ID, true);
 
     verify(mockApiClient).createNamespacedSecret(eq(NAMESPACE), secretCaptor.capture());
     verify(createRequest).execute();
@@ -281,286 +277,6 @@ class KubernetesSecretsManagerTest {
         ExternalSecretsManager.NULL_SECRET_STRING,
         new String(data.get("value"), StandardCharsets.UTF_8),
         "Empty string should be stored as 'null' to prevent secrets manager rejection");
-  }
-
-  // New tests for configurable prefix functionality
-
-  @Test
-  void testDefaultPrefixWhenEmpty() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with empty prefix
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, "", new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithEmptyPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithEmptyPrefix.setApiClient(mockApiClient);
-    secretsManagerWithEmptyPrefix.setNamespace(NAMESPACE);
-
-    // Test that names starting with non-alphanumeric characters get "om-" prefix
-    // Input "-leading-hyphen" becomes "-leading-hyphen/field" after buildSecretId
-    // After sanitization: "leading-hyphen-field" (starts with 'l', so no prefix needed)
-    testSanitizedNameWithPrefix(
-        secretsManagerWithEmptyPrefix,
-        "-leading-hyphen",
-        "leading-hyphen-field",
-        "secret:-leading-hyphen/field");
-  }
-
-  @Test
-  void testDefaultPrefixWhenNull() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with null prefix - this should be handled gracefully
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, null, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithNullPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithNullPrefix.setApiClient(mockApiClient);
-    secretsManagerWithNullPrefix.setNamespace(NAMESPACE);
-
-    // Test that names starting with non-alphanumeric characters get "om-" prefix
-    // Input "-leading-hyphen" becomes "-leading-hyphen/field" after buildSecretId
-    // After sanitization: "leading-hyphen-field" (starts with 'l', so no prefix needed)
-    testSanitizedNameWithPrefix(
-        secretsManagerWithNullPrefix,
-        "-leading-hyphen",
-        "leading-hyphen-field",
-        "secret:-leading-hyphen/field");
-  }
-
-  @Test
-  void testCustomPrefix() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with custom prefix
-    String customPrefix = "myapp";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test that names starting with non-alphanumeric characters get custom prefix
-    // Input "-leading-hyphen" becomes "-leading-hyphen/field" after buildSecretId
-    // After sanitization: "leading-hyphen-field" (starts with 'l', so no prefix needed)
-    testSanitizedNameWithPrefix(
-        secretsManagerWithCustomPrefix,
-        "-leading-hyphen",
-        "leading-hyphen-field",
-        "secret:-leading-hyphen/field");
-  }
-
-  @Test
-  void testPrefixNotAppliedWhenNameStartsWithAlphanumeric() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with custom prefix
-    String customPrefix = "myapp";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test that names starting with alphanumeric characters don't get prefix
-    testSanitizedNameWithPrefix(
-        secretsManagerWithCustomPrefix,
-        "normal-name",
-        "normal-name-field",
-        "secret:normal-name/field");
-  }
-
-  @Test
-  void testPrefixWithSpecialCharacters() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with prefix containing special characters
-    String customPrefix = "my-app";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test that names starting with non-alphanumeric characters get custom prefix
-    // Input "-leading-hyphen" becomes "-leading-hyphen/field" after buildSecretId
-    // After sanitization: "leading-hyphen-field" (starts with 'l', so no prefix needed)
-    testSanitizedNameWithPrefix(
-        secretsManagerWithCustomPrefix,
-        "-leading-hyphen",
-        "leading-hyphen-field",
-        "secret:-leading-hyphen/field");
-  }
-
-  @Test
-  void testEmptyStringNameWithDefaultPrefix() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with empty prefix
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, "", new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithEmptyPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithEmptyPrefix.setApiClient(mockApiClient);
-    secretsManagerWithEmptyPrefix.setNamespace(NAMESPACE);
-
-    // Test empty string name - this should result in "om-secret-field"
-    // Input "" becomes "/field" after buildSecretId
-    // After sanitization: "field" (starts with 'f', so no prefix needed)
-    testSanitizedNameWithPrefix(secretsManagerWithEmptyPrefix, "", "field", "secret:/field");
-  }
-
-  @Test
-  void testEmptyStringNameWithCustomPrefix() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with custom prefix
-    String customPrefix = "myapp";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test empty string name with custom prefix
-    // Input "" becomes "/field" after buildSecretId
-    // After sanitization: "field" (starts with 'f', so no prefix needed)
-    testSanitizedNameWithPrefix(secretsManagerWithCustomPrefix, "", "field", "secret:/field");
-  }
-
-  // Add tests that actually trigger prefix application
-  @Test
-  void testPrefixAppliedWhenNameStartsWithHyphen() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with custom prefix
-    String customPrefix = "myapp";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test with a name that will actually trigger prefix application
-    // Input "-" becomes "-/field" after buildSecretId
-    // After sanitization: "field" (leading hyphen gets removed, so no prefix needed)
-    testSanitizedNameWithPrefix(secretsManagerWithCustomPrefix, "-", "field", "secret:-/field");
-  }
-
-  @Test
-  void testPrefixAppliedWhenNameStartsWithSpecialChar() throws Exception {
-    // Reset singleton instance
-    java.lang.reflect.Field instanceField =
-        KubernetesSecretsManager.class.getDeclaredField("instance");
-    instanceField.setAccessible(true);
-    instanceField.set(null, null);
-
-    Parameters parameters = new Parameters();
-    parameters.setAdditionalProperty("namespace", NAMESPACE);
-    parameters.setAdditionalProperty("inCluster", "false");
-    parameters.setAdditionalProperty("skipInit", "true");
-
-    // Test with custom prefix
-    String customPrefix = "myapp";
-    SecretsManager.SecretsConfig secretsConfig =
-        new SecretsManager.SecretsConfig(CLUSTER_NAME, customPrefix, new ArrayList<>(), parameters);
-
-    KubernetesSecretsManager secretsManagerWithCustomPrefix =
-        KubernetesSecretsManager.getInstance(secretsConfig);
-    secretsManagerWithCustomPrefix.setApiClient(mockApiClient);
-    secretsManagerWithCustomPrefix.setNamespace(NAMESPACE);
-
-    // Test with a name that will actually trigger prefix application
-    // Input "@special" becomes "_special/field" after buildSecretId (special chars replaced with _)
-    // After sanitization: "special-field" (starts with 's', so no prefix needed)
-    testSanitizedNameWithPrefix(
-        secretsManagerWithCustomPrefix, "@special", "special-field", "secret:_special/field");
   }
 
   private V1Secret createMockSecret(String value) {
@@ -577,8 +293,8 @@ class KubernetesSecretsManagerTest {
     return secret;
   }
 
-  private void testSanitizedName(String input, String expectedSanitizedName, String expectedResult)
-      throws ApiException {
+  private void testStoreValueProducesExpectedName(
+      String secretId, String fieldName, String expectedK8sName) throws ApiException {
     reset(mockApiClient, readRequest, createRequest);
     when(mockApiClient.readNamespacedSecret(anyString(), eq(NAMESPACE))).thenReturn(readRequest);
     when(readRequest.execute()).thenThrow(new ApiException(404, "Not Found"));
@@ -586,38 +302,19 @@ class KubernetesSecretsManagerTest {
     when(mockApiClient.createNamespacedSecret(eq(NAMESPACE), any(V1Secret.class)))
         .thenReturn(createRequest);
     when(createRequest.execute()).thenReturn(new V1Secret());
-    String result = secretsManager.storeValue("field", "value", input, true);
-    verify(mockApiClient).createNamespacedSecret(eq(NAMESPACE), secretCaptor.capture());
-    V1Secret createdSecret = secretCaptor.getValue();
-    String actualName = Objects.requireNonNull(createdSecret.getMetadata()).getName();
-    assertEquals(expectedSanitizedName, actualName);
-    assertEquals(expectedResult, result);
-  }
 
-  private void testSanitizedNameWithPrefix(
-      KubernetesSecretsManager secretsManagerInstance,
-      String input,
-      String expectedSanitizedName,
-      String expectedResult)
-      throws ApiException {
-    reset(mockApiClient, readRequest, createRequest);
-    when(mockApiClient.readNamespacedSecret(anyString(), eq(NAMESPACE))).thenReturn(readRequest);
-    when(readRequest.execute()).thenThrow(new ApiException(404, "Not Found"));
-    ArgumentCaptor<V1Secret> secretCaptor = ArgumentCaptor.forClass(V1Secret.class);
-    when(mockApiClient.createNamespacedSecret(eq(NAMESPACE), any(V1Secret.class)))
-        .thenReturn(createRequest);
-    when(createRequest.execute()).thenReturn(new V1Secret());
-    String result = secretsManagerInstance.storeValue("field", "value", input, true);
+    String result = secretsManager.storeValue(fieldName, "value", secretId, true);
+
     verify(mockApiClient).createNamespacedSecret(eq(NAMESPACE), secretCaptor.capture());
     V1Secret createdSecret = secretCaptor.getValue();
     String actualName = Objects.requireNonNull(createdSecret.getMetadata()).getName();
-    assertEquals(expectedSanitizedName, actualName);
-    assertEquals(expectedResult, result);
+    assertEquals(expectedK8sName, actualName);
+    // The DB reference should match the K8s name (no path conversion needed by clients)
+    assertEquals("secret:" + expectedK8sName, result);
   }
 
   @AfterEach
   void tearDown() throws Exception {
-    // Reset singleton instance after each test
     java.lang.reflect.Field instanceField =
         KubernetesSecretsManager.class.getDeclaredField("instance");
     instanceField.setAccessible(true);
