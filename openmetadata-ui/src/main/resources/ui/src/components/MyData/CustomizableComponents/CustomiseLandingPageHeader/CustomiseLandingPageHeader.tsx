@@ -138,9 +138,9 @@ const CustomiseLandingPageHeader = ({
     [updateActiveDomain, navigate]
   );
 
-  const domainDisplayName = getDomainDisplayName(
-    activeDomainEntityRef,
-    activeDomain
+  const domainDisplayName = useMemo(
+    () => getDomainDisplayName(activeDomainEntityRef, activeDomain),
+    [activeDomainEntityRef, activeDomain, t]
   );
 
   const navigateToEntity = (data: {

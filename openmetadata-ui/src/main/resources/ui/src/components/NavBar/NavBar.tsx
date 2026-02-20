@@ -429,10 +429,9 @@ const NavBar = () => {
     []
   );
 
-  // Extracted domain display name logic to avoid nested ternary in JSX
-  const domainDisplayName = getDomainDisplayName(
-    activeDomainEntityRef,
-    activeDomain
+  const domainDisplayName = useMemo(
+    () => getDomainDisplayName(activeDomainEntityRef, activeDomain),
+    [activeDomainEntityRef, activeDomain, t]
   );
 
   const handleLanguageChange = useCallback(({ key }: MenuInfo) => {
