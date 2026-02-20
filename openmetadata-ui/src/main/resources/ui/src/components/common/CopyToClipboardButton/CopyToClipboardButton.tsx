@@ -49,7 +49,7 @@ export const CopyToClipboardButton: FunctionComponent<Props> = ({
       <ButtonUtility
         color="tertiary"
         icon={Copy01}
-        onClick={onCopyToClipBoard}
+        onClick={() => onCopyToClipBoard()}
       />
     </Tooltip>
   );
