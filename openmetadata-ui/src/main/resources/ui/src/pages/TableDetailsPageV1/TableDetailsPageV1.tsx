@@ -68,7 +68,6 @@ import { getDataQualityLineage } from '../../rest/lineageAPI';
 import { getQueriesList } from '../../rest/queryAPI';
 import {
   addFollower,
-  getTableColumnsByFQN,
   getTableDetailsByFQN,
   patchTableDetails,
   removeFollower,
@@ -210,42 +209,18 @@ const TableDetailsPageV1: React.FC = () => {
           fields += `,${TabSpecificField.TESTSUITE}`;
         }
 
-        const [details, columnsResponse] = await Promise.all([
-          getTableDetailsByFQN(tableFqn, { fields }),
-          getTableColumnsByFQN(tableFqn, {
-            fields: 'tags,customMetrics,extension',
-          }).catch(() => null),
-        ]);
-
-        let finalColumns = details.columns || [];
-        if (columnsResponse?.data && columnsResponse.data.length > 0) {
-          // Merge fresh columns from /columns API into the full list from /tables API
-          // This ensures we keep the correct total count while having fresh data for visible columns
-          columnsResponse.data.forEach((freshCol) => {
-            finalColumns = updateColumnInNestedStructure(
-              finalColumns,
-              freshCol.fullyQualifiedName ?? '',
-              freshCol
-            );
-          });
-        }
-
-        const mergedDetails = {
-          ...details,
-          columns: finalColumns,
-        };
+        const details = await getTableDetailsByFQN(tableFqn, { fields });
 
         setTableDetails((current) => {
           // Prevent stale server data from overwriting newer local state (optimistic updates)
           if (
             current?.updatedAt &&
-            mergedDetails.updatedAt &&
-            mergedDetails.updatedAt < current.updatedAt
+            details.updatedAt &&
+            details.updatedAt < current.updatedAt
           ) {
             return current;
           }
-
-          return mergedDetails;
+          return details;
         });
         addToRecentViewed({
           displayName: getEntityName(details),

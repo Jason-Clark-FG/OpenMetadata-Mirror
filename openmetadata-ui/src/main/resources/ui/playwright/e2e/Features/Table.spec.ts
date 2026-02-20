@@ -161,11 +161,12 @@ test.describe(
     test('Table details API should not fetch columns in fields parameter', async ({
       dataConsumerPage: page,
     }) => {
-      const detailsRequest = page.waitForRequest((request) =>
-        request.url().includes('/api/v1/tables/name/') &&
-        request.method() === 'GET' &&
-        !request.url().includes('/columns') &&
-        request.url().includes('fields=')
+      const detailsRequest = page.waitForRequest(
+        (request) =>
+          request.url().includes('/api/v1/tables/name/') &&
+          request.method() === 'GET' &&
+          !request.url().includes('/columns') &&
+          request.url().includes('fields=')
       );
 
       await table1.visitEntityPage(page);
@@ -173,7 +174,7 @@ test.describe(
       const req = await detailsRequest;
       const url = new URL(req.url());
       const fields = url.searchParams.get('fields') || '';
-      
+
       expect(fields).not.toContain('columns');
       expect(fields).toContain('tags');
     });
