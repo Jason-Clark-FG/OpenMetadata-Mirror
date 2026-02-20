@@ -2304,65 +2304,83 @@ public class OpenMetadataOperations implements Callable<Integer> {
       String table, Pattern secretPattern, ConnectionType connType, boolean dryRun) {
     String selectSql;
     String updateSql;
+    int batchSize = 50;
 
     if (connType == ConnectionType.MYSQL) {
-      selectSql = String.format("SELECT id, json FROM %s WHERE json LIKE '%%\"secret:/%%'", table);
+      selectSql =
+          String.format(
+              "SELECT id, json FROM %s WHERE json LIKE '%%\"secret:/%%' ORDER BY id", table);
       updateSql = String.format("UPDATE %s SET json = :json WHERE id = :id", table);
     } else {
       selectSql =
           String.format(
-              "SELECT id, json::text as json FROM %s WHERE json::text LIKE '%%\"secret:/%%'",
+              "SELECT id, json::text as json FROM %s"
+                  + " WHERE json::text LIKE '%%\"secret:/%%' ORDER BY id",
               table);
       updateSql = String.format("UPDATE %s SET json = (:json :: jsonb) WHERE id = :id", table);
     }
 
-    List<Map<String, Object>> rows =
-        jdbi.withHandle(handle -> handle.createQuery(selectSql).mapToMap().list());
+    List<Map.Entry<String, String>> pendingUpdates = new ArrayList<>();
+    int offset = 0;
 
-    if (rows.isEmpty()) {
+    while (true) {
+      String batchSql = selectSql + " LIMIT " + batchSize + " OFFSET " + offset;
+      List<Map<String, Object>> batch =
+          jdbi.withHandle(handle -> handle.createQuery(batchSql).mapToMap().list());
+
+      if (batch.isEmpty()) {
+        break;
+      }
+
+      for (Map<String, Object> row : batch) {
+        String id = row.get("id").toString();
+        String json = row.get("json").toString();
+
+        Matcher matcher = secretPattern.matcher(json);
+        StringBuilder sb = new StringBuilder();
+        boolean found = false;
+
+        while (matcher.find()) {
+          found = true;
+          String oldPath = matcher.group(1);
+          String newPath =
+              KubernetesSecretsManager.sanitizeForK8s(
+                  oldPath.toLowerCase().replaceAll("[^a-z0-9\\-]", "-"));
+          if (dryRun) {
+            LOG.info("  [{}] secret:/{} -> secret:{}", table, oldPath, newPath);
+          }
+          matcher.appendReplacement(sb, "secret:" + Matcher.quoteReplacement(newPath));
+        }
+        matcher.appendTail(sb);
+
+        if (found) {
+          pendingUpdates.add(Map.entry(id, sb.toString()));
+        }
+      }
+
+      offset += batchSize;
+    }
+
+    if (pendingUpdates.isEmpty()) {
       return 0;
     }
 
-    LOG.info("Found {} rows with old-format secret references in {}", rows.size(), table);
-    int updated = 0;
+    LOG.info("Found {} rows with old-format secret references in {}", pendingUpdates.size(), table);
 
-    for (Map<String, Object> row : rows) {
-      String id = row.get("id").toString();
-      String json = row.get("json").toString();
-
-      Matcher matcher = secretPattern.matcher(json);
-      StringBuilder sb = new StringBuilder();
-      boolean found = false;
-
-      while (matcher.find()) {
-        found = true;
-        String oldPath = matcher.group(1);
-        String newPath =
-            KubernetesSecretsManager.sanitizeForK8s(
-                oldPath.toLowerCase().replaceAll("[^a-z0-9\\-]", "-"));
-        if (dryRun) {
-          LOG.info("  [{}] secret:/{} -> secret:{}", table, oldPath, newPath);
-        }
-        matcher.appendReplacement(sb, "secret:" + Matcher.quoteReplacement(newPath));
-      }
-      matcher.appendTail(sb);
-
-      if (found) {
-        if (!dryRun) {
-          String updatedJson = sb.toString();
-          jdbi.useHandle(
-              handle ->
-                  handle
-                      .createUpdate(updateSql)
-                      .bind("json", updatedJson)
-                      .bind("id", id)
-                      .execute());
-        }
-        updated++;
-      }
+    if (!dryRun) {
+      jdbi.useTransaction(
+          handle -> {
+            for (Map.Entry<String, String> entry : pendingUpdates) {
+              handle
+                  .createUpdate(updateSql)
+                  .bind("json", entry.getValue())
+                  .bind("id", entry.getKey())
+                  .execute();
+            }
+          });
     }
 
-    return updated;
+    return pendingUpdates.size();
   }
 
   @Command(name = "drop-indexes", description = "Drop all indexes from Elasticsearch/OpenSearch.")
