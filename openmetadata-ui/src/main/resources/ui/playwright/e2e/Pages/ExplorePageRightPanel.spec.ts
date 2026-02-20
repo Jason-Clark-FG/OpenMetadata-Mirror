@@ -1322,7 +1322,6 @@ test.describe('Right Panel Test Suite', () => {
           // DataConsumer: canEditDomains=false, canEditDataProducts=false
           await rightPanelDC.verifyPermissions();
         });
-
       });
     });
 
@@ -1409,9 +1408,8 @@ test.describe('Right Panel Test Suite', () => {
           await expect(ownersSection).toBeVisible();
           // No owner chips should be present for a freshly-created entity
           await expect(adminPage.getByTestId('user-tag')).not.toBeVisible();
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1443,9 +1441,8 @@ test.describe('Right Panel Test Suite', () => {
           await expect(tagsSection).toBeVisible();
           // Verified from test output: empty tags section shows this placeholder text
           await expect(tagsSection).toContainText('No Tags assigned');
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1482,9 +1479,8 @@ test.describe('Right Panel Test Suite', () => {
               .getByTestId('Tier')
               .locator('.ant-tag')
           ).not.toBeVisible();
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1518,9 +1514,8 @@ test.describe('Right Panel Test Suite', () => {
           await expect(adminPage.locator('.domains-content')).toContainText(
             'No Domains assigned'
           );
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1552,11 +1547,12 @@ test.describe('Right Panel Test Suite', () => {
           await expect(glossarySection).toBeVisible();
           // No glossary term chips should be present; the container holds only the empty state
           await expect(
-            adminPage.getByTestId('glossary-container').locator('.no-data-placeholder')
+            adminPage
+              .getByTestId('glossary-container')
+              .locator('.no-data-placeholder')
           ).toBeVisible();
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1585,9 +1581,8 @@ test.describe('Right Panel Test Suite', () => {
           const emptyLineage = new LineagePageObject(rightPanel);
           await emptyLineage.navigateToLineageTab();
           await emptyLineage.shouldBeVisible();
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });
@@ -1617,9 +1612,8 @@ test.describe('Right Panel Test Suite', () => {
           await emptyDataQuality.navigateToDataQualityTab();
           await emptyDataQuality.shouldBeVisible();
           await emptyDataQuality.shouldShowTestCaseCardsCount(0);
-
-          await testEntity.delete(apiContext);
         } finally {
+          await testEntity.delete(apiContext);
           await afterAction();
         }
       });

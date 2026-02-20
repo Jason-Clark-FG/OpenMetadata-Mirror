@@ -78,10 +78,12 @@ export class OverviewPageObject extends RightPanelBase {
   private readonly editOwnersIcon: Locator;
   private readonly updateOwnersButton: Locator;
   private readonly dataQualitySectionInOverview: Locator;
+  private readonly lineageSection: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
     this.container = this.getSummaryPanel();
+    this.lineageSection = this.getSummaryPanel().locator('.lineage-content');
 
     // Scoped locators for action elements
     this.editDescriptionIcon = this.getSummaryPanel().locator(
@@ -745,7 +747,7 @@ export class OverviewPageObject extends RightPanelBase {
    * Verify lineage section is visible
    */
   async shouldShowLineageSection(): Promise<void> {
-    // await this.lineageSection.waitFor({ state: 'visible' });
+    await this.lineageSection.waitFor({ state: 'visible' });
   }
 
   /**

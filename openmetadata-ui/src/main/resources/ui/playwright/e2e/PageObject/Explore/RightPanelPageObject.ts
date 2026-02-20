@@ -456,18 +456,126 @@ export class RightPanelPageObject {
 
     const summaryPanel = this.page.locator(this.summaryPanel);
 
+    // 1. Description
+    if (this.rolePermissions.canEditDescription) {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-description"]')
+      ).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-description"]')
+      ).not.toBeVisible();
+    }
+
+    // 2. Owners
+    if (this.rolePermissions.canEditOwners) {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-owners"]')
+      ).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-owners"]')
+      ).not.toBeVisible();
+    }
+
+    // 3. Tags
+    if (this.rolePermissions.canEditTags) {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-icon-tags"]')
+      ).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-icon-tags"]')
+      ).not.toBeVisible();
+    }
+
+    // 4. Glossary Terms
+    if (this.rolePermissions.canEditGlossaryTerms) {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-glossary-terms"]')
+      ).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-glossary-terms"]')
+      ).not.toBeVisible();
+    }
+
+    // 5. Tier
+    if (this.rolePermissions.canEditTier) {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-icon-tier"]')
+      ).toBeVisible();
+    } else {
+      await expect(
+        summaryPanel.locator('[data-testid="edit-icon-tier"]')
+      ).not.toBeVisible();
+    }
+
+    // 6. Domains
     if (this.rolePermissions.canEditDomains) {
       await expect(summaryPanel.getByTestId('add-domain')).toBeVisible();
     } else {
       await expect(summaryPanel.getByTestId('add-domain')).not.toBeVisible();
     }
 
+    // 7. Data Products
     if (this.rolePermissions.canEditDataProducts) {
-      await expect(summaryPanel.getByTestId('edit-data-products')).toBeVisible();
+      await expect(
+        summaryPanel.getByTestId('edit-data-products')
+      ).toBeVisible();
     } else {
       await expect(
         summaryPanel.getByTestId('edit-data-products')
       ).not.toBeVisible();
+    }
+
+    // 8. Custom Properties (Edit)
+    if (
+      this.rolePermissions.canEditCustomProperties &&
+      this.isTabAvailable(RIGHT_PANEL_TAB.CUSTOM_PROPERTIES)
+    ) {
+      // Check if edit button inside custom properties tab is visible (requires navigation if not in tab)
+      // For now, checks if the tab itself is visible as proxy or check if we are in the tab.
+      // A better check would be to navigate to the tab and check the edit button, but that changes state.
+      // We will check if the custom properties tab is present.
+      const tab = this.getTabLocator(RIGHT_PANEL_TAB.CUSTOM_PROPERTIES);
+      await expect(tab).toBeVisible();
+    }
+
+    // 9. Data Quality (View)
+    if (
+      this.rolePermissions.canViewDataQuality &&
+      this.isTabAvailable(RIGHT_PANEL_TAB.DATA_QUALITY)
+    ) {
+      const tab = this.getTabLocator(RIGHT_PANEL_TAB.DATA_QUALITY);
+      await expect(tab).toBeVisible();
+    }
+
+    // 10. Lineage (View)
+    if (
+      this.rolePermissions.canViewLineage &&
+      this.isTabAvailable(RIGHT_PANEL_TAB.LINEAGE)
+    ) {
+      const tab = this.getTabLocator(RIGHT_PANEL_TAB.LINEAGE);
+      await expect(tab).toBeVisible();
+    }
+
+    // 11. Schema (View)
+    if (
+      this.rolePermissions.canViewSchema &&
+      this.isTabAvailable(RIGHT_PANEL_TAB.SCHEMA)
+    ) {
+      const tab = this.getTabLocator(RIGHT_PANEL_TAB.SCHEMA);
+      await expect(tab).toBeVisible();
+    }
+
+    // 12. Custom Properties (View)
+    if (
+      this.rolePermissions.canViewCustomProperties &&
+      this.isTabAvailable(RIGHT_PANEL_TAB.CUSTOM_PROPERTIES)
+    ) {
+      const tab = this.getTabLocator(RIGHT_PANEL_TAB.CUSTOM_PROPERTIES);
+      await expect(tab).toBeVisible();
     }
   }
 

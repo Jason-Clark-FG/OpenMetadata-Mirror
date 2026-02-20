@@ -11,8 +11,11 @@
  *  limitations under the License.
  */
 
-import { Page } from '@playwright/test';
-import { RightPanelPageObject, PageContext } from '../PageObject/Explore/RightPanelPageObject';
+import { expect, Page } from '@playwright/test';
+import {
+  RightPanelPageObject,
+  PageContext,
+} from '../PageObject/Explore/RightPanelPageObject';
 import { OverviewPageObject } from '../PageObject/Explore/OverviewPageObject';
 import { SchemaPageObject } from '../PageObject/Explore/SchemaPageObject';
 import { LineagePageObject } from '../PageObject/Explore/LineagePageObject';
@@ -36,9 +39,9 @@ export class RightPanelTestSuite {
   private customProperties: CustomPropertiesPageObject;
 
   constructor(
-    private page: Page,
-    private entityInstance: EntityClass,
-    private pageContext: PageContext = PageContext.EXPLORE
+    page: Page,
+    entityInstance: EntityClass,
+    pageContext: PageContext = PageContext.EXPLORE
   ) {
     this.rightPanel = new RightPanelPageObject(page);
     this.rightPanel.setPageContext(pageContext);
@@ -52,7 +55,12 @@ export class RightPanelTestSuite {
   }
 
   async runStandardTestSuite(options: TestOptions = {}): Promise<void> {
-    const { skipTabs = [], onlyTabs = [], skipCRUD = false, role = 'Admin' } = options;
+    const {
+      skipTabs = [],
+      onlyTabs = [],
+      skipCRUD = false,
+      role = 'Admin',
+    } = options;
 
     if (role !== 'Admin') {
       this.rightPanel.setRolePermissions(role);
@@ -64,7 +72,9 @@ export class RightPanelTestSuite {
       if (onlyTabs.length > 0) {
         return onlyTabs.includes(tabName);
       }
-      return !skipTabs.includes(tabName) && this.rightPanel.isTabAvailable(tabName);
+      return (
+        !skipTabs.includes(tabName) && this.rightPanel.isTabAvailable(tabName)
+      );
     };
 
     if (shouldTestTab('overview')) {
@@ -124,7 +134,10 @@ export class RightPanelTestSuite {
     await this.overview.shouldShowDescriptionWithText(description);
   }
 
-  async testOwnersCRUD(ownerName: string, type: 'Users' | 'Teams' = 'Users'): Promise<void> {
+  async testOwnersCRUD(
+    ownerName: string,
+    type: 'Users' | 'Teams' = 'Users'
+  ): Promise<void> {
     await this.overview.navigateToOverviewTab();
     await this.overview.addOwnerWithoutValidation(ownerName);
     await this.overview.shouldShowOwner(ownerName);
@@ -164,16 +177,16 @@ export class RightPanelTestSuite {
     await this.overview.removeDomain(domainName);
   }
 
-  async testAsRole(role: 'Admin' | 'DataSteward' | 'DataConsumer'): Promise<void> {
+  async testAsRole(
+    role: 'Admin' | 'DataSteward' | 'DataConsumer'
+  ): Promise<void> {
     this.rightPanel.setRolePermissions(role);
     await this.rightPanel.verifyPermissions();
   }
 
   async verifyTabsAvailability(expectedTabs: string[]): Promise<void> {
     for (const tab of expectedTabs) {
-      if (!this.rightPanel.isTabAvailable(tab)) {
-        throw new Error(`Expected tab "${tab}" to be available but it is not`);
-      }
+      expect(this.rightPanel.isTabAvailable(tab)).toBeTruthy();
     }
   }
 
