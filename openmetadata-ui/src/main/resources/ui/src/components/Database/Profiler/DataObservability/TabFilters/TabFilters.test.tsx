@@ -35,13 +35,19 @@ jest.mock('@openmetadata/ui-core-components', () => {
     <div>{children}</div>
   );
 
-  const DropdownMenu = <T,>({
+  const DropdownMenu = <T extends { id: string }>({
     items,
     children,
   }: {
     items: T[];
     children: (item: T) => ReactNode;
-  }) => <div>{items.map((item) => children(item))}</div>;
+  }) => (
+    <div>
+      {items.map((item) => (
+        <div key={item.id}>{children(item)}</div>
+      ))}
+    </div>
+  );
 
   const DropdownItem = ({
     id,

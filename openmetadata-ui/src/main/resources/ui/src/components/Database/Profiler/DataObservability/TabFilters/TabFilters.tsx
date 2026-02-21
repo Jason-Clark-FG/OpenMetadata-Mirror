@@ -109,21 +109,18 @@ const TabFilters = () => {
     setIsMenuOpen(false);
   };
 
-  const addMenuItems = useMemo(
-    () => [
-      {
-        id: 'test-case',
-        label: t('label.test-case'),
-        onAction: handleTestCaseClick,
-      },
-      {
-        id: 'custom-metric',
-        label: t('label.custom-metric'),
-        onAction: handleCustomMetricClick,
-      },
-    ],
-    [t, handleTestCaseClick, handleCustomMetricClick]
-  );
+  const addMenuItems = [
+    {
+      id: 'test-case',
+      label: t('label.test-case'),
+      onAction: handleTestCaseClick,
+    },
+    {
+      id: 'custom-metric',
+      label: t('label.custom-metric'),
+      onAction: handleCustomMetricClick,
+    },
+  ];
 
   const handleDateRangeChange = (value: DateRangeObject) => {
     const updatedFilter = pick(value, ['startTs', 'endTs', 'key', 'title']);
