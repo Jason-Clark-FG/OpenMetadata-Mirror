@@ -657,10 +657,10 @@ const TagsPage = () => {
       <div className="h-full" data-testid="tags-left-panel">
         <TagsLeftPanelSkeleton loading={isLoading}>
           <div className="p-y-xs" data-testid="data-summary-container">
-            <div className="w-full p-x-sm m-b-sm tw:flex tw:flex-col tw:gap-2">
+            <div className="w-full p-x-sm m-b-sm flex flex-col gap-2">
               {createClassificationPermission && (
                 <UTButton
-                  className="tw:w-full"
+                  className="tw:w-full tw:font-normal shadow-none tw:hover:bg-transparent tw:border tw:border-gray-300 tw:hover:border-brand-600 tw:text-brand-600!"
                   color="secondary"
                   data-testid="add-classification"
                   iconLeading={PlusIcon}
@@ -691,9 +691,9 @@ const TagsPage = () => {
                 <div className="prose">
                   <p
                     className={classNames(
-                      'self-center m-b-0 tag-category tw:truncate tw:text-sm',
+                      'self-center m-b-0 tag-category truncate text-sm',
                       {
-                        'tw:font-bold tw:text-primary':
+                        'tw:font-bold text-primary':
                           currentClassification?.name === category.name,
                       }
                     )}
