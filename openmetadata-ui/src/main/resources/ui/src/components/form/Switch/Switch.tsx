@@ -12,7 +12,6 @@
  */
 import { Toggle } from '@openmetadata/ui-core-components';
 import { FC, memo } from 'react';
-import FormItemLabel from '../../common/FormItemLabel/FormItemLabel';
 import { SwitchProps } from './Switch.interface';
 
 const Switch: FC<SwitchProps> = ({
@@ -27,10 +26,10 @@ const Switch: FC<SwitchProps> = ({
       <Toggle
         isDisabled={disabled}
         isSelected={checked}
+        label={label}
         size={size}
         onChange={onChange}
       />
-      {label && <FormItemLabel label={label} />}
     </div>
   );
 };

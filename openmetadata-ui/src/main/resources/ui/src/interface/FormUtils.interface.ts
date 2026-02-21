@@ -34,7 +34,7 @@ export enum FieldTypes {
   PASSWORD_MUI = 'password_mui',
   FILTER_PATTERN = 'filter_pattern',
   SWITCH = 'switch',
-  SWITCH_MUI = 'switch_mui',
+  UT_SWITCH = 'ut_switch',
   SELECT = 'select',
   SELECT_MUI = 'select_mui',
   UT_DROPDOWN = 'ut_dropdown',
@@ -58,7 +58,7 @@ export enum FieldTypes {
   COVER_IMAGE_UPLOAD_MUI = 'cover_image_upload_mui',
   CRON_EDITOR = 'cron_editor',
   TREE_ASYNC_SELECT_LIST = 'tree_async_select_list',
-  AUTOCOMPLETE_MUI = 'autocomplete_mui',
+  UT_AUTOCOMPLETE = 'ut_autocomplete',
   COMPONENT = 'component',
 }
 

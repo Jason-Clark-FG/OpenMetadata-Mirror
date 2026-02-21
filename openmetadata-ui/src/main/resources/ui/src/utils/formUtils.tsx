@@ -70,7 +70,7 @@ import UserTeamSelectableListSearchInput from '../components/common/UserTeamSele
 import Autocomplete, {
   AutocompleteProps,
 } from '../components/form/Autocomplete';
-import { SwitchProps } from '../components/form/Switch';
+import UTSwitch, { SwitchProps } from '../components/form/Switch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
@@ -497,7 +497,7 @@ export const getField = (field: FieldProp) => {
       );
     }
 
-    case FieldTypes.AUTOCOMPLETE_MUI: {
+    case FieldTypes.UT_AUTOCOMPLETE: {
       return (
         <Form.Item {...formProps}>
           <Autocomplete
@@ -509,10 +509,10 @@ export const getField = (field: FieldProp) => {
       );
     }
 
-    case FieldTypes.SWITCH_MUI: {
+    case FieldTypes.UT_SWITCH: {
       return (
         <Form.Item {...formProps} valuePropName="checked">
-          <Switch label={muiLabel as string} {...(props as SwitchProps)} />
+          <UTSwitch label={muiLabel as string} {...(props as SwitchProps)} />
         </Form.Item>
       );
     }
