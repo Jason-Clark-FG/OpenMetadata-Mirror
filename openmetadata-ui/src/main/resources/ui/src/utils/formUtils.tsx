@@ -50,7 +50,6 @@ import { MUIIconPicker } from '../components/common/IconPicker';
 import { InlineAlertProps } from '../components/common/InlineAlert/InlineAlert.interface';
 import MUIDomainSelect from '../components/common/MUIDomainSelect/MUIDomainSelect';
 import { MUIDomainSelectProps } from '../components/common/MUIDomainSelect/MUIDomainSelect.interface';
-import MUIFormItemLabel from '../components/common/MUIFormItemLabel';
 import MUIGlossaryTagSuggestion from '../components/common/MUIGlossaryTagSuggestion/MUIGlossaryTagSuggestion';
 import MUISelect from '../components/common/MUISelect/MUISelect';
 import MUITagSuggestion from '../components/common/MUITagSuggestion/MUITagSuggestion';
@@ -68,10 +67,10 @@ import { UserSelectableListProps } from '../components/common/UserSelectableList
 import { UserTeamSelectableList } from '../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
 import { UserSelectDropdownProps } from '../components/common/UserTeamSelectableList/UserTeamSelectableList.interface';
 import UserTeamSelectableListSearchInput from '../components/common/UserTeamSelectableListSearchInput/UserTeamSelectableListSearchInput.component';
-import MUIAutocomplete, {
-  MUIAutocompleteProps,
-} from '../components/form/MUIAutocomplete';
-import MUISwitch, { MUISwitchProps } from '../components/form/MUISwitch';
+import Autocomplete, {
+  AutocompleteProps,
+} from '../components/form/Autocomplete';
+import { SwitchProps } from '../components/form/Switch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
@@ -133,14 +132,13 @@ export const getField = (field: FieldProp) => {
 
   // Define MUI label for MUI field types
   const muiLabel = field.muiLabel || (
-    <MUIFormItemLabel
+    <FormItemLabel
       helperText={helperText}
       helperTextType={helperTextType}
       isBeta={isBeta}
       label={label}
       placement={props?.tooltipPlacement as MUITooltipProps['placement']}
       showHelperText={showHelperText}
-      slotProps={props?.slotProps as Partial<MUITooltipProps>}
     />
   );
 
@@ -502,10 +500,10 @@ export const getField = (field: FieldProp) => {
     case FieldTypes.AUTOCOMPLETE_MUI: {
       return (
         <Form.Item {...formProps}>
-          <MUIAutocomplete
+          <Autocomplete
             label={muiLabel as string}
             placeholder={placeholder}
-            {...(props as MUIAutocompleteProps)}
+            {...(props as AutocompleteProps)}
           />
         </Form.Item>
       );
@@ -514,10 +512,7 @@ export const getField = (field: FieldProp) => {
     case FieldTypes.SWITCH_MUI: {
       return (
         <Form.Item {...formProps} valuePropName="checked">
-          <MUISwitch
-            label={muiLabel as string}
-            {...(props as MUISwitchProps)}
-          />
+          <Switch label={muiLabel as string} {...(props as SwitchProps)} />
         </Form.Item>
       );
     }

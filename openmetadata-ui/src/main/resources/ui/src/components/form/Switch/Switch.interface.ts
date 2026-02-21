@@ -10,19 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { AutocompleteProps } from '@mui/material';
-
-export interface MUIAutocompleteProps
-  extends Omit<
-    AutocompleteProps<string, true, false, true>,
-    'renderInput' | 'onChange' | 'value' | 'options'
-  > {
-  value?: string[];
-  onChange?: (value: string[]) => void;
+export interface SwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
   label?: string;
-  placeholder?: string;
-  required?: boolean;
-  options?: string[];
-  dataTestId?: string;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
 }

@@ -10,10 +10,5 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { SwitchProps } from '@mui/material';
-
-export interface MUISwitchProps extends Omit<SwitchProps, 'onChange'> {
-  checked?: boolean;
-  onChange?: (checked: boolean) => void;
-  label?: string;
-}
+export { default } from './Autocomplete';
+export type { AutocompleteProps } from './Autocomplete.interface';

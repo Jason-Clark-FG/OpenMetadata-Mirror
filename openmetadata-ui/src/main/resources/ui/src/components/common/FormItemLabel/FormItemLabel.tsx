@@ -18,7 +18,7 @@ import { FC, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HelperTextType } from '../../../interface/FormUtils.interface';
 
-export interface MUIFormItemLabelProps {
+export interface FormItemLabelProps {
   label: ReactNode;
   helperText?: ReactNode;
   helperTextType?: HelperTextType;
@@ -30,7 +30,7 @@ export interface MUIFormItemLabelProps {
   labelSx?: SxProps<Theme>;
 }
 
-const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
+const FormItemLabel: FC<FormItemLabelProps> = ({
   helperText,
   helperTextType = HelperTextType.Tooltip,
   isBeta = false,
@@ -105,4 +105,4 @@ const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
   );
 };
 
-export default MUIFormItemLabel;
+export default FormItemLabel;
