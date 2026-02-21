@@ -12,8 +12,6 @@
  *  limitations under the License.
  */
 
-import { ThemeProvider } from '@mui/material';
-import { createMuiTheme } from '@openmetadata/ui-core-components';
 import {
   act,
   findAllByTestId,
@@ -59,12 +57,8 @@ jest.mock('react-router-dom', () => ({
     .mockImplementation(({ children, ...rest }) => <a {...rest}>{children}</a>),
 }));
 
-const theme = createMuiTheme();
-
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ThemeProvider theme={theme}>
-    <MemoryRouter>{children}</MemoryRouter>
-  </ThemeProvider>
+  <MemoryRouter>{children}</MemoryRouter>
 );
 
 const mockProps = {
@@ -247,6 +241,44 @@ jest.mock('../../utils/TagsUtils', () => ({
     .mockImplementation(() => <a href="/">Usage Count</a>),
 }));
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Badge: ({
+    children,
+    'data-testid': testId,
+    className,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+    className?: string;
+  }) => (
+    <span className={className} data-testid={testId}>
+      {children}
+    </span>
+  ),
+  Button: ({
+    children,
+    onClick,
+    isDisabled,
+    'data-testid': testId,
+    className,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    isDisabled?: boolean;
+    'data-testid'?: string;
+    className?: string;
+  }) => (
+    <button
+      className={className}
+      data-testid={testId}
+      disabled={isDisabled}
+      onClick={onClick}>
+      {children}
+    </button>
+  ),
+  createMuiTheme: jest.fn().mockReturnValue({}),
+}));
+
 jest.mock('../../components/common/ResizablePanels/ResizableLeftPanels', () =>
   jest.fn().mockImplementation(({ firstPanel, secondPanel }) => (
     <div>
@@ -254,6 +286,26 @@ jest.mock('../../components/common/ResizablePanels/ResizableLeftPanels', () =>
       {secondPanel.children}
     </div>
   ))
+);
+
+jest.mock('./ClassificationFormDrawer', () =>
+  jest.fn().mockImplementation(({ open }) =>
+    open ? (
+      <div data-testid="classification-form-drawer">
+        <input data-testid="name" />
+      </div>
+    ) : null
+  )
+);
+
+jest.mock('./TagFormDrawer', () =>
+  jest.fn().mockImplementation(({ open }) =>
+    open ? (
+      <div data-testid="tag-form-drawer">
+        <input data-testid="name" />
+      </div>
+    ) : null
+  )
 );
 
 jest.mock('../../hoc/withPageLayout', () => ({

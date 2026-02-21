@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Box, Grid, SxProps, Theme } from '@mui/material';
 import { Form } from 'antd';
 import { castArray } from 'lodash';
 import { Suspense, useEffect, useMemo } from 'react';
@@ -46,11 +45,6 @@ import {
 } from './tagFormFields';
 import './TagsForm.less';
 import { RenameFormProps } from './TagsPage.interface';
-
-const LABEL_STYLES: SxProps<Theme> = {
-  color: (theme) => theme.palette.grey[700],
-  fontWeight: (theme) => theme.typography.subtitle2.fontWeight,
-};
 
 const TagsForm = ({
   formRef,
@@ -121,9 +115,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      muiLabel: (
-        <MUIFormItemLabel label={t(field.muiLabel)} labelSx={LABEL_STYLES} />
-      ),
+      muiLabel: <MUIFormItemLabel label={t(field.muiLabel)} />,
       props: {
         ...field.props,
         placeholder: t(field.placeholder),
@@ -134,12 +126,7 @@ const TagsForm = ({
   const colorField = useMemo(
     () => ({
       ...COLOR_FIELD,
-      muiLabel: (
-        <MUIFormItemLabel
-          label={t(COLOR_FIELD.muiLabel)}
-          labelSx={LABEL_STYLES}
-        />
-      ),
+      muiLabel: <MUIFormItemLabel label={t(COLOR_FIELD.muiLabel)} />,
     }),
     [t]
   );
@@ -214,12 +201,7 @@ const TagsForm = ({
     const fields: FieldProp[] = [
       {
         ...descriptionField,
-        label: (
-          <MUIFormItemLabel
-            label={t(descriptionField.label)}
-            labelSx={LABEL_STYLES}
-          />
-        ),
+        label: <MUIFormItemLabel label={t(descriptionField.label)} />,
       },
     ];
 
@@ -308,24 +290,24 @@ const TagsForm = ({
         validateMessages={VALIDATION_MESSAGES}
         onFinish={handleSave}>
         {/* Name and Display Name row */}
-        <Grid container spacing={4}>
-          <Grid size={6}>{getField(nameField)}</Grid>
-          <Grid size={6}>{getField(displayNameField)}</Grid>
-        </Grid>
+        <div className="tw:grid tw:grid-cols-2 tw:gap-4">
+          <div>{getField(nameField)}</div>
+          <div>{getField(displayNameField)}</div>
+        </div>
 
         {/* Icon and Color row */}
         {!isClassification && (
-          <Grid container spacing={2} sx={{ flexWrap: 'nowrap' }}>
-            <Grid>{getField(iconField)}</Grid>
-            <Grid sx={{ ml: 'auto', minWidth: 0 }}>{getField(colorField)}</Grid>
-          </Grid>
+          <div className="tw:flex tw:gap-2">
+            <div>{getField(iconField)}</div>
+            <div className="tw:ml-auto tw:min-w-0">{getField(colorField)}</div>
+          </div>
         )}
 
         {/* Remaining fields */}
         {generateFormFields(formFields)}
-        <Box sx={{ mb: 6 }}>
+        <div className="tw:mb-6">
           {showMutuallyExclusive && getField(mutuallyExclusiveField)}
-        </Box>
+        </div>
 
         {/* Owner and Domain fields */}
         <div className="m-t-xss">{getField(ownerField)}</div>

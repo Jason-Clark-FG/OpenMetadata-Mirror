@@ -11,9 +11,8 @@
  *  limitations under the License.
  */
 
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { Box, Chip, FormLabel, SxProps, Theme, Tooltip } from '@mui/material';
-import { TooltipProps } from '@mui/material/Tooltip';
+import { Badge, Tooltip } from '@openmetadata/ui-core-components';
+import { InfoCircle } from '@untitledui/icons';
 import { FC, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HelperTextType } from '../../../interface/FormUtils.interface';
@@ -23,11 +22,9 @@ export interface MUIFormItemLabelProps {
   helperText?: ReactNode;
   helperTextType?: HelperTextType;
   showHelperText?: boolean;
-  placement?: TooltipProps['placement'];
+  placement?: 'top' | 'bottom' | 'left' | 'right';
   isBeta?: boolean;
   required?: boolean;
-  slotProps?: Partial<TooltipProps>;
-  labelSx?: SxProps<Theme>;
 }
 
 const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
@@ -35,73 +32,42 @@ const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
   helperTextType = HelperTextType.Tooltip,
   isBeta = false,
   label,
-  labelSx,
   placement = 'top',
   required = false,
   showHelperText = true,
-  slotProps,
 }) => {
   const { t } = useTranslation();
 
   return (
-    <Box alignItems="center" display="inline-flex" gap={0.5}>
-      <FormLabel
-        component="span"
-        data-testid="mui-form-item-label"
-        required={required}
-        sx={{
-          fontSize: (theme) => theme.typography.body2.fontSize,
-          ...labelSx,
-        }}>
+    <div className="tw:inline-flex tw:items-center tw:gap-1">
+      <label data-testid="mui-form-item-label">
         {label}
-      </FormLabel>
+        {required && <span aria-hidden="true"> *</span>}
+      </label>
       {helperTextType === HelperTextType.Tooltip &&
         helperText &&
         showHelperText && (
-          <Box>
-            <Tooltip
-              arrow
-              placement={placement || 'top'}
-              slotProps={slotProps}
-              title={helperText || ''}>
-              <Box
-                component="span"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'help',
-                  lineHeight: 0,
-                  pointerEvents: 'auto',
-                }}>
-                <InfoOutlinedIcon
-                  data-testid="mui-helper-icon"
-                  sx={{
-                    fontSize: 16,
-                    color: 'text.secondary',
-                    pointerEvents: 'auto',
-                  }}
-                />
-              </Box>
-            </Tooltip>
-          </Box>
+          <Tooltip placement={placement} title={helperText}>
+            <button
+              className="tw:flex tw:items-center tw:leading-none tw:cursor-help"
+              type="button">
+              <InfoCircle
+                className="tw:size-4 tw:text-secondary"
+                data-testid="mui-helper-icon"
+              />
+            </button>
+          </Tooltip>
         )}
       {isBeta && (
-        <Chip
-          color="primary"
+        <Badge
+          color="brand"
           data-testid="mui-beta-badge"
-          label={t('label.beta')}
-          size="small"
-          sx={{
-            height: 20,
-            fontSize: '0.75rem',
-            '& .MuiChip-label': {
-              px: 1,
-              py: 0,
-            },
-          }}
-        />
+          size="sm"
+          type="pill-color">
+          {t('label.beta')}
+        </Badge>
       )}
-    </Box>
+    </div>
   );
 };
 
