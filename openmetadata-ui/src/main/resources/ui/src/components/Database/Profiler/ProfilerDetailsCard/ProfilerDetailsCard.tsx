@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { defaultColors, Typography } from '@openmetadata/ui-core-components';
 import React, { Fragment, useMemo, useState } from 'react';
 import {
   Area,
@@ -80,9 +79,9 @@ const ProfilerDetailsCard: React.FC<ProfilerDetailsCardProps> = ({
   return (
     <div>
       {title && (
-        <Typography className="tw:mb-3">
+        <div className="tw:mb-3">
           <p className="tw:m-0 tw:text-md tw:font-semibold">{title}</p>
-        </Typography>
+        </div>
       )}
       <div
         className="tw:rounded-[10px] tw:border tw:border-border-secondary tw:p-4 tw:shadow-none"
@@ -140,7 +139,7 @@ const ProfilerDetailsCard: React.FC<ProfilerDetailsCardProps> = ({
                     />
                   }
                   cursor={{
-                    stroke: defaultColors.gray[200],
+                    stroke: GRAPH_BACKGROUND_COLOR,
                     strokeDasharray: '3 3',
                   }}
                 />
