@@ -13,11 +13,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import Switch from './Switch';
 
-jest.mock('../../common/FormItemLabel/FormItemLabel', () => ({
-  __esModule: true,
-  default: ({ label }: { label: React.ReactNode }) => <span>{label}</span>,
-}));
-
 jest.mock('@openmetadata/ui-core-components', () => ({
   Toggle: ({
     isSelected,
