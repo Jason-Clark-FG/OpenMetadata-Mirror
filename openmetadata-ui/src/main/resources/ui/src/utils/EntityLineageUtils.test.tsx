@@ -28,7 +28,6 @@ import {
   getAllTracedEdges,
   getColumnFunctionValue,
   getColumnLineageData,
-  getColumnSourceTargetHandles,
   getConnectedNodesEdges,
   getEntityChildrenAndLabel,
   getLineageDetailsObject,
@@ -484,47 +483,6 @@ describe('Test EntityLineageUtils utility', () => {
     ]);
   });
 
-  // generate test for getColumnSourceTargetHandles
-  describe('getColumnSourceTargetHandles', () => {
-    it('should handle various states of source and target handles correctly', () => {
-      // Test with both handles defined
-      const obj1 = {
-        sourceHandle: 'c291cmNlSGFuZGxl',
-        targetHandle: 'dGFyZ2V0SGFuZGxl',
-      };
-      const result1 = getColumnSourceTargetHandles(obj1);
-
-      expect(result1).toEqual({
-        sourceHandle: 'sourceHandle',
-        targetHandle: 'targetHandle',
-      });
-
-      // Test with null source handle
-      const obj2 = {
-        sourceHandle: null,
-        targetHandle: 'dGFyZ2V0SGFuZGxl',
-      };
-      const result2 = getColumnSourceTargetHandles(obj2);
-
-      expect(result2).toEqual({
-        sourceHandle: null,
-        targetHandle: 'targetHandle',
-      });
-
-      // Test with null target handle
-      const obj3 = {
-        sourceHandle: 'c291cmNlSGFuZGxl',
-        targetHandle: null,
-      };
-      const result3 = getColumnSourceTargetHandles(obj3);
-
-      expect(result3).toEqual({
-        sourceHandle: 'sourceHandle',
-        targetHandle: null,
-      });
-    });
-  });
-
   describe('createNewEdge', () => {
     it('should create a new edge with the correct properties', () => {
       const edge = {
@@ -667,8 +625,6 @@ describe('Test EntityLineageUtils utility', () => {
       expect(result).toEqual({
         children: [],
         childrenHeading: '',
-        childrenHeight: 0,
-        childrenFlatten: [],
       });
     });
 
@@ -681,8 +637,6 @@ describe('Test EntityLineageUtils utility', () => {
       expect(result).toEqual({
         children: [],
         childrenHeading: '',
-        childrenHeight: 0,
-        childrenFlatten: [],
       });
     });
 
@@ -696,8 +650,6 @@ describe('Test EntityLineageUtils utility', () => {
       expect(result).toEqual({
         children: [],
         childrenHeading: 'label.column-plural',
-        childrenHeight: 0,
-        childrenFlatten: [],
       });
     });
 
@@ -714,8 +666,6 @@ describe('Test EntityLineageUtils utility', () => {
       };
       const result = getEntityChildrenAndLabel(node as any);
 
-      expect(result.childrenHeight).toBeGreaterThan(0);
-      expect(result.childrenFlatten.length).toBeGreaterThan(0);
       expect(result.childrenHeading).toEqual('label.column-plural');
     });
   });

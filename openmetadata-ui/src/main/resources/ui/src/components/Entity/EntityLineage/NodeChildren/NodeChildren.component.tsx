@@ -19,7 +19,6 @@ import { useTranslation } from 'react-i18next';
 import { BORDER_COLOR } from '../../../../constants/constants';
 import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../../constants/Lineage.constants';
 import { EntityType } from '../../../../enums/entity.enum';
-import { LineageLayer } from '../../../../generated/settings/settings';
 import {
   EntityReference,
   TestSummary,
@@ -38,30 +37,24 @@ const NodeChildren = ({
   isOnlyShowColumnsWithLineageFilterActive,
 }: NodeChildrenProps) => {
   const { t } = useTranslation();
-  const { activeLayer, columnsHavingLineage, selectedColumn, isCreatingEdge } =
-    useLineageStore();
+  const {
+    isColumnLevelLineage,
+    isDQEnabled,
+    columnsHavingLineage,
+    selectedColumn,
+    isCreatingEdge,
+  } = useLineageStore();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<EntityChildren>([]);
   const [summary, setSummary] = useState<TestSummary>();
   const [isLoading, setIsLoading] = useState(true);
 
-  const { isColumnLayerEnabled, showDataObservability } = useMemo(() => {
-    return {
-      isColumnLayerEnabled: activeLayer.includes(
-        LineageLayer.ColumnLevelLineage
-      ),
-      showDataObservability: activeLayer.includes(
-        LineageLayer.DataObservability
-      ),
-    };
-  }, [activeLayer]);
-
   const showDataObservabilitySummary = useMemo(() => {
     return Boolean(
-      showDataObservability && entityType === EntityType.TABLE && node.testSuite
+      isDQEnabled && entityType === EntityType.TABLE && node.testSuite
     );
-  }, [node, showDataObservability, entityType]);
+  }, [node, isDQEnabled, entityType]);
 
   const supportsColumns = useMemo(() => {
     return (
@@ -114,16 +107,26 @@ const NodeChildren = ({
 
   useEffect(() => {
     if (!isEmpty(entityChildren)) {
-      if (isOnlyShowColumnsWithLineageFilterActive) {
-        setFilteredColumns(currentNodeColumnsWithLineage);
+      if (
+        isOnlyShowColumnsWithLineageFilterActive &&
+        (columnsHavingLineage.get(node.id)?.size ?? 0) > 0
+      ) {
+        const columnsWithLineage = entityChildren.filter((column) =>
+          columnsHavingLineage
+            .get(node.id)
+            ?.has(column.fullyQualifiedName ?? '')
+        );
+
+        setFilteredColumns(columnsWithLineage);
       } else {
         setFilteredColumns(entityChildren);
       }
     }
   }, [
     entityChildren,
-    currentNodeColumnsWithLineage,
     isOnlyShowColumnsWithLineageFilterActive,
+    columnsHavingLineage,
+    node.id,
   ]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {
@@ -147,47 +150,49 @@ const NodeChildren = ({
     }
   }, [node, showDataObservabilitySummary, summary]);
 
+  // No need to render if there's no children
+  if (entityChildren.length === 0) {
+    return null;
+  }
+
   if (
     supportsColumns &&
-    (isColumnLayerEnabled || showDataObservability || isChildrenListExpanded)
+    (isColumnLevelLineage || isDQEnabled || isChildrenListExpanded)
   ) {
     return (
-      isChildrenListExpanded &&
-      !isEmpty(entityChildren) && (
-        <div
-          className={classNames(
-            'column-container',
-            selectedColumn && 'any-column-selected',
-            isCreatingEdge && 'creating-edge'
-          )}
-          data-testid="column-container">
-          <div className="search-box">
-            <Input
-              data-testid="search-column-input"
-              placeholder={t('label.search-entity', {
-                entity: childrenHeading,
-              })}
-              suffix={<SearchOutlined color={BORDER_COLOR} />}
-              value={searchValue}
-              onChange={handleSearchChange}
-              onClick={(e) => e.stopPropagation()}
-            />
+      <div
+        className={classNames(
+          'column-container',
+          selectedColumn && 'any-column-selected',
+          isCreatingEdge && 'creating-edge'
+        )}
+        data-testid="column-container">
+        <div className="search-box">
+          <Input
+            data-testid="search-column-input"
+            placeholder={t('label.search-entity', {
+              entity: childrenHeading,
+            })}
+            suffix={<SearchOutlined color={BORDER_COLOR} />}
+            value={searchValue}
+            onChange={handleSearchChange}
+            onClick={(e) => e.stopPropagation()}
+          />
 
-            <section className="m-t-md" id="table-columns">
-              <div className="rounded-4 overflow-hidden">
-                <VirtualColumnList
-                  flatItems={filteredColumns}
-                  isConnectable={isConnectable}
-                  isLoading={isLoading}
-                  nodeId={node.id}
-                  showDataObservabilitySummary={showDataObservabilitySummary}
-                  summary={summary}
-                />
-              </div>
-            </section>
-          </div>
+          <section className="m-t-md" id="table-columns">
+            <div className="rounded-4 overflow-hidden">
+              <VirtualColumnList
+                flatItems={filteredColumns}
+                isConnectable={isConnectable}
+                isLoading={isLoading}
+                nodeId={node.id}
+                showDataObservabilitySummary={showDataObservabilitySummary}
+                summary={summary}
+              />
+            </div>
+          </section>
         </div>
-      )
+      </div>
     );
   } else {
     return null;

@@ -27,14 +27,10 @@ class ELKLayout {
 
   static getElk() {
     if (!this.elk) {
-      if (process.env.NODE_ENV === 'test') {
-        this.elk = new ELKGraph();
-      } else {
-        this.elk = new ELKGraph({
-          workerFactory: () =>
-            new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
-        });
-      }
+      this.elk = new ELKGraph({
+        workerFactory: () =>
+          new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
+      });
     }
 
     return this.elk;

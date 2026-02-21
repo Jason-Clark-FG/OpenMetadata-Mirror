@@ -326,7 +326,6 @@ const CustomNodeV1 = (props: NodeProps) => {
     );
   }, [
     columnsExpanded,
-
     isConnectable,
     showColumnsWithLineageOnly,
     node,
