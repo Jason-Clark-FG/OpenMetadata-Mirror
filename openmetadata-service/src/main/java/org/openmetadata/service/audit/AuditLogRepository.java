@@ -6,6 +6,7 @@ import static org.openmetadata.service.formatter.field.DefaultFieldFormatter.get
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.type.ChangeDescription;
@@ -18,6 +19,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.resources.databases.DatasourceConfig;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
 
@@ -98,6 +100,7 @@ public class AuditLogRepository {
               .entityFQN(entityFqn)
               .entityFQNHash(entityFqnHash)
               .eventJson(JsonUtils.pojoToJson(changeEvent))
+              .searchText(buildSearchText(changeEvent))
               .createdAt(System.currentTimeMillis())
               .build();
       LOG.debug(
@@ -167,6 +170,58 @@ public class AuditLogRepository {
     return parts.length > 0 ? parts[0] : null;
   }
 
+  private static final int MAX_SEARCH_TEXT_LENGTH = 2000;
+
+  private String buildSearchText(ChangeEvent changeEvent) {
+    try {
+      StringJoiner joiner = new StringJoiner(" ");
+      addIfNotEmpty(joiner, changeEvent.getUserName());
+      addIfNotEmpty(joiner, changeEvent.getEntityType());
+      addIfNotEmpty(joiner, changeEvent.getEntityFullyQualifiedName());
+      addIfNotEmpty(joiner, extractServiceName(changeEvent.getEntityFullyQualifiedName()));
+      if (changeEvent.getEventType() != null) {
+        addIfNotEmpty(joiner, changeEvent.getEventType().value());
+      }
+      ChangeDescription desc = changeEvent.getChangeDescription();
+      if (desc != null) {
+        appendFieldChanges(joiner, desc.getFieldsAdded());
+        appendFieldChanges(joiner, desc.getFieldsUpdated());
+        appendFieldChanges(joiner, desc.getFieldsDeleted());
+      }
+      String text = joiner.toString();
+      if (text.length() > MAX_SEARCH_TEXT_LENGTH) {
+        text = text.substring(0, MAX_SEARCH_TEXT_LENGTH);
+      }
+      return text.isEmpty() ? null : text.toLowerCase();
+    } catch (Exception ex) {
+      LOG.debug("Failed to build search text for change event {}", changeEvent.getId(), ex);
+      return null;
+    }
+  }
+
+  private void appendFieldChanges(StringJoiner joiner, List<FieldChange> fields) {
+    if (fields == null) {
+      return;
+    }
+    for (FieldChange field : fields) {
+      addIfNotEmpty(joiner, field.getName());
+      String value = getFieldValue(field.getNewValue());
+      if (!nullOrEmpty(value) && value.length() <= 200) {
+        joiner.add(value);
+      }
+      String oldVal = getFieldValue(field.getOldValue());
+      if (!nullOrEmpty(oldVal) && oldVal.length() <= 200) {
+        joiner.add(oldVal);
+      }
+    }
+  }
+
+  private void addIfNotEmpty(StringJoiner joiner, String value) {
+    if (!nullOrEmpty(value)) {
+      joiner.add(value);
+    }
+  }
+
   private UUID parseUuid(String value) {
     if (nullOrEmpty(value)) {
       return null;
@@ -214,7 +269,6 @@ public class AuditLogRepository {
     // Get total count for progress reporting
     String baseCondition = buildBaseCondition(searchTerm);
     String entityFqnHash = null;
-    String searchPattern = nullOrEmpty(searchTerm) ? null : "%" + searchTerm.toLowerCase() + "%";
     int estimatedTotal =
         auditLogDAO.count(
             baseCondition,
@@ -227,7 +281,7 @@ public class AuditLogRepository {
             eventType,
             startTs,
             endTs,
-            searchPattern);
+            searchTerm);
     int actualTotal = Math.min(estimatedTotal, totalLimit);
 
     // Send initial progress
@@ -337,8 +391,6 @@ public class AuditLogRepository {
 
     String baseCondition = buildBaseCondition(searchTerm);
     String entityFqnHash = nullOrEmpty(entityFqn) ? null : FullyQualifiedName.buildHash(entityFqn);
-    // Lowercase the search pattern for case-insensitive matching (works with LOWER() in SQL)
-    String searchPattern = nullOrEmpty(searchTerm) ? null : "%" + searchTerm.toLowerCase() + "%";
 
     List<AuditLogRecord> records;
     boolean isBackward = beforeCursor != null;
@@ -361,7 +413,7 @@ public class AuditLogRepository {
               eventType,
               startTs,
               endTs,
-              searchPattern,
+              searchTerm,
               beforeCursor.eventTs(),
               beforeCursor.id(),
               limit + 1);
@@ -387,7 +439,7 @@ public class AuditLogRepository {
               eventType,
               startTs,
               endTs,
-              searchPattern,
+              searchTerm,
               afterCursor != null ? afterCursor.eventTs() : null,
               afterCursor != null ? afterCursor.id() : null,
               limit + 1);
@@ -404,24 +456,19 @@ public class AuditLogRepository {
       }
     }
 
-    // Skip the expensive COUNT query when a search term is present since it would
-    // repeat the same unindexed LIKE scan. The UI can rely on cursor-based hasMore.
-    int total = 0;
-    if (nullOrEmpty(searchTerm)) {
-      total =
-          auditLogDAO.count(
-              baseCondition,
-              userName,
-              actorType,
-              serviceName,
-              entityType,
-              entityFqn,
-              entityFqnHash,
-              eventType,
-              startTs,
-              endTs,
-              searchPattern);
-    }
+    int total =
+        auditLogDAO.count(
+            baseCondition,
+            userName,
+            actorType,
+            serviceName,
+            entityType,
+            entityFqn,
+            entityFqnHash,
+            eventType,
+            startTs,
+            endTs,
+            searchTerm);
 
     List<AuditLogEntry> resultEntries = records.stream().map(this::toAuditLogEntry).toList();
 
@@ -661,12 +708,12 @@ public class AuditLogRepository {
                 + "AND (:endTs IS NULL OR event_ts <= :endTs)");
 
     if (!nullOrEmpty(searchTerm)) {
-      condition.append(
-          " AND (:searchPattern IS NULL OR "
-              + "user_name LIKE :searchPattern OR "
-              + "entity_fqn LIKE :searchPattern OR "
-              + "service_name LIKE :searchPattern OR "
-              + "entity_type LIKE :searchPattern)");
+      if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
+        condition.append(" AND (MATCH(search_text) AGAINST(:searchTerm IN BOOLEAN MODE))");
+      } else {
+        condition.append(
+            " AND (to_tsvector('english', coalesce(search_text, '')) @@ plainto_tsquery('english', :searchTerm))");
+      }
     }
     return condition.toString();
   }
