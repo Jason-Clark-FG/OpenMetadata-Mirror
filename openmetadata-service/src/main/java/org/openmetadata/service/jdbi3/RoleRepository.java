@@ -261,10 +261,12 @@ public class RoleRepository extends EntityRepository<Role> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("policies")) {
-        updatePolicies(listOrEmpty(original.getPolicies()), listOrEmpty(updated.getPolicies()));
-        SubjectCache.invalidateAll();
-      }
+      compareAndUpdate(
+          "policies",
+          () -> {
+            updatePolicies(listOrEmpty(original.getPolicies()), listOrEmpty(updated.getPolicies()));
+            SubjectCache.invalidateAll();
+          });
     }
 
     private void updatePolicies(

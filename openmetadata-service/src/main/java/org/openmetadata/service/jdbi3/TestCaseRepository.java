@@ -1235,63 +1235,94 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("entity")) {
-        EntityLink origEntityLink = EntityLink.parse(original.getEntityLink());
-        EntityReference origTableRef = EntityUtil.validateEntityLink(origEntityLink);
+      compareAndUpdate(
+          "entity",
+          () -> {
+            EntityLink origEntityLink = EntityLink.parse(original.getEntityLink());
+            EntityReference origTableRef = EntityUtil.validateEntityLink(origEntityLink);
 
-        EntityLink updatedEntityLink = EntityLink.parse(updated.getEntityLink());
-        EntityReference updatedTableRef = EntityUtil.validateEntityLink(updatedEntityLink);
+            EntityLink updatedEntityLink = EntityLink.parse(updated.getEntityLink());
+            EntityReference updatedTableRef = EntityUtil.validateEntityLink(updatedEntityLink);
 
-        updateFromRelationship(
-            "entity",
-            updatedTableRef.getType(),
-            origTableRef,
-            updatedTableRef,
-            Relationship.CONTAINS,
-            TEST_CASE,
-            updated.getId());
-      }
-      if (shouldCompare(TEST_SUITE_FIELD))
-        updateFromRelationship(
-            TEST_SUITE_FIELD,
-            TEST_SUITE,
-            original.getTestSuite(),
-            updated.getTestSuite(),
-            Relationship.HAS,
-            TEST_CASE,
-            updated.getId());
-      if (shouldCompare(TEST_DEFINITION))
-        updateFromRelationship(
-            TEST_DEFINITION,
-            TEST_DEFINITION,
-            original.getTestDefinition(),
-            updated.getTestDefinition(),
-            Relationship.CONTAINS,
-            TEST_CASE,
-            updated.getId());
-      if (shouldCompare("parameterValues"))
-        recordChange(
-            "parameterValues", original.getParameterValues(), updated.getParameterValues());
-      if (shouldCompare("inspectionQuery"))
-        recordChange(
-            "inspectionQuery", original.getInspectionQuery(), updated.getInspectionQuery());
-      if (shouldCompare("computePassedFailedRowCount"))
-        recordChange(
-            "computePassedFailedRowCount",
-            original.getComputePassedFailedRowCount(),
-            updated.getComputePassedFailedRowCount());
-      if (shouldCompare("useDynamicAssertion"))
-        recordChange(
-            "useDynamicAssertion",
-            original.getUseDynamicAssertion(),
-            updated.getUseDynamicAssertion());
-      if (shouldCompare("dimensionColumns"))
-        recordChange(
-            "dimensionColumns", original.getDimensionColumns(), updated.getDimensionColumns());
-      if (shouldCompare("testCaseStatus"))
-        recordChange("testCaseStatus", original.getTestCaseStatus(), updated.getTestCaseStatus());
-      if (shouldCompare("testCaseResult"))
-        recordChange("testCaseResult", original.getTestCaseResult(), updated.getTestCaseResult());
+            updateFromRelationship(
+                "entity",
+                updatedTableRef.getType(),
+                origTableRef,
+                updatedTableRef,
+                Relationship.CONTAINS,
+                TEST_CASE,
+                updated.getId());
+          });
+      compareAndUpdate(
+          TEST_SUITE_FIELD,
+          () -> {
+            updateFromRelationship(
+                TEST_SUITE_FIELD,
+                TEST_SUITE,
+                original.getTestSuite(),
+                updated.getTestSuite(),
+                Relationship.HAS,
+                TEST_CASE,
+                updated.getId());
+          });
+      compareAndUpdate(
+          TEST_DEFINITION,
+          () -> {
+            updateFromRelationship(
+                TEST_DEFINITION,
+                TEST_DEFINITION,
+                original.getTestDefinition(),
+                updated.getTestDefinition(),
+                Relationship.CONTAINS,
+                TEST_CASE,
+                updated.getId());
+          });
+      compareAndUpdate(
+          "parameterValues",
+          () -> {
+            recordChange(
+                "parameterValues", original.getParameterValues(), updated.getParameterValues());
+          });
+      compareAndUpdate(
+          "inspectionQuery",
+          () -> {
+            recordChange(
+                "inspectionQuery", original.getInspectionQuery(), updated.getInspectionQuery());
+          });
+      compareAndUpdate(
+          "computePassedFailedRowCount",
+          () -> {
+            recordChange(
+                "computePassedFailedRowCount",
+                original.getComputePassedFailedRowCount(),
+                updated.getComputePassedFailedRowCount());
+          });
+      compareAndUpdate(
+          "useDynamicAssertion",
+          () -> {
+            recordChange(
+                "useDynamicAssertion",
+                original.getUseDynamicAssertion(),
+                updated.getUseDynamicAssertion());
+          });
+      compareAndUpdate(
+          "dimensionColumns",
+          () -> {
+            recordChange(
+                "dimensionColumns", original.getDimensionColumns(), updated.getDimensionColumns());
+          });
+      compareAndUpdate(
+          "testCaseStatus",
+          () -> {
+            recordChange(
+                "testCaseStatus", original.getTestCaseStatus(), updated.getTestCaseStatus());
+          });
+      compareAndUpdate(
+          "testCaseResult",
+          () -> {
+            recordChange(
+                "testCaseResult", original.getTestCaseResult(), updated.getTestCaseResult());
+          });
     }
   }
 

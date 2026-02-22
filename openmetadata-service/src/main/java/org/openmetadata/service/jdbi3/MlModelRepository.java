@@ -492,23 +492,57 @@ public class MlModelRepository extends EntityRepository<MlModel> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("algorithm")) updateAlgorithm(original, updated);
-      if (shouldCompare("dashboard")) updateDashboard(original, updated);
-      if (shouldCompare("mlFeatures")) updateMlFeatures(original, updated);
-      if (shouldCompare("mlHyperParameters")) updateMlHyperParameters(original, updated);
-      if (shouldCompare("mlStore")) updateMlStore(original, updated);
-      if (shouldCompare("server")) updateServer(original, updated);
-      if (shouldCompare("target")) updateTarget(original, updated);
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "algorithm",
+          () -> {
+            updateAlgorithm(original, updated);
+          });
+      compareAndUpdate(
+          "dashboard",
+          () -> {
+            updateDashboard(original, updated);
+          });
+      compareAndUpdate(
+          "mlFeatures",
+          () -> {
+            updateMlFeatures(original, updated);
+          });
+      compareAndUpdate(
+          "mlHyperParameters",
+          () -> {
+            updateMlHyperParameters(original, updated);
+          });
+      compareAndUpdate(
+          "mlStore",
+          () -> {
+            updateMlStore(original, updated);
+          });
+      compareAndUpdate(
+          "server",
+          () -> {
+            updateServer(original, updated);
+          });
+      compareAndUpdate(
+          "target",
+          () -> {
+            updateTarget(original, updated);
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateAlgorithm(MlModel origModel, MlModel updatedModel) {

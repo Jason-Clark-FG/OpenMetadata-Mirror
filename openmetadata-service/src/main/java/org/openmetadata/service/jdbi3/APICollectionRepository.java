@@ -269,15 +269,17 @@ public class APICollectionRepository extends EntityRepository<APICollection> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("sourceHash")) {
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      }
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
   }
 }

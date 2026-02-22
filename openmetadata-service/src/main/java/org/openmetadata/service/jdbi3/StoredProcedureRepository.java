@@ -251,38 +251,50 @@ public class StoredProcedureRepository extends EntityRepository<StoredProcedure>
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("storedProcedureCode")) {
-        // storedProcedureCode is a required field. Cannot be null.
-        if (updated.getStoredProcedureCode() != null) {
-          recordChange(
-              "storedProcedureCode",
-              original.getStoredProcedureCode(),
-              updated.getStoredProcedureCode());
-        }
-      }
-      if (shouldCompare("storedProcedureType")) {
-        if (updated.getStoredProcedureType() != null) {
-          recordChange(
-              "storedProcedureType",
-              original.getStoredProcedureType(),
-              updated.getStoredProcedureType());
-        }
-      }
-      if (shouldCompare("processedLineage")) {
-        updateProcessedLineage(original, updated);
-        recordChange(
-            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
-      }
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "storedProcedureCode",
+          () -> {
+            // storedProcedureCode is a required field. Cannot be null.
+            if (updated.getStoredProcedureCode() != null) {
+              recordChange(
+                  "storedProcedureCode",
+                  original.getStoredProcedureCode(),
+                  updated.getStoredProcedureCode());
+            }
+          });
+      compareAndUpdate(
+          "storedProcedureType",
+          () -> {
+            if (updated.getStoredProcedureType() != null) {
+              recordChange(
+                  "storedProcedureType",
+                  original.getStoredProcedureType(),
+                  updated.getStoredProcedureType());
+            }
+          });
+      compareAndUpdate(
+          "processedLineage",
+          () -> {
+            updateProcessedLineage(original, updated);
+            recordChange(
+                "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateProcessedLineage(StoredProcedure origSP, StoredProcedure updatedSP) {

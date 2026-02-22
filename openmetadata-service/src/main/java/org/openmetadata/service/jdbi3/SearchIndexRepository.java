@@ -568,30 +568,41 @@ public class SearchIndexRepository extends EntityRepository<SearchIndex> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("fields")) {
-        if (updated.getFields() != null) {
-          updateSearchIndexFields(
-              "fields",
-              original.getFields() == null ? null : original.getFields(),
-              updated.getFields(),
-              EntityUtil.searchIndexFieldMatch);
-        }
-      }
-      if (shouldCompare("searchIndexSettings"))
-        recordChange(
-            "searchIndexSettings",
-            original.getSearchIndexSettings(),
-            updated.getSearchIndexSettings());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      if (shouldCompare("indexType"))
-        recordChange("indexType", original.getIndexType(), updated.getIndexType());
+      compareAndUpdate(
+          "fields",
+          () -> {
+            if (updated.getFields() != null) {
+              updateSearchIndexFields(
+                  "fields",
+                  original.getFields() == null ? null : original.getFields(),
+                  updated.getFields(),
+                  EntityUtil.searchIndexFieldMatch);
+            }
+          });
+      compareAndUpdate(
+          "searchIndexSettings",
+          () -> {
+            recordChange(
+                "searchIndexSettings",
+                original.getSearchIndexSettings(),
+                updated.getSearchIndexSettings());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "indexType",
+          () -> {
+            recordChange("indexType", original.getIndexType(), updated.getIndexType());
+          });
     }
 
     private void updateSearchIndexFields(

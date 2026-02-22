@@ -613,65 +613,99 @@ public class TopicRepository extends EntityRepository<Topic> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("maximumMessageSize"))
-        recordChange(
-            "maximumMessageSize",
-            original.getMaximumMessageSize(),
-            updated.getMaximumMessageSize());
-      if (shouldCompare("minimumInSyncReplicas"))
-        recordChange(
-            "minimumInSyncReplicas",
-            original.getMinimumInSyncReplicas(),
-            updated.getMinimumInSyncReplicas());
-      if (shouldCompare("partitions")) {
-        // Partitions is a required field. Cannot be null.
-        if (updated.getPartitions() != null) {
-          recordChange("partitions", original.getPartitions(), updated.getPartitions());
-        }
-      }
-      if (shouldCompare("replicationFactor"))
-        recordChange(
-            "replicationFactor", original.getReplicationFactor(), updated.getReplicationFactor());
-      if (shouldCompare("retentionTime"))
-        recordChange("retentionTime", original.getRetentionTime(), updated.getRetentionTime());
-      if (shouldCompare("retentionSize"))
-        recordChange("retentionSize", original.getRetentionSize(), updated.getRetentionSize());
-      if (shouldCompare("messageSchema")) {
-        if (updated.getMessageSchema() != null) {
-          recordChange(
-              "messageSchema.schemaText",
-              original.getMessageSchema() == null
-                  ? null
-                  : original.getMessageSchema().getSchemaText(),
-              updated.getMessageSchema().getSchemaText());
-          recordChange(
-              "messageSchema.schemaType",
-              original.getMessageSchema() == null
-                  ? null
-                  : original.getMessageSchema().getSchemaType(),
-              updated.getMessageSchema().getSchemaType());
-          updateSchemaFields(
-              "messageSchema.schemaFields",
-              original.getMessageSchema() == null
-                  ? new ArrayList<>()
-                  : listOrEmpty(original.getMessageSchema().getSchemaFields()),
-              listOrEmpty(updated.getMessageSchema().getSchemaFields()),
-              EntityUtil.schemaFieldMatch);
-        }
-      }
-      if (shouldCompare("topicConfig"))
-        recordChange("topicConfig", original.getTopicConfig(), updated.getTopicConfig());
-      if (shouldCompare("cleanupPolicies")) updateCleanupPolicies(original, updated);
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "maximumMessageSize",
+          () -> {
+            recordChange(
+                "maximumMessageSize",
+                original.getMaximumMessageSize(),
+                updated.getMaximumMessageSize());
+          });
+      compareAndUpdate(
+          "minimumInSyncReplicas",
+          () -> {
+            recordChange(
+                "minimumInSyncReplicas",
+                original.getMinimumInSyncReplicas(),
+                updated.getMinimumInSyncReplicas());
+          });
+      compareAndUpdate(
+          "partitions",
+          () -> {
+            // Partitions is a required field. Cannot be null.
+            if (updated.getPartitions() != null) {
+              recordChange("partitions", original.getPartitions(), updated.getPartitions());
+            }
+          });
+      compareAndUpdate(
+          "replicationFactor",
+          () -> {
+            recordChange(
+                "replicationFactor",
+                original.getReplicationFactor(),
+                updated.getReplicationFactor());
+          });
+      compareAndUpdate(
+          "retentionTime",
+          () -> {
+            recordChange("retentionTime", original.getRetentionTime(), updated.getRetentionTime());
+          });
+      compareAndUpdate(
+          "retentionSize",
+          () -> {
+            recordChange("retentionSize", original.getRetentionSize(), updated.getRetentionSize());
+          });
+      compareAndUpdate(
+          "messageSchema",
+          () -> {
+            if (updated.getMessageSchema() != null) {
+              recordChange(
+                  "messageSchema.schemaText",
+                  original.getMessageSchema() == null
+                      ? null
+                      : original.getMessageSchema().getSchemaText(),
+                  updated.getMessageSchema().getSchemaText());
+              recordChange(
+                  "messageSchema.schemaType",
+                  original.getMessageSchema() == null
+                      ? null
+                      : original.getMessageSchema().getSchemaType(),
+                  updated.getMessageSchema().getSchemaType());
+              updateSchemaFields(
+                  "messageSchema.schemaFields",
+                  original.getMessageSchema() == null
+                      ? new ArrayList<>()
+                      : listOrEmpty(original.getMessageSchema().getSchemaFields()),
+                  listOrEmpty(updated.getMessageSchema().getSchemaFields()),
+                  EntityUtil.schemaFieldMatch);
+            }
+          });
+      compareAndUpdate(
+          "topicConfig",
+          () -> {
+            recordChange("topicConfig", original.getTopicConfig(), updated.getTopicConfig());
+          });
+      compareAndUpdate(
+          "cleanupPolicies",
+          () -> {
+            updateCleanupPolicies(original, updated);
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateCleanupPolicies(Topic original, Topic updated) {

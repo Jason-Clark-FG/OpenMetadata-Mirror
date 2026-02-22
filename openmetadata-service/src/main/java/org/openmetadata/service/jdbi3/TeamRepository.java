@@ -58,6 +58,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVPrinter;
@@ -1236,33 +1237,60 @@ public class TeamRepository extends EntityRepository<Team> {
           throw new IllegalArgumentException(INVALID_GROUP_TEAM_CHILDREN_UPDATE);
         }
       }
-      if (shouldCompare("profile"))
-        recordChange("profile", original.getProfile(), updated.getProfile(), true);
-      if (shouldCompare("isJoinable"))
-        recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable());
-      if (shouldCompare("teamType"))
-        recordChange("teamType", original.getTeamType(), updated.getTeamType());
+      compareAndUpdate(
+          "profile",
+          () -> {
+            recordChange("profile", original.getProfile(), updated.getProfile(), true);
+          });
+      compareAndUpdate(
+          "isJoinable",
+          () -> {
+            recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable());
+          });
+      compareAndUpdate(
+          "teamType",
+          () -> {
+            recordChange("teamType", original.getTeamType(), updated.getTeamType());
+          });
       // If the team is empty then email should be null, not be empty
       if (CommonUtil.nullOrEmpty(updated.getEmail())) {
         updated.setEmail(null);
       }
-      if (shouldCompare("email")) recordChange("email", original.getEmail(), updated.getEmail());
-      if (shouldCompare("users")) updateUsers(original, updated);
-      if (shouldCompare("defaultRoles")) updateDefaultRoles(original, updated);
-      boolean hierarchyOrPolicyChanged = false;
-      if (shouldCompare("parents")) {
-        updateParents(original, updated);
-        hierarchyOrPolicyChanged = true;
-      }
-      if (shouldCompare("children")) {
-        updateChildren(original, updated);
-        hierarchyOrPolicyChanged = true;
-      }
-      if (shouldCompare("policies")) {
-        updatePolicies(original, updated);
-        hierarchyOrPolicyChanged = true;
-      }
-      if (hierarchyOrPolicyChanged) {
+      compareAndUpdate(
+          "email",
+          () -> {
+            recordChange("email", original.getEmail(), updated.getEmail());
+          });
+      compareAndUpdate(
+          "users",
+          () -> {
+            updateUsers(original, updated);
+          });
+      compareAndUpdate(
+          "defaultRoles",
+          () -> {
+            updateDefaultRoles(original, updated);
+          });
+      AtomicBoolean hierarchyOrPolicyChanged = new AtomicBoolean(false);
+      compareAndUpdate(
+          "parents",
+          () -> {
+            updateParents(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "children",
+          () -> {
+            updateChildren(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "policies",
+          () -> {
+            updatePolicies(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      if (hierarchyOrPolicyChanged.get()) {
         SubjectCache.invalidateAll();
       }
     }

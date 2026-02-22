@@ -163,8 +163,16 @@ public class PersonaRepository extends EntityRepository<Persona> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("users")) updateUsers(original, updated);
-      if (shouldCompare("default")) updateDefault(original, updated);
+      compareAndUpdate(
+          "users",
+          () -> {
+            updateUsers(original, updated);
+          });
+      compareAndUpdate(
+          "default",
+          () -> {
+            updateDefault(original, updated);
+          });
     }
 
     @Transaction

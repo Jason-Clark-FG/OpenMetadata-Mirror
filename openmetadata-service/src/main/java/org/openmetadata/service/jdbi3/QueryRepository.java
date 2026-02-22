@@ -394,44 +394,57 @@ public class QueryRepository extends EntityRepository<Query> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("users"))
-        updateFromRelationships(
-            "users",
-            USER,
-            original.getUsers(),
-            updated.getUsers() == null ? new ArrayList<>() : updated.getUsers(),
-            Relationship.USES,
-            Entity.QUERY,
-            original.getId());
-      if (shouldCompare("queryUsedIn")) {
-        List<EntityReference> added = new ArrayList<>();
-        List<EntityReference> deleted = new ArrayList<>();
-        recordListChange(
-            "queryUsedIn",
-            original.getQueryUsedIn(),
-            updated.getQueryUsedIn(),
-            added,
-            deleted,
-            EntityUtil.entityReferenceMatch);
-        storeQueryUsedIn(updated.getId(), added, deleted);
-      }
-      if (shouldCompare("processedLineage"))
-        recordChange(
-            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
-      if (shouldCompare("usedBy"))
-        recordChange("usedBy", original.getUsedBy(), updated.getUsedBy(), true);
-      if (shouldCompare("query")) {
-        // Query is a required field. Cannot be removed.
-        if (updated.getQuery() != null) {
-          String originalChecksum = EntityUtil.hash(original.getQuery());
-          String updatedChecksum = EntityUtil.hash(updated.getQuery());
-          if (!originalChecksum.equals(updatedChecksum)) {
-            updated.setChecksum(updatedChecksum);
-            recordChange("query", original.getQuery(), updated.getQuery());
-            recordChange("checksum", original.getChecksum(), updated.getChecksum());
-          }
-        }
-      }
+      compareAndUpdate(
+          "users",
+          () -> {
+            updateFromRelationships(
+                "users",
+                USER,
+                original.getUsers(),
+                updated.getUsers() == null ? new ArrayList<>() : updated.getUsers(),
+                Relationship.USES,
+                Entity.QUERY,
+                original.getId());
+          });
+      compareAndUpdate(
+          "queryUsedIn",
+          () -> {
+            List<EntityReference> added = new ArrayList<>();
+            List<EntityReference> deleted = new ArrayList<>();
+            recordListChange(
+                "queryUsedIn",
+                original.getQueryUsedIn(),
+                updated.getQueryUsedIn(),
+                added,
+                deleted,
+                EntityUtil.entityReferenceMatch);
+            storeQueryUsedIn(updated.getId(), added, deleted);
+          });
+      compareAndUpdate(
+          "processedLineage",
+          () -> {
+            recordChange(
+                "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+          });
+      compareAndUpdate(
+          "usedBy",
+          () -> {
+            recordChange("usedBy", original.getUsedBy(), updated.getUsedBy(), true);
+          });
+      compareAndUpdate(
+          "query",
+          () -> {
+            // Query is a required field. Cannot be removed.
+            if (updated.getQuery() != null) {
+              String originalChecksum = EntityUtil.hash(original.getQuery());
+              String updatedChecksum = EntityUtil.hash(updated.getQuery());
+              if (!originalChecksum.equals(updatedChecksum)) {
+                updated.setChecksum(updatedChecksum);
+                recordChange("query", original.getQuery(), updated.getQuery());
+                recordChange("checksum", original.getChecksum(), updated.getChecksum());
+              }
+            }
+          });
     }
   }
 }

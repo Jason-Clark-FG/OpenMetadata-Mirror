@@ -1407,20 +1407,51 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("latestResult"))
-        recordChange("latestResult", original.getLatestResult(), updated.getLatestResult());
-      if (shouldCompare("status"))
-        recordChange("status", original.getEntityStatus(), updated.getEntityStatus());
-      if (shouldCompare("testSuite"))
-        recordChange("testSuite", original.getTestSuite(), updated.getTestSuite());
-      if (shouldCompare("termsOfUse"))
-        recordChange("termsOfUse", original.getTermsOfUse(), updated.getTermsOfUse());
-      if (shouldCompare("security"))
-        recordChange("security", original.getSecurity(), updated.getSecurity());
-      if (shouldCompare("sla")) recordChange("sla", original.getSla(), updated.getSla());
-      if (shouldCompare("schema")) updateSchema(original, updated);
-      if (shouldCompare("qualityExpectations")) updateQualityExpectations(original, updated);
-      if (shouldCompare("semantics")) updateSemantics(original, updated);
+      compareAndUpdate(
+          "latestResult",
+          () -> {
+            recordChange("latestResult", original.getLatestResult(), updated.getLatestResult());
+          });
+      compareAndUpdate(
+          "status",
+          () -> {
+            recordChange("status", original.getEntityStatus(), updated.getEntityStatus());
+          });
+      compareAndUpdate(
+          "testSuite",
+          () -> {
+            recordChange("testSuite", original.getTestSuite(), updated.getTestSuite());
+          });
+      compareAndUpdate(
+          "termsOfUse",
+          () -> {
+            recordChange("termsOfUse", original.getTermsOfUse(), updated.getTermsOfUse());
+          });
+      compareAndUpdate(
+          "security",
+          () -> {
+            recordChange("security", original.getSecurity(), updated.getSecurity());
+          });
+      compareAndUpdate(
+          "sla",
+          () -> {
+            recordChange("sla", original.getSla(), updated.getSla());
+          });
+      compareAndUpdate(
+          "schema",
+          () -> {
+            updateSchema(original, updated);
+          });
+      compareAndUpdate(
+          "qualityExpectations",
+          () -> {
+            updateQualityExpectations(original, updated);
+          });
+      compareAndUpdate(
+          "semantics",
+          () -> {
+            updateSemantics(original, updated);
+          });
       // Preserve immutable creation fields
       updated.setCreatedAt(original.getCreatedAt());
       updated.setCreatedBy(original.getCreatedBy());

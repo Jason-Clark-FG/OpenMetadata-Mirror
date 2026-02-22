@@ -218,25 +218,47 @@ public class MetricRepository extends EntityRepository<Metric> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("granularity"))
-        recordChange("granularity", original.getGranularity(), updated.getGranularity());
-      if (shouldCompare("metricType"))
-        recordChange("metricType", original.getMetricType(), updated.getMetricType());
-      if (shouldCompare("unitOfMeasurement"))
-        recordChange(
-            "unitOfMeasurement", original.getUnitOfMeasurement(), updated.getUnitOfMeasurement());
-      if (shouldCompare("customUnitOfMeasurement"))
-        recordChange(
-            "customUnitOfMeasurement",
-            original.getCustomUnitOfMeasurement(),
-            updated.getCustomUnitOfMeasurement());
-      if (shouldCompare("metricExpression")) {
-        if (updated.getMetricExpression() != null) {
-          recordChange(
-              "metricExpression", original.getMetricExpression(), updated.getMetricExpression());
-        }
-      }
-      if (shouldCompare("relatedMetrics")) updateRelatedMetrics(original, updated);
+      compareAndUpdate(
+          "granularity",
+          () -> {
+            recordChange("granularity", original.getGranularity(), updated.getGranularity());
+          });
+      compareAndUpdate(
+          "metricType",
+          () -> {
+            recordChange("metricType", original.getMetricType(), updated.getMetricType());
+          });
+      compareAndUpdate(
+          "unitOfMeasurement",
+          () -> {
+            recordChange(
+                "unitOfMeasurement",
+                original.getUnitOfMeasurement(),
+                updated.getUnitOfMeasurement());
+          });
+      compareAndUpdate(
+          "customUnitOfMeasurement",
+          () -> {
+            recordChange(
+                "customUnitOfMeasurement",
+                original.getCustomUnitOfMeasurement(),
+                updated.getCustomUnitOfMeasurement());
+          });
+      compareAndUpdate(
+          "metricExpression",
+          () -> {
+            if (updated.getMetricExpression() != null) {
+              recordChange(
+                  "metricExpression",
+                  original.getMetricExpression(),
+                  updated.getMetricExpression());
+            }
+          });
+      compareAndUpdate(
+          "relatedMetrics",
+          () -> {
+            updateRelatedMetrics(original, updated);
+          });
     }
 
     private void updateRelatedMetrics(Metric original, Metric updated) {

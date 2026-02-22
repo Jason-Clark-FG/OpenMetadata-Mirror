@@ -1006,23 +1006,43 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("tasks")) updateTasks(original, updated);
-      if (shouldCompare("state")) recordChange("state", original.getState(), updated.getState());
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("concurrency"))
-        recordChange("concurrency", original.getConcurrency(), updated.getConcurrency());
-      if (shouldCompare("pipelineLocation"))
-        recordChange(
-            "pipelineLocation", original.getPipelineLocation(), updated.getPipelineLocation());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "tasks",
+          () -> {
+            updateTasks(original, updated);
+          });
+      compareAndUpdate(
+          "state",
+          () -> {
+            recordChange("state", original.getState(), updated.getState());
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "concurrency",
+          () -> {
+            recordChange("concurrency", original.getConcurrency(), updated.getConcurrency());
+          });
+      compareAndUpdate(
+          "pipelineLocation",
+          () -> {
+            recordChange(
+                "pipelineLocation", original.getPipelineLocation(), updated.getPipelineLocation());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateTasks(Pipeline original, Pipeline updated) {

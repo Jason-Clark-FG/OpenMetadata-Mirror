@@ -987,21 +987,28 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare(UPDATE_FIELDS)) {
-        List<EntityReference> origTests = listOrEmpty(original.getTests());
-        List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
-        recordChange(UPDATE_FIELDS, origTests, updatedTests);
-      }
-      if (shouldCompare("testCaseResultSummary")) {
-        List<ResultSummary> origTestCaseResultSummary =
-            listOrEmpty(original.getTestCaseResultSummary());
-        List<ResultSummary> updatedTestCaseResultSummary =
-            listOrEmpty(updated.getTestCaseResultSummary());
-        recordChange(
-            "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
-      }
-      if (shouldCompare("dataContract"))
-        recordChange("dataContract", original.getDataContract(), updated.getDataContract());
+      compareAndUpdate(
+          UPDATE_FIELDS,
+          () -> {
+            List<EntityReference> origTests = listOrEmpty(original.getTests());
+            List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
+            recordChange(UPDATE_FIELDS, origTests, updatedTests);
+          });
+      compareAndUpdate(
+          "testCaseResultSummary",
+          () -> {
+            List<ResultSummary> origTestCaseResultSummary =
+                listOrEmpty(original.getTestCaseResultSummary());
+            List<ResultSummary> updatedTestCaseResultSummary =
+                listOrEmpty(updated.getTestCaseResultSummary());
+            recordChange(
+                "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
+          });
+      compareAndUpdate(
+          "dataContract",
+          () -> {
+            recordChange("dataContract", original.getDataContract(), updated.getDataContract());
+          });
     }
   }
 }

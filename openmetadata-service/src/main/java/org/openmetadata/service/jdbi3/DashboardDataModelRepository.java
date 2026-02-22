@@ -343,22 +343,34 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("columns")) {
-        DatabaseUtil.validateColumns(original.getColumns());
-        updateColumns(
-            "columns", original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      }
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      if (shouldCompare("sql")) recordChange("sql", original.getSql(), updated.getSql());
+      compareAndUpdate(
+          "columns",
+          () -> {
+            DatabaseUtil.validateColumns(original.getColumns());
+            updateColumns(
+                "columns", original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "sql",
+          () -> {
+            recordChange("sql", original.getSql(), updated.getSql());
+          });
     }
   }
 

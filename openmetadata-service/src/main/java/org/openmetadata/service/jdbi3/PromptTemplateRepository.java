@@ -94,20 +94,38 @@ public class PromptTemplateRepository extends EntityRepository<PromptTemplate> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("templateContent"))
-        recordChange(
-            "templateContent", original.getTemplateContent(), updated.getTemplateContent());
-      if (shouldCompare("systemPrompt"))
-        recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
-      if (shouldCompare("variables"))
-        recordChange("variables", original.getVariables(), updated.getVariables(), true);
-      if (shouldCompare("examples"))
-        recordChange("examples", original.getExamples(), updated.getExamples(), true);
-      if (shouldCompare("templateType"))
-        recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
-      if (shouldCompare("templateVersion"))
-        recordChange(
-            "templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
+      compareAndUpdate(
+          "templateContent",
+          () -> {
+            recordChange(
+                "templateContent", original.getTemplateContent(), updated.getTemplateContent());
+          });
+      compareAndUpdate(
+          "systemPrompt",
+          () -> {
+            recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
+          });
+      compareAndUpdate(
+          "variables",
+          () -> {
+            recordChange("variables", original.getVariables(), updated.getVariables(), true);
+          });
+      compareAndUpdate(
+          "examples",
+          () -> {
+            recordChange("examples", original.getExamples(), updated.getExamples(), true);
+          });
+      compareAndUpdate(
+          "templateType",
+          () -> {
+            recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
+          });
+      compareAndUpdate(
+          "templateVersion",
+          () -> {
+            recordChange(
+                "templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
+          });
     }
   }
 }

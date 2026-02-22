@@ -448,18 +448,41 @@ public class SpreadsheetRepository extends EntityRepository<Spreadsheet> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("mimeType"))
-        recordChange("mimeType", original.getMimeType(), updated.getMimeType());
-      if (shouldCompare("createdTime"))
-        recordChange("createdTime", original.getCreatedTime(), updated.getCreatedTime());
-      if (shouldCompare("modifiedTime"))
-        recordChange("modifiedTime", original.getModifiedTime(), updated.getModifiedTime());
-      if (shouldCompare("path")) recordChange("path", original.getPath(), updated.getPath());
-      if (shouldCompare("driveFileId"))
-        recordChange("driveFileId", original.getDriveFileId(), updated.getDriveFileId());
-      if (shouldCompare("size")) recordChange("size", original.getSize(), updated.getSize());
-      if (shouldCompare("fileVersion"))
-        recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
+      compareAndUpdate(
+          "mimeType",
+          () -> {
+            recordChange("mimeType", original.getMimeType(), updated.getMimeType());
+          });
+      compareAndUpdate(
+          "createdTime",
+          () -> {
+            recordChange("createdTime", original.getCreatedTime(), updated.getCreatedTime());
+          });
+      compareAndUpdate(
+          "modifiedTime",
+          () -> {
+            recordChange("modifiedTime", original.getModifiedTime(), updated.getModifiedTime());
+          });
+      compareAndUpdate(
+          "path",
+          () -> {
+            recordChange("path", original.getPath(), updated.getPath());
+          });
+      compareAndUpdate(
+          "driveFileId",
+          () -> {
+            recordChange("driveFileId", original.getDriveFileId(), updated.getDriveFileId());
+          });
+      compareAndUpdate(
+          "size",
+          () -> {
+            recordChange("size", original.getSize(), updated.getSize());
+          });
+      compareAndUpdate(
+          "fileVersion",
+          () -> {
+            recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
+          });
     }
   }
 }

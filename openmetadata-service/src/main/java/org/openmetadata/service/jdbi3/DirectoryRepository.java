@@ -477,29 +477,51 @@ public class DirectoryRepository extends EntityRepository<Directory> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("parent"))
-        updateFromRelationship(
-            "parent",
-            DIRECTORY,
-            original.getParent(),
-            updated.getParent(),
-            Relationship.CONTAINS,
-            DIRECTORY,
-            original.getId());
-      if (shouldCompare("directoryType"))
-        recordChange("directoryType", original.getDirectoryType(), updated.getDirectoryType());
-      if (shouldCompare("path")) recordChange("path", original.getPath(), updated.getPath());
-      if (shouldCompare("isShared"))
-        recordChange("isShared", original.getIsShared(), updated.getIsShared());
-      if (shouldCompare("numberOfFiles"))
-        recordChange("numberOfFiles", original.getNumberOfFiles(), updated.getNumberOfFiles());
-      if (shouldCompare("numberOfSubDirectories"))
-        recordChange(
-            "numberOfSubDirectories",
-            original.getNumberOfSubDirectories(),
-            updated.getNumberOfSubDirectories());
-      if (shouldCompare("totalSize"))
-        recordChange("totalSize", original.getTotalSize(), updated.getTotalSize());
+      compareAndUpdate(
+          "parent",
+          () -> {
+            updateFromRelationship(
+                "parent",
+                DIRECTORY,
+                original.getParent(),
+                updated.getParent(),
+                Relationship.CONTAINS,
+                DIRECTORY,
+                original.getId());
+          });
+      compareAndUpdate(
+          "directoryType",
+          () -> {
+            recordChange("directoryType", original.getDirectoryType(), updated.getDirectoryType());
+          });
+      compareAndUpdate(
+          "path",
+          () -> {
+            recordChange("path", original.getPath(), updated.getPath());
+          });
+      compareAndUpdate(
+          "isShared",
+          () -> {
+            recordChange("isShared", original.getIsShared(), updated.getIsShared());
+          });
+      compareAndUpdate(
+          "numberOfFiles",
+          () -> {
+            recordChange("numberOfFiles", original.getNumberOfFiles(), updated.getNumberOfFiles());
+          });
+      compareAndUpdate(
+          "numberOfSubDirectories",
+          () -> {
+            recordChange(
+                "numberOfSubDirectories",
+                original.getNumberOfSubDirectories(),
+                updated.getNumberOfSubDirectories());
+          });
+      compareAndUpdate(
+          "totalSize",
+          () -> {
+            recordChange("totalSize", original.getTotalSize(), updated.getTotalSize());
+          });
     }
   }
 }

@@ -98,10 +98,26 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("trigger")) updateTrigger();
-      if (shouldCompare("config")) updateConfig();
-      if (shouldCompare("nodes")) updateNodes();
-      if (shouldCompare("edges")) updateEdges();
+      compareAndUpdate(
+          "trigger",
+          () -> {
+            updateTrigger();
+          });
+      compareAndUpdate(
+          "config",
+          () -> {
+            updateConfig();
+          });
+      compareAndUpdate(
+          "nodes",
+          () -> {
+            updateNodes();
+          });
+      compareAndUpdate(
+          "edges",
+          () -> {
+            updateEdges();
+          });
     }
 
     private void updateTrigger() {

@@ -816,25 +816,41 @@ public class TagRepository extends EntityRepository<Tag> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("mutuallyExclusive"))
-        recordChange(
-            "mutuallyExclusive", original.getMutuallyExclusive(), updated.getMutuallyExclusive());
-      if (shouldCompare("disabled"))
-        recordChange("disabled", original.getDisabled(), updated.getDisabled());
-      if (shouldCompare("recognizers"))
-        recordChange("recognizers", original.getRecognizers(), updated.getRecognizers(), true);
-      if (shouldCompare("autoClassificationEnabled"))
-        recordChange(
-            "autoClassificationEnabled",
-            original.getAutoClassificationEnabled(),
-            updated.getAutoClassificationEnabled());
-      if (shouldCompare("autoClassificationPriority"))
-        recordChange(
-            "autoClassificationPriority",
-            original.getAutoClassificationPriority(),
-            updated.getAutoClassificationPriority());
-      if (shouldCompare("name") || shouldCompare("parent") || shouldCompare("classification"))
-        updateNameAndParent(updated);
+      compareAndUpdate(
+          "mutuallyExclusive",
+          () -> {
+            recordChange(
+                "mutuallyExclusive",
+                original.getMutuallyExclusive(),
+                updated.getMutuallyExclusive());
+          });
+      compareAndUpdate(
+          "disabled",
+          () -> {
+            recordChange("disabled", original.getDisabled(), updated.getDisabled());
+          });
+      compareAndUpdate(
+          "recognizers",
+          () -> {
+            recordChange("recognizers", original.getRecognizers(), updated.getRecognizers(), true);
+          });
+      compareAndUpdate(
+          "autoClassificationEnabled",
+          () -> {
+            recordChange(
+                "autoClassificationEnabled",
+                original.getAutoClassificationEnabled(),
+                updated.getAutoClassificationEnabled());
+          });
+      compareAndUpdate(
+          "autoClassificationPriority",
+          () -> {
+            recordChange(
+                "autoClassificationPriority",
+                original.getAutoClassificationPriority(),
+                updated.getAutoClassificationPriority());
+          });
+      compareAndUpdateAny(() -> updateNameAndParent(updated), "name", "parent", "classification");
     }
 
     /**

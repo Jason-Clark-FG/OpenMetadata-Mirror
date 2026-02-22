@@ -555,17 +555,30 @@ public class AppRepository extends EntityRepository<App> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("appConfiguration"))
-        recordChange(
-            "appConfiguration", original.getAppConfiguration(), updated.getAppConfiguration());
-      if (shouldCompare("appSchedule"))
-        recordChange("appSchedule", original.getAppSchedule(), updated.getAppSchedule());
-      if (shouldCompare("bot")) recordChange("bot", original.getBot(), updated.getBot());
-      if (shouldCompare("eventSubscriptions"))
-        recordChange(
-            "eventSubscriptions",
-            original.getEventSubscriptions(),
-            updated.getEventSubscriptions());
+      compareAndUpdate(
+          "appConfiguration",
+          () -> {
+            recordChange(
+                "appConfiguration", original.getAppConfiguration(), updated.getAppConfiguration());
+          });
+      compareAndUpdate(
+          "appSchedule",
+          () -> {
+            recordChange("appSchedule", original.getAppSchedule(), updated.getAppSchedule());
+          });
+      compareAndUpdate(
+          "bot",
+          () -> {
+            recordChange("bot", original.getBot(), updated.getBot());
+          });
+      compareAndUpdate(
+          "eventSubscriptions",
+          () -> {
+            recordChange(
+                "eventSubscriptions",
+                original.getEventSubscriptions(),
+                updated.getEventSubscriptions());
+          });
     }
   }
 }

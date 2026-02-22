@@ -479,27 +479,62 @@ public class FileRepository extends EntityRepository<File> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("fileType"))
-        recordChange("fileType", original.getFileType(), updated.getFileType());
-      if (shouldCompare("mimeType"))
-        recordChange("mimeType", original.getMimeType(), updated.getMimeType());
-      if (shouldCompare("fileExtension"))
-        recordChange("fileExtension", original.getFileExtension(), updated.getFileExtension());
-      if (shouldCompare("path")) recordChange("path", original.getPath(), updated.getPath());
-      if (shouldCompare("size")) recordChange("size", original.getSize(), updated.getSize());
-      if (shouldCompare("checksum"))
-        recordChange("checksum", original.getChecksum(), updated.getChecksum());
-      if (shouldCompare("webViewLink"))
-        recordChange("webViewLink", original.getWebViewLink(), updated.getWebViewLink());
-      if (shouldCompare("downloadLink"))
-        recordChange("downloadLink", original.getDownloadLink(), updated.getDownloadLink());
-      if (shouldCompare("isShared"))
-        recordChange("isShared", original.getIsShared(), updated.getIsShared());
-      if (shouldCompare("fileVersion"))
-        recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
-      if (shouldCompare("columns"))
-        updateColumns(
-            COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+      compareAndUpdate(
+          "fileType",
+          () -> {
+            recordChange("fileType", original.getFileType(), updated.getFileType());
+          });
+      compareAndUpdate(
+          "mimeType",
+          () -> {
+            recordChange("mimeType", original.getMimeType(), updated.getMimeType());
+          });
+      compareAndUpdate(
+          "fileExtension",
+          () -> {
+            recordChange("fileExtension", original.getFileExtension(), updated.getFileExtension());
+          });
+      compareAndUpdate(
+          "path",
+          () -> {
+            recordChange("path", original.getPath(), updated.getPath());
+          });
+      compareAndUpdate(
+          "size",
+          () -> {
+            recordChange("size", original.getSize(), updated.getSize());
+          });
+      compareAndUpdate(
+          "checksum",
+          () -> {
+            recordChange("checksum", original.getChecksum(), updated.getChecksum());
+          });
+      compareAndUpdate(
+          "webViewLink",
+          () -> {
+            recordChange("webViewLink", original.getWebViewLink(), updated.getWebViewLink());
+          });
+      compareAndUpdate(
+          "downloadLink",
+          () -> {
+            recordChange("downloadLink", original.getDownloadLink(), updated.getDownloadLink());
+          });
+      compareAndUpdate(
+          "isShared",
+          () -> {
+            recordChange("isShared", original.getIsShared(), updated.getIsShared());
+          });
+      compareAndUpdate(
+          "fileVersion",
+          () -> {
+            recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
+          });
+      compareAndUpdate(
+          "columns",
+          () -> {
+            updateColumns(
+                COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+          });
     }
   }
 }

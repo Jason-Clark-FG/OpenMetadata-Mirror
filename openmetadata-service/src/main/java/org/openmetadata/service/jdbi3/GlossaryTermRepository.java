@@ -1430,11 +1430,22 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       validateParent();
-      if (shouldCompare("synonyms")) updateSynonyms(original, updated);
-      if (shouldCompare("references")) updateReferences(original, updated);
-      if (shouldCompare("relatedTerms")) updateRelatedTerms(original, updated);
-      if (shouldCompare("name") || shouldCompare("parent") || shouldCompare("glossary"))
-        updateNameAndParent(updated);
+      compareAndUpdate(
+          "synonyms",
+          () -> {
+            updateSynonyms(original, updated);
+          });
+      compareAndUpdate(
+          "references",
+          () -> {
+            updateReferences(original, updated);
+          });
+      compareAndUpdate(
+          "relatedTerms",
+          () -> {
+            updateRelatedTerms(original, updated);
+          });
+      compareAndUpdateAny(() -> updateNameAndParent(updated), "name", "parent", "glossary");
       // Mutually exclusive cannot be updated
       updated.setMutuallyExclusive(original.getMutuallyExclusive());
     }

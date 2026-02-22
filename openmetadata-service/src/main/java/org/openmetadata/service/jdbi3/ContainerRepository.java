@@ -564,47 +564,79 @@ public class ContainerRepository extends EntityRepository<Container> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("dataModel")) updateDataModel(original, updated);
-      if (shouldCompare("prefix"))
-        recordChange("prefix", original.getPrefix(), updated.getPrefix());
-      if (shouldCompare("fileFormats")) {
-        List<ContainerFileFormat> addedItems = new ArrayList<>();
-        List<ContainerFileFormat> deletedItems = new ArrayList<>();
-        recordListChange(
-            "fileFormats",
-            original.getFileFormats(),
-            updated.getFileFormats(),
-            addedItems,
-            deletedItems,
-            EntityUtil.containerFileFormatMatch);
-      }
+      compareAndUpdate(
+          "dataModel",
+          () -> {
+            updateDataModel(original, updated);
+          });
+      compareAndUpdate(
+          "prefix",
+          () -> {
+            recordChange("prefix", original.getPrefix(), updated.getPrefix());
+          });
+      compareAndUpdate(
+          "fileFormats",
+          () -> {
+            List<ContainerFileFormat> addedItems = new ArrayList<>();
+            List<ContainerFileFormat> deletedItems = new ArrayList<>();
+            recordListChange(
+                "fileFormats",
+                original.getFileFormats(),
+                updated.getFileFormats(),
+                addedItems,
+                deletedItems,
+                EntityUtil.containerFileFormatMatch);
+          });
 
-      if (shouldCompare("numberOfObjects"))
-        recordChange(
-            "numberOfObjects",
-            original.getNumberOfObjects(),
-            updated.getNumberOfObjects(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      if (shouldCompare("size"))
-        recordChange(
-            "size", original.getSize(), updated.getSize(), false, EntityUtil.objectMatch, false);
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("fullPath"))
-        recordChange("fullPath", original.getFullPath(), updated.getFullPath());
-      if (shouldCompare("retentionPeriod"))
-        recordChange(
-            "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "numberOfObjects",
+          () -> {
+            recordChange(
+                "numberOfObjects",
+                original.getNumberOfObjects(),
+                updated.getNumberOfObjects(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "size",
+          () -> {
+            recordChange(
+                "size",
+                original.getSize(),
+                updated.getSize(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "fullPath",
+          () -> {
+            recordChange("fullPath", original.getFullPath(), updated.getFullPath());
+          });
+      compareAndUpdate(
+          "retentionPeriod",
+          () -> {
+            recordChange(
+                "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateDataModel(Container original, Container updated) {

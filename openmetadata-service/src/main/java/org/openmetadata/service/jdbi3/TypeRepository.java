@@ -346,7 +346,11 @@ public class TypeRepository extends EntityRepository<Type> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("customProperties")) updateCustomProperties();
+      compareAndUpdate(
+          "customProperties",
+          () -> {
+            updateCustomProperties();
+          });
     }
 
     private void updateCustomProperties() {

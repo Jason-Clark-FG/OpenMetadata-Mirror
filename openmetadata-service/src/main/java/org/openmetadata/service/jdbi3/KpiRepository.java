@@ -267,24 +267,39 @@ public class KpiRepository extends EntityRepository<Kpi> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("dataInsightChart"))
-        updateToRelationship(
-            "dataInsightChart",
-            KPI,
-            original.getId(),
-            Relationship.USES,
-            DATA_INSIGHT_CHART,
-            original.getDataInsightChart(),
-            updated.getDataInsightChart(),
-            false);
-      if (shouldCompare("targetValue"))
-        recordChange("targetValue", original.getTargetValue(), updated.getTargetValue(), true);
-      if (shouldCompare("startDate"))
-        recordChange("startDate", original.getStartDate(), updated.getStartDate());
-      if (shouldCompare("endDate"))
-        recordChange("endDate", original.getEndDate(), updated.getEndDate());
-      if (shouldCompare("metricType"))
-        recordChange("metricType", original.getMetricType(), updated.getMetricType());
+      compareAndUpdate(
+          "dataInsightChart",
+          () -> {
+            updateToRelationship(
+                "dataInsightChart",
+                KPI,
+                original.getId(),
+                Relationship.USES,
+                DATA_INSIGHT_CHART,
+                original.getDataInsightChart(),
+                updated.getDataInsightChart(),
+                false);
+          });
+      compareAndUpdate(
+          "targetValue",
+          () -> {
+            recordChange("targetValue", original.getTargetValue(), updated.getTargetValue(), true);
+          });
+      compareAndUpdate(
+          "startDate",
+          () -> {
+            recordChange("startDate", original.getStartDate(), updated.getStartDate());
+          });
+      compareAndUpdate(
+          "endDate",
+          () -> {
+            recordChange("endDate", original.getEndDate(), updated.getEndDate());
+          });
+      compareAndUpdate(
+          "metricType",
+          () -> {
+            recordChange("metricType", original.getMetricType(), updated.getMetricType());
+          });
     }
   }
 }

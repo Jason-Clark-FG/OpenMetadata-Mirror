@@ -259,8 +259,11 @@ public class SecurityServiceRepository
       super.entitySpecificUpdate(consolidatingChanges);
 
       // Handle security service specific updates
-      if (shouldCompare("serviceType"))
-        recordChange("serviceType", original.getServiceType(), updated.getServiceType());
+      compareAndUpdate(
+          "serviceType",
+          () -> {
+            recordChange("serviceType", original.getServiceType(), updated.getServiceType());
+          });
     }
   }
 }

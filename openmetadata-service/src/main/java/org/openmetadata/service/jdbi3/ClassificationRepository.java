@@ -285,15 +285,25 @@ public class ClassificationRepository extends EntityRepository<Classification> {
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       // Mutually exclusive cannot be updated
       updated.setMutuallyExclusive(original.getMutuallyExclusive());
-      if (shouldCompare("disabled"))
-        recordChange("disabled", original.getDisabled(), updated.getDisabled());
-      if (shouldCompare("autoClassificationConfig"))
-        recordChange(
-            "autoClassificationConfig",
-            original.getAutoClassificationConfig(),
-            updated.getAutoClassificationConfig(),
-            true);
-      if (shouldCompare("name")) updateName(updated);
+      compareAndUpdate(
+          "disabled",
+          () -> {
+            recordChange("disabled", original.getDisabled(), updated.getDisabled());
+          });
+      compareAndUpdate(
+          "autoClassificationConfig",
+          () -> {
+            recordChange(
+                "autoClassificationConfig",
+                original.getAutoClassificationConfig(),
+                updated.getAutoClassificationConfig(),
+                true);
+          });
+      compareAndUpdate(
+          "name",
+          () -> {
+            updateName(updated);
+          });
     }
 
     public void updateName(Classification updated) {

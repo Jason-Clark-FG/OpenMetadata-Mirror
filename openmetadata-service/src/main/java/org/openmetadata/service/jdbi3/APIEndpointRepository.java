@@ -692,50 +692,63 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("endpointURL"))
-        recordChange("endpointURL", original.getEndpointURL(), updated.getEndpointURL());
-      if (shouldCompare("requestMethod"))
-        recordChange("requestMethod", original.getRequestMethod(), updated.getRequestMethod());
+      compareAndUpdate(
+          "endpointURL",
+          () -> {
+            recordChange("endpointURL", original.getEndpointURL(), updated.getEndpointURL());
+          });
+      compareAndUpdate(
+          "requestMethod",
+          () -> {
+            recordChange("requestMethod", original.getRequestMethod(), updated.getRequestMethod());
+          });
 
-      if (shouldCompare("requestSchema")) {
-        if (updated.getRequestSchema() != null
-            && updated.getRequestSchema().getSchemaFields() != null) {
-          updateSchemaFields(
-              "requestSchema.schemaFields",
-              original.getResponseSchema() == null
-                  ? new ArrayList<>()
-                  : listOrEmpty(
-                      original.getRequestSchema() != null
-                          ? original.getRequestSchema().getSchemaFields()
-                          : null),
-              listOrEmpty(updated.getRequestSchema().getSchemaFields()),
-              EntityUtil.schemaFieldMatch);
-        }
-      }
+      compareAndUpdate(
+          "requestSchema",
+          () -> {
+            if (updated.getRequestSchema() != null
+                && updated.getRequestSchema().getSchemaFields() != null) {
+              updateSchemaFields(
+                  "requestSchema.schemaFields",
+                  original.getResponseSchema() == null
+                      ? new ArrayList<>()
+                      : listOrEmpty(
+                          original.getRequestSchema() != null
+                              ? original.getRequestSchema().getSchemaFields()
+                              : null),
+                  listOrEmpty(updated.getRequestSchema().getSchemaFields()),
+                  EntityUtil.schemaFieldMatch);
+            }
+          });
 
-      if (shouldCompare("responseSchema")) {
-        if (updated.getResponseSchema() != null
-            && updated.getResponseSchema().getSchemaFields() != null) {
-          updateSchemaFields(
-              "responseSchema.schemaFields",
-              original.getResponseSchema() == null
-                  ? new ArrayList<>()
-                  : listOrEmpty(
-                      original.getResponseSchema().getSchemaFields() != null
-                          ? original.getResponseSchema().getSchemaFields()
-                          : null),
-              listOrEmpty(updated.getResponseSchema().getSchemaFields()),
-              EntityUtil.schemaFieldMatch);
-        }
-      }
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
+      compareAndUpdate(
+          "responseSchema",
+          () -> {
+            if (updated.getResponseSchema() != null
+                && updated.getResponseSchema().getSchemaFields() != null) {
+              updateSchemaFields(
+                  "responseSchema.schemaFields",
+                  original.getResponseSchema() == null
+                      ? new ArrayList<>()
+                      : listOrEmpty(
+                          original.getResponseSchema().getSchemaFields() != null
+                              ? original.getResponseSchema().getSchemaFields()
+                              : null),
+                  listOrEmpty(updated.getResponseSchema().getSchemaFields()),
+                  EntityUtil.schemaFieldMatch);
+            }
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
     }
 
     private void updateSchemaFields(

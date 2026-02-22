@@ -192,35 +192,65 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("baseModel"))
-        recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
-      if (shouldCompare("modelVersion"))
-        recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
-      if (shouldCompare("modelProvider"))
-        recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
-      if (shouldCompare("modelSpecifications"))
-        recordChange(
-            "modelSpecifications",
-            original.getModelSpecifications(),
-            updated.getModelSpecifications(),
-            true);
-      if (shouldCompare("trainingMetadata"))
-        recordChange(
-            "trainingMetadata",
-            original.getTrainingMetadata(),
-            updated.getTrainingMetadata(),
-            true);
-      if (shouldCompare("modelEvaluation"))
-        recordChange(
-            "modelEvaluation", original.getModelEvaluation(), updated.getModelEvaluation(), true);
-      if (shouldCompare("costMetrics"))
-        recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
-      if (shouldCompare("deploymentInfo"))
-        recordChange(
-            "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
-      if (shouldCompare("governanceStatus"))
-        recordChange(
-            "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
+      compareAndUpdate(
+          "baseModel",
+          () -> {
+            recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
+          });
+      compareAndUpdate(
+          "modelVersion",
+          () -> {
+            recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
+          });
+      compareAndUpdate(
+          "modelProvider",
+          () -> {
+            recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
+          });
+      compareAndUpdate(
+          "modelSpecifications",
+          () -> {
+            recordChange(
+                "modelSpecifications",
+                original.getModelSpecifications(),
+                updated.getModelSpecifications(),
+                true);
+          });
+      compareAndUpdate(
+          "trainingMetadata",
+          () -> {
+            recordChange(
+                "trainingMetadata",
+                original.getTrainingMetadata(),
+                updated.getTrainingMetadata(),
+                true);
+          });
+      compareAndUpdate(
+          "modelEvaluation",
+          () -> {
+            recordChange(
+                "modelEvaluation",
+                original.getModelEvaluation(),
+                updated.getModelEvaluation(),
+                true);
+          });
+      compareAndUpdate(
+          "costMetrics",
+          () -> {
+            recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
+          });
+      compareAndUpdate(
+          "deploymentInfo",
+          () -> {
+            recordChange(
+                "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
+          });
+      compareAndUpdate(
+          "governanceStatus",
+          () -> {
+            recordChange(
+                "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
+          });
     }
   }
 }

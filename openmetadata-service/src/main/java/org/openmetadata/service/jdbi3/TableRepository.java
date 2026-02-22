@@ -2270,47 +2270,83 @@ public class TableRepository extends EntityRepository<Table> {
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       Table origTable = original;
       Table updatedTable = updated;
-      if (shouldCompare("columns")) {
-        DatabaseUtil.validateColumns(updatedTable.getColumns());
-        updateColumns(
-            COLUMN_FIELD, origTable.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      }
-      if (shouldCompare("tableType"))
-        recordChange("tableType", origTable.getTableType(), updatedTable.getTableType());
-      if (shouldCompare("tableConstraints"))
-        updateTableConstraints(origTable, updatedTable, operation);
-      if (shouldCompare("processedLineage")) updateProcessedLineage(origTable, updatedTable);
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("retentionPeriod"))
-        recordChange(
-            "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-      if (shouldCompare("compressionEnabled"))
-        recordChange(
-            "compressionEnabled",
-            original.getCompressionEnabled(),
-            updated.getCompressionEnabled());
-      if (shouldCompare("compressionCodec"))
-        recordChange(
-            "compressionCodec", original.getCompressionCodec(), updated.getCompressionCodec());
-      if (shouldCompare("compressionStrategy"))
-        recordChange(
-            "compressionStrategy",
-            original.getCompressionStrategy(),
-            updated.getCompressionStrategy());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      if (shouldCompare("locationPath"))
-        recordChange("locationPath", original.getLocationPath(), updated.getLocationPath());
-      if (shouldCompare("processedLineage"))
-        recordChange(
-            "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+      compareAndUpdate(
+          "columns",
+          () -> {
+            DatabaseUtil.validateColumns(updatedTable.getColumns());
+            updateColumns(
+                COLUMN_FIELD, origTable.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+          });
+      compareAndUpdate(
+          "tableType",
+          () -> {
+            recordChange("tableType", origTable.getTableType(), updatedTable.getTableType());
+          });
+      compareAndUpdate(
+          "tableConstraints",
+          () -> {
+            updateTableConstraints(origTable, updatedTable, operation);
+          });
+      compareAndUpdate(
+          "processedLineage",
+          () -> {
+            updateProcessedLineage(origTable, updatedTable);
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "retentionPeriod",
+          () -> {
+            recordChange(
+                "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+          });
+      compareAndUpdate(
+          "compressionEnabled",
+          () -> {
+            recordChange(
+                "compressionEnabled",
+                original.getCompressionEnabled(),
+                updated.getCompressionEnabled());
+          });
+      compareAndUpdate(
+          "compressionCodec",
+          () -> {
+            recordChange(
+                "compressionCodec", original.getCompressionCodec(), updated.getCompressionCodec());
+          });
+      compareAndUpdate(
+          "compressionStrategy",
+          () -> {
+            recordChange(
+                "compressionStrategy",
+                original.getCompressionStrategy(),
+                updated.getCompressionStrategy());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "locationPath",
+          () -> {
+            recordChange("locationPath", original.getLocationPath(), updated.getLocationPath());
+          });
+      compareAndUpdate(
+          "processedLineage",
+          () -> {
+            recordChange(
+                "processedLineage", original.getProcessedLineage(), updated.getProcessedLineage());
+          });
     }
 
     private void updateProcessedLineage(Table origTable, Table updatedTable) {

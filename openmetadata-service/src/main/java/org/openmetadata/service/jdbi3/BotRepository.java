@@ -135,7 +135,11 @@ public class BotRepository extends EntityRepository<Bot> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare(BOT_UPDATE_FIELDS)) updateUser(original, updated);
+      compareAndUpdate(
+          BOT_UPDATE_FIELDS,
+          () -> {
+            updateUser(original, updated);
+          });
     }
 
     private void updateUser(Bot original, Bot updated) {

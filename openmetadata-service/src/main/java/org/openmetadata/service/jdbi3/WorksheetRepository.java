@@ -530,26 +530,47 @@ public class WorksheetRepository extends EntityRepository<Worksheet> {
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       LOG.info("WorksheetUpdater.entitySpecificUpdate called");
-      if (shouldCompare("worksheetId"))
-        recordChange("worksheetId", original.getWorksheetId(), updated.getWorksheetId());
-      if (shouldCompare("index")) recordChange("index", original.getIndex(), updated.getIndex());
-      if (shouldCompare("rowCount"))
-        recordChange("rowCount", original.getRowCount(), updated.getRowCount());
-      if (shouldCompare("columnCount"))
-        recordChange("columnCount", original.getColumnCount(), updated.getColumnCount());
-      if (shouldCompare("columns")) {
-        // Use updateColumns for proper column handling including tags
-        LOG.info(
-            "Calling updateColumns with original columns: {} and updated columns: {}",
-            original.getColumns() != null ? original.getColumns().size() : "null",
-            updated.getColumns() != null ? updated.getColumns().size() : "null");
-        updateColumns(
-            COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
-      }
-      if (shouldCompare("isHidden"))
-        recordChange("isHidden", original.getIsHidden(), updated.getIsHidden());
-      if (shouldCompare("sampleData"))
-        recordChange("sampleData", original.getSampleData(), updated.getSampleData());
+      compareAndUpdate(
+          "worksheetId",
+          () -> {
+            recordChange("worksheetId", original.getWorksheetId(), updated.getWorksheetId());
+          });
+      compareAndUpdate(
+          "index",
+          () -> {
+            recordChange("index", original.getIndex(), updated.getIndex());
+          });
+      compareAndUpdate(
+          "rowCount",
+          () -> {
+            recordChange("rowCount", original.getRowCount(), updated.getRowCount());
+          });
+      compareAndUpdate(
+          "columnCount",
+          () -> {
+            recordChange("columnCount", original.getColumnCount(), updated.getColumnCount());
+          });
+      compareAndUpdate(
+          "columns",
+          () -> {
+            // Use updateColumns for proper column handling including tags
+            LOG.info(
+                "Calling updateColumns with original columns: {} and updated columns: {}",
+                original.getColumns() != null ? original.getColumns().size() : "null",
+                updated.getColumns() != null ? updated.getColumns().size() : "null");
+            updateColumns(
+                COLUMN_FIELD, original.getColumns(), updated.getColumns(), EntityUtil.columnMatch);
+          });
+      compareAndUpdate(
+          "isHidden",
+          () -> {
+            recordChange("isHidden", original.getIsHidden(), updated.getIsHidden());
+          });
+      compareAndUpdate(
+          "sampleData",
+          () -> {
+            recordChange("sampleData", original.getSampleData(), updated.getSampleData());
+          });
     }
   }
 }

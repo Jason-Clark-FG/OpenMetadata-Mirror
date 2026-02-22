@@ -1213,40 +1213,83 @@ public class UserRepository extends EntityRepository<User> {
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       // LowerCase Email
       updated.setEmail(original.getEmail().toLowerCase());
-      if (shouldCompare("lastLoginTime"))
-        recordChange(
-            "lastLoginTime",
-            original.getLastLoginTime(),
-            updated.getLastLoginTime(),
-            false,
-            objectMatch,
-            false);
+      compareAndUpdate(
+          "lastLoginTime",
+          () -> {
+            recordChange(
+                "lastLoginTime",
+                original.getLastLoginTime(),
+                updated.getLastLoginTime(),
+                false,
+                objectMatch,
+                false);
+          });
 
-      if (shouldCompare("roles")) updateRoles(original, updated);
-      if (shouldCompare("teams")) updateTeams(original, updated);
-      if (shouldCompare("personas")) updatePersonas(original, updated);
-      if (shouldCompare("defaultPersona")) updateDefaultPersona(original, updated);
-      if (shouldCompare("profile"))
-        recordChange("profile", original.getProfile(), updated.getProfile(), true);
-      if (shouldCompare("timezone"))
-        recordChange("timezone", original.getTimezone(), updated.getTimezone());
-      if (shouldCompare("isBot")) recordChange("isBot", original.getIsBot(), updated.getIsBot());
-      if (shouldCompare("isAdmin"))
-        recordChange("isAdmin", original.getIsAdmin(), updated.getIsAdmin());
-      if (shouldCompare("isEmailVerified"))
-        recordChange(
-            "isEmailVerified", original.getIsEmailVerified(), updated.getIsEmailVerified());
-      if (shouldCompare("allowImpersonation"))
-        recordChange(
-            "allowImpersonation",
-            original.getAllowImpersonation(),
-            updated.getAllowImpersonation());
-      if (shouldCompare("personaPreferences")) updatePersonaPreferences(original, updated);
-      if (shouldCompare("authenticationMechanism"))
-        updateAuthenticationMechanism(original, updated);
-      if (shouldCompare("roles") || shouldCompare("teams")) {
-        SubjectCache.invalidateUser(updated.getName());
-      }
+      compareAndUpdate(
+          "roles",
+          () -> {
+            updateRoles(original, updated);
+          });
+      compareAndUpdate(
+          "teams",
+          () -> {
+            updateTeams(original, updated);
+          });
+      compareAndUpdate(
+          "personas",
+          () -> {
+            updatePersonas(original, updated);
+          });
+      compareAndUpdate(
+          "defaultPersona",
+          () -> {
+            updateDefaultPersona(original, updated);
+          });
+      compareAndUpdate(
+          "profile",
+          () -> {
+            recordChange("profile", original.getProfile(), updated.getProfile(), true);
+          });
+      compareAndUpdate(
+          "timezone",
+          () -> {
+            recordChange("timezone", original.getTimezone(), updated.getTimezone());
+          });
+      compareAndUpdate(
+          "isBot",
+          () -> {
+            recordChange("isBot", original.getIsBot(), updated.getIsBot());
+          });
+      compareAndUpdate(
+          "isAdmin",
+          () -> {
+            recordChange("isAdmin", original.getIsAdmin(), updated.getIsAdmin());
+          });
+      compareAndUpdate(
+          "isEmailVerified",
+          () -> {
+            recordChange(
+                "isEmailVerified", original.getIsEmailVerified(), updated.getIsEmailVerified());
+          });
+      compareAndUpdate(
+          "allowImpersonation",
+          () -> {
+            recordChange(
+                "allowImpersonation",
+                original.getAllowImpersonation(),
+                updated.getAllowImpersonation());
+          });
+      compareAndUpdate(
+          "personaPreferences",
+          () -> {
+            updatePersonaPreferences(original, updated);
+          });
+      compareAndUpdate(
+          "authenticationMechanism",
+          () -> {
+            updateAuthenticationMechanism(original, updated);
+          });
+      compareAndUpdateAny(() -> SubjectCache.invalidateUser(updated.getName()), "roles", "teams");
     }
 
     private void updateRoles(User original, User updated) {

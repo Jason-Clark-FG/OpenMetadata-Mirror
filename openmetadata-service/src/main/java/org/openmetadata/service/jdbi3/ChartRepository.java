@@ -241,24 +241,36 @@ public class ChartRepository extends EntityRepository<Chart> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("chartType"))
-        recordChange("chartType", original.getChartType(), updated.getChartType());
-      if (shouldCompare("sourceUrl"))
-        recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-      if (shouldCompare("sourceHash"))
-        recordChange(
-            "sourceHash",
-            original.getSourceHash(),
-            updated.getSourceHash(),
-            false,
-            EntityUtil.objectMatch,
-            false);
-      if (shouldCompare("dashboards"))
-        update(
-            Entity.DASHBOARD,
-            "dashboards",
-            listOrEmpty(updated.getDashboards()),
-            listOrEmpty(original.getDashboards()));
+      compareAndUpdate(
+          "chartType",
+          () -> {
+            recordChange("chartType", original.getChartType(), updated.getChartType());
+          });
+      compareAndUpdate(
+          "sourceUrl",
+          () -> {
+            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+          });
+      compareAndUpdate(
+          "sourceHash",
+          () -> {
+            recordChange(
+                "sourceHash",
+                original.getSourceHash(),
+                updated.getSourceHash(),
+                false,
+                EntityUtil.objectMatch,
+                false);
+          });
+      compareAndUpdate(
+          "dashboards",
+          () -> {
+            update(
+                Entity.DASHBOARD,
+                "dashboards",
+                listOrEmpty(updated.getDashboards()),
+                listOrEmpty(original.getDashboards()));
+          });
     }
 
     private void update(

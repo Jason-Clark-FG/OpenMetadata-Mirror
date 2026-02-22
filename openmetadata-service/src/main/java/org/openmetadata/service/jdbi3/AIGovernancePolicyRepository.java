@@ -81,40 +81,71 @@ public class AIGovernancePolicyRepository extends EntityRepository<AIGovernanceP
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("policyType"))
-        recordChange("policyType", original.getPolicyType(), updated.getPolicyType());
-      if (shouldCompare("rules"))
-        recordChange("rules", original.getRules(), updated.getRules(), true);
-      if (shouldCompare("biasThresholds"))
-        recordChange(
-            "biasThresholds", original.getBiasThresholds(), updated.getBiasThresholds(), true);
-      if (shouldCompare("dataAccessControls"))
-        recordChange(
-            "dataAccessControls",
-            original.getDataAccessControls(),
-            updated.getDataAccessControls(),
-            true);
-      if (shouldCompare("costControls"))
-        recordChange("costControls", original.getCostControls(), updated.getCostControls(), true);
-      if (shouldCompare("complianceRequirements"))
-        recordChange(
-            "complianceRequirements",
-            original.getComplianceRequirements(),
-            updated.getComplianceRequirements(),
-            true);
-      if (shouldCompare("performanceStandards"))
-        recordChange(
-            "performanceStandards",
-            original.getPerformanceStandards(),
-            updated.getPerformanceStandards(),
-            true);
-      if (shouldCompare("appliesTo"))
-        recordChange("appliesTo", original.getAppliesTo(), updated.getAppliesTo(), true);
-      if (shouldCompare("enforcementLevel"))
-        recordChange(
-            "enforcementLevel", original.getEnforcementLevel(), updated.getEnforcementLevel());
-      if (shouldCompare("enabled"))
-        recordChange("enabled", original.getEnabled(), updated.getEnabled());
+      compareAndUpdate(
+          "policyType",
+          () -> {
+            recordChange("policyType", original.getPolicyType(), updated.getPolicyType());
+          });
+      compareAndUpdate(
+          "rules",
+          () -> {
+            recordChange("rules", original.getRules(), updated.getRules(), true);
+          });
+      compareAndUpdate(
+          "biasThresholds",
+          () -> {
+            recordChange(
+                "biasThresholds", original.getBiasThresholds(), updated.getBiasThresholds(), true);
+          });
+      compareAndUpdate(
+          "dataAccessControls",
+          () -> {
+            recordChange(
+                "dataAccessControls",
+                original.getDataAccessControls(),
+                updated.getDataAccessControls(),
+                true);
+          });
+      compareAndUpdate(
+          "costControls",
+          () -> {
+            recordChange(
+                "costControls", original.getCostControls(), updated.getCostControls(), true);
+          });
+      compareAndUpdate(
+          "complianceRequirements",
+          () -> {
+            recordChange(
+                "complianceRequirements",
+                original.getComplianceRequirements(),
+                updated.getComplianceRequirements(),
+                true);
+          });
+      compareAndUpdate(
+          "performanceStandards",
+          () -> {
+            recordChange(
+                "performanceStandards",
+                original.getPerformanceStandards(),
+                updated.getPerformanceStandards(),
+                true);
+          });
+      compareAndUpdate(
+          "appliesTo",
+          () -> {
+            recordChange("appliesTo", original.getAppliesTo(), updated.getAppliesTo(), true);
+          });
+      compareAndUpdate(
+          "enforcementLevel",
+          () -> {
+            recordChange(
+                "enforcementLevel", original.getEnforcementLevel(), updated.getEnforcementLevel());
+          });
+      compareAndUpdate(
+          "enabled",
+          () -> {
+            recordChange("enabled", original.getEnabled(), updated.getEnabled());
+          });
     }
   }
 }

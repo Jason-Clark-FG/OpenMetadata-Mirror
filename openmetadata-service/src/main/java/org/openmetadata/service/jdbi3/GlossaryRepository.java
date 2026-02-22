@@ -530,7 +530,11 @@ public class GlossaryRepository extends EntityRepository<Glossary> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("name")) updateName(updated);
+      compareAndUpdate(
+          "name",
+          () -> {
+            updateName(updated);
+          });
       // Mutually exclusive cannot be updated
       updated.setMutuallyExclusive(original.getMutuallyExclusive());
     }

@@ -5719,7 +5719,47 @@ public abstract class EntityRepository<T extends EntityInterface> {
     @Getter private final String originalFqn;
 
     protected boolean shouldCompare(String fieldName) {
-      return patchedFields == null || patchedFields.contains(fieldName);
+      if (patchedFields == null || fieldName == null) {
+        return true;
+      }
+
+      if (patchedFields.contains(fieldName)) {
+        return true;
+      }
+
+      // PATCH stores top-level field names (for example "columns"), while change tracking may use
+      // nested names (for example "columns.colA.description"). Match both hierarchies.
+      int fieldPathSeparator = fieldName.indexOf(Entity.SEPARATOR);
+      if (fieldPathSeparator > 0
+          && patchedFields.contains(fieldName.substring(0, fieldPathSeparator))) {
+        return true;
+      }
+
+      for (String patchedField : patchedFields) {
+        if (fieldName.startsWith(patchedField + Entity.SEPARATOR)
+            || patchedField.startsWith(fieldName + Entity.SEPARATOR)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    protected final void compareAndUpdate(String fieldName, Runnable updater) {
+      if (shouldCompare(fieldName)) {
+        updater.run();
+      }
+    }
+
+    protected final void compareAndUpdateAny(Runnable updater, String... fieldNames) {
+      if (fieldNames == null) {
+        return;
+      }
+      for (String fieldName : fieldNames) {
+        if (shouldCompare(fieldName)) {
+          updater.run();
+          return;
+        }
+      }
     }
 
     public EntityUpdater(T original, T updated, Operation operation) {
@@ -6079,21 +6119,26 @@ public abstract class EntityRepository<T extends EntityInterface> {
       } else { // PUT or PATCH operations
         updated.setId(original.getId());
         updateDeleted();
-        if (shouldCompare("description")) updateDescription();
-        if (shouldCompare("displayName")) updateDisplayName();
-        if (shouldCompare("entityStatus")) updateEntityStatus(consolidatingChanges);
-        if (shouldCompare("owners")) updateOwners();
-        if (shouldCompare("extension")) updateExtension(consolidatingChanges);
-        if (shouldCompare("tags"))
-          updateTags(
-              updated.getFullyQualifiedName(), FIELD_TAGS, original.getTags(), updated.getTags());
-        if (shouldCompare("domains")) updateDomains();
-        if (shouldCompare("dataProducts")) updateDataProducts();
-        if (shouldCompare("experts")) updateExperts();
-        if (shouldCompare("reviewers")) updateReviewers();
-        if (shouldCompare("style")) updateStyle();
-        if (shouldCompare("lifeCycle")) updateLifeCycle();
-        if (shouldCompare("certification")) updateCertification();
+        compareAndUpdate(FIELD_DESCRIPTION, this::updateDescription);
+        compareAndUpdate(FIELD_DISPLAY_NAME, this::updateDisplayName);
+        compareAndUpdate(FIELD_ENTITY_STATUS, () -> updateEntityStatus(consolidatingChanges));
+        compareAndUpdate(FIELD_OWNERS, this::updateOwners);
+        compareAndUpdate(FIELD_EXTENSION, () -> updateExtension(consolidatingChanges));
+        compareAndUpdate(
+            FIELD_TAGS,
+            () ->
+                updateTags(
+                    updated.getFullyQualifiedName(),
+                    FIELD_TAGS,
+                    original.getTags(),
+                    updated.getTags()));
+        compareAndUpdate(FIELD_DOMAINS, this::updateDomains);
+        compareAndUpdate(FIELD_DATA_PRODUCTS, this::updateDataProducts);
+        compareAndUpdate(FIELD_EXPERTS, this::updateExperts);
+        compareAndUpdate(FIELD_REVIEWERS, this::updateReviewers);
+        compareAndUpdate(FIELD_STYLE, this::updateStyle);
+        compareAndUpdate(FIELD_LIFE_CYCLE, this::updateLifeCycle);
+        compareAndUpdate(FIELD_CERTIFICATION, this::updateCertification);
         entitySpecificUpdate(consolidatingChanges);
         updateChangeSummary();
       }
@@ -6863,6 +6908,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
         boolean jsonValue,
         BiPredicate<K, K> typeMatch,
         boolean updateVersion) {
+      if (!shouldCompare(field)) {
+        return false;
+      }
       if (orig == updated) {
         return false;
       }
@@ -6900,6 +6948,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
         List<K> addedItems,
         List<K> deletedItems,
         BiPredicate<K, K> typeMatch) {
+      if (!shouldCompare(field)) {
+        return false;
+      }
       origList = listOrEmpty(origList);
       updatedList = listOrEmpty(updatedList);
       List<K> updatedItems = new ArrayList<>();

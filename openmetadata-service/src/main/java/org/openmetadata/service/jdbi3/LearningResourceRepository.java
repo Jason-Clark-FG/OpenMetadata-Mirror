@@ -405,17 +405,34 @@ public class LearningResourceRepository extends EntityRepository<LearningResourc
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("categories"))
-        recordChange("categories", original.getCategories(), updated.getCategories());
-      if (shouldCompare("contexts"))
-        recordChange("contexts", original.getContexts(), updated.getContexts(), true);
-      if (shouldCompare("difficulty"))
-        recordChange("difficulty", original.getDifficulty(), updated.getDifficulty());
-      if (shouldCompare("source"))
-        recordChange("source", original.getSource(), updated.getSource(), true);
-      if (shouldCompare("estimatedDuration"))
-        recordChange(
-            "estimatedDuration", original.getEstimatedDuration(), updated.getEstimatedDuration());
+      compareAndUpdate(
+          "categories",
+          () -> {
+            recordChange("categories", original.getCategories(), updated.getCategories());
+          });
+      compareAndUpdate(
+          "contexts",
+          () -> {
+            recordChange("contexts", original.getContexts(), updated.getContexts(), true);
+          });
+      compareAndUpdate(
+          "difficulty",
+          () -> {
+            recordChange("difficulty", original.getDifficulty(), updated.getDifficulty());
+          });
+      compareAndUpdate(
+          "source",
+          () -> {
+            recordChange("source", original.getSource(), updated.getSource(), true);
+          });
+      compareAndUpdate(
+          "estimatedDuration",
+          () -> {
+            recordChange(
+                "estimatedDuration",
+                original.getEstimatedDuration(),
+                updated.getEstimatedDuration());
+          });
     }
   }
 }

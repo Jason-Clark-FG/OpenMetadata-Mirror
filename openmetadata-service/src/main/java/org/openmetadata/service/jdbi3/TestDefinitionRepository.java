@@ -135,34 +135,62 @@ public class TestDefinitionRepository extends EntityRepository<TestDefinition> {
       // For system test definitions, only allow enabled field changes
       if (original.getProvider() == ProviderType.SYSTEM) {
         // Only record enabled field changes for system test definitions
-        if (shouldCompare("enabled"))
-          recordChange("enabled", original.getEnabled(), updated.getEnabled());
+        compareAndUpdate(
+            "enabled",
+            () -> {
+              recordChange("enabled", original.getEnabled(), updated.getEnabled());
+            });
       } else {
         // For user/automation test definitions, allow all changes
-        if (shouldCompare("testPlatforms"))
-          recordChange("testPlatforms", original.getTestPlatforms(), updated.getTestPlatforms());
-        if (shouldCompare("supportedDataTypes"))
-          recordChange(
-              "supportedDataTypes",
-              original.getSupportedDataTypes(),
-              updated.getSupportedDataTypes());
-        if (shouldCompare("parameterDefinition"))
-          recordChange(
-              "parameterDefinition",
-              original.getParameterDefinition(),
-              updated.getParameterDefinition());
-        if (shouldCompare("enabled"))
-          recordChange("enabled", original.getEnabled(), updated.getEnabled());
-        if (shouldCompare("dataQualityDimension"))
-          recordChange(
-              "dataQualityDimension",
-              original.getDataQualityDimension(),
-              updated.getDataQualityDimension());
-        if (shouldCompare("supportedServices"))
-          recordChange(
-              "supportedServices", original.getSupportedServices(), updated.getSupportedServices());
-        if (shouldCompare("sqlExpression"))
-          recordChange("sqlExpression", original.getSqlExpression(), updated.getSqlExpression());
+        compareAndUpdate(
+            "testPlatforms",
+            () -> {
+              recordChange(
+                  "testPlatforms", original.getTestPlatforms(), updated.getTestPlatforms());
+            });
+        compareAndUpdate(
+            "supportedDataTypes",
+            () -> {
+              recordChange(
+                  "supportedDataTypes",
+                  original.getSupportedDataTypes(),
+                  updated.getSupportedDataTypes());
+            });
+        compareAndUpdate(
+            "parameterDefinition",
+            () -> {
+              recordChange(
+                  "parameterDefinition",
+                  original.getParameterDefinition(),
+                  updated.getParameterDefinition());
+            });
+        compareAndUpdate(
+            "enabled",
+            () -> {
+              recordChange("enabled", original.getEnabled(), updated.getEnabled());
+            });
+        compareAndUpdate(
+            "dataQualityDimension",
+            () -> {
+              recordChange(
+                  "dataQualityDimension",
+                  original.getDataQualityDimension(),
+                  updated.getDataQualityDimension());
+            });
+        compareAndUpdate(
+            "supportedServices",
+            () -> {
+              recordChange(
+                  "supportedServices",
+                  original.getSupportedServices(),
+                  updated.getSupportedServices());
+            });
+        compareAndUpdate(
+            "sqlExpression",
+            () -> {
+              recordChange(
+                  "sqlExpression", original.getSqlExpression(), updated.getSqlExpression());
+            });
       }
     }
   }

@@ -689,19 +689,47 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      if (shouldCompare("processingEngine")) updateProcessingEngine(original, updated);
-      if (shouldCompare("sourceConfig")) updateSourceConfig();
-      if (shouldCompare("airflowConfig"))
-        updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
-      if (shouldCompare("loggerLevel"))
-        updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
-      if (shouldCompare("enabled")) updateEnabled(original.getEnabled(), updated.getEnabled());
-      if (shouldCompare("deployed")) updateDeployed(original.getDeployed(), updated.getDeployed());
-      if (shouldCompare("raiseOnError"))
-        updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
-      if (shouldCompare("enableStreamableLogs"))
-        updateEnableStreamableLogs(
-            original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
+      compareAndUpdate(
+          "processingEngine",
+          () -> {
+            updateProcessingEngine(original, updated);
+          });
+      compareAndUpdate(
+          "sourceConfig",
+          () -> {
+            updateSourceConfig();
+          });
+      compareAndUpdate(
+          "airflowConfig",
+          () -> {
+            updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
+          });
+      compareAndUpdate(
+          "loggerLevel",
+          () -> {
+            updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
+          });
+      compareAndUpdate(
+          "enabled",
+          () -> {
+            updateEnabled(original.getEnabled(), updated.getEnabled());
+          });
+      compareAndUpdate(
+          "deployed",
+          () -> {
+            updateDeployed(original.getDeployed(), updated.getDeployed());
+          });
+      compareAndUpdate(
+          "raiseOnError",
+          () -> {
+            updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
+          });
+      compareAndUpdate(
+          "enableStreamableLogs",
+          () -> {
+            updateEnableStreamableLogs(
+                original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
+          });
 
       deployIfRequired(original, updated);
     }
