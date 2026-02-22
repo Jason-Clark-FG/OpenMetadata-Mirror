@@ -201,6 +201,7 @@ interface ColumnContentProps {
   isLoading: boolean;
   summary?: ColumnTestSummaryDefinition;
   depth?: number;
+  className?: string;
 }
 
 const ColumnContentInner = ({
@@ -210,10 +211,16 @@ const ColumnContentInner = ({
   isLoading,
   summary,
   depth = 0,
+  className = '',
 }: ColumnContentProps) => {
   const { onColumnMouseEnter } = useLineageProvider();
-  const { selectedColumn, setSelectedColumn, setTracedColumns, isEditMode } =
-    useLineageStore();
+  const {
+    selectedColumn,
+    setSelectedColumn,
+    setTracedColumns,
+    isEditMode,
+    tracedColumns,
+  } = useLineageStore();
 
   const { fullyQualifiedName } = column;
 
@@ -259,7 +266,11 @@ const ColumnContentInner = ({
 
   return (
     <div
-      className="custom-node-column-container"
+      className={classNames(`custom-node-column-container ${className}`, {
+        'custom-node-header-column-tracing': tracedColumns.has(
+          fullyQualifiedName ?? ''
+        ),
+      })}
       data-testid={`column-${fullyQualifiedName}`}
       style={{
         paddingLeft: depth * DEPTH_INDENT_PX,

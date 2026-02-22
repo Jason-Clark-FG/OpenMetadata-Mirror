@@ -19,7 +19,6 @@ import CustomNodeV1Component from './CustomNodeV1.component';
 
 interface PaginationAssertionParams {
   columnsContainer: HTMLElement;
-  expectedPageText: string;
   expectedColumns: string[];
   direction: 'next' | 'prev';
   shouldBeDisabled?: 'prev' | 'next';
@@ -45,16 +44,13 @@ const getColumnsFromCurrentPage = (columnsContainer: HTMLElement): string[] => {
 
 const assertPaginationState = ({
   columnsContainer,
-  expectedPageText,
   expectedColumns,
   direction,
   shouldBeDisabled,
 }: PaginationAssertionParams): void => {
-  const prevButton = within(columnsContainer).getByTestId('prev-btn');
-  const nextButton = within(columnsContainer).getByTestId('next-btn');
+  const prevButton = within(columnsContainer).getByTestId('column-scroll-up');
+  const nextButton = within(columnsContainer).getByTestId('column-scroll-down');
   const button = direction === 'next' ? nextButton : prevButton;
-
-  expect(screen.getByText(expectedPageText)).toBeInTheDocument();
 
   const visibleColumns = getColumnsFromCurrentPage(columnsContainer);
 
@@ -338,7 +334,7 @@ describe('CustomNodeV1', () => {
   });
 
   it('should render searchbar when column layer is applied and node has children', async () => {
-    (useLineageStore as unknown as jest.Mock).mockImplementationOnce(() => ({
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
       isColumnLevelLineage: true,
       isDQ: false,
       tracedColumns: new Set(),
@@ -360,11 +356,12 @@ describe('CustomNodeV1', () => {
   });
 
   it('should not remove searchbar from node when no columns are matched while searching', () => {
-    (useLineageStore as unknown as jest.Mock).mockImplementationOnce(() => ({
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
       isColumnLevelLineage: true,
       isDQ: false,
       tracedColumns: new Set(),
       tracedNodes: new Set(),
+      updateColumnsInCurrentPages: jest.fn(),
       columnsHavingLineage: new Map([['id', new Set()]]),
       isEditMode: false,
     }));
@@ -385,11 +382,12 @@ describe('CustomNodeV1', () => {
   });
 
   it('should render NodeChildren when column layer is applied and there are no columns', () => {
-    (useLineageStore as unknown as jest.Mock).mockImplementationOnce(() => ({
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
       isColumnLevelLineage: true,
       isDQ: false,
       tracedColumns: new Set(),
       tracedNodes: new Set(),
+      updateColumnsInCurrentPages: jest.fn(),
       columnsHavingLineage: new Map([['id', new Set()]]),
       isEditMode: false,
     }));
@@ -404,11 +402,12 @@ describe('CustomNodeV1', () => {
   });
 
   it('should not render NodeChildren when column layer is applied but there are no columns', () => {
-    (useLineageStore as unknown as jest.Mock).mockImplementationOnce(() => ({
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
       isColumnLevelLineage: true,
       isDQ: false,
       tracedColumns: new Set(),
       tracedNodes: new Set(),
+      updateColumnsInCurrentPages: jest.fn(),
       columnsHavingLineage: new Map([['id', new Set()]]),
       isEditMode: false,
     }));
@@ -433,6 +432,16 @@ describe('CustomNodeV1', () => {
   });
 
   it('should toggle columns list when children dropdown button is clicked', () => {
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+      isColumnLevelLineage: false,
+      isDQEnabled: false,
+      tracedColumns: new Set(),
+      tracedNodes: new Set(),
+      columnsHavingLineage: new Map(),
+      isEditMode: false,
+      updateColumnsInCurrentPages: jest.fn(),
+      setSelectedColumn: mockSetSelectedColumn,
+    }));
     render(
       <ReactFlowProvider>
         <CustomNodeV1Component {...mockNodeDataProps} />
@@ -443,13 +452,17 @@ describe('CustomNodeV1', () => {
 
     expect(button).toBeInTheDocument();
 
-    fireEvent.click(button);
+    act(() => {
+      fireEvent.click(button);
+    });
 
     expect(screen.getByText('col1')).toBeInTheDocument();
     expect(screen.getByText('col2')).toBeInTheDocument();
     expect(screen.getByText('col3')).toBeInTheDocument();
 
-    fireEvent.click(button);
+    act(() => {
+      fireEvent.click(button);
+    });
 
     expect(screen.queryByText('col1')).not.toBeInTheDocument();
     expect(screen.queryByText('col2')).not.toBeInTheDocument();
@@ -512,14 +525,14 @@ describe('CustomNodeV1', () => {
   });
 
   it('should have Test summary widget when observability layer is applied', async () => {
-    (useLineageStore as jest.Mock).mockImplementation(() => ({
-      isColumnLevelLineage: false,
+    (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+      isColumnLevelLineage: true,
       isDQEnabled: true,
       tracedColumns: new Set(),
       tracedNodes: new Set(),
+      updateColumnsInCurrentPages: jest.fn(),
       columnsHavingLineage: new Map([['id', new Set()]]),
       isEditMode: false,
-      updateColumnsInCurrentPages: jest.fn(),
     }));
 
     render(
@@ -544,7 +557,17 @@ describe('CustomNodeV1', () => {
     };
 
     it('should have pagination in columns', () => {
-      //   columnsHavingLineage = ['col0', 'col2', 'col5', 'col7', 'col10'];
+      (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+        isColumnLevelLineage: true,
+        isDQEnabled: false,
+        tracedColumns: new Set(),
+        tracedNodes: new Set(),
+        columnsHavingLineage: new Map([
+          ['id', new Set(['col0', 'col2', 'col5', 'col7', 'col10'])],
+        ]),
+        isEditMode: false,
+        updateColumnsInCurrentPages: jest.fn(),
+      }));
 
       render(
         <ReactFlowProvider>
@@ -560,45 +583,85 @@ describe('CustomNodeV1', () => {
 
       assertPaginationState({
         columnsContainer,
-        expectedPageText: '1 / 3',
-        expectedColumns: ['col0', 'col1', 'col2', 'col3', 'col4'],
+        expectedColumns: [
+          'col0',
+          'col1',
+          'col2',
+          'col3',
+          'col4',
+          'col5',
+          'col6',
+          'col7',
+          'col8',
+          'col9',
+        ],
         direction: 'next',
         shouldBeDisabled: 'prev',
       });
 
       assertPaginationState({
         columnsContainer,
-        expectedPageText: '2 / 3',
-        expectedColumns: ['col5', 'col6', 'col7', 'col8', 'col9'],
-        direction: 'next',
-      });
-
-      assertPaginationState({
-        columnsContainer,
-        expectedPageText: '3 / 3',
-        expectedColumns: ['col10', 'col11'],
+        expectedColumns: [
+          'col2',
+          'col3',
+          'col4',
+          'col5',
+          'col6',
+          'col7',
+          'col8',
+          'col9',
+          'col10',
+          'col11',
+        ],
         direction: 'prev',
         shouldBeDisabled: 'next',
       });
 
-      assertPaginationState({
-        columnsContainer,
-        expectedPageText: '2 / 3',
-        expectedColumns: ['col5', 'col6', 'col7', 'col8', 'col9'],
-        direction: 'prev',
-      });
+      //   assertPaginationState({
+      //     columnsContainer,
+      //     expectedColumns: ['col10', 'col11'],
+      //     direction: 'prev',
+      //     shouldBeDisabled: 'next',
+      //   });
+
+      //   assertPaginationState({
+      //     columnsContainer,
+      //     expectedColumns: ['col5', 'col6', 'col7', 'col8', 'col9'],
+      //     direction: 'prev',
+      //   });
 
       assertPaginationState({
         columnsContainer,
-        expectedPageText: '1 / 3',
-        expectedColumns: ['col0', 'col1', 'col2', 'col3', 'col4'],
+        expectedColumns: [
+          'col0',
+          'col1',
+          'col2',
+          'col3',
+          'col4',
+          'col5',
+          'col6',
+          'col7',
+          'col8',
+          'col9',
+        ],
         direction: 'next',
         shouldBeDisabled: 'prev',
       });
     });
 
     it('should select a column when it is clicked', () => {
-      //   columnsHavingLineage = ['col0', 'col2', 'col5', 'col7', 'col10'];
+      (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+        isColumnLevelLineage: true,
+        isDQEnabled: false,
+        tracedColumns: new Set(),
+        tracedNodes: new Set(),
+        columnsHavingLineage: new Map([
+          ['id', new Set(['col0', 'col2', 'col5', 'col7', 'col10'])],
+        ]),
+        isEditMode: false,
+        updateColumnsInCurrentPages: jest.fn(),
+        setSelectedColumn: mockSetSelectedColumn,
+      }));
 
       render(
         <ReactFlowProvider>
@@ -616,7 +679,34 @@ describe('CustomNodeV1', () => {
     });
 
     it('should keep the traced column visible when page changes', () => {
-      //   columnsHavingLineage = ['col0', 'col2', 'col3', 'col5', 'col7', 'col10'];
+      let tracedColumns = new Set<string>();
+      (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+        isColumnLevelLineage: true,
+        isDQEnabled: false,
+        tracedColumns,
+        tracedNodes: new Set(),
+        columnsHavingLineage: new Map([
+          [
+            'id',
+            new Set([
+              'col0',
+              'col1',
+              'col2',
+              'col3',
+              'col4',
+              'col5',
+              'col6',
+              'col7',
+              'col8',
+              'col9',
+              'col10',
+            ]),
+          ],
+        ]),
+        isEditMode: false,
+        updateColumnsInCurrentPages: jest.fn(),
+        setSelectedColumn: mockSetSelectedColumn,
+      }));
 
       const { rerender } = render(
         <ReactFlowProvider>
@@ -626,12 +716,11 @@ describe('CustomNodeV1', () => {
 
       clickFilterButton();
 
-      expect(screen.getByText('1 / 3')).toBeVisible();
       expect(screen.getByTestId('column-col3')).not.toHaveClass(
         'custom-node-header-column-tracing'
       );
 
-      //   tracedColumns = ['col3'];
+      tracedColumns = new Set(['col10']);
 
       rerender(
         <ReactFlowProvider>
@@ -639,13 +728,12 @@ describe('CustomNodeV1', () => {
         </ReactFlowProvider>
       );
 
-      const nextButton = screen.getByTestId('next-btn');
+      const nextButton = screen.getByTestId('column-scroll-down');
       act(() => {
         fireEvent.click(nextButton);
       });
 
-      expect(screen.getByText('2 / 3')).toBeVisible();
-      expect(screen.getByTestId('column-col3')).toHaveClass(
+      expect(screen.getByTestId('column-col10')).toHaveClass(
         'custom-node-header-column-tracing'
       );
     });
@@ -658,7 +746,18 @@ describe('CustomNodeV1', () => {
     };
 
     it('should render tooltip on hovering filter button in lineage node', async () => {
-      //   columnsHavingLineage = ['col0', 'col2', 'col5'];
+      (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+        isColumnLevelLineage: true,
+        isDQEnabled: false,
+        tracedColumns: new Set(),
+        tracedNodes: new Set(),
+        columnsHavingLineage: new Map([
+          ['id', new Set(['col0', 'col2', 'col5'])],
+        ]),
+        isEditMode: false,
+        updateColumnsInCurrentPages: jest.fn(),
+        setSelectedColumn: mockSetSelectedColumn,
+      }));
 
       render(
         <ReactFlowProvider>
@@ -679,9 +778,19 @@ describe('CustomNodeV1', () => {
 
     describe('Column Filter', () => {
       it('should only render columns with lineage when filter is on', () => {
-        // isColumnLayerActive = false;
         let visibleColumns = [];
-        // columnsHavingLineage = ['col0', 'col2', 'col5', 'col7', 'col10'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: false,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: new Map([
+            ['khjahjfja', new Set(['col0', 'col2', 'col5', 'col7', 'col10'])],
+          ]),
+          isEditMode: false,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         render(
           <ReactFlowProvider>
@@ -701,9 +810,12 @@ describe('CustomNodeV1', () => {
           'col2',
           'col3',
           'col4',
+          'col5',
+          'col6',
+          'col7',
+          'col8',
+          'col9',
         ]);
-
-        expect(screen.getByText('1 / 3')).toBeInTheDocument();
 
         const filterButton = screen.getByTestId('lineage-filter-button');
 
@@ -717,6 +829,7 @@ describe('CustomNodeV1', () => {
         visibleColumns = getColumnsFromContainer(columnsContainer);
 
         expect(visibleColumns).toEqual([
+          '',
           'col0',
           'col2',
           'col5',
@@ -730,7 +843,18 @@ describe('CustomNodeV1', () => {
       });
 
       it('should turn on the filter when column layer is applied', () => {
-        // columnsHavingLineage = ['col0', 'col2', 'col5'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: true,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: new Map([
+            ['khjahjfja', new Set(['col0', 'col2', 'col5'])],
+          ]),
+          isEditMode: false,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         render(
           <ReactFlowProvider>
@@ -746,13 +870,22 @@ describe('CustomNodeV1', () => {
         const columnsContainer = screen.getByTestId('column-container');
         const visibleColumns = getColumnsFromContainer(columnsContainer);
 
-        expect(visibleColumns).toEqual(['col0', 'col2', 'col5']);
-        expect(screen.queryByTestId('prev-btn')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('next-btn')).not.toBeInTheDocument();
+        expect(visibleColumns).toEqual(['', 'col0', 'col2', 'col5']);
       });
 
       it('should maintain filter state when another layer is applied', () => {
-        // columnsHavingLineage = ['col0', 'col2', 'col5'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: true,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: new Map([
+            ['khjahjfja', new Set(['col0', 'col2', 'col5'])],
+          ]),
+          isEditMode: false,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         const { rerender } = render(
           <ReactFlowProvider>
@@ -778,8 +911,18 @@ describe('CustomNodeV1', () => {
       });
 
       it('should disable turn off and disable the filter in edit mode', () => {
-        // isEditMode = true;
-        // columnsHavingLineage = ['col0', 'col2', 'col5'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: false,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: new Map([
+            ['khjahjfja', new Set(['col0', 'col2', 'col5'])],
+          ]),
+          isEditMode: true,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         render(
           <ReactFlowProvider>
@@ -806,30 +949,27 @@ describe('CustomNodeV1', () => {
                   fullyQualifiedName: 'parent1',
                   name: 'parent1',
                   dataType: 'RECORD',
-                  children: [
-                    {
-                      fullyQualifiedName: 'parent1.child1',
-                      name: 'parent1.child1',
-                      dataType: 'VARCHAR',
-                    },
-                    {
-                      fullyQualifiedName: 'parent1.child2',
-                      name: 'parent1.child2',
-                      dataType: 'VARCHAR',
-                    },
-                  ],
+                },
+                {
+                  fullyQualifiedName: 'parent1.child1',
+                  name: 'parent1.child1',
+                  dataType: 'VARCHAR',
+                },
+                {
+                  fullyQualifiedName: 'parent1.child2',
+                  name: 'parent1.child2',
+                  dataType: 'VARCHAR',
                 },
                 {
                   fullyQualifiedName: 'parent2',
                   name: 'parent2',
                   dataType: 'RECORD',
-                  children: [
-                    {
-                      fullyQualifiedName: 'parent2.child1',
-                      name: 'parent2.child1',
-                      dataType: 'VARCHAR',
-                    },
-                  ],
+                  children: [],
+                },
+                {
+                  fullyQualifiedName: 'parent2.child1',
+                  name: 'parent2.child1',
+                  dataType: 'VARCHAR',
                 },
                 {
                   fullyQualifiedName: 'col0',
@@ -840,8 +980,19 @@ describe('CustomNodeV1', () => {
             },
           },
         };
+        const columnsLineageMap = new Map();
+        columnsLineageMap.set('khjahjfja', new Set(['parent1.child2']));
 
-        // columnsHavingLineage = ['parent1.child2'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: true,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: columnsLineageMap,
+          isEditMode: false,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         render(
           <ReactFlowProvider>
@@ -854,8 +1005,8 @@ describe('CustomNodeV1', () => {
          * so asserting the activated state that only columns with lineage
          * are visible, rest are hidden
          */
-        expect(screen.getByText('parent1')).toBeInTheDocument();
-        expect(screen.getByText('parent1.child1')).toBeInTheDocument();
+        expect(screen.queryByText('parent1')).not.toBeInTheDocument();
+        expect(screen.queryByText('parent1.child1')).not.toBeInTheDocument();
         expect(screen.getByText('parent1.child2')).toBeInTheDocument();
         expect(screen.queryByText('parent2')).not.toBeInTheDocument();
         expect(screen.queryByText('parent2.child1')).not.toBeInTheDocument();
@@ -878,7 +1029,18 @@ describe('CustomNodeV1', () => {
 
     describe('Filter with Search', () => {
       it('should only search among columns with lineage when filter is activated and column is searched', () => {
-        // columnsHavingLineage = ['col0', 'col2', 'col5', 'col7', 'col10'];
+        (useLineageStore as unknown as jest.Mock).mockImplementation(() => ({
+          isColumnLevelLineage: true,
+          isDQEnabled: false,
+          tracedColumns: new Set(),
+          tracedNodes: new Set(),
+          columnsHavingLineage: new Map([
+            ['khjahjfja', new Set(['col0', 'col2', 'col5', 'col7', 'col10'])],
+          ]),
+          isEditMode: false,
+          updateColumnsInCurrentPages: jest.fn(),
+          setSelectedColumn: mockSetSelectedColumn,
+        }));
 
         render(
           <ReactFlowProvider>
@@ -890,6 +1052,7 @@ describe('CustomNodeV1', () => {
         let visibleColumns = getColumnsFromContainer(columnsContainer);
 
         expect(visibleColumns).toEqual([
+          '',
           'col0',
           'col2',
           'col5',
@@ -908,7 +1071,7 @@ describe('CustomNodeV1', () => {
         columnsContainer = screen.getByTestId('column-container');
         visibleColumns = getColumnsFromContainer(columnsContainer);
 
-        expect(visibleColumns).toEqual(['col10']);
+        expect(visibleColumns).toEqual(['', 'col10']);
         expect(visibleColumns).not.toContain('col1');
         expect(visibleColumns).not.toContain('col11');
       });

@@ -13,8 +13,14 @@
 import { SearchOutlined } from '@ant-design/icons';
 import { Input } from 'antd';
 import classNames from 'classnames';
-import { isEmpty, isUndefined } from 'lodash';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { isEmpty, isEqual, isUndefined } from 'lodash';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { BORDER_COLOR } from '../../../../constants/constants';
 import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../../constants/Lineage.constants';
@@ -54,27 +60,37 @@ const NodeChildren = ({
     return Boolean(
       isDQEnabled && entityType === EntityType.TABLE && node.testSuite
     );
-  }, [node, isDQEnabled, entityType]);
+  }, [isDQEnabled, entityType]);
 
   const supportsColumns = useMemo(() => {
     return (
       node &&
       LINEAGE_COLUMN_NODE_SUPPORTED.includes(node.entityType as EntityType)
     );
-  }, [node]);
+  }, []);
 
   const { children: entityChildren, childrenHeading } = useMemo(
     () => getEntityChildrenAndLabel(node),
-    [node]
+    []
   );
 
-  const currentNodeColumnsWithLineage = useMemo(
-    () =>
-      entityChildren.filter((column) =>
-        columnsHavingLineage.get(node.id)?.has(column.fullyQualifiedName ?? '')
-      ),
-    [entityChildren, columnsHavingLineage, node.id]
-  );
+  const currentNodeColumnsWithLineage = useMemo(() => {
+    const filtered = entityChildren.filter((column) =>
+      columnsHavingLineage.get(node.id)?.has(column.fullyQualifiedName ?? '')
+    );
+
+    return filtered;
+  }, [entityChildren, columnsHavingLineage, node.id]);
+
+  const prevFilteredRef = useRef<EntityChildren>([]);
+  const stableColumnsWithLineage = useMemo(() => {
+    if (isEqual(prevFilteredRef.current, currentNodeColumnsWithLineage)) {
+      return prevFilteredRef.current;
+    }
+    prevFilteredRef.current = currentNodeColumnsWithLineage;
+
+    return currentNodeColumnsWithLineage;
+  }, [currentNodeColumnsWithLineage]);
 
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +99,7 @@ const NodeChildren = ({
       setSearchValue(searchQuery);
       const currentNodeColumnsToSearch =
         isOnlyShowColumnsWithLineageFilterActive
-          ? currentNodeColumnsWithLineage
+          ? stableColumnsWithLineage
           : entityChildren;
 
       if (searchQuery.trim() === '') {
@@ -100,33 +116,23 @@ const NodeChildren = ({
     },
     [
       entityChildren,
-      currentNodeColumnsWithLineage,
+      stableColumnsWithLineage,
       isOnlyShowColumnsWithLineageFilterActive,
     ]
   );
 
   useEffect(() => {
     if (!isEmpty(entityChildren)) {
-      if (
-        isOnlyShowColumnsWithLineageFilterActive &&
-        (columnsHavingLineage.get(node.id)?.size ?? 0) > 0
-      ) {
-        const columnsWithLineage = entityChildren.filter((column) =>
-          columnsHavingLineage
-            .get(node.id)
-            ?.has(column.fullyQualifiedName ?? '')
-        );
-
-        setFilteredColumns(columnsWithLineage);
+      if (isOnlyShowColumnsWithLineageFilterActive) {
+        setFilteredColumns(stableColumnsWithLineage);
       } else {
         setFilteredColumns(entityChildren);
       }
     }
   }, [
     entityChildren,
+    stableColumnsWithLineage,
     isOnlyShowColumnsWithLineageFilterActive,
-    columnsHavingLineage,
-    node.id,
   ]);
 
   const fetchTestSuiteSummary = async (testSuite: EntityReference) => {

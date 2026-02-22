@@ -163,7 +163,7 @@ const CustomNodeV1 = (props: NodeProps) => {
 
   // by default it will be enabled
   const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
-    useState(true);
+    useState(false);
 
   const [columnsExpanded, setColumnsExpanded] = useState<boolean>(false);
 
@@ -179,6 +179,17 @@ const CustomNodeV1 = (props: NodeProps) => {
       setShowColumnsWithLineageOnly(true);
     };
   }, [isEditMode]);
+
+  useEffect(() => {
+    if (isColumnLevelLineage) {
+      setShowColumnsWithLineageOnly(true);
+    }
+
+    // reset on unmount
+    return () => {
+      setShowColumnsWithLineageOnly(false);
+    };
+  }, [isColumnLevelLineage]);
 
   const {
     label,

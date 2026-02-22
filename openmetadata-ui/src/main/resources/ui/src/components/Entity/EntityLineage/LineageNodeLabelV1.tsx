@@ -192,7 +192,7 @@ const EntityFooter = ({
   isOnlyShowColumnsWithLineageFilterActive,
 }: LineageNodeLabelProps) => {
   const { t } = useTranslation();
-  const { isEditMode, isColumnLevelLineage } = useLineageStore();
+  const { isEditMode } = useLineageStore();
   const { children, childrenHeading } = useMemo(
     () => getEntityChildrenAndLabel(node),
     [node.id]
@@ -251,22 +251,20 @@ const EntityFooter = ({
       </div>
       <div className="entity-footer__test-summary-and-filter">
         <TestSuiteSummaryContainer node={node} />
-        {isColumnLevelLineage && (
-          <Tooltip
-            placement="right"
-            title={t('message.only-show-columns-with-lineage')}>
-            <IconButton
-              className={classNames(
-                'only-show-columns-with-lineage-filter-button',
-                isOnlyShowColumnsWithLineageFilterActive && 'active'
-              )}
-              data-testid="lineage-filter-button"
-              disabled={isEditMode}
-              onClick={handleOnlyShowColumnsWithLineage}>
-              <FilterIcon height={20} width={20} />
-            </IconButton>
-          </Tooltip>
-        )}
+        <Tooltip
+          placement="right"
+          title={t('message.only-show-columns-with-lineage')}>
+          <IconButton
+            className={classNames(
+              'only-show-columns-with-lineage-filter-button',
+              isOnlyShowColumnsWithLineageFilterActive && 'active'
+            )}
+            data-testid="lineage-filter-button"
+            disabled={isEditMode}
+            onClick={handleOnlyShowColumnsWithLineage}>
+            <FilterIcon height={20} width={20} />
+          </IconButton>
+        </Tooltip>
       </div>
     </div>
   );

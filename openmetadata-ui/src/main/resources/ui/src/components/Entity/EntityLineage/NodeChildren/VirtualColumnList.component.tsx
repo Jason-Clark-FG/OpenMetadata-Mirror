@@ -110,12 +110,13 @@ const VirtualColumnList = ({
   );
 
   const renderFlatItem = useCallback(
-    (column: Flatten<Column>, _className: string) => {
+    (column: Flatten<Column>, className: string) => {
       const { depth = 0 } = column;
       const columnSummary = getColumnSummary(column);
 
       return (
         <ColumnContent
+          className={className}
           column={column}
           depth={depth}
           isConnectable={isConnectable}
