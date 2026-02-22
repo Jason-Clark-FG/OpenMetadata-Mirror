@@ -261,6 +261,7 @@ export function useCanvasEdgeRenderer({
       drawEdgeIcons,
       columnsInCurrentPages,
       hoverEdge,
+      selectedEdge,
     ]
   );
 

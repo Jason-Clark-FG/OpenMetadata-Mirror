@@ -111,9 +111,11 @@ export function getEdgeCoordinates(
     }
 
     const sourceColumnPosition =
-      32.85 * sourceIndex + (sourceIndex >= 10 ? 17 : 0);
+      32.85 * sourceIndex +
+      (sourceIndex >= LINEAGE_CHILD_ITEMS_PER_PAGE ? 17 : 0);
     const targetColumnPosition =
-      32.85 * targetIndex + (targetIndex >= 10 ? 17 : 0);
+      32.85 * targetIndex +
+      (targetIndex >= LINEAGE_CHILD_ITEMS_PER_PAGE ? 17 : 0);
 
     const sourceYPadding = getNodeYPadding(sourceNode);
     const targetYPadding = getNodeYPadding(targetNode);

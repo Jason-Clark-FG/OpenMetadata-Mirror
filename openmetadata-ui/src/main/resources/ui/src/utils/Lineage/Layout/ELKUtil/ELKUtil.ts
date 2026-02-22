@@ -10,7 +10,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import ELKGraph, { ELK, ElkExtendedEdge, ElkNode, LayoutOptions } from 'elkjs';
+import ELKGraph, {
+  ELK,
+  ElkExtendedEdge,
+  ElkNode,
+  LayoutOptions,
+} from 'elkjs/lib/elk.bundled.js';
 
 class ELKLayout {
   static elk: ELK;
@@ -27,10 +32,7 @@ class ELKLayout {
 
   static getElk() {
     if (!this.elk) {
-      this.elk = new ELKGraph({
-        workerFactory: () =>
-          new Worker(new URL('elkjs/lib/elk-worker.min.js', import.meta.url)),
-      });
+      this.elk = new ELKGraph();
     }
 
     return this.elk;

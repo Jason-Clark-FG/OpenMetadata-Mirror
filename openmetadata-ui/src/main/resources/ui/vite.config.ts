@@ -181,16 +181,6 @@ export default defineConfig(({ mode }) => {
       ],
       esbuildOptions: {
         target: 'esnext',
-        plugins: [
-          {
-            name: 'externalize-web-worker',
-            setup(build) {
-              build.onResolve({ filter: /^web-worker$/ }, () => {
-                return { path: 'web-worker', external: true };
-              });
-            },
-          },
-        ],
       },
     },
 

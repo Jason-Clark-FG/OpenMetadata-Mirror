@@ -66,6 +66,7 @@ const defaultLineageStoreState = {
   updateColumnsInCurrentPages: mockUpdateColumnsInCurrentPages,
   selectedColumn: undefined,
   isCreatingEdge: false,
+  isDQEnabled: false,
 };
 
 let mockLineageStoreState = { ...defaultLineageStoreState };
@@ -468,6 +469,7 @@ describe('NodeChildren Component', () => {
   describe('Data Observability', () => {
     it('should fetch test suite summary when data observability is enabled', async () => {
       mockLineageStoreState.activeLayer = [LineageLayer.DataObservability];
+      mockLineageStoreState.isDQEnabled = true;
       const mockSummary = { total: 10, success: 8, failed: 2 };
       mockGetTestCaseExecutionSummary.mockResolvedValue(mockSummary);
 
@@ -488,7 +490,7 @@ describe('NodeChildren Component', () => {
 
     it('should not fetch test suite summary when data observability is disabled', () => {
       mockLineageStoreState.activeLayer = [LineageLayer.ColumnLevelLineage];
-
+      mockLineageStoreState.isDQEnabled = false;
       render(
         <NodeChildren
           isChildrenListExpanded
@@ -502,7 +504,7 @@ describe('NodeChildren Component', () => {
 
     it('should not fetch test suite summary when node has no test suite', () => {
       mockLineageStoreState.activeLayer = [LineageLayer.DataObservability];
-
+      mockLineageStoreState.isDQEnabled = true;
       render(
         <NodeChildren
           isChildrenListExpanded
@@ -516,6 +518,7 @@ describe('NodeChildren Component', () => {
 
     it('should handle test suite summary fetch error gracefully', async () => {
       mockLineageStoreState.activeLayer = [LineageLayer.DataObservability];
+      mockLineageStoreState.isDQEnabled = true;
       mockGetTestCaseExecutionSummary.mockRejectedValue(new Error('API Error'));
 
       render(
@@ -535,6 +538,7 @@ describe('NodeChildren Component', () => {
 
     it('should only fetch test suite summary once', async () => {
       mockLineageStoreState.activeLayer = [LineageLayer.DataObservability];
+      mockLineageStoreState.isDQEnabled = true;
       const mockSummary = { total: 10, success: 8, failed: 2 };
       mockGetTestCaseExecutionSummary.mockResolvedValue(mockSummary);
 

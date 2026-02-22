@@ -317,7 +317,8 @@ export const ColumnContent = memo(
     prev.isLoading === next.isLoading &&
     prev.showDataObservabilitySummary === next.showDataObservabilitySummary &&
     prev.summary === next.summary &&
-    prev.depth === next.depth
+    prev.depth === next.depth &&
+    prev.className === next.className
 );
 
 export function getNodeClassNames({

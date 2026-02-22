@@ -62,6 +62,7 @@ jest.mock('../../../hooks/useLineageStore', () => {
       selectedColumn: '',
       setTracedColumns: jest.fn(),
       isEditMode: false,
+      tracedColumns: new Set(),
     })),
   };
 });
@@ -150,10 +151,6 @@ describe('Custom Node Utils', () => {
       name: 'test column',
       constraint: 'NOT NULL',
     } as unknown as Column;
-
-    beforeEach(() => {
-      jest.clearAllMocks();
-    });
 
     it('should render basic column content', () => {
       const { getByTestId, getByText } = render(

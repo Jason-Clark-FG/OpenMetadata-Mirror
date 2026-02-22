@@ -1518,18 +1518,21 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
             edges: updatedEdges,
           };
         });
-        setSelectedEdge({
-          ...selectedEdge,
-          data: {
-            ...selectedEdge?.data,
-            edge: {
-              ...selectedEdge?.data?.edge,
-              columns: updatedEdgeDetails.edge.lineageDetails?.columnsLineage,
-              description,
-              sqlQuery,
+        const currentSelectedEdge = useLineageStore.getState().selectedEdge;
+        if (currentSelectedEdge) {
+          setSelectedEdge({
+            ...currentSelectedEdge,
+            data: {
+              ...currentSelectedEdge.data,
+              edge: {
+                ...currentSelectedEdge.data?.edge,
+                columns: updatedEdgeDetails.edge.lineageDetails?.columnsLineage,
+                description,
+                sqlQuery,
+              },
             },
-          },
-        } as Edge);
+          } as Edge);
+        }
         if (selectedEdge?.id) {
           updateEdge(selectedEdge.id, (edge) => ({
             ...edge,
