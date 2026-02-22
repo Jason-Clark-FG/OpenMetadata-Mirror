@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Triple;
@@ -65,7 +65,8 @@ import org.openmetadata.service.util.RestUtil.PutResponse;
 public class TypeRepository extends EntityRepository<Type> {
   private static final String UPDATE_FIELDS = "customProperties";
   private static final String PATCH_FIELDS = "customProperties";
-  private static final Striped<Lock> CUSTOM_PROPERTY_UPDATE_LOCKS = Striped.lazyWeakLock(64);
+  private static final ConcurrentHashMap<UUID, Object> TYPE_PROPERTY_LOCKS =
+      new ConcurrentHashMap<>();
 
   public TypeRepository() {
     super(
@@ -164,8 +165,8 @@ public class TypeRepository extends EntityRepository<Type> {
 
   public PutResponse<Type> addCustomProperty(
       UriInfo uriInfo, String updatedBy, UUID id, CustomProperty property) {
-    Lock lock = CUSTOM_PROPERTY_UPDATE_LOCKS.get(id);
-    lock.lock();
+    Object lock = TYPE_PROPERTY_LOCKS.computeIfAbsent(id, k -> new Object());
+    synchronized (lock) {
     try {
       Type type = find(id, Include.NON_DELETED);
       property.setPropertyType(

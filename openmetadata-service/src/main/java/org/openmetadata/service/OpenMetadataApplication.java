@@ -169,6 +169,7 @@ import org.openmetadata.service.socket.SocketAddressFilter;
 import org.openmetadata.service.socket.WebSocketManager;
 import org.openmetadata.service.swagger.SwaggerBundle;
 import org.openmetadata.service.swagger.SwaggerBundleConfiguration;
+import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.CustomParameterNameProvider;
 import org.openmetadata.service.util.incidentSeverityClassifier.IncidentSeverityClassifierInterface;
 import org.quartz.SchedulerException;
@@ -1104,6 +1105,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
     public void stop() throws InterruptedException, SchedulerException {
       LOG.info("Cache with Id Stats {}", EntityRepository.CACHE_WITH_ID.stats());
       LOG.info("Cache with name Stats {}", EntityRepository.CACHE_WITH_NAME.stats());
+      AsyncService.getInstance().shutdown();
       EventPubSub.shutdown();
       EntityLifecycleEventDispatcher.getInstance().shutdown();
       AppScheduler.shutDown();
