@@ -92,7 +92,7 @@ public class SearchIndexApp extends AbstractNativeApplication {
   private DistributedSearchIndexExecutor distributedExecutor;
   private ReindexContext recreateContext;
   private RecreateIndexHandler recreateIndexHandler;
-  private BulkSink searchIndexSink;
+  private volatile BulkSink searchIndexSink;
 
   public SearchIndexApp(CollectionDAO collectionDAO, SearchRepository searchRepository) {
     super(collectionDAO, searchRepository);
@@ -825,9 +825,11 @@ public class SearchIndexApp extends AbstractNativeApplication {
   }
 
   private void handleExecutionException(Exception ex) {
-    if (searchIndexSink != null) {
+    BulkSink sink = searchIndexSink;
+    if (sink != null) {
+      searchIndexSink = null;
       try {
-        searchIndexSink.close();
+        sink.close();
       } catch (Exception e) {
         LOG.error("Error closing search index sink", e);
       }
@@ -896,10 +898,13 @@ public class SearchIndexApp extends AbstractNativeApplication {
       SuccessContext successContext =
           new SuccessContext().withAdditionalProperty("stats", jobData.getStats());
 
+      SearchIndexJob distributedJob =
+          distributedExecutor != null ? distributedExecutor.getJobWithFreshStats() : null;
+
       try {
         String jobIdStr =
-            distributedExecutor != null
-                ? distributedExecutor.getJobWithFreshStats().getId().toString()
+            distributedJob != null
+                ? distributedJob.getId().toString()
                 : getApp().getId().toString();
         int failureCount = collectionDAO.searchIndexFailureDAO().countByJobId(jobIdStr);
         if (failureCount > 0) {
@@ -909,15 +914,12 @@ public class SearchIndexApp extends AbstractNativeApplication {
         LOG.debug("Could not get failure count", e);
       }
 
-      if (distributedExecutor != null) {
-        SearchIndexJob distributedJob = distributedExecutor.getJobWithFreshStats();
-        if (distributedJob != null && distributedJob.getServerStats() != null) {
-          successContext.withAdditionalProperty("serverStats", distributedJob.getServerStats());
-          successContext.withAdditionalProperty(
-              "serverCount", distributedJob.getServerStats().size());
-          successContext.withAdditionalProperty(
-              "distributedJobId", distributedJob.getId().toString());
-        }
+      if (distributedJob != null && distributedJob.getServerStats() != null) {
+        successContext.withAdditionalProperty("serverStats", distributedJob.getServerStats());
+        successContext.withAdditionalProperty(
+            "serverCount", distributedJob.getServerStats().size());
+        successContext.withAdditionalProperty(
+            "distributedJobId", distributedJob.getId().toString());
       }
 
       appRecord.setSuccessContext(successContext);
@@ -963,9 +965,11 @@ public class SearchIndexApp extends AbstractNativeApplication {
       sendUpdates(jobExecutionContext, true);
     }
 
-    if (searchIndexSink != null) {
+    BulkSink sink = searchIndexSink;
+    if (sink != null) {
+      searchIndexSink = null;
       try {
-        searchIndexSink.close();
+        sink.close();
       } catch (Exception e) {
         LOG.error("Error closing search index sink", e);
       }
