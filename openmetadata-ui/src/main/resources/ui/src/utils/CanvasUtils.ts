@@ -10,8 +10,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Edge, Node, Viewport } from 'reactflow';
+import { Edge, Node, Position, Viewport } from 'reactflow';
 import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../constants/constants';
+import { getEdgePathData } from './EntityLineageUtils';
 
 export interface BoundingBox {
   minX: number;
@@ -402,3 +403,91 @@ export function getCubicBezierMidpoint(
     y: (sourceY + targetY) / 2,
   };
 }
+
+interface EdgePathData {
+  edgePath: string;
+  edgeCenterX: number;
+  edgeCenterY: number;
+  sourceX?: number;
+  sourceY?: number;
+  targetX?: number;
+  targetY?: number;
+}
+
+const pathDataCache = new Map<string, EdgePathData>();
+
+function getCacheKey(
+  edgeId: string,
+  sourceNode?: Node,
+  targetNode?: Node,
+  columnsInCurrentPages?: Map<string, string[]>
+): string {
+  const sourcePos = sourceNode
+    ? `${sourceNode.position.x},${sourceNode.position.y},${sourceNode.width},${sourceNode.height}`
+    : '';
+  const targetPos = targetNode
+    ? `${targetNode.position.x},${targetNode.position.y},${targetNode.width},${targetNode.height}`
+    : '';
+  const columnsKey = columnsInCurrentPages
+    ? Array.from(columnsInCurrentPages.entries())
+        .map(([k, v]) => `${k}:${v.join(',')}`)
+        .join('|')
+    : '';
+
+  return `${edgeId}|${sourcePos}|${targetPos}|${columnsKey}`;
+}
+
+export const computePathDataForEdge = (
+  edge: Edge,
+  sourceNode?: Node,
+  targetNode?: Node,
+  columnsInCurrentPages: Map<string, string[]> = new Map()
+): EdgePathData | null => {
+  if (edge.data?.computedPath) {
+    return edge.data.computedPath;
+  }
+
+  const cacheKey = getCacheKey(
+    edge.id,
+    sourceNode,
+    targetNode,
+    columnsInCurrentPages
+  );
+  const cached = pathDataCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const coords = getEdgeCoordinates(
+    edge,
+    sourceNode,
+    targetNode,
+    columnsInCurrentPages
+  );
+
+  if (!coords) {
+    return null;
+  }
+
+  const pathData = getEdgePathData(edge.source ?? '', edge.target ?? '', {
+    sourceX: coords.sourceX,
+    sourceY: coords.sourceY,
+    targetX: coords.targetX,
+    targetY: coords.targetY,
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  });
+
+  pathDataCache.set(cacheKey, pathData);
+
+  if (pathDataCache.size > 1000) {
+    const firstKey = pathDataCache.keys().next().value;
+    pathDataCache.delete(firstKey ?? '');
+  }
+
+  return pathData;
+};
+
+export const clearPathDataCache = (): void => {
+  pathDataCache.clear();
+};

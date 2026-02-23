@@ -133,9 +133,10 @@ export const performZoomOut = async (page: Page) => {
 export const clickEdgeBetweenNodes = async (
   page: Page,
   fromNode: EntityClass,
-  _toNode: EntityClass
+  toNode: EntityClass
 ) => {
   const fromNodeFqn = get(fromNode, 'entityResponseData.fullyQualifiedName');
+  const toNodeFqn = get(toNode, 'entityResponseData.fullyQualifiedName');
 
   const fromNodeLocator = page.locator(
     `[data-testid="lineage-node-${fromNodeFqn}"] .lineage-node-handle.react-flow__handle-right`
@@ -146,15 +147,20 @@ export const clickEdgeBetweenNodes = async (
   const fromBox = await fromNodeLocator.boundingBox();
 
   if (!fromBox) {
-    throw new Error(
-      `Could not find bounding box for source node: ${fromNodeFqn}`
-    );
+    throw new Error(`Could not find edge from ${fromNodeFqn} to ${toNodeFqn}`);
   }
 
-  const clickX = fromBox.x + fromBox.width + 20;
-  const clickY = fromBox.y + fromBox.height / 2;
+  const pane = page.locator('.react-flow__pane');
+  const paneBox = await pane.boundingBox();
 
-  await page.mouse.click(clickX, clickY);
+  if (!paneBox) {
+    throw new Error('Could not find react-flow pane');
+  }
+
+  await page.mouse.move(
+    fromBox.x - paneBox.x + fromBox.width + 20 * 0.65,
+    fromBox.y - paneBox.y + fromBox.height / 2
+  );
 };
 
 export const deleteEdge = async (
@@ -481,7 +487,7 @@ export const applyPipelineFromModal = async (
   );
 
   await clickEdgeBetweenNodes(page, fromNode, toNode);
-  await page.getByTestId('add-pipeline').dispatchEvent('click');
+  await page.getByTestId('add-pipeline').click();
 
   const waitForSearchResponse = page.waitForResponse(
     `/api/v1/search/query?q=*`

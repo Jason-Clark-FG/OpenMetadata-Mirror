@@ -30,7 +30,10 @@ import {
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
-  addPipelineBetweenNodes,
+  applyPipelineFromModal,
+  connectEdgeBetweenNodesViaAPI,
+  editLineage,
+  editLineageClick,
   fillLineageConfigForm,
   performCollapse,
   performExpand,
@@ -38,6 +41,7 @@ import {
   verifyColumnLayerActive,
   verifyExpandHandleHover,
   verifyNodePresent,
+  verifyPipelineDataInDrawer,
   visitLineageTab,
 } from '../../utils/lineage';
 import { settingClick, sidebarClick } from '../../utils/sidebar';
@@ -67,6 +71,42 @@ test.describe('Lineage Settings Tests', () => {
       pipeline.create(apiContext),
     ]);
 
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: table.entityResponseData.id, type: 'table' },
+      { id: topic.entityResponseData.id, type: 'topic' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: topic.entityResponseData.id, type: 'topic' },
+      { id: dashboard.entityResponseData.id, type: 'dashboard' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: dashboard.entityResponseData.id, type: 'dashboard' },
+      { id: mlModel.entityResponseData.id, type: 'mlmodel' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: mlModel.entityResponseData.id, type: 'mlmodel' },
+      { id: searchIndex.entityResponseData.id, type: 'searchIndex' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: searchIndex.entityResponseData.id, type: 'searchIndex' },
+      { id: container.entityResponseData.id, type: 'container' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: container.entityResponseData.id, type: 'container' },
+      { id: metric.entityResponseData.id, type: 'metric' }
+    );
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: metric.entityResponseData.id, type: 'metric' },
+      { id: pipeline.entityResponseData.id, type: 'pipeline' }
+    );
+
     await afterAction();
   });
 
@@ -93,14 +133,6 @@ test.describe('Lineage Settings Tests', () => {
 
   test('Verify global lineage config', async ({ page }) => {
     test.slow(true);
-
-    await addPipelineBetweenNodes(page, table, topic);
-    await addPipelineBetweenNodes(page, topic, dashboard);
-    await addPipelineBetweenNodes(page, dashboard, mlModel);
-    await addPipelineBetweenNodes(page, mlModel, searchIndex);
-    await addPipelineBetweenNodes(page, searchIndex, container);
-    await addPipelineBetweenNodes(page, container, metric);
-    await addPipelineBetweenNodes(page, metric, pipeline);
 
     await test.step(
       'Lineage config should throw error if upstream depth is less than 0',
@@ -237,6 +269,7 @@ test.describe('Lineage Settings Tests', () => {
 
         await dashboard.visitEntityPage(page);
         await visitLineageTab(page);
+        await performZoomOut(page);
 
         await verifyNodePresent(page, table);
         await verifyNodePresent(page, dashboard);
@@ -251,8 +284,6 @@ test.describe('Lineage Settings Tests', () => {
     page,
     dataStewardPage,
   }) => {
-    test.slow();
-
     // Update setting to show pipeline as Edge
     await redirectToHomePage(page);
     await sidebarClick(page, SidebarItem.SETTINGS);
@@ -269,13 +300,15 @@ test.describe('Lineage Settings Tests', () => {
 
     await redirectToHomePage(dataStewardPage);
 
-    await addPipelineBetweenNodes(
-      dataStewardPage,
-      table,
-      topic,
-      pipeline,
-      true
-    );
+    await table.visitEntityPage(page);
+    await visitLineageTab(page);
+    await editLineage(page);
+
+    // Select pipeline from Modal
+    await applyPipelineFromModal(page, table, topic, pipeline);
+    await editLineageClick(page);
+    await verifyPipelineDataInDrawer(page, table, topic, pipeline, true);
+
     await pipeline.visitEntityPage(dataStewardPage);
     await dataStewardPage.getByRole('tab', { name: 'Lineage' }).click();
     await dataStewardPage.waitForLoadState('networkidle');

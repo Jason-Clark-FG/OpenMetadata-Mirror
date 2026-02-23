@@ -132,9 +132,6 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
     };
 
     const handleMouseMove = (event: Event) => {
-      if (isEditMode) {
-        return;
-      }
       const mouseEvent = event as MouseEvent;
       const rect = container.getBoundingClientRect();
       const edge = getEdgeAtPointRef.current?.(

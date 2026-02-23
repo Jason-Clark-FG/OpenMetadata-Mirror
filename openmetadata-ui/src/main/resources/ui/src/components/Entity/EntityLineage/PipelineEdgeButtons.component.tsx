@@ -13,18 +13,21 @@
 import { Button, Tag } from 'antd';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
-import { Edge, Position, useReactFlow, useViewport, Viewport } from 'reactflow';
+import { useReactFlow, Viewport } from 'reactflow';
 import { ReactComponent as FunctionIcon } from '../../../assets/svg/ic-function.svg';
 import { ReactComponent as PipelineIcon } from '../../../assets/svg/pipeline-grey.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { StatusType } from '../../../generated/entity/data/pipeline';
 import { useLineageStore } from '../../../hooks/useLineageStore';
-import { getEdgeCoordinates, transformPoint } from '../../../utils/CanvasUtils';
-import { getEdgePathData } from '../../../utils/EntityLineageUtils';
+import { useThrottledViewport } from '../../../hooks/useThrottledViewport';
+import {
+  computePathDataForEdge,
+  transformPoint,
+} from '../../../utils/CanvasUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
-function getAbsolutePosition(
+export function getAbsolutePosition(
   canvasX: number,
   canvasY: number,
   viewport: Viewport
@@ -35,7 +38,7 @@ function getAbsolutePosition(
     position: 'absolute',
     left: `${transformed.x}px`,
     top: `${transformed.y}px`,
-    transform: 'translate(-50%, -50%)',
+    transform: `translate(-50%, -50%) scale(${viewport.zoom})`,
     pointerEvents: 'all',
   };
 }
@@ -71,47 +74,13 @@ function getBlinkingClass(
   return statusClass ? `blinking-${statusClass}-border` : 'blinking-border';
 }
 
-interface EdgePathData {
-  edgePath: string;
-  edgeCenterX: number;
-  edgeCenterY: number;
-  sourceX?: number;
-  sourceY?: number;
-  targetX?: number;
-  targetY?: number;
-}
-
 export const PipelineEdgeButtons: React.FC = () => {
   const { edges } = useLineageProvider();
-  const { columnsInCurrentPages } = useLineageStore();
+  const { columnsInCurrentPages, isEditMode, isDQEnabled, setSelectedEdge } =
+    useLineageStore();
+  const { onAddPipelineClick } = useLineageProvider();
   const { getNode } = useReactFlow();
-  const viewport = useViewport();
-
-  const computePathData = (edge: Edge): EdgePathData | null => {
-    if (edge.data?.computedPath) {
-      return edge.data.computedPath;
-    }
-
-    const coords = getEdgeCoordinates(
-      edge,
-      getNode(edge.source),
-      getNode(edge.target),
-      columnsInCurrentPages
-    );
-
-    if (!coords) {
-      return null;
-    }
-
-    return getEdgePathData(edge.source, edge.target, {
-      sourceX: coords.sourceX,
-      sourceY: coords.sourceY,
-      targetX: coords.targetX,
-      targetY: coords.targetY,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
-    });
-  };
+  const viewport = useThrottledViewport(100);
 
   const edgesWithButtons = useMemo(() => {
     return edges.filter((edge) => {
@@ -132,9 +101,29 @@ export const PipelineEdgeButtons: React.FC = () => {
     });
   }, [edges]);
 
+  const edgePositions = useMemo(() => {
+    return edgesWithButtons.map((edge) => {
+      const pathData = computePathDataForEdge(
+        edge,
+        getNode(edge.source),
+        getNode(edge.target),
+        columnsInCurrentPages
+      );
+
+      return {
+        edge,
+        pathData,
+      };
+    });
+  }, [edgesWithButtons, getNode, columnsInCurrentPages]);
+
   return (
     <div className="pipeline-edge-buttons-overlay">
-      {edgesWithButtons.map((edge) => {
+      {edgePositions.map(({ edge, pathData }) => {
+        if (!pathData) {
+          return null;
+        }
+
         const {
           edge: edgeDetails,
           isColumnLineage,
@@ -142,11 +131,6 @@ export const PipelineEdgeButtons: React.FC = () => {
           isExpanded,
           isPipelineRootNode,
         } = edge.data || {};
-
-        const pathData = computePathData(edge);
-        if (!pathData) {
-          return null;
-        }
 
         const hasPipeline =
           !isColumnLineage &&
@@ -160,9 +144,9 @@ export const PipelineEdgeButtons: React.FC = () => {
         }
 
         const pipelineData = edgeDetails?.pipeline?.pipelineStatus;
-        const currentPipelineStatus = getPipelineStatusClass(
-          pipelineData?.executionStatus
-        );
+        const currentPipelineStatus = isDQEnabled
+          ? getPipelineStatusClass(pipelineData?.executionStatus)
+          : '';
         const blinkingClass = getBlinkingClass(
           isPipelineRootNode,
           pipelineData?.executionStatus
@@ -180,6 +164,10 @@ export const PipelineEdgeButtons: React.FC = () => {
               )}
               data-testid={dataTestId}
               icon={<PipelineIcon />}
+              size="small"
+              onClick={() =>
+                isEditMode ? onAddPipelineClick() : setSelectedEdge(edge)
+              }
             />
           );
 
@@ -191,18 +179,22 @@ export const PipelineEdgeButtons: React.FC = () => {
                 pathData.edgeCenterY,
                 viewport
               )}>
-              <EntityPopOverCard
-                entityFQN={edgeDetails.pipeline.fullyQualifiedName}
-                entityType={edgeDetails.pipelineEntityType}
-                extraInfo={
-                  pipelineData && (
-                    <Tag className={currentPipelineStatus}>
-                      {pipelineData.executionStatus}
-                    </Tag>
-                  )
-                }>
-                {buttonElement}
-              </EntityPopOverCard>
+              {isEditMode ? (
+                buttonElement
+              ) : (
+                <EntityPopOverCard
+                  entityFQN={edgeDetails.pipeline.fullyQualifiedName}
+                  entityType={edgeDetails.pipelineEntityType}
+                  extraInfo={
+                    pipelineData && (
+                      <Tag className={currentPipelineStatus}>
+                        {pipelineData.executionStatus}
+                      </Tag>
+                    )
+                  }>
+                  {buttonElement}
+                </EntityPopOverCard>
+              )}
             </div>
           );
         }
@@ -218,6 +210,10 @@ export const PipelineEdgeButtons: React.FC = () => {
               )}
               data-testid={dataTestId}
               icon={<FunctionIcon />}
+              size="small"
+              onClick={() =>
+                isEditMode ? onAddPipelineClick() : setSelectedEdge(edge)
+              }
             />
           );
 
@@ -229,18 +225,22 @@ export const PipelineEdgeButtons: React.FC = () => {
                 pathData.edgeCenterY,
                 viewport
               )}>
-              <EntityPopOverCard
-                entityFQN={edgeDetails?.pipeline?.fullyQualifiedName}
-                entityType={edge.data.pipelineEntityType}
-                extraInfo={
-                  pipelineData && (
-                    <Tag className={currentPipelineStatus}>
-                      {pipelineData.executionStatus}
-                    </Tag>
-                  )
-                }>
-                {buttonElement}
-              </EntityPopOverCard>
+              {isEditMode ? (
+                buttonElement
+              ) : (
+                <EntityPopOverCard
+                  entityFQN={edgeDetails?.pipeline?.fullyQualifiedName}
+                  entityType={edge.data.pipelineEntityType}
+                  extraInfo={
+                    pipelineData && (
+                      <Tag className={currentPipelineStatus}>
+                        {pipelineData.executionStatus}
+                      </Tag>
+                    )
+                  }>
+                  {buttonElement}
+                </EntityPopOverCard>
+              )}
             </div>
           );
         }

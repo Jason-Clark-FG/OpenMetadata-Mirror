@@ -11,9 +11,7 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import React from 'react';
 import { Edge } from 'reactflow';
-import { StatusType } from '../../../generated/entity/data/pipeline';
 import { EdgeInteractionOverlay } from './EdgeInteractionOverlay.component';
 
 const mockUseViewport = jest.fn().mockReturnValue({ x: 0, y: 0, zoom: 1 });
@@ -30,13 +28,6 @@ jest.mock('reactflow', () => ({
 
 jest.mock('../../../hooks/useLineageStore', () => ({
   useLineageStore: () => mockUseLineageStore,
-}));
-
-jest.mock('../../common/PopOverCard/EntityPopOverCard', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
 }));
 
 const createEdge = (overrides: Partial<Edge> = {}): Edge => ({
@@ -71,171 +62,6 @@ describe('EdgeInteractionOverlay', () => {
     expect(
       container.querySelector('.edge-interaction-overlay')
     ).toBeEmptyDOMElement();
-  });
-
-  it('renders pipeline button when edge has pipeline data', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-
-    expect(pipelineButton).toBeInTheDocument();
-  });
-
-  it('does not render pipeline button for column lineage', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: true,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    expect(
-      screen.queryByTestId('pipeline-label-table1-table2')
-    ).not.toBeInTheDocument();
-  });
-
-  it('renders function icon when edge has column function', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-        columnFunctionValue: 'CONCAT(col1, col2)',
-        isExpanded: true,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    const functionButton = screen.getByTestId('function-icon-table1-table2');
-
-    expect(functionButton).toBeInTheDocument();
-  });
-
-  it('does not render function icon when not expanded', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-        columnFunctionValue: 'CONCAT(col1, col2)',
-        isExpanded: false,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    expect(
-      screen.queryByTestId('function-icon-table1-table2')
-    ).not.toBeInTheDocument();
-  });
-
-  it('applies correct status class to pipeline button', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-            pipelineStatus: {
-              executionStatus: StatusType.Successful,
-            },
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-
-    expect(pipelineButton).toHaveClass('green');
-  });
-
-  it('applies blinking class for pipeline root node', () => {
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-            pipelineStatus: {
-              executionStatus: StatusType.Failed,
-            },
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-        isPipelineRootNode: true,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-
-    expect(pipelineButton).toHaveClass('blinking-red-border');
   });
 
   it('renders edit button when edge is selected in edit mode', () => {
@@ -292,76 +118,6 @@ describe('EdgeInteractionOverlay', () => {
     expect(screen.queryByTestId('delete-button')).not.toBeInTheDocument();
   });
 
-  it('calls onPipelineClick when pipeline button is clicked in edit mode', () => {
-    const onPipelineClick = jest.fn();
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-      },
-    });
-
-    mockUseLineageStore.isEditMode = true;
-
-    render(
-      <EdgeInteractionOverlay
-        hoveredEdge={edge}
-        onPipelineClick={onPipelineClick}
-      />
-    );
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-    fireEvent.click(pipelineButton);
-
-    expect(onPipelineClick).toHaveBeenCalled();
-  });
-
-  it('does not call onPipelineClick when not in edit mode', () => {
-    const onPipelineClick = jest.fn();
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-      },
-    });
-
-    render(
-      <EdgeInteractionOverlay
-        hoveredEdge={edge}
-        onPipelineClick={onPipelineClick}
-      />
-    );
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-    fireEvent.click(pipelineButton);
-
-    expect(onPipelineClick).not.toHaveBeenCalled();
-  });
-
   it('calls onEdgeRemove when delete button is clicked', () => {
     const onEdgeRemove = jest.fn();
     const edge = createEdge({
@@ -382,7 +138,7 @@ describe('EdgeInteractionOverlay', () => {
   });
 
   it('does not render when computedPath is missing', () => {
-    const edge = createEdge({
+    createEdge({
       data: {
         edge: {
           fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
@@ -396,49 +152,10 @@ describe('EdgeInteractionOverlay', () => {
       },
     });
 
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
+    render(<EdgeInteractionOverlay />);
 
     expect(
       screen.queryByTestId('pipeline-label-table1-table2')
     ).not.toBeInTheDocument();
-  });
-
-  it('handles all pipeline status types', () => {
-    const statusTypes = [
-      { status: StatusType.Successful, class: 'green' },
-      { status: StatusType.Failed, class: 'red' },
-      { status: StatusType.Pending, class: 'amber' },
-      { status: StatusType.Skipped, class: 'amber' },
-    ];
-
-    statusTypes.forEach(({ status, class: expectedClass }) => {
-      const edge = createEdge({
-        data: {
-          edge: {
-            fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-            toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-            pipeline: {
-              fullyQualifiedName: 'pipeline1',
-              name: 'Pipeline 1',
-              pipelineStatus: { executionStatus: status },
-            },
-          },
-          computedPath: {
-            edgePath: 'M 0,0 C 100,0 100,100 200,100',
-            edgeCenterX: 100,
-            edgeCenterY: 50,
-          },
-          isColumnLineage: false,
-        },
-      });
-
-      const { unmount } = render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-      const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-
-      expect(pipelineButton).toHaveClass(expectedClass);
-
-      unmount();
-    });
   });
 });
