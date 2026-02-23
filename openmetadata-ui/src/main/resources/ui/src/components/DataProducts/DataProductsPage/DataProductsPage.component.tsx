@@ -251,18 +251,6 @@ const DataProductsPage = () => {
     setIsFollowingLoading(false);
   }, [isFollowing, unFollowDataProduct, followDataProduct]);
 
-  const handleUpdateVote = useCallback(
-    async (data: QueryVote, id: string) => {
-      try {
-        await updateDataProductVotes(id, data);
-        await refreshDataProduct();
-      } catch (error) {
-        showErrorToast(error as AxiosError);
-      }
-    },
-    [dataProductFqn]
-  );
-
   // Refresh data product without showing loader (for port updates)
   const refreshDataProduct = useCallback(async () => {
     if (!dataProductFqn) {
@@ -288,6 +276,18 @@ const DataProductsPage = () => {
       showErrorToast(error as AxiosError);
     }
   }, [dataProductFqn]);
+
+  const handleUpdateVote = useCallback(
+    async (data: QueryVote, id: string) => {
+      try {
+        await updateDataProductVotes(id, data);
+        await refreshDataProduct();
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      }
+    },
+    [refreshDataProduct]
+  );
 
   useEffect(() => {
     if (dataProductFqn) {
