@@ -1114,6 +1114,57 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
+  public ResultList<T> listAfterKeyset(
+      ListFilter filter,
+      int limitParam,
+      String after,
+      int cachedTotal,
+      boolean skipErrors,
+      Fields fields) {
+    List<T> entities = new ArrayList<>();
+    List<EntityError> errors = new ArrayList<>();
+    if (limitParam > 0) {
+      Map<String, String> cursorMap =
+          parseCursorMap(after == null || after.isEmpty() ? "" : RestUtil.decodeCursor(after));
+      String afterName = FullyQualifiedName.unquoteName(cursorMap.get("name"));
+      String afterId = cursorMap.get("id");
+      List<String> jsons = dao.listAfter(filter, limitParam + 1, afterName, afterId);
+
+      Iterator<Either<T, EntityError>> iterator = serializeJsons(jsons, fields, null);
+      while (iterator.hasNext()) {
+        Either<T, EntityError> either = iterator.next();
+        if (either.right().isPresent()) {
+          if (!skipErrors) {
+            throw new RuntimeException(either.right().get().getMessage());
+          } else {
+            errors.add(either.right().get());
+            if (!isEntityNotFoundError(either.right().get())) {
+              LOG.error("[listAfterKeyset] Failed for Entity : {}", either.right().get());
+            } else {
+              LOG.debug(
+                  "[listAfterKeyset] Stale reference detected: {}",
+                  either.right().get().getMessage());
+            }
+          }
+        } else {
+          entities.add(either.left().get());
+        }
+      }
+
+      String afterCursor = null;
+      if (entities.size() > limitParam) {
+        entities.remove(limitParam);
+        afterCursor = RestUtil.encodeCursor(getCursorValue(entities.get(limitParam - 1)));
+      } else if (!entities.isEmpty()) {
+        // Last page — no more data after this
+        afterCursor = null;
+      }
+      return getResultList(entities, errors, null, afterCursor, cachedTotal);
+    } else {
+      return getResultList(entities, errors, null, null, cachedTotal);
+    }
+  }
+
   @SuppressWarnings("unchecked")
   Map<String, String> parseCursorMap(String param) {
     Map<String, String> cursorMap;

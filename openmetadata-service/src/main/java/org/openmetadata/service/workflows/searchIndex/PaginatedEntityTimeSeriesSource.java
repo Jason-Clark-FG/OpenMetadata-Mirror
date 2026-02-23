@@ -178,6 +178,50 @@ public class PaginatedEntityTimeSeriesSource
     return result;
   }
 
+  public ResultList<? extends EntityTimeSeriesInterface> readNextKeyset(String keysetCursor)
+      throws SearchIndexException {
+    LOG.debug("[PaginatedEntityTimeSeriesSource] Fetching keyset batch of size: {}", batchSize);
+    EntityTimeSeriesRepository<? extends EntityTimeSeriesInterface> repository =
+        getEntityTimeSeriesRepository();
+    ResultList<? extends EntityTimeSeriesInterface> result;
+    try {
+      long afterTs = 0;
+      String afterFQNHash = "";
+      if (keysetCursor != null && !keysetCursor.isEmpty()) {
+        int sep = keysetCursor.indexOf('|');
+        afterTs = Long.parseLong(keysetCursor.substring(0, sep));
+        afterFQNHash = keysetCursor.substring(sep + 1);
+      }
+      ListFilter filter = getFilter();
+      int cachedTotal = stats.getTotalRecords() != null ? stats.getTotalRecords() : 0;
+      result =
+          repository.listAfterKeyset(filter, batchSize, afterTs, afterFQNHash, cachedTotal, true);
+
+      LOG.debug(
+          "[PaginatedEntityTimeSeriesSource] Keyset batch stats — Submitted: {} Success: {} Failed: {}",
+          batchSize,
+          result.getData().size(),
+          result.getErrors().size());
+    } catch (Exception e) {
+      LOG.error(
+          "Error reading keyset batch for entityType: {} with cursor: {}",
+          entityType,
+          keysetCursor,
+          e);
+      IndexingError indexingError =
+          new IndexingError()
+              .withErrorSource(READER)
+              .withSuccessCount(0)
+              .withMessage(
+                  String.format(
+                      "Failed to read keyset batch for entityType: %s. Error: %s",
+                      entityType, e.getMessage()))
+              .withStackTrace(ExceptionUtils.exceptionStackTraceAsString(e));
+      throw new SearchIndexException(indexingError);
+    }
+    return result;
+  }
+
   @Override
   public void reset() {
     cursor.set(null);

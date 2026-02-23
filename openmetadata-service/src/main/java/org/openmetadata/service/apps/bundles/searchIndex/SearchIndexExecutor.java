@@ -828,24 +828,27 @@ public class SearchIndexExecutor implements AutoCloseable {
   private void processEntityType(
       String entityType, CountDownLatch producerLatch, int fixedBatchSize) {
     try {
-      listeners.onEntityTypeStarted(entityType, getTotalEntityRecords(entityType));
-
       int totalEntityRecords = getTotalEntityRecords(entityType);
-      int loadPerThread = calculateNumberOfThreads(totalEntityRecords, fixedBatchSize);
+      listeners.onEntityTypeStarted(entityType, totalEntityRecords);
 
-      // Initialize per-entity batch tracking for promotion
-      int batchCount = totalEntityRecords > 0 ? loadPerThread : 0;
-      entityBatchCounters.put(entityType, new AtomicInteger(batchCount));
+      entityBatchCounters.put(entityType, new AtomicInteger(1));
       entityBatchFailures.put(entityType, new AtomicInteger(0));
 
       if (totalEntityRecords > 0) {
-        for (int i = 0; i < loadPerThread; i++) {
-          int currentOffset = i * fixedBatchSize;
-          producerExecutor.submit(() -> processBatch(entityType, currentOffset, producerLatch));
+        if (TIME_SERIES_ENTITIES.contains(entityType)) {
+          producerExecutor.submit(
+              () ->
+                  processTimeSeriesSequentially(
+                      entityType, totalEntityRecords, fixedBatchSize, producerLatch));
+        } else {
+          producerExecutor.submit(
+              () ->
+                  processEntitySequentially(
+                      entityType, totalEntityRecords, fixedBatchSize, producerLatch));
         }
       } else {
-        // No records to process - promote immediately if recreating indexes
         promoteEntityIndexIfReady(entityType);
+        producerLatch.countDown();
       }
 
       StepStats entityStats =
@@ -855,6 +858,199 @@ public class SearchIndexExecutor implements AutoCloseable {
       listeners.onEntityTypeCompleted(entityType, entityStats);
     } catch (Exception e) {
       LOG.error("Error processing entity type {}", entityType, e);
+    }
+  }
+
+  private void processEntitySequentially(
+      String entityType, int totalEntityRecords, int fixedBatchSize, CountDownLatch producerLatch) {
+    boolean hadFailure = false;
+    try {
+      PaginatedEntitiesSource source =
+          new PaginatedEntitiesSource(
+              entityType, fixedBatchSize, getSearchIndexFields(entityType), totalEntityRecords);
+      String keysetCursor = null;
+      int processed = 0;
+
+      while (processed < totalEntityRecords && !stopped.get()) {
+        long backpressureWaitStart = System.currentTimeMillis();
+        while (isBackpressureActive()) {
+          if (stopped.get()) {
+            return;
+          }
+          long elapsed = System.currentTimeMillis() - backpressureWaitStart;
+          if (elapsed > 15_000) {
+            LOG.warn("Backpressure wait timeout for {}, proceeding anyway", entityType);
+            break;
+          }
+          Thread.sleep(500);
+        }
+
+        try {
+          ResultList<? extends EntityInterface> result = source.readNextKeyset(keysetCursor);
+          if (result == null || result.getData().isEmpty()) {
+            break;
+          }
+
+          int readerSuccessCount = result.getData().size();
+          int readerFailedCount = listOrEmpty(result.getErrors()).size();
+          int readerWarningsCount =
+              result.getWarningsCount() != null ? result.getWarningsCount() : 0;
+          updateReaderStats(readerSuccessCount, readerFailedCount, readerWarningsCount);
+
+          StepStats batchStats =
+              new StepStats()
+                  .withSuccessRecords(readerSuccessCount)
+                  .withFailedRecords(readerFailedCount)
+                  .withWarningRecords(readerWarningsCount);
+          updateStats(entityType, batchStats);
+
+          if (!result.getData().isEmpty() && !stopped.get()) {
+            @SuppressWarnings("unchecked")
+            ResultList<EntityInterface> entityResult = (ResultList<EntityInterface>) result;
+            IndexingTask<EntityInterface> task =
+                new IndexingTask<>(entityType, entityResult, processed);
+            taskQueue.put(task);
+          }
+
+          processed += result.getData().size() + readerFailedCount + readerWarningsCount;
+          keysetCursor = result.getPaging() != null ? result.getPaging().getAfter() : null;
+          if (keysetCursor == null) {
+            break;
+          }
+        } catch (SearchIndexException e) {
+          hadFailure = true;
+          LOG.error("Error reading keyset batch for {}", entityType, e);
+          if (failureRecorder != null) {
+            failureRecorder.recordReaderFailure(
+                entityType, e.getMessage(), ExceptionUtils.getStackTrace(e));
+          }
+          listeners.onError(entityType, e.getIndexingError(), stats.get());
+          int failedCount =
+              e.getIndexingError() != null && e.getIndexingError().getFailedCount() != null
+                  ? e.getIndexingError().getFailedCount()
+                  : fixedBatchSize;
+          updateReaderStats(0, failedCount, 0);
+          updateStats(
+              entityType, new StepStats().withSuccessRecords(0).withFailedRecords(failedCount));
+          processed += fixedBatchSize;
+        }
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.warn("Interrupted during sequential processing of {}", entityType);
+    } catch (Exception e) {
+      hadFailure = true;
+      if (!stopped.get()) {
+        LOG.error("Error in sequential processing for {}", entityType, e);
+      }
+    } finally {
+      producerLatch.countDown();
+      if (hadFailure) {
+        AtomicInteger failures = entityBatchFailures.get(entityType);
+        if (failures != null) {
+          failures.incrementAndGet();
+        }
+      }
+      AtomicInteger remaining = entityBatchCounters.get(entityType);
+      if (remaining != null && remaining.decrementAndGet() == 0) {
+        promoteEntityIndexIfReady(entityType);
+      }
+    }
+  }
+
+  private void processTimeSeriesSequentially(
+      String entityType, int totalEntityRecords, int fixedBatchSize, CountDownLatch producerLatch) {
+    boolean hadFailure = false;
+    try {
+      PaginatedEntityTimeSeriesSource source =
+          new PaginatedEntityTimeSeriesSource(
+              entityType, fixedBatchSize, getSearchIndexFields(entityType), totalEntityRecords);
+      String keysetCursor = null;
+      int processed = 0;
+
+      while (processed < totalEntityRecords && !stopped.get()) {
+        long backpressureWaitStart = System.currentTimeMillis();
+        while (isBackpressureActive()) {
+          if (stopped.get()) {
+            return;
+          }
+          long elapsed = System.currentTimeMillis() - backpressureWaitStart;
+          if (elapsed > 15_000) {
+            LOG.warn("Backpressure wait timeout for {}, proceeding anyway", entityType);
+            break;
+          }
+          Thread.sleep(500);
+        }
+
+        try {
+          ResultList<? extends EntityTimeSeriesInterface> result =
+              source.readNextKeyset(keysetCursor);
+          if (result == null || result.getData().isEmpty()) {
+            break;
+          }
+
+          int readerSuccessCount = result.getData().size();
+          int readerFailedCount = listOrEmpty(result.getErrors()).size();
+          updateReaderStats(readerSuccessCount, readerFailedCount, 0);
+
+          StepStats batchStats =
+              new StepStats()
+                  .withSuccessRecords(readerSuccessCount)
+                  .withFailedRecords(readerFailedCount);
+          updateStats(entityType, batchStats);
+
+          if (!result.getData().isEmpty() && !stopped.get()) {
+            @SuppressWarnings("unchecked")
+            ResultList<EntityTimeSeriesInterface> tsResult =
+                (ResultList<EntityTimeSeriesInterface>) result;
+            IndexingTask<EntityTimeSeriesInterface> task =
+                new IndexingTask<>(entityType, tsResult, processed);
+            taskQueue.put(task);
+          }
+
+          processed += result.getData().size() + readerFailedCount;
+          keysetCursor = result.getPaging() != null ? result.getPaging().getAfter() : null;
+          if (keysetCursor == null) {
+            break;
+          }
+        } catch (SearchIndexException e) {
+          hadFailure = true;
+          LOG.error("Error reading keyset batch for time-series {}", entityType, e);
+          if (failureRecorder != null) {
+            failureRecorder.recordReaderFailure(
+                entityType, e.getMessage(), ExceptionUtils.getStackTrace(e));
+          }
+          listeners.onError(entityType, e.getIndexingError(), stats.get());
+          int failedCount =
+              e.getIndexingError() != null && e.getIndexingError().getFailedCount() != null
+                  ? e.getIndexingError().getFailedCount()
+                  : fixedBatchSize;
+          updateReaderStats(0, failedCount, 0);
+          updateStats(
+              entityType, new StepStats().withSuccessRecords(0).withFailedRecords(failedCount));
+          processed += fixedBatchSize;
+        }
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.warn("Interrupted during sequential processing of {}", entityType);
+    } catch (Exception e) {
+      hadFailure = true;
+      if (!stopped.get()) {
+        LOG.error("Error in sequential time-series processing for {}", entityType, e);
+      }
+    } finally {
+      producerLatch.countDown();
+      if (hadFailure) {
+        AtomicInteger failures = entityBatchFailures.get(entityType);
+        if (failures != null) {
+          failures.incrementAndGet();
+        }
+      }
+      AtomicInteger remaining = entityBatchCounters.get(entityType);
+      if (remaining != null && remaining.decrementAndGet() == 0) {
+        promoteEntityIndexIfReady(entityType);
+      }
     }
   }
 
@@ -1109,17 +1305,7 @@ public class SearchIndexExecutor implements AutoCloseable {
   }
 
   private int getTotalLatchCount(Set<String> entities, int fixedBatchSize) {
-    if (stats.get() == null) {
-      return entities.size();
-    }
-
-    return entities.stream()
-        .mapToInt(
-            entityType -> {
-              int totalRecords = getTotalEntityRecords(entityType);
-              return calculateNumberOfThreads(totalRecords, fixedBatchSize);
-            })
-        .sum();
+    return entities.size();
   }
 
   private int getTotalEntityRecords(String entityType) {
