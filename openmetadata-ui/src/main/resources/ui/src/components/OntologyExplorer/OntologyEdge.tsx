@@ -15,6 +15,7 @@ import { Tag } from 'antd';
 import classNames from 'classnames';
 import React, { memo, useMemo } from 'react';
 import { EdgeProps } from 'reactflow';
+import { RELATION_COLORS } from './OntologyExplorer.constants';
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 60;
@@ -110,38 +111,7 @@ export interface OntologyEdgeData {
   color: string;
 }
 
-export const RELATION_COLORS: Record<string, string> = {
-  relatedTo: '#3062d4',
-  related: '#3062d4',
-  synonym: '#7c3aed',
-  antonym: '#dc2626',
-  typeOf: '#059669',
-  hasTypes: '#10b981',
-  hasA: '#0891b2',
-  partOf: '#0d9488',
-  hasPart: '#14b8a6',
-  componentOf: '#0891b2',
-  composedOf: '#06b6d4',
-  calculatedFrom: '#d97706',
-  usedToCalculate: '#f59e0b',
-  derivedFrom: '#ea580c',
-  seeAlso: '#be185d',
-  parentOf: '#4f46e5',
-  childOf: '#6366f1',
-  broader: '#4f46e5',
-  narrower: '#6366f1',
-  isA: '#059669',
-  instanceOf: '#10b981',
-  owns: '#7c3aed',
-  ownedBy: '#8b5cf6',
-  manages: '#3062d4',
-  managedBy: '#3b82f6',
-  contains: '#0891b2',
-  containedIn: '#06b6d4',
-  dependsOn: '#dc2626',
-  usedBy: '#d97706',
-  default: '#6b7280',
-};
+export { RELATION_COLORS } from './OntologyExplorer.constants';
 
 const OntologyEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
   id,
@@ -210,8 +180,7 @@ const OntologyEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
           orient="auto"
           refX="8"
           refY="4"
-          viewBox="0 0 8 8"
-        >
+          viewBox="0 0 8 8">
           <path d="M0,0 L8,4 L0,8 z" fill={relationColor} />
         </marker>
         {isBidirectional && (
@@ -223,8 +192,7 @@ const OntologyEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
             orient="auto-start-reverse"
             refX="0"
             refY="4"
-            viewBox="0 0 8 8"
-          >
+            viewBox="0 0 8 8">
             <path d="M8,0 L0,4 L8,8 z" fill={relationColor} />
           </marker>
         )}
@@ -246,8 +214,7 @@ const OntologyEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
           height={20}
           width={labelWidth}
           x={labelX - labelWidth / 2}
-          y={labelY - 10}
-        >
+          y={labelY - 10}>
           <Tag
             className={classNames('ontology-flow-edge-label', {
               'ontology-flow-edge-label--highlighted':
@@ -263,8 +230,7 @@ const OntologyEdge: React.FC<EdgeProps<OntologyEdgeData>> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-            }}
-          >
+            }}>
             {displayLabel}
           </Tag>
         </foreignObject>

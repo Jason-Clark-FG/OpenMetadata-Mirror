@@ -15,12 +15,6 @@ import {
   ApartmentOutlined,
   DownloadOutlined,
   ExpandOutlined,
-  FolderOpenOutlined,
-  FullscreenOutlined,
-  PlusOutlined,
-  RedoOutlined,
-  SaveOutlined,
-  UndoOutlined,
 } from '@ant-design/icons';
 import {
   Button,
@@ -44,7 +38,7 @@ import {
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compare } from 'fast-json-patch';
-import { isEqual, isUndefined, omitBy } from 'lodash';
+import { isUndefined, omitBy } from 'lodash';
 import React, {
   useCallback,
   useEffect,
@@ -163,7 +157,6 @@ const DEFAULT_FILTERS: GraphFilters = {
 };
 
 const DEFAULT_LIMIT = 500;
-const HISTORY_LIMIT = 50;
 const ASSET_TERM_LIMIT = 40;
 const ASSET_TOTAL_LIMIT = 200;
 
@@ -220,13 +213,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const [explorationMode, setExplorationMode] =
     useState<ExplorationMode>('model');
   const [isMinimapVisible, setIsMinimapVisible] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     node: OntologyNode;
     position: { x: number; y: number };
   } | null>(null);
-  const [history, setHistory] = useState<ExplorationSnapshot[]>([]);
-  const [future, setFuture] = useState<ExplorationSnapshot[]>([]);
   const [savedExplorations, setSavedExplorations] = useState<
     SavedExploration[]
   >([]);
@@ -633,25 +623,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     },
     [graphData]
   );
-
-  useEffect(() => {
-    if (historyApplyingRef.current) {
-      return;
-    }
-    const nextSnapshot = snapshot();
-    setHistory((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && isEqual(last, nextSnapshot)) {
-        return prev;
-      }
-      const updated = [...prev, nextSnapshot];
-
-      return updated.length > HISTORY_LIMIT
-        ? updated.slice(updated.length - HISTORY_LIMIT)
-        : updated;
-    });
-    setFuture([]);
-  }, [snapshot]);
 
   useEffect(() => {
     try {
@@ -1213,19 +1184,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     graphRef.current?.fitView();
   }, []);
 
-  const handleFullscreen = useCallback(() => {
-    const container = document.querySelector('.ontology-explorer');
-    if (container) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      } else {
-        (container as HTMLElement).requestFullscreen();
-        setIsFullscreen(true);
-      }
-    }
-  }, []);
-
   const handleToggleMinimap = useCallback(() => {
     setIsMinimapVisible((prev) => !prev);
   }, []);
@@ -1233,37 +1191,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const handleRearrange = useCallback(() => {
     graphRef.current?.runLayout();
   }, []);
-
-  const handleUndo = useCallback(() => {
-    setHistory((prev) => {
-      if (prev.length < 2) {
-        return prev;
-      }
-      const nextHistory = prev.slice(0, -1);
-      const lastSnapshot = prev[prev.length - 1];
-      setFuture((futurePrev) =>
-        [lastSnapshot, ...futurePrev].slice(0, HISTORY_LIMIT)
-      );
-      applySnapshot(nextHistory[nextHistory.length - 1]);
-
-      return nextHistory;
-    });
-  }, [applySnapshot]);
-
-  const handleRedo = useCallback(() => {
-    setFuture((prev) => {
-      if (prev.length === 0) {
-        return prev;
-      }
-      const [nextSnapshot, ...rest] = prev;
-      setHistory((historyPrev) =>
-        [...historyPrev, nextSnapshot].slice(-HISTORY_LIMIT)
-      );
-      applySnapshot(nextSnapshot);
-
-      return rest;
-    });
-  }, [applySnapshot]);
 
   const handleSaveExploration = useCallback(() => {
     saveForm.validateFields().then((values) => {
@@ -1296,16 +1223,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     },
     [persistSavedExplorations, savedExplorations]
   );
-
-  const handleNewExploration = useCallback(() => {
-    setExplorationMode('model');
-    setFilters(DEFAULT_FILTERS);
-    setSettings(DEFAULT_SETTINGS);
-    setSelectedNode(null);
-    setSelectedTreeNode(null);
-    setContextMenu(null);
-    setSavedPositions(null);
-  }, []);
 
   const handleGraphScopeChange = useCallback((value: string) => {
     if (value === 'all') {
@@ -1840,9 +1757,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     )} • ${isolatedCount} ${t('label.isolated')}${sourceLabel}`;
   }, [filteredGraphData, dataSource, explorationMode, t]);
 
-  const canUndo = history.length > 1;
-  const canRedo = future.length > 0;
-
   return (
     <div
       className={classNames('ontology-explorer', className)}
@@ -1904,45 +1818,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               onChange={(value) => handleModeChange(value as ExplorationMode)}
             />
 
-            <Button
-              icon={<PlusOutlined />}
-              size="small"
-              onClick={handleNewExploration}>
-              {t('label.new')}
-            </Button>
-
-            <Button
-              icon={<SaveOutlined />}
-              size="small"
-              onClick={() => setIsSaveModalOpen(true)}>
-              {t('label.save')}
-            </Button>
-
-            <Button
-              icon={<FolderOpenOutlined />}
-              size="small"
-              onClick={() => setIsSavedDrawerOpen(true)}>
-              {t('label.open')}
-            </Button>
-
-            <Button
-              disabled={!canUndo}
-              icon={<UndoOutlined />}
-              size="small"
-              onClick={handleUndo}
-            />
-
-            <Button
-              disabled={!canRedo}
-              icon={<RedoOutlined />}
-              size="small"
-              onClick={handleRedo}
-            />
-
             <Dropdown
               menu={{
                 items: [
-                  { key: '1', label: t('label.expand-1-hops') },
+                  { key: '1', label: t('label.expand-1-hop') },
                   { key: '2', label: t('label.expand-2-hops') },
                 ],
                 onClick: ({ key }) => handleGrowSelection(Number(key)),
@@ -1954,12 +1833,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                 {t('label.grow-selection')}
               </Button>
             </Dropdown>
-
-            <Button
-              icon={<FullscreenOutlined />}
-              size="small"
-              onClick={handleFullscreen}
-            />
 
             <Button
               icon={<ApartmentOutlined />}
@@ -1991,13 +1864,11 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             />
 
             <OntologyControlButtons
-              isFullscreen={isFullscreen}
               isLoading={loading}
               isMinimapVisible={isMinimapVisible}
               onFitToScreen={handleFitToScreen}
               onFocusHome={handleFocusHome}
               onFocusSelected={selectedNode ? handleFocusSelected : undefined}
-              onFullscreen={handleFullscreen}
               onRearrange={handleRearrange}
               onRefresh={handleRefresh}
               onToggleMinimap={handleToggleMinimap}
@@ -2167,10 +2038,20 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               ? t('label.data-asset')
               : t('label.glossary-term');
 
+            if (!selectedNode) {
+              return (
+                <Typography.Text type="secondary">
+                  {t('label.please-select-entity', {
+                    entity: t('label.node'),
+                  })}
+                </Typography.Text>
+              );
+            }
+
             return (
               <>
                 <Typography.Text type="secondary">
-                  {selectedNode?.label ?? t('label.select-entity')}
+                  {selectedNode.label}
                 </Typography.Text>
 
                 <Divider />

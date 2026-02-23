@@ -15,75 +15,8 @@ import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Typography } from 'antd';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { RELATION_META } from './OntologyExplorer.constants';
 import { OntologyEdge } from './OntologyExplorer.interface';
-
-const RELATION_COLORS: Record<string, string> = {
-  relatedTo: '#3062d4',
-  related: '#3062d4',
-  synonym: '#7c3aed',
-  antonym: '#dc2626',
-  typeOf: '#059669',
-  hasTypes: '#10b981',
-  hasA: '#0891b2',
-  partOf: '#0d9488',
-  hasPart: '#14b8a6',
-  componentOf: '#0891b2',
-  composedOf: '#06b6d4',
-  calculatedFrom: '#d97706',
-  usedToCalculate: '#f59e0b',
-  derivedFrom: '#ea580c',
-  seeAlso: '#be185d',
-  parentOf: '#4f46e5',
-  childOf: '#6366f1',
-  broader: '#4f46e5',
-  narrower: '#6366f1',
-  isA: '#059669',
-  instanceOf: '#10b981',
-  owns: '#7c3aed',
-  ownedBy: '#8b5cf6',
-  manages: '#3062d4',
-  managedBy: '#3b82f6',
-  contains: '#0891b2',
-  containedIn: '#06b6d4',
-  dependsOn: '#dc2626',
-  usedBy: '#d97706',
-  metricFor: '#0ea5e9',
-  hasGlossaryTerm: '#0f766e',
-};
-
-const RELATION_DISPLAY_NAMES: Record<string, string> = {
-  relatedTo: 'Related To',
-  related: 'Related',
-  synonym: 'Synonym',
-  antonym: 'Antonym',
-  typeOf: 'Type Of',
-  hasTypes: 'Has Types',
-  hasA: 'Has A',
-  partOf: 'Part Of',
-  hasPart: 'Has Part',
-  componentOf: 'Component Of',
-  composedOf: 'Composed Of',
-  calculatedFrom: 'Calculated From',
-  usedToCalculate: 'Used to Calculate',
-  derivedFrom: 'Derived From',
-  seeAlso: 'See Also',
-  parentOf: 'Parent Of',
-  childOf: 'Child Of',
-  broader: 'Broader',
-  narrower: 'Narrower',
-  isA: 'Is A',
-  instanceOf: 'Instance Of',
-  owns: 'Owns',
-  ownedBy: 'Owned By',
-  manages: 'Manages',
-  managedBy: 'Managed By',
-  contains: 'Contains',
-  containedIn: 'Contained In',
-  dependsOn: 'Depends On',
-  usedBy: 'Used By',
-  metricFor: 'Metric For',
-  hasGlossaryTerm: 'Tagged With',
-};
 
 export interface OntologyLegendProps {
   edges: OntologyEdge[];
@@ -126,16 +59,14 @@ const OntologyLegend: React.FC<OntologyLegendProps> = ({ edges }) => {
       {isExpanded && (
         <div className="ontology-legend__content">
           {activeRelationTypes.map((relationType) => {
-            const color =
-              RELATION_COLORS[relationType] ?? RELATION_COLORS.related;
-            const displayName =
-              RELATION_DISPLAY_NAMES[relationType] ?? relationType;
+            const meta = RELATION_META[relationType] ?? RELATION_META.related;
+            const displayName = meta ? t(meta.labelKey) : relationType;
 
             return (
               <div className="ontology-legend__item" key={relationType}>
                 <div
                   className="ontology-legend__line"
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: meta?.color }}
                 />
                 <Typography.Text className="ontology-legend__label">
                   {displayName}

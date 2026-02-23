@@ -27,6 +27,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import { RELATION_COLORS } from './OntologyExplorer.constants';
 import {
   GraphSettings,
   OntologyEdge,
@@ -34,41 +35,6 @@ import {
 } from './OntologyExplorer.interface';
 
 cytoscape.use(fcose);
-
-const RELATION_COLORS: Record<string, string> = {
-  relatedTo: '#3062d4',
-  related: '#3062d4',
-  synonym: '#7c3aed',
-  antonym: '#dc2626',
-  typeOf: '#059669',
-  hasTypes: '#10b981',
-  hasA: '#0891b2',
-  partOf: '#0d9488',
-  hasPart: '#14b8a6',
-  componentOf: '#0891b2',
-  composedOf: '#06b6d4',
-  calculatedFrom: '#d97706',
-  usedToCalculate: '#f59e0b',
-  derivedFrom: '#ea580c',
-  seeAlso: '#be185d',
-  parentOf: '#4f46e5',
-  childOf: '#6366f1',
-  broader: '#4f46e5',
-  narrower: '#6366f1',
-  isA: '#059669',
-  instanceOf: '#10b981',
-  owns: '#7c3aed',
-  ownedBy: '#8b5cf6',
-  manages: '#3062d4',
-  managedBy: '#3b82f6',
-  contains: '#0891b2',
-  containedIn: '#06b6d4',
-  dependsOn: '#dc2626',
-  usedBy: '#d97706',
-  metricFor: '#0ea5e9',
-  hasGlossaryTerm: '#0f766e',
-  default: '#6b7280',
-};
 
 const METRIC_NODE_TYPE = 'metric';
 const METRIC_COLOR = '#0ea5e9';

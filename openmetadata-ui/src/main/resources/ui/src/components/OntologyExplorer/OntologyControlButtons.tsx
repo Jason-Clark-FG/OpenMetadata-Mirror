@@ -20,10 +20,8 @@ import {
 } from '@mui/material';
 import { FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as ExitFullScreenIcon } from '../../assets/svg/ic-exit-fullscreen.svg';
 import { ReactComponent as FitScreenIcon } from '../../assets/svg/ic-fit-screen.svg';
 import { ReactComponent as FitViewOptionsIcon } from '../../assets/svg/ic-fit-view-options.svg';
-import { ReactComponent as FullscreenIcon } from '../../assets/svg/ic-fullscreen.svg';
 import { ReactComponent as HomeIcon } from '../../assets/svg/ic-home.svg';
 import { ReactComponent as MapIcon } from '../../assets/svg/ic-map.svg';
 import { ReactComponent as RearrangeNodesIcon } from '../../assets/svg/ic-rearrange-nodes.svg';
@@ -36,13 +34,11 @@ export interface OntologyControlButtonsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFitToScreen: () => void;
-  onFullscreen: () => void;
   onRefresh: () => void;
   onRearrange?: () => void;
   onFocusSelected?: () => void;
   onFocusHome?: () => void;
   onToggleMinimap?: () => void;
-  isFullscreen?: boolean;
   isMinimapVisible?: boolean;
   isLoading?: boolean;
 }
@@ -51,13 +47,11 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
   onZoomIn,
   onZoomOut,
   onFitToScreen,
-  onFullscreen,
   onRefresh,
   onRearrange,
   onFocusSelected,
   onFocusHome,
   onToggleMinimap,
-  isFullscreen = false,
   isMinimapVisible = false,
   isLoading = false,
 }) => {
@@ -109,14 +103,12 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
           height: theme.spacing(4),
           width: theme.spacing(4),
         },
-      }}
-    >
+      }}>
       <Tooltip arrow placement="top" title={t('label.view-option-plural')}>
         <ToggleButton
           data-testid="view-options"
           value="view-options"
-          onClick={(event) => setViewOptionsAnchorEl(event.currentTarget)}
-        >
+          onClick={(event) => setViewOptionsAnchorEl(event.currentTarget)}>
           <FitViewOptionsIcon />
         </ToggleButton>
       </Tooltip>
@@ -140,8 +132,7 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
           vertical: 'top',
           horizontal: 'left',
         }}
-        onClose={() => setViewOptionsAnchorEl(null)}
-      >
+        onClose={() => setViewOptionsAnchorEl(null)}>
         <MenuItem onClick={handleFitView}>
           <FitScreenIcon />
           {t('label.fit-to-screen')}
@@ -172,8 +163,7 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
             data-testid="toggle-minimap"
             selected={isMinimapVisible}
             value="minimap"
-            onClick={onToggleMinimap}
-          >
+            onClick={onToggleMinimap}>
             <MapIcon />
           </ToggleButton>
         </Tooltip>
@@ -189,8 +179,7 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
         <ToggleButton
           data-testid="zoom-out"
           value="zoom-out"
-          onClick={onZoomOut}
-        >
+          onClick={onZoomOut}>
           <ZoomOutIcon />
         </ToggleButton>
       </Tooltip>
@@ -200,26 +189,8 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
           data-testid="refresh"
           disabled={isLoading}
           value="refresh"
-          onClick={onRefresh}
-        >
+          onClick={onRefresh}>
           <RefreshIcon className={isLoading ? 'rotate-animation' : ''} />
-        </ToggleButton>
-      </Tooltip>
-
-      <Tooltip
-        arrow
-        placement="top"
-        title={
-          isFullscreen ? t('label.exit-full-screen') : t('label.full-screen')
-        }
-      >
-        <ToggleButton
-          data-testid={isFullscreen ? 'exit-fullscreen' : 'fullscreen'}
-          selected={isFullscreen}
-          value="fullscreen"
-          onClick={onFullscreen}
-        >
-          {isFullscreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
         </ToggleButton>
       </Tooltip>
     </ToggleButtonGroup>
