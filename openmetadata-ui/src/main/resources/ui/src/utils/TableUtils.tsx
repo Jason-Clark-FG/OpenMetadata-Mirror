@@ -315,8 +315,7 @@ export const getConstraintIcon = ({
       className={classNames(className)}
       placement="bottom"
       title={title}
-      trigger="hover"
-    >
+      trigger="hover">
       <Icon
         alt={title}
         className={classNames({
@@ -933,18 +932,18 @@ export const getTableDetailPageBaseTabs = ({
         />
       ),
       key: EntityTabs.TABLE_QUERIES,
-      children: !viewQueriesPermission ? (
+      children: viewQueriesPermission ? (
+        <TableQueries
+          isTableDeleted={deleted}
+          tableId={tableDetails?.id ?? ''}
+        />
+      ) : (
         <ErrorPlaceHolder
           className="border-none"
           permissionValue={t('label.view-entity', {
             entity: t('label.query-plural'),
           })}
           type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
-        />
-      ) : (
-        <TableQueries
-          isTableDeleted={deleted}
-          tableId={tableDetails?.id ?? ''}
         />
       ),
     },
@@ -1170,7 +1169,7 @@ export const createTableConstraintObject = (
   constraints: string[],
   type: ConstraintType
 ) =>
-  !isEmpty(constraints) ? [{ columns: constraints, constraintType: type }] : [];
+  isEmpty(constraints) ? [] : [{ columns: constraints, constraintType: type }];
 
 export const tableConstraintRendererBasedOnType = (
   constraintType: ConstraintType,
@@ -1182,13 +1181,11 @@ export const tableConstraintRendererBasedOnType = (
     <div
       className="d-flex constraint-columns"
       data-testid={`${constraintType}-container`}
-      key={constraintType}
-    >
+      key={constraintType}>
       <Space
         className="constraint-icon-container"
         direction="vertical"
-        size={0}
-      >
+        size={0}>
         {columns?.map((column, index) => (
           <Fragment key={column}>
             {(columns?.length ?? 0) - 1 !== index || isSingleColumn ? (
@@ -1495,7 +1492,7 @@ export const shouldCollapseSchema = <T extends { children?: T[] }>(
 };
 
 export const getExpandAllKeysToDepth = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   maxDepth = 3
@@ -1509,8 +1506,8 @@ export const getExpandAllKeysToDepth = <
 
     items.forEach((item) => {
       if (item.children && item.children.length > 0) {
-        if (item.name) {
-          keys.push(item.name);
+        if (item.fullyQualifiedName) {
+          keys.push(item.fullyQualifiedName);
         }
         // Continue collecting keys from children up to maxDepth
         collectKeys(item.children, currentDepth + 1);
@@ -1524,7 +1521,7 @@ export const getExpandAllKeysToDepth = <
 };
 
 export const getSafeExpandAllKeys = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   isLargeSchema: boolean,

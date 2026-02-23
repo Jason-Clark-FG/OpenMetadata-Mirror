@@ -248,8 +248,8 @@ const IncidentManagerPage = withSuspenseFallback(
   React.lazy(() => import('../../pages/IncidentManager/IncidentManagerPage'))
 );
 
-const RulesLibraryPage = withSuspenseFallback(
-  React.lazy(() => import('../../pages/RulesLibrary/RulesLibraryPage'))
+const TestLibraryPage = withSuspenseFallback(
+  React.lazy(() => import('../../pages/TestLibrary/TestLibraryPage'))
 );
 
 const IncidentManagerDetailPage = withSuspenseFallback(
@@ -390,8 +390,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
               Operation.Create,
               ResourceEntity.INGESTION_PIPELINE,
               permissions
-            )}
-          >
+            )}>
             <AddIngestionPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.ingestion'),
@@ -408,8 +407,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
               Operation.EditAll,
               ResourceEntity.INGESTION_PIPELINE,
               permissions
-            )}
-          >
+            )}>
             <EditIngestionPage
               pageTitle={t('label.edit-entity', {
                 entity: t('label.ingestion'),
@@ -460,8 +458,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
               Operation.EditDataProfile,
               ResourceEntity.TABLE,
               permissions
-            )}
-          >
+            )}>
             <AddCustomMetricPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.custom-metric'),
@@ -478,8 +475,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
               Operation.Create,
               ResourceEntity.USER,
               permissions
-            )}
-          >
+            )}>
             <CreateUserPage />
           </AdminProtectedRoute>
         }
@@ -557,8 +553,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_SUITE,
               permissions
-            )}
-          >
+            )}>
             <DataQualityPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.data-quality'),
@@ -574,8 +569,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_SUITE,
               permissions
-            )}
-          >
+            )}>
             <DataQualityPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.data-quality'),
@@ -591,8 +585,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_SUITE,
               permissions
-            )}
-          >
+            )}>
             <DataQualityPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.data-quality'),
@@ -608,8 +601,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_CASE,
               permissions
-            )}
-          >
+            )}>
             <IncidentManagerPage />
           </AdminProtectedRoute>
         }
@@ -621,12 +613,11 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_DEFINITION,
               permissions
-            )}
-          >
-            <RulesLibraryPage />
+            )}>
+            <TestLibraryPage />
           </AdminProtectedRoute>
         }
-        path={ROUTES.RULES_LIBRARY}
+        path={ROUTES.TEST_LIBRARY}
       />
 
       {[
@@ -641,8 +632,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
               hasPermission={userPermissions.hasViewPermissions(
                 ResourceEntity.TEST_CASE,
                 permissions
-              )}
-            >
+              )}>
               <IncidentManagerDetailPage />
             </AdminProtectedRoute>
           }
@@ -657,8 +647,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_CASE,
               permissions
-            )}
-          >
+            )}>
             <TestCaseVersionPage />
           </AdminProtectedRoute>
         }
@@ -671,8 +660,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEST_CASE,
               permissions
-            )}
-          >
+            )}>
             <TestCaseVersionPage />
           </AdminProtectedRoute>
         }
@@ -684,8 +672,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.EVENT_SUBSCRIPTION,
               permissions
-            )}
-          >
+            )}>
             <ObservabilityAlertsPage />
           </AdminProtectedRoute>
         }
@@ -697,8 +684,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.EVENT_SUBSCRIPTION,
               permissions
-            )}
-          >
+            )}>
             <AlertDetailsPage isNotificationAlert={false} />
           </AdminProtectedRoute>
         }

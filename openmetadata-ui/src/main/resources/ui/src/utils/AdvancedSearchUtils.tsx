@@ -73,6 +73,8 @@ export const getAssetsPageQuickFilters = (type?: AssetsOfEntity) => {
   switch (type) {
     case AssetsOfEntity.DOMAIN:
     case AssetsOfEntity.DATA_PRODUCT:
+    case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+    case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
       return [...DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS];
 
     case AssetsOfEntity.GLOSSARY:
@@ -113,8 +115,7 @@ export const renderAdvanceSearchButtons: RenderSettings['renderButton'] = (
         data-testid="advanced-search-add-rule"
         icon={<PlusOutlined />}
         type="primary"
-        onClick={props?.onClick}
-      >
+        onClick={props?.onClick}>
         {t('label.add')}
       </Button>
     );
@@ -125,8 +126,7 @@ export const renderAdvanceSearchButtons: RenderSettings['renderButton'] = (
         data-testid="advanced-search-add-group"
         icon={<PlusOutlined />}
         type="primary"
-        onClick={props?.onClick}
-      >
+        onClick={props?.onClick}>
         {t('label.add')}
       </Button>
     );
@@ -188,8 +188,7 @@ export const generateSearchDropdownLabel = (
           <Typography.Text
             ellipsis
             className="dropdown-option-label"
-            title={option.label}
-          >
+            title={option.label}>
             <span
               dangerouslySetInnerHTML={{
                 __html: getSearchLabel(option.label, searchKey),
@@ -200,8 +199,7 @@ export const generateSearchDropdownLabel = (
             <Typography.Text
               className="text-xs d-block"
               data-testid={`${option.key}-description`}
-              type="secondary"
-            >
+              type="secondary">
               {option.description}
             </Typography.Text>
           )}

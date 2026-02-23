@@ -75,32 +75,6 @@ import { LearningResourceCard } from '../../components/Learning/LearningResource
 import { ResourcePlayerModal } from '../../components/Learning/ResourcePlayer/ResourcePlayerModal.component';
 import { LearningResourceForm } from './LearningResourceForm.component';
 
-import { styled } from '@mui/material/styles';
-
-const StyledPageLayout = styled(PageLayoutV1)(() => ({
-  '& .page-layout-v1-vertical-scroll.learning-resources-page-layout': {
-    overflow: 'hidden',
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  '& .learning-resources-page-layout > .ant-row': {
-    flex: 1,
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  '& .learning-resources-page-layout .ant-row .ant-col': {
-    flex: 'none',
-  },
-  '& .learning-resources-page-layout .ant-row .ant-col:last-child': {
-    minHeight: 0,
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-  },
-}));
-
 const getResourceTypeIcon = (type: string) => {
   const icons: Record<
     string,
@@ -122,8 +96,7 @@ const getResourceTypeIcon = (type: string) => {
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-      }}
-    >
+      }}>
       <Icon height={24} width={24} />
     </Box>
   );
@@ -165,21 +138,18 @@ const ResourceRow = ({
           paddingBottom: 0,
         },
       }}
-      onClick={() => handlePreview(record)}
-    >
+      onClick={() => handlePreview(record)}>
       {/* Name */}
       <TableCell
         sx={{
           maxWidth: 360,
           overflow: 'hidden',
-        }}
-      >
+        }}>
         <Stack
           alignItems="center"
           direction="row"
           spacing={1}
-          sx={{ minWidth: 0 }}
-        >
+          sx={{ minWidth: 0 }}>
           {getResourceTypeIcon(record.resourceType)}
           <Typography
             noWrap
@@ -190,8 +160,7 @@ const ResourceRow = ({
               textOverflow: 'ellipsis',
               minWidth: 0,
             }}
-            title={record.displayName || record.name}
-          >
+            title={record.displayName || record.name}>
             {record.displayName || record.name}
           </Typography>
         </Stack>
@@ -207,8 +176,7 @@ const ResourceRow = ({
             overflow: 'hidden',
             alignItems: 'center',
             minWidth: 0,
-          }}
-        >
+          }}>
           <Box
             sx={{
               flexShrink: 1,
@@ -218,8 +186,7 @@ const ResourceRow = ({
               flexWrap: 'nowrap',
               gap: theme.spacing(1.5),
               alignItems: 'center',
-            }}
-          >
+            }}>
             {record.categories?.slice(0, MAX_VISIBLE_TAGS).map((cat) => {
               const c = getCategoryColors(cat);
 
@@ -273,8 +240,7 @@ const ResourceRow = ({
             overflow: 'hidden',
             alignItems: 'center',
             minWidth: 0,
-          }}
-        >
+          }}>
           <Box
             sx={{
               flexShrink: 1,
@@ -284,8 +250,7 @@ const ResourceRow = ({
               flexWrap: 'nowrap',
               gap: theme.spacing(1.5),
               alignItems: 'center',
-            }}
-          >
+            }}>
             {record.contexts?.slice(0, MAX_VISIBLE_CONTEXTS).map((ctx, i) => (
               <Chip
                 key={ctx.pageId ?? i}
@@ -336,8 +301,7 @@ const ResourceRow = ({
           sx={{
             color: theme.palette.grey[600],
             fontSize: theme.typography.body2.fontSize,
-          }}
-        >
+          }}>
           {record.updatedAt
             ? DateTime.fromMillis(record.updatedAt).toFormat('LLL d, yyyy')
             : '-'}
@@ -360,8 +324,7 @@ const ResourceRow = ({
                   bgcolor: 'common.white',
                 },
               }}
-              onClick={() => handleEdit(record)}
-            >
+              onClick={() => handleEdit(record)}>
               <IconEdit height={14} width={14} />
             </IconButton>
           </Tooltip>
@@ -379,8 +342,7 @@ const ResourceRow = ({
                   bgcolor: 'common.white',
                 },
               }}
-              onClick={() => handleDelete(record)}
-            >
+              onClick={() => handleDelete(record)}>
               <Trash01 size={14} />
             </IconButton>
           </Tooltip>
@@ -477,14 +439,14 @@ export const LearningResourcesPage: React.FC = () => {
   );
 
   return (
-    <StyledPageLayout
+    <PageLayoutV1
+      fullHeight
       mainContainerClassName="learning-resources-page-layout"
       pageContainerStyle={{
         height: 'calc(100vh - 64px)',
         overflow: 'hidden',
       }}
-      pageTitle={t('label.learning-resource')}
-    >
+      pageTitle={t('label.learning-resource')}>
       <Box
         data-testid="learning-resources-page"
         sx={{
@@ -493,8 +455,7 @@ export const LearningResourcesPage: React.FC = () => {
           height: '100%',
           minHeight: 0,
           overflow: 'hidden',
-        }}
-      >
+        }}>
         <Box sx={{ flexShrink: 0, marginBottom: theme.spacing(2) }}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Box>
@@ -513,15 +474,13 @@ export const LearningResourcesPage: React.FC = () => {
             boxShadow: 1,
             borderRadius: 1,
             border: `1px solid ${defaultColors.blueGray[100]}`,
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: 'column',
               gap: theme.spacing(2 / 3),
-            }}
-          >
+            }}>
             <Typography
               sx={{
                 color: theme.palette.grey[900],
@@ -529,8 +488,7 @@ export const LearningResourcesPage: React.FC = () => {
                 fontSize: theme.typography.body1.fontSize,
                 fontWeight: 600,
                 lineHeight: theme.typography.body1.lineHeight,
-              }}
-            >
+              }}>
               {t('label.learning-resource')}
             </Typography>
             <Typography
@@ -540,8 +498,7 @@ export const LearningResourcesPage: React.FC = () => {
                 fontSize: theme.typography.body2.fontSize,
                 fontWeight: 400,
                 lineHeight: theme.typography.body2.lineHeight,
-              }}
-            >
+              }}>
               {t('message.learning-resources-management-description')}
             </Typography>
           </Box>
@@ -565,8 +522,7 @@ export const LearningResourcesPage: React.FC = () => {
               },
             }}
             variant="text"
-            onClick={handleCreate}
-          >
+            onClick={handleCreate}>
             {t('label.add-entity', {
               entity: t('label.resource'),
             })}
@@ -585,15 +541,13 @@ export const LearningResourcesPage: React.FC = () => {
             marginTop: theme.spacing(2.5),
             borderRadius: '12px',
             border: `1px solid ${defaultColors.blueGray[100]}`,
-          }}
-        >
+          }}>
           {/* Filters */}
           <Box
             sx={{
               flexShrink: 0,
               p: 3,
-            }}
-          >
+            }}>
             <Stack alignItems="center" direction="row" spacing={2}>
               {search}
               {quickFilters}
@@ -612,8 +566,7 @@ export const LearningResourcesPage: React.FC = () => {
                   minHeight: 0,
                   overflow: 'auto',
                   borderRadius: 0, // Ensure no border radius here either
-                }}
-              >
+                }}>
                 <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
                   <TableHead>
                     <TableRow>
@@ -623,8 +576,7 @@ export const LearningResourcesPage: React.FC = () => {
                           bgcolor: 'grey.50',
                           maxWidth: 360,
                           width: 360,
-                        }}
-                      >
+                        }}>
                         {t('label.content-name')}
                       </TableCell>
                       <TableCell
@@ -633,8 +585,7 @@ export const LearningResourcesPage: React.FC = () => {
                           bgcolor: 'grey.50',
                           width: 220,
                           minWidth: 220,
-                        }}
-                      >
+                        }}>
                         {t('label.category-plural')}
                       </TableCell>
                       <TableCell
@@ -643,8 +594,7 @@ export const LearningResourcesPage: React.FC = () => {
                           bgcolor: 'grey.50',
                           width: 220,
                           minWidth: 220,
-                        }}
-                      >
+                        }}>
                         {t('label.context')}
                       </TableCell>
                       <TableCell
@@ -653,8 +603,7 @@ export const LearningResourcesPage: React.FC = () => {
                           bgcolor: 'grey.50',
                           width: 140,
                           minWidth: 140,
-                        }}
-                      >
+                        }}>
                         {t('label.updated-at')}
                       </TableCell>
                       <TableCell
@@ -663,8 +612,7 @@ export const LearningResourcesPage: React.FC = () => {
                           bgcolor: 'grey.50',
                           width: 80,
                           minWidth: 80,
-                        }}
-                      >
+                        }}>
                         {t('label.action-plural')}
                       </TableCell>
                     </TableRow>
@@ -706,8 +654,7 @@ export const LearningResourcesPage: React.FC = () => {
                   justifyContent: 'center',
                   boxShadow:
                     '0 -13px 16px -4px rgba(10, 13, 18, 0.04), 0 -4px 6px -2px rgba(10, 13, 18, 0.03)',
-                }}
-              >
+                }}>
                 <NextPrevious {...paginationData} />
               </Box>
             </>
@@ -726,8 +673,7 @@ export const LearningResourcesPage: React.FC = () => {
                       gridTemplateColumns:
                         'repeat(auto-fill, minmax(280px,1fr))',
                       gap: 2,
-                    }}
-                  >
+                    }}>
                     {resources.map((r) => (
                       <LearningResourceCard
                         key={r.id}
@@ -746,8 +692,7 @@ export const LearningResourcesPage: React.FC = () => {
                   justifyContent: 'center',
                   boxShadow:
                     '0 -13px 16px -4px rgba(10, 13, 18, 0.04), 0 -4px 6px -2px rgba(10, 13, 18, 0.03)',
-                }}
-              >
+                }}>
                 <NextPrevious {...paginationData} />
               </Box>
             </>
@@ -783,6 +728,6 @@ export const LearningResourcesPage: React.FC = () => {
           />
         )}
       </Box>
-    </StyledPageLayout>
+    </PageLayoutV1>
   );
 };

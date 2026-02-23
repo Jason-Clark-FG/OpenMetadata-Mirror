@@ -73,15 +73,13 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         display: 'flex',
         alignItems: 'center',
         gap: theme.spacing(1),
-      }}
-    >
+      }}>
       <Box
         component="span"
         sx={{
           fontSize: theme.typography.pxToRem(13),
           whiteSpace: 'nowrap',
-        }}
-      >
+        }}>
         {t('label.learn-how-this-feature-works')}
       </Box>
       <Button
@@ -103,8 +101,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
           minWidth: 0,
         }}
         variant="text"
-        onClick={handleClick}
-      >
+        onClick={handleClick}>
         {resourceCount} {t('label.resource-plural').toLowerCase()}
       </Button>
     </Box>
@@ -122,8 +119,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         }}
         placement="bottomLeft"
         showArrow={false}
-        trigger="hover"
-      >
+        trigger="hover">
         <Box
           className={className}
           data-testid="learning-icon"
@@ -134,12 +130,16 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
             verticalAlign: 'middle',
             position: 'relative',
             borderRadius: theme.spacing(2),
-            backgroundColor: theme.palette.grey[100],
+            backgroundColor: theme.palette.primary.light + '1A',
             padding: theme.spacing(0.5),
             height: 'fit-content',
+            color: theme.palette.primary.main,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: theme.palette.primary.light + '33',
+            },
           }}
-          onClick={handleClick}
-        >
+          onClick={handleClick}>
           <Box
             sx={{
               display: 'inline-flex',
@@ -150,8 +150,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
               '&:hover': {
                 transform: 'scale(1.1)',
               },
-            }}
-          >
+            }}>
             <LearningIconSvg height={16} width={16} />
           </Box>
         </Box>

@@ -467,7 +467,7 @@ const ModelTab = () => {
         }}
         pagination={false}
         rowClassName={getRowClassName}
-        rowKey="name"
+        rowKey="fullyQualifiedName"
         scroll={{ x: 1200 }}
         searchProps={searchProps}
         size="small"
@@ -477,8 +477,7 @@ const ModelTab = () => {
       {editColumnDescription && (
         <EntityAttachmentProvider
           entityFqn={editColumnDescription.fullyQualifiedName}
-          entityType={EntityType.DASHBOARD_DATA_MODEL}
-        >
+          entityType={EntityType.DASHBOARD_DATA_MODEL}>
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.column'),
