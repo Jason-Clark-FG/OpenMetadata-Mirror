@@ -27,392 +27,420 @@ test.use({
   storageState: 'playwright/.auth/admin.json',
 });
 
-test.describe('Glossary Related Terms with Relation Types', () => {
-  test.beforeEach(async ({ page }) => {
-    await redirectToHomePage(page);
-  });
+test.describe(
+  'Glossary Related Terms with Relation Types',
+  { tag: ['@Features', '@Governance'] },
+  () => {
+    test.beforeEach(async ({ page }) => {
+      await redirectToHomePage(page);
+    });
 
-  test('should add related term with default relatedTo type', async ({
-    page,
-  }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
+    test('should add related term with default relatedTo type', async ({
+      page,
+    }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
 
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
 
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
 
-      await addRelatedTerms(page, [term2]);
+        await test.step('Navigate to glossary term', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+        });
 
-      const relatedTermName =
-        term2.responseData?.displayName ?? term2.data.displayName;
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
-      await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
-      await expect(relatedContainer.getByText('Related To')).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
+        await test.step('Add related term with relatedTo type and verify label', async () => {
+          await addRelatedTerms(page, [term2]);
 
-  test('should add related term with synonym type', async ({ page }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
-
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
-
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
-
-      await addRelatedTerms(page, [term2], 'Synonym');
-
-      const relatedTermName =
-        term2.responseData?.displayName ?? term2.data.displayName;
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
-      await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
-      await expect(relatedContainer.getByText('Synonym')).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
-
-  test('should add related term with broader type', async ({ page }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
-
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
-
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
-
-      await addRelatedTerms(page, [term2], 'Broader');
-
-      const relatedTermName =
-        term2.responseData?.displayName ?? term2.data.displayName;
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
-      await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
-      await expect(relatedContainer.getByText('Broader')).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
-
-  test('should show relation type selector when adding related terms', async ({
-    page,
-  }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
-
-      await page.getByTestId('related-term-add-button').click();
-
-      const relationTypeSelect = page.getByTestId('relation-type-select');
-      await expect(relationTypeSelect).toBeVisible();
-
-      // Close any auto-opened tree dropdowns
-      const openTreeDropdowns = page.locator('.async-tree-select-list-dropdown');
-      if (await openTreeDropdowns.isVisible()) {
-        await page.keyboard.press('Escape');
-        await expect(openTreeDropdowns).not.toBeVisible();
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText('Related To')).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
       }
+    });
 
-      await relationTypeSelect.locator('.ant-select-selector').click();
+    test('should add related term with synonym type', async ({ page }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
 
-      // Use :visible chain pattern (never store :visible locators!)
-      await expect(
-        page
-          .locator('.ant-select-dropdown:visible')
-          .locator('.ant-select-item-option-content')
-          .filter({ hasText: 'Related To' })
-      ).toBeVisible();
-      await expect(
-        page
-          .locator('.ant-select-dropdown:visible')
-          .locator('.ant-select-item-option-content')
-          .filter({ hasText: 'Synonym' })
-      ).toBeVisible();
-      await expect(
-        page
-          .locator('.ant-select-dropdown:visible')
-          .locator('.ant-select-item-option-content')
-          .filter({ hasText: 'Broader' })
-      ).toBeVisible();
-      await expect(
-        page
-          .locator('.ant-select-dropdown:visible')
-          .locator('.ant-select-item-option-content')
-          .filter({ hasText: 'Narrower' })
-      ).toBeVisible();
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
 
-      await page.keyboard.press('Escape');
-      await expect(page.locator('.ant-select-dropdown:visible')).not.toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
 
-  test('should verify bidirectional relation for symmetric type (synonym)', async ({
-    page,
-  }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
+        await test.step('Navigate to glossary term', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+        });
 
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
+        await test.step('Add related term with synonym type and verify label', async () => {
+          await addRelatedTerms(page, [term2], 'Synonym');
 
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText('Synonym')).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
 
-      await addRelatedTerms(page, [term2], 'Synonym');
+    test('should add related term with broader type', async ({ page }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
 
-      await selectActiveGlossaryTerm(
-        page,
-        term2.responseData?.displayName ?? term2.data.displayName
-      );
-      await waitForAllLoadersToDisappear(page);
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
 
-      const term1Name =
-        term1.responseData?.displayName ?? term1.data.displayName;
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
-      await expect(relatedContainer.getByText(term1Name)).toBeVisible();
-      await expect(relatedContainer.getByText('Synonym')).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
 
-  test.skip('should verify inverse relation for asymmetric type (broader/narrower)', async ({
-    page,
-  }) => {
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
+        await test.step('Navigate to glossary term', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+        });
 
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
+        await test.step('Add related term with broader type and verify label', async () => {
+          await addRelatedTerms(page, [term2], 'Broader');
 
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText('Broader')).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
 
-      await addRelatedTerms(page, [term2], 'Broader');
+    test('should show relation type selector when adding related terms', async ({
+      page,
+    }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
 
-      const relatedContainer1 = page.getByTestId('related-term-container');
-      await expect(relatedContainer1.getByText('Broader')).toBeVisible();
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
 
-      await selectActiveGlossaryTerm(page, term2.data.displayName);
-      await waitForAllLoadersToDisappear(page);
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
 
-      const term1Name = term1.responseData?.displayName;
-      const relatedContainer2 = page.getByTestId('related-term-container');
-      await expect(relatedContainer2.getByText(term1Name)).toBeVisible();
-      await expect(relatedContainer2.getByText('Narrower')).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
+        await test.step('Navigate to glossary term', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+        });
 
-  test('should display relations grouped by type', async ({ page }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
-    const term3 = new GlossaryTerm(glossary);
-    const term4 = new GlossaryTerm(glossary);
+        await test.step('Open relation type selector and verify all options', async () => {
+          await page.getByTestId('related-term-add-button').click();
 
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
-      await term3.create(apiContext);
-      await term4.create(apiContext);
+          const relationTypeSelect = page.getByTestId('relation-type-select');
+          await expect(relationTypeSelect).toBeVisible();
 
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
+          const openTreeDropdowns = page.locator(
+            '.async-tree-select-list-dropdown'
+          );
+          if (await openTreeDropdowns.isVisible()) {
+            await page.keyboard.press('Escape');
+            await expect(openTreeDropdowns).not.toBeVisible();
+          }
 
-      await addRelatedTerms(page, [term2], 'Synonym');
-      await addRelatedTerms(page, [term3], 'Broader');
-      await addRelatedTerms(page, [term4]);
+          await relationTypeSelect.locator('.ant-select-selector').click();
 
-      await waitForAllLoadersToDisappear(page);
+          for (const optionText of [
+            'Related To',
+            'Synonym',
+            'Broader',
+            'Narrower',
+          ]) {
+            await expect(
+              page
+                .locator('.ant-select-dropdown:visible')
+                .locator('.ant-select-item-option-content')
+                .filter({ hasText: optionText })
+            ).toBeVisible();
+          }
 
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(
+            page.locator('.ant-select-dropdown:visible')
+          ).not.toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
 
-      await expect(relatedContainer.getByText('Synonym')).toBeVisible();
-      await expect(relatedContainer.getByText('Broader')).toBeVisible();
-      await expect(relatedContainer.getByText('Related To')).toBeVisible();
+    test('should verify bidirectional relation for symmetric type (synonym)', async ({
+      page,
+    }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
 
-      const term2Name =
-        term2.responseData?.displayName ?? term2.data.displayName;
-      const term3Name =
-        term3.responseData?.displayName ?? term3.data.displayName;
-      const term4Name =
-        term4.responseData?.displayName ?? term4.data.displayName;
-      await expect(relatedContainer.getByText(term2Name)).toBeVisible();
-      await expect(relatedContainer.getByText(term3Name)).toBeVisible();
-      await expect(relatedContainer.getByText(term4Name)).toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await term3.delete(apiContext);
-      await term4.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
 
-  test('should remove relation and verify both directions are removed', async ({
-    page,
-  }) => {
-    test.slow();
-    const { apiContext, afterAction } = await getApiContext(page);
-    const glossary = new Glossary();
-    const term1 = new GlossaryTerm(glossary);
-    const term2 = new GlossaryTerm(glossary);
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
+        const term2Name =
+          term2.responseData?.displayName ?? term2.data.displayName;
 
-    try {
-      await glossary.create(apiContext);
-      await term1.create(apiContext);
-      await term2.create(apiContext);
+        await test.step('Add synonym relation from term1 to term2', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+          await addRelatedTerms(page, [term2], 'Synonym');
+        });
 
-      await sidebarClick(page, SidebarItem.GLOSSARY);
-      await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        term1.responseData?.displayName ?? term1.data.displayName
-      );
+        await test.step('Verify term2 shows term1 as synonym (bidirectional)', async () => {
+          await selectActiveGlossaryTerm(page, term2Name);
+          await waitForAllLoadersToDisappear(page);
 
-      await addRelatedTerms(page, [term2], 'Synonym');
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText(term1Name)).toBeVisible();
+          await expect(relatedContainer.getByText('Synonym')).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
 
-      const term2Name =
-        term2.responseData?.displayName ?? term2.data.displayName;
-      const relatedContainer = page.getByTestId('related-term-container');
-      await expect(relatedContainer).toBeVisible();
-      await expect(relatedContainer.getByText(term2Name)).toBeVisible();
+    test('should verify inverse relation for asymmetric type (broader/narrower)', async ({
+      page,
+    }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
 
-      await relatedContainer.getByTestId('edit-button').click();
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
 
-      const relationTypeSelect = page.getByTestId('relation-type-select');
-      await expect(relationTypeSelect).toBeVisible();
-      await relationTypeSelect.locator('.ant-select-selector').click();
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
+        const term2Name =
+          term2.responseData?.displayName ?? term2.data.displayName;
 
-      // Use :visible chain pattern
-      const synonymOption = page
-        .locator('.ant-select-dropdown:visible')
-        .locator('.ant-select-item-option-content')
-        .filter({ hasText: 'Synonym' });
-      await expect(synonymOption).toBeVisible();
-      await synonymOption.click();
-      await expect(page.locator('.ant-select-dropdown:visible')).not.toBeVisible();
+        await test.step('Add broader relation from term1 to term2', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+          await addRelatedTerms(page, [term2], 'Broader');
 
-      const removeIcon = relatedContainer
-        .locator('.ant-tag-close-icon, .ant-select-selection-item-remove')
-        .first();
-      await expect(removeIcon).toBeVisible();
-      await removeIcon.click();
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText('Broader')).toBeVisible();
+        });
 
-      const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');
-      await page.getByTestId('saveAssociatedTag').click();
-      await saveRes;
+        await test.step('Verify term2 shows term1 as narrower (inverse)', async () => {
+          await selectActiveGlossaryTerm(page, term2Name);
+          await waitForAllLoadersToDisappear(page);
 
-      await expect(relatedContainer.getByText(term2Name)).not.toBeVisible();
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText(term1Name)).toBeVisible();
+          await expect(relatedContainer.getByText('Narrower')).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
 
-      await selectActiveGlossaryTerm(
-        page,
-        term2.responseData?.displayName ?? term2.data.displayName
-      );
-      await waitForAllLoadersToDisappear(page);
+    test('should display relations grouped by type', async ({ page }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
+      const term3 = new GlossaryTerm(glossary);
+      const term4 = new GlossaryTerm(glossary);
 
-      const term1Name =
-        term1.responseData?.displayName ?? term1.data.displayName;
-      const term2RelatedContainer = page.getByTestId('related-term-container');
-      await expect(term2RelatedContainer.getByText(term1Name)).not.toBeVisible();
-    } finally {
-      await term1.delete(apiContext);
-      await term2.delete(apiContext);
-      await glossary.delete(apiContext);
-      await afterAction();
-    }
-  });
-});
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
+        await term3.create(apiContext);
+        await term4.create(apiContext);
+
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
+        const term2Name =
+          term2.responseData?.displayName ?? term2.data.displayName;
+        const term3Name =
+          term3.responseData?.displayName ?? term3.data.displayName;
+        const term4Name =
+          term4.responseData?.displayName ?? term4.data.displayName;
+
+        await test.step('Navigate to term1', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+        });
+
+        await test.step('Add relations of three different types', async () => {
+          await addRelatedTerms(page, [term2], 'Synonym');
+          await addRelatedTerms(page, [term3], 'Broader');
+          await addRelatedTerms(page, [term4]);
+        });
+
+        await test.step('Verify all relation type labels and terms are displayed', async () => {
+          await waitForAllLoadersToDisappear(page);
+
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+
+          await expect(relatedContainer.getByText('Synonym')).toBeVisible();
+          await expect(relatedContainer.getByText('Broader')).toBeVisible();
+          await expect(relatedContainer.getByText('Related To')).toBeVisible();
+
+          await expect(relatedContainer.getByText(term2Name)).toBeVisible();
+          await expect(relatedContainer.getByText(term3Name)).toBeVisible();
+          await expect(relatedContainer.getByText(term4Name)).toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await term3.delete(apiContext);
+        await term4.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
+
+    test('should remove relation and verify both directions are removed', async ({
+      page,
+    }) => {
+      test.slow();
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+      const term1 = new GlossaryTerm(glossary);
+      const term2 = new GlossaryTerm(glossary);
+
+      try {
+        await glossary.create(apiContext);
+        await term1.create(apiContext);
+        await term2.create(apiContext);
+
+        const term1Name =
+          term1.responseData?.displayName ?? term1.data.displayName;
+        const term2Name =
+          term2.responseData?.displayName ?? term2.data.displayName;
+
+        await test.step('Add synonym relation from term1 to term2', async () => {
+          await sidebarClick(page, SidebarItem.GLOSSARY);
+          await selectActiveGlossary(page, glossary.data.displayName);
+          await selectActiveGlossaryTerm(page, term1Name);
+          await addRelatedTerms(page, [term2], 'Synonym');
+        });
+
+        await test.step('Remove the synonym relation from term1', async () => {
+          const relatedContainer = page.getByTestId('related-term-container');
+          await expect(relatedContainer).toBeVisible();
+          await expect(relatedContainer.getByText(term2Name)).toBeVisible();
+
+          await relatedContainer.getByTestId('edit-button').click();
+
+          const relationTypeSelect = page.getByTestId('relation-type-select');
+          await expect(relationTypeSelect).toBeVisible();
+          await relationTypeSelect.locator('.ant-select-selector').click();
+
+          await page
+            .locator('.ant-select-dropdown:visible')
+            .locator('.ant-select-item-option-content')
+            .filter({ hasText: 'Synonym' })
+            .click();
+
+          await expect(
+            page.locator('.ant-select-dropdown:visible')
+          ).not.toBeVisible();
+
+          const term2Tag = page
+            .getByTestId('tag-selector')
+            .locator('.ant-select-selection-item')
+            .filter({ hasText: term2Name });
+          await expect(term2Tag).toBeVisible();
+          await term2Tag.locator('.ant-select-selection-item-remove').click();
+
+          const saveButton = page.getByTestId('saveAssociatedTag');
+          await expect(saveButton).toBeEnabled();
+          const saveResponse = page.waitForResponse(
+            (response) =>
+              response.url().includes('/api/v1/glossaryTerms') &&
+              response.status() === 200
+          );
+          await saveButton.click();
+          await saveResponse;
+          await waitForAllLoadersToDisappear(page);
+
+          await expect(relatedContainer.getByText(term2Name)).not.toBeVisible();
+        });
+
+        await test.step('Verify relation is also removed from term2 (bidirectional removal)', async () => {
+          await selectActiveGlossaryTerm(page, term2Name);
+          await waitForAllLoadersToDisappear(page);
+
+          await expect(
+            page.getByTestId('related-term-container').getByText(term1Name)
+          ).not.toBeVisible();
+        });
+      } finally {
+        await term1.delete(apiContext);
+        await term2.delete(apiContext);
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
+  }
+);

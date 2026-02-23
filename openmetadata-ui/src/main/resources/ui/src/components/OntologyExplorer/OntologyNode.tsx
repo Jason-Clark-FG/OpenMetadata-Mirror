@@ -24,6 +24,7 @@ export interface OntologyNodeData {
   isHighlighted: boolean;
   isConnected: boolean;
   glossaryColor: string;
+  nodeHeight?: number;
   onClick: (nodeId: string) => void;
   onDoubleClick: (nodeId: string) => void;
 }
@@ -35,6 +36,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
     isHighlighted,
     isConnected,
     glossaryColor,
+    nodeHeight,
     onClick,
     onDoubleClick,
   } = data;
@@ -78,10 +80,10 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
           : isHighlighted
           ? `0 0 0 1px ${glossaryColor}30`
           : undefined,
+        minHeight: nodeHeight ? `${nodeHeight}px` : undefined,
       }}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-    >
+      onDoubleClick={handleDoubleClick}>
       {/* Center handle - enables true straight line edges like professional ontology tools */}
       <Handle
         className="ontology-flow-handle"
@@ -113,8 +115,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
       <div className="ontology-flow-node__content">
         <div
           className="ontology-flow-node__icon"
-          style={{ backgroundColor: `${glossaryColor}15` }}
-        >
+          style={{ backgroundColor: `${glossaryColor}15` }}>
           {isGlossary ? (
             <BookOutlined style={{ color: glossaryColor }} />
           ) : (
@@ -127,8 +128,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
             <Typography.Text
               ellipsis
               className="ontology-flow-node__label"
-              strong={isGlossary}
-            >
+              strong={isGlossary}>
               {displayLabel}
             </Typography.Text>
           </Tooltip>
@@ -138,8 +138,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
               <Typography.Text
                 ellipsis
                 className="ontology-flow-node__group"
-                type="secondary"
-              >
+                type="secondary">
                 {node.group}
               </Typography.Text>
             </Tooltip>
@@ -149,8 +148,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
         {isGlossary && (
           <div
             className="ontology-flow-node__badge"
-            style={{ backgroundColor: glossaryColor }}
-          >
+            style={{ backgroundColor: glossaryColor }}>
             G
           </div>
         )}

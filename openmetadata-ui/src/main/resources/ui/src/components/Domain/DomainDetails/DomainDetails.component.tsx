@@ -139,11 +139,8 @@ const DomainDetails = ({
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { getEntityPermission, permissions } = usePermissionProvider();
-  const routeParams = useParams<{
-    fqn?: string;
-    tab?: string;
-    version?: string;
-  }>();
+  const routeParams =
+    useParams<{ fqn?: string; tab?: string; version?: string }>();
   const reactNavigate = useNavigate();
   const navigate = useCallback(
     (path: string) => {

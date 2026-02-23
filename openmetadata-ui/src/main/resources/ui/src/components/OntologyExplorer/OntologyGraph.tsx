@@ -34,7 +34,10 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import GlossaryGroupNode, { GlossaryGroupNodeData } from './GlossaryGroupNode';
-import OntologyEdge, { OntologyEdgeData } from './OntologyEdge';
+import OntologyEdge, {
+  OntologyEdgeData,
+  RELATION_COLORS,
+} from './OntologyEdge';
 import {
   GraphSettings,
   OntologyEdge as OntologyEdgeType,
@@ -212,6 +215,133 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
 
       return counts;
     }, [inputEdges]);
+
+    const outDegrees = useMemo(() => {
+      const counts = new Map<string, number>();
+      inputEdges.forEach((edge) => {
+        counts.set(edge.from, (counts.get(edge.from) ?? 0) + 1);
+      });
+
+      return counts;
+    }, [inputEdges]);
+
+    const hierarchyDepths = useMemo(() => {
+      const depths = new Map<string, number>();
+      const hasIncoming = new Set(inputEdges.map((e) => e.to));
+      const roots = inputNodes.filter((n) => !hasIncoming.has(n.id));
+      const queue: Array<{ id: string; depth: number }> = roots.map((r) => ({
+        id: r.id,
+        depth: 0,
+      }));
+      queue.forEach(({ id, depth }) => depths.set(id, depth));
+      let i = 0;
+      while (i < queue.length) {
+        const { id, depth } = queue[i];
+        inputEdges.forEach((edge) => {
+          if (edge.from === id && !depths.has(edge.to)) {
+            depths.set(edge.to, depth + 1);
+            queue.push({ id: edge.to, depth: depth + 1 });
+          }
+        });
+        i++;
+      }
+      inputNodes.forEach((n) => {
+        if (!depths.has(n.id)) {
+          depths.set(n.id, 0);
+        }
+      });
+
+      return depths;
+    }, [inputNodes, inputEdges]);
+
+    const computeNodeColor = useCallback(
+      (node: OntologyNodeType): string => {
+        switch (settings.nodeColorMode) {
+          case 'glossary':
+            return node.glossaryId && glossaryColorMap[node.glossaryId]
+              ? glossaryColorMap[node.glossaryId]
+              : '#3062d4';
+          case 'connectionCount': {
+            const count = connectionCounts.get(node.id) ?? 0;
+            if (count === 0) {
+              return '#9ca3af';
+            }
+            if (count <= 2) {
+              return '#3b82f6';
+            }
+            if (count <= 5) {
+              return '#7c3aed';
+            }
+
+            return '#ec4899';
+          }
+          case 'hierarchyLevel': {
+            const palette = [
+              '#1d4ed8',
+              '#2563eb',
+              '#3b82f6',
+              '#60a5fa',
+              '#93c5fd',
+            ];
+            const depth = hierarchyDepths.get(node.id) ?? 0;
+
+            return palette[Math.min(depth, palette.length - 1)];
+          }
+          case 'relationType': {
+            const typeCounts = new Map<string, number>();
+            inputEdges.forEach((edge) => {
+              if (edge.from === node.id || edge.to === node.id) {
+                typeCounts.set(
+                  edge.relationType,
+                  (typeCounts.get(edge.relationType) ?? 0) + 1
+                );
+              }
+            });
+            let primaryType = '';
+            let maxCount = 0;
+            typeCounts.forEach((count, type) => {
+              if (count > maxCount) {
+                maxCount = count;
+                primaryType = type;
+              }
+            });
+
+            return RELATION_COLORS[primaryType] ?? '#3062d4';
+          }
+          default:
+            return node.glossaryId && glossaryColorMap[node.glossaryId]
+              ? glossaryColorMap[node.glossaryId]
+              : '#3062d4';
+        }
+      },
+      [
+        settings.nodeColorMode,
+        glossaryColorMap,
+        connectionCounts,
+        hierarchyDepths,
+        inputEdges,
+      ]
+    );
+
+    const computeNodeHeight = useCallback(
+      (nodeId: string): number => {
+        switch (settings.nodeSizeMode) {
+          case 'connectionCount':
+            return (
+              NODE_HEIGHT +
+              Math.min((connectionCounts.get(nodeId) ?? 0) * 4, 30)
+            );
+          case 'childCount':
+            return (
+              NODE_HEIGHT + Math.min((outDegrees.get(nodeId) ?? 0) * 4, 30)
+            );
+          case 'uniform':
+          default:
+            return NODE_HEIGHT;
+        }
+      },
+      [settings.nodeSizeMode, connectionCounts, outDegrees]
+    );
 
     const mergedEdges = useMemo((): MergedEdge[] => {
       const edgeMap = new Map<string, OntologyEdgeType>();
@@ -409,7 +539,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
         const elkNodes: ElkNode[] = nodesData.map((node) => ({
           id: node.id,
           width: NODE_WIDTH,
-          height: NODE_HEIGHT,
+          height: computeNodeHeight(node.id),
         }));
 
         const elkEdges: ElkExtendedEdge[] = edgesData.map((edge, index) => ({
@@ -452,10 +582,8 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             const isHighlighted =
               selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
             const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
-            const glossaryColor =
-              node.glossaryId && glossaryColorMap[node.glossaryId]
-                ? glossaryColorMap[node.glossaryId]
-                : '#3062d4';
+            const glossaryColor = computeNodeColor(node);
+            const nodeHeight = computeNodeHeight(node.id);
 
             const nodeData: OntologyNodeData = {
               node,
@@ -463,6 +591,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               isHighlighted,
               isConnected,
               glossaryColor,
+              nodeHeight,
               onClick: handleClick,
               onDoubleClick: handleDoubleClick,
             };
@@ -476,7 +605,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               },
               data: nodeData,
               width: NODE_WIDTH,
-              height: NODE_HEIGHT,
+              height: nodeHeight,
             };
           });
         } catch {
@@ -486,10 +615,8 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             const isHighlighted =
               selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
             const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
-            const glossaryColor =
-              node.glossaryId && glossaryColorMap[node.glossaryId]
-                ? glossaryColorMap[node.glossaryId]
-                : '#3062d4';
+            const glossaryColor = computeNodeColor(node);
+            const nodeHeight = computeNodeHeight(node.id);
 
             const nodeData: OntologyNodeData = {
               node,
@@ -497,6 +624,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               isHighlighted,
               isConnected,
               glossaryColor,
+              nodeHeight,
               onClick: handleClick,
               onDoubleClick: handleDoubleClick,
             };
@@ -510,7 +638,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               },
               data: nodeData,
               width: NODE_WIDTH,
-              height: NODE_HEIGHT,
+              height: nodeHeight,
             };
           });
         }
@@ -520,9 +648,10 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
         getNeighborIds,
         selectedNodeId,
         connectionCounts,
-        glossaryColorMap,
         onNodeClick,
         onNodeDoubleClick,
+        computeNodeColor,
+        computeNodeHeight,
       ]
     );
 
@@ -579,7 +708,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             children: terms.map((t) => ({
               id: t.id,
               width: NODE_WIDTH,
-              height: NODE_HEIGHT,
+              height: computeNodeHeight(t.id),
             })),
             edges: intraEdges.map((e, i) => ({
               id: `intra-${glossaryId}-${i}`,
@@ -592,7 +721,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
           elkChildren.push({
             id: node.id,
             width: NODE_WIDTH,
-            height: NODE_HEIGHT,
+            height: computeNodeHeight(node.id),
           });
         });
 
@@ -602,11 +731,14 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
           targets: [edge.to],
         }));
 
+        const rootDirection =
+          settings.layout === 'hierarchical' ? 'RIGHT' : 'DOWN';
+
         const graph: ElkNode = {
           id: 'root',
           layoutOptions: {
             'elk.algorithm': 'layered',
-            'elk.direction': 'RIGHT',
+            'elk.direction': rootDirection,
             'elk.spacing.nodeNode': '120',
             'elk.layered.spacing.nodeNodeBetweenLayers': '160',
             'elk.separateConnectedComponents': 'false',
@@ -671,10 +803,8 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                   selectedNodeId !== null &&
                   neighborIds.has(selectedNodeId ?? '');
                 const isConnected = (connectionCounts.get(ontNode.id) ?? 0) > 0;
-                const nodeGlossaryColor =
-                  ontNode.glossaryId && glossaryColorMap[ontNode.glossaryId]
-                    ? glossaryColorMap[ontNode.glossaryId]
-                    : '#3062d4';
+                const nodeGlossaryColor = computeNodeColor(ontNode);
+                const nodeHeight = computeNodeHeight(child.id);
 
                 termNodes.push({
                   id: child.id,
@@ -688,11 +818,12 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                     isHighlighted,
                     isConnected,
                     glossaryColor: nodeGlossaryColor,
+                    nodeHeight,
                     onClick: handleClick,
                     onDoubleClick: handleDoubleClick,
                   } as OntologyNodeData,
                   width: NODE_WIDTH,
-                  height: NODE_HEIGHT,
+                  height: nodeHeight,
                   zIndex: 2,
                 });
               });
@@ -707,10 +838,8 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                 selectedNodeId !== null &&
                 neighborIds.has(selectedNodeId ?? '');
               const isConnected = (connectionCounts.get(ontNode.id) ?? 0) > 0;
-              const nodeGlossaryColor =
-                ontNode.glossaryId && glossaryColorMap[ontNode.glossaryId]
-                  ? glossaryColorMap[ontNode.glossaryId]
-                  : '#3062d4';
+              const nodeGlossaryColor = computeNodeColor(ontNode);
+              const nodeHeight = computeNodeHeight(elkNode.id);
 
               termNodes.push({
                 id: elkNode.id,
@@ -722,11 +851,12 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                   isHighlighted,
                   isConnected,
                   glossaryColor: nodeGlossaryColor,
+                  nodeHeight,
                   onClick: handleClick,
                   onDoubleClick: handleDoubleClick,
                 } as OntologyNodeData,
                 width: NODE_WIDTH,
-                height: NODE_HEIGHT,
+                height: nodeHeight,
               });
             }
           });
@@ -741,10 +871,12 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
         getNeighborIds,
         selectedNodeId,
         connectionCounts,
-        glossaryColorMap,
         onNodeClick,
         onNodeDoubleClick,
         layoutNodes,
+        computeNodeColor,
+        computeNodeHeight,
+        settings.layout,
       ]
     );
 
@@ -803,10 +935,8 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
           const isHighlighted =
             selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
           const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
-          const glossaryColor =
-            node.glossaryId && glossaryColorMap[node.glossaryId]
-              ? glossaryColorMap[node.glossaryId]
-              : '#3062d4';
+          const glossaryColor = computeNodeColor(node);
+          const nodeHeight = computeNodeHeight(node.id);
 
           const nodeData: OntologyNodeData = {
             node,
@@ -814,6 +944,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             isHighlighted,
             isConnected,
             glossaryColor,
+            nodeHeight,
             onClick: handleClick,
             onDoubleClick: handleDoubleClick,
           };
@@ -824,7 +955,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             position: pos,
             data: nodeData,
             width: NODE_WIDTH,
-            height: NODE_HEIGHT,
+            height: nodeHeight,
           };
         });
       },
@@ -832,9 +963,10 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
         getNeighborIds,
         selectedNodeId,
         connectionCounts,
-        glossaryColorMap,
         onNodeClick,
         onNodeDoubleClick,
+        computeNodeColor,
+        computeNodeHeight,
       ]
     );
 

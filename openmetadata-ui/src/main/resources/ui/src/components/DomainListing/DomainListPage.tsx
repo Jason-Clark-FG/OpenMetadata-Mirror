@@ -283,8 +283,7 @@ const DomainListPage = () => {
               height: 'calc(100vh - 80px)',
             }
           : {}
-      }
-    >
+      }>
       {breadcrumbs}
       {pageHeader}
 
@@ -298,8 +297,7 @@ const DomainListPage = () => {
             py: 4,
             borderBottom: `1px solid`,
             borderColor: theme.palette.allShades?.gray?.[200],
-          }}
-        >
+          }}>
           <Box sx={{ display: 'flex', gap: 5, alignItems: 'center' }}>
             {titleAndCount}
             {search}
