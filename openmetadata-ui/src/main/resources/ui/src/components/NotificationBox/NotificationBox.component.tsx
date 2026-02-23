@@ -151,9 +151,11 @@ const NotificationBox = ({
 
       if (hasTaskNotification || hasMentionNotification) {
         setTimeout(() => {
-          key === NotificationTabsKey.TASK
-            ? onMarkTaskNotificationRead()
-            : onMarkMentionsNotificationRead();
+          if (key === NotificationTabsKey.TASK) {
+            onMarkTaskNotificationRead();
+          } else {
+            onMarkMentionsNotificationRead();
+          }
         }, NOTIFICATION_READ_TIMER);
       }
     },
@@ -212,7 +214,7 @@ const NotificationBox = ({
           size="small"
         />
       ),
-    [notifications, notificationDropDownList, viewAllPath]
+    [notifications, notificationDropDownList, viewAllPath, t]
   );
 
   return (

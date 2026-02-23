@@ -175,18 +175,20 @@ const NavBar = () => {
       if (visible) {
         switch (activeTab) {
           case 'Task':
-            hasTaskNotification &&
+            if (hasTaskNotification) {
               setTimeout(() => {
                 handleTaskNotificationRead();
               }, NOTIFICATION_READ_TIMER);
+            }
 
             break;
 
           case 'Conversation':
-            hasMentionNotification &&
+            if (hasMentionNotification) {
               setTimeout(() => {
                 handleMentionsNotificationRead();
               }, NOTIFICATION_READ_TIMER);
+            }
 
             break;
         }
@@ -518,6 +520,7 @@ const NavBar = () => {
               trigger={['click']}>
               <Button
                 className="flex-center gap-2 p-x-xs font-medium"
+                data-testid="language-selector-button"
                 type="text">
                 {language ? upperCase(language.split('-')[0]) : ''}{' '}
                 <DropDownIcon width={12} />
