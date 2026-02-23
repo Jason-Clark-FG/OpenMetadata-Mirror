@@ -110,8 +110,7 @@ public class APIServiceResourceTest extends ServiceResourceTest<ApiService, Crea
     RestConnection credentials2 =
         new RestConnection()
             .withOpenAPISchemaConnection(
-                new OpenAPISchemaURL()
-                    .withOpenAPISchemaURL(new URI("https://localhost:9400")))
+                new OpenAPISchemaURL().withOpenAPISchemaURL(new URI("https://localhost:9400")))
             .withToken("test");
     ApiConnection connection2 = new ApiConnection().withConfig(credentials2);
 

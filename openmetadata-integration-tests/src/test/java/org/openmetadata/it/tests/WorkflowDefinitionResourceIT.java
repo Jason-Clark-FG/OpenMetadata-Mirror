@@ -5672,7 +5672,8 @@ public class WorkflowDefinitionResourceIT {
                         new RestConnection()
                             .withOpenAPISchemaConnection(
                                 new OpenAPISchemaURL()
-                                    .withOpenAPISchemaURL(java.net.URI.create("http://localhost:8585")))));
+                                    .withOpenAPISchemaURL(
+                                        java.net.URI.create("http://localhost:8585")))));
 
     ApiService apiService = client.apiServices().create(createApiService);
     LOG.debug("Created API service: {}", apiService.getName());

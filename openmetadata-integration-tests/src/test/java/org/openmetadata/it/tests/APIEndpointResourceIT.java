@@ -335,7 +335,6 @@ public class APIEndpointResourceIT extends BaseEntityIT<APIEndpoint, CreateAPIEn
             () -> createEntity(requestWithoutCollection),
             "Creating API endpoint without collection should fail");
     assertEquals(400, exception1.getStatusCode());
-
   }
 
   @Test

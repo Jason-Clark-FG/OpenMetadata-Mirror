@@ -99,7 +99,6 @@ public class APIEndpointResourceTest extends EntityResourceTest<APIEndpoint, Cre
         () -> createEntity(createRequest(test).withApiCollection(null), ADMIN_AUTH_HEADERS),
         BAD_REQUEST,
         "[query param apiCollection must not be null]");
-
   }
 
   @Order(1)

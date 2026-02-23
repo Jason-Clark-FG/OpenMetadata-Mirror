@@ -40,7 +40,8 @@ public class APIServiceResourceIT extends BaseServiceIT<ApiService, CreateApiSer
     RestConnection conn =
         new RestConnection()
             .withOpenAPISchemaConnection(
-                new OpenAPISchemaURL().withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
+                new OpenAPISchemaURL()
+                    .withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
 
     return new CreateApiService()
         .withName(ns.prefix("apiservice"))
@@ -54,7 +55,8 @@ public class APIServiceResourceIT extends BaseServiceIT<ApiService, CreateApiSer
     RestConnection conn =
         new RestConnection()
             .withOpenAPISchemaConnection(
-                new OpenAPISchemaURL().withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
+                new OpenAPISchemaURL()
+                    .withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
 
     return new CreateApiService()
         .withName(name)
@@ -154,7 +156,8 @@ public class APIServiceResourceIT extends BaseServiceIT<ApiService, CreateApiSer
     RestConnection conn =
         new RestConnection()
             .withOpenAPISchemaConnection(
-                new OpenAPISchemaURL().withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
+                new OpenAPISchemaURL()
+                    .withOpenAPISchemaURL(URI.create("http://localhost:8585/swagger.json")));
 
     CreateApiService request =
         new CreateApiService()
