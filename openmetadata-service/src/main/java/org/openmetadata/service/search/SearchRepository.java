@@ -495,6 +495,10 @@ public class SearchRepository {
       String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
       searchClient.createEntity(indexMapping.getIndexName(clusterAlias), entityId, doc);
     } catch (Exception ie) {
+      SearchIndexRetryQueue.enqueue(
+          entityId,
+          entity.getFullyQualifiedName(),
+          SearchIndexRetryQueue.failureReason("createEntityIndex", ie));
       LOG.error(
           "Issue in Creating new search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
           entityId,
@@ -524,6 +528,12 @@ public class SearchRepository {
       try {
         searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
       } catch (Exception ie) {
+        for (EntityInterface entity : entities) {
+          SearchIndexRetryQueue.enqueue(
+              entity.getId() != null ? entity.getId().toString() : null,
+              entity.getFullyQualifiedName(),
+              SearchIndexRetryQueue.failureReason("createEntitiesIndex", ie));
+        }
         LOG.error(
             "Issue in Creating entities document for entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
             entityType,
@@ -687,6 +697,10 @@ public class SearchRepository {
         Metrics.counter("search.index.propagation.skipped", tags).increment();
       }
     } catch (Exception ie) {
+      SearchIndexRetryQueue.enqueue(
+          entityId,
+          entity.getFullyQualifiedName(),
+          SearchIndexRetryQueue.failureReason("updateEntityIndex", ie));
       LOG.error(
           "Issue in Updating the search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
           entityId,
@@ -804,7 +818,14 @@ public class SearchRepository {
    */
   public void updateAssetDomainsForDataProduct(
       String dataProductFqn, List<String> oldDomainFqns, List<EntityReference> newDomains) {
-    getSearchClient().updateAssetDomainsForDataProduct(dataProductFqn, oldDomainFqns, newDomains);
+    try {
+      getSearchClient().updateAssetDomainsForDataProduct(dataProductFqn, oldDomainFqns, newDomains);
+    } catch (Exception e) {
+      SearchIndexRetryQueue.enqueue(
+          null,
+          dataProductFqn,
+          SearchIndexRetryQueue.failureReason("updateAssetDomainsForDataProduct", e));
+    }
   }
 
   /**
@@ -812,15 +833,34 @@ public class SearchRepository {
    */
   public void updateAssetDomainsByIds(
       List<UUID> assetIds, List<String> oldDomainFqns, List<EntityReference> newDomains) {
-    getSearchClient().updateAssetDomainsByIds(assetIds, oldDomainFqns, newDomains);
+    try {
+      getSearchClient().updateAssetDomainsByIds(assetIds, oldDomainFqns, newDomains);
+    } catch (Exception e) {
+      for (UUID assetId : listOrEmpty(assetIds)) {
+        SearchIndexRetryQueue.enqueue(
+            assetId != null ? assetId.toString() : null,
+            null,
+            SearchIndexRetryQueue.failureReason("updateAssetDomainsByIds", e));
+      }
+    }
   }
 
   public void updateDomainFqnByPrefix(String oldFqn, String newFqn) {
-    getSearchClient().updateDomainFqnByPrefix(oldFqn, newFqn);
+    try {
+      getSearchClient().updateDomainFqnByPrefix(oldFqn, newFqn);
+    } catch (Exception e) {
+      SearchIndexRetryQueue.enqueue(
+          null, newFqn, SearchIndexRetryQueue.failureReason("updateDomainFqnByPrefix", e));
+    }
   }
 
   public void updateAssetDomainFqnByPrefix(String oldFqn, String newFqn) {
-    getSearchClient().updateAssetDomainFqnByPrefix(oldFqn, newFqn);
+    try {
+      getSearchClient().updateAssetDomainFqnByPrefix(oldFqn, newFqn);
+    } catch (Exception e) {
+      SearchIndexRetryQueue.enqueue(
+          null, newFqn, SearchIndexRetryQueue.failureReason("updateAssetDomainFqnByPrefix", e));
+    }
   }
 
   public boolean checkIfIndexingIsSupported(String entityType) {
@@ -1373,6 +1413,10 @@ public class SearchRepository {
       searchClient.deleteEntity(indexMapping.getIndexName(clusterAlias), entityId);
       deleteOrUpdateChildren(entity, indexMapping);
     } catch (Exception ie) {
+      SearchIndexRetryQueue.enqueue(
+          entityId,
+          entity.getFullyQualifiedName(),
+          SearchIndexRetryQueue.failureReason("deleteEntityIndex", ie));
       LOG.error(
           "Issue in Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
           entityId,
@@ -1391,6 +1435,10 @@ public class SearchRepository {
       try {
         searchClient.deleteEntityByFQNPrefix(indexMapping.getIndexName(clusterAlias), fqn);
       } catch (Exception ie) {
+        SearchIndexRetryQueue.enqueue(
+            entity.getId() != null ? entity.getId().toString() : null,
+            fqn,
+            SearchIndexRetryQueue.failureReason("deleteEntityByFQNPrefix", ie));
         LOG.error(
             "Issue in Deleting the search document for entityFQN [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
             fqn,
@@ -1446,6 +1494,10 @@ public class SearchRepository {
           indexMapping.getIndexName(clusterAlias), entityId, scriptTxt);
       softDeleteOrRestoredChildren(entity.getEntityReference(), indexMapping, delete);
     } catch (Exception ie) {
+      SearchIndexRetryQueue.enqueue(
+          entityId,
+          entity.getFullyQualifiedName(),
+          SearchIndexRetryQueue.failureReason("softDeleteOrRestoreEntityIndex", ie));
       LOG.error(
           "Issue in Soft Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
           entityId,
