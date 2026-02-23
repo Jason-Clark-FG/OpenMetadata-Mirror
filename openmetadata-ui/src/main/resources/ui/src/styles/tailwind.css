@@ -10,17 +10,24 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Skeleton, Typography } from 'antd';
+@import 'tailwindcss' prefix(tw);
 
-interface TeamAssetCountProps {
-  count: number | null;
-  isLoading: boolean;
+/* Importing the theme.css from ui-core-components to ensure that the theme 
+variables are available in this file. This is an explicit decision to maintain theme 
+file in the core components and loading in here. */
+@import '@openmetadata/ui-core-components/theme.css';
+
+@source '../';
+
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+/* These are global overrided by antd, so adding default values here */
+svg {
+  display: inline;
+  vertical-align: baseline;
 }
 
-export const TeamAssetCount = ({ count, isLoading }: TeamAssetCountProps) => {
-  if (isLoading) {
-    return <Skeleton.Input active size="small" style={{ width: 30, height: 20 }} />;
-  }
-
-  return <Typography.Text data-testid="asset-count">{count ?? 0}</Typography.Text>;
-};
+img {
+  display: inline;
+  max-width: none;
+}
