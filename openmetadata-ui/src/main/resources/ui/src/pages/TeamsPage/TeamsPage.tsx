@@ -207,7 +207,7 @@ const TeamsPage = () => {
         const teamIds = await collectAllTeamIds(selectedTeam, resultMap);
 
         // Discard stale results if the user navigated away
-        if (currentFqnRef.current !== fetchFqn) return;
+        if (currentFqnRef.current !== fetchFqn) { return; }
 
         const res = await searchQuery({
           query: '',
@@ -218,7 +218,7 @@ const TeamsPage = () => {
         });
 
         // Discard stale results if the user navigated away
-        if (currentFqnRef.current !== fetchFqn) return;
+        if (currentFqnRef.current !== fetchFqn) { return; }
 
         const total = res?.hits?.total.value ?? 0;
         setAllTeamIds(teamIds);
@@ -226,10 +226,10 @@ const TeamsPage = () => {
         setAssets(total);
       } catch (error) {
         // Only apply error state if still on the same team
-        if (currentFqnRef.current !== fetchFqn) return;
+        if (currentFqnRef.current !== fetchFqn) { return; }
 
         setAssets(0);
-        setAllTeamIds([]);
+        setAllTeamIds([selectedTeam.id]);
         setTeamIdsMap({});
         showErrorToast(
           error as AxiosError,
@@ -563,7 +563,6 @@ const TeamsPage = () => {
         afterDeleteAction={afterDeleteAction}
         allTeamIds={allTeamIds}
         assetsCount={assets}
-        teamIdsMap={teamIdsMap}
         childTeams={childTeams}
         currentTeam={selectedTeam}
         entityPermissions={entityPermissions}
@@ -578,6 +577,7 @@ const TeamsPage = () => {
         parentTeams={parentTeams}
         removeUserFromTeam={removeUserFromTeam}
         showDeletedTeam={showDeletedTeam}
+        teamIdsMap={teamIdsMap}
         updateTeamHandler={updateTeamHandler}
         onDescriptionUpdate={onDescriptionUpdate}
         onShowDeletedTeamChange={toggleShowDeletedTeam}
