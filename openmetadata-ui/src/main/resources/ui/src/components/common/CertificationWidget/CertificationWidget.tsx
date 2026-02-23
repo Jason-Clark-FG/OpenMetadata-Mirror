@@ -55,7 +55,7 @@ const CertificationWidget = () => {
       {canEdit && (
         <EditIconButton
           newLook
-          data-testid="edit-certification-button"
+          data-testid="edit-certification"
           size="small"
           title={t('label.edit-entity', {
             entity: t('label.certification'),
@@ -83,15 +83,17 @@ const CertificationWidget = () => {
         setIsEditing(false);
       }}
       onClose={() => setIsEditing(false)}>
-      {entity.certification ? (
-        <CertificationTag showName certification={entity.certification} />
-      ) : (
-        <span className="no-data-placeholder">
-          {t('label.no-entity-assigned', {
-            entity: t('label.certification'),
-          })}
-        </span>
-      )}
+      <div data-testid="certification-label">
+        {entity.certification ? (
+          <CertificationTag showName certification={entity.certification} />
+        ) : (
+          <span className="no-data-placeholder">
+            {t('label.no-entity-assigned', {
+              entity: t('label.certification'),
+            })}
+          </span>
+        )}
+      </div>
     </Certification>
   );
 

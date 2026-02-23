@@ -66,7 +66,7 @@ const TierWidget = () => {
       {canEdit && (
         <EditIconButton
           newLook
-          data-testid="edit-tier-button"
+          data-testid="edit-tier"
           size="small"
           title={t('label.edit-entity', {
             entity: t('label.tier'),
@@ -85,7 +85,7 @@ const TierWidget = () => {
       tagProps={{ 'data-testid': 'Tier' }}
     />
   ) : (
-    <span className="no-data-placeholder">
+    <span className="no-data-placeholder" data-testid="Tier">
       {t('label.no-entity-assigned', {
         entity: t('label.tier'),
       })}
