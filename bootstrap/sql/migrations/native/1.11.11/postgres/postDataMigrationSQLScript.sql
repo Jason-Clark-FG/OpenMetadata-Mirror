@@ -6,6 +6,6 @@ SET json = jsonb_set(
     jsonb_build_object('openAPISchemaURL', json #> '{connection,config,openAPISchemaURL}'),
     true
 )
-WHERE serviceType = 'REST'
+WHERE serviceType = 'Rest'
   AND jsonb_exists(json -> 'connection' -> 'config', 'openAPISchemaURL')
   AND NOT jsonb_exists(json -> 'connection' -> 'config', 'openAPISchemaConnection');

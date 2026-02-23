@@ -8,6 +8,6 @@ SET json = JSON_SET(
         JSON_UNQUOTE(JSON_EXTRACT(json, '$.connection.config.openAPISchemaURL'))
     )
 )
-WHERE serviceType = 'REST'
+WHERE serviceType = 'Rest'
   AND JSON_CONTAINS_PATH(json, 'one', '$.connection.config.openAPISchemaURL')
   AND NOT JSON_CONTAINS_PATH(json, 'one', '$.connection.config.openAPISchemaConnection');
