@@ -1074,3 +1074,200 @@ class TestKafkaConnectLineageRefactoring(TestCase):
                         messaging_service_name="KafkaProd",
                     )
                     self.assertEqual(len(result.topics), 2)
+
+
+class TestGetDatasetEntityContainerSearch:
+    """
+    Tests for the container entity lookup in get_dataset_entity(), covering both the
+    exact-FQN fast path and the wildcard fallback introduced to handle containers whose
+    names include a topic-name suffix (e.g. raw_kafka/topic-01.v1).
+    """
+
+    def _make_source(self):
+        from metadata.ingestion.source.pipeline.kafkaconnect.metadata import (
+            KafkaconnectSource,
+        )
+
+        source = object.__new__(KafkaconnectSource)
+        source.metadata = MagicMock()
+        source.service_connection = MagicMock(spec=KafkaConnectConnection)
+        source.service_connection.hostPort = "http://localhost:8083"
+        return source
+
+    def _make_pipeline(self):
+        return KafkaConnectPipelineDetails(name="s3-sink", conn_type="sink")
+
+    def test_exact_match_returned_without_wildcard_search(self):
+        """Exact FQN hit → wildcard search should never be called."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        mock_container = MagicMock()
+        mock_container.fullyQualifiedName.root = "DearlakeS3.dear-lake-stg.raw_kafka"
+
+        source.metadata.get_by_name = MagicMock(return_value=mock_container)
+        source.metadata.search_in_any_service = MagicMock()
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            result = source.get_dataset_entity(pipeline, dataset)
+
+        assert result is mock_container
+        source.metadata.search_in_any_service.assert_not_called()
+
+    def test_wildcard_search_used_when_exact_match_fails(self):
+        """When get_by_name returns None the wildcard search must be attempted."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        mock_container = MagicMock()
+        mock_container.fullyQualifiedName.root = (
+            'DearlakeS3."dear-lake-stg"."raw_kafka/topic-01.v1"'
+        )
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=mock_container)
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            result = source.get_dataset_entity(pipeline, dataset)
+
+        assert result is mock_container
+        source.metadata.search_in_any_service.assert_called_once()
+
+    def test_container_with_topic_suffix_found_via_wildcard(self):
+        """
+        Core bug scenario: bucket=dear-lake-stg, prefix=raw_kafka, topic=topic-01.v1.
+        The ingested container FQN is raw_kafka/topic-01.v1 — exact match fails and
+        wildcard search must succeed.
+        """
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        container_with_suffix = MagicMock()
+        container_with_suffix.fullyQualifiedName.root = (
+            'DearlakeS3."dear-lake-stg"."raw_kafka/topic-01.v1"'
+        )
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(
+            return_value=container_with_suffix
+        )
+
+        with patch.object(
+            source, "get_storage_service_names", return_value=["DearlakeS3"]
+        ):
+            result = source.get_dataset_entity(pipeline, dataset)
+
+        assert result is container_with_suffix
+
+        call_kwargs = source.metadata.search_in_any_service.call_args
+        assert call_kwargs is not None
+        fqn_arg = call_kwargs.kwargs.get(
+            "fqn_search_string",
+            call_kwargs.args[1] if len(call_kwargs.args) > 1 else None,
+        )
+        assert fqn_arg is not None
+        assert "dear-lake-stg" in fqn_arg
+        assert "raw_kafka" in fqn_arg
+
+    def test_wildcard_search_with_parent_container_builds_correct_pattern(self):
+        """Pattern must include both parent_container and container_name parts."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=None)
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            source.get_dataset_entity(pipeline, dataset)
+
+        call_kwargs = source.metadata.search_in_any_service.call_args
+        fqn_arg = call_kwargs.kwargs.get(
+            "fqn_search_string",
+            call_kwargs.args[1] if len(call_kwargs.args) > 1 else None,
+        )
+        assert "dear-lake-stg" in fqn_arg
+        assert "raw_kafka" in fqn_arg
+
+    def test_wildcard_search_without_parent_container(self):
+        """When there is no parent_container the pattern must still include container_name."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(container_name="raw_kafka")
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=None)
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            source.get_dataset_entity(pipeline, dataset)
+
+        call_kwargs = source.metadata.search_in_any_service.call_args
+        fqn_arg = call_kwargs.kwargs.get(
+            "fqn_search_string",
+            call_kwargs.args[1] if len(call_kwargs.args) > 1 else None,
+        )
+        assert "raw_kafka" in fqn_arg
+
+    def test_wildcard_search_scoped_to_configured_storage_service(self):
+        """When a specific storage service is configured the search FQN must be prefixed with it."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=None)
+
+        with patch.object(
+            source, "get_storage_service_names", return_value=["DearlakeS3"]
+        ):
+            source.get_dataset_entity(pipeline, dataset)
+
+        call_kwargs = source.metadata.search_in_any_service.call_args
+        fqn_arg = call_kwargs.kwargs.get(
+            "fqn_search_string",
+            call_kwargs.args[1] if len(call_kwargs.args) > 1 else None,
+        )
+        assert "DearlakeS3" in fqn_arg
+
+    def test_returns_none_when_both_searches_fail(self):
+        """If neither exact match nor wildcard finds anything, None is returned."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(
+            container_name="raw_kafka", parent_container="dear-lake-stg"
+        )
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=None)
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            result = source.get_dataset_entity(pipeline, dataset)
+
+        assert result is None
+
+    def test_wildcard_not_attempted_when_no_container_name(self):
+        """If container_name is absent, wildcard search should not be attempted."""
+        source = self._make_source()
+        pipeline = self._make_pipeline()
+        dataset = KafkaConnectDatasetDetails(parent_container="dear-lake-stg")
+
+        source.metadata.get_by_name = MagicMock(return_value=None)
+        source.metadata.search_in_any_service = MagicMock(return_value=None)
+
+        with patch.object(source, "get_storage_service_names", return_value=["*"]):
+            source.get_dataset_entity(pipeline, dataset)
+
+        source.metadata.search_in_any_service.assert_not_called()

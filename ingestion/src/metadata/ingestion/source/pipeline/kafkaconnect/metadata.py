@@ -620,6 +620,49 @@ class KafkaconnectSource(PipelineServiceSource):
                         if storage_entity:
                             return storage_entity
 
+                    # Fallback: Try wildcard search for containers with topic name suffixes
+                    # This handles cases where containers are ingested with topic names appended
+                    # Example: StorageServiceName.BucketName.Directory/TopicName.extension
+                    if storage_entity is None and dataset_details.container_name:
+                        if dataset_details.parent_container:
+                            parent_part = fqn.quote_name(
+                                dataset_details.parent_container
+                            )
+                            container_part = fqn.quote_name(
+                                dataset_details.container_name
+                            )
+                            search_pattern = f"{parent_part}.{container_part}"
+                        else:
+                            search_pattern = fqn.quote_name(
+                                dataset_details.container_name
+                            )
+
+                        logger.debug(
+                            f"Exact container match failed, trying wildcard search with pattern: *.{search_pattern}"
+                        )
+
+                        for storageservicename in self.get_storage_service_names() or [
+                            "*"
+                        ]:
+                            if storageservicename != "*":
+                                search_fqn = f"{fqn.quote_name(storageservicename)}.{search_pattern}"
+                            else:
+                                search_fqn = search_pattern
+
+                            storage_entity = self.metadata.search_in_any_service(
+                                entity_type=Container,
+                                fqn_search_string=search_fqn,
+                            )
+
+                            if storage_entity:
+                                container_fqn = model_str(
+                                    storage_entity.fullyQualifiedName
+                                )
+                                logger.info(
+                                    f"Found container via wildcard search: {container_fqn}"
+                                )
+                                return storage_entity
+
         except Exception as exc:
             logger.debug(traceback.format_exc())
             logger.warning(f"Unable to get dataset entity {exc}")
