@@ -132,6 +132,7 @@ public class UserRepository extends EntityRepository<User> {
     this.fieldFetchers.put("follows", this::fetchAndSetFollows);
     this.fieldFetchers.put("personas", this::fetchAndSetPersonas);
     this.fieldFetchers.put("defaultPersona", this::fetchAndSetDefaultPersona);
+    this.fieldFetchers.put("inheritedPersonas", this::fetchAndSetInheritedPersonas);
     this.fieldFetchers.put("domains", this::fetchAndSetDomains);
 
     if (searchRepository != null) {
@@ -228,6 +229,7 @@ public class UserRepository extends EntityRepository<User> {
     super.restorePatchAttributes(original, updated);
     updated
         .withInheritedRoles(original.getInheritedRoles())
+        .withInheritedPersonas(original.getInheritedPersonas())
         .withAuthenticationMechanism(original.getAuthenticationMechanism());
   }
 
@@ -244,7 +246,11 @@ public class UserRepository extends EntityRepository<User> {
     List<EntityReference> teams = user.getTeams();
     EntityReference defaultPersona = user.getDefaultPersona();
 
-    user.withRoles(null).withTeams(null).withInheritedRoles(null).withDefaultPersona(null);
+    user.withRoles(null)
+        .withTeams(null)
+        .withInheritedRoles(null)
+        .withInheritedPersonas(null)
+        .withDefaultPersona(null);
 
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
     if (secretsManager != null && Boolean.TRUE.equals(user.getIsBot())) {
@@ -267,7 +273,11 @@ public class UserRepository extends EntityRepository<User> {
       List<EntityReference> teams = user.getTeams();
       EntityReference defaultPersona = user.getDefaultPersona();
 
-      user.withRoles(null).withTeams(null).withInheritedRoles(null).withDefaultPersona(null);
+      user.withRoles(null)
+          .withTeams(null)
+          .withInheritedRoles(null)
+          .withInheritedPersonas(null)
+          .withDefaultPersona(null);
 
       SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
       if (secretsManager != null && Boolean.TRUE.equals(user.getIsBot())) {
@@ -371,6 +381,7 @@ public class UserRepository extends EntityRepository<User> {
     assignDefaultPersona(user, user.getDefaultPersona());
     assignPersonas(user, user.getPersonas());
     user.setInheritedRoles(getInheritedRoles(user));
+    user.setInheritedPersonas(getInheritedPersonas(user));
   }
 
   @Override
@@ -410,6 +421,8 @@ public class UserRepository extends EntityRepository<User> {
         fields.contains("defaultPersona") ? getDefaultPersona(user) : user.getDefaultPersona());
     user.withInheritedRoles(
         fields.contains(ROLES_FIELD) ? getInheritedRoles(user) : user.getInheritedRoles());
+    user.setInheritedPersonas(
+        fields.contains("personas") ? getInheritedPersonas(user) : user.getInheritedPersonas());
     user.setDomains(fields.contains("domains") ? getDomains(user.getId()) : user.getDomains());
   }
 
@@ -428,6 +441,7 @@ public class UserRepository extends EntityRepository<User> {
     user.setLastLoginTime(fields.contains("lastLoginTime") ? user.getLastLoginTime() : null);
     user.setPersonas(fields.contains("personas") ? user.getPersonas() : null);
     user.setDefaultPersona(fields.contains("defaultPersona") ? user.getDefaultPersona() : null);
+    user.setInheritedPersonas(fields.contains("personas") ? user.getInheritedPersonas() : null);
     user.setDomains(fields.contains("domains") ? user.getDomains() : null);
   }
 
@@ -653,6 +667,28 @@ public class UserRepository extends EntityRepository<User> {
         (PersonaRepository) Entity.getEntityRepository(Entity.PERSONA);
     Persona systemDefault = personaRepository.getSystemDefaultPersona();
     return systemDefault != null ? systemDefault.getEntityReference() : null;
+  }
+
+  private List<EntityReference> getInheritedPersonas(User user) {
+    if (Boolean.TRUE.equals(user.getIsBot())) {
+      return Collections.emptyList();
+    }
+    List<EntityReference> teams = user.getTeams() != null ? user.getTeams() : getTeams(user);
+    Set<UUID> seen = new HashSet<>();
+    List<EntityReference> inherited = new ArrayList<>();
+    for (EntityReference teamRef : teams) {
+      try {
+        Team team = Entity.getEntity(TEAM, teamRef.getId(), "defaultPersona,teamType", ALL);
+        if (TeamType.GROUP.equals(team.getTeamType()) && team.getDefaultPersona() != null) {
+          if (seen.add(team.getDefaultPersona().getId())) {
+            inherited.add(team.getDefaultPersona());
+          }
+        }
+      } catch (Exception e) {
+        LOG.debug("Failed to get team {} for inherited personas", teamRef.getId(), e);
+      }
+    }
+    return inherited;
   }
 
   private void assignRoles(User user, List<EntityReference> roles) {
@@ -982,6 +1018,15 @@ public class UserRepository extends EntityRepository<User> {
     for (User user : users) {
       EntityReference defaultPersonaRef = userToDefaultPersona.get(user.getId());
       user.setDefaultPersona(defaultPersonaRef);
+    }
+  }
+
+  private void fetchAndSetInheritedPersonas(List<User> users, Fields fields) {
+    if (!fields.contains("personas") || users == null || users.isEmpty()) {
+      return;
+    }
+    for (User user : users) {
+      user.setInheritedPersonas(getInheritedPersonas(user));
     }
   }
 
@@ -1385,6 +1430,13 @@ public class UserRepository extends EntityRepository<User> {
                 ? userPersonas.stream().map(EntityReference::getId).collect(Collectors.toSet())
                 : new HashSet<UUID>();
 
+        // Also include inherited persona IDs from team memberships
+        var inheritedPersonas = updated.getInheritedPersonas();
+        if (inheritedPersonas != null) {
+          assignedPersonaIds.addAll(
+              inheritedPersonas.stream().map(EntityReference::getId).collect(Collectors.toSet()));
+        }
+
         // Get system default persona ID to allow preferences for it
         PersonaRepository personaRepository =
             (PersonaRepository) Entity.getEntityRepository(Entity.PERSONA);
@@ -1393,7 +1445,7 @@ public class UserRepository extends EntityRepository<User> {
             systemDefaultPersona != null ? systemDefaultPersona.getId() : null;
 
         for (var pref : updatedPreferences) {
-          // Allow preferences for assigned personas OR system default persona
+          // Allow preferences for assigned/inherited personas OR system default persona
           boolean isAssignedPersona = assignedPersonaIds.contains(pref.getPersonaId());
           boolean isSystemDefaultPersona =
               systemDefaultPersonaId != null && systemDefaultPersonaId.equals(pref.getPersonaId());
