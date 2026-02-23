@@ -624,34 +624,20 @@ class KafkaconnectSource(PipelineServiceSource):
                     # This handles cases where containers are ingested with topic names appended
                     # Example: StorageServiceName.BucketName.Directory/TopicName.extension
                     if storage_entity is None and dataset_details.container_name:
-                        if dataset_details.parent_container:
-                            parent_part = fqn.quote_name(
-                                dataset_details.parent_container
-                            )
-                            container_part = fqn.quote_name(
-                                dataset_details.container_name
-                            )
-                            search_pattern = f"{parent_part}.{container_part}"
-                        else:
-                            search_pattern = fqn.quote_name(
-                                dataset_details.container_name
-                            )
-
                         logger.debug(
-                            f"Exact container match failed, trying wildcard search with pattern: {search_pattern}"
+                            f"Exact container match failed, trying prefix search for "
+                            f"container '{dataset_details.container_name}*' "
+                            f"under parent '{dataset_details.parent_container}'"
                         )
 
                         for storageservicename in self.get_storage_service_names() or [
-                            "*"
+                            None
                         ]:
-                            if storageservicename != "*":
-                                search_fqn = f"{fqn.quote_name(storageservicename)}.{search_pattern}"
-                            else:
-                                search_fqn = search_pattern
-
-                            storage_entity = self.metadata.search_in_any_service(
-                                entity_type=Container,
-                                fqn_search_string=search_fqn,
+                            storage_entity = fqn.search_container_from_es(
+                                metadata=self.metadata,
+                                container_name=dataset_details.container_name + "*",
+                                service_name=storageservicename,
+                                parent_container=dataset_details.parent_container,
                             )
 
                             if storage_entity:
