@@ -38,6 +38,9 @@ from metadata.generated.schema.entity.services.apiService import (
     ApiService,
     ApiServiceType,
 )
+from metadata.generated.schema.entity.services.connections.api.openAPISchemaURL import (
+    OpenAPISchemaURL,
+)
 from metadata.generated.schema.entity.services.connections.api.restConnection import (
     RestConnection,
     RestType,
@@ -46,17 +49,46 @@ from metadata.generated.schema.type.basic import EntityName
 from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.generated.schema.type.entityReferenceList import EntityReferenceList
 
+from ..conftest import _safe_delete
+from ..integration_base import generate_name
 
-class OMetaRestApiTest(TestCase):
-    """
-    Run this integration test with the local API available
-    Install the ingestion package before running the tests
-    """
 
-    service_entity_id = None
+@pytest.fixture(scope="module")
+def api_service(metadata):
+    """Module-scoped ApiService for REST API tests."""
+    service_name = generate_name()
+    service_request = CreateApiServiceRequest(
+        name=service_name,
+        serviceType=ApiServiceType.Rest,
+        connection=ApiConnection(
+            config=RestConnection(
+                openAPISchemaConnection=OpenAPISchemaURL(
+                    openAPISchemaURL="https://petstore.swagger.io/v2/swagger.json"
+                ),
+                type=RestType.Rest,
+            )
+        ),
+    )
+    service_entity = metadata.create_or_update(data=service_request)
 
-    metadata = int_admin_ometa()
+    yield service_entity
 
+    _safe_delete(
+        metadata,
+        entity=ApiService,
+        entity_id=service_entity.id,
+        recursive=True,
+        hard_delete=True,
+    )
+
+
+@pytest.fixture(scope="module")
+def rest_user(metadata):
+    """User for REST API ownership tests."""
+    from metadata.generated.schema.api.teams.createUser import CreateUserRequest
+    from metadata.generated.schema.entity.teams.user import User
+
+    user_name = generate_name()
     user = metadata.create_or_update(
         data=CreateUserRequest(name="random-user", email="random@user.com"),
     )
@@ -73,7 +105,9 @@ class OMetaRestApiTest(TestCase):
         serviceType=ApiServiceType.Rest,
         connection=ApiConnection(
             config=RestConnection(
-                openAPISchemaURL="https://petstore.swagger.io/v2/swagger.json",
+                openAPISchemaConnection=OpenAPISchemaURL(
+                    openAPISchemaURL="https://petstore.swagger.io/v2/swagger.json"
+                ),
                 type=RestType.Rest,
             )
         ),
@@ -226,7 +260,9 @@ class OMetaRestApiTest(TestCase):
             serviceType=ApiServiceType.Rest,
             connection=ApiConnection(
                 config=RestConnection(
-                    openAPISchemaURL="https://petstore.swagger.io/v2/swagger.json",
+                    openAPISchemaConnection=OpenAPISchemaURL(
+                        openAPISchemaURL="https://petstore.swagger.io/v2/swagger.json"
+                    ),
                     type=RestType.Rest,
                 )
             ),

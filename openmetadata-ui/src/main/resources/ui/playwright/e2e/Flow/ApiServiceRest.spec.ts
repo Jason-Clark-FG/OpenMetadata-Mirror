@@ -25,7 +25,9 @@ const apiServiceConfig = {
   name: `pw-api-service-${uuid()}`,
   displayName: `API Service-${uuid()}`,
   description: 'Testing API service',
-  openAPISchemaURL: 'https://example.com/swagger.json',
+  openAPISchemaConnection: {
+    openAPISchemaURL: 'https://example.com/swagger.json',
+  },
   token: '********',
 };
 
@@ -51,8 +53,8 @@ test.describe('API service', () => {
 
     // step 2
     await page
-      .locator('#root\\/openAPISchemaURL')
-      .fill(apiServiceConfig.openAPISchemaURL);
+      .locator('#root\\/openAPISchemaConnection\\/openAPISchemaURL')
+      .fill(apiServiceConfig.openAPISchemaConnection.openAPISchemaURL);
 
     await page.locator('#root\\/token').fill(apiServiceConfig.token);
     await page.getByTestId('submit-btn').click();
