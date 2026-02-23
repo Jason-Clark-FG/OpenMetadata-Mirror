@@ -194,8 +194,7 @@ jest.mock(
           <button
             onClick={() =>
               onPageChange({ cursorType: 'after', currentPage: 2 })
-            }
-          >
+            }>
             Next Page
           </button>
         </div>

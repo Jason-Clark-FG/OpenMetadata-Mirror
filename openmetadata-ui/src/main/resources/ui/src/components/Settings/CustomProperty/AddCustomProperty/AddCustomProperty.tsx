@@ -241,8 +241,7 @@ const AddCustomProperty = ({
         label={
           <Typography
             color={theme.palette.allShades.gray['700']}
-            variant="body2"
-          >
+            variant="body2">
             {t('label.table-column')}
           </Typography>
         }
@@ -575,8 +574,7 @@ const AddCustomProperty = ({
       layout="vertical"
       onFieldsChange={handleFieldsChange}
       onFinish={handleFormSubmit}
-      onFocus={handleFieldFocus}
-    >
+      onFocus={handleFieldFocus}>
       {generateFormFields(formFields)}
       {
         // Only show enum value field if the property type has enum config
@@ -602,8 +600,7 @@ const AddCustomProperty = ({
             <Button
               data-testid="back-button"
               type="link"
-              onClick={handleCancel}
-            >
+              onClick={handleCancel}>
               {t('label.back')}
             </Button>
           </Col>
@@ -612,8 +609,7 @@ const AddCustomProperty = ({
               data-testid="create-button"
               htmlType="submit"
               loading={isCreating || loading}
-              type="primary"
-            >
+              type="primary">
               {t('label.create')}
             </Button>
           </Col>
@@ -640,8 +636,7 @@ const AddCustomProperty = ({
           </div>
         }
         title={t('label.add-entity', { entity: t('label.custom-property') })}
-        onClose={onClose ?? handleCancel}
-      >
+        onClose={onClose ?? handleCancel}>
         {formContent}
       </MuiDrawer>
     );

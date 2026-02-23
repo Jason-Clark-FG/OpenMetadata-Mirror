@@ -120,8 +120,7 @@ const EntityHeaderTitle = ({
       className={classNames('entity-header-title', className)}
       data-testid={`${serviceName}-${name}`}
       gutter={12}
-      wrap={false}
-    >
+      wrap={false}>
       {icon && <Col className="flex-center">{icon}</Col>}
       <Col
         className={classNames(
@@ -129,15 +128,13 @@ const EntityHeaderTitle = ({
           {
             'w-max-full-200': deleted || badge,
           }
-        )}
-      >
+        )}>
         {/* If we do not have displayName name only be shown in the bold from the below code */}
         {!isEmpty(displayName) && showName ? (
           <div className="d-flex items-center gap-2">
             <Tooltip
               placement="bottom"
-              title={stringToHTML(displayName ?? name)}
-            >
+              title={stringToHTML(displayName ?? name)}>
               <Typography.Text
                 ellipsis
                 className={classNames(
@@ -145,8 +142,7 @@ const EntityHeaderTitle = ({
                   nameClassName,
                   'm-b-0 d-block display-xs font-semibold'
                 )}
-                data-testid="entity-header-display-name"
-              >
+                data-testid="entity-header-display-name">
                 {stringToHTML(displayName ?? name)}
               </Typography.Text>
             </Tooltip>
@@ -157,8 +153,7 @@ const EntityHeaderTitle = ({
 
         <div
           className="d-flex gap-3 items-center"
-          data-testid="entity-header-title"
-        >
+          data-testid="entity-header-title">
           <Tooltip placement="bottom" title={entityName}>
             <Typography.Text
               ellipsis
@@ -166,8 +161,7 @@ const EntityHeaderTitle = ({
                 'display-xs entity-header-name font-semibold': !displayName,
                 'text-md entity-header-display-name font-medium': displayName,
               })}
-              data-testid="entity-header-name"
-            >
+              data-testid="entity-header-name">
               {entityName}
               {openEntityInNewPage && (
                 <IconExternalLink
@@ -184,8 +178,7 @@ const EntityHeaderTitle = ({
             title={
               copyTooltip ??
               t('label.copy-item', { item: t('label.url-uppercase') })
-            }
-          >
+            }>
             <Button
               className="remove-button-default-styling copy-button flex-center p-xss "
               icon={<Icon component={ShareIcon} />}
@@ -201,16 +194,14 @@ const EntityHeaderTitle = ({
                 title={t('label.field-entity', {
                   field: t(`label.${isFollowing ? 'un-follow' : 'follow'}`),
                   entity: formattedEntityType,
-                })}
-              >
+                })}>
                 <Button
                   className="entity-follow-button flex-center gap-1 text-sm "
                   data-testid="entity-follow-button"
                   disabled={deleted}
                   icon={<Icon component={StarFilledIcon} />}
                   loading={isFollowingLoading}
-                  onClick={handleFollowingClick}
-                >
+                  onClick={handleFollowingClick}>
                   <Typography.Text>
                     {t(`label.${isFollowing ? 'un-follow' : 'follow'}`)}
                   </Typography.Text>
@@ -229,8 +220,7 @@ const EntityHeaderTitle = ({
       className="no-underline d-inline-block w-max-full entity-header-title-link"
       data-testid="entity-link"
       target={openEntityInNewPage ? '_blank' : '_self'}
-      to={link}
-    >
+      to={link}>
       {content}
     </Link>
   ) : (

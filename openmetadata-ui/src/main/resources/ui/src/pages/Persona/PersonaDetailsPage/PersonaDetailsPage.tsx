@@ -380,13 +380,11 @@ export const PersonaDetailsPage = () => {
                   hasPermission
                   multiSelect
                   selectedUsers={personaDetails.users ?? []}
-                  onUpdate={(users) => handlePersonaUpdate({ users }, true)}
-                >
+                  onUpdate={(users) => handlePersonaUpdate({ users }, true)}>
                   <Button
                     data-testid="add-persona-button"
                     size="small"
-                    type="primary"
-                  >
+                    type="primary">
                     {t('label.add-entity', { entity: t('label.user') })}
                   </Button>
                 </UserSelectableList>
@@ -412,8 +410,7 @@ export const PersonaDetailsPage = () => {
             : t('label.set-as-default')
         }
         onCancel={handleCancelSetAsDefault}
-        onOk={handleConfirmDefaultAction}
-      >
+        onOk={handleConfirmDefaultAction}>
         <Typography.Text>
           {personaDetails?.default
             ? t('message.remove-default-persona-confirmation', {

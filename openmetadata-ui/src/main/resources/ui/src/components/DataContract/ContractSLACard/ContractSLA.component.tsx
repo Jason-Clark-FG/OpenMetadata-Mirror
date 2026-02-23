@@ -153,8 +153,7 @@ const ContractSLA: React.FC<{
     <Tooltip
       title={t('label.inherited-entity', {
         entity: t('label.service-level-agreement'),
-      })}
-    >
+      })}>
       <InheritIcon className="inherit-icon cursor-pointer" width={14} />
     </Tooltip>
   ) : null;
@@ -163,8 +162,7 @@ const ContractSLA: React.FC<{
     <Col
       className="contract-card-items"
       data-testid="contract-sla-card"
-      span={24}
-    >
+      span={24}>
       <div className="contract-card-header-container">
         <div className="d-flex items-center gap-1">
           <Typography.Text className="contract-card-header">

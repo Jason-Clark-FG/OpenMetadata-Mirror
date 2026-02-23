@@ -105,8 +105,7 @@ export const ColumnSummaryList = ({
         block
         loading={loading && currentPage > 1}
         type="link"
-        onClick={handleLoadMore}
-      >
+        onClick={handleLoadMore}>
         {t('label.show-more')}
       </Button>
     );

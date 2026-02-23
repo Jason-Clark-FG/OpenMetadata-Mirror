@@ -116,8 +116,7 @@ const MarketPlacePage = () => {
   return (
     <PageLayoutV1
       className="marketplace-page"
-      pageTitle={t('label.market-place')}
-    >
+      pageTitle={t('label.market-place')}>
       <Row className="marketplace-header">
         <Col span={24}>
           <TitleBreadcrumb

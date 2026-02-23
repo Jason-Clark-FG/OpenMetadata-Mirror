@@ -314,8 +314,7 @@ const MetricDetails: React.FC<MetricDetailsProps> = ({
           isTabExpanded={isTabExpanded}
           permissions={metricPermissions}
           type={EntityType.METRIC as CustomizeEntityType}
-          onUpdate={onMetricUpdate}
-        >
+          onUpdate={onMetricUpdate}>
           <Col className="metric-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

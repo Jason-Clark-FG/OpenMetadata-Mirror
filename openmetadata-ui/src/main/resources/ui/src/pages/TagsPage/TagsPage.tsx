@@ -661,8 +661,7 @@ const TagsPage = () => {
             <Stack
               className="w-full p-x-sm m-b-sm"
               direction="column"
-              spacing={2}
-            >
+              spacing={2}>
               {createClassificationPermission && (
                 <Button
                   fullWidth
@@ -683,8 +682,7 @@ const TagsPage = () => {
                   onClick={() => {
                     classificationForm.resetFields();
                     handleClassificationDrawerOpen();
-                  }}
-                >
+                  }}>
                   {t('label.add-entity', {
                     entity: t('label.classification'),
                   })}
@@ -703,8 +701,7 @@ const TagsPage = () => {
                 )}
                 data-testid="side-panel-classification"
                 key={category.name}
-                onClick={() => onClickClassifications(category)}
-              >
+                onClick={() => onClickClassifications(category)}>
                 <Typography
                   noWrap
                   className="self-center m-b-0 tag-category"
@@ -720,8 +717,7 @@ const TagsPage = () => {
                         : 'inherit',
                   }}
                   title={getEntityName(category)}
-                  variant="body2"
-                >
+                  variant="body2">
                   {getEntityName(category)}
                   {category.disabled && (
                     <Badge

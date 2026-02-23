@@ -112,8 +112,7 @@ class CSVUtilsClassBase {
                 open: true,
               }}
               onClose={onClose}
-              onUpdate={handleChange}
-            >
+              onUpdate={handleChange}>
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </UserTeamSelectableList>
           );
@@ -181,8 +180,7 @@ class CSVUtilsClassBase {
               <div ref={containerRef}>
                 <InlineEdit
                   onCancel={() => onClose(false)}
-                  onSave={() => onClose(true)}
-                >
+                  onSave={() => onClose(true)}>
                   <TagSuggestion
                     autoFocus
                     dropdownContainerRef={dropdownContainerRef}
@@ -273,8 +271,7 @@ class CSVUtilsClassBase {
               currentTier={value}
               popoverProps={{ open: true }}
               updateTier={handleChange}
-              onClose={() => onClose(false)}
-            >
+              onClose={() => onClose(false)}>
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </TierCard>
           );
@@ -304,8 +301,7 @@ class CSVUtilsClassBase {
               currentCertificate={value}
               popoverProps={{ open: true }}
               onCertificationUpdate={handleChange}
-              onClose={() => onClose(false)}
-            >
+              onClose={() => onClose(false)}>
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </Certification>
           );
@@ -369,8 +365,7 @@ class CSVUtilsClassBase {
               popoverProps={{ open: true }}
               selectedDomain={domains}
               wrapInButton={false}
-              onUpdate={(domain) => handleChange(domain as EntityReference[])}
-            >
+              onUpdate={(domain) => handleChange(domain as EntityReference[])}>
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </DomainSelectableList>
           );
@@ -430,8 +425,7 @@ class CSVUtilsClassBase {
                 open: true,
               }}
               onClose={onClose}
-              onUpdate={handleChange}
-            >
+              onUpdate={handleChange}>
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </UserTeamSelectableList>
           );
@@ -483,8 +477,7 @@ class CSVUtilsClassBase {
             <KeyDownStopPropagationWrapper>
               <InlineEdit
                 onCancel={() => onClose(false)}
-                onSave={() => onClose(true)}
-              >
+                onSave={() => onClose(true)}>
                 <Select
                   autoFocus
                   open

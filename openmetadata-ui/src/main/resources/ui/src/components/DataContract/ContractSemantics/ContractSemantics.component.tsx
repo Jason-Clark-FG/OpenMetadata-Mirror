@@ -56,8 +56,7 @@ const ContractSemantics: React.FC<{
             <Tooltip
               title={t('label.inherited-entity', {
                 entity: t('label.semantic-plural'),
-              })}
-            >
+              })}>
               <InheritIcon className="inherit-icon cursor-pointer" width={14} />
             </Tooltip>
           ) : null;

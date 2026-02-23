@@ -658,8 +658,7 @@ const DataProductsDetailsPage = ({
           icon={icon ? <Icon component={icon} /> : null}
           onClick={() => {
             handleTabChange(EntityTabs.CONTRACT);
-          }}
-        >
+          }}>
           {t(`label.entity-${toLower(dataContract.latestResult.status)}`, {
             entity: t('label.contract'),
           })}
@@ -697,8 +696,7 @@ const DataProductsDetailsPage = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}
-      >
+        }}>
         <CoverImage
           imageUrl={
             (dataProduct.style as Style & { coverImage?: { url?: string } })
@@ -745,14 +743,12 @@ const DataProductsDetailsPage = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}
-            >
+              }}>
               {!isVersionsView && dataProductPermission.Create && (
                 <Button
                   data-testid="data-product-details-add-button"
                   type="primary"
-                  onClick={openAssetDrawer}
-                >
+                  onClick={openAssetDrawer}>
                   {t('label.add-entity', {
                     entity: t('label.asset-plural'),
                   })}
@@ -770,21 +766,18 @@ const DataProductsDetailsPage = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}
-                  >
+                    )}>
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}
-                    >
+                      onClick={handleVersionClick}>
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}
-                      >
+                        })}>
                         {toString(dataProduct.version)}
                       </Typography.Text>
                     </Button>
@@ -803,14 +796,12 @@ const DataProductsDetailsPage = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}
-                  >
+                    onOpenChange={setShowActions}>
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.data-product'),
-                      })}
-                    >
+                      })}>
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -843,12 +834,10 @@ const DataProductsDetailsPage = ({
           isVersionView={isVersionsView}
           permissions={dataProductPermission}
           type={EntityType.DATA_PRODUCT}
-          onUpdate={onUpdate}
-        >
+          onUpdate={onUpdate}>
           <Box
             className="data-product-details-page-tabs"
-            sx={{ width: '100%' }}
-          >
+            sx={{ width: '100%' }}>
             <Box sx={{ padding: 5 }}>
               <Tabs
                 destroyInactiveTabPane

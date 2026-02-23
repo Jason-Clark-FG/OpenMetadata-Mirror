@@ -86,7 +86,6 @@ import { fetchGlossaryList } from '../../utils/TagsUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { useGenericContext } from '../Customization/GenericProvider/GenericProvider';
 import ConceptsTree from './ConceptsTree';
-import CytoscapeGraph, { CytoscapeGraphHandle } from './CytoscapeGraph';
 import DetailsPanel from './DetailsPanel';
 import FilterToolbar from './FilterToolbar';
 import GraphSettingsPanel from './GraphSettingsPanel';
@@ -103,6 +102,7 @@ import {
   OntologyNode,
 } from './OntologyExplorer.interface';
 import './OntologyExplorer.style.less';
+import OntologyGraph, { OntologyGraphHandle } from './OntologyGraph';
 import OntologyLegend from './OntologyLegend';
 
 const isValidUUID = (str: string): boolean => {
@@ -187,7 +187,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const graphRef = useRef<CytoscapeGraphHandle | null>(null);
+  const graphRef = useRef<OntologyGraphHandle | null>(null);
 
   const contextData = useGenericContext<GlossaryTerm>();
   const entityId =
@@ -1910,7 +1910,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             </div>
           ) : (
             <div className="ontology-explorer-canvas">
-              <CytoscapeGraph
+              <OntologyGraph
                 edges={filteredGraphData.edges}
                 glossaryColorMap={glossaryColorMap}
                 nodePositions={savedPositions ?? undefined}

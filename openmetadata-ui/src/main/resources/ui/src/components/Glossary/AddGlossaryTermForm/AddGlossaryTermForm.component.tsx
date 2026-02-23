@@ -384,8 +384,7 @@ const AddGlossaryTermForm = ({
           description: editMode && glossaryTerm ? glossaryTerm.description : '',
         }}
         layout="vertical"
-        onFinish={handleSave}
-      >
+        onFinish={handleSave}>
         {generateFormFields(formFields)}
 
         <Form.List name="references">
@@ -394,8 +393,7 @@ const AddGlossaryTermForm = ({
               <Form.Item
                 className="form-item-horizontal"
                 colon={false}
-                label={t('label.reference-plural')}
-              >
+                label={t('label.reference-plural')}>
                 <Button
                   data-testid="add-reference"
                   icon={
@@ -423,8 +421,7 @@ const AddGlossaryTermForm = ({
                             fieldText: t('label.name'),
                           })}`,
                         },
-                      ]}
-                    >
+                      ]}>
                       <Input
                         id={`name-${index}`}
                         placeholder={t('label.name')}
@@ -443,8 +440,7 @@ const AddGlossaryTermForm = ({
                         {
                           validator: referenceURLValidator,
                         },
-                      ]}
-                    >
+                      ]}>
                       <Input
                         id={`url-${index}`}
                         placeholder={t('label.endpoint')}

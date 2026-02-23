@@ -76,12 +76,10 @@ const BasicSignUp = () => {
   return (
     <CarouselLayout
       carouselClassName="signup-page"
-      pageTitle={t('label.sign-up')}
-    >
+      pageTitle={t('label.sign-up')}>
       <div
         className="login-form-container signup-page"
-        data-testid="signin-page"
-      >
+        data-testid="signin-page">
         <div className="login-box">
           <BrandImage isMonoGram height="auto" width={50} />
           <Typography.Title className="header-text display-sm" level={3}>
@@ -105,15 +103,13 @@ const BasicSignUp = () => {
                 form={form}
                 layout="vertical"
                 validateMessages={VALIDATION_MESSAGES}
-                onFinish={handleSubmit}
-              >
+                onFinish={handleSubmit}>
                 <Form.Item
                   label={t('label.entity-name', {
                     entity: t('label.first'),
                   })}
                   name="firstName"
-                  rules={[{ whitespace: true, required: true }]}
-                >
+                  rules={[{ whitespace: true, required: true }]}>
                   <Input
                     autoFocus
                     className="input-field"
@@ -127,8 +123,7 @@ const BasicSignUp = () => {
                     entity: t('label.last'),
                   })}
                   name="lastName"
-                  rules={[{ whitespace: true, required: true }]}
-                >
+                  rules={[{ whitespace: true, required: true }]}>
                   <Input
                     className="input-field"
                     placeholder={t('label.enter-entity', {
@@ -139,8 +134,7 @@ const BasicSignUp = () => {
                 <Form.Item
                   label={t('label.email')}
                   name="email"
-                  rules={[{ type: 'email', required: true }]}
-                >
+                  rules={[{ type: 'email', required: true }]}>
                   <Input
                     className="input-field"
                     placeholder={t('label.enter-entity', {
@@ -159,8 +153,7 @@ const BasicSignUp = () => {
                       pattern: passwordRegex,
                       message: t('message.password-error-message'),
                     },
-                  ]}
-                >
+                  ]}>
                   <Input.Password
                     autoComplete="off"
                     className="input-field"
@@ -191,8 +184,7 @@ const BasicSignUp = () => {
                         return Promise.resolve();
                       },
                     },
-                  ]}
-                >
+                  ]}>
                   <Input.Password
                     autoComplete="off"
                     className="input-field"
@@ -205,8 +197,7 @@ const BasicSignUp = () => {
                   className="login-btn"
                   htmlType="submit"
                   size="large"
-                  type="primary"
-                >
+                  type="primary">
                   {t('label.create-entity', {
                     entity: t('label.account'),
                   })}
@@ -221,8 +212,7 @@ const BasicSignUp = () => {
                     className="link-btn"
                     data-testid="login"
                     type="link"
-                    onClick={handleLogin}
-                  >
+                    onClick={handleLogin}>
                     {t('label.login')}
                   </Button>
                 </div>

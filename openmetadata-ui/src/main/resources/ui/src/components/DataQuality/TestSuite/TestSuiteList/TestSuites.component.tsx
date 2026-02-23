@@ -164,8 +164,7 @@ export const TestSuites = () => {
                     record.basicEntityReference?.fullyQualifiedName ?? '',
                     EntityTabs.PROFILER,
                     ProfilerTabPath.DATA_QUALITY
-                  )}
-                >
+                  )}>
                   {record.basicEntityReference?.fullyQualifiedName ??
                     record.basicEntityReference?.name}
                 </Link>
@@ -174,8 +173,7 @@ export const TestSuites = () => {
                   data-testid={name}
                   to={getTestSuitePath(
                     record.fullyQualifiedName ?? record.name
-                  )}
-                >
+                  )}>
                   {getEntityName(record)}
                 </Link>
               )}
@@ -352,8 +350,7 @@ export const TestSuites = () => {
                 popoverProps={{
                   getPopupContainer: getPopupContainer,
                 }}
-                onUpdate={(updatedUser) => handleOwnerSelect(updatedUser)}
-              >
+                onUpdate={(updatedUser) => handleOwnerSelect(updatedUser)}>
                 <Select
                   data-testid="owner-select-filter"
                   open={false}
@@ -381,14 +378,12 @@ export const TestSuites = () => {
                 <Radio.Group value={subTab} onChange={handleSubTabChange}>
                   <Radio.Button
                     data-testid="table-suite-radio-btn"
-                    value={DataQualitySubTabs.TABLE_SUITES}
-                  >
+                    value={DataQualitySubTabs.TABLE_SUITES}>
                     {t('label.table-suite-plural')}
                   </Radio.Button>
                   <Radio.Button
                     data-testid="bundle-suite-radio-btn"
-                    value={DataQualitySubTabs.BUNDLE_SUITES}
-                  >
+                    value={DataQualitySubTabs.BUNDLE_SUITES}>
                     {t('label.bundle-suite-plural')}
                   </Radio.Button>
                 </Radio.Group>

@@ -232,8 +232,7 @@ export const PipelineTaskTab = () => {
             <Link
               className="flex items-center gap-2"
               target="_blank"
-              to={record.sourceUrl ?? ''}
-            >
+              to={record.sourceUrl ?? ''}>
               <div className="d-flex items-center">
                 <span className="break-all">{getEntityName(record)}</span>
 
@@ -363,8 +362,7 @@ export const PipelineTaskTab = () => {
       {editTask && (
         <EntityAttachmentProvider
           entityFqn={editTask.task.fullyQualifiedName}
-          entityType={EntityType.PIPELINE}
-        >
+          entityType={EntityType.PIPELINE}>
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.task'),

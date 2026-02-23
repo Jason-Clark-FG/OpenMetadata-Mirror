@@ -49,8 +49,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
         },
       }}
       sx={{ zIndex: 1000 }}
-      onClose={onClose}
-    >
+      onClose={onClose}>
       {/* Header */}
       <Box
         sx={{
@@ -60,8 +59,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: (theme) => theme.shadows[1],
-        }}
-      >
+        }}>
         <Typography data-testid="form-heading" variant="h6">
           {t('label.adding-new-classification')}
         </Typography>
@@ -69,8 +67,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
           data-testid="drawer-close-icon"
           size="medium"
           sx={{ color: (theme) => theme.palette.grey[700] }}
-          onClick={onClose}
-        >
+          onClick={onClose}>
           <XClose />
         </IconButton>
       </Box>
@@ -97,8 +94,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
           justifyContent: 'flex-end',
           gap: 2,
           boxShadow: (theme) => `0px -4px 6px -2px ${theme.palette.grey[200]}`,
-        }}
-      >
+        }}>
         <Button
           color="primary"
           data-testid="cancel-button"
@@ -112,8 +108,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
             },
           }}
           variant="text"
-          onClick={onClose}
-        >
+          onClick={onClose}>
           {t('label.cancel')}
         </Button>
         <Button
@@ -122,8 +117,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
           loading={isLoading}
           loadingIndicator={<CircularProgress color="inherit" size={18} />}
           variant="contained"
-          onClick={() => formRef.submit()}
-        >
+          onClick={() => formRef.submit()}>
           {t('label.save')}
         </Button>
       </Box>

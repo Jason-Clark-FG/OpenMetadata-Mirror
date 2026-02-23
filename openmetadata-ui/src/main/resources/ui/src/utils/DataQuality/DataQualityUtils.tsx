@@ -398,15 +398,13 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
         sx={(theme) => ({
           p: '10px',
           bgcolor: theme.palette.allShades.white,
-        })}
-      >
+        })}>
         <Typography
           sx={(theme) => ({
             color: theme.palette.allShades.gray[900],
             fontWeight: theme.typography.fontWeightMedium,
             fontSize: theme.typography.pxToRem(12),
-          })}
-        >
+          })}>
           {timestamp}
         </Typography>
         <Divider
@@ -423,8 +421,7 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
             return (
               <Box
                 className="d-flex items-center justify-between gap-6 p-b-xss text-sm"
-                key={`item-${index}`}
-              >
+                key={`item-${index}`}>
                 <span className="flex items-center">
                   <Surface className="mr-2" height={14} version="1.1" width={4}>
                     <rect fill={entry.color} height="14" rx="2" width="4" />
@@ -433,8 +430,7 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
                     sx={(theme) => ({
                       color: theme.palette.allShades.gray[700],
                       fontSize: theme.typography.pxToRem(11),
-                    })}
-                  >
+                    })}>
                     {transformLabel
                       ? startCase(entry.name ?? (entry.dataKey as string))
                       : entry.name ?? (entry.dataKey as string)}
@@ -445,8 +441,7 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
                     color: theme.palette.allShades.gray[900],
                     fontWeight: theme.typography.fontWeightMedium,
                     fontSize: theme.typography.pxToRem(11),
-                  })}
-                >
+                  })}>
                   {valueFormatter
                     ? valueFormatter(value, entry.name ?? entry.dataKey)
                     : getEntryFormattedValue(value, isPercentage)}

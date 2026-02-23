@@ -120,8 +120,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
           },
         }),
       }}
-      onClick={() => onClick?.(resource)}
-    >
+      onClick={() => onClick?.(resource)}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Box
           sx={{
@@ -130,8 +129,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
             gap: 1.5,
             minWidth: 0,
             minHeight: 40,
-          }}
-        >
+          }}>
           <Box sx={{ flexShrink: 0, mt: '2px' }}>{resourceTypeIcon}</Box>
           <Typography
             component="span"
@@ -147,8 +145,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               fontWeight: 600,
-            }}
-          >
+            }}>
             {resource.displayName || resource.name}
           </Typography>
         </Box>
@@ -158,8 +155,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
             display: 'flex',
             flexDirection: 'column',
             minHeight: 56,
-          }}
-        >
+          }}>
           {resource.description ? (
             <>
               <Typography
@@ -177,8 +173,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                   WebkitBoxOrient: 'vertical',
                   flex: 1,
                   minHeight: 0,
-                }}
-              >
+                }}>
                 {resource.description}
               </Typography>
               {showViewMore && (
@@ -193,8 +188,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                     '&:hover': { textDecoration: 'underline' },
                   }}
                   type="button"
-                  onClick={handleViewMoreClick}
-                >
+                  onClick={handleViewMoreClick}>
                   {t('label.view-more')}
                 </Link>
               )}
@@ -210,8 +204,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                 fontStyle: 'italic',
                 fontWeight: theme.typography.fontWeightRegular,
                 lineHeight: theme.typography.body2.lineHeight,
-              }}
-            >
+              }}>
               {t('label.no-entity-added', {
                 entity: t('label.description-lowercase'),
               })}
@@ -224,8 +217,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
             display: 'flex',
             flexDirection: 'column',
             gap: 1.5,
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
@@ -233,8 +225,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
               gap: theme.spacing(0.75),
               minWidth: 0,
               overflow: 'hidden',
-            }}
-          >
+            }}>
             {categoryTags.visible.length > 0 ? (
               <>
                 <Box
@@ -244,8 +235,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                     gap: theme.spacing(0.75),
                     minWidth: 0,
                     overflow: 'hidden',
-                  }}
-                >
+                  }}>
                   {categoryTags.visible.map((category) => {
                     const colors = getCategoryColors(category);
 
@@ -264,8 +254,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                           border: '1px solid',
                           borderColor: colors.borderColor,
                           color: colors.color,
-                        }}
-                      >
+                        }}>
                         {LEARNING_CATEGORIES[
                           category as keyof typeof LEARNING_CATEGORIES
                         ]?.label ?? category}
@@ -293,8 +282,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                             theme.palette.allShades?.brand?.[100],
                         },
                       }}
-                      onClick={handleMoreTagClick}
-                    >
+                      onClick={handleMoreTagClick}>
                       +{categoryTags.remaining}
                     </Box>
                     <Popover
@@ -307,8 +295,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                         },
                       }}
                       transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                      onClose={handlePopoverClose}
-                    >
+                      onClose={handlePopoverClose}>
                       <Box
                         sx={{
                           display: 'flex',
@@ -317,8 +304,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                           maxWidth: 250,
                           p: 1.5,
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                        onClick={(e) => e.stopPropagation()}>
                         {categoryTags.hidden.map((category) => {
                           const colors = getCategoryColors(category);
 
@@ -336,8 +322,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                                 border: '1px solid',
                                 borderColor: colors.borderColor,
                                 color: colors.color,
-                              }}
-                            >
+                              }}>
                               {LEARNING_CATEGORIES[
                                 category as keyof typeof LEARNING_CATEGORIES
                               ]?.label ?? category}
@@ -359,8 +344,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                   fontStyle: 'italic',
                   fontWeight: theme.typography.fontWeightRegular,
                   lineHeight: theme.typography.body2.lineHeight,
-                }}
-              >
+                }}>
                 {t('label.no-entity-added', {
                   entity: t('label.category-lowercase'),
                 })}
@@ -374,16 +358,14 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
               alignItems: 'center',
               gap: 0.75,
               flexShrink: 0,
-            }}
-          >
+            }}>
             {formattedDate && (
               <Typography
                 component="span"
                 sx={{
                   fontSize: theme.typography.caption.fontSize,
                   color: theme.palette.allShades?.gray?.[600],
-                }}
-              >
+                }}>
                 {formattedDate}
               </Typography>
             )}
@@ -393,8 +375,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                 sx={{
                   fontSize: theme.typography.caption.fontSize,
                   color: theme.palette.allShades?.blueGray?.[100],
-                }}
-              >
+                }}>
                 |
               </Typography>
             )}
@@ -404,8 +385,7 @@ export const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
                 sx={{
                   fontSize: theme.typography.caption.fontSize,
                   color: theme.palette.allShades?.gray?.[600],
-                }}
-              >
+                }}>
                 {formattedDuration}
               </Typography>
             )}

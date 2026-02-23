@@ -244,8 +244,7 @@ const DataModelDetails = ({
   return (
     <PageLayoutV1
       pageTitle={getEntityName(dataModelData)}
-      title="Data Model Details"
-    >
+      title="Data Model Details">
       <Row gutter={[0, 12]}>
         <Col span={24}>
           <DataAssetsHeader
@@ -273,8 +272,7 @@ const DataModelDetails = ({
           isTabExpanded={isTabExpanded}
           permissions={dataModelPermissions}
           type={EntityType.DASHBOARD_DATA_MODEL}
-          onUpdate={onUpdateDataModel}
-        >
+          onUpdate={onUpdateDataModel}>
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

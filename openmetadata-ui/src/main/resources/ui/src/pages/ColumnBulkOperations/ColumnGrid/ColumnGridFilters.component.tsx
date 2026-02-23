@@ -110,8 +110,7 @@ const ColumnGridFiltersComponent: React.FC<ColumnGridFiltersProps> = ({
                 value={formValues.entityTypes || []}
                 onChange={(e) =>
                   handleFieldChange('entityTypes', e.target.value)
-                }
-              >
+                }>
                 {entityTypeOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.label}

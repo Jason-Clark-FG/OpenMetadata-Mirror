@@ -544,16 +544,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             border: `1px solid ${theme.palette.divider}`,
             borderRadius: '8px',
             p: '16px',
-          }}
-        >
+          }}>
           <Typography
             sx={{
               fontSize: '16px',
               fontWeight: 600,
               color: theme.palette.text.secondary,
               mb: '12px',
-            }}
-          >
+            }}>
             {t('label.contract-preview')}
           </Typography>
           <Box sx={{ display: 'flex', mb: '8px' }}>
@@ -563,8 +561,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 color: theme.palette.text.secondary,
                 width: '70px',
                 flexShrink: 0,
-              }}
-            >
+              }}>
               {t('label.name')}
             </Typography>
             <Typography
@@ -572,8 +569,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 fontSize: '14px',
                 fontWeight: 500,
                 color: theme.palette.text.primary,
-              }}
-            >
+              }}>
               {odcsContract.name ?? t('label.not-specified')}
             </Typography>
           </Box>
@@ -584,8 +580,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 color: theme.palette.text.secondary,
                 width: '70px',
                 flexShrink: 0,
-              }}
-            >
+              }}>
               {t('label.version')}
             </Typography>
             <Typography
@@ -593,8 +588,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 fontSize: '14px',
                 fontWeight: 500,
                 color: theme.palette.text.primary,
-              }}
-            >
+              }}>
               {odcsContract.version}
             </Typography>
           </Box>
@@ -605,8 +599,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 color: theme.palette.text.secondary,
                 width: '70px',
                 flexShrink: 0,
-              }}
-            >
+              }}>
               {t('label.status')}
             </Typography>
             <Typography
@@ -614,8 +607,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 fontSize: '14px',
                 fontWeight: 500,
                 color: theme.palette.text.primary,
-              }}
-            >
+              }}>
               {odcsContract.status}
             </Typography>
           </Box>
@@ -626,8 +618,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 gap: '8px',
                 flexWrap: 'wrap',
                 mt: '12px',
-              }}
-            >
+              }}>
               {includedFeatures.map((feature) => (
                 <Chip
                   key={feature}
@@ -669,8 +660,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: '8px',
           p: '16px',
-        }}
-      >
+        }}>
         <Typography
           sx={{
             fontSize: '16px',
@@ -678,8 +668,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             color: theme.palette.text.secondary,
             letterSpacing: '0.5px',
             mb: '12px',
-          }}
-        >
+          }}>
           {t('label.contract-preview')}
         </Typography>
         <Box sx={{ display: 'flex', mb: '8px' }}>
@@ -689,8 +678,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               color: theme.palette.text.secondary,
               width: '70px',
               flexShrink: 0,
-            }}
-          >
+            }}>
             {t('label.name')}
           </Typography>
           <Typography
@@ -698,8 +686,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               fontSize: '14px',
               fontWeight: 500,
               color: theme.palette.text.primary,
-            }}
-          >
+            }}>
             {omContract.name ?? t('label.not-specified')}
           </Typography>
         </Box>
@@ -711,8 +698,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 color: theme.palette.text.secondary,
                 width: '70px',
                 flexShrink: 0,
-              }}
-            >
+              }}>
               {t('label.display-name')}
             </Typography>
             <Typography
@@ -720,16 +706,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 fontSize: '14px',
                 fontWeight: 500,
                 color: theme.palette.text.primary,
-              }}
-            >
+              }}>
               {omContract.displayName}
             </Typography>
           </Box>
         )}
         {includedFeatures.length > 0 && (
           <Box
-            sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', mt: '12px' }}
-          >
+            sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap', mt: '12px' }}>
             {includedFeatures.map((feature) => (
               <Chip
                 key={feature}
@@ -761,8 +745,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
@@ -771,8 +754,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mb: '16px',
               pb: '16px',
               borderBottom: `1px solid ${theme.palette.allShades.error[100]}`,
-            }}
-          >
+            }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>
               {t('label.parse-error')}
             </Typography>
@@ -797,8 +779,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 fontSize: '14px',
                 color: theme.palette.text.secondary,
                 mb: '12px',
-              }}
-            >
+              }}>
               {isODCSFormat
                 ? t('message.invalid-odcs-contract-format-required-fields')
                 : t(
@@ -810,8 +791,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 (field) => (
                   <Box
                     key={field}
-                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Box
                       sx={{
                         width: 6,
@@ -831,8 +811,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mt: 'auto',
               pt: '16px',
               borderTop: `1px solid ${theme.palette.allShades.error[100]}`,
-            }}
-          >
+            }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CancelIcon
                 sx={{
@@ -860,12 +839,10 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-          }}
-        >
+          }}>
           <CircularProgress size={24} sx={{ mb: '12px' }} />
           <Typography
-            sx={{ fontSize: '14px', color: theme.palette.text.secondary }}
-          >
+            sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
             {t('message.validating-contract-schema')}
           </Typography>
         </Box>
@@ -882,8 +859,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
@@ -892,8 +868,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mb: '16px',
               pb: '16px',
               borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>
               {t('label.schema-validation')}
             </Typography>
@@ -914,8 +889,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           </Box>
           <Box sx={{ flex: 1, minHeight: '200px' }}>
             <Typography
-              sx={{ fontSize: '14px', color: theme.palette.text.secondary }}
-            >
+              sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
               {serverValidationError}
             </Typography>
           </Box>
@@ -924,16 +898,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mt: 'auto',
               pt: '16px',
               borderTop: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 mb: '8px',
-              }}
-            >
+              }}>
               <CheckCircleIcon
                 sx={{
                   fontSize: '16px',
@@ -973,8 +945,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
@@ -983,8 +954,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mb: '16px',
               pb: '16px',
               borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>
               {t('label.schema-validation')}
             </Typography>
@@ -1008,18 +978,15 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               flex: 1,
               minHeight: '200px',
               overflowY: 'auto',
-            }}
-          >
+            }}>
             <Box
               data-testid="failed-fields-list"
-              sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-            >
+              sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {serverValidation.schemaValidation?.failedFields?.map(
                 (field, index) => (
                   <Box
                     key={`notfound-${index}`}
-                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Box
                       sx={{
                         width: 6,
@@ -1030,8 +997,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                     />
                     <Typography
                       data-testid={`failed-field-${index}`}
-                      sx={{ fontSize: '14px' }}
-                    >
+                      sx={{ fontSize: '14px' }}>
                       {field} - {t('label.not-found-lowercase')}
                     </Typography>
                   </Box>
@@ -1041,8 +1007,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 (field, index) => (
                   <Box
                     key={`duplicate-${index}`}
-                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Box
                       sx={{
                         width: 6,
@@ -1053,8 +1018,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                     />
                     <Typography
                       data-testid={`duplicate-field-${index}`}
-                      sx={{ fontSize: '14px' }}
-                    >
+                      sx={{ fontSize: '14px' }}>
                       {field} - {t('label.duplicate')}
                     </Typography>
                   </Box>
@@ -1064,8 +1028,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 (field, index) => (
                   <Box
                     key={`typemismatch-${index}`}
-                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Box
                       sx={{
                         width: 6,
@@ -1076,8 +1039,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                     />
                     <Typography
                       data-testid={`type-mismatch-field-${index}`}
-                      sx={{ fontSize: '14px' }}
-                    >
+                      sx={{ fontSize: '14px' }}>
                       {field}
                     </Typography>
                   </Box>
@@ -1090,16 +1052,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mt: 'auto',
               pt: '16px',
               borderTop: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 mb: '8px',
-              }}
-            >
+              }}>
               <CheckCircleIcon
                 sx={{
                   fontSize: '16px',
@@ -1150,8 +1110,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
@@ -1160,8 +1119,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mb: '16px',
               pb: '16px',
               borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>
               {t('label.contract-validation')}
             </Typography>
@@ -1183,8 +1141,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           <Box sx={{ flex: 1, minHeight: '200px' }}>
             <Box
               data-testid="entity-errors-list"
-              sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-            >
+              sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {allErrors.map((error, index) => (
                 <Box
                   key={index}
@@ -1192,8 +1149,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '8px',
-                  }}
-                >
+                  }}>
                   <Box
                     sx={{
                       width: 6,
@@ -1206,8 +1162,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                   />
                   <Typography
                     data-testid={`entity-error-${index}`}
-                    sx={{ fontSize: '14px', wordBreak: 'break-word' }}
-                  >
+                    sx={{ fontSize: '14px', wordBreak: 'break-word' }}>
                     {error}
                   </Typography>
                 </Box>
@@ -1219,16 +1174,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               mt: 'auto',
               pt: '16px',
               borderTop: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+            }}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 mb: '8px',
-              }}
-            >
+              }}>
               <CheckCircleIcon
                 sx={{
                   fontSize: '16px',
@@ -1269,8 +1222,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-        }}
-      >
+        }}>
         <Box
           sx={{
             display: 'flex',
@@ -1279,15 +1231,13 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             mb: '16px',
             pb: '16px',
             borderBottom: `1px solid ${theme.palette.divider}`,
-          }}
-        >
+          }}>
           <Typography
             sx={{
               fontSize: '14px',
               fontWeight: 600,
               color: theme.palette.text.primary,
-            }}
-          >
+            }}>
             {t('label.schema-validation')}
           </Typography>
           <Chip
@@ -1317,8 +1267,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
         </Box>
         <Box sx={{ flex: 1, minHeight: '200px', overflowY: 'auto' }}>
           <Typography
-            sx={{ fontSize: '14px', color: theme.palette.text.secondary }}
-          >
+            sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
             {serverValidation?.schemaValidation?.total &&
             serverValidation.schemaValidation.total > 0
               ? t('message.schema-validation-passed', {
@@ -1334,14 +1283,12 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                   fontWeight: 600,
                   color: theme.palette.allShades.warning[700],
                   mb: '8px',
-                }}
-              >
+                }}>
                 {t('label.type-mismatches')}
               </Typography>
               <Box
                 data-testid="type-mismatch-warnings-list"
-                sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-              >
+                sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {serverValidation.schemaValidation.typeMismatchFields.map(
                   (field, index) => (
                     <Box
@@ -1350,8 +1297,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                      }}
-                    >
+                      }}>
                       <WarningAmberIcon
                         sx={{
                           fontSize: '14px',
@@ -1360,8 +1306,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                       />
                       <Typography
                         data-testid={`type-mismatch-warning-${index}`}
-                        sx={{ fontSize: '14px' }}
-                      >
+                        sx={{ fontSize: '14px' }}>
                         {field}
                       </Typography>
                     </Box>
@@ -1376,16 +1321,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             mt: 'auto',
             pt: '16px',
             borderTop: `1px solid ${theme.palette.divider}`,
-          }}
-        >
+          }}>
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               mb: '8px',
-            }}
-          >
+            }}>
             <CheckCircleOutlineOutlined
               sx={{
                 fontSize: '16px',
@@ -1436,8 +1379,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           flexDirection: 'column',
           gap: '12px',
           marginTop: '16px',
-        }}
-      >
+        }}>
         <Box
           data-testid="existing-contract-warning"
           sx={{
@@ -1448,8 +1390,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             border: `1px solid ${theme.palette.allShades.warning[300]}`,
             borderRadius: '8px',
             p: '12px',
-          }}
-        >
+          }}>
           <WarningAmberIcon
             sx={{
               color: theme.palette.allShades.warning[600],
@@ -1462,8 +1403,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               fontSize: '14px',
               color: theme.palette.allShades.warning[800],
               lineHeight: '20px',
-            }}
-          >
+            }}>
             {t('message.existing-contract-detected')}{' '}
             <strong>{t('message.please-select-action-below')}</strong>
           </Typography>
@@ -1490,23 +1430,20 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                   borderColor: theme.palette.primary.main,
                 },
               }}
-              onClick={() => setImportMode('merge')}
-            >
+              onClick={() => setImportMode('merge')}>
               <Box
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
-                }}
-              >
+                }}>
                 <Box>
                   <Typography
                     sx={{
                       fontSize: '14px',
                       fontWeight: 600,
                       color: theme.palette.text.primary,
-                    }}
-                  >
+                    }}>
                     {t('label.merge-with-existing')}
                   </Typography>
                   <Typography
@@ -1514,8 +1451,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                       fontSize: '12px',
                       color: theme.palette.text.secondary,
                       lineHeight: '20px',
-                    }}
-                  >
+                    }}>
                     {t('message.import-mode-merge-description')}
                   </Typography>
                 </Box>
@@ -1544,23 +1480,20 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                   borderColor: theme.palette.primary.main,
                 },
               }}
-              onClick={() => setImportMode('replace')}
-            >
+              onClick={() => setImportMode('replace')}>
               <Box
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
-                }}
-              >
+                }}>
                 <Box>
                   <Typography
                     sx={{
                       fontSize: '14px',
                       fontWeight: 600,
                       color: theme.palette.text.primary,
-                    }}
-                  >
+                    }}>
                     {t('label.replace-entire-contract')}
                   </Typography>
                   <Typography
@@ -1568,8 +1501,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                       fontSize: '12px',
                       color: theme.palette.text.secondary,
                       lineHeight: '20px',
-                    }}
-                  >
+                    }}>
                     {t('message.import-mode-replace-description')}
                   </Typography>
                 </Box>
@@ -1597,8 +1529,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           <Typography
             component="span"
             data-testid="multi-object-contract-detected"
-            sx={{ fontSize: '14px', fontWeight: 600 }}
-          >
+            sx={{ fontSize: '14px', fontWeight: 600 }}>
             {t('message.multi-object-contract-detected')}
           </Typography>
         </Box>
@@ -1609,8 +1540,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               fullWidth
               data-testid="schema-object-select"
               value={selectedObjectName}
-              onChange={handleObjectSelectChange}
-            >
+              onChange={handleObjectSelectChange}>
               <MenuItem disabled value="">
                 {t('label.select-schema-object')}
               </MenuItem>
@@ -1619,8 +1549,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                   data-testid={`schema-object-option-${obj}`}
                   key={obj}
                   sx={{ px: '12px' }}
-                  value={obj}
-                >
+                  value={obj}>
                   {obj}
                 </MenuItem>
               ))}
@@ -1658,8 +1587,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           },
         },
       }}
-      onClose={isLoading ? undefined : handleReset}
-    >
+      onClose={isLoading ? undefined : handleReset}>
       <DialogTitle
         data-testid="import-contract-modal-title"
         sx={{
@@ -1672,20 +1600,17 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               ? '0 4px 6px -1px rgba(10, 13, 18, 0.10), 0 2px 4px -2px rgba(10, 13, 18, 0.06)'
               : 'none',
           },
-        }}
-      >
+        }}>
         <Box>
           <Typography
-            sx={{ fontSize: '14px', fontWeight: 600, lineHeight: '20px' }}
-          >
+            sx={{ fontSize: '14px', fontWeight: 600, lineHeight: '20px' }}>
             {isODCSFormat
               ? t('label.import-odcs-contract')
               : t('label.import-contract')}
           </Typography>
           <Typography
             color="textSecondary"
-            sx={{ fontSize: '14px', lineHeight: '20px', mt: '4px' }}
-          >
+            sx={{ fontSize: '14px', lineHeight: '20px', mt: '4px' }}>
             {t('message.upload-file-description')}
           </Typography>
         </Box>
@@ -1703,8 +1628,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             minHeight: yamlContent ? '400px' : 'auto',
             marginTop: yamlContent ? '16px' : '0',
             overflow: 'scroll',
-          }}
-        >
+          }}>
           <Box className="source-panel">
             {!yamlContent ? (
               <Box
@@ -1725,8 +1649,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 }}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              >
+                onDrop={handleDrop}>
                 <input
                   accept=".yaml,.yml"
                   data-testid="file-upload-input"
@@ -1737,8 +1660,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 />
                 <label
                   htmlFor="file-upload-input"
-                  style={{ cursor: 'pointer', display: 'block' }}
-                >
+                  style={{ cursor: 'pointer', display: 'block' }}>
                   <Box
                     sx={{
                       width: 40,
@@ -1750,8 +1672,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                       justifyContent: 'center',
                       mx: 'auto',
                       mb: '12px',
-                    }}
-                  >
+                    }}>
                     <CloudUpload height={20} width={20} />
                   </Box>
                   <Typography sx={{ fontSize: '14px', lineHeight: '20px' }}>
@@ -1762,16 +1683,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                         fontWeight: 600,
                         fontSize: '14px',
                         cursor: 'pointer',
-                      }}
-                    >
+                      }}>
                       {t('label.click-to-upload')}
                     </Typography>{' '}
                     {t('label.or-drag-and-drop')}
                   </Typography>
                   <Typography
                     color="textSecondary"
-                    sx={{ fontSize: '12px', lineHeight: '18px', mt: '4px' }}
-                  >
+                    sx={{ fontSize: '12px', lineHeight: '18px', mt: '4px' }}>
                     {t('label.supports-yaml-format')}
                   </Typography>
                 </label>
@@ -1791,8 +1710,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                     className="remove-button"
                     size="small"
                     title="Delete file"
-                    onClick={handleRemoveFile}
-                  >
+                    onClick={handleRemoveFile}>
                     <DeleteOutlineOutlined fontSize="small" />
                   </IconButton>
                 </Box>
@@ -1811,8 +1729,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 backgroundColor: parseError
                   ? theme.palette.allShades.error[50]
                   : theme.palette.grey[50],
-              }}
-            >
+              }}>
               {renderValidationPanel()}
             </Box>
           )}
@@ -1831,8 +1748,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             py: '8px',
           }}
           variant="text"
-          onClick={handleReset}
-        >
+          onClick={handleReset}>
           {t('label.cancel')}
         </Button>
         <Button
@@ -1846,8 +1762,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             py: '8px',
           }}
           variant="contained"
-          onClick={handleImport}
-        >
+          onClick={handleImport}>
           {(isLoading || isValidating) && (
             <CircularProgress color="inherit" size={16} sx={{ mr: 1 }} />
           )}

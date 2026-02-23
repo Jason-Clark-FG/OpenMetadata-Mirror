@@ -214,8 +214,7 @@ const Suggestions = ({
       <div
         className="global-search-suggestion-box"
         data-testid="global-search-suggestion-box"
-        role="none"
-      >
+        role="none">
         {[
           { suggestions: tableSuggestions, searchIndex: SearchIndex.TABLE },
           { suggestions: topicSuggestions, searchIndex: SearchIndex.TOPIC },
@@ -372,8 +371,7 @@ const Suggestions = ({
             }
             key={query}
             type="text"
-            onClick={() => onSearchTextUpdate?.(query)}
-          >
+            onClick={() => onSearchTextUpdate?.(query)}>
             {query}
           </Button>
         ))}

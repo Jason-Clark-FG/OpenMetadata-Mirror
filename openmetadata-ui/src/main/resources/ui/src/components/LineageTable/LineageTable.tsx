@@ -272,14 +272,12 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         onChange={(_, value) => {
           handlePageChange(1);
           updateURLParams({ dir: value });
-        }}
-      >
+        }}>
         {radioGroupOptions.map((option) => (
           <ToggleButton
             className="font-semibold"
             key={option.value}
-            value={option.value}
-          >
+            value={option.value}>
             {option.label}
           </ToggleButton>
         ))}
@@ -332,8 +330,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
               },
             },
           }}
-          onClick={(event) => setImpactOnEl(event.currentTarget)}
-        >
+          onClick={(event) => setImpactOnEl(event.currentTarget)}>
           <Transi18next
             i18nKey="label.impact-on-area"
             renderElement={<span className="m-l-xss text-primary" />}
@@ -343,8 +340,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         <StyledMenu
           anchorEl={impactOnEl}
           open={Boolean(impactOnEl)}
-          onClose={() => setImpactOnEl(null)}
-        >
+          onClose={() => setImpactOnEl(null)}>
           {LINEAGE_IMPACT_OPTIONS.map((option) => (
             <MenuItem
               key={option.key}
@@ -353,8 +349,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
                 setSelectedImpactLevel(option.key);
                 handlePageChange(currentPage);
                 setImpactOnEl(null);
-              }}
-            >
+              }}>
               {option.icon}
               {option.label}
             </MenuItem>
@@ -498,15 +493,13 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     (_: string, record: SearchSourceAlias) => (
       <EntityPopOverCard
         entityFQN={record.fullyQualifiedName ?? ''}
-        entityType={record.entityType ?? ''}
-      >
+        entityType={record.entityType ?? ''}>
         <Link
           to={getEntityLinkFromType(
             record.fullyQualifiedName ?? '',
             record.entityType as EntityType,
             record
-          )}
-        >
+          )}>
           {stringToHTML(
             highlightSearchText(getEntityName(record), searchValue)
           )}
@@ -662,8 +655,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
             to={getEntityLinkFromType(
               record?.fullyQualifiedName ?? '',
               record?.type as EntityType
-            )}
-          >
+            )}>
             {stringToHTML(
               highlightSearchText(
                 Fqn.split(record?.fullyQualifiedName ?? '').pop(),
@@ -688,8 +680,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
             to={getEntityLinkFromType(
               record?.fullyQualifiedName ?? '',
               record?.type as EntityType
-            )}
-          >
+            )}>
             {stringToHTML(
               highlightSearchText(
                 Fqn.split(record?.fullyQualifiedName ?? '').pop(),
@@ -810,8 +801,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         'lineage-card lineage-card-table'
       )}
       data-testid="lineage-card-table"
-      title={cardHeader}
-    >
+      title={cardHeader}>
       <Table
         bordered
         className="h-full"

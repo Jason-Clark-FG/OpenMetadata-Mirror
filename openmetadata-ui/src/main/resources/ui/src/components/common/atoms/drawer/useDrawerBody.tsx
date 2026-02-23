@@ -71,8 +71,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
           position: 'relative',
           overflow: 'hidden',
           ...sx,
-        }}
-      >
+        }}>
         {loading && (
           <Box
             sx={{
@@ -87,8 +86,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
               justifyContent: 'center',
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               zIndex: 1000,
-            }}
-          >
+            }}>
             <CircularProgress />
             {loadingMessage && (
               <Box sx={{ mt: 2, color: 'text.secondary' }}>
@@ -103,8 +101,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
             overflow: 'auto',
             height: '100%',
             p: padding,
-          }}
-        >
+          }}>
           {children}
         </Box>
       </Box>

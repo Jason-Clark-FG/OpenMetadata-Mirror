@@ -777,15 +777,13 @@ const DomainTreeView = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
-                }}
-              >
+                }}>
                 <EntityAvatar entity={node} size={24} variant="rounded" />
                 <Typography
                   sx={{
                     color: theme.palette.allShades?.gray?.[800],
                   }}
-                  variant="body2"
-                >
+                  variant="body2">
                   {getEntityName(node)}
                 </Typography>
                 {hasChildren && (
@@ -803,8 +801,7 @@ const DomainTreeView = ({
                 )}
                 {isLoading && <Loader size="small" />}
               </Box>
-            }
-          >
+            }>
             {childDomains.length > 0
               ? renderTreeItems(childDomains, identifier)
               : hasChildren && <div />}
@@ -825,8 +822,7 @@ const DomainTreeView = ({
                 sx={{
                   ml: 1,
                   mb: 1.5,
-                }}
-              >
+                }}>
                 <Button
                   startIcon={isLoadingMore ? null : <AddIcon />}
                   sx={{
@@ -841,8 +837,7 @@ const DomainTreeView = ({
                     },
                   }}
                   variant="text"
-                  onClick={(e) => handleLoadMoreChildren(parentFqn, e)}
-                >
+                  onClick={(e) => handleLoadMoreChildren(parentFqn, e)}>
                   {isLoadingMore ? (
                     <Loader size="small" />
                   ) : (
@@ -1056,8 +1051,7 @@ const DomainTreeView = ({
               },
           }}
           onExpandedItemsChange={handleExpandedChange}
-          onSelectedItemsChange={(_, value) => handleSelectionChange(value)}
-        >
+          onSelectedItemsChange={(_, value) => handleSelectionChange(value)}>
           {renderTreeItems(hierarchy)}
         </SimpleTreeView>
         {isLoadingMore && (
@@ -1116,8 +1110,7 @@ const DomainTreeView = ({
               overflowY: 'auto',
               maxHeight: 'calc(80vh - 160px)',
             }}
-            onScroll={handleScroll}
-          >
+            onScroll={handleScroll}>
             {hierarchySection}
           </Box>
         ),
@@ -1134,8 +1127,7 @@ const DomainTreeView = ({
               pt: 3,
               overflowY: 'auto',
               maxHeight: 'calc(80vh - 160px)',
-            }}
-          >
+            }}>
             {domainSection}
           </Box>
         ),

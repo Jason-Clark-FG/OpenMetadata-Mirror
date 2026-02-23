@@ -887,8 +887,7 @@ const DomainDetails = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}
-      >
+        }}>
         {!isTreeView && (
           <CoverImage
             imageUrl={domain.style?.coverImage?.url}
@@ -901,8 +900,7 @@ const DomainDetails = ({
             display: 'flex',
             mx: 5,
             alignItems: 'flex-end',
-          }}
-        >
+          }}>
           <Box sx={{ flex: 1 }}>
             <EntityHeader
               breadcrumb={[]}
@@ -931,8 +929,7 @@ const DomainDetails = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}
-            >
+              }}>
               {!isVersionsView && addButtonContent.length > 0 && (
                 <Dropdown
                   data-testid="domain-details-add-button-menu"
@@ -940,12 +937,10 @@ const DomainDetails = ({
                     items: addButtonContent,
                   }}
                   placement="bottomRight"
-                  trigger={['click']}
-                >
+                  trigger={['click']}>
                   <Button
                     data-testid="domain-details-add-button"
-                    type="primary"
-                  >
+                    type="primary">
                     <Space>
                       {t('label.add')}
                       <DownOutlined />
@@ -963,21 +958,18 @@ const DomainDetails = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}
-                  >
+                    )}>
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}
-                    >
+                      onClick={handleVersionClick}>
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}
-                      >
+                        })}>
                         {toString(domain.version)}
                       </Typography.Text>
                     </Button>
@@ -996,14 +988,12 @@ const DomainDetails = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}
-                  >
+                    onOpenChange={setShowActions}>
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.domain'),
-                      })}
-                    >
+                      })}>
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -1034,8 +1024,7 @@ const DomainDetails = ({
           isVersionView={isVersionsView}
           permissions={domainPermission}
           type={EntityType.DOMAIN}
-          onUpdate={onUpdate}
-        >
+          onUpdate={onUpdate}>
           <Box className="domain-details-page-tabs" sx={{ width: '100%' }}>
             <Box sx={{ px: isTreeView ? 0 : 5, py: 5 }}>
               <Tabs
@@ -1126,8 +1115,7 @@ const DomainDetails = ({
         sx={{
           ...getDomainContainerStyles(theme),
           ...(isTreeView && { border: 'none' }),
-        }}
-      >
+        }}>
         {content}
       </Box>
     </>

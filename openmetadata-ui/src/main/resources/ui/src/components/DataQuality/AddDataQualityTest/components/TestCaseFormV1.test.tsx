@@ -231,8 +231,7 @@ jest.mock('../../../common/AsyncSelect/AsyncSelect', () => ({
           if (api) {
             api();
           }
-        }}
-      >
+        }}>
         <option value="">Select table</option>
         <option value="sample_data.ecommerce_db.shopify.users_table">
           Users Table
@@ -253,8 +252,7 @@ jest.mock('../../../common/SelectionCardGroup/SelectionCardGroup', () =>
           data-testid={`test-level-${option.value}`}
           disabled={disabled}
           key={option.value}
-          onClick={() => !disabled && onChange?.(option.value)}
-        >
+          onClick={() => !disabled && onChange?.(option.value)}>
           {option.label}
         </button>
       ))}

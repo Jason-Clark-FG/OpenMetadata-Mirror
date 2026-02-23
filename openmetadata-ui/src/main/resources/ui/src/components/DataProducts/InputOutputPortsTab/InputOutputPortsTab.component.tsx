@@ -243,8 +243,7 @@ export const InputOutputPortsTab = forwardRef<
           flexDirection: 'column',
           alignItems: 'flex-start',
           gap: 5,
-        }}
-      >
+        }}>
         <Grid container spacing={2} sx={{ width: '100%', flexShrink: 0 }}>
           <Grid size={12}>
             <Card
@@ -254,8 +253,7 @@ export const InputOutputPortsTab = forwardRef<
                 overflow: 'visible',
                 boxShadow: 'none',
               }}
-              variant="outlined"
-            >
+              variant="outlined">
               <Box
                 sx={{
                   display: 'flex',
@@ -266,8 +264,7 @@ export const InputOutputPortsTab = forwardRef<
                   borderRadius: isLineageCollapsed ? '8px' : '8px 8px 0 0',
                   cursor: 'pointer',
                 }}
-                onClick={handleToggleLineageCollapse}
-              >
+                onClick={handleToggleLineageCollapse}>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                   <Typography fontWeight={500} variant="body1">
                     {t('label.port-plural')} {t('label.lineage')}
@@ -285,8 +282,7 @@ export const InputOutputPortsTab = forwardRef<
                   onClick={(e) => {
                     e.stopPropagation();
                     handleToggleLineageCollapse();
-                  }}
-                >
+                  }}>
                   {isLineageCollapsed ? (
                     <ChevronDown height={20} width={20} />
                   ) : (
@@ -303,8 +299,7 @@ export const InputOutputPortsTab = forwardRef<
                         justifyContent: 'center',
                         alignItems: 'center',
                         height: 250,
-                      }}
-                    >
+                      }}>
                       <Loader />
                     </Box>
                   ) : (
@@ -330,8 +325,7 @@ export const InputOutputPortsTab = forwardRef<
         <Grid
           container
           spacing={2}
-          sx={{ width: '100%', flex: 1, minHeight: 0 }}
-        >
+          sx={{ width: '100%', flex: 1, minHeight: 0 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card
               sx={{
@@ -341,8 +335,7 @@ export const InputOutputPortsTab = forwardRef<
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              variant="outlined"
-            >
+              variant="outlined">
               <Box
                 sx={{
                   display: 'flex',
@@ -356,8 +349,7 @@ export const InputOutputPortsTab = forwardRef<
                   cursor: 'pointer',
                   flexShrink: 0,
                 }}
-                onClick={() => setIsInputPortsCollapsed((prev) => !prev)}
-              >
+                onClick={() => setIsInputPortsCollapsed((prev) => !prev)}>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                   <Typography fontWeight={500} variant="body1">
                     {t('label.entity-port-plural', {
@@ -378,8 +370,7 @@ export const InputOutputPortsTab = forwardRef<
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddInputPort();
-                        }}
-                      >
+                        }}>
                         {t('label.add')}
                       </Button>
                     )}
@@ -389,8 +380,7 @@ export const InputOutputPortsTab = forwardRef<
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsInputPortsCollapsed((prev) => !prev);
-                    }}
-                  >
+                    }}>
                     {isInputPortsCollapsed ? (
                       <ChevronDown height={20} width={20} />
                     ) : (
@@ -408,8 +398,7 @@ export const InputOutputPortsTab = forwardRef<
                     height: isInputPortsCollapsed
                       ? 'auto'
                       : 'calc(100vh - 400px)',
-                  }}
-                >
+                  }}>
                   {inputPortsCount === 0 ? (
                     <ErrorPlaceHolder
                       className="m-t-0"
@@ -420,8 +409,7 @@ export const InputOutputPortsTab = forwardRef<
                         />
                       }
                       size={SIZE.SMALL}
-                      type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
-                    >
+                      type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
                       <Typography className="text-center">
                         {t('message.no-input-ports-added')}
                       </Typography>
@@ -431,8 +419,7 @@ export const InputOutputPortsTab = forwardRef<
                           data-testid="add-input-port-button"
                           icon={<PlusOutlined />}
                           type="primary"
-                          onClick={handleAddInputPort}
-                        >
+                          onClick={handleAddInputPort}>
                           {t('label.add-entity', {
                             entity: t('label.entity-port-plural', {
                               entity: t('label.input'),
@@ -464,8 +451,7 @@ export const InputOutputPortsTab = forwardRef<
                 display: 'flex',
                 flexDirection: 'column',
               }}
-              variant="outlined"
-            >
+              variant="outlined">
               <Box
                 sx={{
                   display: 'flex',
@@ -479,8 +465,7 @@ export const InputOutputPortsTab = forwardRef<
                   cursor: 'pointer',
                   flexShrink: 0,
                 }}
-                onClick={() => setIsOutputPortsCollapsed((prev) => !prev)}
-              >
+                onClick={() => setIsOutputPortsCollapsed((prev) => !prev)}>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                   <Typography fontWeight={500} variant="body1">
                     {t('label.entity-port-plural', {
@@ -501,8 +486,7 @@ export const InputOutputPortsTab = forwardRef<
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddOutputPort();
-                        }}
-                      >
+                        }}>
                         {t('label.add')}
                       </Button>
                     )}
@@ -512,8 +496,7 @@ export const InputOutputPortsTab = forwardRef<
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsOutputPortsCollapsed((prev) => !prev);
-                    }}
-                  >
+                    }}>
                     {isOutputPortsCollapsed ? (
                       <ChevronDown height={20} width={20} />
                     ) : (
@@ -531,8 +514,7 @@ export const InputOutputPortsTab = forwardRef<
                     height: isOutputPortsCollapsed
                       ? 'auto'
                       : 'calc(100vh - 400px)',
-                  }}
-                >
+                  }}>
                   {outputPortsCount === 0 ? (
                     <ErrorPlaceHolder
                       className="m-t-0"
@@ -543,8 +525,7 @@ export const InputOutputPortsTab = forwardRef<
                         />
                       }
                       size={SIZE.SMALL}
-                      type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
-                    >
+                      type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
                       <Typography className="text-center">
                         {assetCount === 0
                           ? t('message.no-assets-for-output-ports')
@@ -556,8 +537,7 @@ export const InputOutputPortsTab = forwardRef<
                           data-testid="add-output-port-button"
                           icon={<PlusOutlined />}
                           type="primary"
-                          onClick={handleAddOutputPort}
-                        >
+                          onClick={handleAddOutputPort}>
                           {t('label.add-entity', {
                             entity: t('label.entity-port-plural', {
                               entity: t('label.output'),

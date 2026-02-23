@@ -374,8 +374,7 @@ const Services = ({ serviceName }: ServicesProps) => {
             to={getServiceDetailsPath(
               record.fullyQualifiedName ?? record.name,
               serviceName
-            )}
-          >
+            )}>
             {stringToHTML(
               highlightSearchText(getEntityName(record), searchTerm)
             )}
@@ -423,8 +422,7 @@ const Services = ({ serviceName }: ServicesProps) => {
         <Card className="w-full" size="small">
           <div
             className="d-flex justify-between text-grey-muted"
-            data-testid="service-card"
-          >
+            data-testid="service-card">
             <Row gutter={[0, 6]}>
               <Col span={24}>
                 <Link
@@ -432,20 +430,17 @@ const Services = ({ serviceName }: ServicesProps) => {
                   to={getServiceDetailsPath(
                     service.fullyQualifiedName ?? service.name,
                     serviceName
-                  )}
-                >
+                  )}>
                   <Typography.Text
                     className="text-base text-grey-body font-medium truncate w-48 d-inline-block"
                     data-testid={`service-name-${service.name}`}
-                    title={getEntityName(service)}
-                  >
+                    title={getEntityName(service)}>
                     {getEntityName(service)}
                   </Typography.Text>
                 </Link>
                 <div
                   className="p-t-xs text-grey-body break-all description-text"
-                  data-testid="service-description"
-                >
+                  data-testid="service-description">
                   {service.description ? (
                     <RichTextEditorPreviewerV1
                       className="max-two-lines"
@@ -531,8 +526,7 @@ const Services = ({ serviceName }: ServicesProps) => {
     <Row
       className="justify-center"
       data-testid="services-container"
-      gutter={[16, 16]}
-    >
+      gutter={[16, 16]}>
       <Col span={24}>
         <Space className="w-full justify-between m-b-lg" data-testid="header">
           <PageHeader
@@ -550,8 +544,7 @@ const Services = ({ serviceName }: ServicesProps) => {
                       entity: t('label.service'),
                     })
                   : t(NO_PERMISSION_FOR_ACTION)
-              }
-            >
+              }>
               {addServicePermission && (
                 <LimitWrapper resource="dataAssets">
                   <Button
@@ -559,8 +552,7 @@ const Services = ({ serviceName }: ServicesProps) => {
                     data-testid="add-service-button"
                     size="middle"
                     type="primary"
-                    onClick={handleAddServiceClick}
-                  >
+                    onClick={handleAddServiceClick}>
                     {t('label.add-new-entity', {
                       entity: t('label.service'),
                     })}

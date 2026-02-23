@@ -244,8 +244,7 @@ const MuiDatePickerMenu = ({
                 data-testid="clear-date-picker"
                 size="small"
                 sx={{ p: 0.25, ml: -0.5 }}
-                onClick={handleClear}
-              >
+                onClick={handleClear}>
                 <Close sx={{ fontSize: 16 }} />
               </IconButton>
             )}
@@ -269,8 +268,7 @@ const MuiDatePickerMenu = ({
           },
         }}
         variant="outlined"
-        onClick={handleMenuClick}
-      >
+        onClick={handleMenuClick}>
         {selectedTimeRange}
       </Button>
       <Menu
@@ -290,16 +288,14 @@ const MuiDatePickerMenu = ({
           horizontal: 'right',
           vertical: 'top',
         }}
-        onClose={handleMenuClose}
-      >
+        onClose={handleMenuClose}>
         {Object.entries(menuOptions).map(([key, value]) => (
           <MenuItem
             data-testid={`date-range-option-${key}`}
             key={key}
             selected={selectedTimeRangeKey === key}
             sx={menuItemStyles}
-            onClick={() => handlePresetRangeClick(key)}
-          >
+            onClick={() => handlePresetRangeClick(key)}>
             {value.title}
           </MenuItem>
         ))}
@@ -310,8 +306,7 @@ const MuiDatePickerMenu = ({
             <MenuItem
               data-testid="custom-range-option"
               selected={selectedTimeRangeKey === 'customRange'}
-              sx={customRangeMenuItemStyles}
-            >
+              sx={customRangeMenuItemStyles}>
               <Box sx={{ width: '100%' }}>
                 <MyDatePicker.RangePicker
                   bordered={false}

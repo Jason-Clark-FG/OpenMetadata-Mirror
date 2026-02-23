@@ -72,8 +72,7 @@ jest.mock('@mui/material', () => ({
     <div
       data-testid={props['data-testid']}
       role="menuitem"
-      onClick={props.onClick}
-    >
+      onClick={props.onClick}>
       {children}
     </div>
   ),
@@ -83,8 +82,7 @@ jest.mock('@mui/material', () => ({
       value={value}
       onChange={(e) =>
         onChange && onChange({ target: { value: e.target.value } })
-      }
-    >
+      }>
       {children}
     </select>
   ),

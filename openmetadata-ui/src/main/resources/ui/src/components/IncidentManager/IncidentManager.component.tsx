@@ -574,8 +574,7 @@ const IncidentManager = ({
               data-testid={`test-case-${record.testCaseReference?.name}`}
               to={getTestCaseDetailPagePath(
                 record.testCaseReference?.fullyQualifiedName ?? ''
-              )}
-            >
+              )}>
               {getEntityName(record.testCaseReference)}
             </Link>
           );
@@ -609,8 +608,7 @@ const IncidentManager = ({
                       EntityTabs.PROFILER,
                       ProfilerTabPath.DATA_QUALITY
                     )}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                    onClick={(e) => e.stopPropagation()}>
                     {getNameFromFQN(tableFqn) ?? value.fullyQualifiedName}
                   </Link>
                 );
@@ -717,8 +715,7 @@ const IncidentManager = ({
         border: `1px solid ${theme.palette.grey[200]}`,
         borderRadius: '10px',
         backgroundColor: theme.palette.common.white,
-      }}
-    >
+      }}>
       <Box
         className="new-form-style"
         sx={{
@@ -727,14 +724,12 @@ const IncidentManager = ({
           alignItems: 'center',
           p: 4,
           gap: 5,
-        }}
-      >
+        }}>
         <Stack
           direction="row"
           justifyContent="space-between"
           spacing={5}
-          width="100%"
-        >
+          width="100%">
           <AsyncSelect
             allowClear
             showArrow
@@ -770,8 +765,7 @@ const IncidentManager = ({
                 value={filters.testCaseResolutionStatusType}
                 onChange={(value) =>
                   updateFilters({ testCaseResolutionStatusType: value })
-                }
-              >
+                }>
                 {Object.values(TestCaseResolutionStatusTypes).map((value) => (
                   <Select.Option key={value}>
                     {TEST_CASE_RESOLUTION_STATUS_LABELS[value]}

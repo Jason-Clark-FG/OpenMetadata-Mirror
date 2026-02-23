@@ -274,8 +274,7 @@ const DataProductListPage = () => {
             py: 4,
             borderBottom: `1px solid`,
             borderColor: theme.palette.allShades?.gray?.[200],
-          }}
-        >
+          }}>
           <Box sx={{ display: 'flex', gap: 5, alignItems: 'center' }}>
             {titleAndCount}
             {search}

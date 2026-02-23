@@ -275,8 +275,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
       <Card
         bodyStyle={{ padding: 0 }}
         className={classNames('custom-dropdown-render', dropdownClassName)}
-        data-testid="drop-down-menu"
-      >
+        data-testid="drop-down-menu">
         <Space className="w-full" direction="vertical" size={0}>
           {!hideSearchBar && (
             <div className="p-t-sm p-x-sm">
@@ -300,8 +299,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
                 className="p-0 m-l-sm"
                 data-testid="clear-button"
                 type="link"
-                onClick={handleClear}
-              >
+                onClick={handleClear}>
                 {t('label.clear-entity', {
                   entity: t('label.all'),
                 })}
@@ -322,8 +320,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
                     checked={nullOptionSelected}
                     className="d-flex flex-1"
                     data-testid="no-option-radio"
-                    onChange={(e) => handleNullOptionChange(e.target.checked)}
-                  >
+                    onChange={(e) => handleNullOptionChange(e.target.checked)}>
                     {nullLabelText}
                   </Radio>
                 ) : (
@@ -331,8 +328,7 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
                     checked={nullOptionSelected}
                     className="d-flex flex-1"
                     data-testid="no-option-checkbox"
-                    onChange={(e) => handleNullOptionChange(e.target.checked)}
-                  >
+                    onChange={(e) => handleNullOptionChange(e.target.checked)}>
                     {nullLabelText}
                   </Checkbox>
                 )}
@@ -348,16 +344,14 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
               className="update-btn"
               data-testid="update-btn"
               size="small"
-              onClick={handleUpdate}
-            >
+              onClick={handleUpdate}>
               {t('label.update')}
             </Button>
             <Button
               data-testid="close-btn"
               size="small"
               type="link"
-              onClick={handleDropdownClose}
-            >
+              onClick={handleDropdownClose}>
               {t('label.close')}
             </Button>
           </Space>
@@ -398,26 +392,22 @@ const SearchDropdown: FC<SearchDropdownProps> = ({
           onGetInitialOptions(searchKey);
         setIsDropDownOpen(visible);
         setSearchText('');
-      }}
-    >
+      }}>
       <Tooltip
         mouseLeaveDelay={0}
         overlayClassName={isEmpty(selectedKeys) ? 'd-none' : ''}
         placement="top"
         title={getSelectedOptionLabelString(selectedKeys, true)}
-        trigger="hover"
-      >
+        trigger="hover">
         <Button
           className="quick-filter-dropdown-trigger-btn"
-          size={triggerButtonSize}
-        >
+          size={triggerButtonSize}>
           <Space data-testid={`search-dropdown-${label}`} size={4}>
             <Space
               className={classNames({
                 active: selectedKeys.length > 0,
               })}
-              size={0}
-            >
+              size={0}>
               <Typography.Text className="filters-label font-medium">
                 {label}
               </Typography.Text>

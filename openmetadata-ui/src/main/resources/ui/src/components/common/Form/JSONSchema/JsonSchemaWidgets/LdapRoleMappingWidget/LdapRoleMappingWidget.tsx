@@ -225,8 +225,7 @@ const LdapRoleMappingWidget: FC<WidgetProps> = (props) => {
             className="mapping-card"
             data-testid={`mapping-card-${mapping.id}`}
             key={mapping.id}
-            size="small"
-          >
+            size="small">
             <Grid container alignItems="center" spacing={2}>
               <Grid size="grow">
                 <div>
@@ -245,8 +244,7 @@ const LdapRoleMappingWidget: FC<WidgetProps> = (props) => {
                     <Text
                       className="text-xs m-t-xss"
                       data-testid={`ldap-group-error-${mapping.id}`}
-                      type="danger"
-                    >
+                      type="danger">
                       {errors[mapping.id]}
                     </Text>
                   )}
@@ -291,8 +289,7 @@ const LdapRoleMappingWidget: FC<WidgetProps> = (props) => {
             data-testid="add-mapping-btn"
             disabled={disabled}
             icon={<PlusOutlined />}
-            onClick={handleAddMapping}
-          >
+            onClick={handleAddMapping}>
             {t('label.add-entity', {
               entity: t('label.ldap-group-mapping'),
             })}

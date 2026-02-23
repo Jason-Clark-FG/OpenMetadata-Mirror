@@ -53,8 +53,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
         },
       }}
       sx={{ zIndex: 1000 }}
-      onClose={onClose}
-    >
+      onClose={onClose}>
       {/* Header */}
       <Box
         sx={{
@@ -64,8 +63,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: (theme) => theme.shadows[1],
-        }}
-      >
+        }}>
         <Typography data-testid="form-heading" variant="h6">
           {tagsFormHeader}
         </Typography>
@@ -73,8 +71,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
           data-testid="drawer-close-icon"
           size="medium"
           sx={{ color: (theme) => theme.palette.grey[700] }}
-          onClick={onClose}
-        >
+          onClick={onClose}>
           <XClose style={{ width: '20px', height: '20px' }} />
         </IconButton>
       </Box>
@@ -102,8 +99,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
           justifyContent: 'flex-end',
           gap: 2,
           boxShadow: (theme) => `0px -4px 6px -2px ${theme.palette.grey[200]}`,
-        }}
-      >
+        }}>
         <Button
           color="primary"
           data-testid="cancel-button"
@@ -117,8 +113,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
             },
           }}
           variant="text"
-          onClick={onClose}
-        >
+          onClick={onClose}>
           {t('label.cancel')}
         </Button>
         <Button
@@ -127,8 +122,7 @@ const TagFormDrawer: FC<TagFormDrawerProps> = ({
           loading={isLoading}
           loadingIndicator={<CircularProgress color="inherit" size={18} />}
           variant="contained"
-          onClick={() => formRef.submit()}
-        >
+          onClick={() => formRef.submit()}>
           {t('label.save')}
         </Button>
       </Box>

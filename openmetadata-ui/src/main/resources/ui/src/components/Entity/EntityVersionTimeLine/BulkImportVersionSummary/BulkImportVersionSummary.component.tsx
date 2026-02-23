@@ -110,8 +110,7 @@ export const BulkImportVersionSummary = ({
             <Typography
               data-testid="processed-row"
               sx={valueStyle}
-              variant="caption"
-            >
+              variant="caption">
               {csvImportResult.numberOfRowsProcessed}
             </Typography>
           </Box>
@@ -122,8 +121,7 @@ export const BulkImportVersionSummary = ({
             <Typography
               data-testid="passed-row"
               sx={valueStyle}
-              variant="caption"
-            >
+              variant="caption">
               {csvImportResult.numberOfRowsPassed}
             </Typography>
           </Box>
@@ -134,8 +132,7 @@ export const BulkImportVersionSummary = ({
             <Typography
               data-testid="failed-row"
               sx={valueStyle}
-              variant="caption"
-            >
+              variant="caption">
               {csvImportResult.numberOfRowsFailed}
             </Typography>
           </Box>
@@ -154,8 +151,7 @@ export const BulkImportVersionSummary = ({
             },
           }}
           variant="text"
-          onClick={handleViewMore}
-        >
+          onClick={handleViewMore}>
           {t('label.view-more')}
         </Button>
       </Box>
@@ -174,8 +170,7 @@ export const BulkImportVersionSummary = ({
           },
         }}
         sx={{ zIndex: 1300 }}
-        onClose={handleClose}
-      >
+        onClose={handleClose}>
         <DialogTitle
           sx={{
             display: 'flex',
@@ -184,14 +179,12 @@ export const BulkImportVersionSummary = ({
             p: '16px 24px !important',
             boxShadow: (theme) => theme.shadows[1],
             flexShrink: 0,
-          }}
-        >
+          }}>
           {t('label.bulk-import-entity', { entity: t('label.detail-plural') })}
           <IconButton
             data-testid="close-modal-button"
             size="small"
-            onClick={handleClose}
-          >
+            onClick={handleClose}>
             <CloseIcon height={12} width={12} />
           </IconButton>
         </DialogTitle>
@@ -202,8 +195,7 @@ export const BulkImportVersionSummary = ({
             display: 'flex',
             flexDirection: 'column',
             flex: 1,
-          }}
-        >
+          }}>
           {tableData && (
             <Box className="om-rdg" sx={{ flex: 1, minHeight: 0 }}>
               <DataGrid

@@ -221,13 +221,11 @@ const MUITagSuggestion: FC<MUITagSuggestionProps> = ({
           <Box
             component="li"
             {...props}
-            data-testid={`tag-option-${option.value}`}
-          >
+            data-testid={`tag-option-${option.value}`}>
             <Box display="flex" flexDirection="column">
               <Box
                 fontWeight="medium"
-                sx={{ color: option.data?.style?.color || undefined }}
-              >
+                sx={{ color: option.data?.style?.color || undefined }}>
                 {option.label}
               </Box>
               {(option.data?.displayName || option.data?.name) && (

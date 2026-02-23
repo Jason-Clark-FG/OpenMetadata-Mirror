@@ -225,8 +225,7 @@ const renderWorksheetDetails = (props: Partial<WorksheetDetailsProps> = {}) => {
     <MemoryRouter
       initialEntries={[
         '/worksheet/test-service.test-spreadsheet.test-worksheet',
-      ]}
-    >
+      ]}>
       <WorksheetDetails {...finalProps} />
     </MemoryRouter>
   );

@@ -378,14 +378,12 @@ export const QualityTab = () => {
         sx={{
           border: `1px solid ${theme.palette.grey['200']}`,
           borderRadius: '10px',
-        }}
-      >
+        }}>
         <Box
           alignItems="center"
           display="flex"
           justifyContent="space-between"
-          p={4}
-        >
+          p={4}>
           <Box display="flex" gap={5} width="100%">
             <Tabs
               sx={{
@@ -424,8 +422,7 @@ export const QualityTab = () => {
                 },
               }}
               value={qualityTab}
-              onChange={handleTabChange}
-            >
+              onChange={handleTabChange}>
               {tabs.map(({ label, key }) => (
                 <Tab key={key} label={label} value={key} />
               ))}

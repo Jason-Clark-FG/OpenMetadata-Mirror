@@ -106,8 +106,7 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
           pt: 3.5,
           px: 6,
           pb: 5,
-        }}
-      >
+        }}>
         <Button
           color="secondary"
           data-testid="previous"
@@ -119,8 +118,7 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
             />
           }
           variant="contained"
-          onClick={() => config.onPageChange(config.currentPage - 1)}
-        >
+          onClick={() => config.onPageChange(config.currentPage - 1)}>
           {t('label.previous')}
         </Button>
 
@@ -141,24 +139,21 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
             display: 'flex',
             alignItems: 'center',
             gap: 1.5,
-          }}
-        >
+          }}>
           {!config.prevNextOnly && config.onPageSizeChange && (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-              }}
-            >
+              }}>
               <Typography
                 sx={{
                   fontSize: theme.typography.pxToRem(14),
                   color: theme.palette.text.secondary,
                   whiteSpace: 'nowrap',
                   marginRight: theme.spacing(1),
-                }}
-              >
+                }}>
                 {`${formatNumberWithComma(
                   displayedRowsRange.start
                 )}-${formatNumberWithComma(displayedRowsRange.end)} ${t(
@@ -177,8 +172,7 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
                   },
                 }}
                 value={selectedPageSize}
-                onChange={handlePageSizeChange}
-              >
+                onChange={handlePageSizeChange}>
                 {rowsPerPageOptions.map((option) => (
                   <MenuItem key={option} value={option}>
                     {option}
@@ -199,8 +193,7 @@ export const usePaginationControls = (config: PaginationControlsConfig) => {
             }
             size="small"
             variant="contained"
-            onClick={() => config.onPageChange(config.currentPage + 1)}
-          >
+            onClick={() => config.onPageChange(config.currentPage + 1)}>
             {t('label.next')}
           </Button>
         </Box>

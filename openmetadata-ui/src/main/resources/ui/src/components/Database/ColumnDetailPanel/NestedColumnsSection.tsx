@@ -42,8 +42,7 @@ const NestedColumnItem: React.FC<{
             textDecoration: 'underline',
           },
         }}
-        onClick={() => onColumnClick(column)}
-      >
+        onClick={() => onColumnClick(column)}>
         <ColumnIcon
           style={{
             width: 11,
@@ -58,8 +57,7 @@ const NestedColumnItem: React.FC<{
             fontSize: 14,
             fontWeight: 400,
             color: theme.palette.allShades?.brand?.[700],
-          }}
-        >
+          }}>
           {getEntityName(column)}
         </Typography.Link>
       </Box>
@@ -95,23 +93,20 @@ export const NestedColumnsSection: React.FC<NestedColumnsSectionProps> = ({
     <Box
       borderBottom={`0.6px solid ${theme.palette.allShades?.blueGray?.[100]}`}
       padding={4}
-      paddingTop={0}
-    >
+      paddingTop={0}>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1,
           marginBottom: 3,
-        }}
-      >
+        }}>
         <Typography.Text
           style={{
             fontSize: 13,
             fontWeight: 600,
             color: theme.palette.allShades?.gray?.[900],
-          }}
-        >
+          }}>
           {t(getNestedSectionTitle(entityType))}
         </Typography.Text>
         <Box
@@ -127,15 +122,13 @@ export const NestedColumnsSection: React.FC<NestedColumnsSectionProps> = ({
             border: '1px solid',
             borderColor: 'divider',
             backgroundColor: 'grey.50',
-          }}
-        >
+          }}>
           <Typography.Text
             style={{
               color: theme.palette.allShades?.gray?.[600],
               fontSize: 10,
               fontWeight: 500,
-            }}
-          >
+            }}>
             {columns.length}
           </Typography.Text>
         </Box>

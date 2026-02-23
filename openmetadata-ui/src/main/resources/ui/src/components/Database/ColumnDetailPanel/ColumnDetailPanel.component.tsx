@@ -778,15 +778,13 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
             return (
               <Box
                 key={breadcrumb.fullyQualifiedName}
-                sx={{ display: 'inline-flex', alignItems: 'center' }}
-              >
+                sx={{ display: 'inline-flex', alignItems: 'center' }}>
                 <Box
                   sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 0.5,
-                  }}
-                >
+                  }}>
                   <Typography.Text
                     style={{
                       fontSize: 12,
@@ -808,8 +806,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.textDecoration = 'none';
-                    }}
-                  >
+                    }}>
                     {getEntityName(breadcrumb)}
                   </Typography.Text>
                   {index < breadcrumbPath.length - 1 && (
@@ -838,8 +835,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                 borderRadius: '4px',
                 boxShadow:
                   '0 1px 2px -1px rgba(10, 13, 18, 0.1), 0 1px 3px 0 rgba(10, 13, 18, 0.1)',
-              }}
-            >
+              }}>
               <ColumnIcon
                 style={{
                   width: 20,
@@ -854,13 +850,11 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                   mouseEnterDelay={0.5}
                   placement="topLeft"
                   title={getEntityName(activeColumn)}
-                  trigger="hover"
-                >
+                  trigger="hover">
                   <Typography.Text
                     className="entity-title-link"
                     data-testid="entity-link"
-                    ellipsis={{ tooltip: true }}
-                  >
+                    ellipsis={{ tooltip: true }}>
                     {stringToHTML(
                       (activeColumn as { displayName?: string }).displayName ||
                         activeColumn.name ||
@@ -899,8 +893,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                   <Typography.Text
                     className="text-grey-muted text-xs"
                     data-testid="entity-name"
-                    ellipsis={{ tooltip: true }}
-                  >
+                    ellipsis={{ tooltip: true }}>
                     {stringToHTML(activeColumn.name || '')}
                   </Typography.Text>
                 )}
@@ -921,8 +914,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
             <Tooltip
               placement="bottom"
               title={getDataTypeDisplay(activeColumn)}
-              trigger="hover"
-            >
+              trigger="hover">
               <Chip
                 className="data-type-chip"
                 label={getDataTypeDisplay(activeColumn) || ''}
@@ -1003,8 +995,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                 backgroundColor: theme.palette.allShades?.white,
                 padding: 4,
               }}
-              onClick={handlePreviousColumn}
-            >
+              onClick={handlePreviousColumn}>
               <ChevronUp
                 color={theme.palette.allShades?.gray?.[600]}
                 height={16}
@@ -1019,8 +1010,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                 padding: 4,
                 backgroundColor: theme.palette.allShades?.white,
               }}
-              onClick={handleNextColumn}
-            >
+              onClick={handleNextColumn}>
               <ChevronDown
                 color={theme.palette.allShades?.gray?.[600]}
                 height={16}
@@ -1041,8 +1031,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
       placement="right"
       title={columnTitle}
       width="40%"
-      onClose={onClose}
-    >
+      onClose={onClose}>
       {localToast.open && (
         <Box
           sx={{
@@ -1074,8 +1063,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                 wordBreak: 'break-word',
               },
             },
-          }}
-        >
+          }}>
           <AlertBar
             defaultExpand
             message={localToast.message}

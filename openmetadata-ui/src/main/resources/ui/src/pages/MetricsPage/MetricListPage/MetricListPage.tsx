@@ -173,8 +173,7 @@ const MetricListPage = () => {
               to={getEntityDetailsPath(
                 EntityType.METRIC,
                 record.fullyQualifiedName ?? ''
-              )}
-            >
+              )}>
               {getEntityName(record)}
             </Link>
           );
@@ -260,8 +259,7 @@ const MetricListPage = () => {
                 <Button
                   data-testid="create-metric"
                   type="primary"
-                  onClick={() => navigate(ROUTES.ADD_METRIC)}
-                >
+                  onClick={() => navigate(ROUTES.ADD_METRIC)}>
                   {t('label.add-entity', { entity: t('label.metric') })}
                 </Button>
               </LimitWrapper>

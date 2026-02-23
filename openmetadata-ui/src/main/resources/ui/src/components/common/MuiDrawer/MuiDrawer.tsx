@@ -63,8 +63,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
       sx={{
         zIndex: 1000,
       }}
-      onClose={onClose}
-    >
+      onClose={onClose}>
       <Box
         ref={drawerContentRef}
         sx={{
@@ -72,8 +71,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-        }}
-      >
+        }}>
         {/* Header */}
         <Box
           sx={{
@@ -85,8 +83,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
             alignItems: 'center',
             flexShrink: 0,
             bgcolor: theme.palette.background.paper,
-          }}
-        >
+          }}>
           <Typography component="h2" variant="h6">
             {title}
           </Typography>
@@ -117,8 +114,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
             display: 'flex',
             overflow: 'hidden',
             bgcolor: theme.palette.background.default,
-          }}
-        >
+          }}>
           {/* Main Content Side */}
           <Box
             sx={{
@@ -131,8 +127,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
               borderRight: showSidePanel
                 ? `1px solid ${theme.palette.divider}`
                 : 'none',
-            }}
-          >
+            }}>
             {children}
           </Box>
 
@@ -146,8 +141,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 pt: 0,
-              }}
-            >
+              }}>
               {sidePanel}
             </Box>
           )}
@@ -165,15 +159,13 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
               display: 'flex',
               justifyContent: 'flex-end',
               gap: 2,
-            }}
-          >
+            }}>
             <Button
               color="inherit"
               data-testid="cancel-button"
               disabled={isLoading}
               variant="text"
-              onClick={onClose}
-            >
+              onClick={onClose}>
               {cancelBtnLabel || t('label.cancel')}
             </Button>
             <Button
@@ -195,8 +187,7 @@ const MuiDrawer: FC<MuiDrawerProps> = ({
                 },
               }}
               variant="contained"
-              onClick={() => formRef.submit()}
-            >
+              onClick={() => formRef.submit()}>
               {submitBtnLabel || t('label.create')}
             </Button>
           </Box>

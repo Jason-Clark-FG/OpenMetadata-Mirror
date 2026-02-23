@@ -93,8 +93,7 @@ jest.mock('@mui/material', () => {
       <select
         data-testid="object-selector"
         value={value}
-        onChange={(e) => onChange({ target: { value: e.target.value } })}
-      >
+        onChange={(e) => onChange({ target: { value: e.target.value } })}>
         {displayEmpty && <option value="">Select Schema Object</option>}
         {children}
       </select>

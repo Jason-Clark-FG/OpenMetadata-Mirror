@@ -514,8 +514,7 @@ const AddDataContract: React.FC<{
           <Button
             className="add-contract-cancel-button"
             type="default"
-            onClick={onCancel}
-          >
+            onClick={onCancel}>
             {t('label.cancel')}
           </Button>
           <Button
@@ -524,8 +523,7 @@ const AddDataContract: React.FC<{
             disabled={isSaveDisabled}
             loading={isSubmitting}
             type="primary"
-            onClick={handleSave}
-          >
+            onClick={handleSave}>
             {t('label.save')}
           </Button>
         </div>
@@ -568,8 +566,7 @@ const AddDataContract: React.FC<{
     <Card
       className="add-contract-card"
       data-testid="add-contract-card"
-      title={cardTitle}
-    >
+      title={cardTitle}>
       {cardContent}
     </Card>
   );

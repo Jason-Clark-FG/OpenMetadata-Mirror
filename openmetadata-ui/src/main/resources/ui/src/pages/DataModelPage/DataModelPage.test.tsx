@@ -79,8 +79,7 @@ jest.mock(
                 handleUpdateOwner();
                 handleUpdateTier();
                 onUpdateDataModel();
-              }}
-            >
+              }}>
               {UPDATE_DATA_MODEL}
             </button>
             <button onClick={handleFollowDataModel}>{FOLLOW_DATA_MODEL}</button>

@@ -236,8 +236,7 @@ const TestSuitePipelineTab = ({
               data-testid="add-placeholder-button"
               icon={<PlusOutlined />}
               type="primary"
-              onClick={handleAddPipelineRedirection}
-            >
+              onClick={handleAddPipelineRedirection}>
               {t('label.add')}
             </Button>
           }
@@ -246,8 +245,7 @@ const TestSuitePipelineTab = ({
           permissionValue={t('label.create-entity', {
             entity: t('label.test-suite-ingestion'),
           })}
-          type={ERROR_PLACEHOLDER_TYPE.ASSIGN}
-        >
+          type={ERROR_PLACEHOLDER_TYPE.ASSIGN}>
           {t('message.no-table-pipeline')}
         </ErrorPlaceHolder>
       ) : (
@@ -297,8 +295,7 @@ const TestSuitePipelineTab = ({
           <Button
             data-testid="add-pipeline-button"
             type="primary"
-            onClick={handleAddPipelineRedirection}
-          >
+            onClick={handleAddPipelineRedirection}>
             {t('label.add-entity', { entity: t('label.pipeline') })}
           </Button>
         </Col>

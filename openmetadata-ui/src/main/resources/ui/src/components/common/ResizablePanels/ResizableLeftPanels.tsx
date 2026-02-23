@@ -45,8 +45,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
       {pageTitle && <DocumentTitle title={pageTitle} />}
       <ReflexContainer
         className={classNames(className, 'resizable-panels-layout')}
-        orientation={orientation}
-      >
+        orientation={orientation}>
         <ReflexElement
           className={classNames(firstPanel.className, 'resizable-left-panel', {
             hidden: hideFirstPanel,
@@ -57,8 +56,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
           minSize={isLeftPanelCollapsed ? 0 : firstPanel.minWidth}
           onStopResize={(args) => {
             firstPanel.onStopResize?.(args.component.props.flex);
-          }}
-        >
+          }}>
           {!hideFirstPanel && (
             <Card
               className="reflex-card card-padding-0"
@@ -76,8 +74,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
                     )}
                   </div>
                 )
-              }
-            >
+              }>
               {firstPanel.children}
             </Card>
           )}
@@ -86,8 +83,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
         <ReflexSplitter
           className={classNames('splitter left-panel-splitter', {
             hidden: hideFirstPanel,
-          })}
-        >
+          })}>
           {isLeftPanelCollapsed && (
             <Card className="reflex-card card-padding-0">
               <Tooltip placement="right" title={t('label.expand')}>
@@ -107,8 +103,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
               className={classNames({
                 'panel-grabber-vertical': orientation === 'vertical',
                 'panel-grabber-horizontal': orientation === 'horizontal',
-              })}
-            >
+              })}>
               <div
                 className={classNames('handle-icon', {
                   'handle-icon-vertical ': orientation === 'vertical',
@@ -132,8 +127,7 @@ const ResizableLeftPanels: React.FC<ResizablePanelsLeftProps> = ({
           minSize={secondPanel.minWidth}
           onStopResize={(args) => {
             secondPanel.onStopResize?.(args.component.props.flex);
-          }}
-        >
+          }}>
           {secondPanel.children}
         </ReflexElement>
       </ReflexContainer>

@@ -122,8 +122,7 @@ const DomainSelectableList = ({
           }
         }}
         {...popoverProps}
-        getPopupContainer={getPopupContainerProp ?? getVisiblePopupContainer}
-      >
+        getPopupContainer={getPopupContainerProp ?? getVisiblePopupContainer}>
         {children ??
           (!isVersionView && (
             <EditIconButton
@@ -161,8 +160,7 @@ const DomainSelectableList = ({
       <Button
         className="remove-button-default-styling flex-center"
         disabled={disabled}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         {popoverContent}
       </Button>
     );

@@ -1586,8 +1586,7 @@ export const getFrequentlyJoinedColumns = (
               to={getEntityDetailsPath(
                 EntityType.TABLE,
                 columnJoin.fullyQualifiedName
-              )}
-            >
+              )}>
               {getPartialNameFromTableFQN(
                 columnJoin.fullyQualifiedName,
                 [
@@ -1619,8 +1618,7 @@ export const getFrequentlyJoinedColumns = (
                           columnJoin?.fullyQualifiedName,
                           [FqnPart.Column]
                         )
-                      )}
-                    >
+                      )}>
                       {getPartialNameFromTableFQN(
                         columnJoin?.fullyQualifiedName,
                         [FqnPart.Database, FqnPart.Table, FqnPart.Column]
@@ -1631,8 +1629,7 @@ export const getFrequentlyJoinedColumns = (
               </div>
             }
             placement="bottom"
-            trigger="click"
-          >
+            trigger="click">
             <span className="show-more m-l-xss text-underline">...</span>
           </Popover>
         )}

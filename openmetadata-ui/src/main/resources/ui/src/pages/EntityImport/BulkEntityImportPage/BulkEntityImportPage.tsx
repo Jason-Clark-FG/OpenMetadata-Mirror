@@ -643,8 +643,7 @@ const BulkEntityImportPage = () => {
     <PageLayoutV1
       pageTitle={t('label.import-entity', {
         entity: entityType,
-      })}
-    >
+      })}>
       <Row className="p-x-lg" gutter={[16, 16]}>
         {isBulkEdit ? (
           <BulkEditEntity
@@ -721,12 +720,10 @@ const BulkEntityImportPage = () => {
                         align="center"
                         className="w-full justify-center p-lg text-center"
                         direction="vertical"
-                        size={16}
-                      >
+                        size={16}>
                         <Typography.Text
                           className="text-center"
-                          data-testid="abort-reason"
-                        >
+                          data-testid="abort-reason">
                           <strong className="d-block">
                             {t('label.aborted')}
                           </strong>{' '}
@@ -737,8 +734,7 @@ const BulkEntityImportPage = () => {
                             ghost
                             data-testid="cancel-button"
                             type="primary"
-                            onClick={handleRetryCsvUpload}
-                          >
+                            onClick={handleRetryCsvUpload}>
                             {t('label.back')}
                           </Button>
                         </Space>
@@ -796,8 +792,7 @@ const BulkEntityImportPage = () => {
                       className="m-l-sm"
                       disabled={isValidating}
                       type="primary"
-                      onClick={handleValidate}
-                    >
+                      onClick={handleValidate}>
                       {activeStep === 2 ? t('label.update') : t('label.next')}
                     </Button>
                   )}

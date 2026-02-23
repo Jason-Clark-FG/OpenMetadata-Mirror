@@ -34,8 +34,7 @@ const PageHeader = ({
           className="heading m-b-0"
           data-testid="heading"
           level={5}
-          {...titleProps}
-        >
+          {...titleProps}>
           {header}
 
           {isBeta && (
@@ -54,8 +53,7 @@ const PageHeader = ({
       <Typography.Paragraph
         className="sub-heading"
         data-testid="sub-heading"
-        {...subHeaderProps}
-      >
+        {...subHeaderProps}>
         {subHeader}
       </Typography.Paragraph>
     </div>

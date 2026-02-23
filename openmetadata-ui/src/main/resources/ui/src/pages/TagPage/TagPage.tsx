@@ -709,8 +709,7 @@ const TagPage = () => {
           <Row
             className="data-classification"
             data-testid="data-classification"
-            gutter={[0, 12]}
-          >
+            gutter={[0, 12]}>
             <Col className="p-x-md" flex="1">
               <EntityHeader
                 badge={badge}
@@ -735,8 +734,7 @@ const TagPage = () => {
                     <Button
                       data-testid="data-classification-add-button"
                       type="primary"
-                      onClick={() => setAssetModalVisible(true)}
-                    >
+                      onClick={() => setAssetModalVisible(true)}>
                       {t('label.add-entity', {
                         entity: t('label.asset-plural'),
                       })}
@@ -753,14 +751,12 @@ const TagPage = () => {
                       overlayStyle={{ width: '350px' }}
                       placement="bottomRight"
                       trigger={['click']}
-                      onOpenChange={setShowActions}
-                    >
+                      onOpenChange={setShowActions}>
                       <Tooltip
                         placement="topRight"
                         title={t('label.manage-entity', {
                           entity: t('label.tag-lowercase'),
-                        })}
-                      >
+                        })}>
                         <Button
                           className="flex-center"
                           data-testid="manage-button"
@@ -786,16 +782,14 @@ const TagPage = () => {
           type={EntityType.TAG as CustomizeEntityType}
           onUpdate={(updatedData: Tag) =>
             Promise.resolve(updateTag(updatedData))
-          }
-        >
+          }>
           <Col
             span={24}
             style={{
               overflowY: 'auto',
               overflowX: 'hidden',
               height: 'calc(100vh - 170px)',
-            }}
-          >
+            }}>
             <Tabs
               destroyInactiveTabPane
               activeKey={activeTab}

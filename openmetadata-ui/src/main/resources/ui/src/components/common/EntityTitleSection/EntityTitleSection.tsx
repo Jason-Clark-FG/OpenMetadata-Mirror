@@ -113,8 +113,7 @@ export const EntityTitleSection = ({
         ...(className.includes('drawer-title-section') && {
           backgroundColor: 'transparent',
         }),
-      }}
-    >
+      }}>
       <Box
         sx={{
           display: 'flex',
@@ -124,8 +123,7 @@ export const EntityTitleSection = ({
           height: theme.spacing(11.5),
           px: theme.spacing(1),
           backgroundColor: theme.palette.allShades.blueGray[50],
-        }}
-      >
+        }}>
         <Box
           sx={{
             display: 'flex',
@@ -133,8 +131,7 @@ export const EntityTitleSection = ({
             flex: 1,
             minWidth: 0,
             overflow: 'hidden',
-          }}
-        >
+          }}>
           <Box
             sx={{
               color: theme.palette.allShades.blue[600],
@@ -145,16 +142,14 @@ export const EntityTitleSection = ({
               alignItems: 'center',
               flexShrink: 0,
               mr: theme.spacing(2),
-            }}
-          >
+            }}>
             {searchClassBase.getEntityIcon(entityTypeValue)}
           </Box>
           <Tooltip
             mouseEnterDelay={0.5}
             placement={tooltipPlacement}
             title={getTextFromHtmlString(entityName)}
-            trigger="hover"
-          >
+            trigger="hover">
             <Link
               data-testid={testId}
               style={{
@@ -169,8 +164,7 @@ export const EntityTitleSection = ({
                 color: theme.palette.allShades.blue[700],
                 display: 'block',
               }}
-              to={linkHref}
-            >
+              to={linkHref}>
               {stringToHTML(entityName)}
             </Link>
           </Tooltip>
@@ -183,8 +177,7 @@ export const EntityTitleSection = ({
                   ml: theme.spacing(1),
                   flexShrink: 0,
                 }}
-                onClick={() => setIsEditModalOpen(true)}
-              >
+                onClick={() => setIsEditModalOpen(true)}>
                 <IconEdit color={DE_ACTIVE_COLOR} height={14} width={14} />
               </IconButton>
             </Tooltip>

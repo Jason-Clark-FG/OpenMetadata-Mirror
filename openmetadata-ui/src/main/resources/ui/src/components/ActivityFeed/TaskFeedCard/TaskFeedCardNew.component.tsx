@@ -140,8 +140,7 @@ const TaskFeedCard = ({
           className="p-0 task-feed-header"
           data-testid="redirect-task-button-link"
           type="link"
-          onClick={handleTaskLinkClick}
-        >
+          onClick={handleTaskLinkClick}>
           <Typography.Text className="m-r-xss task-details-id">{`#${taskDetails.id} `}</Typography.Text>
 
           <Typography.Text className="m-r-xss  m-r-xss task-details-entity-link">
@@ -155,8 +154,7 @@ const TaskFeedCard = ({
           {!isRecognizerFeedback && (
             <Typography.Text
               className="break-all header-link text-sm"
-              data-testid="entity-link"
-            >
+              data-testid="entity-link">
               {entityName}
             </Typography.Text>
           )}
@@ -275,8 +273,7 @@ const TaskFeedCard = ({
           active: isActive,
           'no-bg-border': hideCardBorder,
         })}
-        data-testid="task-feed-card"
-      >
+        data-testid="task-feed-card">
         <Row
           gutter={
             isTaskTestCaseResult || isTaskGlossaryApproval
@@ -284,8 +281,7 @@ const TaskFeedCard = ({
               : isTaskDescription
               ? undefined
               : [0, 14]
-          }
-        >
+          }>
           <Col className="d-flex flex-col align-start">
             <Col>
               <Icon
@@ -305,12 +301,10 @@ const TaskFeedCard = ({
               <Typography.Text>
                 <UserPopOverCard
                   key={feed.createdBy}
-                  userName={feed.createdBy ?? ''}
-                >
+                  userName={feed.createdBy ?? ''}>
                   <span
                     className="task-created-by-text p-r-xss"
-                    data-testid="task-created-by"
-                  >
+                    data-testid="task-created-by">
                     {getEntityName(user)}
                   </span>
                 </UserPopOverCard>
@@ -321,8 +315,7 @@ const TaskFeedCard = ({
                   <Tooltip title={formatDateTime(timeStamp)}>
                     <span
                       className="p-l-xss task-timestamp-text"
-                      data-testid="timestamp"
-                    >
+                      data-testid="timestamp">
                       {getRelativeTime(timeStamp)}
                     </span>
                   </Tooltip>
@@ -334,8 +327,7 @@ const TaskFeedCard = ({
             {isTaskTags && (
               <Card
                 bordered
-                className="activity-feed-card-message tags-card-container"
-              >
+                className="activity-feed-card-message tags-card-container">
                 <TagsTask
                   hasEditAccess={false}
                   isTaskActionEdit={false}
@@ -354,8 +346,7 @@ const TaskFeedCard = ({
           {!isOpenInDrawer && (
             <Col
               className="task-feed-card-footer  d-flex flex-wrap align-center justify-between"
-              span={24}
-            >
+              span={24}>
               <Col className="d-flex">
                 <Col className="d-flex flex-center">
                   <ReplyIcon
@@ -369,8 +360,7 @@ const TaskFeedCard = ({
                       className="posts-length m-r-xss p-0 remove-button-default-styling"
                       data-testid="replies-count"
                       type="link"
-                      onClick={isForFeedTab ? showReplies : undefined}
-                    >
+                      onClick={isForFeedTab ? showReplies : undefined}>
                       {t(
                         feed.postsCount === 1
                           ? 'label.one-reply'
@@ -386,8 +376,7 @@ const TaskFeedCard = ({
                     feed?.posts && feed?.posts?.length > 0
                       ? 'task-card-assignee'
                       : ''
-                  }`}
-                >
+                  }`}>
                   <OwnerLabel
                     isCompactView={false}
                     owners={feed?.task?.assignees}
@@ -403,8 +392,7 @@ const TaskFeedCard = ({
                       className="task-card-approve-btn d-flex items-center"
                       data-testid="approve-button"
                       icon={<CheckCircleFilled />}
-                      onClick={onTaskResolve}
-                    >
+                      onClick={onTaskResolve}>
                       {t('label.approve')}
                     </Button>
                   )}
@@ -414,8 +402,7 @@ const TaskFeedCard = ({
                       data-testid="reject-button"
                       icon={<CloseCircleFilled />}
                       type="default"
-                      onClick={onTaskReject}
-                    >
+                      onClick={onTaskReject}>
                       {t('label.reject')}
                     </Button>
                   )}

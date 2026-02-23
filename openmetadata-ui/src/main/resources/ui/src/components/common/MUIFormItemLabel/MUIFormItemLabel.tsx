@@ -52,8 +52,7 @@ const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
         sx={{
           fontSize: (theme) => theme.typography.body2.fontSize,
           ...labelSx,
-        }}
-      >
+        }}>
         {label}
       </FormLabel>
       {helperTextType === HelperTextType.Tooltip &&
@@ -64,8 +63,7 @@ const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
               arrow
               placement={placement || 'top'}
               slotProps={slotProps}
-              title={helperText || ''}
-            >
+              title={helperText || ''}>
               <Box
                 component="span"
                 sx={{
@@ -74,8 +72,7 @@ const MUIFormItemLabel: FC<MUIFormItemLabelProps> = ({
                   cursor: 'help',
                   lineHeight: 0,
                   pointerEvents: 'auto',
-                }}
-              >
+                }}>
                 <InfoOutlinedIcon
                   data-testid="mui-helper-icon"
                   sx={{

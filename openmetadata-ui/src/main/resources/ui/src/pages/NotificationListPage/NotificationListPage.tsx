@@ -233,8 +233,7 @@ const NotificationListPage = () => {
             record.fullyQualifiedName && (
               <Link
                 data-testid="alert-name"
-                to={getNotificationAlertDetailsPath(record.fullyQualifiedName)}
-              >
+                to={getNotificationAlertDetailsPath(record.fullyQualifiedName)}>
                 {getEntityName(record)}
               </Link>
             )
@@ -339,8 +338,7 @@ const NotificationListPage = () => {
                         GlobalSettingOptions.ADD_NOTIFICATION
                       )
                     )
-                  }
-                >
+                  }>
                   {t('label.add-entity', { entity: t('label.alert') })}
                 </Button>
               </LimitWrapper>

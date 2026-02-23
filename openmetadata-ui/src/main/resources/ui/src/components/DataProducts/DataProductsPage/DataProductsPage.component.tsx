@@ -295,8 +295,7 @@ const DataProductsPage = () => {
             ghost
             className="m-t-sm"
             type="primary"
-            onClick={() => navigate(getDomainPath())}
-          >
+            onClick={() => navigate(getDomainPath())}>
             {t('label.go-back')}
           </Button>
         </div>
@@ -310,8 +309,7 @@ const DataProductsPage = () => {
         className={classNames('data-product-page-layout', {
           'version-data': version,
         })}
-        pageTitle={getEntityName(dataProduct)}
-      >
+        pageTitle={getEntityName(dataProduct)}>
         <DataProductsDetailsPage
           dataProduct={
             version ? selectedVersionData ?? dataProduct : dataProduct

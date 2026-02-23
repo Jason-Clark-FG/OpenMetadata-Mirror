@@ -142,8 +142,7 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
         <Space
           className="p-sm p-b-xss p-l-xs custom-dropdown-render"
           data-testid="custom-drop-down-menu"
-          size={8}
-        >
+          size={8}>
           <Button
             className="update-btn"
             data-testid="saveAssociatedTag"
@@ -153,16 +152,14 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
             size="small"
             tabIndex={0}
             type="default"
-            onClick={() => handleSubmit()}
-          >
+            onClick={() => handleSubmit()}>
             {t('label.update')}
           </Button>
           <Button
             data-testid="cancelAssociatedTag"
             size="small"
             tabIndex={0}
-            onClick={onCancel}
-          >
+            onClick={onCancel}>
             {t('label.cancel')}
           </Button>
         </Space>

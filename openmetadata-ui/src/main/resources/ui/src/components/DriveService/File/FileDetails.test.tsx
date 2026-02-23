@@ -118,8 +118,7 @@ jest.mock('../../common/IconButtons/EditIconButton', () => ({
       className={className}
       data-testid="expand-button"
       title={title}
-      onClick={onClick}
-    >
+      onClick={onClick}>
       Expand
     </button>
   )),

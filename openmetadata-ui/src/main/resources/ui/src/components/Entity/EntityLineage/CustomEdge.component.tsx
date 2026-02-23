@@ -52,8 +52,7 @@ export const LineageEdgeIcon = ({
       requiredExtensions="http://www.w3.org/1999/xhtml"
       width={FOREIGN_OBJECT_SIZE}
       x={x - FOREIGN_OBJECT_SIZE / offset}
-      y={y - FOREIGN_OBJECT_SIZE / offset}
-    >
+      y={y - FOREIGN_OBJECT_SIZE / offset}>
       {children}
     </foreignObject>
   );
@@ -302,8 +301,7 @@ export const CustomEdge = ({
           key="pipeline-icon"
           offset={3}
           x={edgeCenterX}
-          y={edgeCenterY}
-        >
+          y={edgeCenterY}>
           {isEditMode ? (
             <Button
               className={classNames(
@@ -325,8 +323,7 @@ export const CustomEdge = ({
                     {pipelineData?.executionStatus}
                   </Tag>
                 )
-              }
-            >
+              }>
               <Button
                 className={classNames(
                   'flex-center custom-edge-pipeline-button',
@@ -350,8 +347,7 @@ export const CustomEdge = ({
           key="edit-icon"
           offset={offset}
           x={edgeCenterX}
-          y={edgeCenterY}
-        >
+          y={edgeCenterY}>
           <Button
             className="cursor-pointer d-flex"
             data-testid="add-pipeline"
@@ -377,8 +373,7 @@ export const CustomEdge = ({
           key="delete-icon"
           offset={offset}
           x={edgeCenterX}
-          y={edgeCenterY}
-        >
+          y={edgeCenterY}>
           <Button
             className="cursor-pointer d-flex"
             data-testid="delete-button"
@@ -410,8 +405,7 @@ export const CustomEdge = ({
           key="function-icon"
           offset={3}
           x={edgeCenterX}
-          y={edgeCenterY}
-        >
+          y={edgeCenterY}>
           {isEditMode ? (
             <Button
               className={classNames(
@@ -432,8 +426,7 @@ export const CustomEdge = ({
                     {pipeline?.pipelineStatus?.executionStatus}
                   </Tag>
                 )
-              }
-            >
+              }>
               <Button
                 className={classNames(
                   'flex-center custom-edge-pipeline-button',

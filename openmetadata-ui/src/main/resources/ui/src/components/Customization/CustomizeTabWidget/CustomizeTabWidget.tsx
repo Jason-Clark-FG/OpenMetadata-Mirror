@@ -373,15 +373,13 @@ export const CustomizeTabWidget = () => {
             <Button
               icon={<PlusOutlined />}
               type="primary"
-              onClick={() => setShowAddTabModal(true)}
-            >
+              onClick={() => setShowAddTabModal(true)}>
               {t('label.add-entity', {
                 entity: t('label.tab'),
               })}
             </Button>
           }
-          title={t('label.customize-tab-plural')}
-        >
+          title={t('label.customize-tab-plural')}>
           <div className="d-flex flex-wrap gap-4">
             {items.map((item, index) => (
               <TabItem
@@ -408,12 +406,10 @@ export const CustomizeTabWidget = () => {
                   ],
                   onClick: () => add(item),
                 }}
-                trigger={['click']}
-              >
+                trigger={['click']}>
                 <Button
                   className="draggable-hidden-tab-item bg-grey"
-                  data-testid={`tab-${item.name}`}
-                >
+                  data-testid={`tab-${item.name}`}>
                   <Space>
                     {getTabDisplayName(item)}
                     <MoreOutlined />
@@ -432,8 +428,7 @@ export const CustomizeTabWidget = () => {
             <Button
               icon={<PlusOutlined />}
               type="primary"
-              onClick={handleOpenAddWidgetModal}
-            >
+              onClick={handleOpenAddWidgetModal}>
               {t('label.add-entity', {
                 entity: t('label.widget'),
               })}
@@ -443,8 +438,7 @@ export const CustomizeTabWidget = () => {
             entity: getEntityName(
               items.find((item) => item.id === activeKey) as Tab
             ),
-          })}
-        >
+          })}>
           {/* 
             ReactGridLayout with optimized drag and drop behavior for tab customization
             - verticalCompact: Packs widgets tightly without gaps
@@ -460,8 +454,7 @@ export const CustomizeTabWidget = () => {
             margin={[16, 16]}
             preventCollision={false}
             rowHeight={100}
-            onLayoutChange={handleLayoutUpdate}
-          >
+            onLayoutChange={handleLayoutUpdate}>
             {widgets}
           </ReactGridLayout>
         </Card>
@@ -488,8 +481,7 @@ export const CustomizeTabWidget = () => {
             entity: t('label.tab'),
           })}
           onCancel={() => setShowAddTabModal(false)}
-          onOk={() => add()}
-        >
+          onOk={() => add()}>
           <Input
             autoFocus
             data-testid="add-tab-input"
@@ -504,8 +496,7 @@ export const CustomizeTabWidget = () => {
           open={!isNil(editableItem)}
           title="Rename tab"
           onCancel={() => setEditableItem(null)}
-          onOk={handleRenameSave}
-        >
+          onOk={handleRenameSave}>
           <Input
             autoFocus
             value={getTabDisplayName(editableItem)}

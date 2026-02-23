@@ -121,8 +121,7 @@ const PoliciesListPage = () => {
               record.fullyQualifiedName
                 ? getPolicyWithFqnPath(record.fullyQualifiedName)
                 : ''
-            }
-          >
+            }>
             {getEntityName(record)}
           </Link>
         ),
@@ -143,8 +142,7 @@ const PoliciesListPage = () => {
                 viewRolePermission ? (
                   <Link
                     key={uniqueId()}
-                    to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}
-                  >
+                    to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}>
                     {getEntityName(role)}
                   </Link>
                 ) : (
@@ -164,15 +162,13 @@ const PoliciesListPage = () => {
                             key={uniqueId()}
                             to={getRoleWithFqnPath(
                               role.fullyQualifiedName || ''
-                            )}
-                          >
+                            )}>
                             {getEntityName(role)}
                           </Link>
                         ) : (
                           <Tooltip
                             key={uniqueId()}
-                            title={t(NO_PERMISSION_TO_VIEW)}
-                          >
+                            title={t(NO_PERMISSION_TO_VIEW)}>
                             {getEntityName(role)}
                           </Tooltip>
                         )
@@ -180,8 +176,7 @@ const PoliciesListPage = () => {
                     </Space>
                   }
                   overlayClassName="w-40 text-center"
-                  trigger="click"
-                >
+                  trigger="click">
                   <Tag className="m-l-xss" data-testid="plus-more-count">{`+${
                     listLength - LIST_CAP
                   } more`}</Tag>
@@ -209,8 +204,7 @@ const PoliciesListPage = () => {
                       entity: t('label.policy'),
                     })
                   : t(NO_PERMISSION_FOR_ACTION)
-              }
-            >
+              }>
               <Button
                 data-testid={`delete-action-${getEntityName(record)}`}
                 disabled={!deletePolicyPermission}
@@ -281,8 +275,7 @@ const PoliciesListPage = () => {
       <Row
         className="policies-list-container"
         data-testid="policies-list-container"
-        gutter={[0, 16]}
-      >
+        gutter={[0, 16]}>
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
@@ -301,8 +294,7 @@ const PoliciesListPage = () => {
               <Button
                 data-testid="add-policy"
                 type="primary"
-                onClick={handleAddPolicy}
-              >
+                onClick={handleAddPolicy}>
                 {t('label.add-entity', { entity: t('label.policy') })}
               </Button>
             )}

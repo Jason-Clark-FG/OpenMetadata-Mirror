@@ -259,8 +259,7 @@ export const useLearningResourceFilters = (
                 aria-label="Remove filter"
                 className="filter-selection-remove-btn"
                 component="button"
-                onClick={() => handleRemoveFilter(filter.key)}
-              >
+                onClick={() => handleRemoveFilter(filter.key)}>
                 <XClose size={14} />
               </Box>
             </Box>
@@ -269,8 +268,7 @@ export const useLearningResourceFilters = (
         <Button
           className="filter-selection-clear-all"
           variant="text"
-          onClick={handleClearAll}
-        >
+          onClick={handleClearAll}>
           {t('label.clear-entity', { entity: t('label.all-lowercase') })}
         </Button>
       </Box>

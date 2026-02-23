@@ -55,8 +55,7 @@ const DeleteModal = ({
           },
         },
       }}
-      onClose={handleCancel}
-    >
+      onClose={handleCancel}>
       <Box sx={{ p: 6 }}>
         <Box
           data-testid="delete-icon-container"
@@ -69,8 +68,7 @@ const DeleteModal = ({
             justifyContent: 'center',
             mb: 4,
             width: 48,
-          }}
-        >
+          }}>
           <Trash01 color={theme.palette.allShades?.error?.[600]} size={24} />
         </Box>
 
@@ -88,8 +86,7 @@ const DeleteModal = ({
               fontSize: '16px',
               lineHeight: 1.5,
             },
-          }}
-        >
+          }}>
           {t('label.delete')} {entityName || entityType}
         </DialogTitle>
 
@@ -98,8 +95,7 @@ const DeleteModal = ({
             mb: 8,
             p: 0,
             '&.MuiDialogContent-root': { padding: 0 },
-          }}
-        >
+          }}>
           <Typography
             color="text.secondary"
             data-testid="modal-body"
@@ -107,8 +103,7 @@ const DeleteModal = ({
               fontWeight: 400,
               fontSize: '14px',
               lineHeight: 1.43,
-            }}
-          >
+            }}>
             {t('message.are-you-sure-you-want-to-delete-this-entity', {
               entity: entityType?.toLowerCase() || 'item',
             })}
@@ -123,8 +118,7 @@ const DeleteModal = ({
             '&.MuiDialogActions-root': {
               padding: 0,
             },
-          }}
-        >
+          }}>
           <Button
             data-testid="cancel-button"
             disabled={isDeleting}
@@ -134,8 +128,7 @@ const DeleteModal = ({
               textTransform: 'none',
             }}
             variant="outlined"
-            onClick={handleCancel}
-          >
+            onClick={handleCancel}>
             {t('label.cancel')}
           </Button>
           <Button
@@ -148,8 +141,7 @@ const DeleteModal = ({
               textTransform: 'none',
             }}
             variant="contained"
-            onClick={onConfirm}
-          >
+            onClick={onConfirm}>
             {isDeleting ? (
               <CircularProgress color="inherit" size={20} />
             ) : (

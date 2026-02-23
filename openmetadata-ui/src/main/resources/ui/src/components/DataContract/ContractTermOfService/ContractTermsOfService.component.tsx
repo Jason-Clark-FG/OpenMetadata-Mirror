@@ -72,8 +72,7 @@ export const ContractTermsOfService: React.FC<{
             <EntityAttachmentProvider
               allowFileUpload
               entityFqn={fqn}
-              entityType={EntityType.TABLE}
-            >
+              entityType={EntityType.TABLE}>
               <BlockEditor
                 editable
                 content={termsOfUseContent}
@@ -89,15 +88,13 @@ export const ContractTermsOfService: React.FC<{
           className="contract-prev-button"
           icon={<LeftOutlined height={22} width={20} />}
           type="default"
-          onClick={onPrev}
-        >
+          onClick={onPrev}>
           {buttonProps.prevLabel ?? t('label.previous')}
         </Button>
         <Button
           className="contract-next-button"
           type="primary"
-          onClick={onNext}
-        >
+          onClick={onNext}>
           {buttonProps.nextLabel ?? t('label.next')}
           <Icon component={RightIcon} />
         </Button>

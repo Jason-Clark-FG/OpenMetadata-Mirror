@@ -123,8 +123,7 @@ export const useViewToggle = ({
             },
           },
         }}
-        variant="outlined"
-      >
+        variant="outlined">
         {availableViews.map((mode) => {
           const isActive = view === mode;
 
@@ -147,8 +146,7 @@ export const useViewToggle = ({
               }}
               title={mode}
               variant="outlined"
-              onClick={() => setView(mode)}
-            >
+              onClick={() => setView(mode)}>
               {renderIcon(mode)}
             </Button>
           );

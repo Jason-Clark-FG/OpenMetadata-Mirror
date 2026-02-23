@@ -110,8 +110,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
         rowGap: 4,
         flexDirection: 'column',
         mt: -1.5,
-      }}
-    >
+      }}>
       {recognizerName && (
         <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
@@ -170,8 +169,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
               '& .ProseMirror p, button': {
                 fontSize: theme.typography.caption.fontSize,
               },
-            }}
-          >
+            }}>
             <RichTextEditorPreviewerNew
               className="text-grey-700"
               markdown={feedback.userComments}
@@ -205,8 +203,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
           <Typography
             color={theme.palette.grey[700]}
             fontSize={theme.typography.caption.fontSize}
-            variant="body2"
-          >
+            variant="body2">
             {formatDateTime(feedback.createdAt)}
           </Typography>
         </Box>
@@ -224,8 +221,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
               fontSize={theme.typography.caption.fontSize}
               fontWeight={theme.typography.body1.fontWeight}
               sx={{ lineBreak: 'anywhere' }}
-              variant="body2"
-            >
+              variant="body2">
               {entityLinkData.entityName}
             </Typography>
           </Link>

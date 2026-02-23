@@ -89,8 +89,7 @@ export const ArticleViewer: React.FC<ArticleViewerProps> = ({ resource }) => {
                 rel="noopener noreferrer"
                 size="small"
                 target="_blank"
-                type="link"
-              >
+                type="link">
                 {t('label.open-original')}
               </Button>
             }

@@ -24,8 +24,7 @@ const PortNode = memo(({ data }: PortNodeProps) => {
   return (
     <div
       className="lineage-node"
-      data-testid={`port-node-${port.fullyQualifiedName}`}
-    >
+      data-testid={`port-node-${port.fullyQualifiedName}`}>
       {isInputPort && (
         <Handle
           className="lineage-node-handle"

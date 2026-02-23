@@ -321,8 +321,7 @@ const UserListPageV1 = () => {
           <Space
             align="center"
             className="w-full justify-center action-icons"
-            size={8}
-          >
+            size={8}>
             {showRestore && (
               <Tooltip
                 placement={isAdminUser ? 'bottom' : 'left'}
@@ -332,8 +331,7 @@ const UserListPageV1 = () => {
                         entity: t('label.user'),
                       })
                     : t(ADMIN_ONLY_ACTION)
-                }
-              >
+                }>
                 <Button
                   data-testid={`restore-user-btn-${record.name}`}
                   disabled={!isAdminUser}
@@ -354,8 +352,7 @@ const UserListPageV1 = () => {
                       entity: t('label.user'),
                     })
                   : t(ADMIN_ONLY_ACTION)
-              }
-            >
+              }>
               <Button
                 disabled={!isAdminUser}
                 icon={
@@ -481,8 +478,7 @@ const UserListPageV1 = () => {
       <Row
         className="user-listing p-b-md"
         data-testid="user-list-v1-component"
-        gutter={[0, 16]}
-      >
+        gutter={[0, 16]}>
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
@@ -510,8 +506,7 @@ const UserListPageV1 = () => {
                 <Button
                   data-testid="add-user"
                   type="primary"
-                  onClick={handleAddNewUser}
-                >
+                  onClick={handleAddNewUser}>
                   {t('label.add-entity', {
                     entity: t(`label.${isAdminPage ? 'admin' : 'user'}`),
                   })}
@@ -575,8 +570,7 @@ const UserListPageV1 = () => {
             setShowReactiveModal(false);
             setSelectedUser(undefined);
           }}
-          onOk={handleReactiveUser}
-        >
+          onOk={handleReactiveUser}>
           <p>
             {t('message.are-you-want-to-restore', {
               entity: getEntityName(selectedUser),

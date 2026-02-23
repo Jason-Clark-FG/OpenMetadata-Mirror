@@ -456,8 +456,7 @@ const TopicDetails: React.FC<TopicDetailsProps> = ({
           isTabExpanded={isTabExpanded}
           permissions={topicPermissions}
           type={EntityType.TOPIC}
-          onUpdate={onTopicUpdate}
-        >
+          onUpdate={onTopicUpdate}>
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

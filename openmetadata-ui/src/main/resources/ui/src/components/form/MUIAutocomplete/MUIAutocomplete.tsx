@@ -66,8 +66,7 @@ const MUIAutocomplete: FC<MUIAutocompleteProps> = ({
             color: (theme) => theme.palette.grey[700],
             fontWeight: (theme) => theme.typography.h6.fontWeight,
           }}
-          variant="body2"
-        >
+          variant="body2">
           {option?.label ?? option}
         </Typography>
       )}

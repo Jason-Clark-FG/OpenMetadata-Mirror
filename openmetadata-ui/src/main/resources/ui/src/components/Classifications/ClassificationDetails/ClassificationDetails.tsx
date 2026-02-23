@@ -424,8 +424,7 @@ const ClassificationDetails = forwardRef(
                       data-testid="add-new-tag-button"
                       disabled={isClassificationDisabled}
                       type="primary"
-                      onClick={handleAddNewTagClick}
-                    >
+                      onClick={handleAddNewTagClick}>
                       {t('label.add-entity', {
                         entity: t('label.tag'),
                       })}
@@ -441,14 +440,12 @@ const ClassificationDetails = forwardRef(
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}
-                  >
+                    )}>
                     <Button
                       className="w-16 p-0"
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={versionHandler}
-                    >
+                      onClick={versionHandler}>
                       <Typography.Text>{currentVersion}</Typography.Text>
                     </Button>
                   </Tooltip>
@@ -484,8 +481,7 @@ const ClassificationDetails = forwardRef(
           type={EntityType.CLASSIFICATION as CustomizeEntityType}
           onUpdate={(updatedData: Classification) =>
             Promise.resolve(handleUpdateClassification?.(updatedData))
-          }
-        >
+          }>
           <Row className="m-t-md" gutter={16}>
             <Col span={18}>
               <Card className="classification-details-card">

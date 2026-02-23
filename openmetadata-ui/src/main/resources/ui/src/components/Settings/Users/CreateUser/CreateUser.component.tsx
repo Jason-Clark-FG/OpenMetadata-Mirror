@@ -273,8 +273,7 @@ const CreateUser = ({
       }}
       layout="vertical"
       validateMessages={VALIDATION_MESSAGES}
-      onFinish={handleSave}
-    >
+      onFinish={handleSave}>
       <Form.Item
         label={t('label.email')}
         name="email"
@@ -287,8 +286,7 @@ const CreateUser = ({
               fieldText: t('label.email'),
             }),
           },
-        ]}
-      >
+        ]}>
         <Input
           data-testid="email"
           name="email"
@@ -310,13 +308,11 @@ const CreateUser = ({
             {
               required: true,
             },
-          ]}
-        >
+          ]}>
           <Select
             className="w-full"
             data-testid="token-expiry"
-            placeholder={t('message.select-token-expiration')}
-          >
+            placeholder={t('message.select-token-expiration')}>
             {getJWTTokenExpiryOptions()}
           </Select>
         </Form.Item>
@@ -354,8 +350,7 @@ const CreateUser = ({
                         pattern: passwordRegex,
                         message: t('message.password-error-message'),
                       },
-                    ]}
-                  >
+                    ]}>
                     <Input.Password
                       autoComplete="off"
                       name="password"
@@ -382,8 +377,7 @@ const CreateUser = ({
                           return Promise.resolve();
                         },
                       },
-                    ]}
-                  >
+                    ]}>
                     <Input.Password
                       autoComplete="off"
                       name="confirmPassword"
@@ -404,8 +398,7 @@ const CreateUser = ({
                       {
                         required: true,
                       },
-                    ]}
-                  >
+                    ]}>
                     <Input.Password
                       readOnly
                       addonAfter={
@@ -413,8 +406,7 @@ const CreateUser = ({
                           <div
                             className="w-8 h-7 flex-center cursor-pointer"
                             data-testid="password-generator"
-                            onClick={generateRandomPassword}
-                          >
+                            onClick={generateRandomPassword}>
                             {isPasswordGenerating ? (
                               <Loader size="small" type="default" />
                             ) : (
@@ -527,8 +519,7 @@ const CreateUser = ({
           form="create-user-bot-form"
           htmlType="submit"
           loading={isLoading}
-          type="primary"
-        >
+          type="primary">
           {t('label.create')}
         </Button>
       </Space>

@@ -168,8 +168,7 @@ const MlModelFeaturesList = () => {
                 <Card
                   className="m-b-lg shadow-none"
                   data-testid={`feature-card-${feature.name ?? ''}`}
-                  key={feature.fullyQualifiedName}
-                >
+                  key={feature.fullyQualifiedName}>
                   <Row gutter={[0, 8]}>
                     <Col span={24}>
                       <Typography.Text
@@ -178,8 +177,7 @@ const MlModelFeaturesList = () => {
                         style={{
                           cursor: isDeleted ? 'default' : 'pointer',
                         }}
-                        onClick={(event) => handleColumnClick(feature, event)}
-                      >
+                        onClick={(event) => handleColumnClick(feature, event)}>
                         {feature.name}
                       </Typography.Text>
                     </Col>
@@ -292,8 +290,7 @@ const MlModelFeaturesList = () => {
         {!isEmpty(selectedFeature) && (
           <EntityAttachmentProvider
             entityFqn={selectedFeature.fullyQualifiedName}
-            entityType={EntityType.MLMODEL}
-          >
+            entityType={EntityType.MLMODEL}>
             <ModalWithMarkdownEditor
               header={t('label.edit-entity-name', {
                 entityType: t('label.feature'),

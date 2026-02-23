@@ -79,8 +79,7 @@ jest.mock('../../../common/ErrorWithPlaceholder/ErrorPlaceHolderNew', () => ({
       <div
         className={className}
         data-testid="error-placeholder"
-        data-type={type}
-      >
+        data-type={type}>
         {icon}
         {children}
       </div>

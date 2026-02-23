@@ -74,8 +74,7 @@ export const EntityHeader = ({
           'entity-breadcrumb',
           gutter === 'large' ? 'm-b-sm' : 'm-b-xss'
         )}
-        data-testid="category-name"
-      >
+        data-testid="category-name">
         <TitleBreadcrumb titleLinks={breadcrumb} />
       </div>
 

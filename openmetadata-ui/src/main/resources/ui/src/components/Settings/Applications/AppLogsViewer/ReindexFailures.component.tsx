@@ -129,13 +129,11 @@ const ReindexFailures = ({ visible, onClose }: ReindexFailuresProps) => {
             <Tooltip
               overlayStyle={{ maxWidth: 500 }}
               placement="topLeft"
-              title={<pre className="m-0 whitespace-pre-wrap">{text}</pre>}
-            >
+              title={<pre className="m-0 whitespace-pre-wrap">{text}</pre>}>
               <Typography.Paragraph
                 copyable
                 className="m-b-0"
-                ellipsis={{ rows: 2, expandable: true, symbol: 'more' }}
-              >
+                ellipsis={{ rows: 2, expandable: true, symbol: 'more' }}>
                 {text}
               </Typography.Paragraph>
             </Tooltip>
@@ -161,8 +159,7 @@ const ReindexFailures = ({ visible, onClose }: ReindexFailuresProps) => {
       placement="right"
       title={t('label.reindex-failure-plural')}
       width={900}
-      onClose={onClose}
-    >
+      onClose={onClose}>
       <Space className="w-full m-b-md" direction="vertical" size="small">
         <Space>
           <Typography.Text>{t('label.filter-by-entity-type')}:</Typography.Text>
@@ -171,8 +168,7 @@ const ReindexFailures = ({ visible, onClose }: ReindexFailuresProps) => {
             placeholder={t('label.all')}
             style={{ width: 200 }}
             value={entityTypeFilter}
-            onChange={handleEntityTypeChange}
-          >
+            onChange={handleEntityTypeChange}>
             {entityTypes.map((type) => (
               <Select.Option key={type} value={type}>
                 {type}

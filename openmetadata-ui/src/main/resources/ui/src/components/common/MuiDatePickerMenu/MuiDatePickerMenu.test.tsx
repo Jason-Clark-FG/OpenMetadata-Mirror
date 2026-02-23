@@ -67,14 +67,12 @@ jest.mock('../DatePicker/DatePicker', () => ({
               [DateTime.fromISO('2024-03-01'), DateTime.fromISO('2024-03-31')],
               ['2024-03-01', '2024-03-31']
             )
-          }
-        >
+          }>
           Apply
         </button>
         <button
           data-testid="clear-custom-range"
-          onClick={() => onChange(null, ['', ''])}
-        >
+          onClick={() => onChange(null, ['', ''])}>
           Clear
         </button>
       </div>

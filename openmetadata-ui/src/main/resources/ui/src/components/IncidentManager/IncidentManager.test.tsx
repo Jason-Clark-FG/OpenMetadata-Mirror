@@ -41,8 +41,7 @@ jest.mock('../common/MuiDatePickerMenu/MuiDatePickerMenu', () => {
             key: 'last7days',
             title: 'Last 7 days',
           })
-        }
-      >
+        }>
         time filter
       </button>
     </div>
@@ -65,8 +64,7 @@ jest.mock('../../pages/TasksPage/shared/Assignees', () => {
       <p>Assignees.component</p>
       <button
         data-testid="assignee-change-btn"
-        onClick={() => onChange([{ name: 'user1' }])}
-      >
+        onClick={() => onChange([{ name: 'user1' }])}>
         Change Assignee
       </button>
     </div>

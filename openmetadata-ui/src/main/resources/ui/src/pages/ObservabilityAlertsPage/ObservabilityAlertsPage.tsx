@@ -209,8 +209,7 @@ const ObservabilityAlertsPage = () => {
               data-testid="alert-name"
               to={getObservabilityAlertDetailsPath(
                 record.fullyQualifiedName ?? ''
-              )}
-            >
+              )}>
               {getEntityName(record)}
             </Link>
           );
@@ -308,8 +307,7 @@ const ObservabilityAlertsPage = () => {
                 <Button
                   data-testid="create-observability"
                   type="primary"
-                  onClick={() => navigate(ROUTES.ADD_OBSERVABILITY_ALERTS)}
-                >
+                  onClick={() => navigate(ROUTES.ADD_OBSERVABILITY_ALERTS)}>
                   {t('label.add-entity', { entity: t('label.alert') })}
                 </Button>
               </LimitWrapper>

@@ -715,8 +715,7 @@ const ContainerPage = () => {
           isTabExpanded={isTabExpanded}
           permissions={containerPermissions}
           type={EntityType.CONTAINER as CustomizeEntityType}
-          onUpdate={handleContainerUpdate}
-        >
+          onUpdate={handleContainerUpdate}>
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={tab}

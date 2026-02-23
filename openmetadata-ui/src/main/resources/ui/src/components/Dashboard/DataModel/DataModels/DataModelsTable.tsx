@@ -149,8 +149,7 @@ const DataModelTable = ({
                 to={getEntityDetailsPath(
                   EntityType.DASHBOARD_DATA_MODEL,
                   record.fullyQualifiedName || ''
-                )}
-              >
+                )}>
                 {stringToHTML(
                   highlightSearchText(dataModelDisplayName, searchValue)
                 )}

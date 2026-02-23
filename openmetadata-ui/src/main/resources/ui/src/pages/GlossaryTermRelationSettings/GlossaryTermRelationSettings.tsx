@@ -420,8 +420,7 @@ function GlossaryTermRelationSettingsPage() {
         data-testid="save-btn"
         loading={saving}
         type="primary"
-        onClick={handleModalOk}
-      >
+        onClick={handleModalOk}>
         {editingRelation ? t('label.update') : t('label.add')}
       </Button>
     </Space>
@@ -478,8 +477,7 @@ function GlossaryTermRelationSettingsPage() {
                 color: style.text,
                 fontWeight: 500,
                 textTransform: 'capitalize',
-              }}
-            >
+              }}>
               {category}
             </Tag>
           );
@@ -576,12 +574,10 @@ function GlossaryTermRelationSettingsPage() {
                 count > 0
                   ? t('message.relation-type-in-use-count', { count })
                   : t('message.relation-type-not-in-use')
-              }
-            >
+              }>
               <Tag
                 color={count > 0 ? 'blue' : 'default'}
-                data-testid={`usage-count-${record.name}`}
-              >
+                data-testid={`usage-count-${record.name}`}>
                 {count}
               </Tag>
             </Tooltip>
@@ -604,8 +600,7 @@ function GlossaryTermRelationSettingsPage() {
                 disabled={record.isSystemDefined}
                 size="small"
                 type="link"
-                onClick={() => handleEdit(record)}
-              >
+                onClick={() => handleEdit(record)}>
                 {t('label.edit')}
               </Button>
               {!record.isSystemDefined && (
@@ -616,16 +611,14 @@ function GlossaryTermRelationSettingsPage() {
                           count,
                         })
                       : undefined
-                  }
-                >
+                  }>
                   <Button
                     danger
                     data-testid={`delete-${record.name}-btn`}
                     disabled={saving || isInUse}
                     size="small"
                     type="link"
-                    onClick={() => handleDelete(record.name)}
-                  >
+                    onClick={() => handleDelete(record.name)}>
                     {t('label.delete')}
                   </Button>
                 </Tooltip>
@@ -647,8 +640,7 @@ function GlossaryTermRelationSettingsPage() {
       <Row
         align="middle"
         className="p-lg bg-white border-radius-sm"
-        gutter={[0, 16]}
-      >
+        gutter={[0, 16]}>
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
@@ -669,8 +661,7 @@ function GlossaryTermRelationSettingsPage() {
                 <Button
                   data-testid="add-relation-type-btn"
                   type="primary"
-                  onClick={handleAddNew}
-                >
+                  onClick={handleAddNew}>
                   {t('label.add-entity', {
                     entity: t('label.relation-type'),
                   })}
@@ -715,8 +706,7 @@ function GlossaryTermRelationSettingsPage() {
             : t('label.add-entity', { entity: t('label.relation-type') })
         }
         width={600}
-        onClose={handleModalCancel}
-      >
+        onClose={handleModalCancel}>
         <Form data-testid="relation-type-form" form={form} layout="vertical">
           <Form.Item
             label={t('label.name')}
@@ -730,8 +720,7 @@ function GlossaryTermRelationSettingsPage() {
                 pattern: /^[a-zA-Z][a-zA-Z0-9]*$/,
                 message: t('message.must-start-with-letter-alphanumeric'),
               },
-            ]}
-          >
+            ]}>
             <Input
               data-testid="name-input"
               disabled={Boolean(editingRelation)}
@@ -749,8 +738,7 @@ function GlossaryTermRelationSettingsPage() {
                   field: t('label.display-name'),
                 }),
               },
-            ]}
-          >
+            ]}>
             <Input
               data-testid="display-name-input"
               placeholder={t('label.enter-entity', {
@@ -772,16 +760,14 @@ function GlossaryTermRelationSettingsPage() {
           <Form.Item
             label={t('label.category')}
             name="category"
-            rules={[{ required: true }]}
-          >
+            rules={[{ required: true }]}>
             <Select data-testid="category-select" options={CATEGORY_OPTIONS} />
           </Form.Item>
 
           <Form.Item
             label={t('label.inverse-relation')}
             name="inverseRelation"
-            tooltip={t('message.inverse-relation-tooltip')}
-          >
+            tooltip={t('message.inverse-relation-tooltip')}>
             <Input
               data-testid="inverse-relation-input"
               placeholder={t('label.enter-entity', {
@@ -799,8 +785,7 @@ function GlossaryTermRelationSettingsPage() {
             label={t('label.rdf-predicate')}
             name="rdfPredicate"
             tooltip={t('message.rdf-predicate-tooltip')}
-            validateStatus={rdfPredicateDuplicates ? 'warning' : undefined}
-          >
+            validateStatus={rdfPredicateDuplicates ? 'warning' : undefined}>
             <AutoComplete
               className="w-full"
               data-testid="rdf-predicate-input"
@@ -825,8 +810,7 @@ function GlossaryTermRelationSettingsPage() {
                   field: t('label.cardinality'),
                 }),
               },
-            ]}
-          >
+            ]}>
             <Select
               data-testid="cardinality-select"
               options={cardinalityOptions}
@@ -836,8 +820,7 @@ function GlossaryTermRelationSettingsPage() {
           <Form.Item
             label={t('label.color')}
             name="color"
-            tooltip={t('message.relation-color-tooltip')}
-          >
+            tooltip={t('message.relation-color-tooltip')}>
             <Input
               data-testid="color-input"
               placeholder="#1890ff"
@@ -866,8 +849,7 @@ function GlossaryTermRelationSettingsPage() {
               <Form.Item
                 label={t('label.symmetric')}
                 name="isSymmetric"
-                valuePropName="checked"
-              >
+                valuePropName="checked">
                 <Switch data-testid="symmetric-switch" />
               </Form.Item>
             </Col>
@@ -875,8 +857,7 @@ function GlossaryTermRelationSettingsPage() {
               <Form.Item
                 label={t('label.transitive')}
                 name="isTransitive"
-                valuePropName="checked"
-              >
+                valuePropName="checked">
                 <Switch data-testid="transitive-switch" />
               </Form.Item>
             </Col>
@@ -884,8 +865,7 @@ function GlossaryTermRelationSettingsPage() {
               <Form.Item
                 label={t('label.cross-glossary')}
                 name="isCrossGlossaryAllowed"
-                valuePropName="checked"
-              >
+                valuePropName="checked">
                 <Switch data-testid="cross-glossary-switch" />
               </Form.Item>
             </Col>
@@ -898,8 +878,7 @@ function GlossaryTermRelationSettingsPage() {
                   <Col span={24}>
                     <Form.Item
                       label={`${t('label.source')} ${t('label.max')}`}
-                      name="sourceMax"
-                    >
+                      name="sourceMax">
                       <InputNumber
                         className="w-full"
                         data-testid="source-max-input"
@@ -911,8 +890,7 @@ function GlossaryTermRelationSettingsPage() {
                   <Col span={24}>
                     <Form.Item
                       label={`${t('label.target')} ${t('label.max')}`}
-                      name="targetMax"
-                    >
+                      name="targetMax">
                       <InputNumber
                         className="w-full"
                         data-testid="target-max-input"

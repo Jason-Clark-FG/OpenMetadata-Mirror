@@ -221,8 +221,7 @@ const PortsLineageView = ({
           borderRadius: '8px',
           border: '1px solid',
           borderColor: 'grey.200',
-        }}
-      >
+        }}>
         <ErrorPlaceHolder
           className="m-t-0"
           icon={
@@ -232,8 +231,7 @@ const PortsLineageView = ({
             />
           }
           size={SIZE.SMALL}
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
-        >
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
           <Typography className="text-center" variant="body2">
             {assetCount === 0
               ? t('message.no-assets-for-ports-lineage')
@@ -261,8 +259,7 @@ const PortsLineageView = ({
         right: isFullScreen ? 0 : 'auto',
         bottom: isFullScreen ? 0 : 'auto',
         zIndex: isFullScreen ? 1300 : 'auto',
-      }}
-    >
+      }}>
       {onToggleFullScreen && (
         <Box
           sx={{
@@ -270,15 +267,13 @@ const PortsLineageView = ({
             top: 8,
             right: 8,
             zIndex: 10,
-          }}
-        >
+          }}>
           <Tooltip
             title={
               isFullScreen
                 ? t('label.exit-full-screen')
                 : t('label.full-screen')
-            }
-          >
+            }>
             <IconButton
               data-testid="toggle-fullscreen-btn"
               size="small"
@@ -290,8 +285,7 @@ const PortsLineageView = ({
                   backgroundColor: 'grey.100',
                 },
               }}
-              onClick={handleToggleFullScreen}
-            >
+              onClick={handleToggleFullScreen}>
               {isFullScreen ? (
                 <Minimize01 fill="#414651" height={18} width={18} />
               ) : (
@@ -312,8 +306,7 @@ const PortsLineageView = ({
         nodesConnectable={false}
         nodesDraggable={false}
         onEdgesChange={onEdgesChange}
-        onNodesChange={onNodesChange}
-      >
+        onNodesChange={onNodesChange}>
         <Background color="#e5e7eb" gap={16} size={1} />
         <Controls
           showFitView

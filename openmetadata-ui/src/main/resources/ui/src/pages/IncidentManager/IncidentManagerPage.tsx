@@ -35,16 +35,14 @@ const IncidentManagerPage = () => {
             <Typography.Title
               className="m-b-0"
               data-testid="page-title"
-              level={5}
-            >
+              level={5}>
               {t(PAGE_HEADERS.INCIDENT_MANAGER.header)}
             </Typography.Title>
             <LearningIcon pageId={LEARNING_PAGE_IDS.INCIDENT_MANAGER} />
           </Space>
           <Typography.Paragraph
             className="text-grey-muted"
-            data-testid="page-sub-title"
-          >
+            data-testid="page-sub-title">
             {t(PAGE_HEADERS.INCIDENT_MANAGER.subHeader)}
           </Typography.Paragraph>
         </Col>

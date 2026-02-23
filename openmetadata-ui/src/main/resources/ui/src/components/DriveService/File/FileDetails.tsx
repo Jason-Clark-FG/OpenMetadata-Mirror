@@ -420,8 +420,7 @@ function FileDetails({
           isTabExpanded={isTabExpanded}
           permissions={filePermissions}
           type={EntityType.FILE}
-          onUpdate={onFileUpdate}
-        >
+          onUpdate={onFileUpdate}>
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

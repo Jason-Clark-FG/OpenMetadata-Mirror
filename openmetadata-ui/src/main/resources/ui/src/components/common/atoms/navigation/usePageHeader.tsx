@@ -49,15 +49,13 @@ export const usePageHeader = (config: PageHeaderConfig) => {
           boxShadow: 'none',
           border: `1px solid ${theme.palette.allShades?.blueGray?.[100]}`,
           borderRadius: 1.5,
-        }}
-      >
+        }}>
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-          }}
-        >
+          }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography
@@ -67,8 +65,7 @@ export const usePageHeader = (config: PageHeaderConfig) => {
                   color: 'text.primary',
                   mb: 0.5,
                 }}
-                variant="h4"
-              >
+                variant="h4">
                 {displayTitle}
               </Typography>
               {config.learningPageId && (
@@ -78,8 +75,7 @@ export const usePageHeader = (config: PageHeaderConfig) => {
             {displayDescription && (
               <Typography
                 sx={{ color: 'text.secondary', fontSize: '0.875rem' }}
-                variant="body2"
-              >
+                variant="body2">
                 {displayDescription}
               </Typography>
             )}
@@ -93,8 +89,7 @@ export const usePageHeader = (config: PageHeaderConfig) => {
                   data-testid={config.addButtonTestId || 'add-entity-button'}
                   startIcon={<Plus size={16} />}
                   variant="contained"
-                  onClick={config.onAddClick}
-                >
+                  onClick={config.onAddClick}>
                   {displayButtonLabel}
                 </Button>
               ))}

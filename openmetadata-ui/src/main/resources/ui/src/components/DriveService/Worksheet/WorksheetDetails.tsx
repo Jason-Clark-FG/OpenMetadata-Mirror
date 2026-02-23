@@ -433,8 +433,7 @@ function WorksheetDetails({
           isTabExpanded={isTabExpanded}
           permissions={worksheetPermissions}
           type={EntityType.WORKSHEET}
-          onUpdate={onWorksheetUpdate}
-        >
+          onUpdate={onWorksheetUpdate}>
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}
