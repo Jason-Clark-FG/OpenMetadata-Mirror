@@ -47,7 +47,7 @@ export const CalendarCell = ({ date, isHighlighted, ...props }: CalendarCellProp
                     isRoundedRight && "tw:rounded-r-full",
                     isInRange && isDisabled && "tw:bg-active",
                     isSelected && isRangeCalendar && "tw:bg-active",
-                    isDisabled ? "pointer-events-none" : "tw:cursor-pointer",
+                    isDisabled ? "tw:pointer-events-none" : "tw:cursor-pointer",
                     isFocusVisible ? "tw:z-10" : "tw:z-0",
                     isRangeCalendar && isOutsideMonth && "tw:hidden",
 
@@ -79,7 +79,7 @@ export const CalendarCell = ({ date, isHighlighted, ...props }: CalendarCellProp
                             // Focus ring, visible while the cell has keyboard focus.
                             isFocusVisible ? "tw:outline-2 tw:outline-offset-2 tw:outline-focus-ring" : "",
                             // Hover state for cells in the middle of the range.
-                            isSelected && !isDisabled && isRangeCalendar ? "font-medium" : "",
+                            isSelected && !isDisabled && isRangeCalendar ? "tw:font-medium" : "",
                             markedAsSelected && "tw:bg-brand-solid tw:font-medium tw:text-white tw:hover:bg-brand-solid_hover tw:hover:text-white",
                             // Hover state for non-selected cells.
                             !isSelected && !isDisabled ? "tw:hover:bg-primary_hover tw:hover:font-medium!" : "",

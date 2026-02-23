@@ -174,7 +174,7 @@ const TableHead = ({ className, tooltip, label, children, ...props }: TableHeadP
             className={(state) =>
                 cx(
                     "tw:relative tw:p-0 tw:px-6 tw:py-2 tw:outline-hidden tw:focus-visible:z-1 tw:focus-visible:ring-2 tw:focus-visible:ring-focus-ring tw:focus-visible:ring-offset-bg-primary tw:focus-visible:ring-inset",
-                    selectionBehavior === "toggle" && "nth-2:pl-3",
+                    selectionBehavior === "toggle" && "tw:nth-2:pl-3",
                     state.allowsSorting && "tw:cursor-pointer",
                     typeof className === "function" ? className(state) : className,
                 )
@@ -197,7 +197,7 @@ const TableHead = ({ className, tooltip, label, children, ...props }: TableHeadP
 
                     {state.allowsSorting &&
                         (state.sortDirection ? (
-                            <ArrowDown className={cx("tw:size-3 tw:stroke-[3px] tw:text-fg-quaternary", state.sortDirection === "ascending" && "rotate-180")} />
+                            <ArrowDown className={cx("tw:size-3 tw:stroke-[3px] tw:text-fg-quaternary", state.sortDirection === "ascending" && "tw:rotate-180")} />
                         ) : (
                             <ChevronSelectorVertical size={12} strokeWidth={3} className="tw:text-fg-quaternary" />
                         ))}
@@ -265,7 +265,7 @@ const TableCell = ({ className, children, ...props }: TableCellProps) => {
                     size === "sm" && "tw:px-5 tw:py-3",
                     size === "md" && "tw:px-6 tw:py-4",
 
-                    selectionBehavior === "toggle" && "nth-2:pl-3",
+                    selectionBehavior === "toggle" && "tw:nth-2:pl-3",
 
                     typeof className === "function" ? className(state) : className,
                 )

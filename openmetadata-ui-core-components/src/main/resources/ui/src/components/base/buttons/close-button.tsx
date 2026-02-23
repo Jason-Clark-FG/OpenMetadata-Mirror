@@ -3,15 +3,15 @@ import { Button as AriaButton, type ButtonProps as AriaButtonProps } from "react
 import { cx } from "@/utils/cx";
 
 const sizes = {
-    xs: { root: "size-7", icon: "size-4" },
-    sm: { root: "size-9", icon: "size-5" },
-    md: { root: "size-10", icon: "size-5" },
-    lg: { root: "size-11", icon: "size-6" },
+    xs: { root: "tw:size-7", icon: "tw:size-4" },
+    sm: { root: "tw:size-9", icon: "tw:size-5" },
+    md: { root: "tw:size-10", icon: "tw:size-5" },
+    lg: { root: "tw:size-11", icon: "tw:size-6" },
 };
 
 const themes = {
-    light: "text-fg-quaternary hover:bg-primary_hover hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus-ring",
-    dark: "text-fg-white/70 hover:text-fg-white hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus-ring",
+    light: "tw:text-fg-quaternary tw:hover:bg-primary_hover tw:hover:text-fg-quaternary_hover tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:outline-focus-ring",
+    dark: "tw:text-fg-white/70 tw:hover:text-fg-white tw:hover:bg-white/20 tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:outline-focus-ring",
 };
 
 interface CloseButtonProps extends AriaButtonProps {
