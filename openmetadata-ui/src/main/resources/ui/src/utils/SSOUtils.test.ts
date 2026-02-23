@@ -2839,20 +2839,6 @@ describe('SSOUtils', () => {
         expect(mockEvent.preventDefault).toHaveBeenCalled();
         expect(mockEvent.stopPropagation).toHaveBeenCalled();
       });
-
-      it('should prevent default when Enter is pressed in Ant Design Select search field', () => {
-        const div = document.createElement('div');
-        div.className = 'ant-select-search__field';
-        Object.defineProperty(mockEvent, 'target', {
-          value: div,
-          writable: true,
-        });
-
-        handler(mockEvent as KeyboardEvent);
-
-        expect(mockEvent.preventDefault).toHaveBeenCalled();
-        expect(mockEvent.stopPropagation).toHaveBeenCalled();
-      });
     });
 
     describe('should NOT prevent default for special cases', () => {

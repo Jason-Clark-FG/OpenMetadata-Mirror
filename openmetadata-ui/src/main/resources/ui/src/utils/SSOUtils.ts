@@ -1097,13 +1097,8 @@ export const createFormKeyDownHandler = () => {
     ) {
       const target = e.target as HTMLElement;
 
-      if (!target) {
-        return;
-      }
-
       if (
         target.tagName === 'INPUT' ||
-        target.classList.contains('ant-select-search__field') ||
         target.classList.contains('ant-input')
       ) {
         const isInSelectTags = target.closest('.ant-select-selector');
