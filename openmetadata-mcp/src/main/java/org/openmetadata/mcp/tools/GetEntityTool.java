@@ -18,8 +18,10 @@ import org.openmetadata.service.security.policyevaluator.ResourceContext;
 @Slf4j
 public class GetEntityTool implements McpTool {
 
-  // Fields to exclude from response to optimize LLM context usage
-  // These fields are typically verbose and not useful for LLM understanding
+  // Fields to exclude from the DB query and response to optimize performance and LLM context usage.
+  // Heavy relational fields (sampleData, joins, testSuite) are excluded from the DB query to
+  // prevent socket timeouts on large tables. Verbose metadata fields are excluded from the
+  // response to reduce LLM context noise.
   private static final List<String> EXCLUDE_FIELDS =
       List.of(
           "version",
@@ -44,7 +46,10 @@ public class GetEntityTool implements McpTool {
           "columnDescriptionStatus",
           "descriptionStatus",
           "embeddings",
-          "extension");
+          "extension",
+          "sampleData",
+          "joins",
+          "testSuite");
 
   @Override
   public Map<String, Object> execute(
@@ -57,11 +62,11 @@ public class GetEntityTool implements McpTool {
         new OperationContext(entityType, VIEW_ALL),
         new ResourceContext<>(entityType));
     LOG.info("Getting details for entity type: {}, FQN: {}", entityType, fqn);
-    String fields = "*";
+    String excludeFields = String.join(",", EXCLUDE_FIELDS);
     Map<String, Object> entityData =
-        JsonUtils.getMap(Entity.getEntityByName(entityType, fqn, fields, null));
+        JsonUtils.getMap(
+            Entity.getEntityByNameWithExcludedFields(entityType, fqn, excludeFields, null));
 
-    // Clean response to optimize LLM context usage
     return cleanEntityResponse(entityData);
   }
 
