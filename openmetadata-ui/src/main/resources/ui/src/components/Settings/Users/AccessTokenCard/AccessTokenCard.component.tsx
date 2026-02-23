@@ -111,7 +111,7 @@ const AccessTokenCard: FC<MockProps> = ({
               updatedAuthMechanism.config?.JWTTokenExpiry ??
               JWTTokenExpiry.Unlimited,
           });
-          fetchAuthMechanismForBot();
+          await fetchAuthMechanismForBot();
         } else {
           // Fallback to createUserWithPut for non-JWT auth mechanisms (e.g., SSO)
           const {
