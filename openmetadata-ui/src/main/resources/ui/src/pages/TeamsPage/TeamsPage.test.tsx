@@ -21,6 +21,7 @@ import { mockUserData } from '../../mocks/MyDataPage.mock';
 import { MOCK_CURRENT_TEAM, MOCK_TABLE_DATA } from '../../mocks/Teams.mock';
 import { searchQuery } from '../../rest/searchAPI';
 import { getTeamByName, getTeams } from '../../rest/teamsAPI';
+import { collectAllTeamIds } from '../../components/Settings/Team/TeamDetails/TeamDetailsV1.utils';
 import { DEFAULT_ENTITY_PERMISSION } from '../../utils/PermissionsUtils';
 import TeamsPage from './TeamsPage';
 
@@ -41,6 +42,12 @@ jest.mock('../../components/Tag/TagsContainerV2/TagsContainerV2', () => {
 });
 
 const mockOnShowDeletedTeamChange = jest.fn();
+
+jest.mock('../../components/Settings/Team/TeamDetails/TeamDetailsV1.utils', () => ({
+  collectAllTeamIds: jest
+    .fn()
+    .mockResolvedValue(['f9578f16-363a-4788-80fb-d05816c9e169']),
+}));
 
 jest.mock('../../components/Settings/Team/TeamDetails/TeamDetailsV1', () => {
   return jest.fn().mockImplementation(({ onShowDeletedTeamChange }) => {
@@ -239,13 +246,14 @@ describe('Test Teams Page', () => {
       queryFilter: {
         query: {
           bool: {
-            must: [
+            should: [
               {
                 term: {
                   'owners.id': 'f9578f16-363a-4788-80fb-d05816c9e169',
                 },
               },
             ],
+            minimum_should_match: 1,
           },
         },
       },
@@ -253,7 +261,7 @@ describe('Test Teams Page', () => {
     });
   });
 
-  it('should not fetchAssetCount on page load if TeamType is not Group', async () => {
+  it('should fetchAssetCount on page load even if TeamType is not Group', async () => {
     (usePermissionProvider as jest.Mock).mockImplementationOnce(() => ({
       getEntityPermissionByFqn: jest.fn().mockImplementationOnce(() => ({
         ViewBasic: true,
@@ -261,14 +269,59 @@ describe('Test Teams Page', () => {
     }));
 
     (getTeamByName as jest.Mock).mockImplementation(() =>
-      Promise.resolve({ ...MOCK_CURRENT_TEAM, teamType: TeamType.BusinessUnit })
+      Promise.resolve({
+        ...MOCK_CURRENT_TEAM,
+        teamType: TeamType.BusinessUnit,
+        childrenCount: 1,
+      })
     );
+
+    (getTeams as jest.Mock).mockImplementation(() =>
+      Promise.resolve({
+        data: [
+          {
+            id: 'child-team-id',
+            name: 'Child Team',
+            childrenCount: 0,
+          },
+        ],
+      })
+    );
+
+    (collectAllTeamIds as jest.Mock).mockResolvedValue([
+      'f9578f16-363a-4788-80fb-d05816c9e169',
+      'child-team-id',
+    ]);
 
     await act(async () => {
       render(<TeamsPage />);
     });
 
-    expect(searchQuery).not.toHaveBeenCalled();
+    expect(searchQuery).toHaveBeenCalledWith({
+      query: '',
+      pageNumber: 0,
+      pageSize: 0,
+      queryFilter: {
+        query: {
+          bool: {
+            should: [
+              {
+                term: {
+                  'owners.id': 'f9578f16-363a-4788-80fb-d05816c9e169',
+                },
+              },
+              {
+                term: {
+                  'owners.id': 'child-team-id',
+                },
+              },
+            ],
+            minimum_should_match: 1,
+          },
+        },
+      },
+      searchIndex: 'all',
+    });
 
     (getTeamByName as jest.Mock).mockReset();
   });

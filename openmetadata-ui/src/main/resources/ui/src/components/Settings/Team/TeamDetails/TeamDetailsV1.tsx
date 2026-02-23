@@ -107,6 +107,7 @@ import TeamsInfo from './TeamsHeaderSection/TeamsInfo.component';
 import { UserTab } from './UserTab/UserTab.component';
 
 const TeamDetailsV1 = ({
+  allTeamIds,
   assetsCount,
   currentTeam,
   isTeamMemberLoading,
@@ -158,7 +159,7 @@ const TeamDetailsV1 = ({
     return isGroupType ? TeamsPageTab.USERS : TeamsPageTab.TEAMS;
   }, [activeTab, isGroupType]);
   const [deletingUser, setDeletingUser] = useState<{
-    user: UserTeams | undefined;
+    user: undefined | UserTeams;
     state: boolean;
     leave: boolean;
   }>(DELETE_USER_INITIAL_STATE);
@@ -713,20 +714,23 @@ const TeamDetailsV1 = ({
   );
 
   const assetTabRender = useMemo(
-    () => (
-      <AssetsTabs
-        isSummaryPanelOpen
-        assetCount={assetsCount}
-        isEntityDeleted={isTeamDeleted}
-        noDataPlaceholder={t('message.adding-new-asset-to-team')}
-        permissions={entityPermissions}
-        queryFilter={getTermQuery({ 'owners.id': currentTeam.id })}
-        type={AssetsOfEntity.TEAM}
-        onAddAsset={() => navigate(ROUTES.EXPLORE)}
-        onAssetClick={setPreviewAsset}
-      />
-    ),
-    [entityPermissions, assetsCount, setPreviewAsset, isTeamDeleted]
+    () =>
+      allTeamIds.length === 0 ? (
+        <Loader />
+      ) : (
+        <AssetsTabs
+          isSummaryPanelOpen
+          assetCount={assetsCount}
+          isEntityDeleted={isTeamDeleted}
+          noDataPlaceholder={t('message.adding-new-asset-to-team')}
+          permissions={entityPermissions}
+          queryFilter={getTermQuery({ 'owners.id': allTeamIds }, 'should', 1)}
+          type={AssetsOfEntity.TEAM}
+          onAddAsset={() => navigate(ROUTES.EXPLORE)}
+          onAssetClick={setPreviewAsset}
+        />
+      ),
+    [entityPermissions, assetsCount, setPreviewAsset, isTeamDeleted, allTeamIds]
   );
 
   const rolesTabRender = useMemo(
