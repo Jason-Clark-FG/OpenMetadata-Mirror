@@ -64,6 +64,10 @@ const testTag = new TagClass({
 });
 const testGlossary = new Glossary();
 const testGlossaryTerm = new GlossaryTerm(testGlossary);
+const testClassification2 = new ClassificationClass();
+const testTag2 = new TagClass({
+  classification: testClassification2.data.name,
+});
 
 // Entity mapping for tests
 const entityMap = {
@@ -161,6 +165,8 @@ test.describe('Right Panel Test Suite', () => {
       await testTag.create(apiContext);
       await testGlossary.create(apiContext);
       await testGlossaryTerm.create(apiContext);
+      await testClassification2.create(apiContext);
+      await testTag2.create(apiContext);
       await domainEntity.create(apiContext);
       await user1.create(apiContext);
       await dcOwnerTestTable.create(apiContext);
@@ -186,6 +192,8 @@ test.describe('Right Panel Test Suite', () => {
       );
       await testTag.delete(apiContext);
       await testClassification.delete(apiContext);
+      await testTag2.delete(apiContext);
+      await testClassification2.delete(apiContext);
       await testGlossaryTerm.delete(apiContext);
       await testGlossary.delete(apiContext);
       await user1.delete(apiContext);
@@ -1413,59 +1421,51 @@ test.describe('Right Panel Test Suite', () => {
     test.describe('Data Consumer User - Owner Restriction', () => {
       test('Should NOT allow Data Consumer to edit owners when entity has owner', async ({
         adminPage,
-        browser,
+        dataConsumerPage,
       }) => {
-        const { page: dataConsumerPage, afterAction } = await performUserLogin(
-          browser,
-          user1
+        const fqn = getEntityFqn(dcOwnerTestTable);
+
+        // Admin assigns user1 as owner so the entity is no longer ownerless.
+        // When an entity has an owner, EditOwners is no longer granted to all
+        // users — DataConsumer (which lacks EditOwners / EditAll) cannot see
+        // the edit-owners button.
+        await navigateToExploreAndSelectEntity(
+          adminPage,
+          dcOwnerTestTable.entity.name,
+          dcOwnerTestTable.endpoint,
+          fqn
         );
+        await adminPage.waitForSelector(
+          '[data-testid="entity-summary-panel-container"]',
+          { state: 'visible' }
+        );
+        const adminRightPanel = new RightPanelPageObject(adminPage);
+        adminRightPanel.setEntityConfig(dcOwnerTestTable);
+        const adminOverview = new OverviewPageObject(adminRightPanel);
+        await adminOverview.addOwnerWithoutValidation(
+          user1.getUserDisplayName()
+        );
+        await adminOverview.shouldShowOwner(user1.getUserDisplayName());
 
-        try {
-          const fqn = getEntityFqn(dcOwnerTestTable);
-
-          // Admin assigns user1 as owner so the entity is no longer ownerless.
-          // When an entity has an owner, EditOwners is no longer granted to all
-          // users — DataConsumer (which lacks EditOwners / EditAll) cannot see
-          // the edit-owners button.
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            dcOwnerTestTable.entity.name,
-            dcOwnerTestTable.endpoint,
-            fqn
-          );
-          await adminPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-          const adminRightPanel = new RightPanelPageObject(adminPage);
-          adminRightPanel.setEntityConfig(dcOwnerTestTable);
-          const adminOverview = new OverviewPageObject(adminRightPanel);
-          await adminOverview.addOwnerWithoutValidation(
-            user1.getUserDisplayName()
-          );
-          await adminOverview.shouldShowOwner(user1.getUserDisplayName());
-
-          // DataConsumer navigates to the same entity and verifies that the
-          // edit-owners button is NOT visible (restricted by role).
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            dcOwnerTestTable.entity.name,
-            dcOwnerTestTable.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-          const dcSummaryPanel = dataConsumerPage.locator(
-            '.entity-summary-panel-container'
-          );
-          await expect(
-            dcSummaryPanel.getByTestId('edit-owners')
-          ).not.toBeVisible();
-        } finally {
-          await afterAction();
-        }
+        // The pre-configured DataConsumer fixture user (NOT user1, NOT the owner)
+        // navigates to the same entity and verifies that edit-owners is NOT
+        // visible (restricted by role when the entity already has an owner).
+        await navigateToExploreAndSelectEntity(
+          dataConsumerPage,
+          dcOwnerTestTable.entity.name,
+          dcOwnerTestTable.endpoint,
+          fqn
+        );
+        await dataConsumerPage.waitForSelector(
+          '[data-testid="entity-summary-panel-container"]',
+          { state: 'visible' }
+        );
+        const dcSummaryPanel = dataConsumerPage.locator(
+          '.entity-summary-panel-container'
+        );
+        await expect(
+          dcSummaryPanel.getByTestId('edit-owners')
+        ).not.toBeVisible();
       });
     });
 
@@ -1807,6 +1807,7 @@ test.describe('Right Panel Test Suite', () => {
             dashboardEntity.endpoint,
             dashboardFqn
           );
+          await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
           rightPanel.setEntityConfig(dashboardEntity);
 
@@ -1818,6 +1819,8 @@ test.describe('Right Panel Test Suite', () => {
           const dashboardNameInPanel = updatedPanel.getByText(
             dashboardEntity.entity.name
           );
+          // Explicitly wait for the dashboard name to appear before checking absence of table name
+          await dashboardNameInPanel.waitFor({ state: 'visible' });
           await expect(dashboardNameInPanel).toBeVisible();
 
           // Verify the old entity name is no longer visible in the panel
@@ -1861,7 +1864,8 @@ test.describe('Right Panel Test Suite', () => {
           await localOverview.shouldShowTag(tagToUpdate);
 
           // Add second tag (via edit)
-          const secondTag = 'PII.Sensitive';
+          const secondTag =
+            testTag2.responseData?.displayName ?? testTag2.data.displayName;
           await localOverview.editTags(secondTag);
           await localOverview.shouldShowTag(secondTag);
 
