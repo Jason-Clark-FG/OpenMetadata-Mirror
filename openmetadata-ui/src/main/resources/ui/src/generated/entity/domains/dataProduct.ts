@@ -20,6 +20,7 @@ export interface DataProduct {
      * Data assets collection that is part of this data product.
      */
     assets?: EntityReference[];
+    certification?: AssetCertification;
     /**
      * Change that lead to this version of the entity.
      */
@@ -118,6 +119,10 @@ export interface DataProduct {
      * Metadata version of the entity.
      */
     version?: number;
+    /**
+     * Votes on the entity.
+     */
+    votes?: Votes;
 }
 
 /**
@@ -503,4 +508,23 @@ export enum TagSource {
 export enum State {
     Confirmed = "Confirmed",
     Suggested = "Suggested",
+}
+
+/**
+ * Defines the Asset Certification schema.
+ */
+export interface AssetCertification {
+    appliedDate: number;
+    expiryDate: number;
+    tagLabel:   TagLabel;
+}
+
+/**
+ * This schema defines the Votes for a Data Asset.
+ */
+export interface Votes {
+    downVoters?: EntityReference[];
+    downVotes?: number;
+    upVoters?: EntityReference[];
+    upVotes?: number;
 }

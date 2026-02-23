@@ -18,6 +18,7 @@ import { toString } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { QueryVote } from '../../../components/Database/TableQueries/TableQueries.interface';
 import { ROUTES } from '../../../constants/constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
@@ -33,6 +34,7 @@ import {
   getDataProductVersionsList,
   patchDataProduct,
   removeFollower,
+  updateDataProductVotes,
 } from '../../../rest/dataProductAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import {
@@ -131,6 +133,8 @@ const DataProductsPage = () => {
           TabSpecificField.TAGS,
           TabSpecificField.FOLLOWERS,
           TabSpecificField.REVIEWERS,
+          TabSpecificField.VOTES,
+          TabSpecificField.CERTIFICATION,
         ],
       });
       setDataProduct(data);
@@ -247,6 +251,18 @@ const DataProductsPage = () => {
     setIsFollowingLoading(false);
   }, [isFollowing, unFollowDataProduct, followDataProduct]);
 
+  const handleUpdateVote = useCallback(
+    async (data: QueryVote, id: string) => {
+      try {
+        await updateDataProductVotes(id, data);
+        await refreshDataProduct();
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      }
+    },
+    [dataProductFqn]
+  );
+
   // Refresh data product without showing loader (for port updates)
   const refreshDataProduct = useCallback(async () => {
     if (!dataProductFqn) {
@@ -263,6 +279,8 @@ const DataProductsPage = () => {
           TabSpecificField.TAGS,
           TabSpecificField.FOLLOWERS,
           TabSpecificField.REVIEWERS,
+          TabSpecificField.VOTES,
+          TabSpecificField.CERTIFICATION,
         ],
       });
       setDataProduct(data);
@@ -321,6 +339,7 @@ const DataProductsPage = () => {
           onDelete={handleDataProductDelete}
           onRefresh={refreshDataProduct}
           onUpdate={handleDataProductUpdate}
+          onUpdateVote={handleUpdateVote}
         />
       </PageLayoutV1>
 
