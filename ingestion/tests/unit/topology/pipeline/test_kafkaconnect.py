@@ -1077,6 +1077,8 @@ class TestKafkaConnectLineageRefactoring(TestCase):
 
 
 _SEARCH_CONTAINER = "metadata.ingestion.source.pipeline.kafkaconnect.metadata.fqn.search_container_from_es"
+_FQN_BUILD = "metadata.ingestion.source.pipeline.kafkaconnect.metadata.fqn.build"
+_STATIC_FQN = "DearlakeS3.dear-lake-stg.raw_kafka"
 
 
 class TestGetDatasetEntityContainerSearch:
@@ -1084,11 +1086,6 @@ class TestGetDatasetEntityContainerSearch:
     Tests for the container entity lookup in get_dataset_entity(), covering both the
     exact-FQN fast path and the prefix-wildcard fallback introduced to handle containers
     whose names include a topic-name suffix (e.g. raw_kafka/topic-01.v1).
-
-    The fallback calls fqn.search_container_from_es — the dedicated Container search
-    function that works with Container's recursive FQN structure — with container_name
-    suffixed by '*' so that Elasticsearch prefix-matches both the exact name and any
-    topic-suffixed variant.
     """
 
     def _make_source(self):
@@ -1106,7 +1103,7 @@ class TestGetDatasetEntityContainerSearch:
         return KafkaConnectPipelineDetails(name="s3-sink", conn_type="sink")
 
     def test_exact_match_returned_without_prefix_search(self):
-        """Exact FQN hit → prefix search should never be called."""
+        """Exact FQN hit → prefix-search fallback must never be triggered."""
         source = self._make_source()
         pipeline = self._make_pipeline()
         dataset = KafkaConnectDatasetDetails(
@@ -1114,12 +1111,14 @@ class TestGetDatasetEntityContainerSearch:
         )
 
         mock_container = MagicMock()
-        mock_container.fullyQualifiedName.root = "DearlakeS3.dear-lake-stg.raw_kafka"
         source.metadata.get_by_name = MagicMock(return_value=mock_container)
 
-        with patch(_SEARCH_CONTAINER) as mock_search:
-            with patch.object(source, "get_storage_service_names", return_value=["*"]):
-                result = source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(_SEARCH_CONTAINER) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=["DearlakeS3"]
+                ):
+                    result = source.get_dataset_entity(pipeline, dataset)
 
         assert result is mock_container
         mock_search.assert_not_called()
@@ -1138,9 +1137,12 @@ class TestGetDatasetEntityContainerSearch:
         )
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER, return_value=mock_container) as mock_search:
-            with patch.object(source, "get_storage_service_names", return_value=[None]):
-                result = source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(_SEARCH_CONTAINER, return_value=mock_container) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=[None]
+                ):
+                    result = source.get_dataset_entity(pipeline, dataset)
 
         assert result is mock_container
         mock_search.assert_called_once()
@@ -1149,8 +1151,8 @@ class TestGetDatasetEntityContainerSearch:
         """
         Core bug scenario: bucket=dear-lake-stg, prefix=raw_kafka, topic=topic-01.v1.
         The ingested container FQN ends with raw_kafka/topic-01.v1 — exact match fails
-        and the prefix search must be called with container_name='raw_kafka*' so that
-        Elasticsearch can match the suffixed FQN.
+        and the fallback must be called with container_name='raw_kafka*' so that
+        Elasticsearch prefix-matches the suffixed FQN.
         """
         source = self._make_source()
         pipeline = self._make_pipeline()
@@ -1164,13 +1166,14 @@ class TestGetDatasetEntityContainerSearch:
         )
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(
-            _SEARCH_CONTAINER, return_value=container_with_suffix
-        ) as mock_search:
-            with patch.object(
-                source, "get_storage_service_names", return_value=["DearlakeS3"]
-            ):
-                result = source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(
+                _SEARCH_CONTAINER, return_value=container_with_suffix
+            ) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=["DearlakeS3"]
+                ):
+                    result = source.get_dataset_entity(pipeline, dataset)
 
         assert result is container_with_suffix
         mock_search.assert_called_once_with(
@@ -1190,9 +1193,12 @@ class TestGetDatasetEntityContainerSearch:
 
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
-            with patch.object(source, "get_storage_service_names", return_value=[None]):
-                source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=[None]
+                ):
+                    source.get_dataset_entity(pipeline, dataset)
 
         _, call_kwargs = mock_search.call_args
         assert call_kwargs["container_name"] == "raw_kafka*"
@@ -1206,9 +1212,12 @@ class TestGetDatasetEntityContainerSearch:
 
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
-            with patch.object(source, "get_storage_service_names", return_value=[None]):
-                source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value="DearlakeS3.raw_kafka"):
+            with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=[None]
+                ):
+                    source.get_dataset_entity(pipeline, dataset)
 
         _, call_kwargs = mock_search.call_args
         assert call_kwargs["container_name"] == "raw_kafka*"
@@ -1224,11 +1233,12 @@ class TestGetDatasetEntityContainerSearch:
 
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
-            with patch.object(
-                source, "get_storage_service_names", return_value=["DearlakeS3"]
-            ):
-                source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(_SEARCH_CONTAINER, return_value=None) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=["DearlakeS3"]
+                ):
+                    source.get_dataset_entity(pipeline, dataset)
 
         _, call_kwargs = mock_search.call_args
         assert call_kwargs["service_name"] == "DearlakeS3"
@@ -1243,9 +1253,12 @@ class TestGetDatasetEntityContainerSearch:
 
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER, return_value=None):
-            with patch.object(source, "get_storage_service_names", return_value=[None]):
-                result = source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=_STATIC_FQN):
+            with patch(_SEARCH_CONTAINER, return_value=None):
+                with patch.object(
+                    source, "get_storage_service_names", return_value=[None]
+                ):
+                    result = source.get_dataset_entity(pipeline, dataset)
 
         assert result is None
 
@@ -1257,8 +1270,11 @@ class TestGetDatasetEntityContainerSearch:
 
         source.metadata.get_by_name = MagicMock(return_value=None)
 
-        with patch(_SEARCH_CONTAINER) as mock_search:
-            with patch.object(source, "get_storage_service_names", return_value=[None]):
-                source.get_dataset_entity(pipeline, dataset)
+        with patch(_FQN_BUILD, return_value=None):
+            with patch(_SEARCH_CONTAINER) as mock_search:
+                with patch.object(
+                    source, "get_storage_service_names", return_value=[None]
+                ):
+                    source.get_dataset_entity(pipeline, dataset)
 
         mock_search.assert_not_called()
