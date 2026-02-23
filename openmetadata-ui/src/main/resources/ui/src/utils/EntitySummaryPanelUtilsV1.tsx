@@ -936,7 +936,9 @@ const APIEndpointSchemaV1: React.FC<{
     const lowerSearch = searchText.toLowerCase();
     const filterFields = (fieldList: Field[]): Field[] => {
       return fieldList.reduce<Field[]>((acc, field) => {
-        const nameMatch = field.name?.toLowerCase().includes(lowerSearch);
+        const nameMatch =
+          field.name?.toLowerCase().includes(lowerSearch) ||
+          getEntityName(field)?.toLowerCase().includes(lowerSearch);
         const filteredChildren = field.children
           ? filterFields(field.children)
           : [];
