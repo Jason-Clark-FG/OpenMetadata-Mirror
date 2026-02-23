@@ -170,12 +170,12 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
         {
           key: 'reveal-relations',
           icon: <ShareAltOutlined />,
-          label: `${t('label.expand')} 1 hop`,
+          label: t('label.expand-1-hops'),
         },
         {
           key: 'expand-2',
           icon: <ExpandOutlined />,
-          label: `${t('label.expand')} 2 hops`,
+          label: t('label.expand-2-hops'),
         }
       );
     }
@@ -192,8 +192,7 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
         top: position.y,
         left: position.x,
         zIndex: 1050,
-      }}
-    >
+      }}>
       <Menu
         items={menuItems}
         mode="vertical"

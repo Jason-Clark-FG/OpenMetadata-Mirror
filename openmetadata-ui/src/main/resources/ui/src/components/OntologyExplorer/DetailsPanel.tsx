@@ -76,7 +76,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
 
     if (node.entityRef?.type && node.entityRef?.fullyQualifiedName) {
       return getEntityDetailsPath(
-        node.entityRef.type,
+        node.entityRef.type as EntityType,
         node.entityRef.fullyQualifiedName
       );
     }
@@ -123,7 +123,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
     return map;
   }, [relationTypes]);
 
-  const relationLabelOverrides = useMemo(
+  const relationLabelOverrides = useMemo<Record<string, string>>(
     () => ({
       metricFor: `${t('label.metric')} ${t('label.for-lowercase')}`,
       hasGlossaryTerm: t('label.tagged-with'),
@@ -200,7 +200,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
 
   const getReadableType = useCallback(
     (type: string) => {
-      if (node.entityRef?.type) {
+      if (node?.entityRef?.type) {
         return startCase(node.entityRef.type);
       }
       const typeMap: Record<string, string> = {
@@ -246,8 +246,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
           <div className="section-value">
             <Typography.Text
               copyable={{ text: node.fullyQualifiedName }}
-              ellipsis={{ tooltip: node.fullyQualifiedName }}
-            >
+              ellipsis={{ tooltip: node.fullyQualifiedName }}>
               {node.fullyQualifiedName}
             </Typography.Text>
           </div>
@@ -282,8 +281,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                 : node.type === 'dataAsset'
                 ? 'gold'
                 : 'cyan'
-            }
-          >
+            }>
             {getReadableType(node.type)}
           </Tag>
         </div>
@@ -306,8 +304,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                 className="relation-item cursor-pointer"
                 onClick={() =>
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }
-              >
+                }>
                 {(() => {
                   const relationMeta = relationTypeMap.get(rel.relationType);
                   const displayName =
@@ -329,8 +326,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                                   color: '#ffffff',
                                 }
                               : undefined
-                          }
-                        >
+                          }>
                           {displayName}
                         </Tag>
                         <Typography.Text>
@@ -369,8 +365,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                 className="relation-item cursor-pointer"
                 onClick={() =>
                   rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }
-              >
+                }>
                 {(() => {
                   const relationMeta = relationTypeMap.get(rel.relationType);
                   const displayName =
@@ -392,8 +387,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                                   color: '#ffffff',
                                 }
                               : undefined
-                          }
-                        >
+                          }>
                           {displayName}
                         </Tag>
                         <Typography.Text>
@@ -493,10 +487,11 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
 
       {breadcrumbItems.length > 1 && (
         <div className="details-breadcrumb">
-          <Breadcrumb
-            items={breadcrumbItems}
-            separator={<RightOutlined style={{ fontSize: 10 }} />}
-          />
+          <Breadcrumb separator={<RightOutlined style={{ fontSize: 10 }} />}>
+            {breadcrumbItems.map((item) => (
+              <Breadcrumb.Item key={item.key}>{item.title}</Breadcrumb.Item>
+            ))}
+          </Breadcrumb>
         </div>
       )}
 
@@ -514,8 +509,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
             <Button
               icon={<ExportOutlined />}
               type="default"
-              onClick={handleNavigateToEntity}
-            >
+              onClick={handleNavigateToEntity}>
               {t('label.view')}
             </Button>
           </Tooltip>
@@ -524,8 +518,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
           <Button
             icon={<PlusOutlined />}
             type="primary"
-            onClick={() => onAddRelation(node)}
-          >
+            onClick={() => onAddRelation(node)}>
             {t('label.add-entity', { entity: t('label.relation') })}
           </Button>
         )}

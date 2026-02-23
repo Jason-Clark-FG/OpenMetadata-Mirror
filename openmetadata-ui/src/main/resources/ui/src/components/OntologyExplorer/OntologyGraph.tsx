@@ -319,7 +319,7 @@ const OntologyGraph: React.FC<OntologyGraphProps> = ({
           const isSelected = selectedNodeId === node.id;
           const isHighlighted =
             selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
-          const isConnected = connectionCounts.get(node.id) ?? 0 > 0;
+          const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
           const glossaryColor =
             node.glossaryId && glossaryColorMap[node.glossaryId]
               ? glossaryColorMap[node.glossaryId]
@@ -363,7 +363,7 @@ const OntologyGraph: React.FC<OntologyGraphProps> = ({
           const isSelected = selectedNodeId === node.id;
           const isHighlighted =
             selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
-          const isConnected = connectionCounts.get(node.id) ?? 0 > 0;
+          const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
           const glossaryColor =
             node.glossaryId && glossaryColorMap[node.glossaryId]
               ? glossaryColorMap[node.glossaryId]
@@ -550,8 +550,7 @@ const OntologyGraph: React.FC<OntologyGraphProps> = ({
         onNodeContextMenu={handleNodeContextMenu}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodesChange={onNodesChange}
-        onPaneClick={handlePaneClick}
-      >
+        onPaneClick={handlePaneClick}>
         <Background color="#e5e7eb" gap={20} size={1} />
 
         {showMinimap && (

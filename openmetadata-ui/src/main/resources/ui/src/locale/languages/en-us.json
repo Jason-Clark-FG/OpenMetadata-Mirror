@@ -737,6 +737,8 @@
     "exit-full-screen": "Exit Full Screen",
     "exit-version-history": "Exit Version History",
     "expand": "Expand",
+    "expand-1-hops": "Expand 1 hops",
+    "expand-2-hops": "Expand 2 hops",
     "expand-all": "Expand All",
     "expert-lowercase": "expert",
     "expert-plural": "Experts",

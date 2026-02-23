@@ -737,6 +737,8 @@
     "exit-full-screen": "전체 화면 종료",
     "exit-version-history": "버전 기록 종료",
     "expand": "확장",
+    "expand-1-hops": "1홉 확장",
+    "expand-2-hops": "2홉 확장",
     "expand-all": "모두 확장",
     "expert-lowercase": "전문가",
     "expert-plural": "전문가들",

@@ -14,6 +14,7 @@
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 import { Typography } from 'antd';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OntologyEdge } from './OntologyExplorer.interface';
 
 const RELATION_COLORS: Record<string, string> = {
@@ -89,6 +90,7 @@ export interface OntologyLegendProps {
 }
 
 const OntologyLegend: React.FC<OntologyLegendProps> = ({ edges }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   const activeRelationTypes = useMemo(() => {
@@ -110,10 +112,9 @@ const OntologyLegend: React.FC<OntologyLegendProps> = ({ edges }) => {
     <div className="ontology-legend">
       <div
         className="ontology-legend__header"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+        onClick={() => setIsExpanded(!isExpanded)}>
         <Typography.Text strong className="ontology-legend__title">
-          Relation Types
+          {t('label.relation-type-plural')}
         </Typography.Text>
         {isExpanded ? (
           <DownOutlined className="ontology-legend__icon" />

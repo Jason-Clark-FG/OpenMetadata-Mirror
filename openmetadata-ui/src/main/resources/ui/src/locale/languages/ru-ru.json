@@ -737,6 +737,8 @@
     "exit-full-screen": "Выйти из полноэкранного режима",
     "exit-version-history": "Закрыть историю версий",
     "expand": "Развернуть",
+    "expand-1-hops": "Развернуть на 1 шаг",
+    "expand-2-hops": "Развернуть на 2 шага",
     "expand-all": "Развернуть все",
     "expert-lowercase": "эксперт",
     "expert-plural": "Эксперты",

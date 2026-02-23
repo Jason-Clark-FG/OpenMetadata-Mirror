@@ -1202,11 +1202,11 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   }, [selectedTreeNode, filteredGraphData]);
 
   const handleZoomIn = useCallback(() => {
-    graphRef.current?.fitView();
+    graphRef.current?.zoomIn();
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    graphRef.current?.fitView();
+    graphRef.current?.zoomOut();
   }, []);
 
   const handleFitToScreen = useCallback(() => {
@@ -1231,7 +1231,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   }, []);
 
   const handleRearrange = useCallback(() => {
-    graphRef.current?.fitView();
+    graphRef.current?.runLayout();
   }, []);
 
   const handleUndo = useCallback(() => {
@@ -1320,10 +1320,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
       setExplorationMode(mode);
       if (mode === 'data') {
         modelFiltersRef.current = filters;
-        const nextFilters = {
+        const nextFilters: GraphFilters = {
           ...dataFiltersRef.current,
           relationTypes: [METRIC_RELATION_TYPE, ASSET_RELATION_TYPE],
-          viewMode: 'overview',
+          viewMode: 'overview' as GraphViewMode,
         };
         setFilters(nextFilters);
         setSettings((prev) => ({ ...prev, showMetrics: true }));
@@ -1477,7 +1477,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
       setSelectedTermValues([]);
       fetchAllGlossaryData(glossaryId);
     } catch (error) {
-      showErrorToast(error as AxiosError, t('server.entity-update-error'));
+      showErrorToast(
+        error as AxiosError,
+        t('server.entity-updating-error', { entity: t('label.relation') })
+      );
     } finally {
       setQuickAddSaving(false);
     }
@@ -1516,7 +1519,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const getNodePath = useCallback((node: OntologyNode) => {
     if (node.entityRef?.type && node.entityRef?.fullyQualifiedName) {
       return getEntityDetailsPath(
-        node.entityRef.type,
+        node.entityRef.type as EntityType,
         node.entityRef.fullyQualifiedName
       );
     }
@@ -1843,8 +1846,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   return (
     <div
       className={classNames('ontology-explorer', className)}
-      style={{ height }}
-    >
+      style={{ height }}>
       {showHeader && (
         <div className="ontology-explorer-header">
           <Typography.Title className="header-title" level={4}>
@@ -1876,8 +1878,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                 scope === 'global'
                   ? t('label.change-entity', { entity: t('label.glossary') })
                   : t('message.available-on-global-view')
-              }
-            >
+              }>
               <Select
                 className="actionbar-select"
                 disabled={scope !== 'global'}
@@ -1906,24 +1907,21 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             <Button
               icon={<PlusOutlined />}
               size="small"
-              onClick={handleNewExploration}
-            >
+              onClick={handleNewExploration}>
               {t('label.new')}
             </Button>
 
             <Button
               icon={<SaveOutlined />}
               size="small"
-              onClick={() => setIsSaveModalOpen(true)}
-            >
+              onClick={() => setIsSaveModalOpen(true)}>
               {t('label.save')}
             </Button>
 
             <Button
               icon={<FolderOpenOutlined />}
               size="small"
-              onClick={() => setIsSavedDrawerOpen(true)}
-            >
+              onClick={() => setIsSavedDrawerOpen(true)}>
               {t('label.open')}
             </Button>
 
@@ -1944,17 +1942,15 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             <Dropdown
               menu={{
                 items: [
-                  { key: '1', label: t('label.expand') + ' 1 hop' },
-                  { key: '2', label: t('label.expand') + ' 2 hops' },
+                  { key: '1', label: t('label.expand-1-hops') },
+                  { key: '2', label: t('label.expand-2-hops') },
                 ],
                 onClick: ({ key }) => handleGrowSelection(Number(key)),
-              }}
-            >
+              }}>
               <Button
                 disabled={!selectedNode && !selectedTreeNode}
                 icon={<ExpandOutlined />}
-                size="small"
-              >
+                size="small">
                 {t('label.grow-selection')}
               </Button>
             </Dropdown>
@@ -1968,8 +1964,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             <Button
               icon={<ApartmentOutlined />}
               size="small"
-              onClick={() => handleQuickAddOpen(selectedNode ?? undefined)}
-            >
+              onClick={() => handleQuickAddOpen(selectedNode ?? undefined)}>
               {t('label.quick-add')}
             </Button>
           </Space>
@@ -2017,13 +2012,11 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                   onClick: ({ key }) =>
                     handleExport(key as OntologyExportFormat),
                 }}
-                placement="bottomRight"
-              >
+                placement="bottomRight">
                 <Button
                   icon={<DownloadOutlined />}
                   loading={exporting}
-                  size="small"
-                >
+                  size="small">
                   {t('label.export')}
                 </Button>
               </Dropdown>
@@ -2103,8 +2096,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         open={isSaveModalOpen}
         title={t('label.save-exploration')}
         onCancel={() => setIsSaveModalOpen(false)}
-        onOk={handleSaveExploration}
-      >
+        onOk={handleSaveExploration}>
         <Form form={saveForm} layout="vertical">
           <Form.Item
             label={t('label.name')}
@@ -2114,8 +2106,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                 required: true,
                 message: t('label.field-required', { field: t('label.name') }),
               },
-            ]}
-          >
+            ]}>
             <Input
               placeholder={t('label.enter-entity', { entity: t('label.name') })}
             />
@@ -2128,11 +2119,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         placement="right"
         title={t('label.saved-explorations')}
         width={420}
-        onClose={() => setIsSavedDrawerOpen(false)}
-      >
+        onClose={() => setIsSavedDrawerOpen(false)}>
         <List
           dataSource={savedExplorations}
-          locale={{ emptyText: t('message.no-data-found') }}
+          locale={{ emptyText: t('label.no-data-found') }}
           renderItem={(item) => (
             <List.Item
               actions={[
@@ -2140,8 +2130,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                   key="open"
                   size="small"
                   type="link"
-                  onClick={() => handleOpenExploration(item)}
-                >
+                  onClick={() => handleOpenExploration(item)}>
                   {t('label.open')}
                 </Button>,
                 <Button
@@ -2149,12 +2138,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                   key="delete"
                   size="small"
                   type="link"
-                  onClick={() => handleDeleteExploration(item.id)}
-                >
+                  onClick={() => handleDeleteExploration(item.id)}>
                   {t('label.delete')}
                 </Button>,
-              ]}
-            >
+              ]}>
               <List.Item.Meta
                 description={new Date(item.createdAt).toLocaleString()}
                 title={item.name}
@@ -2169,8 +2156,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         placement="right"
         title={t('label.quick-add')}
         width={420}
-        onClose={handleQuickAddClose}
-      >
+        onClose={handleQuickAddClose}>
         <div className="quick-add-panel">
           {(() => {
             const isMetric = selectedNode?.type === METRIC_NODE_TYPE;
@@ -2225,18 +2211,25 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                     })}
                     value={selectedTermValues}
                     onChange={handleTermSelectionChange}
+                    onDropdownVisibleChange={(open) => {
+                      if (open && termOptions.length === 0) {
+                        handleSearchGlossaryTerms('');
+                      }
+                    }}
                     onSearch={handleSearchGlossaryTerms}
                   />
                 </div>
                 <Button
                   className="m-t-sm"
                   disabled={
-                    !selectedNode || isAsset || selectedTermValues.length === 0
+                    !selectedNode ||
+                    isAsset ||
+                    selectedTermValues.length === 0 ||
+                    (!isMetric && !selectedRelationType)
                   }
                   loading={quickAddSaving}
                   type="primary"
-                  onClick={handleAddRelation}
-                >
+                  onClick={handleAddRelation}>
                   {isMetric
                     ? t('label.add-entity', {
                         entity: t('label.glossary-term'),
@@ -2271,8 +2264,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                       }
                       const path = getNodePath(selectedNode);
                       window.open(path, '_blank');
-                    }}
-                  >
+                    }}>
                     {t('label.edit-entity', { entity: editEntityLabel })}
                   </Button>
                 </div>

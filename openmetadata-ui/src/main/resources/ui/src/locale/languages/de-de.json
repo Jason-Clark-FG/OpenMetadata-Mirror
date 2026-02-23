@@ -737,6 +737,8 @@
     "exit-full-screen": "Vollbildmodus beenden",
     "exit-version-history": "Versionshistorie verlassen",
     "expand": "Erweitern",
+    "expand-1-hops": "1 Hop erweitern",
+    "expand-2-hops": "2 Hops erweitern",
     "expand-all": "Alles erweitern",
     "expert-lowercase": "experte",
     "expert-plural": "experten",

@@ -737,6 +737,8 @@
     "exit-full-screen": "全画面表示を終了",
     "exit-version-history": "バージョン履歴を閉じる",
     "expand": "展開",
+    "expand-1-hops": "1ホップ展開",
+    "expand-2-hops": "2ホップ展開",
     "expand-all": "すべて展開",
     "expert-lowercase": "専門家",
     "expert-plural": "専門家",

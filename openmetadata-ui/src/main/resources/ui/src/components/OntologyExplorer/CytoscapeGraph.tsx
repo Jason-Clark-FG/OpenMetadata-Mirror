@@ -14,8 +14,9 @@
 import cytoscape, {
   Core,
   EventObject,
+  LayoutOptions,
   NodeSingular,
-  Stylesheet,
+  StylesheetStyle,
 } from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import {
@@ -124,6 +125,9 @@ export interface CytoscapeGraphProps {
 
 export interface CytoscapeGraphHandle {
   fitView: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  runLayout: () => void;
   focusNode: (nodeId: string) => void;
   getNodePositions: () => Record<string, { x: number; y: number }>;
 }
@@ -155,6 +159,9 @@ const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, CytoscapeGraphProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const cyRef = useRef<Core | null>(null);
     const nodesMapRef = useRef<Map<string, OntologyNode>>(new Map());
+    const getLayoutConfigRef = useRef<() => LayoutOptions>(() => ({
+      name: 'fcose',
+    }));
 
     useImperativeHandle(
       ref,
@@ -162,6 +169,28 @@ const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, CytoscapeGraphProps>(
         fitView: () => {
           if (cyRef.current) {
             cyRef.current.fit(undefined, 80);
+          }
+        },
+        zoomIn: () => {
+          const cy = cyRef.current;
+          if (cy) {
+            cy.zoom(Math.min(cy.zoom() * 1.3, cy.maxZoom()));
+            cy.center();
+          }
+        },
+        zoomOut: () => {
+          const cy = cyRef.current;
+          if (cy) {
+            cy.zoom(Math.max(cy.zoom() / 1.3, cy.minZoom()));
+            cy.center();
+          }
+        },
+        runLayout: () => {
+          const cy = cyRef.current;
+          if (cy && cy.nodes().length > 0) {
+            const layout = cy.layout(getLayoutConfigRef.current());
+            layout.run();
+            layout.on('layoutstop', () => cy.fit(undefined, 50));
           }
         },
         focusNode: (nodeId: string) => {
@@ -366,7 +395,7 @@ const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, CytoscapeGraphProps>(
       nodePositions,
     ]);
 
-    const getStylesheet = useCallback((): Stylesheet[] => {
+    const getStylesheet = useCallback((): StylesheetStyle[] => {
       return [
         {
           selector: 'node',
@@ -580,6 +609,10 @@ const CytoscapeGraph = forwardRef<CytoscapeGraphHandle, CytoscapeGraphProps>(
           };
       }
     }, [settings.layout, settings.animateTransitions, nodePositions]);
+
+    useEffect(() => {
+      getLayoutConfigRef.current = getLayoutConfig;
+    }, [getLayoutConfig]);
 
     useEffect(() => {
       if (!containerRef.current) {

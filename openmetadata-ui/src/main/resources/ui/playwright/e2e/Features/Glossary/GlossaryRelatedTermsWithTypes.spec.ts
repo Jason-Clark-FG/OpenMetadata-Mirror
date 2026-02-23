@@ -46,14 +46,19 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add related term without specifying type (defaults to relatedTo)
       await addRelatedTerms(page, [term2]);
 
       // Verify related term is visible
-      const relatedTermName = term2.responseData?.displayName;
+      const relatedTermName =
+        term2.responseData?.displayName ?? term2.data.displayName;
       const relatedContainer = page.getByTestId('related-term-container');
+      await relatedContainer.waitFor({ state: 'visible' });
       await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
 
       // Verify relation type label is shown
@@ -79,14 +84,19 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add related term with synonym type
       await addRelatedTerms(page, [term2], 'Synonym');
 
       // Verify related term is visible
-      const relatedTermName = term2.responseData?.displayName;
+      const relatedTermName =
+        term2.responseData?.displayName ?? term2.data.displayName;
       const relatedContainer = page.getByTestId('related-term-container');
+      await relatedContainer.waitFor({ state: 'visible' });
       await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
 
       // Verify relation type label is shown
@@ -112,14 +122,19 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add related term with broader type
       await addRelatedTerms(page, [term2], 'Broader');
 
       // Verify related term is visible
-      const relatedTermName = term2.responseData?.displayName;
+      const relatedTermName =
+        term2.responseData?.displayName ?? term2.data.displayName;
       const relatedContainer = page.getByTestId('related-term-container');
+      await relatedContainer.waitFor({ state: 'visible' });
       await expect(relatedContainer.getByText(relatedTermName)).toBeVisible();
 
       // Verify relation type label is shown
@@ -145,7 +160,10 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Click add related term button
       await page.getByTestId('related-term-add-button').click();
@@ -169,9 +187,9 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       // Wait for dropdown to appear
       const dropdown = page.locator('.ant-select-dropdown').last();
-      await dropdown.waitFor({ state: 'visible' });
+      await dropdown.waitFor({ state: 'visible', timeout: 5000 });
 
-      // Verify options in dropdown
+      // Verify options in dropdown (display names from API/settings)
       await expect(
         dropdown.locator('.ant-select-item-option-content').filter({ hasText: 'Related To' })
       ).toBeVisible();
@@ -210,17 +228,25 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add synonym relation from term1 to term2
       await addRelatedTerms(page, [term2], 'Synonym');
 
       // Navigate to term2 and verify term1 is shown as synonym
-      await selectActiveGlossaryTerm(page, term2.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term2.responseData?.displayName ?? term2.data.displayName
+      );
 
       // Wait for page to load
-      const term1Name = term1.responseData?.displayName;
+      const term1Name =
+        term1.responseData?.displayName ?? term1.data.displayName;
       const relatedContainer = page.getByTestId('related-term-container');
+      await relatedContainer.waitFor({ state: 'visible' });
       await expect(relatedContainer.getByText(term1Name)).toBeVisible();
 
       // Verify the relation type is Synonym on term2's page too
@@ -295,7 +321,10 @@ test.describe('Glossary Related Terms with Relation Types', () => {
       // Add relations via UI since the API endpoint may not exist yet
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add synonym relation
       await addRelatedTerms(page, [term2], 'Synonym');
@@ -319,9 +348,12 @@ test.describe('Glossary Related Terms with Relation Types', () => {
       await expect(relatedContainer.getByText('Related To')).toBeVisible();
 
       // Verify terms are visible (by their display names in the UI)
-      const term2Name = term2.responseData?.displayName;
-      const term3Name = term3.responseData?.displayName;
-      const term4Name = term4.responseData?.displayName;
+      const term2Name =
+        term2.responseData?.displayName ?? term2.data.displayName;
+      const term3Name =
+        term3.responseData?.displayName ?? term3.data.displayName;
+      const term4Name =
+        term4.responseData?.displayName ?? term4.data.displayName;
       await expect(relatedContainer.getByText(term2Name)).toBeVisible();
       await expect(relatedContainer.getByText(term3Name)).toBeVisible();
       await expect(relatedContainer.getByText(term4Name)).toBeVisible();
@@ -350,21 +382,41 @@ test.describe('Glossary Related Terms with Relation Types', () => {
 
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
-      await selectActiveGlossaryTerm(page, term1.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term1.responseData?.displayName ?? term1.data.displayName
+      );
 
       // Add synonym relation
       await addRelatedTerms(page, [term2], 'Synonym');
 
       // Verify relation exists
-      const term2Name = term2.responseData?.displayName;
+      const term2Name =
+        term2.responseData?.displayName ?? term2.data.displayName;
       const relatedContainer = page.getByTestId('related-term-container');
+      await relatedContainer.waitFor({ state: 'visible' });
       await expect(relatedContainer.getByText(term2Name)).toBeVisible();
 
       // Click edit button to enter edit mode
       await relatedContainer.getByTestId('edit-button').click();
 
-      // Wait for edit mode and remove the tag
-      await page.locator('.ant-tag-close-icon').first().click();
+      // Wait for edit form; relation type defaults to 'relatedTo' - switch to Synonym to see term2
+      const relationTypeSelect = page.getByTestId('relation-type-select');
+      await relationTypeSelect.waitFor({ state: 'visible', timeout: 5000 });
+      await relationTypeSelect.locator('.ant-select-selector').click({ force: true });
+      await page.locator('.ant-select-dropdown').last().waitFor({ state: 'visible' });
+      await page
+        .locator('.ant-select-item-option-content')
+        .filter({ hasText: 'Synonym' })
+        .first()
+        .click();
+
+      // Remove the selected term tag (Ant Design Select/TreeSelect remove icon)
+      const removeIcon = relatedContainer
+        .locator('.ant-tag-close-icon')
+        .or(relatedContainer.locator('.ant-select-selection-item-remove'))
+        .first();
+      await removeIcon.click();
 
       // Save the changes
       const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');
@@ -375,10 +427,14 @@ test.describe('Glossary Related Terms with Relation Types', () => {
       await expect(relatedContainer.getByText(term2Name)).not.toBeVisible();
 
       // Navigate to term2 and verify term1 is also removed
-      await selectActiveGlossaryTerm(page, term2.data.displayName);
+      await selectActiveGlossaryTerm(
+        page,
+        term2.responseData?.displayName ?? term2.data.displayName
+      );
       await page.waitForLoadState('networkidle');
 
-      const term1Name = term1.responseData?.displayName;
+      const term1Name =
+        term1.responseData?.displayName ?? term1.data.displayName;
       const term2RelatedContainer = page.getByTestId('related-term-container');
       await expect(term2RelatedContainer.getByText(term1Name)).not.toBeVisible();
     } finally {

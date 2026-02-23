@@ -737,6 +737,8 @@
     "exit-full-screen": "Salir de pantalla completa",
     "exit-version-history": "Salir del historial de versiones",
     "expand": "Expandir",
+    "expand-1-hops": "Expandir 1 salto",
+    "expand-2-hops": "Expandir 2 saltos",
     "expand-all": "Expandir todo",
     "expert-lowercase": "experto",
     "expert-plural": "Expertos",
