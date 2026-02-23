@@ -15,7 +15,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Edge } from 'reactflow';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { useCanvasEdgeRenderer } from '../../../hooks/useCanvasEdgeRenderer';
-import { useIconSprites } from '../../../hooks/useIconSprites';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import { clearEdgeStyleCache } from '../../../utils/EdgeStyleUtils';
 
@@ -39,10 +38,13 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
   const { isEditMode } = useLineageStore();
   const { edges } = useLineageProvider();
 
-  // Keep stable refs for callbacks so the pane event listener effect
+  // Keep stable refs for callbacks and getEdgeAtPoint so the pane event listener effect
   // doesn't re-run on every render.
   const onEdgeClickRef = useRef(onEdgeClick);
   const onEdgeHoverRef = useRef(onEdgeHover);
+  const getEdgeAtPointRef = useRef<
+    ((x: number, y: number, rect: DOMRect) => Edge | null) | null
+  >(null);
 
   useEffect(() => {
     onEdgeClickRef.current = onEdgeClick;
@@ -51,8 +53,6 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
   useEffect(() => {
     onEdgeHoverRef.current = onEdgeHover;
   }, [onEdgeHover]);
-
-  const sprites = useIconSprites();
 
   useEffect(() => {
     const updateSize = () => {
@@ -85,11 +85,14 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
     edges,
     dqHighlightedEdges,
     theme,
-    sprites,
     hoverEdge,
     containerWidth: containerSize.width,
     containerHeight: containerSize.height,
   });
+
+  useEffect(() => {
+    getEdgeAtPointRef.current = getEdgeAtPoint;
+  }, [getEdgeAtPoint]);
 
   useEffect(() => {
     redraw();
@@ -116,12 +119,13 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
     }
 
     const handleClick = (event: Event) => {
-      if (isEditMode) {
-        return;
-      }
       const mouseEvent = event as MouseEvent;
       const rect = container.getBoundingClientRect();
-      const edge = getEdgeAtPoint(mouseEvent.clientX, mouseEvent.clientY, rect);
+      const edge = getEdgeAtPointRef.current?.(
+        mouseEvent.clientX,
+        mouseEvent.clientY,
+        rect
+      );
       if (edge) {
         onEdgeClickRef.current?.(edge, mouseEvent);
       }
@@ -133,8 +137,12 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
       }
       const mouseEvent = event as MouseEvent;
       const rect = container.getBoundingClientRect();
-      const edge = getEdgeAtPoint(mouseEvent.clientX, mouseEvent.clientY, rect);
-      onEdgeHoverRef.current?.(edge);
+      const edge = getEdgeAtPointRef.current?.(
+        mouseEvent.clientX,
+        mouseEvent.clientY,
+        rect
+      );
+      edge && onEdgeHoverRef.current?.(edge);
     };
 
     const handleMouseLeave = () => {
@@ -150,7 +158,7 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
       pane.removeEventListener('mousemove', handleMouseMove);
       pane.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [getEdgeAtPoint, isEditMode]);
+  }, [isEditMode]);
 
   return (
     <div

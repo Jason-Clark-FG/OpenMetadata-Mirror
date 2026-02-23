@@ -338,8 +338,6 @@ export function getBezierEndTangentAngle(
   targetX: number,
   targetY: number
 ): number {
-  // Match a cubic bezier command: C c1x c1y c2x c2y tx ty
-  // Numbers may be negative / decimal.
   const cubicRe =
     /[Cc]\s*([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)/g;
 
@@ -357,12 +355,49 @@ export function getBezierEndTangentAngle(
     const dx = tx - c2x;
     const dy = ty - c2y;
 
-    // Only use the bezier tangent if the control point isn't collapsed onto
-    // the endpoint (degenerate bezier).
     if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
       return Math.atan2(dy, dx);
     }
   }
 
   return getEdgeAngle(sourceX, sourceY, targetX, targetY);
+}
+
+export function getCubicBezierMidpoint(
+  pathString: string,
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number
+): { x: number; y: number } {
+  const cubicRe =
+    /[Cc]\s*([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)[,\s]+([-\d.e+]+)/;
+
+  const match = pathString.match(cubicRe);
+
+  if (match) {
+    const c1x = parseFloat(match[1]);
+    const c1y = parseFloat(match[2]);
+    const c2x = parseFloat(match[3]);
+    const c2y = parseFloat(match[4]);
+    const tx = parseFloat(match[5]);
+    const ty = parseFloat(match[6]);
+
+    const t = 0.5;
+    const mt = 1 - t;
+    const mt2 = mt * mt;
+    const mt3 = mt2 * mt;
+    const t2 = t * t;
+    const t3 = t2 * t;
+
+    const x = mt3 * sourceX + 3 * mt2 * t * c1x + 3 * mt * t2 * c2x + t3 * tx;
+    const y = mt3 * sourceY + 3 * mt2 * t * c1y + 3 * mt * t2 * c2y + t3 * ty;
+
+    return { x, y };
+  }
+
+  return {
+    x: (sourceX + targetX) / 2,
+    y: (sourceY + targetY) / 2,
+  };
 }

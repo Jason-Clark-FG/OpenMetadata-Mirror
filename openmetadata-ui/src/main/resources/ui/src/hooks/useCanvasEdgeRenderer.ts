@@ -13,7 +13,6 @@
 import { Theme } from '@mui/material';
 import { RefObject, useCallback, useEffect, useRef } from 'react';
 import { Edge, Position, useNodes, useReactFlow, useViewport } from 'reactflow';
-import { StatusType } from '../generated/entity/data/pipeline';
 import {
   drawArrowMarker,
   getBezierEndTangentAngle,
@@ -23,7 +22,6 @@ import {
 } from '../utils/CanvasUtils';
 import { computeEdgeStyle } from '../utils/EdgeStyleUtils';
 import { getEdgePathData } from '../utils/EntityLineageUtils';
-import { IconSprites } from './useIconSprites';
 import { useLineageStore } from './useLineageStore';
 
 interface UseCanvasEdgeRendererProps {
@@ -32,7 +30,6 @@ interface UseCanvasEdgeRendererProps {
   hoverEdge?: Edge | null;
   dqHighlightedEdges: Set<string>;
   theme: Theme;
-  sprites: IconSprites | null;
   containerWidth: number;
   containerHeight: number;
 }
@@ -48,7 +45,6 @@ export function useCanvasEdgeRenderer({
   edges,
   hoverEdge,
   theme,
-  sprites,
   containerWidth,
   containerHeight,
 }: UseCanvasEdgeRendererProps) {
@@ -77,59 +73,6 @@ export function useCanvasEdgeRenderer({
   } = useLineageStore();
 
   const viewport = useViewport();
-
-  const drawEdgeIcons = useCallback(
-    (
-      ctx: CanvasRenderingContext2D,
-      edge: Edge,
-      centerX: number,
-      centerY: number
-    ) => {
-      if (!sprites) {
-        return;
-      }
-
-      const {
-        edge: edgeDetails,
-        isColumnLineage,
-        columnFunctionValue,
-        isExpanded,
-      } = edge.data;
-
-      const hasLabel = !isColumnLineage && edgeDetails?.pipeline;
-      const hasFunction = !isColumnLineage && columnFunctionValue && isExpanded;
-
-      if (hasLabel && edgeDetails.pipeline) {
-        const pipelineStatus = edgeDetails.pipeline.pipelineStatus;
-        let sprite = sprites.pipeline;
-
-        if (pipelineStatus) {
-          switch (pipelineStatus.executionStatus) {
-            case StatusType.Successful:
-              sprite = sprites.pipelineGreen;
-
-              break;
-            case StatusType.Failed:
-              sprite = sprites.pipelineRed;
-
-              break;
-            case StatusType.Pending:
-            case StatusType.Skipped:
-              sprite = sprites.pipelineAmber;
-
-              break;
-          }
-        }
-
-        ctx.drawImage(sprite, centerX - 8, centerY - 8, 16, 16);
-      }
-
-      if (hasFunction) {
-        ctx.drawImage(sprites.function, centerX - 8, centerY - 8, 16, 16);
-      }
-    },
-    [sprites]
-  );
 
   const drawEdge = useCallback(
     (ctx: CanvasRenderingContext2D, edge: Edge): Path2D | null => {
@@ -194,10 +137,6 @@ export function useCanvasEdgeRenderer({
           style.stroke
         );
 
-        if (sprites && edge.data) {
-          drawEdgeIcons(ctx, edge, pathData.edgeCenterX, pathData.edgeCenterY);
-        }
-
         return path;
       }
 
@@ -244,10 +183,6 @@ export function useCanvasEdgeRenderer({
         );
       }
 
-      if (sprites && edge.data) {
-        drawEdgeIcons(ctx, edge, pathData.edgeCenterX, pathData.edgeCenterY);
-      }
-
       return path;
     },
     [
@@ -257,8 +192,6 @@ export function useCanvasEdgeRenderer({
       dqHighlightedEdges,
       selectedColumn,
       theme,
-      sprites,
-      drawEdgeIcons,
       columnsInCurrentPages,
       hoverEdge,
       selectedEdge,

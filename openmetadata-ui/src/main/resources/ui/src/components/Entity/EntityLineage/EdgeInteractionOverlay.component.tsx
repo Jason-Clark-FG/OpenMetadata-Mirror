@@ -14,14 +14,15 @@ import Icon from '@ant-design/icons/lib/components/Icon';
 import { Button, Tag } from 'antd';
 import classNames from 'classnames';
 import React from 'react';
-import { Edge, useViewport, Viewport } from 'reactflow';
+import { Edge, Position, useReactFlow, useViewport, Viewport } from 'reactflow';
 import { ReactComponent as IconEditCircle } from '../../../assets/svg/ic-edit-circle.svg';
 import { ReactComponent as FunctionIcon } from '../../../assets/svg/ic-function.svg';
 import { ReactComponent as IconTimesCircle } from '../../../assets/svg/ic-times-circle.svg';
 import { ReactComponent as PipelineIcon } from '../../../assets/svg/pipeline-grey.svg';
 import { StatusType } from '../../../generated/entity/data/pipeline';
 import { useLineageStore } from '../../../hooks/useLineageStore';
-import { transformPoint } from '../../../utils/CanvasUtils';
+import { getEdgeCoordinates, transformPoint } from '../../../utils/CanvasUtils';
+import { getEdgePathData } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
@@ -83,9 +84,35 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
   onPipelineClick,
   onEdgeRemove,
 }) => {
-  const { isEditMode, selectedEdge } = useLineageStore();
-
+  const { isEditMode, selectedEdge, columnsInCurrentPages } = useLineageStore();
+  const { getNode } = useReactFlow();
   const viewport = useViewport();
+
+  const computePathData = (edge: Edge) => {
+    if (edge.data?.computedPath) {
+      return edge.data.computedPath;
+    }
+
+    const coords = getEdgeCoordinates(
+      edge,
+      getNode(edge.source),
+      getNode(edge.target),
+      columnsInCurrentPages
+    );
+
+    if (!coords) {
+      return null;
+    }
+
+    return getEdgePathData(edge.source, edge.target, {
+      sourceX: coords.sourceX,
+      sourceY: coords.sourceY,
+      targetX: coords.targetX,
+      targetY: coords.targetY,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    });
+  };
   const renderPipelinePopover = (edge: Edge) => {
     const {
       edge: edgeDetails,
@@ -102,7 +129,7 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
       return null;
     }
 
-    const pathData = edge.data?.computedPath;
+    const pathData = computePathData(edge);
     if (!pathData) {
       return null;
     }
@@ -182,7 +209,7 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
       return null;
     }
 
-    const pathData = edge.data?.computedPath;
+    const pathData = computePathData(edge);
     if (!pathData) {
       return null;
     }
@@ -250,7 +277,7 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
 
   const renderEditButton = (edge: Edge) => {
     const { isColumnLineage } = edge.data || {};
-    const pathData = edge.data?.computedPath;
+    const pathData = computePathData(edge);
 
     if (isColumnLineage || !pathData) {
       return null;
@@ -284,7 +311,7 @@ export const EdgeInteractionOverlay: React.FC<EdgeInteractionOverlayProps> = ({
 
   const renderDeleteButton = (edge: Edge) => {
     const { isColumnLineage } = edge.data || {};
-    const pathData = edge.data?.computedPath;
+    const pathData = computePathData(edge);
 
     if (!isColumnLineage || !pathData) {
       return null;

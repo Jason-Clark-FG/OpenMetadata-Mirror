@@ -13,6 +13,7 @@
 import { Edge } from 'reactflow';
 import { CanvasEdgeRenderer } from '../../../Entity/EntityLineage/CanvasEdgeRenderer.component';
 import { EdgeInteractionOverlay } from '../../../Entity/EntityLineage/EdgeInteractionOverlay.component';
+import { PipelineEdgeButtons } from '../../../Entity/EntityLineage/PipelineEdgeButtons.component';
 
 export const CanvasLayerWrapper = ({
   dqHighlightedEdges,
@@ -37,6 +38,7 @@ export const CanvasLayerWrapper = ({
         onEdgeClick={onEdgeClick}
         onEdgeHover={onEdgeHover}
       />
+      <PipelineEdgeButtons />
       <EdgeInteractionOverlay
         hoveredEdge={hoverEdge}
         onEdgeRemove={onEdgeRemove}
