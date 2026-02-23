@@ -1780,7 +1780,7 @@ test.describe('Right Panel Test Suite', () => {
           const tableFqn = getEntityFqn(tableEntity);
           await navigateToExploreAndSelectEntity(
             authenticatedPage,
-            tableEntity.entity.name,
+            tableEntity.entity.displayName,
             tableEntity.endpoint,
             tableFqn
           );
@@ -1794,16 +1794,16 @@ test.describe('Right Panel Test Suite', () => {
             '[data-testid="entity-summary-panel-container"]'
           );
           await expect(panelContainer).toBeVisible();
-          const tableNameInPanel = panelContainer.getByText(
-            tableEntity.entity.name
-          );
+          const tableNameInPanel = panelContainer
+            .getByTestId('entity-link')
+            .getByText(tableEntity.entity.displayName);
           await expect(tableNameInPanel).toBeVisible();
 
           // Switch to a different entity (dashboard)
           const dashboardFqn = getEntityFqn(dashboardEntity);
           await navigateToExploreAndSelectEntity(
             authenticatedPage,
-            dashboardEntity.entity.name,
+            dashboardEntity.entity.displayName,
             dashboardEntity.endpoint,
             dashboardFqn
           );
@@ -1816,18 +1816,17 @@ test.describe('Right Panel Test Suite', () => {
             '[data-testid="entity-summary-panel-container"]'
           );
           await expect(updatedPanel).toBeVisible();
-          const dashboardNameInPanel = updatedPanel.getByText(
-            dashboardEntity.entity.name
-          );
+          const dashboardNameInPanel = updatedPanel
+            .getByTestId('entity-link')
+            .getByText(dashboardEntity.entity.displayName);
           // Explicitly wait for the dashboard name to appear before checking absence of table name
           await dashboardNameInPanel.waitFor({ state: 'visible' });
           await expect(dashboardNameInPanel).toBeVisible();
 
           // Verify the old entity name is no longer visible in the panel
-          const staleTableName = updatedPanel.getByText(
-            tableEntity.entity.name,
-            { exact: true }
-          );
+          const staleTableName = updatedPanel
+            .getByTestId('entity-link')
+            .getByText(tableEntity.entity.displayName, { exact: true });
           await expect(staleTableName).not.toBeVisible();
         } finally {
           await afterAction();
