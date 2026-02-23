@@ -49,10 +49,6 @@ public class AuditLogRepository {
   }
 
   public void write(ChangeEvent changeEvent) {
-    write(changeEvent, false);
-  }
-
-  public void write(ChangeEvent changeEvent, boolean isBot) {
     if (!SUPPORTED_EVENT_TYPES.contains(changeEvent.getEventType())) {
       LOG.debug(
           "Skipping unsupported event type {} for change event {}",
@@ -79,7 +75,7 @@ public class AuditLogRepository {
       String entityFqnHash =
           nullOrEmpty(entityFqn) ? null : FullyQualifiedName.buildHash(entityFqn);
 
-      AuditLogRecord.ActorType actorType = determineActorType(changeEvent.getUserName(), isBot);
+      AuditLogRecord.ActorType actorType = determineActorType(changeEvent.getUserName());
       String serviceName = extractServiceName(entityFqn);
 
       AuditLogRecord record =
@@ -139,25 +135,28 @@ public class AuditLogRepository {
         });
   }
 
-  /** Determine actor type from username pattern - agents, bots, or regular users. */
-  private AuditLogRecord.ActorType determineActorType(String userName, boolean isBot) {
+  /** Determine actor type from username pattern and user entity — agents, bots, or regular users. */
+  private AuditLogRecord.ActorType determineActorType(String userName) {
     if (nullOrEmpty(userName)) {
-      return isBot ? AuditLogRecord.ActorType.BOT : AuditLogRecord.ActorType.USER;
+      return AuditLogRecord.ActorType.USER;
     }
     String lowerName = userName.toLowerCase();
-    // Check for AI agent patterns first (documentation-agent, auto-classification, etc.)
     for (String indicator : AGENT_INDICATORS) {
       if (lowerName.contains(indicator)) {
         return AuditLogRecord.ActorType.AGENT;
       }
     }
-    // Check for bot patterns (ingestion-bot, metadata-bot, etc.)
     if (lowerName.endsWith("-bot") || lowerName.endsWith("_bot") || lowerName.equals("bot")) {
       return AuditLogRecord.ActorType.BOT;
     }
-    // Explicit isBot flag from caller (e.g., auth context)
-    if (isBot) {
-      return AuditLogRecord.ActorType.BOT;
+    try {
+      org.openmetadata.schema.entity.teams.User user =
+          Entity.getEntityByName(Entity.USER, userName, "isBot", Include.ALL);
+      if (Boolean.TRUE.equals(user.getIsBot())) {
+        return AuditLogRecord.ActorType.BOT;
+      }
+    } catch (Exception e) {
+      LOG.debug("Could not resolve user entity for actor type detection: {}", userName);
     }
     return AuditLogRecord.ActorType.USER;
   }
@@ -709,7 +708,7 @@ public class AuditLogRepository {
 
     if (!nullOrEmpty(searchTerm)) {
       if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
-        condition.append(" AND (MATCH(search_text) AGAINST(:searchTerm IN BOOLEAN MODE))");
+        condition.append(" AND (MATCH(search_text) AGAINST(:searchTerm IN NATURAL LANGUAGE MODE))");
       } else {
         condition.append(
             " AND (to_tsvector('english', coalesce(search_text, '')) @@ plainto_tsquery('english', :searchTerm))");
