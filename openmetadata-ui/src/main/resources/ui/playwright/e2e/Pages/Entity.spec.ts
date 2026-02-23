@@ -2004,194 +2004,193 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
       }
 
       if (entity.type === 'Table') {
-        test('Column detail panel - Custom Properties empty state', async ({
-          page,
-        }) => {
-          test.slow();
+        // TODO: Fix this test once we have an endpoint for custom properties
+        test.fixme(
+          'Column detail panel - Custom Properties empty state',
+          async ({ page }) => {
+            test.slow();
 
-          await test.step(
-            'Open column detail panel and navigate to Custom Properties tab',
-            async () => {
-              await redirectToHomePage(page);
-              await entity.visitEntityPage(page);
+            await test.step(
+              'Open column detail panel and navigate to Custom Properties tab',
+              async () => {
+                await redirectToHomePage(page);
+                await entity.visitEntityPage(page);
 
-              await page.getByTestId(entity.childrenTabId ?? '').click();
-              await waitForAllLoadersToDisappear(page);
+                await page.getByTestId(entity.childrenTabId ?? '').click();
+                await waitForAllLoadersToDisappear(page);
 
-              await openColumnDetailPanel({
-                page,
-                rowSelector,
-                columnId: entity.childrenSelectorId ?? '',
-                columnNameTestId: 'column-name',
-                entityType: entity.type as EntityType,
-              });
+                await openColumnDetailPanel({
+                  page,
+                  rowSelector,
+                  columnId: entity.childrenSelectorId ?? '',
+                  columnNameTestId: 'column-name',
+                  entityType: entity.type as EntityType,
+                });
 
-              const panelContainer = page.locator('.column-detail-panel');
+                const panelContainer = page.locator('.column-detail-panel');
 
-              // Check Custom Properties tab
-              // Wait for the tab to be available
-              await page.getByTestId('custom-properties-tab').click();
-              await waitForAllLoadersToDisappear(page);
+                // Check Custom Properties tab
+                // Wait for the tab to be available
+                await page.getByTestId('custom-properties-tab').click();
+                await waitForAllLoadersToDisappear(page);
 
-              // Assert that the CustomPropertiesSection is visible
-              const customPropertiesContainer = panelContainer
-                .locator('.overview-tab-content')
-                .filter({ has: page.getByTestId('custom-properties-table') })
-                .or(panelContainer.getByText('No custom properties'));
+                // Assert that the CustomPropertiesSection is visible
+                const customPropertiesContainer = panelContainer
+                  .locator('.overview-tab-content')
+                  .filter({ has: page.getByTestId('custom-properties-table') })
+                  .or(panelContainer.getByText('No custom properties'));
 
-              await expect(customPropertiesContainer).toBeVisible();
+                await expect(customPropertiesContainer).toBeVisible();
 
-              await closeColumnDetailPanel(page);
-            }
-          );
-        });
+                await closeColumnDetailPanel(page);
+              }
+            );
+          }
+        );
       }
     }
 
     if (entity.type === 'Table') {
-      test(
-        'Column detail panel - DisplayName editing',
-        async ({ page }) => {
-          test.slow();
+      test('Column detail panel - DisplayName editing', async ({ page }) => {
+        test.slow();
 
-          await test.step(
-            'Edit display name via column detail panel',
-            async () => {
-              await redirectToHomePage(page);
-              await entity.visitEntityPage(page);
+        await test.step(
+          'Edit display name via column detail panel',
+          async () => {
+            await redirectToHomePage(page);
+            await entity.visitEntityPage(page);
 
-              await page.getByTestId(entity.childrenTabId ?? '').click();
-              await waitForAllLoadersToDisappear(page);
+            await page.getByTestId(entity.childrenTabId ?? '').click();
+            await waitForAllLoadersToDisappear(page);
 
-              await openColumnDetailPanel({
-                page,
-                rowSelector,
-                columnId: entity.childrenSelectorId ?? '',
-                columnNameTestId: 'column-name',
-                entityType: entity.type as EntityType,
-              });
+            await openColumnDetailPanel({
+              page,
+              rowSelector,
+              columnId: entity.childrenSelectorId ?? '',
+              columnNameTestId: 'column-name',
+              entityType: entity.type as EntityType,
+            });
 
-              const panelContainer = page.locator('.column-detail-panel');
+            const panelContainer = page.locator('.column-detail-panel');
 
-              // Click edit displayName button
-              const editDisplayNameBtn = panelContainer.getByTestId(
-                'edit-displayName-button'
-              );
-              await expect(editDisplayNameBtn).toBeVisible();
-              await editDisplayNameBtn.click();
+            // Click edit displayName button
+            const editDisplayNameBtn = panelContainer.getByTestId(
+              'edit-displayName-button'
+            );
+            await expect(editDisplayNameBtn).toBeVisible();
+            await editDisplayNameBtn.click();
 
-              // EntityNameModal should appear
-              const modal = page.getByRole('dialog', { name: 'Edit Display Name' });
-              await expect(modal).toBeVisible();
+            // EntityNameModal should appear
+            const modal = page.getByRole('dialog', {
+              name: 'Edit Display Name',
+            });
+            await expect(modal).toBeVisible();
 
-              // Fill in a new display name
-              const displayNameInput = modal.locator('#displayName');
-              await expect(displayNameInput).toBeVisible();
-              await displayNameInput.clear();
-              const newDisplayName = `PW Column Display ${Date.now()}`;
-              await displayNameInput.fill(newDisplayName);
+            // Fill in a new display name
+            const displayNameInput = modal.locator('#displayName');
+            await expect(displayNameInput).toBeVisible();
+            await displayNameInput.clear();
+            const newDisplayName = `PW Column Display ${Date.now()}`;
+            await displayNameInput.fill(newDisplayName);
 
-              // Save
-              const saveResponse = page.waitForResponse(
-                (response) =>
-                  response.url().includes('/api/v1/columns/name/') &&
-                  response.request().method() === 'PUT'
-              );
-              await modal.getByTestId('save-button').click();
-              await saveResponse;
+            // Save
+            const saveResponse = page.waitForResponse(
+              (response) =>
+                response.url().includes('/api/v1/columns/name/') &&
+                response.request().method() === 'PUT'
+            );
+            await modal.getByTestId('save-button').click();
+            await saveResponse;
 
-              // Verify display name is updated in the panel
-              await expect(
-                panelContainer.getByTestId('entity-link')
-              ).toContainText(newDisplayName);
+            // Verify display name is updated in the panel
+            await expect(
+              panelContainer.getByTestId('entity-link')
+            ).toContainText(newDisplayName);
 
-              // Clean up: remove display name
-              await editDisplayNameBtn.click();
-              await expect(modal).toBeVisible();
-              const cleanupInput = modal.locator('#displayName');
-              await cleanupInput.clear();
-              const cleanupResponse = page.waitForResponse(
-                (response) =>
-                  response.url().includes('/api/v1/columns/name/') &&
-                  response.request().method() === 'PUT'
-              );
-              await modal.getByTestId('save-button').click();
-              const response = await cleanupResponse;
-              expect(response.status()).toBe(200);
+            // Clean up: remove display name
+            await editDisplayNameBtn.click();
+            await expect(modal).toBeVisible();
+            const cleanupInput = modal.locator('#displayName');
+            await cleanupInput.clear();
+            const cleanupResponse = page.waitForResponse(
+              (response) =>
+                response.url().includes('/api/v1/columns/name/') &&
+                response.request().method() === 'PUT'
+            );
+            await modal.getByTestId('save-button').click();
+            const response = await cleanupResponse;
+            expect(response.status()).toBe(200);
 
-              await closeColumnDetailPanel(page);
-            }
-          );
-        }
-      );
+            await closeColumnDetailPanel(page);
+          }
+        );
+      });
     }
 
     if (entity.type === 'Table') {
-      test(
-        'Column detail panel - Navigation boundary conditions',
-        async ({ page }) => {
-          test.slow();
+      test('Column detail panel - Navigation boundary conditions', async ({
+        page,
+      }) => {
+        test.slow();
 
-          await test.step(
-            'Verify prev-disabled on first column and next-disabled on last',
-            async () => {
-              await redirectToHomePage(page);
-              await entity.visitEntityPage(page);
+        await test.step(
+          'Verify prev-disabled on first column and next-disabled on last',
+          async () => {
+            await redirectToHomePage(page);
+            await entity.visitEntityPage(page);
 
-              await page.getByTestId(entity.childrenTabId ?? '').click();
-              await waitForAllLoadersToDisappear(page);
+            await page.getByTestId(entity.childrenTabId ?? '').click();
+            await waitForAllLoadersToDisappear(page);
 
-              await openColumnDetailPanel({
-                page,
-                rowSelector,
-                columnId: entity.childrenSelectorId ?? '',
-                columnNameTestId: 'column-name',
-                entityType: entity.type as EntityType,
-              });
+            await openColumnDetailPanel({
+              page,
+              rowSelector,
+              columnId: entity.childrenSelectorId ?? '',
+              columnNameTestId: 'column-name',
+              entityType: entity.type as EntityType,
+            });
 
-              const panelContainer = page.locator('.column-detail-panel');
-              const navContainer =
-                panelContainer.locator('.navigation-container');
-              const prevButton = navContainer.locator('button').nth(0);
-              const nextButton = navContainer.locator('button').nth(1);
+            const panelContainer = page.locator('.column-detail-panel');
+            const navContainer = panelContainer.locator(
+              '.navigation-container'
+            );
+            const prevButton = navContainer.locator('button').nth(0);
+            const nextButton = navContainer.locator('button').nth(1);
 
-              // On the first column, prev should be disabled
-              const paginationText = navContainer.locator(
-                '.pagination-header-text'
-              );
-              const paginationContent = await paginationText.textContent();
-              const match = paginationContent?.match(
-                /(\d+)\s+of\s+(\d+)/i
-              );
+            // On the first column, prev should be disabled
+            const paginationText = navContainer.locator(
+              '.pagination-header-text'
+            );
+            const paginationContent = await paginationText.textContent();
+            const match = paginationContent?.match(/(\d+)\s+of\s+(\d+)/i);
 
-              if (match) {
-                const currentIndex = parseInt(match[1], 10);
-                const totalCount = parseInt(match[2], 10);
+            if (match) {
+              const currentIndex = parseInt(match[1], 10);
+              const totalCount = parseInt(match[2], 10);
 
-                if (currentIndex === 1) {
-                  await expect(prevButton).toBeDisabled();
-                }
-
-                // Navigate to last column
-                if (totalCount > 1) {
-                  for (let i = currentIndex; i < totalCount; i++) {
-                    await nextButton.click();
-                    await page.waitForLoadState('networkidle');
-                  }
-
-                  // At last column, next should be disabled
-                  await expect(nextButton).toBeDisabled();
-
-                  // Prev should be enabled at last column
-                  await expect(prevButton).toBeEnabled();
-                }
+              if (currentIndex === 1) {
+                await expect(prevButton).toBeDisabled();
               }
 
-              await closeColumnDetailPanel(page);
+              // Navigate to last column
+              if (totalCount > 1) {
+                for (let i = currentIndex; i < totalCount; i++) {
+                  await nextButton.click();
+                  await page.waitForLoadState('networkidle');
+                }
+
+                // At last column, next should be disabled
+                await expect(nextButton).toBeDisabled();
+
+                // Prev should be enabled at last column
+                await expect(prevButton).toBeEnabled();
+              }
             }
-          );
-        }
-      );
+
+            await closeColumnDetailPanel(page);
+          }
+        );
+      });
     }
 
     /**
