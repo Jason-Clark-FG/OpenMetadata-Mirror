@@ -118,11 +118,19 @@ Dark mode uses a custom variant: `@custom-variant dark (&:where(.dark-mode, .dar
 
 These are externalized in the build and must be provided by the consuming app:
 
-- `react`, `react-dom`
-- `@mui/material`, `@mui/system`, `@emotion/react`, `@emotion/styled`
+- `react`, `react-dom`, `react/jsx-runtime`
+- `@mui/material`, `@mui/system`, `@mui/material/styles`, `@mui/material/Chip`, `@mui/icons-material`, `@mui/x-date-pickers`
+- `@emotion/react`, `@emotion/styled`
+- `@material/material-color-utilities`
 - `notistack`
-
-`tailwind-merge` is a dev dependency and bundled into the output. `react-aria-components` and `@untitledui/icons` are bundled as well.
+- `@untitledui/icons`
+- `react-aria`, `react-aria-components`, `react-stately`
+- `react-hook-form`
+- `tailwind-merge`
+- `input-otp`
+- `@react-aria/utils`, `@react-stately/utils`, `@react-types/shared`
+- `@internationalized/date`
+- `tailwindcss-react-aria-components`
 
 ## Adding New Components
 

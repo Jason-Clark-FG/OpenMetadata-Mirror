@@ -37,6 +37,7 @@
   },
   "files": [
     "dist",
+    "src/styles/theme.css",
     "README.md",
     "LICENSE"
   ],

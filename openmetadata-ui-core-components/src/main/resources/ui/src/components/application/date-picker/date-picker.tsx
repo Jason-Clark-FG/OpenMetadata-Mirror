@@ -39,7 +39,7 @@ export const DatePicker = ({ value: valueProp, defaultValue, onChange, onApply, 
                 placement="bottom right"
                 className={({ isEntering, isExiting }) =>
                     cx(
-                        "origin-(--trigger-anchor-point) will-change-transform",
+                        "tw:origin-(--trigger-anchor-point) tw:will-change-transform",
                         isEntering &&
                             "tw:duration-150 tw:ease-out tw:animate-in tw:fade-in tw:placement-right:slide-in-from-left-0.5 tw:placement-top:slide-in-from-bottom-0.5 tw:placement-bottom:slide-in-from-top-0.5",
                         isExiting &&
