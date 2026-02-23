@@ -1093,7 +1093,8 @@ export const createFormKeyDownHandler = () => {
   return (e: KeyboardEvent) => {
     if (
       e.key === 'Enter' &&
-      (e.target as HTMLElement)?.tagName !== 'TEXTAREA'
+      e.target &&
+      (e.target as HTMLElement).tagName !== 'TEXTAREA'
     ) {
       const target = e.target as HTMLElement;
 
