@@ -36,6 +36,7 @@ const teamHierarchyPropsData: TeamHierarchyProps = {
   createTeamPermission: true,
   isTeamDeleted: false,
   handleTeamSearch: jest.fn(),
+  teamIdsMap: {},
 };
 
 const mockShowErrorToast = jest.fn();

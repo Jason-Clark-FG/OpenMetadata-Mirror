@@ -70,12 +70,17 @@ export const getTabs = (
 
 /**
  * Recursively collect all descendant team IDs from a team.
- * Used by the Assets tab to build a query filter for displaying assets.
+ * Optionally accepts a resultMap that accumulates per-team results during
+ * traversal, allowing callers to share the results via React state.
  *
  * @param team - Team to collect descendants from
+ * @param resultMap - Optional map to accumulate per-team descendant IDs
  * @returns Array of team IDs including the team itself and all descendants
  */
-export const collectAllTeamIds = async (team: Team): Promise<string[]> => {
+export const collectAllTeamIds = async (
+  team: Team,
+  resultMap?: Map<string, string[]>
+): Promise<string[]> => {
   const teamIds: string[] = [team.id];
 
   if (team.childrenCount && team.childrenCount > 0) {
@@ -86,10 +91,15 @@ export const collectAllTeamIds = async (team: Team): Promise<string[]> => {
     });
 
     const childResults = await Promise.all(
-      childTeams.map((child) => collectAllTeamIds(child))
+      childTeams.map((child) => collectAllTeamIds(child, resultMap))
     );
     childResults.forEach((ids) => teamIds.push(...ids));
   }
 
+  if (resultMap) {
+    resultMap.set(team.id, teamIds);
+  }
+
   return teamIds;
 };
+

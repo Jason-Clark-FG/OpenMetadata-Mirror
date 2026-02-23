@@ -108,6 +108,7 @@ import { UserTab } from './UserTab/UserTab.component';
 
 const TeamDetailsV1 = ({
   allTeamIds,
+  teamIdsMap,
   assetsCount,
   currentTeam,
   isTeamMemberLoading,
@@ -676,6 +677,7 @@ const TeamDetailsV1 = ({
         isTeamDeleted={isTeamDeleted}
         searchTerm={searchTerm}
         showDeletedTeam={showDeletedTeam}
+        teamIdsMap={teamIdsMap}
         onShowDeletedTeamChange={onShowDeletedTeamChange}
         onTeamExpand={onTeamExpand}
       />

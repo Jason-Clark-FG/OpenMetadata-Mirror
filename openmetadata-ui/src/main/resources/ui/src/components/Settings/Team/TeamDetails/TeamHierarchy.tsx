@@ -62,6 +62,7 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   isTeamDeleted,
   handleTeamSearch,
   isTeamBasicDataLoading,
+  teamIdsMap,
 }) => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -103,9 +104,11 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
       newTeams.map(async (team) => {
         try {
           const teamIds =
-            team.childrenCount && team.childrenCount > 0
-              ? await collectAllTeamIds(team)
-              : [team.id];
+            team.id in teamIdsMap
+              ? teamIdsMap[team.id]
+              : team.childrenCount && team.childrenCount > 0
+                ? await collectAllTeamIds(team)
+                : [team.id];
           const queryFilter = getTermQuery(
             { 'owners.id': teamIds },
             'should',
@@ -147,7 +150,7 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         return next;
       });
     };
-  }, [data, isFetchingAllTeamAdvancedDetails]);
+  }, [data, isFetchingAllTeamAdvancedDetails, teamIdsMap]);
 
   const searchProps = useMemo(
     () => ({

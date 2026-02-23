@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -181,8 +181,7 @@ describe('collectAllTeamIds', () => {
 
     (getTeams as jest.Mock)
       .mockResolvedValueOnce({ data: [childTeam1, childTeam2] }) // root children
-      .mockResolvedValueOnce({ data: [grandchildTeam] }) // child1 children
-      .mockResolvedValueOnce({ data: [] }); // child2 children (just in case)
+      .mockResolvedValueOnce({ data: [grandchildTeam] }); // child1 children
 
     const ids = await collectAllTeamIds(parentTeam);
 
@@ -200,4 +199,48 @@ describe('collectAllTeamIds', () => {
 
     expect(ids).toEqual(['root-id', 'c1-id', 'gc1-id', 'c2-id']);
   });
+
+  it('should populate resultMap with per-team descendant IDs when provided', async () => {
+    const parentTeam: Team = {
+      id: 'root-id',
+      name: 'root',
+      fullyQualifiedName: 'root',
+      href: '',
+      childrenCount: 1,
+    };
+
+    const childTeam: Team = {
+      id: 'child-id',
+      name: 'child',
+      fullyQualifiedName: 'root.child',
+      href: '',
+      childrenCount: 0,
+    };
+
+    (getTeams as jest.Mock).mockResolvedValueOnce({
+      data: [childTeam],
+    });
+
+    const resultMap = new Map<string, string[]>();
+    const ids = await collectAllTeamIds(parentTeam, resultMap);
+
+    expect(ids).toEqual(['root-id', 'child-id']);
+    expect(resultMap.get('root-id')).toEqual(['root-id', 'child-id']);
+    expect(resultMap.get('child-id')).toEqual(['child-id']);
+  });
+
+  it('should not mutate resultMap when not provided', async () => {
+    const team: Team = {
+      id: 'solo-id',
+      name: 'solo',
+      fullyQualifiedName: 'solo',
+      href: '',
+    };
+
+    const ids = await collectAllTeamIds(team);
+
+    expect(ids).toEqual(['solo-id']);
+    // No error thrown — resultMap is optional
+  });
 });
+

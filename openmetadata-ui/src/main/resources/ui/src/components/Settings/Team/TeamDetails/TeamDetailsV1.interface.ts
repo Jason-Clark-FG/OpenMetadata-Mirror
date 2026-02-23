@@ -20,6 +20,7 @@ import { EntityReference } from '../../../../generated/entity/type';
 
 export interface TeamDetailsProp {
   allTeamIds: string[];
+  teamIdsMap: Record<string, string[]>;
   assetsCount: number;
   currentTeam: Team;
   teams?: Team[];

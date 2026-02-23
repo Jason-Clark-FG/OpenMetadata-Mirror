@@ -14,7 +14,7 @@
 import { AxiosError } from 'axios';
 import { compare, Operation } from 'fast-json-patch';
 import { cloneDeep, filter, isEmpty, isUndefined } from 'lodash';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
@@ -59,6 +59,7 @@ const TeamsPage = () => {
   const { t } = useTranslation();
   const { getEntityPermissionByFqn } = usePermissionProvider();
   const { fqn } = useFqn();
+  const currentFqnRef = useRef(fqn);
   const [childTeams, setChildTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team>({} as Team);
 
@@ -74,6 +75,7 @@ const TeamsPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [assets, setAssets] = useState<number>(0);
   const [allTeamIds, setAllTeamIds] = useState<string[]>([]);
+  const [teamIdsMap, setTeamIdsMap] = useState<Record<string, string[]>>({});
   const [parentTeams, setParentTeams] = useState<Team[]>([]);
   const { updateCurrentUser } = useApplicationStore();
 
@@ -198,9 +200,14 @@ const TeamsPage = () => {
 
   const fetchAssets = async (selectedTeam: Team) => {
     if (selectedTeam.id && selectedTeam.teamType !== TeamType.Organization) {
+      const fetchFqn = currentFqnRef.current;
       setAllTeamIds([selectedTeam.id]);
       try {
-        const teamIds = await collectAllTeamIds(selectedTeam);
+        const resultMap = new Map<string, string[]>();
+        const teamIds = await collectAllTeamIds(selectedTeam, resultMap);
+
+        // Discard stale results if the user navigated away
+        if (currentFqnRef.current !== fetchFqn) return;
 
         const res = await searchQuery({
           query: '',
@@ -209,11 +216,21 @@ const TeamsPage = () => {
           queryFilter: getTermQuery({ 'owners.id': teamIds }, 'should', 1),
           searchIndex: SearchIndex.ALL,
         });
+
+        // Discard stale results if the user navigated away
+        if (currentFqnRef.current !== fetchFqn) return;
+
         const total = res?.hits?.total.value ?? 0;
         setAllTeamIds(teamIds);
+        setTeamIdsMap(Object.fromEntries(resultMap));
         setAssets(total);
       } catch (error) {
+        // Only apply error state if still on the same team
+        if (currentFqnRef.current !== fetchFqn) return;
+
         setAssets(0);
+        setAllTeamIds([]);
+        setTeamIdsMap({});
         showErrorToast(
           error as AxiosError,
           t('server.entity-fetch-error', {
@@ -496,7 +513,9 @@ const TeamsPage = () => {
   }, [fqn]);
 
   useEffect(() => {
+    currentFqnRef.current = fqn;
     setAllTeamIds([]);
+    setTeamIdsMap({});
     setAssets(0);
     init();
   }, [fqn]);
@@ -544,6 +563,7 @@ const TeamsPage = () => {
         afterDeleteAction={afterDeleteAction}
         allTeamIds={allTeamIds}
         assetsCount={assets}
+        teamIdsMap={teamIdsMap}
         childTeams={childTeams}
         currentTeam={selectedTeam}
         entityPermissions={entityPermissions}
