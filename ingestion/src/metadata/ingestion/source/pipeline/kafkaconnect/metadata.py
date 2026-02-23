@@ -638,7 +638,7 @@ class KafkaconnectSource(PipelineServiceSource):
                             )
 
                         logger.debug(
-                            f"Exact container match failed, trying wildcard search with pattern: *.{search_pattern}"
+                            f"Exact container match failed, trying wildcard search with pattern: {search_pattern}"
                         )
 
                         for storageservicename in self.get_storage_service_names() or [
