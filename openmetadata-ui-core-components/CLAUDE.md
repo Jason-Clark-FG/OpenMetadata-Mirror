@@ -132,12 +132,3 @@ These are externalized in the build and must be provided by the consuming app:
 4. Build on `react-aria-components` for accessibility
 5. Export from `src/components/index.ts`
 6. Run `yarn build` to verify compilation
-
-## Relationship to UntitledUI Source
-
-Components are adapted from the UntitledUI React library (cloned at `/Users/deuex/Documents/GitHub/untitled-ui/react/`). When porting components:
-
-- Add `tw:` prefix to all Tailwind classes
-- Replace `@/utils/cx` imports with the local `@/utils/cx` (same API)
-- Replace `@/utils/is-react-component` with local `@/utils/is-react-component`
-- Not all UntitledUI theme variants need to be ported — add only what's needed
