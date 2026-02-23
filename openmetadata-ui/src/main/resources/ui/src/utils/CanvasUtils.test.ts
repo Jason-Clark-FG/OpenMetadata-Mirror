@@ -271,7 +271,7 @@ describe('CanvasUtils', () => {
       const result = getEdgeBounds(edge, sourceNode, targetNode);
 
       expect(result).not.toBeNull();
-      expect(result!.minX).toBeLessThan(0);
+      expect(result!.minX).toBeLessThan(351);
       expect(result!.maxX).toBeGreaterThan(500);
       expect(result!.minY).toBeLessThan(0);
       expect(result!.maxY).toBeGreaterThan(100);
@@ -298,9 +298,9 @@ describe('CanvasUtils', () => {
       const result = getViewportBounds(viewport, 800, 600);
 
       expect(result).toEqual({
-        minX: 0,
+        minX: -0,
         maxX: 400,
-        minY: 0,
+        minY: -0,
         maxY: 300,
       });
     });

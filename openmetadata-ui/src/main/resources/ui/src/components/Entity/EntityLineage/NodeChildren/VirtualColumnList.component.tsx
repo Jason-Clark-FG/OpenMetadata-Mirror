@@ -137,6 +137,10 @@ const VirtualColumnList = ({
     ]
   );
 
+  if (flatItems.length === 0) {
+    return null;
+  }
+
   const needsNavigation = flatItems.length > LINEAGE_CHILD_ITEMS_PER_PAGE;
 
   return (

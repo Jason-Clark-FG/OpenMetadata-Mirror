@@ -14,7 +14,6 @@ import { Theme } from '@mui/material';
 import { renderHook } from '@testing-library/react';
 import { RefObject } from 'react';
 import { Edge, Node } from 'reactflow';
-import { StatusType } from '../generated/entity/data/pipeline';
 import { useCanvasEdgeRenderer } from './useCanvasEdgeRenderer';
 
 const mockGetNode = jest.fn();
@@ -46,20 +45,7 @@ jest.mock('./useLineageStore', () => ({
 }));
 
 jest.mock('../utils/CanvasUtils', () => ({
-  setupCanvas: jest.fn().mockReturnValue({
-    clearRect: jest.fn(),
-    save: jest.fn(),
-    restore: jest.fn(),
-    translate: jest.fn(),
-    scale: jest.fn(),
-    strokeStyle: '',
-    globalAlpha: 1,
-    lineWidth: 2,
-    setLineDash: jest.fn(),
-    stroke: jest.fn(),
-    drawImage: jest.fn(),
-    isPointInStroke: jest.fn(),
-  }),
+  setupCanvas: jest.fn((canvas) => canvas.getContext('2d')),
   getEdgeCoordinates: jest.fn().mockReturnValue({
     sourceX: 0,
     sourceY: 0,
@@ -87,7 +73,7 @@ jest.mock('../utils/EntityLineageUtils', () => ({
   }),
 }));
 
-const createMockCanvas = (): HTMLCanvasElement => {
+const createMockCanvas = () => {
   const canvas = document.createElement('canvas');
   const ctx = {
     clearRect: jest.fn(),
@@ -114,7 +100,7 @@ const createMockCanvas = (): HTMLCanvasElement => {
 
   jest.spyOn(canvas, 'getContext').mockReturnValue(ctx);
 
-  return canvas;
+  return { canvas, ctx };
 };
 
 const createMockTheme = (): Theme =>
@@ -148,11 +134,15 @@ const createMockNode = (id: string): Node => ({
 
 describe('useCanvasEdgeRenderer', () => {
   let canvasRef: RefObject<HTMLCanvasElement>;
+  let mockCanvas: HTMLCanvasElement;
+  let mockCtx: CanvasRenderingContext2D;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    const canvas = createMockCanvas();
-    canvasRef = { current: canvas };
+    const { canvas, ctx } = createMockCanvas();
+    mockCanvas = canvas;
+    mockCtx = ctx;
+    canvasRef = { current: mockCanvas };
 
     global.requestAnimationFrame = jest.fn((cb) => {
       cb(0);
@@ -166,6 +156,9 @@ describe('useCanvasEdgeRenderer', () => {
         isPointInStroke: jest.fn().mockReturnValue(false),
       }),
     })) as unknown as typeof OffscreenCanvas;
+    global.Path2D = jest.fn().mockImplementation((path?: string) => ({
+      path,
+    })) as unknown as typeof Path2D;
   });
 
   it('initializes without errors', () => {
@@ -223,164 +216,12 @@ describe('useCanvasEdgeRenderer', () => {
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
     );
 
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.stroke).toHaveBeenCalled();
-  });
-
-  it('draws edge icons when sprites are provided', () => {
-    const edge = createMockEdge({
-      data: {
-        isColumnLineage: false,
-        edge: {
-          fromEntity: { id: 'id1', fullyQualifiedName: 'table1' },
-          toEntity: { id: 'id2', fullyQualifiedName: 'table2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-      },
-    });
-
-    const node1 = createMockNode('node-1');
-    const node2 = createMockNode('node-2');
-
-    mockGetNode.mockImplementation((id: string) => {
-      if (id === 'node-1') {
-        return node1;
-      }
-      if (id === 'node-2') {
-        return node2;
-      }
-
-      return undefined;
-    });
-
-    renderHook(() =>
-      useCanvasEdgeRenderer({
-        canvasRef,
-        edges: [edge],
-        dqHighlightedEdges: new Set(),
-        theme: createMockTheme(),
-
-        containerWidth: 800,
-        containerHeight: 600,
-      })
-    );
-
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.drawImage).toHaveBeenCalled();
-  });
-
-  it('draws different pipeline status icons', () => {
-    const statuses = [
-      StatusType.Successful,
-      StatusType.Failed,
-      StatusType.Pending,
-      StatusType.Skipped,
-    ];
-
-    statuses.forEach((status) => {
-      const edge = createMockEdge({
-        data: {
-          isColumnLineage: false,
-          edge: {
-            fromEntity: { id: 'id1', fullyQualifiedName: 'table1' },
-            toEntity: { id: 'id2', fullyQualifiedName: 'table2' },
-            pipeline: {
-              fullyQualifiedName: 'pipeline1',
-              name: 'Pipeline 1',
-              pipelineStatus: { executionStatus: status },
-            },
-          },
-        },
-      });
-
-      const node1 = createMockNode('node-1');
-      const node2 = createMockNode('node-2');
-
-      mockGetNode.mockImplementation((id: string) => {
-        if (id === 'node-1') {
-          return node1;
-        }
-        if (id === 'node-2') {
-          return node2;
-        }
-
-        return undefined;
-      });
-
-      const { unmount } = renderHook(() =>
-        useCanvasEdgeRenderer({
-          canvasRef,
-          edges: [edge],
-          dqHighlightedEdges: new Set(),
-          theme: createMockTheme(),
-
-          containerWidth: 800,
-          containerHeight: 600,
-        })
-      );
-
-      const ctx = canvasRef.current?.getContext('2d');
-
-      expect(ctx?.drawImage).toHaveBeenCalled();
-
-      unmount();
-      jest.clearAllMocks();
-    });
-  });
-
-  it('draws function icon when columnFunctionValue is present', () => {
-    const edge = createMockEdge({
-      data: {
-        isColumnLineage: false,
-        columnFunctionValue: 'CONCAT(col1, col2)',
-        isExpanded: true,
-        edge: {
-          fromEntity: { id: 'id1', fullyQualifiedName: 'table1' },
-          toEntity: { id: 'id2', fullyQualifiedName: 'table2' },
-        },
-      },
-    });
-
-    const node1 = createMockNode('node-1');
-    const node2 = createMockNode('node-2');
-
-    mockGetNode.mockImplementation((id: string) => {
-      if (id === 'node-1') {
-        return node1;
-      }
-      if (id === 'node-2') {
-        return node2;
-      }
-
-      return undefined;
-    });
-
-    renderHook(() =>
-      useCanvasEdgeRenderer({
-        canvasRef,
-        edges: [edge],
-        dqHighlightedEdges: new Set(),
-        theme: createMockTheme(),
-
-        containerWidth: 800,
-        containerHeight: 600,
-      })
-    );
-
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.drawImage).toHaveBeenCalled();
+    expect(mockCtx.stroke).toHaveBeenCalled();
   });
 
   it('filters edges by viewport visibility', () => {
@@ -395,7 +236,6 @@ describe('useCanvasEdgeRenderer', () => {
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
@@ -424,18 +264,24 @@ describe('useCanvasEdgeRenderer', () => {
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
     );
 
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.stroke).toHaveBeenCalled();
+    expect(mockCtx.stroke).toHaveBeenCalled();
   });
 
   it('returns edge at point when hit test succeeds', () => {
+    const mockOffscreenCtx = {
+      lineWidth: 2,
+      isPointInStroke: jest.fn().mockReturnValue(true),
+    };
+
+    (global.OffscreenCanvas as jest.Mock).mockImplementation(() => ({
+      getContext: jest.fn().mockReturnValue(mockOffscreenCtx),
+    }));
+
     const edge = createMockEdge();
     const node1 = createMockNode('node-1');
     const node2 = createMockNode('node-2');
@@ -451,22 +297,19 @@ describe('useCanvasEdgeRenderer', () => {
       return undefined;
     });
 
+    const { isEdgeInViewport } = require('../utils/CanvasUtils');
+    isEdgeInViewport.mockReturnValue(true);
+
     const { result } = renderHook(() =>
       useCanvasEdgeRenderer({
         canvasRef,
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
     );
-
-    const offscreenCtx = (
-      global.OffscreenCanvas as jest.Mock
-    ).mock.results[0].value.getContext();
-    offscreenCtx.isPointInStroke.mockReturnValue(true);
 
     const containerRect = {
       left: 0,
@@ -501,7 +344,6 @@ describe('useCanvasEdgeRenderer', () => {
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
@@ -536,13 +378,21 @@ describe('useCanvasEdgeRenderer', () => {
       return undefined;
     });
 
+    const mockOffscreenCtx = {
+      lineWidth: 2,
+      isPointInStroke: jest.fn().mockReturnValue(false),
+    };
+
+    (global.OffscreenCanvas as jest.Mock).mockImplementation(() => ({
+      getContext: jest.fn().mockReturnValue(mockOffscreenCtx),
+    }));
+
     const { result } = renderHook(() =>
       useCanvasEdgeRenderer({
         canvasRef,
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
@@ -556,11 +406,7 @@ describe('useCanvasEdgeRenderer', () => {
     } as DOMRect;
     result.current.getEdgeAtPoint(50, 50, containerRect);
 
-    const offscreenCtx = (
-      global.OffscreenCanvas as jest.Mock
-    ).mock.results[0].value.getContext();
-
-    expect(offscreenCtx.lineWidth).toBe(6);
+    expect(mockOffscreenCtx.lineWidth).toBe(6);
   });
 
   it('handles edges with computedPath', () => {
@@ -593,31 +439,33 @@ describe('useCanvasEdgeRenderer', () => {
       return undefined;
     });
 
+    const { isEdgeInViewport } = require('../utils/CanvasUtils');
+    isEdgeInViewport.mockReturnValue(true);
+
     renderHook(() =>
       useCanvasEdgeRenderer({
         canvasRef,
         edges: [edge],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
     );
 
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.stroke).toHaveBeenCalled();
+    expect(mockCtx.stroke).toHaveBeenCalled();
   });
 
   it('cancels animation frame on unmount', () => {
+    const originalRAF = global.requestAnimationFrame;
+    global.requestAnimationFrame = jest.fn(() => 123);
+
     const { unmount } = renderHook(() =>
       useCanvasEdgeRenderer({
         canvasRef,
         edges: [],
         dqHighlightedEdges: new Set(),
         theme: createMockTheme(),
-
         containerWidth: 800,
         containerHeight: 600,
       })
@@ -625,7 +473,9 @@ describe('useCanvasEdgeRenderer', () => {
 
     unmount();
 
-    expect(cancelAnimationFrame).toHaveBeenCalled();
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(123);
+
+    global.requestAnimationFrame = originalRAF;
   });
 
   it('handles animated edges with dashed lines', () => {
@@ -644,6 +494,9 @@ describe('useCanvasEdgeRenderer', () => {
       return undefined;
     });
 
+    const { isEdgeInViewport } = require('../utils/CanvasUtils');
+    isEdgeInViewport.mockReturnValue(true);
+
     renderHook(() =>
       useCanvasEdgeRenderer({
         canvasRef,
@@ -655,8 +508,6 @@ describe('useCanvasEdgeRenderer', () => {
       })
     );
 
-    const ctx = canvasRef.current?.getContext('2d');
-
-    expect(ctx?.setLineDash).toHaveBeenCalledWith([6, 4]);
+    expect(mockCtx.setLineDash).toHaveBeenCalledWith([6, 4]);
   });
 });

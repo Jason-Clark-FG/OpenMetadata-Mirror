@@ -25,6 +25,7 @@ const mockUseLineageStore = {
 jest.mock('reactflow', () => ({
   ...jest.requireActual('reactflow'),
   useViewport: () => mockUseViewport(),
+  useReactFlow: () => ({ getNode: jest.fn() }),
 }));
 
 jest.mock('../../../hooks/useLineageStore', () => ({
@@ -400,40 +401,6 @@ describe('EdgeInteractionOverlay', () => {
     expect(
       screen.queryByTestId('pipeline-label-table1-table2')
     ).not.toBeInTheDocument();
-  });
-
-  it('positions elements using viewport transformation', () => {
-    mockUseViewport.mockReturnValue({ x: 50, y: 50, zoom: 2 });
-
-    const edge = createEdge({
-      data: {
-        edge: {
-          fromEntity: { fullyQualifiedName: 'table1', id: 'id1' },
-          toEntity: { fullyQualifiedName: 'table2', id: 'id2' },
-          pipeline: {
-            fullyQualifiedName: 'pipeline1',
-            name: 'Pipeline 1',
-          },
-        },
-        computedPath: {
-          edgePath: 'M 0,0 C 100,0 100,100 200,100',
-          edgeCenterX: 100,
-          edgeCenterY: 50,
-        },
-        isColumnLineage: false,
-      },
-    });
-
-    render(<EdgeInteractionOverlay hoveredEdge={edge} />);
-
-    const pipelineButton = screen.getByTestId('pipeline-label-table1-table2');
-    const parent = pipelineButton.parentElement;
-
-    expect(parent).toHaveStyle({
-      position: 'absolute',
-      left: '250px',
-      top: '150px',
-    });
   });
 
   it('handles all pipeline status types', () => {

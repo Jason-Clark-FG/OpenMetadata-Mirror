@@ -142,7 +142,7 @@ export const CanvasEdgeRenderer: React.FC<CanvasEdgeRendererProps> = ({
         mouseEvent.clientY,
         rect
       );
-      edge && onEdgeHoverRef.current?.(edge);
+      onEdgeHoverRef.current?.(edge as Edge);
     };
 
     const handleMouseLeave = () => {

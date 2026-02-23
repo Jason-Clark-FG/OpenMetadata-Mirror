@@ -157,6 +157,7 @@ export function getEdgeBounds(
     targetNode,
     columnsInCurrentPages
   );
+
   if (!coords) {
     return null;
   }

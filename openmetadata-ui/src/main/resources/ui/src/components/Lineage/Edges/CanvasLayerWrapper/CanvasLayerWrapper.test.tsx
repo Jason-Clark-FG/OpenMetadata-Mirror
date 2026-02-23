@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { Edge } from 'reactflow';
 import { CanvasLayerWrapper } from './CanvasLayerWrapper';
 
@@ -35,6 +35,27 @@ jest.mock('../../../Entity/EntityLineage/CanvasEdgeRenderer.component', () => ({
     />
   ),
 }));
+
+jest.mock(
+  '../../../Entity/EntityLineage/PipelineEdgeButtons.component',
+  () => ({
+    PipelineEdgeButtons: ({
+      onAddPipeline,
+      onRemovePipeline,
+    }: {
+      onAddPipeline?: () => void;
+      onRemovePipeline?: () => void;
+    }) => (
+      <div
+        data-testid="pipeline-edge-buttons"
+        onClick={() => {
+          onAddPipeline?.();
+          onRemovePipeline?.();
+        }}
+      />
+    ),
+  })
+);
 
 jest.mock(
   '../../../Entity/EntityLineage/EdgeInteractionOverlay.component',
@@ -156,7 +177,7 @@ describe('CanvasLayerWrapper', () => {
     );
 
     const renderer = getByTestId('canvas-edge-renderer');
-    renderer.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    fireEvent.mouseEnter(renderer);
 
     expect(onEdgeHover).toHaveBeenCalled();
   });

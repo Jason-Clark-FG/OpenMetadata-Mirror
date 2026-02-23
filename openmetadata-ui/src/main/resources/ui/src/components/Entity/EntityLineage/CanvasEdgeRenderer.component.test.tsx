@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import { useTheme } from '@mui/material';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { Edge } from 'reactflow';
 import { CanvasEdgeRenderer } from './CanvasEdgeRenderer.component';
 
@@ -52,16 +52,6 @@ jest.mock('../../../hooks/useCanvasEdgeRenderer', () => ({
   useCanvasEdgeRenderer: () => mockUseCanvasEdgeRenderer,
 }));
 
-jest.mock('../../../hooks/useIconSprites', () => ({
-  useIconSprites: () => ({
-    pipeline: new Image(),
-    pipelineGreen: new Image(),
-    pipelineAmber: new Image(),
-    pipelineRed: new Image(),
-    function: new Image(),
-  }),
-}));
-
 jest.mock('../../../hooks/useLineageStore', () => ({
   useLineageStore: () => mockUseLineageStore,
 }));
@@ -77,19 +67,21 @@ const mockTheme = {
 };
 
 describe('CanvasEdgeRenderer', () => {
-  let container: HTMLElement;
+  let reactFlowContainer: HTMLElement;
+  let pane: HTMLElement;
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useTheme as jest.Mock).mockReturnValue(mockTheme);
+    mockUseLineageStore.isEditMode = false;
+    mockGetEdgeAtPoint.mockReturnValue(null);
+    mockRedraw.mockClear();
 
-    const reactFlowContainer = document.createElement('div');
+    reactFlowContainer = document.createElement('div');
     reactFlowContainer.className = 'react-flow';
-    const pane = document.createElement('div');
+    pane = document.createElement('div');
     pane.className = 'react-flow__pane';
     reactFlowContainer.appendChild(pane);
-    document.body.appendChild(reactFlowContainer);
-    container = reactFlowContainer;
 
     global.ResizeObserver = jest.fn().mockImplementation(() => ({
       observe: jest.fn(),
@@ -99,7 +91,9 @@ describe('CanvasEdgeRenderer', () => {
   });
 
   afterEach(() => {
-    document.body.removeChild(container);
+    if (reactFlowContainer.parentElement) {
+      reactFlowContainer.parentElement.removeChild(reactFlowContainer);
+    }
   });
 
   const defaultProps = {
@@ -109,8 +103,16 @@ describe('CanvasEdgeRenderer', () => {
     onEdgeHover: jest.fn(),
   };
 
+  const renderInReactFlow = (ui: React.ReactElement) => {
+    const wrapper = document.createElement('div');
+    reactFlowContainer.appendChild(wrapper);
+    document.body.appendChild(reactFlowContainer);
+
+    return render(ui, { container: wrapper });
+  };
+
   it('renders canvas element', () => {
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
     const canvas = document.querySelector('canvas');
 
@@ -118,15 +120,15 @@ describe('CanvasEdgeRenderer', () => {
   });
 
   it('renders container with correct styles', () => {
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
-    const containerDiv = screen.getByRole('generic', { hidden: true });
+    const containerDiv = document.querySelector('.lineage-canvas-container');
 
     expect(containerDiv).toHaveStyle({ pointerEvents: 'none' });
   });
 
   it('calls redraw on mount', async () => {
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockRedraw).toHaveBeenCalled();
@@ -134,7 +136,7 @@ describe('CanvasEdgeRenderer', () => {
   });
 
   it('sets up ResizeObserver', () => {
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
     expect(ResizeObserver).toHaveBeenCalled();
   });
@@ -143,89 +145,154 @@ describe('CanvasEdgeRenderer', () => {
     const onEdgeClick = jest.fn();
     mockGetEdgeAtPoint.mockReturnValue(mockEdges[0]);
 
-    render(<CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />);
+    renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
+    const currentPane = document.querySelector('.react-flow__pane');
+
+    await waitFor(() => {
+      expect(currentPane).toBeInTheDocument();
+    });
+
+    const lineageContainer = document.querySelector(
+      '.lineage-canvas-container'
+    );
+    jest
+      .spyOn(lineageContainer as HTMLElement, 'getBoundingClientRect')
+      .mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
     const clickEvent = new MouseEvent('click', {
       bubbles: true,
       clientX: 100,
       clientY: 100,
     });
 
-    await waitFor(() => {
-      pane?.dispatchEvent(clickEvent);
-    });
+    fireEvent(currentPane!, clickEvent);
 
-    expect(onEdgeClick).toHaveBeenCalledWith(
-      mockEdges[0],
-      expect.any(MouseEvent)
-    );
+    await waitFor(() => {
+      expect(mockGetEdgeAtPoint).toHaveBeenCalled();
+      expect(onEdgeClick).toHaveBeenCalledWith(
+        mockEdges[0],
+        expect.any(MouseEvent)
+      );
+    });
   });
 
-  it('ignores click events in edit mode', async () => {
+  it('handles click events even in edit mode', async () => {
     const onEdgeClick = jest.fn();
     mockUseLineageStore.isEditMode = true;
+    mockGetEdgeAtPoint.mockReturnValue(mockEdges[0]);
 
-    render(<CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />);
+    renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
+    const lineageContainer = document.querySelector(
+      '.lineage-canvas-container'
+    );
+    jest
+      .spyOn(lineageContainer as HTMLElement, 'getBoundingClientRect')
+      .mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
     const clickEvent = new MouseEvent('click', {
       bubbles: true,
       clientX: 100,
       clientY: 100,
     });
 
+    document.querySelector('.react-flow__pane')!.dispatchEvent(clickEvent);
+
     await waitFor(() => {
-      pane?.dispatchEvent(clickEvent);
+      expect(onEdgeClick).toHaveBeenCalledWith(
+        mockEdges[0],
+        expect.any(MouseEvent)
+      );
     });
-
-    expect(onEdgeClick).not.toHaveBeenCalled();
-
-    mockUseLineageStore.isEditMode = false;
   });
 
   it('handles mouse move events', async () => {
     const onEdgeHover = jest.fn();
     mockGetEdgeAtPoint.mockReturnValue(mockEdges[0]);
 
-    render(<CanvasEdgeRenderer {...defaultProps} onEdgeHover={onEdgeHover} />);
+    renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} onEdgeHover={onEdgeHover} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
+    const lineageContainer = document.querySelector(
+      '.lineage-canvas-container'
+    );
+    jest
+      .spyOn(lineageContainer as HTMLElement, 'getBoundingClientRect')
+      .mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 800,
+        height: 600,
+        right: 800,
+        bottom: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
     const moveEvent = new MouseEvent('mousemove', {
       bubbles: true,
       clientX: 100,
       clientY: 100,
     });
 
-    await waitFor(() => {
-      pane?.dispatchEvent(moveEvent);
-    });
+    fireEvent(document.querySelector('.react-flow__pane')!, moveEvent);
 
-    expect(onEdgeHover).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onEdgeHover).toHaveBeenCalled();
+    });
   });
 
   it('handles mouse leave events', async () => {
     const onEdgeHover = jest.fn();
 
-    render(<CanvasEdgeRenderer {...defaultProps} onEdgeHover={onEdgeHover} />);
+    renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} onEdgeHover={onEdgeHover} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
     const leaveEvent = new MouseEvent('mouseleave', { bubbles: true });
 
-    await waitFor(() => {
-      pane?.dispatchEvent(leaveEvent);
-    });
+    fireEvent(document.querySelector('.react-flow__pane')!, leaveEvent);
 
-    expect(onEdgeHover).toHaveBeenCalledWith(null);
+    await waitFor(() => {
+      expect(onEdgeHover).toHaveBeenCalledWith(null);
+    });
   });
 
   it('does not call edge handlers when no edge is found', async () => {
     const onEdgeClick = jest.fn();
     mockGetEdgeAtPoint.mockReturnValue(null);
 
-    render(<CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />);
+    renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} onEdgeClick={onEdgeClick} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
     const clickEvent = new MouseEvent('click', {
       bubbles: true,
       clientX: 100,
@@ -233,14 +300,16 @@ describe('CanvasEdgeRenderer', () => {
     });
 
     await waitFor(() => {
-      pane?.dispatchEvent(clickEvent);
+      document.querySelector('.react-flow__pane')!.dispatchEvent(clickEvent);
     });
 
     expect(onEdgeClick).not.toHaveBeenCalled();
   });
 
   it('updates when edges change', async () => {
-    const { rerender } = render(<CanvasEdgeRenderer {...defaultProps} />);
+    const { rerender } = renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} />
+    );
 
     mockUseLineageProvider.edges = [
       ...mockEdges,
@@ -260,7 +329,9 @@ describe('CanvasEdgeRenderer', () => {
   });
 
   it('updates when hoverEdge changes', async () => {
-    const { rerender } = render(<CanvasEdgeRenderer {...defaultProps} />);
+    const { rerender } = renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} />
+    );
 
     rerender(<CanvasEdgeRenderer {...defaultProps} hoverEdge={mockEdges[0]} />);
 
@@ -270,7 +341,9 @@ describe('CanvasEdgeRenderer', () => {
   });
 
   it('updates when dqHighlightedEdges changes', async () => {
-    const { rerender } = render(<CanvasEdgeRenderer {...defaultProps} />);
+    const { rerender } = renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} />
+    );
 
     const newDqHighlightedEdges = new Set(['edge-1']);
     rerender(
@@ -285,12 +358,14 @@ describe('CanvasEdgeRenderer', () => {
     });
   });
 
-  it('cleans up event listeners on unmount', () => {
-    const { unmount } = render(<CanvasEdgeRenderer {...defaultProps} />);
+  it('cleans up event listeners on unmount', async () => {
+    const { unmount } = renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} />
+    );
 
-    const pane = document.querySelector('.react-flow__pane');
+    const currentPane = document.querySelector('.react-flow__pane');
     const removeEventListenerSpy = jest.spyOn(
-      pane as Element,
+      currentPane!,
       'removeEventListener'
     );
 
@@ -318,7 +393,9 @@ describe('CanvasEdgeRenderer', () => {
       unobserve: jest.fn(),
     }));
 
-    const { unmount } = render(<CanvasEdgeRenderer {...defaultProps} />);
+    const { unmount } = renderInReactFlow(
+      <CanvasEdgeRenderer {...defaultProps} />
+    );
     unmount();
 
     expect(disconnectSpy).toHaveBeenCalled();
@@ -336,7 +413,7 @@ describe('CanvasEdgeRenderer', () => {
       };
     });
 
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
     if (resizeCallback) {
       const mockEntries = [
@@ -344,7 +421,7 @@ describe('CanvasEdgeRenderer', () => {
           contentRect: { width: 800, height: 600 },
           target: document.createElement('div'),
         },
-      ] as ResizeObserverEntry[];
+      ] as unknown as ResizeObserverEntry[];
 
       resizeCallback(mockEntries, {} as ResizeObserver);
     }
@@ -360,14 +437,14 @@ describe('CanvasEdgeRenderer', () => {
     document.body.appendChild(containerWithoutPane);
 
     expect(() => {
-      render(<CanvasEdgeRenderer {...defaultProps} />);
+      renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
     }).not.toThrow();
 
     document.body.removeChild(containerWithoutPane);
   });
 
   it('passes correct props to useCanvasEdgeRenderer', () => {
-    render(<CanvasEdgeRenderer {...defaultProps} />);
+    renderInReactFlow(<CanvasEdgeRenderer {...defaultProps} />);
 
     expect(mockUseCanvasEdgeRenderer).toBeDefined();
   });
