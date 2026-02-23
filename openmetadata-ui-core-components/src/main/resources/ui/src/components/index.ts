@@ -51,7 +51,6 @@ export * from "./base/checkbox/checkbox";
 export * from "./base/input/input";
 export * from "./base/input/hint-text";
 export * from "./base/input/input-group";
-export * from "./base/input/input-payment";
 export * from "./base/input/label";
 export * from "./base/dropdown/dropdown";
 export * from "./base/file-upload-trigger/file-upload-trigger";
@@ -96,7 +95,6 @@ export * from "./application/tabs/tabs";
 
 // Foundations
 export * from "./foundations/dot-icon";
-export * from "./foundations/payment-icons";
 export * from "./foundations/typography";
 
 // Other components
