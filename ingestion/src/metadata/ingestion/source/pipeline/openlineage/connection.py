@@ -124,14 +124,14 @@ def test_connection(
         def custom_executor():
             _ = client.get_watermark_offsets(TopicPartition(broker.topicName, 0))
 
-        test_fn = {"GetWatermarkOffsets": custom_executor}
+        test_fn = {"CheckBrokerConnectivity": custom_executor}
 
     elif isinstance(broker, KinesisBrokerConfig):
 
         def custom_executor():
             client.describe_stream_summary(StreamName=broker.streamName)
 
-        test_fn = {"GetWatermarkOffsets": custom_executor}
+        test_fn = {"CheckBrokerConnectivity": custom_executor}
 
     else:
         raise SourceConnectionException(
