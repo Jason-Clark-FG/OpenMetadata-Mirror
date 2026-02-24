@@ -319,7 +319,11 @@ class TopologyRunnerMixin(Generic[C]):
         else:
             params = {"service": entity_fqn}
         entities_list = self.metadata.list_all_entities(
-            entity=child_type, params=params, fields=["sourceHash"], include="all"
+            entity=child_type,
+            params=params,
+            fields=["sourceHash"],
+            include="all",
+            skip_on_failure=True,
         )
         for entity in entities_list:
             if entity.sourceHash:

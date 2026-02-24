@@ -93,6 +93,7 @@ OWNER_ACCESS_RIGHTS_KEYWORDS = ["owner", "write", "admin"]
 SNOWFLAKE_QUERY_EXPRESSION_KW = "Value.NativeQuery(Snowflake.Databases("
 DATABRICKS_QUERY_EXPRESSION_KW = "Value.NativeQuery(Databricks.Catalogs("
 MAX_PROJECT_FILTER_SIZE = 20
+COLUMN_NAME_MAX_LENGTH = 256
 
 DEFAULT_REPORTS_PREFIX = "reports"
 RDL_REPORT_FORMAT = "RDL"
@@ -539,6 +540,15 @@ class PowerbiSource(DashboardServiceSource):
                             )
                         )
 
+    @staticmethod
+    def _truncate_column_name(name: Optional[str]) -> Optional[str]:
+        if name and len(name) > COLUMN_NAME_MAX_LENGTH:
+            logger.warning(
+                f"Column name '{name[:50]}...' exceeds {COLUMN_NAME_MAX_LENGTH} characters and will be truncated."
+            )
+            return name[:COLUMN_NAME_MAX_LENGTH]
+        return name
+
     def _get_child_measures(self, table: PowerBiTable) -> List[Column]:
         """
         Extract the measures of the table
@@ -561,7 +571,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_measure = PowerBiMeasureModel(
                     dataType=measure_type,
                     dataTypeDisplay=measure_type,
-                    name=measure.name,
+                    name=self._truncate_column_name(measure.name),
                     description=description_field_text,
                 )
                 measures.append(Column(**parsed_measure.model_dump()))
@@ -577,6 +587,7 @@ class PowerbiSource(DashboardServiceSource):
         columns = []
         for column in table.columns or []:
             try:
+                truncated_name = self._truncate_column_name(column.name)
                 parsed_column = {
                     "dataTypeDisplay": (
                         column.dataType if column.dataType else DataType.UNKNOWN.value
@@ -584,7 +595,7 @@ class PowerbiSource(DashboardServiceSource):
                     "dataType": ColumnTypeParser.get_column_type(
                         column.dataType if column.dataType else None
                     ),
-                    "name": column.name,
+                    "name": truncated_name,
                     "displayName": column.name,
                     "description": column.description,
                 }
@@ -613,7 +624,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_table = {
                     "dataTypeDisplay": "PowerBI Table",
                     "dataType": DataType.TABLE,
-                    "name": table.name,
+                    "name": self._truncate_column_name(table.name),
                     "displayName": table_display_name,
                     "description": table.description,
                     "children": [],
@@ -640,7 +651,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_table = {
                     "dataTypeDisplay": "PowerBI Table",
                     "dataType": DataType.TABLE,
-                    "name": entity.name,
+                    "name": self._truncate_column_name(entity.name),
                     "displayName": entity.name,
                     "description": entity.description,
                     "children": [],
@@ -648,6 +659,7 @@ class PowerbiSource(DashboardServiceSource):
                 child_columns = []
                 for attribute in entity.attributes or []:
                     try:
+                        truncated_attr_name = self._truncate_column_name(attribute.name)
                         parsed_column = {
                             "dataTypeDisplay": (
                                 attribute.dataType
@@ -657,7 +669,7 @@ class PowerbiSource(DashboardServiceSource):
                             "dataType": ColumnTypeParser.get_column_type(
                                 attribute.dataType if attribute.dataType else None
                             ),
-                            "name": attribute.name,
+                            "name": truncated_attr_name,
                             "displayName": attribute.name,
                             "description": attribute.description,
                         }
