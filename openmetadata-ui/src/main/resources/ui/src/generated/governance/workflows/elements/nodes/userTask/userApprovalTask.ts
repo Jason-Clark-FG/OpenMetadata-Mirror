@@ -59,19 +59,24 @@ export interface NodeConfiguration {
  */
 export interface Assignees {
     /**
-     * Deprecated: use assigneeSource instead. Add the Reviewers to the assignees List.
+     * Deprecated: use assigneeSources instead. Add the Reviewers to the assignees List.
      */
     addReviewers?: boolean;
     /**
-     * Source for the Task assignees. 'reviewers' will use the entity's reviewers (falling back
-     * to owners if reviewers are not set). 'owners' will use the entity's owners.
+     * Deprecated: use assigneeSources instead. Single source for Task assignees.
      */
     assigneeSource?: AssigneeSource;
+    /**
+     * List of sources for the Task assignees. Each entry can be 'reviewers' (entity's
+     * reviewers), 'owners' (entity's owners), or a specific entity link string (e.g.
+     * '<#E::user::john.doe>'). Multiple sources are unioned together. When empty, the task is
+     * auto-approved.
+     */
+    assigneeSources?: string[];
 }
 
 /**
- * Source for the Task assignees. 'reviewers' will use the entity's reviewers (falling back
- * to owners if reviewers are not set). 'owners' will use the entity's owners.
+ * Deprecated: use assigneeSources instead. Single source for Task assignees.
  */
 export enum AssigneeSource {
     Owners = "owners",

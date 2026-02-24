@@ -6,8 +6,10 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RU
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.flowable.common.engine.api.delegate.Expression;
@@ -37,18 +39,16 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       Map<String, Object> assigneesConfig =
           JsonUtils.readOrConvertValue(assigneesExpr.getValue(execution), Map.class);
 
-      String assigneeSource = (String) assigneesConfig.get("assigneeSource");
-      boolean addReviewers = (boolean) assigneesConfig.getOrDefault("addReviewers", false);
+      // Resolve the list of sources to use. Precedence:
+      //   1. assigneeSources (new, supports multiple sources and specific user entity links)
+      //   2. assigneeSource  (single-value legacy field)
+      //   3. addReviewers=true (oldest legacy field)
+      List<String> sources = resolveSources(assigneesConfig);
 
-      // Determine if we should add assignees from the entity's reviewers or owners.
-      // assigneeSource takes precedence; addReviewers is kept for backward compatibility.
-      boolean useReviewers =
-          "reviewers".equals(assigneeSource) || (assigneeSource == null && addReviewers);
-      boolean useOwners = "owners".equals(assigneeSource);
+      // Use a set to deduplicate assignee entity-link strings across sources.
+      Set<String> assignees = new LinkedHashSet<>();
 
-      List<String> assignees = new ArrayList<>();
-
-      if (useReviewers || useOwners) {
+      if (!sources.isEmpty()) {
         MessageParser.EntityLink entityLink =
             MessageParser.EntityLink.parse(
                 (String)
@@ -56,46 +56,65 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
                         inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
         EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
 
-        if (useReviewers) {
-          boolean entitySupportsReviewers =
-              Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
-          if (entitySupportsReviewers) {
-            // Entity has the reviewers field: use reviewers as-is (even if empty).
-            // An empty reviewers list means auto-approve; do NOT fall back to owners.
-            List<EntityReference> reviewers = entity.getReviewers();
-            if (reviewers != null && !reviewers.isEmpty()) {
-              assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
+        for (String source : sources) {
+          switch (source) {
+            case "reviewers" -> {
+              boolean entitySupportsReviewers =
+                  Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
+              if (entitySupportsReviewers) {
+                // Entity has the reviewers field: use reviewers as-is (even if empty).
+                // An empty reviewers list means auto-approve; do NOT fall back to owners.
+                List<EntityReference> reviewers = entity.getReviewers();
+                if (reviewers != null && !reviewers.isEmpty()) {
+                  assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
+                }
+              } else {
+                // Entity has no reviewers field: fall back to owners.
+                // If owners are also empty the task will be auto-approved.
+                List<EntityReference> owners = entity.getOwners();
+                if (owners != null && !owners.isEmpty()) {
+                  assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+                }
+              }
             }
-          } else {
-            // Entity has no reviewers field: fall back to owners.
-            // If owners are also empty the task will be auto-approved.
-            List<EntityReference> owners = entity.getOwners();
-            if (owners != null && !owners.isEmpty()) {
-              assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+            case "owners" -> {
+              List<EntityReference> owners = entity.getOwners();
+              if (owners != null && !owners.isEmpty()) {
+                assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+              }
             }
-          }
-        } else {
-          // useOwners: use the entity's owners directly.
-          List<EntityReference> owners = entity.getOwners();
-          if (owners != null && !owners.isEmpty()) {
-            assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+            default -> {
+              // Treat as a specific entity link (e.g. <#E::user::john.doe>).
+              // Log a warning for invalid links and skip them rather than failing the whole task.
+              try {
+                assignees.add(MessageParser.EntityLink.parse(source).getLinkString());
+              } catch (Exception e) {
+                LOG.warn(
+                    "[Process: {}] Skipping invalid assignee entity link '{}': {}",
+                    execution.getProcessInstanceId(),
+                    source,
+                    e.getMessage());
+              }
+            }
           }
         }
       }
 
-      // Persist the list as JSON array so TaskListener can read it
-      // Using setVariable instead of setVariableLocal to ensure visibility across subprocess
-      execution.setVariable(
-          assigneesVarNameExpr.getValue(execution).toString(), JsonUtils.pojoToJson(assignees));
+      List<String> assigneeList = new ArrayList<>(assignees);
 
-      boolean hasAssignees = !assignees.isEmpty();
+      // Persist the list as JSON array so TaskListener can read it.
+      // Using setVariable instead of setVariableLocal to ensure visibility across subprocess.
+      execution.setVariable(
+          assigneesVarNameExpr.getValue(execution).toString(), JsonUtils.pojoToJson(assigneeList));
+
+      boolean hasAssignees = !assigneeList.isEmpty();
       execution.setVariable("hasAssignees", hasAssignees);
 
       LOG.debug(
           "[Process: {}] ✓ Set hasAssignees={}, assignees count: {}, flow will {}",
           execution.getProcessInstanceId(),
           hasAssignees,
-          assignees.size(),
+          assigneeList.size(),
           hasAssignees ? "create USER TASK" : "AUTO-APPROVE");
     } catch (Exception exc) {
       LOG.error(
@@ -105,6 +124,33 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
+  }
+
+  /**
+   * Resolves the list of sources from the assignees config, handling all three generations of the
+   * configuration format (assigneeSources → assigneeSource → addReviewers).
+   */
+  @SuppressWarnings("unchecked")
+  private List<String> resolveSources(Map<String, Object> assigneesConfig) {
+    List<String> assigneeSources = (List<String>) assigneesConfig.get("assigneeSources");
+    if (assigneeSources != null) {
+      return assigneeSources;
+    }
+
+    // Legacy: single-value assigneeSource
+    String assigneeSource = (String) assigneesConfig.get("assigneeSource");
+    if (assigneeSource != null) {
+      return List.of(assigneeSource);
+    }
+
+    // Oldest legacy: addReviewers boolean
+    boolean addReviewers = (boolean) assigneesConfig.getOrDefault("addReviewers", false);
+    if (addReviewers) {
+      return List.of("reviewers");
+    }
+
+    // No recognised source found: return empty list, which causes the task to be auto-approved.
+    return List.of();
   }
 
   private List<String> getEntityLinkStringFromEntityReference(List<EntityReference> assignees) {
