@@ -21,7 +21,6 @@ public record DomainIndex(Domain domain) implements SearchIndex {
     ParseTags parseTags = new ParseTags(Entity.getEntityTags(Entity.DOMAIN, domain));
     doc.putAll(commonAttributes);
     doc.put("tags", parseTags.getTags());
-    doc.put("tier", parseTags.getTierTag());
     doc.put("classificationTags", parseTags.getClassificationTags());
     doc.put("glossaryTags", parseTags.getGlossaryTags());
     doc.put("upstreamLineage", SearchIndex.getLineageData(domain.getEntityReference()));
