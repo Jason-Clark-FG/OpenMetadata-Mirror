@@ -16,11 +16,15 @@ import { Domain } from '../../support/domain/Domain';
 import { TagClass } from '../../support/tag/TagClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
-import { clickOutside, redirectToHomePage } from '../../utils/common';
 import {
-  assignCertification,
+  clickOutside,
+  readElementInListWithScroll,
+  redirectToHomePage,
+} from '../../utils/common';
+import {
   assignTier,
   downVote,
+  getEncodedFqn,
   upVote,
 } from '../../utils/entity';
 
@@ -54,6 +58,64 @@ const test = base.extend<{
     }
   },
 });
+
+const assignCertificationForWidget = async (
+  page: Page,
+  certification: TagClass,
+  endpoint: string
+) => {
+  await page.getByTestId('edit-certification').click();
+
+  await page.waitForSelector('.certification-card-popover', {
+    state: 'visible',
+  });
+  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+
+  await readElementInListWithScroll(
+    page,
+    page.getByTestId(
+      `radio-btn-${certification.responseData.fullyQualifiedName}`
+    ),
+    page.locator('[data-testid="certification-cards"] .ant-radio-group')
+  );
+
+  await page
+    .getByTestId(`radio-btn-${certification.responseData.fullyQualifiedName}`)
+    .click();
+
+  const patchRequest = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/api/v1/${endpoint}`) &&
+      response.request().method() === 'PATCH'
+  );
+  await page.getByTestId('update-certification').click();
+
+  const patchResponse = await patchRequest;
+  expect(patchResponse.status()).toBe(200);
+
+  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await clickOutside(page);
+
+  await expect(page.getByTestId('certification-label')).toContainText(
+    certification.responseData.displayName
+  );
+};
+
+const visitDomainPage = async (page: Page) => {
+  await page.goto(
+    `/domain/${getEncodedFqn(domain.responseData.fullyQualifiedName ?? '')}`
+  );
+  await page.waitForLoadState('networkidle');
+  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+};
+
+const visitDataProductPage = async (page: Page) => {
+  await page.goto(
+    `/dataProduct/${getEncodedFqn(dataProduct.responseData.fullyQualifiedName ?? '')}`
+  );
+  await page.waitForLoadState('networkidle');
+  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+};
 
 /**
  * Custom removeTier that asserts the no-data placeholder instead of '--'.
@@ -142,7 +204,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     });
 
     test('Domain - Tier assign, update, and remove', async ({ page }) => {
-      await domain.visitEntityPage(page);
+      await visitDomainPage(page);
       await assignTier(page, 'Tier1', domain.endpoint);
       await assignTier(page, 'Tier3', domain.endpoint);
       await removeTierFromWidget(page, domain.endpoint);
@@ -151,20 +213,20 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     test('Domain - Certification assign, update, and remove', async ({
       page,
     }) => {
-      await domain.visitEntityPage(page);
-      await assignCertification(page, certTag1, domain.endpoint);
-      await assignCertification(page, certTag2, domain.endpoint);
+      await visitDomainPage(page);
+      await assignCertificationForWidget(page, certTag1, domain.endpoint);
+      await assignCertificationForWidget(page, certTag2, domain.endpoint);
       await removeCertificationFromWidget(page, domain.endpoint);
     });
 
     test('Domain - UpVote and DownVote', async ({ page }) => {
-      await domain.visitEntityPage(page);
+      await visitDomainPage(page);
       await upVote(page, domain.endpoint);
       await downVote(page, domain.endpoint);
     });
 
     test('DataProduct - Tier assign, update, and remove', async ({ page }) => {
-      await dataProduct.visitEntityPage(page);
+      await visitDataProductPage(page);
       await assignTier(page, 'Tier1', dataProduct.endpoint);
       await assignTier(page, 'Tier3', dataProduct.endpoint);
       await removeTierFromWidget(page, dataProduct.endpoint);
@@ -173,14 +235,14 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     test('DataProduct - Certification assign, update, and remove', async ({
       page,
     }) => {
-      await dataProduct.visitEntityPage(page);
-      await assignCertification(page, certTag1, dataProduct.endpoint);
-      await assignCertification(page, certTag2, dataProduct.endpoint);
+      await visitDataProductPage(page);
+      await assignCertificationForWidget(page, certTag1, dataProduct.endpoint);
+      await assignCertificationForWidget(page, certTag2, dataProduct.endpoint);
       await removeCertificationFromWidget(page, dataProduct.endpoint);
     });
 
     test('DataProduct - UpVote and DownVote', async ({ page }) => {
-      await dataProduct.visitEntityPage(page);
+      await visitDataProductPage(page);
       await upVote(page, dataProduct.endpoint);
       await downVote(page, dataProduct.endpoint);
     });
@@ -194,7 +256,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     test('Non-admin cannot edit tier and certification on Domain', async ({
       userPage,
     }) => {
-      await domain.visitEntityPage(userPage);
+      await visitDomainPage(userPage);
       await userPage.waitForLoadState('networkidle');
 
       await expect(
@@ -206,7 +268,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     });
 
     test('Non-admin can vote on Domain', async ({ userPage }) => {
-      await domain.visitEntityPage(userPage);
+      await visitDomainPage(userPage);
       await userPage.waitForLoadState('networkidle');
 
       await expect(userPage.getByTestId('up-vote-btn')).toBeVisible();
@@ -216,7 +278,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     test('Non-admin cannot edit tier and certification on DataProduct', async ({
       userPage,
     }) => {
-      await dataProduct.visitEntityPage(userPage);
+      await visitDataProductPage(userPage);
       await userPage.waitForLoadState('networkidle');
 
       await expect(
@@ -228,7 +290,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     });
 
     test('Non-admin can vote on DataProduct', async ({ userPage }) => {
-      await dataProduct.visitEntityPage(userPage);
+      await visitDataProductPage(userPage);
       await userPage.waitForLoadState('networkidle');
 
       await expect(userPage.getByTestId('up-vote-btn')).toBeVisible();
