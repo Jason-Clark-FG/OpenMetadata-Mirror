@@ -457,13 +457,6 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
               {node.originalLabel ?? node.label}
             </Typography.Text>
           </Tooltip>
-          <span className="type-badge">
-            {node.type === 'glossary'
-              ? '📚'
-              : node.type === 'metric'
-              ? '📈'
-              : '📝'}
-          </span>
         </div>
         <Space size={4}>
           {onFocusNode && (

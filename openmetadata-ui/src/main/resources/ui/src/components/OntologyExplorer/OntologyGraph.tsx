@@ -536,7 +536,22 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
         nodesData: OntologyNodeType[],
         edgesData: OntologyEdgeType[]
       ): Promise<Node[]> => {
-        const elkNodes: ElkNode[] = nodesData.map((node) => ({
+        // Separate nodes that have at least one edge from isolated nodes.
+        // Isolated nodes are placed in a grid below the connected graph so they
+        // never overlap with arrow paths between connected nodes.
+        const connectedNodeIds = new Set<string>();
+        edgesData.forEach((e) => {
+          connectedNodeIds.add(e.from);
+          connectedNodeIds.add(e.to);
+        });
+        const connectedNodes = nodesData.filter((n) =>
+          connectedNodeIds.has(n.id)
+        );
+        const isolatedNodes = nodesData.filter(
+          (n) => !connectedNodeIds.has(n.id)
+        );
+
+        const elkNodes: ElkNode[] = connectedNodes.map((node) => ({
           id: node.id,
           width: NODE_WIDTH,
           height: computeNodeHeight(node.id),
@@ -569,79 +584,79 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
           }
         };
 
+        const positionsById = new Map<string, { x: number; y: number }>();
+
+        const placeIsolatedGrid = (startY: number) => {
+          const ISOLATED_COL_GAP = NODE_WIDTH + 40;
+          const ISOLATED_ROW_GAP = NODE_HEIGHT + 40;
+          const cols = Math.ceil(Math.sqrt(Math.max(1, isolatedNodes.length)));
+          isolatedNodes.forEach((node, index) => {
+            positionsById.set(node.id, {
+              x: (index % cols) * ISOLATED_COL_GAP,
+              y: startY + Math.floor(index / cols) * ISOLATED_ROW_GAP,
+            });
+          });
+        };
+
         try {
           const layoutedGraph = await elk.layout(graph);
-          const layoutedById = new Map(
-            (layoutedGraph.children ?? []).map((n) => [n.id, n])
-          );
-
-          return nodesData.map((node) => {
-            const layoutedNode = layoutedById.get(node.id);
-            const neighborIds = getNeighborIds(node.id);
-            const isSelected = selectedNodeId === node.id;
-            const isHighlighted =
-              selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
-            const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
-            const glossaryColor = computeNodeColor(node);
-            const nodeHeight = computeNodeHeight(node.id);
-
-            const nodeData: OntologyNodeData = {
-              node,
-              isSelected,
-              isHighlighted,
-              isConnected,
-              glossaryColor,
-              nodeHeight,
-              onClick: handleClick,
-              onDoubleClick: handleDoubleClick,
-            };
-
-            return {
-              id: node.id,
-              type: 'ontologyNode',
-              position: {
-                x: layoutedNode?.x ?? 0,
-                y: layoutedNode?.y ?? 0,
-              },
-              data: nodeData,
-              width: NODE_WIDTH,
-              height: nodeHeight,
-            };
+          let connectedMaxY = 0;
+          (layoutedGraph.children ?? []).forEach((elkNode) => {
+            positionsById.set(elkNode.id, {
+              x: elkNode.x ?? 0,
+              y: elkNode.y ?? 0,
+            });
+            connectedMaxY = Math.max(
+              connectedMaxY,
+              (elkNode.y ?? 0) +
+                (elkNode.height ?? computeNodeHeight(elkNode.id))
+            );
           });
+
+          if (isolatedNodes.length > 0) {
+            placeIsolatedGrid(
+              connectedNodes.length > 0 ? connectedMaxY + 80 : 0
+            );
+          }
         } catch {
-          return nodesData.map((node, index) => {
-            const neighborIds = getNeighborIds(node.id);
-            const isSelected = selectedNodeId === node.id;
-            const isHighlighted =
-              selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
-            const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
-            const glossaryColor = computeNodeColor(node);
-            const nodeHeight = computeNodeHeight(node.id);
-
-            const nodeData: OntologyNodeData = {
-              node,
-              isSelected,
-              isHighlighted,
-              isConnected,
-              glossaryColor,
-              nodeHeight,
-              onClick: handleClick,
-              onDoubleClick: handleDoubleClick,
-            };
-
-            return {
-              id: node.id,
-              type: 'ontologyNode',
-              position: {
-                x: (index % 10) * (NODE_WIDTH + 50),
-                y: Math.floor(index / 10) * (NODE_HEIGHT + 50),
-              },
-              data: nodeData,
-              width: NODE_WIDTH,
-              height: nodeHeight,
-            };
+          nodesData.forEach((node, index) => {
+            positionsById.set(node.id, {
+              x: (index % 10) * (NODE_WIDTH + 50),
+              y: Math.floor(index / 10) * (NODE_HEIGHT + 50),
+            });
           });
         }
+
+        return nodesData.map((node) => {
+          const pos = positionsById.get(node.id) ?? { x: 0, y: 0 };
+          const neighborIds = getNeighborIds(node.id);
+          const isSelected = selectedNodeId === node.id;
+          const isHighlighted =
+            selectedNodeId !== null && neighborIds.has(selectedNodeId ?? '');
+          const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
+          const glossaryColor = computeNodeColor(node);
+          const nodeHeight = computeNodeHeight(node.id);
+
+          const nodeData: OntologyNodeData = {
+            node,
+            isSelected,
+            isHighlighted,
+            isConnected,
+            glossaryColor,
+            nodeHeight,
+            onClick: handleClick,
+            onDoubleClick: handleDoubleClick,
+          };
+
+          return {
+            id: node.id,
+            type: 'ontologyNode',
+            position: pos,
+            data: nodeData,
+            width: NODE_WIDTH,
+            height: nodeHeight,
+          };
+        });
       },
       [
         getLayoutOptions,
@@ -717,7 +732,22 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             })),
           });
         });
-        ungroupedData.forEach((node) => {
+        // Among ungrouped nodes, separate those with cross-edges from
+        // truly isolated ones (no edges at all). Isolated nodes are placed
+        // below the main layout to prevent them overlapping with edge arrows.
+        const crossEdgeNodeIds = new Set<string>();
+        crossEdgesList.forEach((e) => {
+          crossEdgeNodeIds.add(e.from);
+          crossEdgeNodeIds.add(e.to);
+        });
+        const ungroupedConnected = ungroupedData.filter((n) =>
+          crossEdgeNodeIds.has(n.id)
+        );
+        const ungroupedIsolated = ungroupedData.filter(
+          (n) => !crossEdgeNodeIds.has(n.id)
+        );
+
+        ungroupedConnected.forEach((node) => {
           elkChildren.push({
             id: node.id,
             width: NODE_WIDTH,
@@ -765,8 +795,14 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
           const layoutedGraph = await elk.layout(graph);
           const groupNodes: Node[] = [];
           const termNodes: Node[] = [];
+          let topLevelMaxY = 0;
 
           layoutedGraph.children?.forEach((elkNode) => {
+            topLevelMaxY = Math.max(
+              topLevelMaxY,
+              (elkNode.y ?? 0) + (elkNode.height ?? NODE_HEIGHT)
+            );
+
             if (elkNode.id.startsWith('glossary-group-')) {
               const glossaryId = elkNode.id.replace('glossary-group-', '');
               const groupW = elkNode.width ?? 200;
@@ -860,6 +896,46 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               });
             }
           });
+
+          // Place ungrouped isolated nodes in a grid below the ELK layout
+          if (ungroupedIsolated.length > 0) {
+            const ISOLATED_GAP = 80;
+            const ISOLATED_COL_GAP = NODE_WIDTH + 40;
+            const ISOLATED_ROW_GAP = NODE_HEIGHT + 40;
+            const cols = Math.ceil(Math.sqrt(ungroupedIsolated.length));
+            ungroupedIsolated.forEach((node, index) => {
+              const col = index % cols;
+              const row = Math.floor(index / cols);
+              const neighborIds = getNeighborIds(node.id);
+              const isSelected = selectedNodeId === node.id;
+              const isHighlighted =
+                selectedNodeId !== null &&
+                neighborIds.has(selectedNodeId ?? '');
+              const isConnected = (connectionCounts.get(node.id) ?? 0) > 0;
+              const nodeGlossaryColor = computeNodeColor(node);
+              const nodeHeight = computeNodeHeight(node.id);
+              termNodes.push({
+                id: node.id,
+                type: 'ontologyNode',
+                position: {
+                  x: col * ISOLATED_COL_GAP,
+                  y: topLevelMaxY + ISOLATED_GAP + row * ISOLATED_ROW_GAP,
+                },
+                data: {
+                  node,
+                  isSelected,
+                  isHighlighted,
+                  isConnected,
+                  glossaryColor: nodeGlossaryColor,
+                  nodeHeight,
+                  onClick: handleClick,
+                  onDoubleClick: handleDoubleClick,
+                } as OntologyNodeData,
+                width: NODE_WIDTH,
+                height: nodeHeight,
+              });
+            });
+          }
 
           // Group nodes must precede their children in the React Flow array
           return [...groupNodes, ...termNodes];

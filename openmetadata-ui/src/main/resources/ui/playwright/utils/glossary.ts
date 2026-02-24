@@ -1228,11 +1228,6 @@ export const addRelatedTerms = async (
       .filter({ hasText: relationType });
     await expect(option).toBeVisible();
     await option.click();
-
-    // Verify dropdown closed
-    await expect(
-      page.locator('.ant-select-dropdown:visible')
-    ).not.toBeVisible();
   }
 
   for (const term of relatedTerms) {

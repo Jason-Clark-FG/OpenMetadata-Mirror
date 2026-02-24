@@ -212,8 +212,7 @@ const DimensionalityTab = () => {
               <Typography sx={{ fontSize: 12 }}>
                 {t('message.impact-score-helper')}
               </Typography>
-            }
-          >
+            }>
             <HelpOutline sx={{ fontSize: 16 }} />
           </Tooltip>
         </Box>
@@ -245,14 +244,12 @@ const DimensionalityTab = () => {
               '&:hover': {
                 textDecoration: 'underline',
               },
-            }}
-          >
+            }}>
             <Link
               to={getTestCaseDimensionsDetailPagePath(
                 testCase?.fullyQualifiedName || '',
                 record.result.dimensionKey || ''
-              )}
-            >
+              )}>
               {dimensionValue}
             </Link>
           </Typography>
@@ -308,8 +305,7 @@ const DimensionalityTab = () => {
               fontSize: theme.typography.pxToRem(13),
               fontWeight: 500,
               whiteSpace: 'nowrap',
-            }}
-          >
+            }}>
             {`${t('label.select-dimension')}:`}
           </Typography>
           <Select
@@ -350,16 +346,14 @@ const DimensionalityTab = () => {
               },
             }}
             value={selectedDimension}
-            onChange={handleDimensionChange}
-          >
+            onChange={handleDimensionChange}>
             {dimensionColumnsOptions.map((column) => (
               <MenuItem
                 key={column}
                 sx={{
                   fontWeight: 500,
                 }}
-                value={column}
-              >
+                value={column}>
                 {column}
               </MenuItem>
             ))}
@@ -372,8 +366,7 @@ const DimensionalityTab = () => {
               fontSize: theme.typography.pxToRem(13),
               fontWeight: 500,
               whiteSpace: 'nowrap',
-            }}
-          >
+            }}>
             {`${t('label.date')}:`}
           </Typography>
           <MuiDatePickerMenu
@@ -395,8 +388,7 @@ const DimensionalityTab = () => {
               boxShadow: 'none',
               border: `1px solid ${theme.palette.grey[200]}`,
               borderRadius: '10px',
-            }}
-          >
+            }}>
             <DimensionalityHeatmap
               data={dimensionData}
               endDate={dateRange.endTs}
@@ -411,8 +403,7 @@ const DimensionalityTab = () => {
                 color: theme.palette.grey[900],
                 fontSize: theme.typography.pxToRem(14),
                 fontWeight: 500,
-              }}
-            >
+              }}>
               {t('label.entity-text-table', {
                 entityText: selectedDimension || '',
               })}
