@@ -139,9 +139,7 @@ public class FetchEntitiesImpl implements JavaDelegate {
 
     // Use .keyword suffix for entities with text fields
     String sortField = "fullyQualifiedName";
-    if (entityType.equals("testCase")
-        || entityType.equals("user")
-        || entityType.equals("team")) {
+    if (entityType.equals("testCase") || entityType.equals("user") || entityType.equals("team")) {
       sortField = "fullyQualifiedName.keyword";
     }
     SearchSortFilter searchSortFilter = new SearchSortFilter(sortField, null, null, null);
