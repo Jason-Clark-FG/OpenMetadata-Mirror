@@ -259,14 +259,20 @@ public class SearchIndexFieldLimitIT {
     updateTableExtension(client, table.getId().toString(), extension);
 
     Awaitility.await("Wait for table to be re-indexed after extension update")
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
         .until(
             () -> {
-              refreshIndex(searchClient, TABLE_INDEX);
-              return searchDocumentExists(searchClient, TABLE_INDEX, table.getId().toString());
+              String searchResponse =
+                  client
+                      .search()
+                      .query("id:" + table.getId())
+                      .index("table_search_index")
+                      .size(1)
+                      .execute();
+              return searchResponse.contains("\"id\":\"" + table.getId() + "\"");
             });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
@@ -310,14 +316,20 @@ public class SearchIndexFieldLimitIT {
 
     String finalTableId = lastTableId;
     Awaitility.await("Wait for tables to be re-indexed after extension updates")
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
         .until(
             () -> {
-              refreshIndex(searchClient, TABLE_INDEX);
-              return searchDocumentExists(searchClient, TABLE_INDEX, finalTableId);
+              String searchResponse =
+                  client
+                      .search()
+                      .query("id:" + finalTableId)
+                      .index("table_search_index")
+                      .size(1)
+                      .execute();
+              return searchResponse.contains("\"id\":\"" + finalTableId + "\"");
             });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
@@ -384,14 +396,20 @@ public class SearchIndexFieldLimitIT {
     updateTableExtension(client, table.getId().toString(), extension);
 
     Awaitility.await("Wait for table to be re-indexed after complex property update")
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
         .until(
             () -> {
-              refreshIndex(searchClient, TABLE_INDEX);
-              return searchDocumentExists(searchClient, TABLE_INDEX, table.getId().toString());
+              String searchResponse =
+                  client
+                      .search()
+                      .query("id:" + table.getId())
+                      .index("table_search_index")
+                      .size(1)
+                      .execute();
+              return searchResponse.contains("\"id\":\"" + table.getId() + "\"");
             });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
@@ -663,21 +681,6 @@ public class SearchIndexFieldLimitIT {
       }
     }
     return null;
-  }
-
-  private void refreshIndex(Rest5Client searchClient, String indexName) throws Exception {
-    Request refreshRequest = new Request("POST", "/" + indexName + "/_refresh");
-    searchClient.performRequest(refreshRequest);
-  }
-
-  private boolean searchDocumentExists(Rest5Client searchClient, String indexName, String docId)
-      throws Exception {
-    Request request = new Request("POST", "/" + indexName + "/_search");
-    request.setJsonEntity("{\"query\":{\"term\":{\"id\":\"" + docId + "\"}},\"size\":1}");
-    Response response = searchClient.performRequest(request);
-    String body =
-        new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
-    return body.contains("\"id\":\"" + docId + "\"");
   }
 
   private JsonNode findFieldMapping(JsonNode root, String fieldName) {

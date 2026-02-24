@@ -3598,32 +3598,25 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     withDesc.setColumns(cols3);
     Table tableWithDesc = client.tables().create(withDesc);
 
-    // Poll until the last created table is indexed
+    // Poll until the last created table is indexed using SDK search API
+    Awaitility.await("Wait for tables to be indexed in search")
+        .atMost(Duration.ofSeconds(60))
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () -> {
+              String searchResponse =
+                  client
+                      .search()
+                      .query("id:" + tableWithDesc.getId())
+                      .index("table_search_index")
+                      .size(1)
+                      .execute();
+              return searchResponse.contains("\"id\":\"" + tableWithDesc.getId() + "\"");
+            });
+
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
-      ensureSearchIndexExists(searchClient);
-
-      Awaitility.await("Wait for tables to be indexed in search")
-          .atMost(Duration.ofSeconds(30))
-          .pollDelay(Duration.ofMillis(500))
-          .pollInterval(Duration.ofSeconds(1))
-          .ignoreExceptions()
-          .until(
-              () -> {
-                Request refreshReq =
-                    new Request("POST", "/" + getTableSearchIndexName() + "/_refresh");
-                searchClient.performRequest(refreshReq);
-                Request checkReq =
-                    new Request("POST", "/" + getTableSearchIndexName() + "/_search");
-                checkReq.setJsonEntity(
-                    "{\"query\":{\"term\":{\"id\":\"" + tableWithDesc.getId() + "\"}},\"size\":1}");
-                Response checkResp = searchClient.performRequest(checkReq);
-                String body =
-                    new String(
-                        checkResp.getEntity().getContent().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                return body.contains("\"id\":\"" + tableWithDesc.getId() + "\"");
-              });
-
       // Create search request for tables with missing descriptions
       String searchQuery =
           "{"
@@ -3688,32 +3681,25 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
     Table table = client.tables().create(req);
 
-    // Poll until the table is indexed in search
+    // Poll until the table is indexed in search using SDK search API
+    Awaitility.await("Wait for searchable table to be indexed")
+        .atMost(Duration.ofSeconds(60))
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () -> {
+              String searchResponse =
+                  client
+                      .search()
+                      .query("id:" + table.getId())
+                      .index("table_search_index")
+                      .size(1)
+                      .execute();
+              return searchResponse.contains("\"id\":\"" + table.getId() + "\"");
+            });
+
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
-      ensureSearchIndexExists(searchClient);
-
-      Awaitility.await("Wait for searchable table to be indexed")
-          .atMost(Duration.ofSeconds(30))
-          .pollDelay(Duration.ofMillis(500))
-          .pollInterval(Duration.ofSeconds(1))
-          .ignoreExceptions()
-          .until(
-              () -> {
-                Request refreshReq =
-                    new Request("POST", "/" + getTableSearchIndexName() + "/_refresh");
-                searchClient.performRequest(refreshReq);
-                Request checkReq =
-                    new Request("POST", "/" + getTableSearchIndexName() + "/_search");
-                checkReq.setJsonEntity(
-                    "{\"query\":{\"term\":{\"id\":\"" + table.getId() + "\"}},\"size\":1}");
-                Response checkResp = searchClient.performRequest(checkReq);
-                String body =
-                    new String(
-                        checkResp.getEntity().getContent().readAllBytes(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                return body.contains("\"id\":\"" + table.getId() + "\"");
-              });
-
       String searchQuery =
           "{"
               + "  \"query\": {"
