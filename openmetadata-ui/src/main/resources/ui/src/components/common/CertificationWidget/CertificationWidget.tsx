@@ -54,6 +54,8 @@ const CertificationWidget = () => {
       await onUpdate(updatedEntity);
     } catch (error) {
       showErrorToast(error as AxiosError);
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -90,10 +92,7 @@ const CertificationWidget = () => {
           }
         },
       }}
-      onCertificationUpdate={async (cert) => {
-        await handleCertificationUpdate(cert);
-        setIsEditing(false);
-      }}
+      onCertificationUpdate={handleCertificationUpdate}
       onClose={() => setIsEditing(false)}>
       <div data-testid="certification-label">
         {entity.certification ? (
