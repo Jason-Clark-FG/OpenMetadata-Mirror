@@ -22,6 +22,7 @@ import {
   redirectToHomePage,
   uuid,
 } from '../../utils/common';
+import { TeamClass } from '../../support/team/TeamClass';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { validateFormNameFieldInput } from '../../utils/form';
 import {
@@ -497,5 +498,127 @@ test.describe.serial('Default persona setting and removal flow', () => {
       await waitForAllLoadersToDisappear(userPage);
       await checkPersonaInProfile(userPage); // Expect no persona again
     });
+  });
+});
+
+test.describe.serial('Team persona setting flow', () => {
+  const teamPersona = new PersonaClass();
+  const teamUser = new UserClass();
+  const testTeam = new TeamClass();
+
+  const test = base.extend<{
+    adminPage: Page;
+  }>({
+    adminPage: async ({ browser }, use) => {
+      const adminContext = await browser.newContext({
+        storageState: 'playwright/.auth/admin.json',
+      });
+      const page = await adminContext.newPage();
+      await page.goto('/');
+      await use(page);
+      await adminContext.close();
+    },
+  });
+
+  test.beforeAll(
+    'Setup user, team and persona for team persona flow',
+    async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+
+      await teamUser.create(apiContext);
+
+      testTeam.data.users = [teamUser.responseData.id];
+      await testTeam.create(apiContext);
+
+      await teamPersona.create(apiContext);
+      await afterAction();
+    }
+  );
+
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await testTeam.delete(apiContext);
+    await teamUser.delete(apiContext);
+    await teamPersona.delete(apiContext);
+    await afterAction();
+  });
+
+  test('Set default persona for team should work properly', async ({
+    adminPage,
+  }) => {
+    test.slow(true);
+
+    await test.step('Admin sets default persona for a team', async () => {
+      await redirectToHomePage(adminPage);
+
+      await testTeam.visitTeamPage(adminPage);
+
+      // const teamSettingsResponse = adminPage.waitForResponse('/api/v1/teams/*');
+
+      // Click to edit default persona
+      await adminPage.getByTestId('default-edit-user-persona').click();
+
+      // Wait for dropdown to open and options to load
+      await adminPage.waitForSelector(
+        '[data-testid="default-persona-select-list"]'
+      );
+      await adminPage.waitForSelector('.ant-select-dropdown', {
+        state: 'visible',
+      });
+
+      const option = adminPage.getByTitle(teamPersona.responseData.displayName);
+
+      await expect(option).toBeVisible();
+      await option.click();
+
+      // Verify the selected option is correct
+      await expect(
+        adminPage.locator(`span.ant-select-selection-item[title="${teamPersona.responseData.displayName}"]`)
+      ).toBeVisible();
+
+      const teamPatchResponse = adminPage.waitForResponse('/api/v1/teams/*');
+      
+      // Save the default persona for team
+      await adminPage.getByTestId('user-profile-default-persona-edit-save').click();
+      await teamPatchResponse;
+
+      // Ensure dropdown closed
+      await expect(
+        adminPage.locator('.ant-select-dropdown:visible')
+      ).not.toBeVisible();
+
+      // Verify persona renders in team UI
+      await expect(adminPage.getByTestId('team-persona')).toContainText(
+        teamPersona.responseData.displayName
+      );
+    });
+
+    await test.step(
+      'Admin can verify the team persona is applied to the team user',
+      async () => {
+        // Navigate to the Users tab in the Team page
+        await adminPage.getByTestId('users').click();
+        
+        // Wait for list to load and click on the specific user
+        const userProfileResponse = adminPage.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/users/name/') &&
+          response.request().method() === 'GET' &&
+            response.status() === 200
+        );
+        await adminPage.getByTestId(teamUser.responseData.name).click();
+        await userProfileResponse;
+
+        // Verify the user inherited the team's default persona
+        await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+        const defaultPersonaChip = adminPage.locator(
+          '[data-testid="default-persona-chip"] [data-testid="tag-chip"]'
+        ).first();
+
+        await expect(defaultPersonaChip).toContainText(
+          teamPersona.responseData.displayName
+        );
+      }
+    );
   });
 });

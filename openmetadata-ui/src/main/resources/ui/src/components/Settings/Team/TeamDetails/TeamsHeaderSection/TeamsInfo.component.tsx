@@ -37,9 +37,12 @@ import { getPrioritizedEditPermission } from '../../../../../utils/PermissionsUt
 import { DomainLabel } from '../../../../common/DomainLabel/DomainLabel.component';
 import { OwnerLabel } from '../../../../common/OwnerLabel/OwnerLabel.component';
 import TeamTypeSelect from '../../../../common/TeamTypeSelect/TeamTypeSelect.component';
+import { PersonaSelectableList } from '../../../../MyData/Persona/PersonaSelectableList/PersonaSelectableList.component';
 import { SubscriptionWebhook, TeamsInfoProps } from '../team.interface';
 import './teams-info.less';
 import TeamsSubscription from './TeamsSubscription.component';
+import Chip from '../../../../common/Chip/Chip.component';
+
 const TeamsInfo = ({
   parentTeams,
   isGroupType,
@@ -134,14 +137,27 @@ const TeamsInfo = ({
           subscription: isEmpty(data)
             ? undefined
             : {
-                [data?.webhook ?? '']: { endpoint: data?.endpoint },
-              },
+              [data?.webhook ?? '']: { endpoint: data?.endpoint },
+            },
         },
       };
 
       await updateTeamHandler(updatedData);
     }
   };
+
+  const handleDefaultPersonaUpdate = useCallback(
+    async (defaultPersona?: EntityReference) => {
+      if (currentTeam) {
+        const updatedData: Team = {
+          ...currentTeam,
+          defaultPersona,
+        };
+        await updateTeamHandler(updatedData);
+      }
+    },
+    [currentTeam, updateTeamHandler]
+  );
 
   const emailRender = useMemo(
     () => (
@@ -309,6 +325,40 @@ const TeamsInfo = ({
     setShowTypeSelector,
   ]);
 
+  const personaRender = useMemo(() => {
+    if (!isGroupType) {
+      return null;
+    }
+
+    return (
+      <>
+        <Divider className="vertical-divider" type="vertical" />
+        <Space align="start" className="d-flex flex-col gap-2">
+          <div className="d-flex gap-2">
+            <Typography.Text className="text-sm font-medium teams-info-heading">
+              {t('label.persona')}
+            </Typography.Text>
+            <PersonaSelectableList
+              isDefaultPersona
+              hasPermission={hasEditPermission}
+              multiSelect={false}
+              selectedPersonas={currentTeam.defaultPersona ? [currentTeam.defaultPersona] : []}
+              onUpdate={handleDefaultPersonaUpdate}
+            />
+          </div>
+          <div data-testid="team-persona">
+            <Chip
+              showNoDataPlaceholder
+              data={currentTeam.defaultPersona ? [currentTeam.defaultPersona] : []}
+              entityType={EntityType.PERSONA}
+              noDataPlaceholder={t('message.no-persona-assigned')}
+            />
+          </div>
+        </Space>
+      </>
+    );
+  }, [isGroupType, currentTeam.defaultPersona, hasEditPermission, handleDefaultPersonaUpdate, t]);
+
   return (
     <Space
       className="teams-info-header-container"
@@ -344,6 +394,8 @@ const TeamsInfo = ({
         updateTeamSubscription={updateTeamSubscription}
       />
       {teamTypeElement}
+
+      {personaRender}
 
       <Divider className="vertical-divider" type="vertical" />
 

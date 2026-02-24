@@ -61,6 +61,23 @@ const UserProfilePersonas = ({
     },
     [updateUserDetails]
   );
+
+  const combinedPersonas = useMemo(() => {
+    const personas = userData.personas ?? [];
+    const inheritedPersonas = userData.inheritedPersonas ?? [];
+    const allPersonas = [...personas, ...inheritedPersonas];
+    
+    if (userData.defaultPersona) {
+      allPersonas.push(userData.defaultPersona);
+    }
+    
+    // Deduplicate by id
+    const uniquePersonasMap = new Map();
+    allPersonas.forEach((p) => uniquePersonasMap.set(p.id, p));
+    
+    return Array.from(uniquePersonasMap.values());
+  }, [userData.personas, userData.inheritedPersonas, userData.defaultPersona]);
+
   const defaultPersonaRender = useMemo(
     () => (
       <>
@@ -80,7 +97,7 @@ const UserProfilePersonas = ({
               isDefaultPersona
               hasPermission={hasEditPermission}
               multiSelect={false}
-              personaList={userData.personas}
+              personaList={combinedPersonas}
               selectedPersonas={defaultPersona ? [defaultPersona] : []}
               onUpdate={handleDefaultPersonaUpdate}
             />
