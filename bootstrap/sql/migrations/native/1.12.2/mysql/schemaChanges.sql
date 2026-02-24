@@ -1,0 +1,2 @@
+-- Migrate workflow definitions: replace addReviewers:true with assigneeSources:["reviewers"]
+-- Java migration handles the JSON transformation
