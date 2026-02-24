@@ -17,7 +17,7 @@ export interface OpenLineageConnection {
     /**
      * Event broker configuration. Choose between Kafka and Kinesis.
      */
-    brokerConfig?: BrokerConfiguration;
+    brokerConfig: BrokerConfiguration;
     /**
      * Regex exclude pipelines.
      */
