@@ -399,7 +399,7 @@ const ColumnProfileTable = () => {
 
   return (
     <div
-      className="tw:flex tw:flex-col tw:gap-[30px]"
+      className="tw:flex tw:flex-col tw:gap-7.5"
       data-testid="column-profile-table-container">
       {!isLoading && !isProfilingEnabled && <NoProfilerBanner />}
 
