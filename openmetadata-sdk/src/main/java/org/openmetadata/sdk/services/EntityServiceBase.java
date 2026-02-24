@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.zjsonpatch.JsonDiff;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -27,14 +28,26 @@ public abstract class EntityServiceBase<T> {
   protected final String basePath;
   protected final ObjectMapper objectMapper;
 
+  private static final int MAX_SNAPSHOTS = 500;
+
   /**
-   * Stores JSON snapshots of entities returned by get() methods. When update() is called,
-   * the snapshot serves as the baseline for JSON Patch diff generation. This allows the diff
-   * to correctly detect field removals (fields set to null after fetching), which would
-   * otherwise be invisible due to NON_NULL serialization omitting null fields.
+   * Stores JSON snapshots of entities returned by get() methods. When update() is called, the
+   * snapshot serves as the baseline for JSON Patch diff generation. This allows the diff to
+   * correctly detect field removals (fields set to null after fetching), which would otherwise be
+   * invisible due to NON_NULL serialization omitting null fields.
+   *
+   * <p>Bounded to {@link #MAX_SNAPSHOTS} entries (LRU eviction) to prevent memory leaks in
+   * long-running clients that fetch many entities without updating them.
    */
-  private final java.util.concurrent.ConcurrentHashMap<String, JsonNode> entitySnapshots =
-      new java.util.concurrent.ConcurrentHashMap<>();
+  @SuppressWarnings("serial")
+  private final Map<String, JsonNode> entitySnapshots =
+      Collections.synchronizedMap(
+          new java.util.LinkedHashMap<>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, JsonNode> eldest) {
+              return size() > MAX_SNAPSHOTS;
+            }
+          });
 
   protected EntityServiceBase(HttpClient httpClient, String basePath) {
     this.httpClient = httpClient;
@@ -52,6 +65,16 @@ public abstract class EntityServiceBase<T> {
     } else if (node.has("id")) {
       entitySnapshots.put(node.get("id").asText(), node);
     }
+  }
+
+  /** Fetch an entity by ID without storing a snapshot (for internal use in update fallback). */
+  private T fetchEntity(String id, String fields) throws OpenMetadataException {
+    if (fields != null) {
+      RequestOptions options = RequestOptions.builder().queryParam("fields", fields).build();
+      return httpClient.execute(
+          HttpMethod.GET, basePath + "/" + id, null, getEntityClass(), options);
+    }
+    return httpClient.execute(HttpMethod.GET, basePath + "/" + id, null, getEntityClass());
   }
 
   public T create(T entity) throws OpenMetadataException {
@@ -232,12 +255,14 @@ public abstract class EntityServiceBase<T> {
           }
         }
 
+        // Fetch original directly without storing a snapshot (avoids polluting the cache
+        // with a server-state snapshot that doesn't reflect the user's baseline).
         T original;
         if (!fieldsToFetch.isEmpty()) {
           String fields = String.join(",", fieldsToFetch);
-          original = get(id, fields);
+          original = fetchEntity(id, fields);
         } else {
-          original = get(id);
+          original = fetchEntity(id, null);
         }
 
         originalNode = objectMapper.readTree(objectMapper.writeValueAsString(original));

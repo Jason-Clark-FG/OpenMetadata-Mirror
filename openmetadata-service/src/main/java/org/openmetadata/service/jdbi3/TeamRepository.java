@@ -981,7 +981,7 @@ public class TeamRepository extends EntityRepository<Team> {
     if (team.getDefaultPersona() == null) {
       return;
     }
-    if (team.getTeamType() != null && !GROUP.equals(team.getTeamType())) {
+    if (!GROUP.equals(team.getTeamType())) {
       throw new IllegalArgumentException(
           "Default persona can only be set for teams of type Group.");
     }
@@ -1335,6 +1335,11 @@ public class TeamRepository extends EntityRepository<Team> {
       if (updatedPersona != null && !GROUP.equals(updatedTeam.getTeamType())) {
         throw new IllegalArgumentException(
             "Default persona can only be set for teams of type Group.");
+      }
+      UUID origId = origPersona != null ? origPersona.getId() : null;
+      UUID updatedId = updatedPersona != null ? updatedPersona.getId() : null;
+      if (Objects.equals(origId, updatedId)) {
+        return;
       }
       if (origPersona != null) {
         deleteFrom(origTeam.getId(), TEAM, Relationship.HAS, Entity.PERSONA);
