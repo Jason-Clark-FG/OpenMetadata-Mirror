@@ -59,7 +59,7 @@ const TierWidget = () => {
   const header = (
     <div className={classNames('d-flex items-center gap-2')}>
       <Typography.Text
-        className="right-panel-label"
+        className="text-sm font-medium"
         data-testid="tier-heading-name">
         {t('label.tier')}
       </Typography.Text>
