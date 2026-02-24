@@ -36,7 +36,7 @@ const SummaryCardV1 = ({
 
   return (
     <div>
-      <div className="tw:flex tw:w-full tw:min-w-52 tw:items-center tw:gap-4 tw:rounded-lg tw:border tw:border-border-secondary tw:px-5 tw:py-4 tw:shadow-xs">
+      <div className="tw:flex tw:w-full tw:min-w-52 tw:items-center tw:gap-4 tw:rounded-lg tw:border tw:border-secondary tw:px-5 tw:py-4 tw:shadow-xs">
         <Icon height={40} width={40} />
         <div>
           <p className="tw:m-0 tw:text-lg tw:font-semibold tw:text-primary">
