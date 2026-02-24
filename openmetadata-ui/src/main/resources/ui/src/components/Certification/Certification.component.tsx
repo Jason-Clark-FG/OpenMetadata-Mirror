@@ -225,14 +225,8 @@ const Certification = ({
   };
 
   useEffect(() => {
-    if (popoverProps?.open) {
-      setSelectedCertification(currentCertificate);
-      setCurrentPage(1);
-      setPaging({} as Paging);
+    if (popoverProps?.open && certifications.length === 0) {
       getCertificationData(1);
-    } else if (popoverProps?.open === false) {
-      setCertifications([]);
-      setSelectedCertification('');
     }
   }, [popoverProps?.open]);
 
@@ -298,11 +292,8 @@ const Certification = ({
       ref={popoverRef}
       showArrow={false}
       trigger="click"
-      {...popoverProps}
-      onOpenChange={(visible) => {
-        onOpenChange(visible);
-        popoverProps?.onOpenChange?.(visible);
-      }}>
+      onOpenChange={onOpenChange}
+      {...popoverProps}>
       {children}
     </Popover>
   );
