@@ -248,6 +248,7 @@ test.describe(
           await page
             .getByTestId('table-profiler-container')
             .getByTestId('manage-button')
+            .nth(2)
             .click();
 
           await page.getByTestId('import-button').click();

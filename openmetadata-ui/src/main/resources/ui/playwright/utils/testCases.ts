@@ -141,8 +141,8 @@ export const clickManageButton = async (
   if (context === 'table') {
     await page
       .getByTestId('table-profiler-container')
-      .locator('form')
       .getByTestId('manage-button')
+      .nth(2)
       .click();
   } else {
     await page.waitForSelector('[data-testid="manage-button"]', {
