@@ -276,6 +276,47 @@ jest.mock('@openmetadata/ui-core-components', () => ({
       {children}
     </button>
   ),
+  Tooltip: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="tooltip" title={title as string}>
+      {children}
+    </div>
+  ),
+  TooltipTrigger: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <button className={className}>{children}</button>,
+  Toggle: ({
+    isSelected,
+    onChange,
+    isDisabled,
+    'data-testid': testId,
+  }: {
+    isSelected?: boolean;
+    onChange?: (val: boolean) => void;
+    isDisabled?: boolean;
+    'data-testid'?: string;
+  }) => (
+    <button
+      aria-checked={isSelected}
+      aria-disabled={isDisabled}
+      data-testid={testId}
+      role="switch"
+      onClick={() => onChange?.(!isSelected)}>
+      toggle
+    </button>
+  ),
+  SlideoutMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   createMuiTheme: jest.fn().mockReturnValue({}),
 }));
 
