@@ -132,6 +132,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -291,6 +293,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
           .expireAfterWrite(30, TimeUnit.SECONDS)
           .recordStats()
           .build(new EntityLoaderWithId());
+
+  private static final ExecutorService FIELD_FETCH_EXECUTOR =
+      Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("field-fetch-", 0).factory());
 
   private static final LoadingCache<String, Integer> COUNT_CACHE =
       CacheBuilder.newBuilder()
@@ -1213,6 +1218,15 @@ public abstract class EntityRepository<T extends EntityInterface> {
     Map<String, String> cursorMap =
         Map.of("name", entity.getName(), "id", String.valueOf(entity.getId()));
     return JsonUtils.pojoToJson(cursorMap);
+  }
+
+  public String getCursorAtOffset(ListFilter filter, int offset) {
+    List<String> jsons = dao.listAfter(filter, 1, offset);
+    if (jsons.isEmpty()) {
+      return null;
+    }
+    T entity = JsonUtils.readValue(jsons.get(0), entityClass);
+    return RestUtil.encodeCursor(getCursorValue(entity));
   }
 
   public final T getVersion(UUID id, String version) {
@@ -6743,7 +6757,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    fieldFetchers.values().forEach(fetcher -> fetcher.accept(entities, fields));
+    if (fieldFetchers.size() <= 1) {
+      fieldFetchers.values().forEach(fetcher -> fetcher.accept(entities, fields));
+      return;
+    }
+    List<CompletableFuture<Void>> futures =
+        fieldFetchers.values().stream()
+            .map(
+                fetcher ->
+                    CompletableFuture.runAsync(
+                        () -> fetcher.accept(entities, fields), FIELD_FETCH_EXECUTOR))
+            .toList();
+    CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
   }
 
   private void fetchAndSetOwners(List<T> entities, Fields fields) {

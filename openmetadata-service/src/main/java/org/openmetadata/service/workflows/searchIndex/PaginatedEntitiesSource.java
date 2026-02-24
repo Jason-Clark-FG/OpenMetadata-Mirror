@@ -287,7 +287,7 @@ public class PaginatedEntitiesSource implements Source<ResultList<? extends Enti
               Entity.getFields(entityType, fields));
 
       int warningsCount = 0;
-      if (!result.getErrors().isEmpty()) {
+      if (result.getErrors() != null && !result.getErrors().isEmpty()) {
         List<EntityError> realErrors = new ArrayList<>();
         for (EntityError error : result.getErrors()) {
           if (isEntityNotFoundError(error)) {
@@ -305,7 +305,7 @@ public class PaginatedEntitiesSource implements Source<ResultList<? extends Enti
           "[PaginatedEntitiesSource] Keyset batch stats — Submitted: {} Success: {} Failed: {} Warnings: {}",
           batchSize,
           result.getData().size(),
-          result.getErrors().size(),
+          result.getErrors() != null ? result.getErrors().size() : 0,
           warningsCount);
 
     } catch (Exception e) {
@@ -326,6 +326,23 @@ public class PaginatedEntitiesSource implements Source<ResultList<? extends Enti
       throw new SearchIndexException(indexingError);
     }
     return result;
+  }
+
+  public List<String> findBoundaryCursors(int numReaders, int totalRecords) {
+    List<String> cursors = new ArrayList<>();
+    if (numReaders <= 1 || totalRecords <= 0) {
+      return cursors;
+    }
+    EntityRepository<?> entityRepository = Entity.getEntityRepository(entityType);
+    int recordsPerReader = totalRecords / numReaders;
+    for (int i = 1; i < numReaders; i++) {
+      int offset = i * recordsPerReader;
+      String cursor = entityRepository.getCursorAtOffset(filter, offset);
+      if (cursor != null) {
+        cursors.add(cursor);
+      }
+    }
+    return cursors;
   }
 
   @Override

@@ -217,6 +217,21 @@ public interface EntityTimeSeriesDAO {
         afterFQNHash);
   }
 
+  @SqlQuery(
+      "SELECT json, timestamp, entityFQNHash FROM <table> <cond> "
+          + "ORDER BY timestamp ASC, entityFQNHash ASC LIMIT 1 OFFSET :offset")
+  @RegisterRowMapper(TimeSeriesRowMapper.class)
+  TimeSeriesRow getCursorAtOffset(
+      @Define("table") String table,
+      @BindMap Map<String, ?> params,
+      @Define("cond") String cond,
+      @Bind("offset") int offset);
+
+  default TimeSeriesRow getCursorAtOffset(ListFilter filter, int offset) {
+    return getCursorAtOffset(
+        getTimeSeriesTableName(), filter.getQueryParams(), filter.getCondition(), offset);
+  }
+
   @ConnectionAwareSqlUpdate(
       value =
           "UPDATE <table> set json = :json where entityFQNHash=:entityFQNHash and extension=:extension and timestamp=:timestamp and json -> '$.operation' = :operation",

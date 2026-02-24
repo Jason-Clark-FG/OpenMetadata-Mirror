@@ -308,6 +308,14 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
     }
   }
 
+  public String getCursorAtOffset(ListFilter filter, int offset) {
+    EntityTimeSeriesDAO.TimeSeriesRow row = timeSeriesDao.getCursorAtOffset(filter, offset);
+    if (row == null) {
+      return null;
+    }
+    return row.timestamp() + "|" + row.entityFQNHash();
+  }
+
   public T getLatestRecord(String recordFQN) {
     String jsonRecord = timeSeriesDao.getLatestRecord(recordFQN);
     if (jsonRecord == null) {

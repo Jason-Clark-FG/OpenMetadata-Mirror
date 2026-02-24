@@ -188,9 +188,10 @@ public class PaginatedEntityTimeSeriesSource
       long afterTs = 0;
       String afterFQNHash = "";
       if (keysetCursor != null && !keysetCursor.isEmpty()) {
-        int sep = keysetCursor.indexOf('|');
-        afterTs = Long.parseLong(keysetCursor.substring(0, sep));
-        afterFQNHash = keysetCursor.substring(sep + 1);
+        String decoded = RestUtil.decodeCursor(keysetCursor);
+        int sep = decoded.indexOf('|');
+        afterTs = Long.parseLong(decoded.substring(0, sep));
+        afterFQNHash = decoded.substring(sep + 1);
       }
       ListFilter filter = getFilter();
       int cachedTotal = stats.getTotalRecords() != null ? stats.getTotalRecords() : 0;
@@ -201,7 +202,7 @@ public class PaginatedEntityTimeSeriesSource
           "[PaginatedEntityTimeSeriesSource] Keyset batch stats — Submitted: {} Success: {} Failed: {}",
           batchSize,
           result.getData().size(),
-          result.getErrors().size());
+          result.getErrors() != null ? result.getErrors().size() : 0);
     } catch (Exception e) {
       LOG.error(
           "Error reading keyset batch for entityType: {} with cursor: {}",
@@ -220,6 +221,25 @@ public class PaginatedEntityTimeSeriesSource
       throw new SearchIndexException(indexingError);
     }
     return result;
+  }
+
+  public List<String> findBoundaryCursors(int numReaders, int totalRecords) {
+    List<String> cursors = new ArrayList<>();
+    if (numReaders <= 1 || totalRecords <= 0) {
+      return cursors;
+    }
+    EntityTimeSeriesRepository<? extends EntityTimeSeriesInterface> repository =
+        getEntityTimeSeriesRepository();
+    ListFilter filter = getFilter();
+    int recordsPerReader = totalRecords / numReaders;
+    for (int i = 1; i < numReaders; i++) {
+      int offset = i * recordsPerReader;
+      String cursor = repository.getCursorAtOffset(filter, offset);
+      if (cursor != null) {
+        cursors.add(cursor);
+      }
+    }
+    return cursors;
   }
 
   @Override
