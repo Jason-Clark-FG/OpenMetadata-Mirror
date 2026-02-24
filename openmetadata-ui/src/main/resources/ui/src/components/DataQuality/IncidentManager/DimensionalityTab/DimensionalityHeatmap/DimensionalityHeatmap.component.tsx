@@ -13,9 +13,9 @@
 
 import {
   ProgressBarCircle,
-  Tooltip,
   Typography,
 } from '@openmetadata/ui-core-components';
+import { Tooltip } from 'antd';
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as RightArrowIcon } from '../../../../../assets/svg/right-arrow.svg';
@@ -128,7 +128,9 @@ const DimensionalityHeatmap = ({
                 {row.cells.map((cell) => (
                   <Tooltip
                     key={`${cell.dimensionValue}-${cell.date}`}
+                    overlayClassName="dimensionality-heatmap-cell-tooltip"
                     placement="top"
+                    showArrow={false}
                     title={<HeatmapCellTooltip cell={cell} />}>
                     <div
                       aria-label={`${cell.dimensionValue}, ${getDateLabel(

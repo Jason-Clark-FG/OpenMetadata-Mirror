@@ -27,11 +27,15 @@ interface TooltipRowProps {
 
 const TooltipRow: FC<TooltipRowProps> = ({ label, value }) => {
   return (
-    <div className="tw:flex tw:items-center tw:justify-between tw:gap-5 tw:text-xs">
-      <Typography as="span" className="tw:whitespace-nowrap tw:text-gray-700">
+    <div className="heatmap-cell-tooltip__row tw:flex tw:items-center tw:justify-between">
+      <Typography
+        as="span"
+        className="heatmap-cell-tooltip__label tw:whitespace-nowrap tw:text-[12px] tw:text-gray-700">
         {label}
       </Typography>
-      <Typography as="span" className="tw:font-medium tw:text-gray-900">
+      <Typography
+        as="span"
+        className="heatmap-cell-tooltip__value tw:font-medium tw:text-[12px] tw:text-gray-900">
         {value}
       </Typography>
     </div>
