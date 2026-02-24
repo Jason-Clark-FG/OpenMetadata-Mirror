@@ -12,7 +12,6 @@
  */
 import { expect, Page } from '@playwright/test';
 import {
-  DOMAIN_TAGS,
   PLAYWRIGHT_INGESTION_TAG_OBJ,
 } from '../../../constant/config';
 import { TableClass } from '../../../support/entity/TableClass';
@@ -124,7 +123,6 @@ const validateProfilerAccessForRole = async (
 
 test.describe(
   'Profiler Role Access Tests',
-  { tag: `${DOMAIN_TAGS.OBSERVABILITY}:Profiler` },
   () => {
     // Store the created test case to avoid stale data from array
     let createdTestCase: ResponseDataType;
