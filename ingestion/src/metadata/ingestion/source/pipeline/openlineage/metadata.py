@@ -519,8 +519,10 @@ class OpenlineageSource(PipelineServiceSource):
         """Poll events from Kinesis Data Stream."""
         try:
             kinesis_client = self.client
-            stream_desc = kinesis_client.describe_stream(StreamName=broker.streamName)
-            shards = stream_desc["StreamDescription"]["Shards"]
+            shards = []
+            paginator = kinesis_client.get_paginator("list_shards")
+            for page in paginator.paginate(StreamName=broker.streamName):
+                shards.extend(page.get("Shards", []))
 
             iterator_type = broker.consumerOffsets.value
             pool_timeout = broker.poolTimeout
