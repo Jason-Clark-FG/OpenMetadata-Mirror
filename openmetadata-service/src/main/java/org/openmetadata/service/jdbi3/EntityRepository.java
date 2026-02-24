@@ -1159,7 +1159,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String afterCursor = null;
       if (entities.size() > limitParam) {
         entities.remove(limitParam);
-        afterCursor = RestUtil.encodeCursor(getCursorValue(entities.get(limitParam - 1)));
+        afterCursor = getCursorValue(entities.get(limitParam - 1));
       } else if (!entities.isEmpty()) {
         // Last page — no more data after this
         afterCursor = null;
@@ -1172,15 +1172,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   @SuppressWarnings("unchecked")
   Map<String, String> parseCursorMap(String param) {
-    Map<String, String> cursorMap;
     if (param == null) {
-      cursorMap = Map.of("name", null, "id", null);
+      return Map.of("name", null, "id", null);
     } else if (nullOrEmpty(param)) {
-      cursorMap = Map.of("name", "", "id", "");
-    } else {
-      cursorMap = JsonUtils.readValue(param, Map.class);
+      return Map.of("name", "", "id", "");
     }
-    return cursorMap;
+    return JsonUtils.readValue(param, Map.class);
   }
 
   public ResultList<T> listBefore(
