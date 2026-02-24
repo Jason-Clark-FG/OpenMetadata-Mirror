@@ -92,6 +92,57 @@ const mockPaging = {
   total: 10,
 };
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Tooltip: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="tooltip" title={title as string}>
+      {children}
+    </div>
+  ),
+  TooltipTrigger: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <button className={className}>{children}</button>,
+  Badge: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+  }) => <span data-testid={testId}>{children}</span>,
+  Toggle: ({
+    isSelected,
+    onChange,
+    isDisabled,
+    'data-testid': testId,
+  }: {
+    isSelected?: boolean;
+    onChange?: (val: boolean) => void;
+    isDisabled?: boolean;
+    'data-testid'?: string;
+  }) => (
+    <button
+      aria-checked={isSelected}
+      aria-disabled={isDisabled}
+      data-testid={testId}
+      role="switch"
+      onClick={() => onChange?.(!isSelected)}>
+      toggle
+    </button>
+  ),
+  SlideoutMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}));
+
 jest.mock('../../../../rest/ingestionPipelineAPI', () => {
   return {
     getIngestionPipelines: jest
