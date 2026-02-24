@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Badge, Button, Stack, Typography, useTheme } from '@mui/material';
+import { Badge, Button as UTButton } from '@openmetadata/ui-core-components';
 import { useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -71,7 +71,6 @@ const TagsPage = () => {
   const { getEntityPermission, permissions } = usePermissionProvider();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const theme = useTheme();
   const { fqn: tagCategoryName } = useFqn();
   const [tagForm] = useForm();
   const [classificationForm] = useForm();
@@ -658,27 +657,14 @@ const TagsPage = () => {
       <div className="h-full" data-testid="tags-left-panel">
         <TagsLeftPanelSkeleton loading={isLoading}>
           <div className="p-y-xs" data-testid="data-summary-container">
-            <Stack
-              className="w-full p-x-sm m-b-sm"
-              direction="column"
-              spacing={2}>
+            <div className="tw:w-full p-x-sm m-b-sm tw:flex tw:flex-col tw:gap-2">
               {createClassificationPermission && (
-                <Button
-                  fullWidth
-                  className="text-primary"
+                <UTButton
+                  className="tw:w-full tw:font-normal shadow-none tw:hover:bg-transparent tw:border tw:border-gray-300 tw:hover:border-brand-600 tw:text-brand-600!"
+                  color="secondary"
                   data-testid="add-classification"
-                  startIcon={<PlusIcon style={{ height: 16, width: 16 }} />}
-                  sx={{
-                    fontWeight: theme.typography.body2.fontWeight,
-                    border: `1px solid ${theme.palette.allShades.blueGray[100]}`,
-                    boxShadow: 'none',
-                    '&:hover': {
-                      boxShadow: 'none',
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${theme.palette.allShades.brand[500]}`,
-                    },
-                  }}
-                  variant="outlined"
+                  iconLeading={<PlusIcon style={{ height: 16, width: 16 }} />}
+                  size="sm"
                   onClick={() => {
                     classificationForm.resetFields();
                     handleClassificationDrawerOpen();
@@ -686,9 +672,9 @@ const TagsPage = () => {
                   {t('label.add-entity', {
                     entity: t('label.classification'),
                   })}
-                </Button>
+                </UTButton>
               )}
-            </Stack>
+            </div>
 
             {classifications.map((category: Classification) => (
               <div
@@ -702,43 +688,30 @@ const TagsPage = () => {
                 data-testid="side-panel-classification"
                 key={category.name}
                 onClick={() => onClickClassifications(category)}>
-                <Typography
-                  noWrap
-                  className="self-center m-b-0 tag-category"
-                  data-testid="tag-name"
-                  sx={{
-                    fontWeight:
-                      currentClassification?.name === category.name
-                        ? theme.typography.fontWeightBold
-                        : 'inherit',
-                    color:
-                      currentClassification?.name === category.name
-                        ? 'primary.main'
-                        : 'inherit',
-                  }}
-                  title={getEntityName(category)}
-                  variant="body2">
-                  {getEntityName(category)}
-                  {category.disabled && (
-                    <Badge
-                      badgeContent={t('label.disabled')}
-                      className="m-l-xs"
-                      color="default"
-                      data-testid="disabled"
-                      sx={{
-                        '& .MuiBadge-badge': {
-                          position: 'relative',
-                          transform: 'none',
-                          height: 'auto',
-                          padding: '2px 8px',
-                          color: theme.palette.grey[700],
-                          backgroundColor: theme.palette.grey[300],
-                          fontSize: theme.typography.caption.fontSize,
-                        },
-                      }}
-                    />
-                  )}
-                </Typography>
+                <div className="prose">
+                  <p
+                    className={classNames(
+                      'tw:self-center tw:m-b-0 tag-category tw:truncate tw:text-sm',
+                      {
+                        'tw:font-bold tw:text-brand-600':
+                          currentClassification?.name === category.name,
+                      }
+                    )}
+                    data-testid="tag-name"
+                    title={getEntityName(category)}>
+                    {getEntityName(category)}
+                    {category.disabled && (
+                      <Badge
+                        className="m-l-xs"
+                        color="gray"
+                        data-testid="disabled"
+                        size="sm"
+                        type="pill-color">
+                        {t('label.disabled')}
+                      </Badge>
+                    )}
+                  </p>
+                </div>
 
                 {getCountBadge(
                   category.termCount,
@@ -769,9 +742,9 @@ const TagsPage = () => {
   if (error) {
     return (
       <ErrorPlaceHolder>
-        <Typography className="text-center m-auto" component="p">
-          {error}
-        </Typography>
+        <div className="prose">
+          <p className="tw:text-center tw:m-auto">{error}</p>
+        </div>
       </ErrorPlaceHolder>
     );
   }

@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Switch, Tooltip as MUITooltip } from '@mui/material';
+import { Toggle, Tooltip as UTTooltip } from '@openmetadata/ui-core-components';
 import { Button, Space, Tooltip, Typography } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
 import { Link } from 'react-router-dom';
@@ -85,15 +85,15 @@ export const getCommonColumns = (options?: {
         }
 
         return (
-          <MUITooltip arrow placement="top" title={tooltipTitle}>
-            <Switch
-              checked={!record.disabled}
+          <UTTooltip placement="top" title={tooltipTitle}>
+            <Toggle
               data-testid={`tag-disable-toggle-${record.name}`}
-              disabled={!canToggleDisable}
-              size="small"
+              isDisabled={!canToggleDisable}
+              isSelected={!record.disabled}
+              size="sm"
               onChange={() => options.handleToggleDisable?.(record)}
             />
-          </MUITooltip>
+          </UTTooltip>
         );
       },
     });

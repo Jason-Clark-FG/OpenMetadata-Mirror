@@ -12,16 +12,10 @@
  */
 
 import {
-  Box,
-  Button,
-  CircularProgress,
-  Drawer,
-  IconButton,
-  Typography,
-  useTheme,
-} from '@mui/material';
-import { XClose } from '@untitledui/icons';
-import { FC } from 'react';
+  Button as UTButton,
+  SlideoutMenu,
+} from '@openmetadata/ui-core-components';
+import { FC, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import TagsForm from './TagsForm';
 import { ClassificationFormDrawerProps } from './TagsPage.interface';
@@ -35,93 +29,70 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const theme = useTheme();
   const { t } = useTranslation();
 
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
   return (
-    <Drawer
-      anchor="right"
+    <SlideoutMenu
       data-testid="classification-form-drawer"
-      open={open}
-      slotProps={{
-        paper: {
-          sx: { width: 670 },
-        },
-      }}
-      sx={{ zIndex: 1000 }}
-      onClose={onClose}>
-      {/* Header */}
-      <Box
-        sx={{
-          px: 6,
-          py: 5,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: (theme) => theme.shadows[1],
-        }}>
-        <Typography data-testid="form-heading" variant="h6">
-          {t('label.adding-new-classification')}
-        </Typography>
-        <IconButton
-          data-testid="drawer-close-icon"
-          size="medium"
-          sx={{ color: (theme) => theme.palette.grey[700] }}
-          onClick={onClose}>
-          <XClose />
-        </IconButton>
-      </Box>
+      isOpen={open}
+      onOpenChange={handleOpenChange}>
+      {({ close }) => (
+        <>
+          <SlideoutMenu.Header
+            className="tw:flex tw:items-center"
+            data-testid="drawer-header"
+            onClose={close}>
+            <div className="tw:prose">
+              <h6
+                className="tw:text-lg tw:font-semibold"
+                data-testid="form-heading">
+                {t('label.adding-new-classification')}
+              </h6>
+            </div>
+          </SlideoutMenu.Header>
 
-      {/* Form Content */}
-      <Box sx={{ flex: 1, overflow: 'auto', px: 6, py: 4 }}>
-        <TagsForm
-          isClassification
-          showMutuallyExclusive
-          data={classifications}
-          formRef={formRef}
-          isEditing={false}
-          isTier={isTier}
-          onSubmit={onSubmit}
-        />
-      </Box>
+          <SlideoutMenu.Content>
+            <TagsForm
+              isClassification
+              showMutuallyExclusive
+              data={classifications}
+              formRef={formRef}
+              isEditing={false}
+              isTier={isTier}
+              onSubmit={onSubmit}
+            />
+          </SlideoutMenu.Content>
 
-      {/* Footer */}
-      <Box
-        sx={{
-          px: 6,
-          py: 3,
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: 2,
-          boxShadow: (theme) => `0px -4px 6px -2px ${theme.palette.grey[200]}`,
-        }}>
-        <Button
-          color="primary"
-          data-testid="cancel-button"
-          sx={{
-            px: theme.spacing(4),
-            py: theme.spacing(2.5),
-            fontSize: theme.typography.body2.fontSize,
-            color: theme.palette.grey[700],
-            '&:hover': {
-              backgroundColor: 'transparent',
-            },
-          }}
-          variant="text"
-          onClick={onClose}>
-          {t('label.cancel')}
-        </Button>
-        <Button
-          data-testid="save-button"
-          disabled={isLoading}
-          loading={isLoading}
-          loadingIndicator={<CircularProgress color="inherit" size={18} />}
-          variant="contained"
-          onClick={() => formRef.submit()}>
-          {t('label.save')}
-        </Button>
-      </Box>
-    </Drawer>
+          <SlideoutMenu.Footer>
+            <div className="tw:flex tw:justify-end tw:gap-4">
+              <UTButton
+                color="tertiary"
+                data-testid="cancel-button"
+                onClick={onClose}>
+                {t('label.cancel')}
+              </UTButton>
+              <UTButton
+                color="primary"
+                data-testid="save-button"
+                isDisabled={isLoading}
+                isLoading={isLoading}
+                onClick={() => formRef.submit()}>
+                {t('label.save')}
+              </UTButton>
+            </div>
+          </SlideoutMenu.Footer>
+        </>
+      )}
+    </SlideoutMenu>
   );
 };
 
