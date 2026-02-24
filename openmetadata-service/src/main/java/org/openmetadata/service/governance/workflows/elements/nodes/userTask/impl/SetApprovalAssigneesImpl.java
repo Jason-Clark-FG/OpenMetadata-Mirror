@@ -55,19 +55,31 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
                     varHandler.getNamespacedVariable(
                         inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
         EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-        List<EntityReference> owners = entity.getOwners();
 
         if (useReviewers) {
-          // Use entity's reviewers; fall back to owners when reviewers are not set.
-          List<EntityReference> reviewers = entity.getReviewers();
-          if (reviewers != null && !reviewers.isEmpty()) {
-            assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
-          } else if (owners != null && !owners.isEmpty()) {
+          boolean entitySupportsReviewers =
+              Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
+          if (entitySupportsReviewers) {
+            // Entity has the reviewers field: use reviewers as-is (even if empty).
+            // An empty reviewers list means auto-approve; do NOT fall back to owners.
+            List<EntityReference> reviewers = entity.getReviewers();
+            if (reviewers != null && !reviewers.isEmpty()) {
+              assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
+            }
+          } else {
+            // Entity has no reviewers field: fall back to owners.
+            // If owners are also empty the task will be auto-approved.
+            List<EntityReference> owners = entity.getOwners();
+            if (owners != null && !owners.isEmpty()) {
+              assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+            }
+          }
+        } else {
+          // useOwners: use the entity's owners directly.
+          List<EntityReference> owners = entity.getOwners();
+          if (owners != null && !owners.isEmpty()) {
             assignees.addAll(getEntityLinkStringFromEntityReference(owners));
           }
-        } else if (owners != null && !owners.isEmpty()) {
-          // useOwners: use the entity's owners directly.
-          assignees.addAll(getEntityLinkStringFromEntityReference(owners));
         }
       }
 
