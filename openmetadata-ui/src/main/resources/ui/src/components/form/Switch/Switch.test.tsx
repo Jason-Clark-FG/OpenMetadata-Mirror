@@ -11,11 +11,33 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import MUISwitch from './MUISwitch';
+import Switch from './Switch';
 
-describe('MUISwitch Component', () => {
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Toggle: ({
+    isSelected,
+    isDisabled,
+    onChange,
+    size,
+  }: {
+    isSelected?: boolean;
+    isDisabled?: boolean;
+    onChange?: (checked: boolean) => void;
+    size?: string;
+  }) => (
+    <button
+      aria-checked={isSelected}
+      data-size={size}
+      disabled={isDisabled}
+      role="switch"
+      onClick={() => onChange?.(!isSelected)}
+    />
+  ),
+}));
+
+describe('Switch Component', () => {
   it('should render the switch component', () => {
-    render(<MUISwitch />);
+    render(<Switch />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -23,7 +45,7 @@ describe('MUISwitch Component', () => {
   });
 
   it('should render with unchecked state by default', () => {
-    render(<MUISwitch />);
+    render(<Switch />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -31,7 +53,7 @@ describe('MUISwitch Component', () => {
   });
 
   it('should render with checked state when checked prop is true', () => {
-    render(<MUISwitch checked />);
+    render(<Switch checked />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -41,13 +63,13 @@ describe('MUISwitch Component', () => {
   it('should render label when provided', () => {
     const labelText = 'Enable Feature';
 
-    render(<MUISwitch label={labelText} />);
+    render(<Switch label={labelText} />);
 
     expect(screen.getByText(labelText)).toBeInTheDocument();
   });
 
   it('should not render label when not provided', () => {
-    render(<MUISwitch />);
+    render(<Switch />);
 
     expect(screen.queryByText('Enable Feature')).not.toBeInTheDocument();
   });
@@ -55,7 +77,7 @@ describe('MUISwitch Component', () => {
   it('should call onChange with true when switch is toggled on', () => {
     const mockOnChange = jest.fn();
 
-    render(<MUISwitch checked={false} onChange={mockOnChange} />);
+    render(<Switch checked={false} onChange={mockOnChange} />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -68,7 +90,7 @@ describe('MUISwitch Component', () => {
   it('should call onChange with false when switch is toggled off', () => {
     const mockOnChange = jest.fn();
 
-    render(<MUISwitch checked onChange={mockOnChange} />);
+    render(<Switch checked onChange={mockOnChange} />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -79,7 +101,7 @@ describe('MUISwitch Component', () => {
   });
 
   it('should not throw error when onChange is not provided', () => {
-    render(<MUISwitch />);
+    render(<Switch />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -87,7 +109,7 @@ describe('MUISwitch Component', () => {
   });
 
   it('should apply disabled attribute when disabled prop is true', () => {
-    render(<MUISwitch disabled />);
+    render(<Switch disabled />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -97,7 +119,7 @@ describe('MUISwitch Component', () => {
   it('should not call onChange when disabled', () => {
     const mockOnChange = jest.fn();
 
-    render(<MUISwitch disabled onChange={mockOnChange} />);
+    render(<Switch disabled onChange={mockOnChange} />);
 
     const switchElement = screen.getByRole('switch');
 
@@ -106,28 +128,21 @@ describe('MUISwitch Component', () => {
     expect(mockOnChange).not.toHaveBeenCalled();
   });
 
-  it('should pass additional props to the underlying Switch component', () => {
-    render(<MUISwitch data-testid="custom-switch" size="small" />);
-
-    expect(screen.getByTestId('custom-switch')).toBeInTheDocument();
-  });
-
   it('should render with both label and checked state', () => {
     const labelText = 'Toggle Me';
 
-    render(<MUISwitch checked label={labelText} />);
+    render(<Switch checked label={labelText} />);
 
     const switchElement = screen.getByRole('switch');
 
     expect(switchElement).toBeChecked();
-
     expect(screen.getByText(labelText)).toBeInTheDocument();
   });
 
   it('should support memoization without breaking rendering', () => {
-    const { rerender } = render(<MUISwitch />);
+    const { rerender } = render(<Switch />);
 
-    rerender(<MUISwitch />);
+    rerender(<Switch />);
 
     expect(screen.getByRole('switch')).toBeInTheDocument();
   });

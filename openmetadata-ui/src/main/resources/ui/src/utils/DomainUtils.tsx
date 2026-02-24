@@ -12,7 +12,7 @@
  */
 import { Tooltip, TooltipTrigger } from '@openmetadata/ui-core-components';
 import { InfoCircle } from '@untitledui/icons';
-import { Divider, Space, Tooltip as AntDTooltip, Typography } from 'antd';
+import { Tooltip as AntDTooltip, Divider, Space, Typography } from 'antd';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { InternalAxiosRequestConfig } from 'axios';
 import classNames from 'classnames';
@@ -414,13 +414,11 @@ export const renderDomainLink = (
           textClassName
         )}
         data-testid="domain-link"
-        to={getDomainPath(domain?.fullyQualifiedName)}
-      >
+        to={getDomainPath(domain?.fullyQualifiedName)}>
         {trimLink ? (
           <Typography.Text
             className="domain-link-name"
-            ellipsis={{ tooltip: false }}
-          >
+            ellipsis={{ tooltip: false }}>
             {displayName}
           </Typography.Text>
         ) : (
@@ -774,8 +772,7 @@ export const DomainListItemRenderer = (props: EntityReference) => {
           <Typography.Text
             ellipsis
             className="m-l-xss text-xs"
-            type="secondary"
-          >
+            type="secondary">
             {fqn}
           </Typography.Text>
         )}

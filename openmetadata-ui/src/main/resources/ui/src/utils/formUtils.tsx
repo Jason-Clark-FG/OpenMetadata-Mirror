@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { TooltipProps as MUITooltipProps } from '@mui/material/Tooltip';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
   Alert,
@@ -46,7 +45,6 @@ import { MUIIconPicker } from '../components/common/IconPicker';
 import { InlineAlertProps } from '../components/common/InlineAlert/InlineAlert.interface';
 import MUIDomainSelect from '../components/common/MUIDomainSelect/MUIDomainSelect';
 import { MUIDomainSelectProps } from '../components/common/MUIDomainSelect/MUIDomainSelect.interface';
-import MUIFormItemLabel from '../components/common/MUIFormItemLabel';
 import MUIGlossaryTagSuggestion from '../components/common/MUIGlossaryTagSuggestion/MUIGlossaryTagSuggestion';
 import MUISelect from '../components/common/MUISelect/MUISelect';
 import MUITagSuggestion from '../components/common/MUITagSuggestion/MUITagSuggestion';
@@ -67,7 +65,7 @@ import UserTeamSelectableListSearchInput from '../components/common/UserTeamSele
 import MUIAutocomplete, {
   MUIAutocompleteProps,
 } from '../components/form/MUIAutocomplete';
-import MUISwitch, { MUISwitchProps } from '../components/form/MUISwitch';
+import UTSwitch, { SwitchProps } from '../components/form/Switch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
@@ -129,14 +127,13 @@ export const getField = (field: FieldProp) => {
 
   // Define MUI label for MUI field types
   const muiLabel = field.muiLabel || (
-    <MUIFormItemLabel
+    <FormItemLabel
       helperText={helperText}
       helperTextType={helperTextType}
       isBeta={isBeta}
       label={label}
-      placement={props?.tooltipPlacement as MUITooltipProps['placement']}
+      placement={props?.tooltipPlacement as TooltipProps['placement']}
       showHelperText={showHelperText}
-      slotProps={props?.slotProps as Partial<MUITooltipProps>}
     />
   );
 
@@ -462,13 +459,10 @@ export const getField = (field: FieldProp) => {
       );
     }
 
-    case FieldTypes.SWITCH_MUI: {
+    case FieldTypes.UT_SWITCH: {
       return (
         <Form.Item {...formProps} valuePropName="checked">
-          <MUISwitch
-            label={muiLabel as string}
-            {...(props as MUISwitchProps)}
-          />
+          <UTSwitch label={muiLabel as string} {...(props as SwitchProps)} />
         </Form.Item>
       );
     }

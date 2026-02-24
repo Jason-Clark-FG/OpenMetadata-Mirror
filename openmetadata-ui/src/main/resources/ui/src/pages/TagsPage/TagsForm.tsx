@@ -17,7 +17,7 @@ import { castArray } from 'lodash';
 import { Suspense, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityAttachmentProvider } from '../../components/common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
-import MUIFormItemLabel from '../../components/common/MUIFormItemLabel/MUIFormItemLabel';
+import FormItemLabel from '../../components/common/FormItemLabel/FormItemLabel';
 import { VALIDATION_MESSAGES } from '../../constants/constants';
 import {
   DEFAULT_FORM_VALUE,
@@ -116,7 +116,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      muiLabel: <MUIFormItemLabel label={t(field.muiLabel)} />,
+      muiLabel: <FormItemLabel label={t(field.muiLabel)} />,
       props: {
         ...field.props,
         placeholder: t(field.placeholder),
@@ -127,7 +127,7 @@ const TagsForm = ({
   const colorField = useMemo(
     () => ({
       ...COLOR_FIELD,
-      muiLabel: <MUIFormItemLabel label={t(COLOR_FIELD.muiLabel)} />,
+      muiLabel: <FormItemLabel label={t(COLOR_FIELD.muiLabel)} />,
     }),
     [t]
   );
@@ -202,7 +202,7 @@ const TagsForm = ({
     const fields: FieldProp[] = [
       {
         ...descriptionField,
-        label: <MUIFormItemLabel label={t(descriptionField.label)} />,
+        label: <FormItemLabel label={t(descriptionField.label)} />,
       },
     ];
 
@@ -278,8 +278,9 @@ const TagsForm = ({
   return (
     <EntityAttachmentProvider
       entityFqn={initialValues?.fullyQualifiedName}
-      entityType={isClassification ? EntityType.CLASSIFICATION : EntityType.TAG}
-    >
+      entityType={
+        isClassification ? EntityType.CLASSIFICATION : EntityType.TAG
+      }>
       <Form
         className="tags-form"
         data-testid="tags-form"
@@ -288,8 +289,7 @@ const TagsForm = ({
         layout="vertical"
         name="tags"
         validateMessages={VALIDATION_MESSAGES}
-        onFinish={handleSave}
-      >
+        onFinish={handleSave}>
         <Grid colGap="4">
           <Grid.Item span={12}>{getField(nameField)}</Grid.Item>
           <Grid.Item span={12}>{getField(displayNameField)}</Grid.Item>
