@@ -10,6 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { Skeleton } from '@openmetadata/ui-core-components';
 import { ReactNode } from 'react';
 import { ReactComponent as AddItemIcon } from '../../../assets/svg/add-item-icon.svg';
 
@@ -27,9 +28,7 @@ const SummaryCardV1 = ({
   value: string | number;
 }) => {
   if (isLoading) {
-    return (
-      <div className="tw:h-25 tw:w-52 tw:animate-pulse tw:rounded-lg tw:bg-quaternary" />
-    );
+    return <Skeleton height={100} variant="rounded" width={210} />;
   }
 
   const Icon = icon ?? AddItemIcon;
