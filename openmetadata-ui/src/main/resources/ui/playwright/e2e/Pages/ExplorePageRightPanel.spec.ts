@@ -39,6 +39,8 @@ import { Domain } from '../../support/domain/Domain';
 import { UserClass } from '../../support/user/UserClass';
 import { navigateToExploreAndSelectEntity } from '../../utils/explore';
 import { getEntityFqn } from '../../utils/entityPanel';
+import { connectEdgeBetweenNodesViaAPI } from '../../utils/lineage';
+import { getCurrentMillis } from '../../utils/dateTime';
 
 // Test data setup
 const tableEntity = new TableClass();
@@ -438,6 +440,85 @@ test.describe('Right Panel Test Suite', () => {
       });
     });
 
+    test.describe('Lineage - With real upstream and downstream data', () => {
+      test('Should show lineage connections created via API in the lineage tab', async ({
+        adminPage,
+      }) => {
+        test.slow();
+        const testTable = new TableClass();
+        const upstreamTable = new TableClass();
+        const downstreamTable = new TableClass();
+        const { apiContext, afterAction } = await performAdminLogin(
+          adminPage.context().browser()!
+        );
+        try {
+          await testTable.create(apiContext);
+          await upstreamTable.create(apiContext);
+          await downstreamTable.create(apiContext);
+
+          await connectEdgeBetweenNodesViaAPI(
+            apiContext,
+            { id: upstreamTable.entityResponseData.id, type: 'table' },
+            { id: testTable.entityResponseData.id, type: 'table' },
+            []
+          );
+          await connectEdgeBetweenNodesViaAPI(
+            apiContext,
+            { id: testTable.entityResponseData.id, type: 'table' },
+            { id: downstreamTable.entityResponseData.id, type: 'table' },
+            []
+          );
+
+          const fqn = getEntityFqn(testTable);
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            testTable.entity.name,
+            testTable.endpoint,
+            fqn
+          );
+
+          const rightPanel = new RightPanelPageObject(adminPage, testTable);
+          const localLineage = new LineagePageObject(rightPanel);
+          await rightPanel.waitForPanelLoaded();
+
+          await localLineage.navigateToLineageTab();
+          await localLineage.shouldBeVisible();
+          await localLineage.shouldShowLineageControls();
+
+          const summaryPanel = adminPage.locator(
+            '[data-testid="entity-summary-panel-container"]'
+          );
+          const lineageContainer = summaryPanel.locator('.lineage-tab-content');
+
+          // Default view is downstream — verify downstream entity card
+          const downstreamCard = lineageContainer
+            .locator('.lineage-item-card')
+            .first();
+          await expect(downstreamCard).toBeVisible();
+          await expect(downstreamCard).toContainText(
+            downstreamTable.entityResponseData?.displayName ??
+              downstreamTable.entity.name
+          );
+
+          // Switch to upstream view and verify upstream entity card
+          await localLineage.clickUpstreamButton();
+          const upstreamCard = lineageContainer
+            .locator('.lineage-item-card')
+            .first();
+          await expect(upstreamCard).toBeVisible();
+          await expect(upstreamCard).toContainText(
+            upstreamTable.entityResponseData?.displayName ??
+              upstreamTable.entity.displayName
+          );
+        } finally {
+          await testTable.delete(apiContext);
+          await upstreamTable.delete(apiContext);
+          await downstreamTable.delete(apiContext);
+          await afterAction();
+        }
+      });
+    });
+
     test.describe('DataQuality - Comprehensive UI Verification', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
         test(`Should navigate to data quality and verify tab structure for ${entityType}`, async ({
@@ -514,6 +595,173 @@ test.describe('Right Panel Test Suite', () => {
           await dataQuality.shouldBeVisible();
           await dataQuality.shouldShowTestCaseCardsCount(0);
         });
+      });
+    });
+
+    test.describe('DataQuality - With real test data and incidents', () => {
+      test('Should display stat cards and filterable test case cards when runs exist', async ({
+        adminPage,
+      }) => {
+        test.slow();
+        const testTable = new TableClass();
+        const { apiContext, afterAction } = await performAdminLogin(
+          adminPage.context().browser()!
+        );
+        try {
+          await testTable.create(apiContext);
+          await testTable.createTestSuiteAndPipelines(apiContext);
+
+          const successCase = await testTable.createTestCase(apiContext, {
+            name: `pw_dq_success_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 100 },
+            ],
+          });
+          const failedCase = await testTable.createTestCase(apiContext, {
+            name: `pw_dq_failed_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 100 },
+            ],
+          });
+          const abortedCase = await testTable.createTestCase(apiContext, {
+            name: `pw_dq_aborted_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 100 },
+            ],
+          });
+
+          await testTable.addTestCaseResult(
+            apiContext,
+            successCase.fullyQualifiedName,
+            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+          );
+          await testTable.addTestCaseResult(
+            apiContext,
+            failedCase.fullyQualifiedName,
+            {
+              testCaseStatus: 'Failed',
+              result: 'Test failed',
+              timestamp: getCurrentMillis(),
+            }
+          );
+          await testTable.addTestCaseResult(
+            apiContext,
+            abortedCase.fullyQualifiedName,
+            { testCaseStatus: 'Aborted', timestamp: getCurrentMillis() }
+          );
+
+          const fqn = getEntityFqn(testTable);
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            testTable.entity.name,
+            testTable.endpoint,
+            fqn
+          );
+          const rightPanel = new RightPanelPageObject(adminPage);
+          const localDQ = new DataQualityPageObject(rightPanel);
+          await rightPanel.waitForPanelLoaded();
+
+          await localDQ.navigateToDataQualityTab();
+          await localDQ.shouldBeVisible();
+          await localDQ.shouldShowAllStatCards();
+          await localDQ.shouldShowStatCardWithText('success', '1');
+          await localDQ.shouldShowStatCardWithText('failed', '1');
+          await localDQ.shouldShowStatCardWithText('aborted', '1');
+
+          const tabContent = adminPage.locator('.data-quality-tab-container');
+          // Validate each status filter shows the right single test case and badge
+          await localDQ.clickStatCard('success');
+          await localDQ.shouldShowTestCaseCardsCount(1);
+          await localDQ.shouldShowTestCaseCardWithName(successCase.name);
+          await localDQ.shouldShowTestCaseCardWithStatus('success');
+
+          await localDQ.clickStatCard('aborted');
+          await localDQ.shouldShowTestCaseCardsCount(1);
+          await localDQ.shouldShowTestCaseCardWithName(abortedCase.name);
+          await localDQ.shouldShowTestCaseCardWithStatus('aborted');
+
+          await localDQ.clickStatCard('failed');
+          await localDQ.shouldShowTestCaseCardsCount(1);
+          await localDQ.shouldShowTestCaseCardWithName(failedCase.name);
+          await localDQ.shouldShowTestCaseCardWithStatus('failed');
+
+          // Verify the test case link navigates to the correct detail page
+          const testCaseLink = tabContent
+            .locator(`[data-testid="test-case-${failedCase.name}"]`)
+            .first();
+          await testCaseLink.waitFor({ state: 'visible' });
+          const href = await testCaseLink.getAttribute('href');
+          expect(href).toContain(failedCase.fullyQualifiedName);
+        } finally {
+          await testTable.delete(apiContext);
+          await afterAction();
+        }
+      });
+
+      test('Should show incidents tab content when a failed test case exists', async ({
+        adminPage,
+      }) => {
+        test.slow();
+        const testTable = new TableClass();
+        const { apiContext, afterAction } = await performAdminLogin(
+          adminPage.context().browser()!
+        );
+        try {
+          await testTable.create(apiContext);
+          await testTable.createTestSuiteAndPipelines(apiContext);
+
+          const incidentCase = await testTable.createTestCase(apiContext, {
+            name: `pw_incident_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 10 },
+            ],
+          });
+          await testTable.addTestCaseResult(
+            apiContext,
+            incidentCase.fullyQualifiedName,
+            {
+              testCaseStatus: 'Failed',
+              result: 'Row count exceeded maximum',
+              timestamp: getCurrentMillis(),
+            }
+          );
+
+          const fqn = getEntityFqn(testTable);
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            testTable.entity.name,
+            testTable.endpoint,
+            fqn
+          );
+          const rightPanel = new RightPanelPageObject(adminPage);
+          const localDQ = new DataQualityPageObject(rightPanel);
+          await rightPanel.waitForPanelLoaded();
+
+          await localDQ.navigateToDataQualityTab();
+          await localDQ.shouldBeVisible();
+          await localDQ.navigateToIncidentsTab();
+          await localDQ.shouldShowIncidentsTab();
+
+          const tabContent = adminPage.locator('.data-quality-tab-container');
+          const incidentsTabContent = tabContent.locator(
+            '.incidents-tab-content'
+          );
+          await expect(incidentsTabContent).toBeVisible();
+          await expect(
+            incidentsTabContent.locator('.incidents-stats-container')
+          ).toBeVisible();
+        } finally {
+          await testTable.delete(apiContext);
+          await afterAction();
+        }
       });
     });
 

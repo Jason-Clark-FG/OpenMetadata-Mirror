@@ -117,19 +117,6 @@ export async function testRightPanelCRUDOperations(
   }
 }
 
-export async function testRightPanelMultiRole(
-  page: Page,
-  entity: EntityClass,
-  roles: Array<'Admin' | 'DataSteward' | 'DataConsumer'>,
-  pageContext: PageContext = PageContext.EXPLORE
-): Promise<void> {
-  for (const role of roles) {
-    const testSuite = new RightPanelTestSuite(page, entity, pageContext);
-    await testSuite.testAsRole(role);
-    await testSuite.runStandardTestSuite({ role });
-  }
-}
-
 export async function verifyRightPanelEmptyStates(
   page: Page,
   entity: EntityClass,

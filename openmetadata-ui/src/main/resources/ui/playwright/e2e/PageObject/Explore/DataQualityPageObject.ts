@@ -56,11 +56,9 @@ export class DataQualityPageObject extends RightPanelBase {
       '[data-testid="data-quality-stat-card-aborted"]'
     );
     this.testCaseCardsSection = this.container.locator(
-      '[data-testid="test-case-cards-section"]'
+      '.test-case-cards-section, [data-testid="test-case-cards-section"]'
     );
-    this.testCaseCards = this.testCaseCardsSection.locator(
-      '.test-case-card, [class*="test-case"], [data-testid*="test-case"]'
-    );
+    this.testCaseCards = this.testCaseCardsSection.locator('.test-case-card');
     this.nameLink = this.testCaseCards
       .locator('.test-case-name, [class*="name"], a')
       .first();
@@ -317,15 +315,29 @@ export class DataQualityPageObject extends RightPanelBase {
     status: 'success' | 'failed' | 'aborted',
     cardIndex: number = 0
   ): Promise<void> {
-    // Use semantic selectors - find card by index and check status
     const cards = this.testCaseCards;
     const card = cards.nth(cardIndex);
     await card.waitFor({ state: 'visible' });
+    const expectedStatusText: Record<'success' | 'failed' | 'aborted', string> =
+      {
+        success: 'Success',
+        failed: 'Failed',
+        aborted: 'Aborted',
+      };
+    const expectedBadgeClass: Record<'success' | 'failed' | 'aborted', string> =
+      {
+        success: 'success',
+        failed: 'failure',
+        aborted: 'aborted',
+      };
     const statusBadge = card.locator(
-      '.status-badge, .badge, [class*="status"]'
+      '.test-case-status-section .status-badge-label'
     );
     await statusBadge.waitFor({ state: 'visible' });
-    await expect(statusBadge).toContainText(new RegExp(status, 'i'));
+    await expect(statusBadge).toHaveText(expectedStatusText[status]);
+    await expect(statusBadge).toHaveClass(
+      new RegExp(`\\b${expectedBadgeClass[status]}\\b`)
+    );
   }
 
   /**
@@ -376,15 +388,18 @@ export class DataQualityPageObject extends RightPanelBase {
   }
 
   /**
-   * Assert internal fields of the Data Quality tab for Table (stat cards, incidents tab).
+   * Assert internal fields of the Data Quality tab for Table (incidents tab presence).
    * Use only when Data Quality tab is available (e.g. Table). Call after navigating to Data Quality tab.
+   *
+   * Note: The stat cards (success / failed / aborted) are intentionally not asserted here.
+   * They are conditionally rendered only when the entity has at least one completed test run.
+   * Test entities used in this suite are freshly created with no runs, so the stat cards are
+   * absent from the DOM. Use assertContent() when you need to verify stat cards against an
+   * entity that has actual test-run data.
    */
   async assertInternalFieldsForTable(assetType?: string): Promise<void> {
     const tabLabel = 'Data Quality';
     const prefix = assetType ? `[Asset: ${assetType}] [Tab: ${tabLabel}] ` : '';
-    // await expect(this.successStatCard, `${prefix}Missing: success stat card`).toBeVisible();
-    // await expect(this.failedStatCard, `${prefix}Missing: failed stat card`).toBeVisible();
-    // await expect(this.abortedStatCard, `${prefix}Missing: aborted stat card`).toBeVisible();
     await expect(
       this.incidentsTab,
       `${prefix}Missing: incidents tab`
