@@ -569,6 +569,8 @@ class OpenlineageSource(PipelineServiceSource):
                         except Exception as e:
                             logger.debug(e)
 
+                    time.sleep(pool_timeout)
+
         except Exception as e:
             traceback.print_exc()
             raise InvalidSourceException(f"Failed to read from Kinesis: {str(e)}")
