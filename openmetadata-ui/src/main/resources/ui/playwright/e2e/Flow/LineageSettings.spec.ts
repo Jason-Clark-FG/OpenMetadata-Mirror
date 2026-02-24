@@ -289,6 +289,7 @@ test.describe('Lineage Settings Tests', () => {
     await sidebarClick(page, SidebarItem.SETTINGS);
     await page.getByTestId('preferences').click();
     await page.getByTestId('preferences.lineageConfig').click();
+
     await page.getByTestId('field-pipeline-view-mode').click();
 
     await page.getByTitle('Edge').filter({ visible: true }).click();
@@ -300,27 +301,30 @@ test.describe('Lineage Settings Tests', () => {
 
     await redirectToHomePage(dataStewardPage);
 
-    await table.visitEntityPage(page);
-    await visitLineageTab(page);
-    await editLineage(page);
+    await table.visitEntityPage(dataStewardPage);
+    await visitLineageTab(dataStewardPage);
+    await editLineage(dataStewardPage);
 
     // Select pipeline from Modal
-    await applyPipelineFromModal(page, table, topic, pipeline);
-    await editLineageClick(page);
-    await verifyPipelineDataInDrawer(page, table, topic, pipeline, true);
+    await applyPipelineFromModal(dataStewardPage, table, topic, pipeline);
+    await editLineageClick(dataStewardPage);
+    await verifyPipelineDataInDrawer(
+      dataStewardPage,
+      table,
+      topic,
+      pipeline,
+      true
+    );
 
     await pipeline.visitEntityPage(dataStewardPage);
-    await dataStewardPage.getByRole('tab', { name: 'Lineage' }).click();
-    await dataStewardPage.waitForLoadState('networkidle');
-    await waitForAllLoadersToDisappear(dataStewardPage);
-    await dataStewardPage.getByTestId('fit-screen').click();
+    await visitLineageTab(dataStewardPage);
 
     // Pipeline should be shown as Edge and not as Node
     await expect(
       dataStewardPage.getByTestId(
         `pipeline-label-${table.entityResponseData.fullyQualifiedName}-${topic.entityResponseData.fullyQualifiedName}`
       )
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10000 });
 
     // update pipeline view mode to Node
     await page.getByTestId('field-pipeline-view-mode').click();
@@ -332,7 +336,6 @@ test.describe('Lineage Settings Tests', () => {
     await dataStewardPage.reload();
     await dataStewardPage.waitForLoadState('networkidle');
     await waitForAllLoadersToDisappear(dataStewardPage);
-    await dataStewardPage.getByTestId('fit-screen').click();
 
     // Pipeline should be shown as Node and not as Edge
     await expect(

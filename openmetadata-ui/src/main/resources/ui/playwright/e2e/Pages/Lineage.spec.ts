@@ -120,8 +120,6 @@ for (const EntityClass of entities) {
         await visitLineageTab(page);
 
         await verifyColumnLayerInactive(page);
-        // enable fullscreen
-        await page.getByTestId('full-screen').click();
         await editLineage(page);
         await performZoomOut(page);
         for (const entity of entities) {
@@ -136,7 +134,7 @@ for (const EntityClass of entities) {
           state: 'visible',
         });
         await editLineageClick(page);
-        await page.getByTestId('fit-screen').click();
+        await performZoomOut(page);
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
 
         for (const entity of entities) {

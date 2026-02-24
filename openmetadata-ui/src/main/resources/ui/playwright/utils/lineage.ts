@@ -158,8 +158,17 @@ export const clickEdgeBetweenNodes = async (
   }
 
   await page.mouse.move(
-    fromBox.x - paneBox.x + fromBox.width + 20 * 0.65,
-    fromBox.y - paneBox.y + fromBox.height / 2
+    fromBox.x + fromBox.width + 10 * 0.65,
+    fromBox.y + fromBox.height / 2
+  );
+
+  await page.mouse.move(
+    fromBox.x + fromBox.width + 20 * 0.65,
+    fromBox.y + fromBox.height / 2
+  );
+  await page.mouse.click(
+    fromBox.x + fromBox.width + 20 * 0.65,
+    fromBox.y + fromBox.height / 2
   );
 };
 
@@ -595,6 +604,8 @@ export const visitLineageTab = async (page: Page) => {
   await waitForAllLoadersToDisappear(page);
   // Go to full screen to get nodes to view
   await page.getByRole('button', { name: 'Full Screen View' }).first().click();
+  const pane = page.locator('.react-flow__pane');
+  await pane.click({ position: { x: 0, y: 0 } });
 };
 
 export const addPipelineBetweenNodes = async (

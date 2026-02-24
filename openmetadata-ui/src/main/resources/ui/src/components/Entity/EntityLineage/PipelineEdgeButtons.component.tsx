@@ -13,17 +13,14 @@
 import { Button, Tag } from 'antd';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
-import { useReactFlow, Viewport } from 'reactflow';
+import { Edge, Position, useReactFlow, useViewport, Viewport } from 'reactflow';
 import { ReactComponent as FunctionIcon } from '../../../assets/svg/ic-function.svg';
 import { ReactComponent as PipelineIcon } from '../../../assets/svg/pipeline-grey.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { StatusType } from '../../../generated/entity/data/pipeline';
 import { useLineageStore } from '../../../hooks/useLineageStore';
-import { useThrottledViewport } from '../../../hooks/useThrottledViewport';
-import {
-  computePathDataForEdge,
-  transformPoint,
-} from '../../../utils/CanvasUtils';
+import { getEdgeCoordinates, transformPoint } from '../../../utils/CanvasUtils';
+import { getEdgePathData } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import EntityPopOverCard from '../../common/PopOverCard/EntityPopOverCard';
 
@@ -74,13 +71,49 @@ function getBlinkingClass(
   return statusClass ? `blinking-${statusClass}-border` : 'blinking-border';
 }
 
+interface EdgePathData {
+  edgePath: string;
+  edgeCenterX: number;
+  edgeCenterY: number;
+  sourceX?: number;
+  sourceY?: number;
+  targetX?: number;
+  targetY?: number;
+}
+
 export const PipelineEdgeButtons: React.FC = () => {
   const { edges } = useLineageProvider();
   const { columnsInCurrentPages, isEditMode, isDQEnabled, setSelectedEdge } =
     useLineageStore();
   const { onAddPipelineClick } = useLineageProvider();
   const { getNode } = useReactFlow();
-  const viewport = useThrottledViewport(100);
+  const viewport = useViewport();
+
+  const computePathData = (edge: Edge): EdgePathData | null => {
+    if (edge.data?.computedPath) {
+      return edge.data.computedPath;
+    }
+
+    const coords = getEdgeCoordinates(
+      edge,
+      getNode(edge.source),
+      getNode(edge.target),
+      columnsInCurrentPages
+    );
+
+    if (!coords) {
+      return null;
+    }
+
+    return getEdgePathData(edge.source, edge.target, {
+      sourceX: coords.sourceX,
+      sourceY: coords.sourceY,
+      targetX: coords.targetX,
+      targetY: coords.targetY,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+    });
+  };
 
   const edgesWithButtons = useMemo(() => {
     return edges.filter((edge) => {
@@ -101,29 +134,9 @@ export const PipelineEdgeButtons: React.FC = () => {
     });
   }, [edges]);
 
-  const edgePositions = useMemo(() => {
-    return edgesWithButtons.map((edge) => {
-      const pathData = computePathDataForEdge(
-        edge,
-        getNode(edge.source),
-        getNode(edge.target),
-        columnsInCurrentPages
-      );
-
-      return {
-        edge,
-        pathData,
-      };
-    });
-  }, [edgesWithButtons, getNode, columnsInCurrentPages]);
-
   return (
     <div className="pipeline-edge-buttons-overlay">
-      {edgePositions.map(({ edge, pathData }) => {
-        if (!pathData) {
-          return null;
-        }
-
+      {edgesWithButtons.map((edge) => {
         const {
           edge: edgeDetails,
           isColumnLineage,
@@ -131,6 +144,11 @@ export const PipelineEdgeButtons: React.FC = () => {
           isExpanded,
           isPipelineRootNode,
         } = edge.data || {};
+
+        const pathData = computePathData(edge);
+        if (!pathData) {
+          return null;
+        }
 
         const hasPipeline =
           !isColumnLineage &&
