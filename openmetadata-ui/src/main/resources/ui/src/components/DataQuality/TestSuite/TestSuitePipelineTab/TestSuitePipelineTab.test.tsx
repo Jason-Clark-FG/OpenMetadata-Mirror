@@ -358,7 +358,7 @@ describe('TestSuite Pipeline component', () => {
     const columnHeader = screen.getByTestId('pipeline-type-column-header');
 
     expect(columnHeader).toBeInTheDocument();
-    expect(screen.getByTestId('form-item-label')).toBeInTheDocument();
-    expect(screen.getByTestId('helper-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('mui-form-item-label')).toBeInTheDocument();
+    expect(screen.getByTestId('mui-helper-icon')).toBeInTheDocument();
   });
 });

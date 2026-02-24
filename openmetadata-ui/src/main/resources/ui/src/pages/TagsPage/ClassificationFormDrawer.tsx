@@ -77,7 +77,7 @@ const ClassificationFormDrawer: FC<ClassificationFormDrawerProps> = ({
               <UTButton
                 color="tertiary"
                 data-testid="cancel-button"
-                onClick={onClose}>
+                onClick={close}>
                 {t('label.cancel')}
               </UTButton>
               <UTButton
