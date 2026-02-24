@@ -10,5 +10,28 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-export { default } from './MUISwitch';
-export type { MUISwitchProps } from './MUISwitch.interface';
+import { Toggle } from '@openmetadata/ui-core-components';
+import { FC, memo } from 'react';
+import { SwitchProps } from './Switch.interface';
+
+const Switch: FC<SwitchProps> = ({
+  checked = false,
+  onChange,
+  label,
+  disabled = false,
+  size,
+}) => {
+  return (
+    <div className="tw:flex tw:gap-2 tw:items-center">
+      <Toggle
+        isDisabled={disabled}
+        isSelected={checked}
+        label={label}
+        size={size}
+        onChange={onChange}
+      />
+    </div>
+  );
+};
+
+export default memo(Switch);
