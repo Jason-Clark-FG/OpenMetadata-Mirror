@@ -29,7 +29,7 @@
       "displayName": "Review Recognizer Feedback",
       "config": {
         "assignees": {
-          "addReviewers": true
+          "assigneeSources": ["reviewers"]
         },
         "approvalThreshold": 1,
         "rejectionThreshold": 1

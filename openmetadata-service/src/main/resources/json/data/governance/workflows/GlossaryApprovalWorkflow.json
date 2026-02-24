@@ -136,7 +136,7 @@
       "displayName": "Create User Approval Task",
       "config": {
         "assignees": {
-          "addReviewers": true
+          "assigneeSources": ["reviewers"]
         },
         "approvalThreshold": 1,
         "rejectionThreshold": 1
@@ -178,7 +178,7 @@
       "displayName": "Review Changes for Updates",
       "config": {
         "assignees": {
-          "addReviewers": true
+          "assigneeSources": ["reviewers"]
         },
         "approvalThreshold": 1,
         "rejectionThreshold": 1
