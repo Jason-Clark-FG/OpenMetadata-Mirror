@@ -684,6 +684,13 @@ test.describe.serial('Team persona setting flow', () => {
         await expect(defaultPersonaChip).toContainText(
           teamPersona.responseData.displayName
         );
+
+        // Verify the inherited icon is displayed
+        await expect(
+          adminPage.locator(
+            '[data-testid="default-persona-chip"] .inherit-icon'
+          )
+        ).toBeVisible();
       }
     );
   });
