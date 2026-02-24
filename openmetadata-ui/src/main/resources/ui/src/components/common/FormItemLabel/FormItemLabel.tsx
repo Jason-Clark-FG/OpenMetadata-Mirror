@@ -11,7 +11,11 @@
  *  limitations under the License.
  */
 
-import { Badge, Tooltip } from '@openmetadata/ui-core-components';
+import {
+  Badge,
+  Tooltip,
+  TooltipTrigger,
+} from '@openmetadata/ui-core-components';
 import { Placement } from '@react-types/overlays';
 import { InfoCircle } from '@untitledui/icons';
 import { FC, ReactNode } from 'react';
@@ -51,14 +55,12 @@ const FormItemLabel: FC<FormItemLabelProps> = ({
         helperText &&
         showHelperText && (
           <Tooltip placement={placement} title={helperText}>
-            <button
-              className="tw:flex tw:items-center tw:leading-none tw:cursor-help"
-              type="button">
+            <TooltipTrigger className="tw:flex tw:items-center tw:leading-none tw:cursor-help">
               <InfoCircle
                 className="tw:size-4 tw:text-secondary"
                 data-testid="form-item-helper-icon"
               />
-            </button>
+            </TooltipTrigger>
           </Tooltip>
         )}
       {isBeta && (
