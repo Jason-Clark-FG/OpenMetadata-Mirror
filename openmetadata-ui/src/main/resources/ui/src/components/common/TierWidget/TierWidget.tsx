@@ -95,6 +95,7 @@ const TierWidget = () => {
   const content = isEditing ? (
     <TierCard
       currentTier={tier?.tagFQN}
+      footerActionButtonsClassName='p-x-md'
       popoverProps={{
         open: true,
         onOpenChange: (visible: boolean) => {
