@@ -10,6 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { Toggle } from '@openmetadata/ui-core-components';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
   Alert,
@@ -65,13 +66,13 @@ import UserTeamSelectableListSearchInput from '../components/common/UserTeamSele
 import MUIAutocomplete, {
   MUIAutocompleteProps,
 } from '../components/form/MUIAutocomplete';
-import UTSwitch, { SwitchProps } from '../components/form/Switch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
   FieldTypes,
   FormItemLayout,
   HelperTextType,
+  SwitchProps,
 } from '../interface/FormUtils.interface';
 import TagSuggestion, {
   TagSuggestionProps,
@@ -460,9 +461,18 @@ export const getField = (field: FieldProp) => {
     }
 
     case FieldTypes.UT_SWITCH: {
+      const { checked, disabled, onChange, ...switchRest } =
+        props as SwitchProps;
+
       return (
         <Form.Item {...formProps} valuePropName="checked">
-          <UTSwitch label={muiLabel as string} {...(props as SwitchProps)} />
+          <Toggle
+            isDisabled={disabled}
+            isSelected={checked}
+            label={muiLabel as string}
+            onChange={onChange}
+            {...switchRest}
+          />
         </Form.Item>
       );
     }
