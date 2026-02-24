@@ -362,7 +362,7 @@ export const QualityTab = () => {
   }
 
   return (
-    <div className="quality-tab-container tw:flex tw:flex-col tw:gap-[30px]">
+    <div className="quality-tab-container tw:flex tw:flex-col tw:gap-7.5">
       <div className="tw:grid tw:grid-cols-4 tw:gap-6">
         {totalTestCaseSummary?.map((summary) => (
           <SummaryCardV1
@@ -378,7 +378,7 @@ export const QualityTab = () => {
       <div className="tw:border tw:border-secondary tw:rounded-[10px]">
         <Tabs selectedKey={qualityTab} onSelectionChange={handleTabChange}>
           <div className="tw:flex tw:items-center tw:justify-between tw:p-4">
-            <div className="tw:flex tw:gap-5 tw:w-full">
+            <div className="tw:flex tw:items-center tw:gap-5 tw:w-full">
               <Tabs.List size="sm" type="button-border">
                 {tabs.map(({ label, key }) => (
                   <Tabs.Item id={key} key={key}>
@@ -388,7 +388,7 @@ export const QualityTab = () => {
               </Tabs.List>
 
               {isTestCaseTab && (
-                <div className="tw:w-[400px]">
+                <div className="tw:w-100">
                   <Searchbar
                     removeMargin
                     placeholder={t('label.search-entity', {
