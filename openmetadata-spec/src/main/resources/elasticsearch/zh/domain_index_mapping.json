@@ -274,11 +274,23 @@
           }
         }
       },
-      "totalVotes": {
-        "type": "long",
-        "null_value": 0
-      },
-      "descriptionStatus": {
+        "totalVotes": {
+          "type": "long",
+          "null_value": 0
+        },
+        "votes": {
+          "type": "object",
+          "dynamic": false,
+          "properties": {
+            "upVotes": {
+              "type": "integer"
+            },
+            "downVotes": {
+              "type": "integer"
+            }
+          }
+        },
+        "descriptionStatus": {
         "type": "keyword"
       },
         "extension": {
