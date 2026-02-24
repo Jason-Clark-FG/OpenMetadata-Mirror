@@ -12,6 +12,7 @@
  */
 
 import { Badge, Tooltip } from '@openmetadata/ui-core-components';
+import { Placement } from '@react-types/overlays';
 import { InfoCircle } from '@untitledui/icons';
 import { FC, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +23,7 @@ export interface FormItemLabelProps {
   helperText?: ReactNode;
   helperTextType?: HelperTextType;
   showHelperText?: boolean;
-  placement?: 'top' | 'bottom' | 'left' | 'right';
+  placement?: Placement;
   isBeta?: boolean;
   required?: boolean;
 }
