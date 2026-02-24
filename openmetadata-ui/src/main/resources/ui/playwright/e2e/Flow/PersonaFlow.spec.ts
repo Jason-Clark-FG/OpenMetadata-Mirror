@@ -503,6 +503,7 @@ test.describe.serial('Default persona setting and removal flow', () => {
 
 test.describe.serial('Team persona setting flow', () => {
   const teamPersona = new PersonaClass();
+  const teamPersona2 = new PersonaClass();
   const teamUser = new UserClass();
   const testTeam = new TeamClass();
 
@@ -531,6 +532,7 @@ test.describe.serial('Team persona setting flow', () => {
       await testTeam.create(apiContext);
 
       await teamPersona.create(apiContext);
+      await teamPersona2.create(apiContext);
       await afterAction();
     }
   );
@@ -540,6 +542,7 @@ test.describe.serial('Team persona setting flow', () => {
     await testTeam.delete(apiContext);
     await teamUser.delete(apiContext);
     await teamPersona.delete(apiContext);
+    await teamPersona2.delete(apiContext);
     await afterAction();
   });
 
@@ -573,13 +576,17 @@ test.describe.serial('Team persona setting flow', () => {
 
       // Verify the selected option is correct
       await expect(
-        adminPage.locator(`span.ant-select-selection-item[title="${teamPersona.responseData.displayName}"]`)
+        adminPage.locator(
+          `span.ant-select-selection-item[title="${teamPersona.responseData.displayName}"]`
+        )
       ).toBeVisible();
 
       const teamPatchResponse = adminPage.waitForResponse('/api/v1/teams/*');
-      
+
       // Save the default persona for team
-      await adminPage.getByTestId('user-profile-default-persona-edit-save').click();
+      await adminPage
+        .getByTestId('user-profile-default-persona-edit-save')
+        .click();
       await teamPatchResponse;
 
       // Ensure dropdown closed
@@ -591,6 +598,63 @@ test.describe.serial('Team persona setting flow', () => {
       await expect(adminPage.getByTestId('team-persona')).toContainText(
         teamPersona.responseData.displayName
       );
+
+      // Verify switching to a different persona in the single-select dropdown replaces the first one
+      await adminPage.getByTestId('default-edit-user-persona').click();
+      await adminPage.waitForSelector(
+        '[data-testid="default-persona-select-list"]'
+      );
+      await adminPage.waitForSelector('.ant-select-dropdown', {
+        state: 'visible',
+      });
+
+      // Click the new persona (teamPersona2)
+      const userPersonaOption = adminPage.getByTitle(
+        teamPersona2.responseData.displayName
+      );
+      await expect(userPersonaOption).toBeVisible();
+      await userPersonaOption.click();
+
+      // Verify the new option replaces the old option in the dropdown selection display
+      await expect(
+        adminPage.locator(
+          `span.ant-select-selection-item[title="${teamPersona2.responseData.displayName}"]`
+        )
+      ).toBeVisible();
+      await expect(
+        adminPage.locator(
+          `span.ant-select-selection-item[title="${teamPersona.responseData.displayName}"]`
+        )
+      ).not.toBeVisible();
+
+      // Save it and re-verify
+      const teamPatchSwitchResponse =
+        adminPage.waitForResponse('/api/v1/teams/*');
+      await adminPage
+        .getByTestId('user-profile-default-persona-edit-save')
+        .click();
+      await teamPatchSwitchResponse;
+
+      await expect(adminPage.getByTestId('team-persona')).toContainText(
+        teamPersona2.responseData.displayName
+      );
+
+      // Revert it back to teamPersona for the rest of the test
+      await adminPage.getByTestId('default-edit-user-persona').click();
+      await adminPage.waitForSelector('.ant-select-dropdown', {
+        state: 'visible',
+      });
+      const revertOption = adminPage.getByTitle(
+        teamPersona.responseData.displayName
+      );
+      await expect(revertOption).toBeVisible();
+      await revertOption.click();
+      const teamPatchRevertResponse =
+        adminPage.waitForResponse('/api/v1/teams/*');
+      await adminPage
+        .getByTestId('user-profile-default-persona-edit-save')
+        .click();
+      await teamPatchRevertResponse;
     });
 
     await test.step(
@@ -598,12 +662,12 @@ test.describe.serial('Team persona setting flow', () => {
       async () => {
         // Navigate to the Users tab in the Team page
         await adminPage.getByTestId('users').click();
-        
+
         // Wait for list to load and click on the specific user
         const userProfileResponse = adminPage.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/users/name/') &&
-          response.request().method() === 'GET' &&
+            response.request().method() === 'GET' &&
             response.status() === 200
         );
         await adminPage.getByTestId(teamUser.responseData.name).click();
@@ -611,9 +675,11 @@ test.describe.serial('Team persona setting flow', () => {
 
         // Verify the user inherited the team's default persona
         await adminPage.waitForSelector('[data-testid="persona-details-card"]');
-        const defaultPersonaChip = adminPage.locator(
-          '[data-testid="default-persona-chip"] [data-testid="tag-chip"]'
-        ).first();
+        const defaultPersonaChip = adminPage
+          .locator(
+            '[data-testid="default-persona-chip"] [data-testid="tag-chip"]'
+          )
+          .first();
 
         await expect(defaultPersonaChip).toContainText(
           teamPersona.responseData.displayName
