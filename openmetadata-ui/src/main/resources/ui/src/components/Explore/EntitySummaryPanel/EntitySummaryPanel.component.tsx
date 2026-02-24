@@ -296,6 +296,12 @@ export default function EntitySummaryPanel({
       const fetchFn = entityFetchMap[entityType];
       if (fetchFn) {
         entityPromise = fetchFn(fqn);
+      } else {
+        entityPromise = entityUtilClassBase.getEntityByFqn(
+          entityType,
+          fqn,
+          'owners,domains,tags,extension'
+        );
       }
 
       if (entityPromise) {
@@ -445,7 +451,9 @@ export default function EntitySummaryPanel({
       }
 
       try {
-        const apiFunc = entityUpdateMap[entityType];
+        const apiFunc =
+          entityUpdateMap[entityType] ??
+          entityUtilClassBase.getEntityPatchAPI(entityType as EntityType);
         if (apiFunc && id) {
           const res = await apiFunc(id, jsonPatch);
           setEntityData((prev: EntityData) => ({
@@ -520,7 +528,9 @@ export default function EntitySummaryPanel({
       }
 
       try {
-        const apiFunc = entityUpdateMap[entityType];
+        const apiFunc =
+          entityUpdateMap[entityType] ??
+          entityUtilClassBase.getEntityPatchAPI(entityType as EntityType);
         if (apiFunc && id) {
           const res = await apiFunc(id, jsonPatch);
           setEntityData((prev: EntityData) => ({
@@ -585,7 +595,9 @@ export default function EntitySummaryPanel({
         }
 
         try {
-          const apiFunc = entityUpdateMap[entityType];
+          const apiFunc =
+            entityUpdateMap[entityType] ??
+            entityUtilClassBase.getEntityPatchAPI(entityType as EntityType);
           if (apiFunc && id) {
             const res = await apiFunc(id, jsonPatch);
             setEntityData((prev: EntityData) => ({
@@ -974,13 +986,11 @@ export default function EntitySummaryPanel({
       <div className="d-flex gap-2 w-full h-full">
         <Card
           bordered={false}
-          className={`summary-panel-container ${
-            isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          className={`summary-panel-container ${isSideDrawer ? 'drawer-summary-panel-container' : ''
+            }`}>
           <Card
-            className={`content-area ${
-              isSideDrawer ? 'drawer-content-area' : ''
-            }`}
+            className={`content-area ${isSideDrawer ? 'drawer-content-area' : ''
+              }`}
             style={{ width: '100%', display: 'block' }}>
             {renderTabContent()}
           </Card>
