@@ -93,23 +93,6 @@ export { SlideoutMenu } from "./application/slideout-menus/slideout-menu";
 export * from "./application/table/table";
 export * from "./application/tabs/tabs";
 
-// Application components
-export * from "./application/date-picker/calendar";
-export * from "./application/date-picker/cell";
-export * from "./application/date-picker/date-input";
-export * from "./application/date-picker/date-picker";
-export * from "./application/date-picker/date-range-picker";
-export * from "./application/date-picker/range-calendar";
-export * from "./application/date-picker/range-preset";
-export * from "./application/modals/modal";
-export * from "./application/pagination/pagination-base";
-export * from "./application/pagination/pagination-dot";
-export * from "./application/pagination/pagination-line";
-export * from "./application/pagination/pagination";
-export { SlideoutMenu } from "./application/slideout-menus/slideout-menu";
-export * from "./application/table/table";
-export * from "./application/tabs/tabs";
-
 // Foundations
 export * from "./foundations/dot-icon";
 export * from "./foundations/typography";

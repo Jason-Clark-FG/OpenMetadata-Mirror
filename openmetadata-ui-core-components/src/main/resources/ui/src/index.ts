@@ -14,19 +14,17 @@
 // Main entry point for OpenMetadata UI Core Components
 // Re-export everything from organized modules
 
-import "./styles/globals.css";
-
 // Theme system
-export * from "./theme";
+export * from './theme';
 
-// Color system
-export * from "./colors";
-
-// Utilities
-export * from "./utils";
+// Color system  
+export * from './colors';
 
 // Components
-export * from "./components";
+export * from './components';
+
+// Utilities
+export * from './utils';
 
 // Types (kept at root for convenience)
-export * from "./types";
+export * from './types';
