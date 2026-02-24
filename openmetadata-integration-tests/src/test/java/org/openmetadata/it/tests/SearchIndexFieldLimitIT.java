@@ -11,11 +11,13 @@ import es.co.elastic.clients.transport.rest5_client.low_level.Request;
 import es.co.elastic.clients.transport.rest5_client.low_level.Response;
 import es.co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -256,7 +258,12 @@ public class SearchIndexFieldLimitIT {
     }
     updateTableExtension(client, table.getId().toString(), extension);
 
-    Thread.sleep(2000);
+    Awaitility.await("Wait for field count to stabilize after custom property creation")
+        .atMost(Duration.ofSeconds(15))
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -295,7 +302,12 @@ public class SearchIndexFieldLimitIT {
       updateTableExtension(client, table.getId().toString(), extension);
     }
 
-    Thread.sleep(2000);
+    Awaitility.await("Wait for field count to stabilize after bounded property creation")
+        .atMost(Duration.ofSeconds(15))
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -360,7 +372,12 @@ public class SearchIndexFieldLimitIT {
 
     updateTableExtension(client, table.getId().toString(), extension);
 
-    Thread.sleep(2000);
+    Awaitility.await("Wait for field count to stabilize after complex property creation")
+        .atMost(Duration.ofSeconds(15))
+        .pollDelay(Duration.ofMillis(500))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 

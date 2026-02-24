@@ -3598,14 +3598,28 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     withDesc.setColumns(cols3);
     Table tableWithDesc = client.tables().create(withDesc);
 
-    // Wait for indexing (Elasticsearch needs time to index)
-    Thread.sleep(2000);
-
-    // Search using REST client to Elasticsearch directly
+    // Poll until the last created table is indexed
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
 
-      // Refresh index to make documents searchable
-      refreshSearchIndex(searchClient);
+      Awaitility.await("Wait for tables to be indexed in search")
+          .atMost(Duration.ofSeconds(30))
+          .pollDelay(Duration.ofMillis(500))
+          .pollInterval(Duration.ofSeconds(1))
+          .ignoreExceptions()
+          .until(
+              () -> {
+                refreshSearchIndex(searchClient);
+                Request checkReq =
+                    new Request("POST", "/" + getTableSearchIndexName() + "/_search");
+                checkReq.setJsonEntity(
+                    "{\"query\":{\"term\":{\"id\":\"" + tableWithDesc.getId() + "\"}},\"size\":1}");
+                Response checkResp = searchClient.performRequest(checkReq);
+                String body =
+                    new String(
+                        checkResp.getEntity().getContent().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                return body.contains("\"id\":\"" + tableWithDesc.getId() + "\"");
+              });
 
       // Create search request for tables with missing descriptions
       String searchQuery =
@@ -3671,14 +3685,28 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
     Table table = client.tables().create(req);
 
-    // Wait for indexing
-    Thread.sleep(2000);
-
-    // Search for tables containing "email" in columns
+    // Poll until the table is indexed in search
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
 
-      // Refresh index to make documents searchable
-      refreshSearchIndex(searchClient);
+      Awaitility.await("Wait for searchable table to be indexed")
+          .atMost(Duration.ofSeconds(30))
+          .pollDelay(Duration.ofMillis(500))
+          .pollInterval(Duration.ofSeconds(1))
+          .ignoreExceptions()
+          .until(
+              () -> {
+                refreshSearchIndex(searchClient);
+                Request checkReq =
+                    new Request("POST", "/" + getTableSearchIndexName() + "/_search");
+                checkReq.setJsonEntity(
+                    "{\"query\":{\"term\":{\"id\":\"" + table.getId() + "\"}},\"size\":1}");
+                Response checkResp = searchClient.performRequest(checkReq);
+                String body =
+                    new String(
+                        checkResp.getEntity().getContent().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                return body.contains("\"id\":\"" + table.getId() + "\"");
+              });
 
       String searchQuery =
           "{"

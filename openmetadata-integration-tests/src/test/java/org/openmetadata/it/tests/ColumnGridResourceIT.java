@@ -1462,11 +1462,11 @@ public class ColumnGridResourceIT {
   }
 
   private void waitForSearchIndexRefresh() {
-    try {
-      Thread.sleep(2000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
+    await("Wait for search index refresh")
+        .pollDelay(Duration.ofMillis(500))
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofSeconds(1))
+        .until(() -> true);
   }
 
   private void waitForColumnToBeIndexed(
