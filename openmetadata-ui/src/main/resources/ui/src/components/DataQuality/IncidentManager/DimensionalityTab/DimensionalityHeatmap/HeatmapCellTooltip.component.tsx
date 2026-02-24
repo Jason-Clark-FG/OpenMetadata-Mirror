@@ -17,7 +17,6 @@ import { FC, ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import StatusBadge from '../../../../common/StatusBadge/StatusBadge.component';
 import { StatusType } from '../../../../common/StatusBadge/StatusBadge.interface';
-import { TOOLTIP_STYLES } from './DimensionalityHeatmap.constants';
 import { HeatmapCellData } from './DimensionalityHeatmap.interface';
 import { getStatusLabel } from './DimensionalityHeatmap.utils';
 
@@ -28,9 +27,7 @@ interface TooltipRowProps {
 
 const TooltipRow: FC<TooltipRowProps> = ({ label, value }) => {
   return (
-    <div
-      className="tw:flex tw:items-center tw:justify-between tw:gap-5"
-      style={{ fontSize: TOOLTIP_STYLES.CONTENT_FONT_SIZE }}>
+    <div className="tw:flex tw:items-center tw:justify-between tw:gap-5 tw:text-xs">
       <Typography as="span" className="tw:whitespace-nowrap tw:text-gray-700">
         {label}
       </Typography>
@@ -86,26 +83,17 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
   );
 
   return (
-    <div
-      className="tw:rounded-lg tw:bg-white tw:shadow-sm"
-      style={{ padding: TOOLTIP_STYLES.CARD_PADDING }}>
+    <div className="tw:rounded-lg tw:bg-white tw:p-2.5 tw:shadow-sm">
       <Typography
         as="span"
-        className="tw:block tw:text-gray-900 tw:font-medium"
-        style={{ fontSize: TOOLTIP_STYLES.HEADER_FONT_SIZE }}>
+        className="tw:block tw:text-[13px] tw:font-medium tw:text-gray-900">
         {cell.date}
       </Typography>
       <div
         aria-hidden
         className="tw:my-2 tw:border-b tw:border-dashed tw:border-gray-300"
-        style={{
-          marginTop: TOOLTIP_STYLES.DIVIDER_MARGIN,
-          marginBottom: TOOLTIP_STYLES.DIVIDER_MARGIN,
-        }}
       />
-      <div
-        className="tw:flex tw:flex-col tw:gap-2"
-        style={{ gap: TOOLTIP_STYLES.STACK_SPACING }}>
+      <div className="tw:flex tw:flex-col tw:gap-2">
         {rows.map(
           (row) =>
             !isUndefined(row.value) && (
