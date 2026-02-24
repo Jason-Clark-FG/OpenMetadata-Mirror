@@ -257,7 +257,9 @@ const IncidentManagerPageHeader = ({
       return (
         <>
           <Divider className="self-center m-x-sm" type="vertical" />
-          <Typography className="d-flex flex-col gap-3 text-xs whitespace-nowrap">
+          <Typography
+            as="span"
+            className="d-flex flex-col gap-3 text-xs whitespace-nowrap">
             <Typography as="span" className="text-blue font-medium text-sm">
               {t('label.incident-status')}
             </Typography>
@@ -277,7 +279,9 @@ const IncidentManagerPageHeader = ({
         {activeTask && (
           <>
             <Divider className="self-center m-x-sm" type="vertical" />
-            <Typography className="d-flex flex-col gap-3 text-xs whitespace-nowrap">
+            <Typography
+              as="span"
+              className="d-flex flex-col gap-3 text-xs whitespace-nowrap">
               <Typography as="span" className="text-blue text-sm font-medium">
                 {t('label.incident')}
               </Typography>
@@ -293,7 +297,9 @@ const IncidentManagerPageHeader = ({
           </>
         )}
         <Divider className="self-center m-x-sm" type="vertical" />
-        <Typography className="d-flex flex-col gap-2 text-xs whitespace-nowrap">
+        <Typography
+          as="span"
+          className="d-flex flex-col gap-2 text-xs whitespace-nowrap">
           <TestCaseIncidentManagerStatus
             newLook
             data={testCaseStatusData}
@@ -320,7 +326,9 @@ const IncidentManagerPageHeader = ({
           />
         </div>
         <Divider className="self-center m-x-sm" type="vertical" />
-        <Typography className="d-flex flex-col gap-2 whitespace-nowrap">
+        <Typography
+          as="span"
+          className="d-flex flex-col gap-2 whitespace-nowrap">
           <Severity
             newLook
             hasPermission={hasEditStatusPermission}
@@ -350,7 +358,9 @@ const IncidentManagerPageHeader = ({
       {tableFqn && (
         <>
           <Divider className="self-center m-x-sm" type="vertical" />
-          <Typography className="flex flex-col gap-3 text-xs whitespace-nowrap">
+          <Typography
+            as="span"
+            className="flex flex-col gap-3 text-xs whitespace-nowrap">
             <Typography as="span" className="text-blue text-sm font-medium">
               {t('label.table')}
             </Typography>
@@ -373,7 +383,9 @@ const IncidentManagerPageHeader = ({
       {dimensionKey && (
         <>
           <Divider className="self-center m-x-sm" type="vertical" />
-          <Typography className="flex flex-col gap-3 text-xs whitespace-nowrap">
+          <Typography
+            as="span"
+            className="flex flex-col gap-3 text-xs whitespace-nowrap">
             <Typography as="span" className="text-blue text-sm font-medium">
               {t('label.dimension')}
             </Typography>
@@ -389,7 +401,9 @@ const IncidentManagerPageHeader = ({
       {columnName && (
         <>
           <Divider className="self-center m-x-sm" type="vertical" />
-          <Typography className="flex flex-col gap-3 text-xs whitespace-nowrap">
+          <Typography
+            as="span"
+            className="flex flex-col gap-3 text-xs whitespace-nowrap">
             <Typography as="span" className="text-blue text-sm font-medium">
               {t('label.column')}
             </Typography>
@@ -403,7 +417,9 @@ const IncidentManagerPageHeader = ({
         </>
       )}
       <Divider className="self-center m-x-sm" type="vertical" />
-      <Typography className="flex flex-col gap-3 text-xs whitespace-nowrap">
+      <Typography
+        as="span"
+        className="flex flex-col gap-3 text-xs whitespace-nowrap">
         <Typography as="span" className="text-blue text-sm font-medium">
           {t('label.test-type')}
         </Typography>
