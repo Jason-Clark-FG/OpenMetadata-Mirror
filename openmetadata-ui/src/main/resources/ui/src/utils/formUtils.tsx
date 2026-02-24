@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { Toggle } from '@openmetadata/ui-core-components';
+import { Placement } from '@react-types/overlays';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
   Alert,
@@ -42,6 +43,7 @@ import { DomainSelectableListProps } from '../components/common/DomainSelectable
 import FilterPattern from '../components/common/FilterPattern/FilterPattern';
 import { FilterPatternProps } from '../components/common/FilterPattern/filterPattern.interface';
 import FormItemLabel from '../components/common/Form/FormItemLabel';
+import UTFormItemLabel from '../components/common/FormItemLabel';
 import { MUIIconPicker } from '../components/common/IconPicker';
 import { InlineAlertProps } from '../components/common/InlineAlert/InlineAlert.interface';
 import MUIDomainSelect from '../components/common/MUIDomainSelect/MUIDomainSelect';
@@ -128,12 +130,12 @@ export const getField = (field: FieldProp) => {
 
   // Define MUI label for MUI field types
   const muiLabel = field.muiLabel || (
-    <FormItemLabel
+    <UTFormItemLabel
       helperText={helperText}
       helperTextType={helperTextType}
       isBeta={isBeta}
       label={label}
-      placement={props?.tooltipPlacement as TooltipProps['placement']}
+      placement={props?.tooltipPlacement as Placement}
       showHelperText={showHelperText}
     />
   );
