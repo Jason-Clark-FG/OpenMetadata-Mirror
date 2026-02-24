@@ -377,8 +377,8 @@ export const QualityTab = () => {
 
       <div className="tw:border tw:border-secondary tw:rounded-[10px]">
         <Tabs selectedKey={qualityTab} onSelectionChange={handleTabChange}>
-          <div className="tw:flex tw:items-center tw:justify-between tw:p-4">
-            <div className="tw:flex tw:items-center tw:gap-5 tw:w-full">
+          <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:p-4">
+            <div className="tw:flex tw:items-center tw:gap-5">
               <Tabs.List size="sm" type="button-border">
                 {tabs.map(({ label, key }) => (
                   <Tabs.Item id={key} key={key}>
