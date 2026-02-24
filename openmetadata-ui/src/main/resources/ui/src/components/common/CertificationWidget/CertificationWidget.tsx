@@ -13,7 +13,7 @@
 import { Typography } from 'antd';
 import classNames from 'classnames';
 import { cloneDeep } from 'lodash';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag } from '../../../generated/entity/classification/tag';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -32,7 +32,6 @@ const CertificationWidget = () => {
     isVersionView,
   } = useGenericContext<Domain>();
   const { t } = useTranslation();
-  const [isEditing, setIsEditing] = useState(false);
 
   const canEdit = useMemo(
     () => permissions.EditAll && !isVersionView,
@@ -52,17 +51,6 @@ const CertificationWidget = () => {
         data-testid="certification-heading-name">
         {t('label.certification')}
       </Typography.Text>
-      {canEdit && (
-        <EditIconButton
-          newLook
-          data-testid="edit-certification"
-          size="small"
-          title={t('label.edit-entity', {
-            entity: t('label.certification'),
-          })}
-          onClick={() => setIsEditing(true)}
-        />
-      )}
     </div>
   );
 
@@ -70,19 +58,7 @@ const CertificationWidget = () => {
     <Certification
       currentCertificate={entity.certification?.tagLabel?.tagFQN}
       permission={canEdit}
-      popoverProps={{
-        open: isEditing,
-        onOpenChange: (visible: boolean) => {
-          if (!visible) {
-            setIsEditing(false);
-          }
-        },
-      }}
-      onCertificationUpdate={async (cert) => {
-        await handleCertificationUpdate(cert);
-        setIsEditing(false);
-      }}
-      onClose={() => setIsEditing(false)}>
+      onCertificationUpdate={handleCertificationUpdate}>
       <div data-testid="certification-label">
         {entity.certification ? (
           <CertificationTag showName certification={entity.certification} />
@@ -92,6 +68,16 @@ const CertificationWidget = () => {
               entity: t('label.certification'),
             })}
           </span>
+        )}
+        {canEdit && (
+          <EditIconButton
+            newLook
+            data-testid="edit-certification"
+            size="small"
+            title={t('label.edit-entity', {
+              entity: t('label.certification'),
+            })}
+          />
         )}
       </div>
     </Certification>
