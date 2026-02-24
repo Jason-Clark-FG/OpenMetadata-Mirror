@@ -30,12 +30,14 @@ export type PrepareChartDataType = {
   testCaseParameterValue: TestCaseParameterValue[];
   testCaseResults: TestCaseResult[];
   entityThread: Thread[];
+  testCaseFqn?: string;
 };
 
 export const prepareChartData = ({
   testCaseParameterValue,
   testCaseResults,
   entityThread,
+  testCaseFqn,
 }: PrepareChartDataType) => {
   // Bond will only be shown if params length is 2 and both values are present
   const params =
@@ -97,7 +99,6 @@ export const prepareChartData = ({
 
   dataPoints.reverse();
 
-  // get params from the result
   const testCaseResultParams = testCaseResults.find(
     (result) => result.testResultValue?.length
   );
@@ -114,6 +115,7 @@ export const prepareChartData = ({
     })),
     data: dataPoints,
     showAILearningBanner,
+    testCaseFqn,
   };
 };
 

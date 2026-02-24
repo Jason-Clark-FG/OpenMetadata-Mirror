@@ -24,8 +24,11 @@ import {
   MenuItem,
   Popover,
   TextField,
-  Typography,
 } from '@mui/material';
+import {
+  ProgressBarCircle,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import {
   ArrowLeft as ArrowBackIcon,
   Check as CheckIcon,
@@ -56,7 +59,6 @@ import {
   getEntityReferenceFromEntity,
 } from '../../../../utils/EntityUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
-import Loader from '../../../common/Loader/Loader';
 import { RequiredLabel } from '../../../common/MuiComponents/RequiredLabel/RequiredLabel.styled';
 import { UserTag } from '../../../common/UserTag/UserTag.component';
 import { InlineTestCaseIncidentStatusProps } from './TestCaseIncidentManagerStatus.interface';
@@ -372,7 +374,7 @@ const InlineTestCaseIncidentStatus = ({
     if (isLoadingUsers) {
       return (
         <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-          <Loader size="small" />
+          <ProgressBarCircle size="xxs" value={75} valueFormatter={() => ''} />
         </Box>
       );
     }
@@ -380,7 +382,7 @@ const InlineTestCaseIncidentStatus = ({
     if (userOptions.length === 0) {
       return (
         <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography color="text.secondary" variant="body2">
+          <Typography as="span" className="tw:text-body tw:text-tertiary">
             {t('message.no-username-available', { user: '' })}
           </Typography>
         </Box>
@@ -520,7 +522,7 @@ const InlineTestCaseIncidentStatus = ({
           <IconButton size="small" onClick={handleBackToStatusMenu}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+          <Typography as="span" className="tw:text-base tw:font-semibold">
             {t('label.assigned')}
           </Typography>
           <Box sx={{ flex: 1 }} />
@@ -590,7 +592,7 @@ const InlineTestCaseIncidentStatus = ({
           <IconButton size="small" onClick={handleBackToStatusMenu}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+          <Typography as="span" className="tw:text-base tw:font-semibold">
             {t('label.resolved')}
           </Typography>
           <Box sx={{ flex: 1 }} />
