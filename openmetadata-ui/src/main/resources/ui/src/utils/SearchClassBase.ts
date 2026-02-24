@@ -40,6 +40,7 @@ import { ExploreTreeNode } from '../components/Explore/ExploreTree/ExploreTree.i
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import {
   API_ENDPOINT_DROPDOWN_ITEMS,
+  COLUMN_DROPDOWN_ITEMS,
   COMMON_DROPDOWN_ITEMS,
   CONTAINER_DROPDOWN_ITEMS,
   DASHBOARD_DATA_MODEL_TYPE,
@@ -55,6 +56,7 @@ import {
   TOPIC_DROPDOWN_ITEMS,
 } from '../constants/AdvancedSearch.constants';
 import {
+  columnSortingFields,
   entitySortingFields,
   INITIAL_SORT_FIELD,
   tableSortingFields,
@@ -417,7 +419,7 @@ class SearchClassBase {
       },
       [SearchIndex.COLUMN]: {
         label: t('label.column-plural'),
-        sortingFields: entitySortingFields,
+        sortingFields: columnSortingFields,
         sortField: INITIAL_SORT_FIELD,
         path: ExplorePageTabs.COLUMNS,
         icon: ColumnIcon,
@@ -603,12 +605,13 @@ class SearchClassBase {
         return TAG_DROPDOWN_ITEMS;
       case SearchIndex.DATA_PRODUCT:
         return DATA_PRODUCT_DROPDOWN_ITEMS;
+      case SearchIndex.COLUMN:
+        return COLUMN_DROPDOWN_ITEMS;
       case SearchIndex.STORED_PROCEDURE:
       case SearchIndex.DATABASE:
       case SearchIndex.DATABASE_SCHEMA:
       case SearchIndex.API_COLLECTION_INDEX:
       case SearchIndex.METRIC_SEARCH_INDEX:
-      case SearchIndex.COLUMN:
         return COMMON_DROPDOWN_ITEMS;
       case SearchIndex.DATA_ASSET:
         return DATA_ASSET_DROPDOWN_ITEMS;

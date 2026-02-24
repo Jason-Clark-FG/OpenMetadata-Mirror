@@ -2917,6 +2917,7 @@ export const getEntityNameLabel = (entityName?: string) => {
     file: t('label.file'),
     spreadsheet: t('label.spreadsheet'),
     worksheet: t('label.worksheet'),
+    tableColumn: t('label.column'),
   };
 
   return (
