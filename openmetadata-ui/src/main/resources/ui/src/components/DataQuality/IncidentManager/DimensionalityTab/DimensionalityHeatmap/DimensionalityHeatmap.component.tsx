@@ -98,19 +98,13 @@ const DimensionalityHeatmap = ({
 
         <div className="dimensionality-heatmap__scroll-wrapper tw:relative tw:flex-1">
           {showLeftIndicator && (
-            <div
+            <button
               aria-label={`${t('label.scroll')} ${t('label.left')}`}
               className="dimensionality-heatmap__scroll-indicator dimensionality-heatmap__scroll-indicator--left tw:cursor-pointer tw:outline-focus-ring"
-              tabIndex={0}
-              onClick={handleScrollLeft}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleScrollLeft();
-                }
-              }}>
+              type="button"
+              onClick={handleScrollLeft}>
               <RightArrowIcon />
-            </div>
+            </button>
           )}
 
           <div
@@ -149,19 +143,13 @@ const DimensionalityHeatmap = ({
           </div>
 
           {showRightIndicator && (
-            <div
+            <button
               aria-label={`${t('label.view')} ${t('label.more')}`}
               className="dimensionality-heatmap__scroll-indicator dimensionality-heatmap__scroll-indicator--right tw:cursor-pointer tw:outline-focus-ring"
-              tabIndex={0}
-              onClick={handleScrollRight}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleScrollRight();
-                }
-              }}>
+              type="button"
+              onClick={handleScrollRight}>
               <RightArrowIcon />
-            </div>
+            </button>
           )}
         </div>
       </div>

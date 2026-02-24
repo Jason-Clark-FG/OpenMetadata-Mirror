@@ -67,10 +67,10 @@ import testCaseResultTabClassBase from './TestCaseResultTabClassBase';
 function ParameterTooltipText({
   className,
   title,
-}: {
+}: Readonly<{
   className: string;
   title: string;
-}) {
+}>) {
   return (
     <Tooltip
       overlayClassName="test-case-result-tooltip"

@@ -102,9 +102,11 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
         )}
         {cell.result?.testResultValue &&
           cell.result.testResultValue.length > 0 &&
-          cell.result.testResultValue.map((resultValue, index) => (
+          cell.result.testResultValue.map((resultValue) => (
             <TooltipRow
-              key={`result-value-${index}`}
+              key={`${resultValue.name ?? 'value'}-${String(
+                resultValue.value
+              )}`}
               label={resultValue.name || t('label.value')}
               value={resultValue.value || '-'}
             />
