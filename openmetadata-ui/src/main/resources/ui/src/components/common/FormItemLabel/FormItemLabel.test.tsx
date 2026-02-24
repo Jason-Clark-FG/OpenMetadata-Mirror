@@ -13,8 +13,9 @@
 
 import { render, screen } from '@testing-library/react';
 import { HelperTextType } from '../../../interface/FormUtils.interface';
-import { FormItemLabelProps } from './Form.interface';
-import FormItemLabel from './FormItemLabel';
+import FormItemLabel, {
+  FormItemLabelProps,
+} from '../FormItemLabel/FormItemLabel';
 
 const mockProps: FormItemLabelProps = {
   label: 'name',
@@ -34,7 +35,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const helpIcon = screen.queryByTestId('helper-icon');
+    const helpIcon = screen.queryByTestId('form-item-helper-icon');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(helpIcon).not.toBeInTheDocument();
@@ -47,7 +48,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const helpIcon = screen.queryByTestId('helper-icon');
+    const helpIcon = screen.queryByTestId('form-item-helper-icon');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(helpIcon).not.toBeInTheDocument();
@@ -58,7 +59,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const helpIcon = screen.queryByTestId('helper-icon');
+    const helpIcon = screen.queryByTestId('form-item-helper-icon');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(helpIcon).not.toBeInTheDocument();
@@ -69,7 +70,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const helpIcon = screen.getByTestId('helper-icon');
+    const helpIcon = screen.getByTestId('form-item-helper-icon');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(helpIcon).toBeInTheDocument();
@@ -80,7 +81,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const betaBadge = screen.getByText('label.beta');
+    const betaBadge = screen.getByTestId('form-item-beta-badge');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(betaBadge).toBeInTheDocument();
@@ -91,7 +92,7 @@ describe('Test FormItemLabel Component', () => {
 
     const label = screen.getByTestId('form-item-label');
 
-    const betaBadge = screen.queryByText('label.beta');
+    const betaBadge = screen.queryByTestId('form-item-beta-badge');
 
     expect(label).toContainHTML(mockProps.label as string);
     expect(betaBadge).not.toBeInTheDocument();
