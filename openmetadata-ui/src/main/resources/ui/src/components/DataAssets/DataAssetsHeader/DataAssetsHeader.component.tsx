@@ -158,6 +158,7 @@ export const DataAssetsHeader = ({
   const [isFollowingLoading, setIsFollowingLoading] = useState(false);
   const navigate = useNavigate();
   const [isAutoPilotTriggering, setIsAutoPilotTriggering] = useState(false);
+  const [isEditingCertification, setIsEditingCertification] = useState(false);
   const { entityRules } = useEntityRules(entityType);
   const [dataContract, setDataContract] = useState<DataContract>();
 
@@ -858,7 +859,19 @@ export const DataAssetsHeader = ({
                       : undefined
                   }
                   permission={false}
-                  onCertificationUpdate={onCertificationUpdate}>
+                  popoverProps={{
+                    open: isEditingCertification,
+                    onOpenChange: (visible: boolean) => {
+                      if (!visible) {
+                        setIsEditingCertification(false);
+                      }
+                    },
+                  }}
+                  onCertificationUpdate={async (cert) => {
+                    await onCertificationUpdate?.(cert);
+                    setIsEditingCertification(false);
+                  }}
+                  onClose={() => setIsEditingCertification(false)}>
                   <div className="d-flex align-start extra-info-container">
                     <Typography.Text
                       className="whitespace-nowrap text-sm d-flex flex-col gap-2"
@@ -876,6 +889,7 @@ export const DataAssetsHeader = ({
                             title={t('label.edit-entity', {
                               entity: t('label.certification'),
                             })}
+                            onClick={() => setIsEditingCertification(true)}
                           />
                         )}
                       </div>
