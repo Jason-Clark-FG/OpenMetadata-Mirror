@@ -98,7 +98,6 @@ export const HeatmapCellTooltip: FC<HeatmapCellTooltipProps> = ({ cell }) => {
       <div
         aria-hidden
         className="tw:my-2 tw:border-b tw:border-dashed tw:border-gray-300"
-        role="separator"
         style={{
           marginTop: TOOLTIP_STYLES.DIVIDER_MARGIN,
           marginBottom: TOOLTIP_STYLES.DIVIDER_MARGIN,

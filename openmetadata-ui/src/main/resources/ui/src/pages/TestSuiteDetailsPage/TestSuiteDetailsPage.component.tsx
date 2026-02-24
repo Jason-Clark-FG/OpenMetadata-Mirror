@@ -92,6 +92,7 @@ import {
 } from '../../utils/RouterUtils';
 import { ExtraTestCaseDropdownOptions } from '../../utils/TestCaseUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
+import './TestSuiteDetailsPage.less';
 
 const TestSuiteDetailsPage = () => {
   const { t } = useTranslation();
@@ -467,7 +468,7 @@ const TestSuiteDetailsPage = () => {
         ),
         key: EntityTabs.TEST_CASES,
         children: (
-          <div className="tw:flex tw:w-full tw:flex-col tw:gap-4 tw:rounded-[10px] tw:border tw:border-border-primary tw:bg-background-paper tw:p-4">
+          <div className="tw:flex tw:w-full tw:flex-col tw:gap-4 tw:rounded-[10px] tw:border tw:border-gray-200 tw:bg-white tw:p-4">
             {renderDescription()}
             <div className="tw:w-full">
               <DataQualityTab
@@ -496,7 +497,7 @@ const TestSuiteDetailsPage = () => {
         ),
         key: EntityTabs.PIPELINE,
         children: (
-          <div className="tw:flex tw:w-full tw:flex-col tw:gap-4 tw:rounded-[10px] tw:border tw:border-border-primary tw:bg-background-paper tw:p-4">
+          <div className="tw:flex tw:w-full tw:flex-col tw:gap-4 tw:rounded-[10px] tw:border tw:border-gray-200 tw:bg-white tw:p-4">
             {renderDescription()}
             <div className="tw:w-full">
               <TestSuitePipelineTab isLogicalTestSuite testSuite={testSuite} />
@@ -549,7 +550,7 @@ const TestSuiteDetailsPage = () => {
       pageTitle={t('label.entity-detail-plural', {
         entity: getEntityName(testSuite),
       })}>
-      <div className="page-container tw:flex tw:w-full tw:flex-col tw:gap-4">
+      <div className="page-container tw:flex tw:w-full tw:flex-col">
         <div className="tw:w-full">
           <TitleBreadcrumb
             data-testid="test-suite-breadcrumb"
@@ -601,7 +602,7 @@ const TestSuiteDetailsPage = () => {
             </div>
           </div>
 
-          <div className="tw:mt-3 tw:flex tw:flex-wrap tw:gap-4 tw:rounded-[12px] tw:border tw:border-border-primary tw:bg-background-paper tw:p-4 tw:sm:p-5">
+          <div className="test-suite-details-domain-owner-section tw:mt-3 tw:flex tw:flex-wrap tw:gap-4 tw:rounded-[12px] tw:border tw:border-gray-200 tw:bg-white tw:p-4 tw:sm:p-5">
             <DomainLabel
               headerLayout
               showDashPlaceholder
@@ -616,7 +617,6 @@ const TestSuiteDetailsPage = () => {
             <div
               aria-hidden
               className="tw:h-[50px] tw:w-px tw:self-center tw:bg-border-primary"
-              role="separator"
             />
             <OwnerLabel
               hasPermission={permissions.hasEditOwnerPermission}
@@ -630,9 +630,11 @@ const TestSuiteDetailsPage = () => {
             />
           </div>
         </div>
-        <div className="tw:mt-3 tw:w-full">
+        <div
+          className="test-suite-details-tabs-root tw:mt-3 tw:w-full tw:flex tw:flex-col"
+          data-testid="tabs-root">
           <Tabs
-            className="tw:bg-transparent"
+            className="test-suite-details-tabs tw:bg-transparent"
             selectedKey={activeTab}
             onSelectionChange={(key) => setActiveTab(key as string)}>
             <Tabs.List
@@ -640,6 +642,7 @@ const TestSuiteDetailsPage = () => {
                 { id: EntityTabs.TEST_CASES, label: tabs.testCasesTab.label },
                 { id: EntityTabs.PIPELINE, label: tabs.pipelineTab.label },
               ]}
+              type="underline"
             />
             <Tabs.Panel id={EntityTabs.TEST_CASES}>
               {tabs.testCasesTab.children}

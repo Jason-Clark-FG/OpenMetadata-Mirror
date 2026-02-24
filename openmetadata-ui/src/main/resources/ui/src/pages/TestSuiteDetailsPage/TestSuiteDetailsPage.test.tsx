@@ -97,11 +97,13 @@ jest.mock('@openmetadata/ui-core-components', () => {
     Tabs: (() => {
       const TabsRoot = ({
         children,
+        onSelectionChange,
         selectedKey,
         ...props
       }: {
         children: React.ReactNode;
-        selectedKey?: string;
+        onSelectionChange?: (key: React.Key) => void;
+        selectedKey?: React.Key;
         [key: string]: unknown;
       }) => {
         const childArray = React.Children.toArray(children);
@@ -119,24 +121,37 @@ jest.mock('@openmetadata/ui-core-components', () => {
         const activePanel = activeKey
           ? panels.find((p) => p.props.id === activeKey)
           : panels[0];
+        const listWithCallback =
+          React.isValidElement(list) && onSelectionChange
+            ? React.cloneElement(list, {
+                onSelectionChange,
+              } as Record<string, unknown>)
+            : list;
 
         return (
           <div data-testid="tabs-root" {...props}>
-            {list}
+            {listWithCallback}
             {activePanel}
           </div>
         );
       };
       const TabsList = ({
         items,
+        onSelectionChange,
         ...listProps
       }: {
-        items?: Array<{ id: string; label: string }>;
+        items?: Array<{ id: string; label: React.ReactNode }>;
+        onSelectionChange?: (key: React.Key) => void;
         [key: string]: unknown;
       }) => (
         <div data-testid="tabs-list" role="tablist" {...listProps}>
           {items?.map((item) => (
-            <button data-testid={`tab-${item.id}`} key={item.id} role="tab">
+            <button
+              data-testid={`tab-${item.id}`}
+              key={item.id}
+              role="tab"
+              type="button"
+              onClick={() => onSelectionChange?.(item.id)}>
               {item.label}
             </button>
           ))}

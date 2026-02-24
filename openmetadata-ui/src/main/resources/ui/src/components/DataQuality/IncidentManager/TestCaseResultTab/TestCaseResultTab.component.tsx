@@ -72,7 +72,11 @@ function ParameterTooltipText({
   title: string;
 }) {
   return (
-    <Tooltip placement="bottomLeft" title={title}>
+    <Tooltip
+      overlayClassName="test-case-result-tooltip"
+      placement="bottomLeft"
+      showArrow={false}
+      title={title}>
       <span className={className}>{title}</span>
     </Tooltip>
   );
@@ -368,11 +372,7 @@ const TestCaseResultTab = () => {
                   ))}
                 </div>
                 {rowIndex < rows.length - 1 && (
-                  <div
-                    aria-hidden
-                    className="parameter-row-divider"
-                    role="separator"
-                  />
+                  <div aria-hidden className="parameter-row-divider" />
                 )}
               </div>
             );
@@ -406,11 +406,7 @@ const TestCaseResultTab = () => {
         return (
           <div>
             {versionParams}
-            <div
-              aria-hidden
-              className="parameter-row-divider"
-              role="separator"
-            />
+            <div aria-hidden className="parameter-row-divider" />
             {renderParameterRows(computeRowCountItem)}
           </div>
         );
