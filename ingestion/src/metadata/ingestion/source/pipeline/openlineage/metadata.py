@@ -527,6 +527,7 @@ class OpenlineageSource(PipelineServiceSource):
             iterator_type = broker.consumerOffsets.value
             pool_timeout = broker.poolTimeout
             session_timeout = broker.sessionTimeout
+            empty_response_time = 0.0
 
             for shard in shards:
                 shard_id = shard["ShardId"]
@@ -537,7 +538,6 @@ class OpenlineageSource(PipelineServiceSource):
                 )
                 shard_iterator = iterator_resp["ShardIterator"]
 
-                empty_response_time = 0.0
                 while shard_iterator and empty_response_time <= session_timeout:
                     response = kinesis_client.get_records(
                         ShardIterator=shard_iterator,
