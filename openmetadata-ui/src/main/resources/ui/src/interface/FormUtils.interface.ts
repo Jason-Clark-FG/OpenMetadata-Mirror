@@ -56,7 +56,7 @@ export enum FieldTypes {
   COVER_IMAGE_UPLOAD_MUI = 'cover_image_upload_mui',
   CRON_EDITOR = 'cron_editor',
   TREE_ASYNC_SELECT_LIST = 'tree_async_select_list',
-  UT_AUTOCOMPLETE = 'ut_autocomplete',
+  AUTOCOMPLETE_MUI = 'autocomplete_mui',
   COMPONENT = 'component',
 }
 
@@ -83,4 +83,12 @@ export interface FieldProp {
   isBeta?: boolean;
   newLook?: boolean;
   muiLabel?: ReactNode;
+}
+
+export interface SwitchProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  label?: string;
+  disabled?: boolean;
+  size?: 'sm' | 'md';
 }
