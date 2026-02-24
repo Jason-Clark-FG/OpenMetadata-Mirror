@@ -11,13 +11,17 @@
  *  limitations under the License.
  */
 import { Typography } from 'antd';
+import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { cloneDeep } from 'lodash';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag } from '../../../generated/entity/classification/tag';
 import { Domain } from '../../../generated/entity/domains/domain';
+import { Operation } from '../../../generated/entity/policies/policy';
+import { getPrioritizedEditPermission } from '../../../utils/PermissionsUtils';
 import { updateCertificationTag } from '../../../utils/TagsUtils';
+import { showErrorToast } from '../../../utils/ToastUtils';
 import Certification from '../../Certification/Certification.component';
 import { useGenericContext } from '../../Customization/GenericProvider/GenericProvider';
 import CertificationTag from '../CertificationTag/CertificationTag';
@@ -35,14 +39,22 @@ const CertificationWidget = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const canEdit = useMemo(
-    () => permissions.EditAll && !isVersionView,
-    [permissions.EditAll, isVersionView]
+    () =>
+      getPrioritizedEditPermission(
+        permissions,
+        Operation.EditCertification
+      ) && !isVersionView,
+    [permissions, isVersionView]
   );
 
   const handleCertificationUpdate = async (newCertification?: Tag) => {
-    const updatedEntity = cloneDeep(entity);
-    updatedEntity.certification = updateCertificationTag(newCertification);
-    await onUpdate(updatedEntity);
+    try {
+      const updatedEntity = cloneDeep(entity);
+      updatedEntity.certification = updateCertificationTag(newCertification);
+      await onUpdate(updatedEntity);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    }
   };
 
   const header = (

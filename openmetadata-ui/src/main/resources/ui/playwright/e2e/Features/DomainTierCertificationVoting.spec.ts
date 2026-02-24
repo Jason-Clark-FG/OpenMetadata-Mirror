@@ -10,11 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { DataProduct } from '../../support/domain/DataProduct';
 import { Domain } from '../../support/domain/Domain';
 import { TagClass } from '../../support/tag/TagClass';
-import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
 import {
@@ -23,44 +22,16 @@ import {
   removeTierFromWidget,
 } from '../../utils/domain';
 import { assignTier, downVote, upVote } from '../../utils/entity';
+import { test } from '../fixtures/pages';
 
-const adminUser = new UserClass();
-const testUser = new UserClass();
 const domain = new Domain();
 const dataProduct = new DataProduct([domain]);
 const certTag1 = new TagClass({ classification: 'Certification' });
 const certTag2 = new TagClass({ classification: 'Certification' });
 
-const test = base.extend<{
-  page: Page;
-  userPage: Page;
-}>({
-  page: async ({ browser }, use) => {
-    const adminPage = await browser.newPage();
-    try {
-      await adminUser.login(adminPage);
-      await use(adminPage);
-    } finally {
-      await adminPage.close();
-    }
-  },
-  userPage: async ({ browser }, use) => {
-    const page = await browser.newPage();
-    try {
-      await testUser.login(page);
-      await use(page);
-    } finally {
-      await page.close();
-    }
-  },
-});
-
 test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
-    await adminUser.create(apiContext);
-    await adminUser.setAdminRole(apiContext);
-    await testUser.create(apiContext);
     await domain.create(apiContext);
     await dataProduct.create(apiContext);
     await certTag1.create(apiContext);
@@ -73,8 +44,6 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     await domain.delete(apiContext);
     await certTag1.delete(apiContext);
     await certTag2.delete(apiContext);
-    await adminUser.delete(apiContext);
-    await testUser.delete(apiContext);
     await afterAction();
   });
 
@@ -129,52 +98,52 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
   });
 
   test.describe('Non-admin permissions', () => {
-    test.beforeEach(async ({ userPage }) => {
-      await redirectToHomePage(userPage);
+    test.beforeEach(async ({ dataConsumerPage }) => {
+      await redirectToHomePage(dataConsumerPage);
     });
 
     test('Non-admin cannot edit tier and certification on Domain', async ({
-      userPage,
+      dataConsumerPage,
     }) => {
-      await domain.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
+      await domain.visitEntityPage(dataConsumerPage);
+      await dataConsumerPage.waitForLoadState('networkidle');
 
       await expect(
-        userPage.getByTestId('edit-tier')
+        dataConsumerPage.getByTestId('edit-tier')
       ).not.toBeVisible();
       await expect(
-        userPage.getByTestId('edit-certification')
+        dataConsumerPage.getByTestId('edit-certification')
       ).not.toBeVisible();
     });
 
-    test('Non-admin can vote on Domain', async ({ userPage }) => {
-      await domain.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
+    test('Non-admin can vote on Domain', async ({ dataConsumerPage }) => {
+      await domain.visitEntityPage(dataConsumerPage);
+      await dataConsumerPage.waitForLoadState('networkidle');
 
-      await expect(userPage.getByTestId('up-vote-btn')).toBeVisible();
-      await expect(userPage.getByTestId('down-vote-btn')).toBeVisible();
+      await expect(dataConsumerPage.getByTestId('up-vote-btn')).toBeVisible();
+      await expect(dataConsumerPage.getByTestId('down-vote-btn')).toBeVisible();
     });
 
     test('Non-admin cannot edit tier and certification on DataProduct', async ({
-      userPage,
+      dataConsumerPage,
     }) => {
-      await dataProduct.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
+      await dataProduct.visitEntityPage(dataConsumerPage);
+      await dataConsumerPage.waitForLoadState('networkidle');
 
       await expect(
-        userPage.getByTestId('edit-tier')
+        dataConsumerPage.getByTestId('edit-tier')
       ).not.toBeVisible();
       await expect(
-        userPage.getByTestId('edit-certification')
+        dataConsumerPage.getByTestId('edit-certification')
       ).not.toBeVisible();
     });
 
-    test('Non-admin can vote on DataProduct', async ({ userPage }) => {
-      await dataProduct.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
+    test('Non-admin can vote on DataProduct', async ({ dataConsumerPage }) => {
+      await dataProduct.visitEntityPage(dataConsumerPage);
+      await dataConsumerPage.waitForLoadState('networkidle');
 
-      await expect(userPage.getByTestId('up-vote-btn')).toBeVisible();
-      await expect(userPage.getByTestId('down-vote-btn')).toBeVisible();
+      await expect(dataConsumerPage.getByTestId('up-vote-btn')).toBeVisible();
+      await expect(dataConsumerPage.getByTestId('down-vote-btn')).toBeVisible();
     });
   });
 });

@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { Typography } from 'antd';
+import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { cloneDeep } from 'lodash';
 import { useMemo, useState } from 'react';
@@ -19,8 +20,11 @@ import { TAG_START_WITH } from '../../../constants/Tag.constants';
 import { Tag } from '../../../generated/entity/classification/tag';
 import { Domain } from '../../../generated/entity/domains/domain';
 import { TagLabel } from '../../../generated/type/tagLabel';
+import { Operation } from '../../../generated/entity/policies/policy';
+import { getPrioritizedEditPermission } from '../../../utils/PermissionsUtils';
 import { getTierTags } from '../../../utils/TableUtils';
 import { updateTierTag } from '../../../utils/TagsUtils';
+import { showErrorToast } from '../../../utils/ToastUtils';
 import { useGenericContext } from '../../Customization/GenericProvider/GenericProvider';
 import TagsV1 from '../../Tag/TagsV1/TagsV1.component';
 import ExpandableCard from '../ExpandableCard/ExpandableCard';
@@ -44,17 +48,27 @@ const TierWidget = () => {
   );
 
   const handleTierUpdate = async (selectedTier?: Tag) => {
-    const updatedTags = updateTierTag(
-      (entity.tags ?? []) as TagLabel[],
-      selectedTier
-    );
-    const updatedEntity = cloneDeep(entity);
-    updatedEntity.tags = updatedTags;
-    await onUpdate(updatedEntity);
-    setIsEditing(false);
+    try {
+      const updatedTags = updateTierTag(
+        (entity.tags ?? []) as TagLabel[],
+        selectedTier
+      );
+      const updatedEntity = cloneDeep(entity);
+      updatedEntity.tags = updatedTags;
+      await onUpdate(updatedEntity);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    } finally {
+      setIsEditing(false);
+    }
   };
 
-  const canEdit = permissions.EditAll && !isVersionView;
+  const canEdit = useMemo(
+    () =>
+      getPrioritizedEditPermission(permissions, Operation.EditTier) &&
+      !isVersionView,
+    [permissions, isVersionView]
+  );
 
   const header = (
     <div className={classNames('d-flex items-center gap-2')}>
