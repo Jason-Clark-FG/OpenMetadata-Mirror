@@ -42,9 +42,16 @@
           "type": "object",
           "properties": {
             "addReviewers": {
-              "description": "Add the Reviewers to the assignees List.",
+              "description": "Deprecated: use assigneeSource instead. Add the Reviewers to the assignees List.",
               "type": "boolean",
               "default": false
+            },
+            "assigneeSource": {
+              "title": "Assignee Source",
+              "description": "Source for the Task assignees. 'reviewers' will use the entity's reviewers (falling back to owners if reviewers are not set). 'owners' will use the entity's owners.",
+              "type": "string",
+              "enum": ["reviewers", "owners"],
+              "default": "reviewers"
             }
           },
           "additionalProperties": false

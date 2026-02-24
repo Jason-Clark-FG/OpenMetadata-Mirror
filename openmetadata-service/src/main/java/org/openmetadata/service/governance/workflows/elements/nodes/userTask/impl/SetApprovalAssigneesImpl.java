@@ -36,19 +36,39 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
       Map<String, Object> assigneesConfig =
           JsonUtils.readOrConvertValue(assigneesExpr.getValue(execution), Map.class);
-      Boolean addReviewers = (Boolean) assigneesConfig.getOrDefault("addReviewers", false);
+
+      String assigneeSource = (String) assigneesConfig.get("assigneeSource");
+      boolean addReviewers = (boolean) assigneesConfig.getOrDefault("addReviewers", false);
+
+      // Determine if we should add assignees from the entity's reviewers or owners.
+      // assigneeSource takes precedence; addReviewers is kept for backward compatibility.
+      boolean useReviewers =
+          "reviewers".equals(assigneeSource) || (assigneeSource == null && addReviewers);
+      boolean useOwners = "owners".equals(assigneeSource);
 
       List<String> assignees = new ArrayList<>();
 
-      // Add reviewers from the related entity if requested
-      if (addReviewers != null && addReviewers) {
+      if (useReviewers || useOwners) {
         MessageParser.EntityLink entityLink =
             MessageParser.EntityLink.parse(
                 (String)
                     varHandler.getNamespacedVariable(
                         inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
         EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-        assignees.addAll(getEntityLinkStringFromEntityReference(entity.getReviewers()));
+        List<EntityReference> owners = entity.getOwners();
+
+        if (useReviewers) {
+          // Use entity's reviewers; fall back to owners when reviewers are not set.
+          List<EntityReference> reviewers = entity.getReviewers();
+          if (reviewers != null && !reviewers.isEmpty()) {
+            assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
+          } else if (owners != null && !owners.isEmpty()) {
+            assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+          }
+        } else if (owners != null && !owners.isEmpty()) {
+          // useOwners: use the entity's owners directly.
+          assignees.addAll(getEntityLinkStringFromEntityReference(owners));
+        }
       }
 
       // Persist the list as JSON array so TaskListener can read it

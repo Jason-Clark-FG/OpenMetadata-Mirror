@@ -2363,14 +2363,15 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
   void test_UserApprovalTaskWithoutReviewerSupport() {
     LOG.info("Starting test_UserApprovalTaskWithoutReviewerSupport");
 
-    // Create a workflow with user approval task for an entity type that doesn't support reviewers
-    // Database entity does not support reviewers, only certain entities like GlossaryTerm do
-    String invalidWorkflowJson =
+    // Create a workflow with user approval task for an entity type that doesn't support reviewers.
+    // Approval workflows are now enabled for all entities; for entities without reviewers, owners
+    // are used as assignees.
+    String workflowJson =
         """
     {
       "name": "databaseApprovalWorkflow",
       "displayName": "Database Approval Workflow",
-      "description": "Invalid workflow with user approval task for database entity",
+      "description": "Workflow with user approval task for database entity",
       "trigger": {
         "type": "eventBasedEntity",
         "config": {
@@ -2421,32 +2422,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     }
     """;
 
-    CreateWorkflowDefinition invalidWorkflow =
-        JsonUtils.readValue(invalidWorkflowJson, CreateWorkflowDefinition.class);
+    CreateWorkflowDefinition workflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
 
-    // Try to create the workflow with user approval task for entity without reviewer support
+    // Workflow creation should succeed for any entity type now
     Response response =
         SecurityUtil.addHeaders(getResource("governance/workflowDefinitions"), ADMIN_AUTH_HEADERS)
-            .post(Entity.json(invalidWorkflow));
+            .post(Entity.json(workflow));
 
-    // Should return error status (400 Bad Request or similar)
-    assertNotEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    assertNotEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertTrue(
-        response.getStatus() >= 400,
-        "Expected error status code >= 400, got: " + response.getStatus());
+    assertEquals(
+        Response.Status.CREATED.getStatusCode(),
+        response.getStatus(),
+        "Expected workflow creation to succeed for entity without reviewer support. Got: "
+            + response.readEntity(String.class));
 
     LOG.debug(
-        "Workflow with user approval task for non-reviewer entity failed as expected with status: {}",
+        "Workflow with user approval task for non-reviewer entity created successfully with status: {}",
         response.getStatus());
-
-    // Verify error message contains expected validation error
-    String errorResponse = response.readEntity(String.class);
-    assertTrue(
-        errorResponse.contains("does not support reviewers")
-            || errorResponse.contains("User approval tasks"),
-        "Error message should mention reviewer support issue. Got: " + errorResponse);
-    LOG.debug("Error message: {}", errorResponse);
 
     LOG.info("test_UserApprovalTaskWithoutReviewerSupport completed successfully");
   }
@@ -3010,14 +3002,14 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     LOG.info("Starting test_EventBasedMultipleEntitiesWithoutReviewerSupport");
 
     // Create a workflow with user approval task for multiple entity types using eventBasedEntity
-    // trigger
-    // None of these entities (table, database, dashboard) support reviewers
-    String invalidWorkflowJson =
+    // trigger. Approval workflows are now enabled for all entities; owners are used as assignees
+    // for entities without reviewer support.
+    String workflowJson =
         """
     {
       "name": "multiEntityEventBasedApprovalWorkflow",
       "displayName": "Multi-Entity Event Based Approval Workflow",
-      "description": "Invalid workflow with user approval task for multiple entities without reviewer support",
+      "description": "Workflow with user approval task for multiple entities",
       "trigger": {
         "type": "eventBasedEntity",
         "config": {
@@ -3068,34 +3060,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     }
     """;
 
-    CreateWorkflowDefinition invalidWorkflow =
-        JsonUtils.readValue(invalidWorkflowJson, CreateWorkflowDefinition.class);
+    CreateWorkflowDefinition workflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
 
-    // Try to create the workflow with user approval task for multiple entities without reviewer
-    // support
+    // Workflow creation should succeed for any entity type now
     Response response =
         SecurityUtil.addHeaders(getResource("governance/workflowDefinitions"), ADMIN_AUTH_HEADERS)
-            .post(Entity.json(invalidWorkflow));
+            .post(Entity.json(workflow));
 
-    // Should return error status (400 Bad Request or similar)
-    assertNotEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    assertNotEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertTrue(
-        response.getStatus() >= 400,
-        "Expected error status code >= 400, got: " + response.getStatus());
+    assertEquals(
+        Response.Status.CREATED.getStatusCode(),
+        response.getStatus(),
+        "Expected workflow creation to succeed for entities without reviewer support. Got: "
+            + response.readEntity(String.class));
 
     LOG.debug(
-        "Workflow with user approval task for multiple non-reviewer entities failed as expected with status: {}",
+        "Workflow with user approval task for multiple non-reviewer entities created successfully with status: {}",
         response.getStatus());
-
-    // Verify error message contains expected validation error - should fail on first entity without
-    // reviewer support
-    String errorResponse = response.readEntity(String.class);
-    assertTrue(
-        errorResponse.contains("does not support reviewers")
-            || errorResponse.contains("User approval tasks"),
-        "Error message should mention reviewer support issue. Got: " + errorResponse);
-    LOG.debug("Error message: {}", errorResponse);
 
     LOG.info("test_EventBasedMultipleEntitiesWithoutReviewerSupport completed successfully");
   }
@@ -3105,14 +3086,15 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
   void test_MixedEntityTypesWithReviewerSupport() {
     LOG.info("Starting test_MixedEntityTypesWithReviewerSupport");
 
-    // Create a workflow with user approval task mixing entities with and without reviewer support
-    // glossaryTerm supports reviewers, but table doesn't
-    String invalidWorkflowJson =
+    // Create a workflow with user approval task mixing entities with and without reviewer support.
+    // Approval workflows are now enabled for all entities; for entities without reviewers, owners
+    // are used as assignees.
+    String workflowJson =
         """
     {
       "name": "mixedEntityApprovalWorkflow",
       "displayName": "Mixed Entity Approval Workflow",
-      "description": "Invalid workflow with user approval task for mixed entities",
+      "description": "Workflow with user approval task for mixed entities",
       "trigger": {
         "type": "eventBasedEntity",
         "config": {
@@ -3163,33 +3145,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     }
     """;
 
-    CreateWorkflowDefinition invalidWorkflow =
-        JsonUtils.readValue(invalidWorkflowJson, CreateWorkflowDefinition.class);
+    CreateWorkflowDefinition workflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
 
-    // Try to create the workflow
+    // Workflow creation should succeed for any entity type now
     Response response =
         SecurityUtil.addHeaders(getResource("governance/workflowDefinitions"), ADMIN_AUTH_HEADERS)
-            .post(Entity.json(invalidWorkflow));
+            .post(Entity.json(workflow));
 
-    // Should return error status because table doesn't support reviewers
-    assertNotEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    assertNotEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertTrue(
-        response.getStatus() >= 400,
-        "Expected error status code >= 400, got: " + response.getStatus());
+    assertEquals(
+        Response.Status.CREATED.getStatusCode(),
+        response.getStatus(),
+        "Expected workflow creation to succeed for mixed entity types. Got: "
+            + response.readEntity(String.class));
 
     LOG.debug(
-        "Workflow with mixed entity types (some without reviewer support) failed as expected with status: {}",
+        "Workflow with mixed entity types created successfully with status: {}",
         response.getStatus());
-
-    // Verify error message mentions table doesn't support reviewers
-    String errorResponse = response.readEntity(String.class);
-    assertTrue(
-        errorResponse.contains("table")
-            && (errorResponse.contains("does not support reviewers")
-                || errorResponse.contains("User approval tasks")),
-        "Error message should mention table doesn't support reviewers. Got: " + errorResponse);
-    LOG.debug("Error message: {}", errorResponse);
 
     LOG.info("test_MixedEntityTypesWithReviewerSupport completed successfully");
   }
@@ -3505,13 +3477,13 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
         "Expected node name clash error message, got: " + clashResponseBody);
     LOG.debug("Node clashing with workflow name correctly rejected: {}", clashResponseBody);
 
-    // Test 5: User approval task on entity without reviewer support should fail
-    String invalidUserTaskWorkflowJson =
+    // Test 5: User approval task on any entity type should now be allowed
+    String validUserTaskWorkflowJson =
         """
     {
-      "name": "invalidUserTaskWorkflow",
-      "displayName": "Invalid User Task Workflow",
-      "description": "Workflow with user approval on non-reviewer entity",
+      "name": "validUserTaskWorkflow",
+      "displayName": "Valid User Task Workflow",
+      "description": "Workflow with user approval on any entity type",
       "trigger": {
         "type": "eventBasedEntity",
         "config": {
@@ -3557,20 +3529,19 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     }
     """;
 
-    CreateWorkflowDefinition invalidUserTaskWorkflow =
-        JsonUtils.readValue(invalidUserTaskWorkflowJson, CreateWorkflowDefinition.class);
+    CreateWorkflowDefinition validUserTaskWorkflow =
+        JsonUtils.readValue(validUserTaskWorkflowJson, CreateWorkflowDefinition.class);
 
     Response userTaskResponse =
         SecurityUtil.addHeaders(
                 getResource("governance/workflowDefinitions/validate"), ADMIN_AUTH_HEADERS)
-            .post(Entity.json(invalidUserTaskWorkflow));
+            .post(Entity.json(validUserTaskWorkflow));
 
-    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), userTaskResponse.getStatus());
-    String userTaskResponseBody = userTaskResponse.readEntity(String.class);
-    assertTrue(
-        userTaskResponseBody.contains("does not support reviewers"),
-        "Expected reviewer support error message, got: " + userTaskResponseBody);
-    LOG.debug("Invalid user task workflow correctly rejected: {}", userTaskResponseBody);
+    assertEquals(
+        Response.Status.OK.getStatusCode(),
+        userTaskResponse.getStatus(),
+        "Expected user approval task workflow to pass validation for any entity type");
+    LOG.debug("User approval task workflow for table entity correctly accepted");
 
     // Test 6: Correct updatedBy namespace with user task should pass
     String correctNamespaceWorkflowJson =

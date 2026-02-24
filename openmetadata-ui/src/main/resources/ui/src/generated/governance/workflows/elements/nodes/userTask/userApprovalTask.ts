@@ -59,9 +59,23 @@ export interface NodeConfiguration {
  */
 export interface Assignees {
     /**
-     * Add the Reviewers to the assignees List.
+     * Deprecated: use assigneeSource instead. Add the Reviewers to the assignees List.
      */
     addReviewers?: boolean;
+    /**
+     * Source for the Task assignees. 'reviewers' will use the entity's reviewers (falling back
+     * to owners if reviewers are not set). 'owners' will use the entity's owners.
+     */
+    assigneeSource?: AssigneeSource;
+}
+
+/**
+ * Source for the Task assignees. 'reviewers' will use the entity's reviewers (falling back
+ * to owners if reviewers are not set). 'owners' will use the entity's owners.
+ */
+export enum AssigneeSource {
+    Owners = "owners",
+    Reviewers = "reviewers",
 }
 
 export interface InputNamespaceMap {
