@@ -35,14 +35,11 @@ import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder;
 import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker;
 import org.openmetadata.service.exception.SearchIndexException;
-import org.openmetadata.service.jdbi3.EntityTimeSeriesRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.search.ReindexContext;
-import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntitiesSource;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntityTimeSeriesSource;
-import org.openmetadata.service.workflows.searchIndex.ReindexingUtil;
 
 /**
  * Worker that processes a single partition of entities for search indexing.
@@ -434,7 +431,7 @@ public class PartitionWorker {
     } else {
       PaginatedEntityTimeSeriesSource source =
           new PaginatedEntityTimeSeriesSource(entityType, limit, fields, 0);
-      return source.readNextKeyset(keysetCursor);
+      return source.readWithCursor(keysetCursor);
     }
   }
 
@@ -442,21 +439,12 @@ public class PartitionWorker {
     if (offset <= 0) {
       return null;
     }
-    int cursorOffset = (int) offset - 1;
     if (!TIME_SERIES_ENTITIES.contains(entityType)) {
+      int cursorOffset = (int) offset - 1;
       ListFilter filter = new ListFilter(Include.ALL);
       return Entity.getEntityRepository(entityType).getCursorAtOffset(filter, cursorOffset);
     } else {
-      ListFilter filter = new ListFilter(Include.ALL);
-      EntityTimeSeriesRepository<?> repository;
-      if (ReindexingUtil.isDataInsightIndex(entityType)) {
-        repository = Entity.getEntityTimeSeriesRepository(Entity.ENTITY_REPORT_DATA);
-        filter.addQueryParam("entityFQNHash", FullyQualifiedName.buildHash(entityType));
-      } else {
-        repository = Entity.getEntityTimeSeriesRepository(entityType);
-      }
-      String rawCursor = repository.getCursorAtOffset(filter, cursorOffset);
-      return rawCursor != null ? RestUtil.encodeCursor(rawCursor) : null;
+      return RestUtil.encodeCursor(String.valueOf(offset));
     }
   }
 
