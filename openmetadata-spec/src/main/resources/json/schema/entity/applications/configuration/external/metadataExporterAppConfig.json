@@ -80,9 +80,6 @@
         },
         {
           "$ref": "metadataExporterConnectors/bigQueryConnection.json"
-        },
-        {
-          "$ref": "metadataExporterConnectors/trinoConnection.json"
         }
       ]
     },

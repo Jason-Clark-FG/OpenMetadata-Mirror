@@ -50,8 +50,6 @@ export interface MetadataExporterAppConfig {
  * Databricks Connection Config
  *
  * Google BigQuery Connection Config
- *
- * Trino Connection Config
  */
 export interface Connection {
     /**
@@ -104,8 +102,6 @@ export interface Connection {
     /**
      * Username to connect to Snowflake. This user should have privileges to read all the
      * metadata in Snowflake.
-     *
-     * Username to connect to Trino.
      */
     username?: string;
     /**
@@ -114,16 +110,12 @@ export interface Connection {
     warehouse?: string;
     /**
      * Choose between different authentication types for Databricks.
-     *
-     * Choose Auth Config Type.
      */
-    authType?: AuthenticationType | NoConfigAuthenticationTypes;
+    authType?: AuthenticationType;
     /**
      * Catalog of the data source(Example: hive_metastore). This is optional parameter, if you
      * would like to restrict the metadata reading to a single catalog. When left blank,
      * OpenMetadata Ingestion attempts to scan all the catalog.
-     *
-     * Catalog of the data source.
      */
     catalog?: string;
     /**
@@ -136,16 +128,12 @@ export interface Connection {
      * Database Schema of the data source. This is optional parameter, if you would like to
      * restrict the metadata reading to a single schema. When left blank, OpenMetadata Ingestion
      * attempts to scan all the schemas.
-     *
-     * Database Schema of the data source.
      */
     databaseSchema?: string;
     /**
      * Host and port of the Databricks service.
      *
      * BigQuery APIs URL.
-     *
-     * Host and port of the Trino service.
      */
     hostPort?: string;
     /**
@@ -186,10 +174,6 @@ export interface Connection {
  *
  * Azure Active Directory authentication for Azure Databricks workspaces using Service
  * Principal.
- *
- * Common Database Connection Config
- *
- * Azure Database Connection Config
  */
 export interface AuthenticationType {
     /**
@@ -219,52 +203,6 @@ export interface AuthenticationType {
      * Azure Active Directory Tenant ID where your Service Principal is registered.
      */
     azureTenantId?: string;
-    /**
-     * Password to connect to source.
-     */
-    password?: string;
-    /**
-     * JWT to connect to source.
-     */
-    jwt?:         string;
-    azureConfig?: AzureCredentials;
-}
-
-/**
- * Azure Cloud Credentials
- */
-export interface AzureCredentials {
-    /**
-     * Account Name of your storage account
-     */
-    accountName?: string;
-    /**
-     * Your Service Principal App ID (Client ID)
-     */
-    clientId?: string;
-    /**
-     * Your Service Principal Password (Client Secret)
-     */
-    clientSecret?: string;
-    /**
-     * Scopes to get access token, for e.g. api://6dfX33ab-XXXX-49df-XXXX-3459eX817d3e/.default
-     */
-    scopes?: string;
-    /**
-     * Tenant ID of your Azure Subscription
-     */
-    tenantId?: string;
-    /**
-     * Key Vault Name
-     */
-    vaultName?: string;
-}
-
-/**
- * Database Authentication types not requiring config.
- */
-export enum NoConfigAuthenticationTypes {
-    OAuth2 = "OAuth2",
 }
 
 /**
@@ -393,7 +331,6 @@ export enum Scheme {
     Bigquery = "bigquery",
     DatabricksConnector = "databricks+connector",
     Snowflake = "snowflake",
-    Trino = "trino",
 }
 
 /**
@@ -405,7 +342,6 @@ export enum Type {
     BigQuery = "BigQuery",
     Databricks = "Databricks",
     Snowflake = "Snowflake",
-    Trino = "Trino",
 }
 
 export enum EventType {
