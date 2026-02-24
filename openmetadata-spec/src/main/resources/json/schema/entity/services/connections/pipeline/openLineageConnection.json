@@ -187,5 +187,6 @@
       "$ref": "../connectionBasicType.json#/definitions/supportsMetadataExtraction"
     }
   },
+  "required": ["brokerConfig"],
   "additionalProperties": false
 }
