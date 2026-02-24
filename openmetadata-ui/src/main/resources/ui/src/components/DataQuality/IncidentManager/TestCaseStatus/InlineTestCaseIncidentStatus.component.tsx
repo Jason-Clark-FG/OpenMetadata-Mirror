@@ -373,8 +373,17 @@ const InlineTestCaseIncidentStatus = ({
   const userListContent = useMemo(() => {
     if (isLoadingUsers) {
       return (
-        <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-          <ProgressBarCircle size="xxs" value={75} valueFormatter={() => ''} />
+        <Box
+          aria-busy
+          aria-label={t('label.loading')}
+          sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
+          <div className="tw:animate-spin">
+            <ProgressBarCircle
+              size="xxs"
+              value={35}
+              valueFormatter={() => ''}
+            />
+          </div>
         </Box>
       );
     }

@@ -64,8 +64,13 @@ const DimensionalityHeatmap = ({
 
   if (isLoading) {
     return (
-      <div className="dimensionality-heatmap__loading tw:flex tw:items-center tw:justify-center tw:p-8">
-        <ProgressBarCircle size="xxs" value={75} valueFormatter={() => ''} />
+      <div
+        aria-busy
+        aria-label={t('label.loading')}
+        className="dimensionality-heatmap__loading tw:flex tw:items-center tw:justify-center tw:p-8">
+        <div className="tw:animate-spin">
+          <ProgressBarCircle size="xxs" value={35} valueFormatter={() => ''} />
+        </div>
       </div>
     );
   }
