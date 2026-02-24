@@ -711,7 +711,7 @@ public class DashboardDataModelResourceIT
               return checkList.getData().stream()
                       .filter(dm -> dm.getName().startsWith(ns.prefix("dm_pagination_")))
                       .count()
-                  >= 1;
+                  >= 3;
             });
 
     ListParams params = new ListParams();

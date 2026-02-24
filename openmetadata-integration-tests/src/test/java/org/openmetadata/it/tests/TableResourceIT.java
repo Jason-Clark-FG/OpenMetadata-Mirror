@@ -3600,6 +3600,7 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
     // Poll until the last created table is indexed
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
+      ensureSearchIndexExists(searchClient);
 
       Awaitility.await("Wait for tables to be indexed in search")
           .atMost(Duration.ofSeconds(30))
@@ -3608,7 +3609,9 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
           .ignoreExceptions()
           .until(
               () -> {
-                refreshSearchIndex(searchClient);
+                Request refreshReq =
+                    new Request("POST", "/" + getTableSearchIndexName() + "/_refresh");
+                searchClient.performRequest(refreshReq);
                 Request checkReq =
                     new Request("POST", "/" + getTableSearchIndexName() + "/_search");
                 checkReq.setJsonEntity(
@@ -3687,6 +3690,7 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
     // Poll until the table is indexed in search
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
+      ensureSearchIndexExists(searchClient);
 
       Awaitility.await("Wait for searchable table to be indexed")
           .atMost(Duration.ofSeconds(30))
@@ -3695,7 +3699,9 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
           .ignoreExceptions()
           .until(
               () -> {
-                refreshSearchIndex(searchClient);
+                Request refreshReq =
+                    new Request("POST", "/" + getTableSearchIndexName() + "/_refresh");
+                searchClient.performRequest(refreshReq);
                 Request checkReq =
                     new Request("POST", "/" + getTableSearchIndexName() + "/_search");
                 checkReq.setJsonEntity(

@@ -258,12 +258,16 @@ public class SearchIndexFieldLimitIT {
     }
     updateTableExtension(client, table.getId().toString(), extension);
 
-    Awaitility.await("Wait for field count to stabilize after custom property creation")
-        .atMost(Duration.ofSeconds(15))
+    Awaitility.await("Wait for table to be re-indexed after extension update")
+        .atMost(Duration.ofSeconds(30))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
-        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
+        .until(
+            () -> {
+              refreshIndex(searchClient, TABLE_INDEX);
+              return searchDocumentExists(searchClient, TABLE_INDEX, table.getId().toString());
+            });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -290,6 +294,7 @@ public class SearchIndexFieldLimitIT {
 
     int initialFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
+    String lastTableId = null;
     for (int tableNum = 0; tableNum < 3; tableNum++) {
       String propName = ns.prefix("boundedProp_" + tableNum);
       addCustomProperty(client, propName);
@@ -300,14 +305,20 @@ public class SearchIndexFieldLimitIT {
       Map<String, Object> extension = new HashMap<>();
       extension.put(propName, "value_" + tableNum);
       updateTableExtension(client, table.getId().toString(), extension);
+      lastTableId = table.getId().toString();
     }
 
-    Awaitility.await("Wait for field count to stabilize after bounded property creation")
-        .atMost(Duration.ofSeconds(15))
+    String finalTableId = lastTableId;
+    Awaitility.await("Wait for tables to be re-indexed after extension updates")
+        .atMost(Duration.ofSeconds(30))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
-        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
+        .until(
+            () -> {
+              refreshIndex(searchClient, TABLE_INDEX);
+              return searchDocumentExists(searchClient, TABLE_INDEX, finalTableId);
+            });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -372,12 +383,16 @@ public class SearchIndexFieldLimitIT {
 
     updateTableExtension(client, table.getId().toString(), extension);
 
-    Awaitility.await("Wait for field count to stabilize after complex property creation")
-        .atMost(Duration.ofSeconds(15))
+    Awaitility.await("Wait for table to be re-indexed after complex property update")
+        .atMost(Duration.ofSeconds(30))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .ignoreExceptions()
-        .until(() -> getFieldCount(searchClient, TABLE_INDEX) > 0);
+        .until(
+            () -> {
+              refreshIndex(searchClient, TABLE_INDEX);
+              return searchDocumentExists(searchClient, TABLE_INDEX, table.getId().toString());
+            });
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -648,6 +663,21 @@ public class SearchIndexFieldLimitIT {
       }
     }
     return null;
+  }
+
+  private void refreshIndex(Rest5Client searchClient, String indexName) throws Exception {
+    Request refreshRequest = new Request("POST", "/" + indexName + "/_refresh");
+    searchClient.performRequest(refreshRequest);
+  }
+
+  private boolean searchDocumentExists(Rest5Client searchClient, String indexName, String docId)
+      throws Exception {
+    Request request = new Request("POST", "/" + indexName + "/_search");
+    request.setJsonEntity("{\"query\":{\"term\":{\"id\":\"" + docId + "\"}},\"size\":1}");
+    Response response = searchClient.performRequest(request);
+    String body =
+        new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
+    return body.contains("\"id\":\"" + docId + "\"");
   }
 
   private JsonNode findFieldMapping(JsonNode root, String fieldName) {

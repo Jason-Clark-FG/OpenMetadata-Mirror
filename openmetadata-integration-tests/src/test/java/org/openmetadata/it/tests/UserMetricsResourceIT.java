@@ -222,7 +222,7 @@ public class UserMetricsResourceIT {
               () -> {
                 Map<String, Object> m = getUserMetrics();
                 int total = (Integer) m.get("total_users");
-                return total >= initialTotalUsers;
+                return total > initialTotalUsers;
               });
 
       Map<String, Object> updatedMetrics = getUserMetrics();

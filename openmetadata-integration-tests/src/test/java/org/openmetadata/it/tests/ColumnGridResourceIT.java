@@ -1462,8 +1462,10 @@ public class ColumnGridResourceIT {
   }
 
   private void waitForSearchIndexRefresh() {
+    // Minimum delay for ES async indexing. Callers that need stronger guarantees
+    // should follow this with an Awaitility assertion (see test_getColumnGrid_aggregates*).
     await("Wait for search index refresh")
-        .pollDelay(Duration.ofMillis(500))
+        .pollDelay(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(10))
         .pollInterval(Duration.ofSeconds(1))
         .until(() -> true);
