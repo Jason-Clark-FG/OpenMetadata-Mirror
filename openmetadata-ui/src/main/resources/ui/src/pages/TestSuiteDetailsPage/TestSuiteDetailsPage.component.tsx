@@ -92,7 +92,7 @@ import {
 } from '../../utils/RouterUtils';
 import { ExtraTestCaseDropdownOptions } from '../../utils/TestCaseUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
-import './TestSuiteDetailsPage.less';
+import './test-suite-details-page.less';
 
 const TestSuiteDetailsPage = () => {
   const { t } = useTranslation();
