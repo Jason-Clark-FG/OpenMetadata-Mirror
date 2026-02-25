@@ -69,6 +69,34 @@ const mockExternalTestDefinition: TestDefinition = {
   ],
 };
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Tooltip: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="tooltip" title={title as string}>
+      {children}
+    </div>
+  ),
+  TooltipTrigger: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <button className={className}>{children}</button>,
+  Badge: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+  }) => <span data-testid={testId}>{children}</span>,
+}));
+
 jest.mock('../../../rest/testAPI', () => ({
   createTestDefinition: jest.fn(),
   patchTestDefinition: jest.fn(),
@@ -418,7 +446,8 @@ describe('TestDefinitionForm Component', () => {
         />
       );
 
-      const sqlField = screen.getByLabelText('label.sql-query');
+      const sqlFields = screen.getAllByLabelText('label.sql-query');
+      const sqlField = sqlFields[sqlFields.length - 1];
 
       expect(sqlField).toBeInTheDocument();
       expect(sqlField).toBeDisabled();
@@ -512,9 +541,11 @@ describe('TestDefinitionForm Component', () => {
         />
       );
 
-      const supportedServicesField = screen.getByLabelText(
+      const supportedServicesFields = screen.getAllByLabelText(
         'label.supported-service-plural'
       );
+      const supportedServicesField =
+        supportedServicesFields[supportedServicesFields.length - 1];
 
       expect(supportedServicesField).toBeDisabled();
     });
@@ -591,9 +622,11 @@ describe('TestDefinitionForm Component', () => {
         <TestDefinitionForm onCancel={mockOnCancel} onSuccess={mockOnSuccess} />
       );
 
-      const supportedServicesField = screen.getByLabelText(
+      const supportedServicesFields = screen.getAllByLabelText(
         'label.supported-service-plural'
       );
+      const supportedServicesField =
+        supportedServicesFields[supportedServicesFields.length - 1];
 
       expect(supportedServicesField).toBeInTheDocument();
       expect(supportedServicesField).not.toBeDisabled();
@@ -608,9 +641,11 @@ describe('TestDefinitionForm Component', () => {
         />
       );
 
-      const supportedServicesField = screen.getByLabelText(
+      const supportedServicesFields = screen.getAllByLabelText(
         'label.supported-service-plural'
       );
+      const supportedServicesField =
+        supportedServicesFields[supportedServicesFields.length - 1];
 
       expect(supportedServicesField).toBeInTheDocument();
       expect(supportedServicesField).not.toBeDisabled();
