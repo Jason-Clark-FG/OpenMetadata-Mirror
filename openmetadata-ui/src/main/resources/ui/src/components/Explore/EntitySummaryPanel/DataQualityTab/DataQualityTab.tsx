@@ -541,6 +541,12 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
   const convertIncidentToTestCase = (
     incident: TestCaseResolutionStatus
   ): TestCase => {
+    const matchingTestCase = testCases.find(
+      (tc) =>
+        tc.fullyQualifiedName ===
+        incident.testCaseReference?.fullyQualifiedName
+    );
+
     return {
       id: incident.id || '',
       name:
@@ -548,7 +554,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         incident.testCaseReference?.name ||
         'Unknown Test Case',
       fullyQualifiedName: incident.testCaseReference?.fullyQualifiedName || '',
-      entityLink: incident.testCaseReference?.fullyQualifiedName || '',
+      entityLink: matchingTestCase?.entityLink || '',
       testCaseResult: {
         testCaseStatus: incident.testCaseResolutionStatusType as string,
         timestamp: incident.timestamp || Date.now(),

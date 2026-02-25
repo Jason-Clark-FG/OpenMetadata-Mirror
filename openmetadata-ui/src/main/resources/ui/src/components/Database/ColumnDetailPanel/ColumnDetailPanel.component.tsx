@@ -969,7 +969,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
           <DataQualityTab
             isColumnDetailPanel
             entityFQN={activeColumn.fullyQualifiedName || ''}
-            entityType={entityType}
             hasViewTests={permissions.ViewTests || permissions.ViewAll}
           />
         );
