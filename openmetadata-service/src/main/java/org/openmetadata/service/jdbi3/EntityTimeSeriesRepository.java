@@ -316,7 +316,7 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
     if (row == null) {
       return null;
     }
-    return row.timestamp() + "|" + row.entityFQNHash();
+    return RestUtil.encodeCursor(row.timestamp() + "|" + row.entityFQNHash());
   }
 
   public T getLatestRecord(String recordFQN) {
