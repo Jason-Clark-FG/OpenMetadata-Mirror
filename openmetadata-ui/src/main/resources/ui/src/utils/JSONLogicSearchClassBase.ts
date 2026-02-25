@@ -330,7 +330,7 @@ class JSONLogicSearchClassBase {
         defaultField: 'tagFQN',
         subfields: {
           tagFQN: {
-            label: 'Tags',
+            label: t('label.tier'),
             type: 'multiselect',
             defaultOperator: 'array_contains',
             mainWidgetProps: this.mainWidgetProps,
