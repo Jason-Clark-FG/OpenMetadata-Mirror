@@ -1214,8 +1214,7 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
           updated.getUseDynamicAssertion());
       recordChange(
           "dimensionColumns", original.getDimensionColumns(), updated.getDimensionColumns());
-      recordChange(
-          "topDimensions", original.getTopDimensions(), updated.getTopDimensions());
+      recordChange("topDimensions", original.getTopDimensions(), updated.getTopDimensions());
       recordChange("testCaseStatus", original.getTestCaseStatus(), updated.getTestCaseStatus());
       recordChange("testCaseResult", original.getTestCaseResult(), updated.getTestCaseResult());
     }
