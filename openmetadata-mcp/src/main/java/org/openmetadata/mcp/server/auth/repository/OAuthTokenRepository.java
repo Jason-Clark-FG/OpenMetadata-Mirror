@@ -83,7 +83,9 @@ public class OAuthTokenRepository {
           record.clientId(),
           e.getMessage());
 
-      // Delete the undecryptable token - it's unusable anyway
+      // TODO: Auto-deleting tokens on decryption failure is a destructive side effect that could
+      //  cause data loss during Fernet key rotation. Consider returning null without deleting,
+      //  or implementing a key rotation strategy that tries multiple keys before giving up.
       accessTokenDAO.delete(tokenHash);
       LOG.debug("Deleted undecryptable access token for client: {}", record.clientId());
 
@@ -153,7 +155,7 @@ public class OAuthTokenRepository {
           record.clientId(),
           e.getMessage());
 
-      // Delete the undecryptable token - it's unusable anyway
+      // TODO: Same auto-delete concern as loadAccessToken — see TODO above.
       refreshTokenDAO.delete(tokenHash);
       LOG.debug(
           "Deleted undecryptable refresh token for user: {}, client: {}",

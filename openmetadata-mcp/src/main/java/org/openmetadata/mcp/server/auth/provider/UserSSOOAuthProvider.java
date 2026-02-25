@@ -170,7 +170,8 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       LOG.warn("Failed to get base URL from system settings: {}", e.getMessage());
     }
 
-    // Final fallback
+    // TODO: Silently falling back to localhost:8585 will cause subtle failures in production.
+    //  Consider throwing an exception or logging at ERROR level to surface misconfiguration.
     return "http://localhost:8585";
   }
 
