@@ -375,6 +375,37 @@ public class SearchRepository {
         .collect(Collectors.joining(","));
   }
 
+  public List<String> getChildIndexAliases(String entityType) {
+    Set<String> visited = new HashSet<>();
+    List<String> aliases = new ArrayList<>();
+    collectChildAliases(entityType, aliases, visited);
+    return aliases;
+  }
+
+  private void collectChildAliases(String entityType, List<String> aliases, Set<String> visited) {
+    if (!visited.add(entityType)) {
+      return;
+    }
+    IndexMapping mapping = entityIndexMap.get(entityType);
+    if (mapping == null) {
+      return;
+    }
+    List<String> children = mapping.getChildAliases(null);
+    if (nullOrEmpty(children)) {
+      return;
+    }
+    for (String childEntityType : children) {
+      IndexMapping childMapping = entityIndexMap.get(childEntityType);
+      if (childMapping != null) {
+        String alias = childMapping.getAlias(null);
+        if (alias != null && !aliases.contains(alias)) {
+          aliases.add(alias);
+        }
+        collectChildAliases(childEntityType, aliases, visited);
+      }
+    }
+  }
+
   public String getIndexNameWithoutAlias(String fullIndexName) {
     if (clusterAlias != null
         && !clusterAlias.isEmpty()
