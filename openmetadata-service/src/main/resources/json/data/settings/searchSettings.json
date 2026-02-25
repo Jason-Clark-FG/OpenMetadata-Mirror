@@ -33,7 +33,7 @@
       {
         "name": "owners.displayName.keyword",
         "type": "terms",
-        "field": "owners.displayName.keyword"
+        "field": "ownerDisplayName"
       },
       {
         "name": "domains.displayName.keyword",
@@ -729,7 +729,7 @@
         {
           "name": "owners.displayName.keyword",
           "type": "terms",
-          "field": "owners.displayName.keyword"
+          "field": "ownerDisplayName"
         },
         {
           "name": "domains.displayName.keyword",

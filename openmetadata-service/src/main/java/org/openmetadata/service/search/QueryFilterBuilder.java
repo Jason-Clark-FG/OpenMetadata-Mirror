@@ -86,8 +86,7 @@ public class QueryFilterBuilder {
     ObjectNode boolNode = queryNode.putObject(BOOL_KEY);
     ArrayNode mustArray = boolNode.putArray(MUST_KEY);
 
-    // owners.fullyQualifiedName is a text field, use match query for exact matching
-    addMatchCondition(mustArray, query.getFieldPath(), query.getFieldValue());
+    addNestedMatchCondition(mustArray, "owners", query.getFieldPath(), query.getFieldValue());
     addCommonFilters(mustArray, query);
 
     return serializeQuery(queryFilter);
@@ -127,8 +126,7 @@ public class QueryFilterBuilder {
     ObjectNode boolNode = queryNode.putObject(BOOL_KEY);
     ArrayNode mustArray = boolNode.putArray(MUST_KEY);
 
-    // owners.id is a keyword field, use term query with OR condition
-    addOrCondition(mustArray, query.getFieldPath(), query.getFieldValues());
+    addNestedOrCondition(mustArray, "owners", query.getFieldPath(), query.getFieldValues());
     addCommonFilters(mustArray, query);
 
     return serializeQuery(queryFilter);
@@ -162,6 +160,34 @@ public class QueryFilterBuilder {
     ObjectNode matchNode = MAPPER.createObjectNode();
     matchNode.putObject(MATCH_KEY).put(fieldPath, fieldValue);
     mustArray.add(matchNode);
+  }
+
+  private static void addNestedMatchCondition(
+      ArrayNode mustArray, String path, String fieldPath, String fieldValue) {
+    ObjectNode nestedNode = MAPPER.createObjectNode();
+    ObjectNode nestedInner = nestedNode.putObject("nested");
+    nestedInner.put("path", path);
+    ObjectNode matchNode = MAPPER.createObjectNode();
+    matchNode.putObject(MATCH_KEY).put(fieldPath, fieldValue);
+    nestedInner.set(QUERY_KEY, matchNode);
+    mustArray.add(nestedNode);
+  }
+
+  private static void addNestedOrCondition(
+      ArrayNode mustArray, String path, String fieldPath, List<String> fieldValues) {
+    ObjectNode nestedNode = MAPPER.createObjectNode();
+    ObjectNode nestedInner = nestedNode.putObject("nested");
+    nestedInner.put("path", path);
+    ObjectNode orCondition = MAPPER.createObjectNode();
+    ObjectNode innerBool = orCondition.putObject(BOOL_KEY);
+    ArrayNode shouldArray = innerBool.putArray(SHOULD_KEY);
+    for (String value : fieldValues) {
+      ObjectNode termNode = MAPPER.createObjectNode();
+      termNode.putObject(TERM_KEY).put(fieldPath, value);
+      shouldArray.add(termNode);
+    }
+    nestedInner.set(QUERY_KEY, orCondition);
+    mustArray.add(nestedNode);
   }
 
   private static void addOrCondition(

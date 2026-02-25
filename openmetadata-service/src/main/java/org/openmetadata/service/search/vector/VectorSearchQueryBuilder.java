@@ -85,7 +85,7 @@ public class VectorSearchQueryBuilder {
           }
           case "tags" -> {
             sb.append(',');
-            appendNested(sb, "tags", "tags.tagFQN", values);
+            appendFlat(sb, "tags.tagFQN", values);
           }
           case "domains" -> {
             sb.append(',');
@@ -123,36 +123,6 @@ public class VectorSearchQueryBuilder {
     sb.append("]}}"); // close must array and bool
 
     sb.append("}}}"); // close embedding, knn, wrapper
-  }
-
-  private static void appendNested(StringBuilder sb, String path, String field, List<String> vals) {
-
-    sb.append("{\"nested\":{\"path\":\"").append(path).append("\",\"query\":");
-    if (vals.size() == 1) {
-      appendOneNestedQuery(sb, field, vals.get(0));
-    } else {
-      sb.append("{\"bool\":{\"should\":[");
-      for (int i = 0; i < vals.size(); i++) {
-        if (i > 0) sb.append(',');
-        appendOneNestedQuery(sb, field, vals.get(i));
-      }
-      sb.append("]}}");
-    }
-    sb.append("}}");
-  }
-
-  private static void appendOneNestedQuery(StringBuilder sb, String field, String val) {
-    switch (val) {
-      case ANY -> sb.append("{\"exists\":{\"field\":\"").append(field).append("\"}}");
-      case NONE -> sb.append("{\"bool\":{\"must_not\":{\"exists\":{\"field\":\"")
-          .append(field)
-          .append("\"}}}}");
-      default -> sb.append("{\"term\":{\"")
-          .append(field)
-          .append("\":\"")
-          .append(escape(val))
-          .append("\"}}");
-    }
   }
 
   private static void appendFlat(StringBuilder sb, String field, List<String> vals) {
@@ -210,7 +180,7 @@ public class VectorSearchQueryBuilder {
             .append("\":\"")
             .append(escape(v))
             .append("\"}},");
-        sb.append("{\"match\":{\"")
+        sb.append("{\"term\":{\"")
             .append(displayNameField)
             .append("\":\"")
             .append(escape(v))
