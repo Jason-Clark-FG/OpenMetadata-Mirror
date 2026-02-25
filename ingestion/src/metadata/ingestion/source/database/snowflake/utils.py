@@ -50,11 +50,14 @@ from metadata.ingestion.source.database.snowflake.queries import (
     SNOWFLAKE_INCREMENTAL_GET_VIEW_NAMES,
 )
 from metadata.utils import fqn
+from metadata.utils.logger import ingestion_logger
 from metadata.utils.sqlalchemy_utils import (
     get_display_datatype,
     get_table_comment_wrapper,
     get_view_definition_wrapper,
 )
+
+logger = ingestion_logger()
 
 dialect = SnowflakeDialect()
 Query = str
@@ -344,9 +347,12 @@ def get_view_definition(
 
     # If the view definition is not found via optimized query,
     # we need to get the view definition from the view ddl
+    logger.debug(
+        f"View definition not found via optimized query for {schema}.{table_name}, falling back to DDL query"
+    )
 
     schema = schema or self.default_schema_name
-    view_name = f"{schema}.{table_name}" if schema else table_name
+    view_name = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
     cursor = connection.execute(SNOWFLAKE_GET_VIEW_DDL.format(view_name=view_name))
     try:
         result = cursor.fetchone()
@@ -365,7 +371,7 @@ def get_stream_definition(  # pylint: disable=unused-argument
     Gets the stream definition
     """
     schema = schema or self.default_schema_name
-    stream_name = f"{schema}.{stream_name}" if schema else stream_name
+    stream_name = f'"{schema}"."{stream_name}"' if schema else f'"{stream_name}"'
     cursor = connection.execute(
         SNOWFLAKE_GET_STREAM_DEFINITION.format(stream_name=stream_name)
     )
@@ -638,7 +644,7 @@ def get_table_ddl(
     Gets the Table DDL
     """
     schema = schema or self.default_schema_name
-    table_name = f"{schema}.{table_name}" if schema else table_name
+    table_name = f'"{schema}"."{table_name}"' if schema else f'"{table_name}"'
     cursor = connection.execute(SNOWFLAKE_GET_TABLE_DDL.format(table_name=table_name))
     try:
         result = cursor.fetchone()

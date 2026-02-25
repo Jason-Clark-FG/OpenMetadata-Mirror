@@ -60,8 +60,13 @@ import {
   openColumnDetailPanel,
   removeOwner,
   removeOwnersFromList,
+  waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import { visitServiceDetailsPage } from '../../utils/service';
+import { getCurrentMillis } from '../../utils/dateTime';
+import { clickDataQualityStatCard } from '../../utils/entityPanel';
+import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
+import { Column, Table } from '../../../src/generated/entity/data/table';
 
 const entities = {
   'Api Endpoint': ApiEndpointClass,
@@ -469,9 +474,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               .locator('[data-testid="tag-select-search-bar"]')
               .fill('PersonalData.SpecialCategory');
             await searchTag;
-            await page.waitForSelector('[data-testid="loader"]', {
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             const tagOption = page.getByTitle('SpecialCategory');
             await tagOption.click();
@@ -483,6 +486,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             );
             await page.getByRole('button', { name: 'Update' }).click();
             await updateResponse;
+            await waitForAllLoadersToDisappear(page);
 
             await expect(
               page
@@ -500,6 +504,48 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                 )
                 .getByTestId('tag-PersonalData.SpecialCategory')
             ).toBeVisible();
+
+            // Cleanup: remove tag via panel
+            const cleanupPanelContainer = await openColumnDetailPanel({
+              page,
+              rowSelector,
+              columnId: entity.childrenSelectorId ?? '',
+              columnNameTestId,
+              entityType: entity.type as EntityType,
+            });
+            await cleanupPanelContainer.getByTestId('edit-icon-tags').click();
+
+            // Wait for selectable list to be visible and ready
+            await page
+              .locator('[data-testid="selectable-list"]')
+              .waitFor({ state: 'visible' });
+
+            const searchTagCleanup = page.waitForResponse(
+              '/api/v1/search/query?q=*index=tag_search_index*'
+            );
+            await page
+              .locator('[data-testid="tag-select-search-bar"]')
+              .fill('PersonalData.SpecialCategory');
+            await searchTagCleanup;
+            await waitForAllLoadersToDisappear(page);
+
+            await page.getByTitle('SpecialCategory', { exact: true }).click();
+            const removeResponse = page.waitForResponse(
+              (response) =>
+                response.url().includes('/api/v1/columns/name/') ||
+                response.url().includes(`/api/v1/${entity.endpoint}/`)
+            );
+            await page.getByRole('button', { name: 'Update' }).click();
+            await removeResponse;
+            await waitForAllLoadersToDisappear(page);
+
+            await expect(
+              cleanupPanelContainer
+                .locator('.tags-list')
+                .getByTestId('tag-PersonalData.SpecialCategory')
+            ).toBeHidden();
+
+            await closeColumnDetailPanel(page);
           }
         );
       });
@@ -551,9 +597,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             );
 
             // Wait for loader to disappear after search
-            await page.waitForSelector('[data-testid="loader"]', {
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Wait for term option to be visible before clicking
             const termOption = page.locator('.ant-list-item').filter({
@@ -575,9 +619,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await glossaryUpdateResponse;
 
             // CRITICAL: Wait for UI to update after API response
-            await page.waitForSelector('[data-testid="loader"]', {
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Verify glossary term is added
             await expect(
@@ -604,16 +646,14 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             const searchTag = page.waitForResponse(
               '/api/v1/search/query?q=*index=tag_search_index*'
             );
-            await tagSearchBar.fill('PersonalData.SpecialCategory');
+            await tagSearchBar.fill('PII.Sensitive');
             await searchTag;
 
             // Wait for loader to disappear after search
-            await page.waitForSelector('[data-testid="loader"]', {
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Wait for tag option to be visible before clicking
-            const tagOption = page.getByTitle('SpecialCategory');
+            const tagOption = page.getByTitle('Sensitive', { exact: true });
             await expect(tagOption).toBeVisible();
             await tagOption.click();
 
@@ -631,19 +671,10 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await tagUpdateButton.click();
             await tagUpdateResponse;
 
-            // CRITICAL: Wait for UI to update after API response
-            await page.waitForSelector('[data-testid="loader"]', {
-              state: 'detached',
-            });
-
-            // Wait for the tags container to be visible first (ensures panel is fully loaded)
-            const tagsContainer = panelContainer.locator('.tags-list');
-            await expect(tagsContainer).toBeVisible();
-
             // Verify both tag and glossary term are still present in the panel
-            // Use panelContainer scope to avoid ambiguity with multiple .tags-list elements
+            // Use panelContainer scope to avoid ambiguity with multiple tags-list elements across table rows
             await expect(
-              tagsContainer.getByTestId('tag-PersonalData.SpecialCategory')
+              panelContainer.getByTestId('tag-PII.Sensitive')
             ).toBeVisible();
             await expect(
               panelContainer.getByTestId(
@@ -658,13 +689,79 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               `[${rowSelector}="${entity.childrenSelectorId ?? ''}"]`
             );
             await expect(
-              rowLocator.getByTestId('tag-PersonalData.SpecialCategory')
+              rowLocator.getByTestId('tag-PII.Sensitive')
             ).toBeVisible();
             await expect(
               rowLocator.getByTestId(
                 `tag-${EntityDataClass.glossaryTerm1.responseData.fullyQualifiedName}`
               )
             ).toBeVisible();
+
+            // Cleanup: remove both tag and glossary term from column detail panel
+            const cleanupPanel = await openColumnDetailPanel({
+              page,
+              rowSelector,
+              columnId: entity.childrenSelectorId ?? '',
+              columnNameTestId,
+              entityType: entity.type as EntityType,
+            });
+
+            // Remove glossary term
+            await cleanupPanel.getByTestId('edit-glossary-terms').click();
+            await page
+              .locator('[data-testid="selectable-list"]')
+              .waitFor({ state: 'visible' });
+
+            const searchGlossaryCleanup = page.waitForResponse(
+              '/api/v1/search/query?q=*index=glossary_term_search_index*'
+            );
+            await page
+              .locator('[data-testid="glossary-term-select-search-bar"]')
+              .fill(EntityDataClass.glossaryTerm1.responseData.displayName);
+            await searchGlossaryCleanup;
+            await waitForAllLoadersToDisappear(page);
+
+            await page
+              .getByTitle(
+                EntityDataClass.glossaryTerm1.responseData.displayName,
+                { exact: true }
+              )
+              .click();
+            const glossaryCleanupResponse = page.waitForResponse(
+              (response) =>
+                response.url().includes('/api/v1/columns/name/') ||
+                response.url().includes(`/api/v1/${entity.endpoint}/`)
+            );
+            await page.getByRole('button', { name: 'Update' }).click();
+            await glossaryCleanupResponse;
+            await waitForAllLoadersToDisappear(page);
+
+            // Remove tag
+            await cleanupPanel.getByTestId('edit-icon-tags').click();
+            await page
+              .locator('[data-testid="selectable-list"]')
+              .waitFor({ state: 'visible' });
+
+            const searchTagCleanup2 = page.waitForResponse(
+              '/api/v1/search/query?q=*index=tag_search_index*'
+            );
+            await page
+              .locator('[data-testid="tag-select-search-bar"]')
+              .fill('PII.Sensitive');
+            await searchTagCleanup2;
+            await waitForAllLoadersToDisappear(page);
+
+            await page.getByTitle('Sensitive', { exact: true }).click();
+            const tagCleanupResponse = page.waitForResponse(
+              (response) =>
+                response.url().includes('/api/v1/columns/name/') ||
+                response.url().includes(`/api/v1/${entity.endpoint}/`)
+            );
+            await page.getByRole('button', { name: 'Update' }).click();
+            await tagCleanupResponse;
+            await waitForAllLoadersToDisappear(page);
+
+            await closeColumnDetailPanel(page);
           }
         );
       });
@@ -1113,11 +1210,11 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         await test.step(
           'Verify array column with nested children renders correctly',
           async () => {
-            const tableResponse = entity.entityResponseData as any;
+            const tableResponse = entity.entityResponseData as Table;
             const columns = tableResponse?.columns || [];
 
             const nestedParent = columns.find(
-              (col: any) => col.name === (entity as TableClass).columnsName[2]
+              (col: Column) => col.name === (entity as TableClass).columnsName[2]
             );
 
             if (!nestedParent) {
@@ -1131,7 +1228,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             const nestedParentFQN = nestedParent.fullyQualifiedName;
 
             const arrayColumn = nestedParent.children?.find(
-              (col: any) => col.name === (entity as TableClass).columnsName[4]
+              (col: Column) => col.name === (entity as TableClass).columnsName[4]
             );
 
             if (!arrayColumn) {
@@ -1447,8 +1544,16 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               await expect(saveButton).toBeEnabled();
               await saveButton.click();
               await saveResponse;
+              await expect(
+                page
+                  .locator('.column-detail-panel')
+                  .getByTestId('alert-bar')
+                  .getByTestId('alert-message')
+              ).toContainText('Description updated successfully');
 
-              await toastNotification(page, /Description updated successfully/);
+              await page.waitForSelector('[data-testid="loader"]', {
+                state: 'detached',
+              });
 
               await expect(
                 panelContainer
@@ -1606,6 +1711,311 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           );
         });
       }
+
+      if (entity.type === 'Table') {
+        test(
+          'Column detail panel - Data Quality tab shows test cases',
+          async ({ page }) => {
+            test.slow();
+
+            const { apiContext, afterAction } = await getApiContext(page);
+            const tableEntity = entity as TableClass;
+            const tableFQN =
+              entity.entityResponseData?.['fullyQualifiedName'];
+            const columnName = tableEntity.columnsName[0];
+            let testCase1Name = '';
+            let testCase2Name = '';
+
+            try {
+              await tableEntity.createTestSuiteAndPipelines(apiContext);
+
+              const testCase1 = await tableEntity.createTestCase(apiContext, {
+                name: `pw_col_dq_success_${uuid()}`,
+                entityLink: `<#E::table::${tableFQN}::columns::${columnName}>`,
+                testDefinition: 'columnValueLengthsToBeBetween',
+                parameterValues: [
+                  { name: 'minLength', value: 1 },
+                  { name: 'maxLength', value: 10 },
+                ],
+              });
+
+              const testCase2 = await tableEntity.createTestCase(apiContext, {
+                name: `pw_col_dq_failed_${uuid()}`,
+                entityLink: `<#E::table::${tableFQN}::columns::${columnName}>`,
+                testDefinition: 'columnValueLengthsToBeBetween',
+                parameterValues: [
+                  { name: 'minLength', value: 100 },
+                  { name: 'maxLength', value: 200 },
+                ],
+              });
+
+              testCase1Name = testCase1.name;
+              testCase2Name = testCase2.name;
+
+              await tableEntity.addTestCaseResult(
+                apiContext,
+                testCase1.fullyQualifiedName,
+                { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+              );
+
+              await tableEntity.addTestCaseResult(
+                apiContext,
+                testCase2.fullyQualifiedName,
+                {
+                  testCaseStatus: 'Failed',
+                  result: 'Column value length exceeded maximum',
+                  timestamp: getCurrentMillis(),
+                }
+              );
+
+              await test.step(
+                'Open column detail panel and navigate to DQ tab',
+                async () => {
+                  await redirectToHomePage(page);
+                  await entity.visitEntityPage(page);
+
+                  await page.getByTestId(entity.childrenTabId ?? '').click();
+                  await waitForAllLoadersToDisappear(page);
+
+                  await openColumnDetailPanel({
+                    page,
+                    rowSelector,
+                    columnId: entity.childrenSelectorId ?? '',
+                    columnNameTestId: 'column-name',
+                    entityType: entity.type as EntityType,
+                  });
+
+                  const dqTabResponsePromise = page.waitForResponse(
+                    (response) =>
+                      response
+                        .url()
+                        .includes('/api/v1/dataQuality/testCases') 
+                  );
+                  await page.getByTestId('data-quality-tab').click();
+                  const dqTabResponse = await dqTabResponsePromise;
+                  expect(dqTabResponse.status()).toBe(200);
+                  await waitForAllLoadersToDisappear(page);
+                }
+              );
+
+              await test.step(
+                'Verify stat cards and filter by failed',
+                async () => {
+                  const panelContainer = page.locator('.column-detail-panel');
+                  const dqContent = panelContainer.locator(
+                    '.data-quality-tab-container'
+                  );
+
+                  await expect(dqContent).toBeVisible();
+
+                  const successStat = panelContainer.locator(
+                    '[data-testid="data-quality-stat-card-success"]'
+                  );
+                  const failedStat = panelContainer.locator(
+                    '[data-testid="data-quality-stat-card-failed"]'
+                  );
+
+                  await expect(successStat).toBeVisible();
+                  await expect(failedStat).toBeVisible();
+
+                  await expect(successStat).toHaveText('1Passed');
+                  await expect(failedStat).toHaveText('1Failed');
+
+                  await clickDataQualityStatCard(page, 'failed');
+
+                  const testCaseCardsSection = dqContent.locator(
+                    '.test-case-cards-section'
+                  );
+
+                  await expect(testCaseCardsSection).toBeVisible();
+
+                  const failedCards =
+                    testCaseCardsSection.locator('.test-case-card');
+
+                  await expect(failedCards).toHaveCount(1);
+
+                  const failedCard = failedCards.first();
+
+                  await expect(
+                    failedCard.locator('.test-case-name')
+                  ).toContainText(testCase2Name);
+                  
+                }
+              );
+
+              await test.step(
+                'Filter by success and verify test case card',
+                async () => {
+                  const panelContainer = page.locator('.column-detail-panel');
+                  const dqContent = panelContainer.locator(
+                    '.data-quality-tab-container'
+                  );
+                  await clickDataQualityStatCard(page, 'success');
+
+                  const testCaseCardsSection = dqContent.locator(
+                    '.test-case-cards-section'
+                  );
+                  const successCards =
+                    testCaseCardsSection.locator('.test-case-card');
+
+                  await expect(successCards).toHaveCount(1);
+                  await expect(
+                    successCards.first().locator('.test-case-name')
+                  ).toContainText(testCase1Name);
+
+                  await closeColumnDetailPanel(page);
+                }
+              );
+            } finally {
+              await afterAction();
+            }
+          }
+        );
+
+        test(
+          'Column detail panel - Data Quality Incidents tab',
+          async ({ page }) => {
+            test.slow();
+
+            const { apiContext, afterAction } = await getApiContext(page);
+            const tableEntity = entity as TableClass;
+            const tableFQN =
+              entity.entityResponseData?.['fullyQualifiedName'];
+            const columnName = tableEntity.columnsName[0];
+
+            try {
+              await tableEntity.createTestSuiteAndPipelines(apiContext);
+
+              const testCase = await tableEntity.createTestCase(apiContext, {
+                name: `pw_col_incident_${uuid()}`,
+                entityLink: `<#E::table::${tableFQN}::columns::${columnName}>`,
+                testDefinition: 'columnValueLengthsToBeBetween',
+                parameterValues: [
+                  { name: 'minLength', value: 100 },
+                  { name: 'maxLength', value: 200 },
+                ],
+              });
+
+              await tableEntity.addTestCaseResult(
+                apiContext,
+                testCase.fullyQualifiedName,
+                {
+                  testCaseStatus: 'Failed',
+                  result: 'Column value length exceeded maximum',
+                  timestamp: getCurrentMillis(),
+                }
+              );
+
+              await test.step(
+                'Open column detail panel and navigate to Incidents tab',
+                async () => {
+                  await redirectToHomePage(page);
+                  await entity.visitEntityPage(page);
+
+                  await page.getByTestId(entity.childrenTabId ?? '').click();
+                  await waitForAllLoadersToDisappear(page);
+
+                  await openColumnDetailPanel({
+                    page,
+                    rowSelector,
+                    columnId: entity.childrenSelectorId ?? '',
+                    columnNameTestId: 'column-name',
+                    entityType: entity.type as EntityType,
+                  });
+
+                  const dqTabResponsePromise = page.waitForResponse(
+                    (response) =>
+                      response
+                        .url()
+                        .includes('/api/v1/dataQuality/testCases') 
+                  );
+                  await page.getByTestId('data-quality-tab').click();
+                  const dqTabResponse = await dqTabResponsePromise;
+                  expect(dqTabResponse.status()).toBe(200);
+
+                  await waitForAllLoadersToDisappear(page);
+
+                  const dqContent = page
+                    .locator('.column-detail-panel')
+                    .locator('.data-quality-tab-container');
+
+                  await expect(dqContent).toBeVisible();
+
+                  
+                  await dqContent
+                    .locator('.data-quality-tabs')
+                    .getByRole('tab', { name: /incidents/i })
+                    .click();
+                  await waitForAllLoadersToDisappear(page);
+                }
+              );
+
+              await test.step(
+                'Verify incidents stats container and cards',
+                async () => {
+                  const panelContainer = page.locator('.column-detail-panel');
+                  const dqContent = panelContainer.locator(
+                    '.data-quality-tab-container'
+                  );
+                  const incidentsTabContent = dqContent.locator(
+                    '.incidents-tab-content'
+                  );
+
+                  await expect(incidentsTabContent).toBeVisible();
+
+                  const incidentStatsContainer = incidentsTabContent.locator(
+                    '.incidents-stats-container'
+                  );
+
+                  await expect(incidentStatsContainer).toBeVisible();
+
+                  await expect(
+                    incidentStatsContainer.locator(
+                      '.incident-stat-card.new-card'
+                    )
+                  ).toBeVisible();
+                  await expect(
+                    incidentStatsContainer.locator(
+                      '.incident-stat-card.ack-card'
+                    )
+                  ).toBeVisible();
+                  await expect(
+                    incidentStatsContainer.locator(
+                      '.incident-stat-card.assigned-card'
+                    )
+                  ).toBeVisible();
+                  await expect(
+                    incidentStatsContainer.locator('.resolved-section')
+                  ).toBeVisible();
+
+                  const incidentCardsSection = incidentsTabContent.locator(
+                    '.incident-cards-section'
+                  );
+
+                  await expect(incidentCardsSection).toBeVisible();
+
+                  const incidentCards =
+                    incidentCardsSection.locator('.test-case-card');
+                  const cardCount = await incidentCards.count();
+
+                  if (cardCount > 0) {
+                    const assigneeSection = incidentCards
+                      .first()
+                      .locator('.test-case-detail-item')
+                      .filter({ hasText: /assignee/i });
+
+                    await expect(assigneeSection).toBeVisible();
+                  }
+
+                  await closeColumnDetailPanel(page);
+                }
+              );
+            } finally {
+              await afterAction();
+            }
+          }
+        );
+      }
     }
 
     /**
@@ -1721,63 +2131,58 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
      * Tests access control for description editing with deny policy
      * @description Tests that a user assigned a role with a deny rule for EditDescription cannot edit entity descriptions
      */
-    test('User should be denied access to edit description when deny policy rule is applied on an entity', async ({
-      page,
-      dataConsumerPage,
-    }) => {
-      await redirectToHomePage(page);
+    test.describe(
+      'User should be denied access to edit description when deny policy rule is applied on an entity',
+      () => {
+        const customPolicy = new PolicyClass();
+        const customRole = new RolesClass();
 
-      await entity.visitEntityPage(page);
+        test.beforeAll(async ({ browser }) => {
+          const { apiContext, afterAction } = await performAdminLogin(browser);
 
-      const { apiContext } = await getApiContext(page);
+          await customPolicy.create(apiContext, [
+            ...DATA_CONSUMER_RULES,
+            {
+              name: 'DenyEditDescription-Rule',
+              resources: ['All'],
+              operations: ['EditDescription'],
+              effect: 'deny',
+            },
+          ]);
 
-      // Create policy with deny rule for edit description
-      const customPolicy = new PolicyClass();
-      await customPolicy.create(apiContext, [
-        ...DATA_CONSUMER_RULES,
-        {
-          name: 'DenyEditDescription-Rule',
-          resources: ['All'],
-          operations: ['EditDescription'],
-          effect: 'deny',
-        },
-      ]);
+          await customRole.create(apiContext, [customPolicy.responseData.name]);
 
-      // Create role with the custom policy
-      const customRole = new RolesClass();
-      await customRole.create(apiContext, [customPolicy.responseData.name]);
-
-      // Assign the custom role to the data consumer user
-      await dataConsumerUser.patch({
-        apiContext,
-        patchData: [
-          {
-            op: 'replace',
-            path: '/roles',
-            value: [
+          await dataConsumerUser.patch({
+            apiContext,
+            patchData: [
               {
-                id: customRole.responseData.id,
-                type: 'role',
-                name: customRole.responseData.name,
+                op: 'replace',
+                path: '/roles',
+                value: [
+                  {
+                    id: customRole.responseData.id,
+                    type: 'role',
+                    name: customRole.responseData.name,
+                  },
+                ],
               },
             ],
-          },
-        ],
-      });
+          });
 
-      await entity.visitEntityPage(dataConsumerPage);
+          await afterAction();
+        });
 
-      // Check if edit description button is not visible
-      await expect(
-        dataConsumerPage.locator('[data-testid="edit-description"]')
-      ).not.toBeVisible();
+        test('User should be denied access to edit description when deny policy rule is applied on an entity', async ({
+          dataConsumerPage,
+        }) => {
+          await entity.visitEntityPage(dataConsumerPage);
 
-      const { apiContext: cleanupContext, afterAction: cleanupAfterAction } =
-        await getApiContext(page);
-      await customRole.delete(cleanupContext);
-      await customPolicy.delete(cleanupContext);
-      await cleanupAfterAction();
-    });
+          await expect(
+            dataConsumerPage.locator('[data-testid="edit-description"]')
+          ).not.toBeVisible();
+        });
+      }
+    );
 
     /**
      * Tests tab switching between Data Observability and Activity Feed
@@ -1877,89 +2282,168 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
        * @description Tests that a data consumer assigned a role with deny rules for ViewQueries and ViewSampleData
        * cannot access those tabs on table entities
        */
-      test('Data Consumer should be denied access to queries and sample data tabs when deny policy rule is applied on table level', async ({
-        page,
-        dataConsumerPage,
-      }) => {
-        await redirectToHomePage(page);
+      test.describe(
+        'Data Consumer should be denied access to queries and sample data tabs when deny policy rule is applied on table level',
+        () => {
+          const customPolicy = new PolicyClass();
+          const customRole = new RolesClass();
 
-        await tableEntity.visitEntityPage(page);
+          test.beforeAll(async ({ browser }) => {
+            const { apiContext, afterAction } = await performAdminLogin(
+              browser
+            );
 
-        const { apiContext } = await getApiContext(page);
+            await customPolicy.create(apiContext, [
+              ...DATA_CONSUMER_RULES,
+              {
+                name: 'DataConsumerPolicy-DenyRule',
+                resources: ['All'],
+                operations: ['ViewQueries', 'ViewSampleData'],
+                effect: 'deny',
+              },
+            ]);
 
-        // Create policy with both allow and deny rules
-        const customPolicy = new PolicyClass();
-        await customPolicy.create(apiContext, [
-          ...DATA_CONSUMER_RULES,
-          {
-            name: 'DataConsumerPolicy-DenyRule',
-            resources: ['All'],
-            operations: ['ViewQueries', 'ViewSampleData'],
-            effect: 'deny',
-          },
-        ]);
+            await customRole.create(apiContext, [
+              customPolicy.responseData.name,
+            ]);
 
-        // Create role with the custom policy
-        const customRole = new RolesClass();
-        await customRole.create(apiContext, [customPolicy.responseData.name]);
-
-        // Assign the custom role to the data consumer user
-        await dataConsumerUser.patch({
-          apiContext,
-          patchData: [
-            {
-              op: 'replace',
-              path: '/roles',
-              value: [
+            await dataConsumerUser.patch({
+              apiContext,
+              patchData: [
                 {
-                  id: customRole.responseData.id,
-                  type: 'role',
-                  name: customRole.responseData.name,
+                  op: 'replace',
+                  path: '/roles',
+                  value: [
+                    {
+                      id: customRole.responseData.id,
+                      type: 'role',
+                      name: customRole.responseData.name,
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-        });
+            });
 
-        await tableEntity.visitEntityPage(dataConsumerPage);
+            await afterAction();
+          });
 
-        // check if queries tab is visible
-        await dataConsumerPage.locator('[data-testid="table_queries"]').click();
+          test('Data Consumer should be denied access to queries and sample data tabs when deny policy rule is applied on table level', async ({
+            dataConsumerPage,
+          }) => {
+            await tableEntity.visitEntityPage(dataConsumerPage);
 
-        await expect(
-          dataConsumerPage
-            .locator('[data-testid="permission-error-placeholder"]')
-            .getByText(
-              "You don't have necessary permissions. Please check with the admin to get the View Queries permission."
-            )
-        ).toBeVisible();
+            await dataConsumerPage
+              .locator('[data-testid="table_queries"]')
+              .click();
 
-        // check is sample data tab visible
-        await dataConsumerPage.locator('[data-testid="sample_data"]').click();
+            await expect(
+              dataConsumerPage
+                .locator('[data-testid="permission-error-placeholder"]')
+                .getByText(
+                  "You don't have necessary permissions. Please check with the admin to get the View Queries permission."
+                )
+            ).toBeVisible();
 
-        await expect(
-          dataConsumerPage
-            .locator('[data-testid="permission-error-placeholder"]')
-            .getByText(
-              "You don't have necessary permissions. Please check with the admin to get the View Sample Data permission."
-            )
-        ).toBeVisible();
+            await dataConsumerPage
+              .locator('[data-testid="sample_data"]')
+              .click();
 
-        const { apiContext: cleanupContext, afterAction: cleanupAfterAction } =
-          await getApiContext(page);
-        await customRole.delete(cleanupContext);
-        await customPolicy.delete(cleanupContext);
-        await cleanupAfterAction();
-      });
+            await expect(
+              dataConsumerPage
+                .locator('[data-testid="permission-error-placeholder"]')
+                .getByText(
+                  "You don't have necessary permissions. Please check with the admin to get the View Sample Data permission."
+                )
+            ).toBeVisible();
+          });
+        }
+      );
+
+      /**
+       * Tests access control for column side panel with deny policy
+       * @description Tests that a data consumer assigned a role with deny rules for EditTags and EditGlossaryTerms
+       * cannot edit tags or glossary terms in the column detail panel
+       */
+      test.describe(
+        'Data Consumer should be denied edit access in column detail panel when deny policy rule is applied',
+        () => {
+          const customPolicy = new PolicyClass();
+          const customRole = new RolesClass();
+
+          test.beforeAll(async ({ browser }) => {
+            const { apiContext, afterAction } = await performAdminLogin(
+              browser
+            );
+
+            await customPolicy.create(apiContext, [
+              ...DATA_CONSUMER_RULES,
+              {
+                name: 'DenyEditTagsAndGlossary-Rule',
+                resources: ['All'],
+                operations: [
+                  'EditTags',
+                  'EditGlossaryTerms',
+                  'EditDescription',
+                ],
+                effect: 'deny',
+              },
+            ]);
+
+            await customRole.create(apiContext, [
+              customPolicy.responseData.name,
+            ]);
+
+            await dataConsumerUser.patch({
+              apiContext,
+              patchData: [
+                {
+                  op: 'replace',
+                  path: '/roles',
+                  value: [
+                    {
+                      id: customRole.responseData.id,
+                      type: 'role',
+                      name: customRole.responseData.name,
+                    },
+                  ],
+                },
+              ],
+            });
+
+            await afterAction();
+          });
+
+          test('Data Consumer should be denied edit access in column detail panel when deny policy rule is applied', async ({
+            dataConsumerPage,
+          }) => {
+            test.slow(true);
+
+            await tableEntity.visitEntityPage(dataConsumerPage);
+
+            const columnNameTestId = 'column-name';
+            const panelContainer = await openColumnDetailPanel({
+              page: dataConsumerPage,
+              rowSelector: 'data-row-key',
+              columnId: tableEntity.childrenSelectorId ?? '',
+              columnNameTestId,
+              entityType: 'table',
+            });
+
+            await expect(
+              panelContainer.getByTestId('edit-icon-tags')
+            ).not.toBeVisible();
+            await expect(
+              panelContainer.getByTestId('edit-glossary-terms')
+            ).not.toBeVisible();
+            await expect(
+              panelContainer.getByTestId('edit-description')
+            ).not.toBeVisible();
+
+            await panelContainer.getByTestId('close-button').click();
+          });
+        }
+      );
     }
-
-    test.afterAll('Cleanup', async ({ browser }) => {
-      test.slow();
-
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-      await entity.delete(apiContext);
-      await afterAction();
-    });
   });
 
   /**
@@ -1967,7 +2451,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
    * @description Tests soft deleting an entity and then hard deleting it to completely remove it from the system
 
    */
-  test(`Delete ${key}`, async ({ page }) => {
+  test(`Delete ${key}`, PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, async ({ page }) => {
     // increase timeout as it using single test for multiple steps
     test.slow(true);
 
@@ -1997,13 +2481,4 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
       );
     });
   });
-});
-
-test.afterAll('Cleanup', async ({ browser }) => {
-  const { apiContext, afterAction } = await performAdminLogin(browser);
-  await adminUser.delete(apiContext);
-  await dataConsumerUser.delete(apiContext);
-  await user.delete(apiContext);
-  await tableEntity.delete(apiContext);
-  await afterAction();
 });

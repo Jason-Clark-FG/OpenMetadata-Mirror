@@ -63,6 +63,8 @@ public class DistributedJobParticipant implements Managed {
    */
   @Getter private UUID currentJobId;
 
+  private volatile Thread participantThread;
+
   public DistributedJobParticipant(
       CollectionDAO collectionDAO,
       SearchRepository searchRepository,
@@ -116,6 +118,18 @@ public class DistributedJobParticipant implements Managed {
   @Override
   public void stop() {
     if (running.compareAndSet(true, false)) {
+      Thread thread = participantThread;
+      if (thread != null) {
+        thread.interrupt();
+        try {
+          thread.join(10_000);
+          if (thread.isAlive()) {
+            LOG.warn("Participant thread did not terminate within 10s after interrupt");
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
       notifier.stop();
       LOG.info("Stopped distributed job participant on server {}", serverId);
     }
@@ -190,22 +204,22 @@ public class DistributedJobParticipant implements Managed {
       pollingNotifier.setParticipating(true);
     }
 
-    Thread.ofVirtual()
-        .name("job-participant-" + job.getId().toString().substring(0, 8))
-        .start(
-            () -> {
-              try {
-                processJobPartitions(job);
-              } finally {
-                participating.set(false);
-                currentJobId = null;
-
-                // Reset polling notifier to idle interval
-                if (notifier instanceof PollingJobNotifier pollingNotifier) {
-                  pollingNotifier.setParticipating(false);
-                }
-              }
-            });
+    participantThread =
+        Thread.ofVirtual()
+            .name("job-participant-" + job.getId().toString().substring(0, 8))
+            .start(
+                () -> {
+                  try {
+                    processJobPartitions(job);
+                  } finally {
+                    currentJobId = null;
+                    if (notifier instanceof PollingJobNotifier pollingNotifier) {
+                      pollingNotifier.setParticipating(false);
+                    }
+                    participating.set(false);
+                    participantThread = null;
+                  }
+                });
   }
 
   /** Process partitions for a job. */
@@ -269,6 +283,7 @@ public class DistributedJobParticipant implements Managed {
       int partitionsProcessed = 0;
       long totalReaderSuccess = 0;
       long totalReaderFailed = 0;
+      long totalReaderWarnings = 0;
       final BulkSink sinkForStats = bulkSink;
 
       // Process partitions until none are available or job completes
@@ -315,44 +330,32 @@ public class DistributedJobParticipant implements Managed {
             partition.getId(),
             partition.getEntityType());
 
-        try {
-          PartitionWorker.PartitionResult result = worker.processPartition(partition);
-          partitionsProcessed++;
-          totalReaderSuccess += result.successCount();
-          totalReaderFailed += result.readerFailed();
+        PartitionWorker.PartitionResult result = worker.processPartition(partition);
+        partitionsProcessed++;
+        totalReaderSuccess += result.successCount();
+        totalReaderFailed += result.readerFailed();
+        totalReaderWarnings += result.readerWarnings();
 
-          LOG.info(
-              "Participant completed partition {} (success: {}, failed: {}, readerFailed: {})",
-              partition.getId(),
-              result.successCount(),
-              result.failedCount(),
-              result.readerFailed());
-
-          // Persist stats after each partition completion
-          persistServerStats(
-              job.getId(),
-              sinkForStats,
-              partitionsProcessed,
-              totalReaderSuccess,
-              totalReaderFailed);
-
-        } catch (Exception e) {
-          LOG.error("Error processing partition {}", partition.getId(), e);
-        }
+        LOG.info(
+            "Participant completed partition {} (success: {}, failed: {}, readerFailed: {}, readerWarnings: {})",
+            partition.getId(),
+            result.successCount(),
+            result.failedCount(),
+            result.readerFailed(),
+            result.readerWarnings());
       }
 
-      // Flush sink and wait for all pending bulk requests to complete before persisting final stats
+      // Flush sink and wait for all pending bulk requests to complete
       if (sinkForStats != null) {
-        LOG.info("Flushing sink and waiting for pending requests before final stats persist");
+        LOG.info("Flushing sink and waiting for pending requests");
         boolean completed = sinkForStats.flushAndAwait(60);
         if (!completed) {
           LOG.warn("Sink flush timed out - some requests may not be reflected in final stats");
         }
       }
 
-      // Persist final server stats before exiting (ensures final state is captured)
-      persistServerStats(
-          job.getId(), sinkForStats, partitionsProcessed, totalReaderSuccess, totalReaderFailed);
+      // Stats are tracked per-entityType by StageStatsTracker in PartitionWorker
+      // No need for participant-level aggregation - it causes double-counting
 
       LOG.info(
           "Server {} finished participating in job {}, processed {} partitions",
@@ -379,56 +382,6 @@ public class DistributedJobParticipant implements Managed {
           LOG.warn("Error closing bulk sink", e);
         }
       }
-    }
-  }
-
-  /** Persist server stats to the database. */
-  private void persistServerStats(
-      UUID jobId,
-      BulkSink bulkSink,
-      int partitionsCompleted,
-      long readerSuccess,
-      long readerFailed) {
-    if (bulkSink == null) {
-      return;
-    }
-
-    try {
-      org.openmetadata.schema.system.StepStats sinkStats = bulkSink.getStats();
-      long entityBuildFailures = bulkSink.getEntityBuildFailures();
-
-      String statsId = UUID.nameUUIDFromBytes((jobId.toString() + serverId).getBytes()).toString();
-
-      collectionDAO
-          .searchIndexServerStatsDAO()
-          .upsert(
-              statsId,
-              jobId.toString(),
-              serverId,
-              readerSuccess,
-              readerFailed,
-              sinkStats != null ? sinkStats.getTotalRecords() : 0,
-              sinkStats != null ? sinkStats.getSuccessRecords() : 0,
-              sinkStats != null ? sinkStats.getFailedRecords() : 0,
-              entityBuildFailures,
-              partitionsCompleted,
-              0, // partitionsFailed - not tracked here
-              System.currentTimeMillis());
-
-      LOG.info(
-          "Participant {} persisted server stats for job {}: readerSuccess={}, readerFailed={}, "
-              + "sinkTotal={}, sinkSuccess={}, sinkFailed={}, partitionsCompleted={}",
-          serverId,
-          jobId,
-          readerSuccess,
-          readerFailed,
-          sinkStats != null ? sinkStats.getTotalRecords() : 0,
-          sinkStats != null ? sinkStats.getSuccessRecords() : 0,
-          sinkStats != null ? sinkStats.getFailedRecords() : 0,
-          partitionsCompleted);
-
-    } catch (Exception e) {
-      LOG.error("Failed to persist server stats for participant {} job {}", serverId, jobId, e);
     }
   }
 
