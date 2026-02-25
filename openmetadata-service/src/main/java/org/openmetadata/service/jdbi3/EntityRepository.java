@@ -2507,7 +2507,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
         T entity = JsonUtils.readOrConvertValueLenient(json, entityClass);
         entityList.add(withHref(uriInfo, entity));
       }
-      return new ResultList<>(entityList, offset, limit, total.intValue());
+      String afterOffset = getAfterOffset(offset, limit, total.intValue());
+      String beforeOffset = getBeforeOffset(offset, limit);
+      ResultList<T> result = getResultList(entityList, beforeOffset, afterOffset, total.intValue());
+      result.getPaging().withOffset(offset).withLimit(limit);
+      return result;
     } else {
       SearchResultListMapper results =
           searchRepository.listWithOffset(
