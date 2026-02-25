@@ -286,7 +286,11 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
     if (limitParam > 0) {
       List<EntityTimeSeriesDAO.TimeSeriesRow> rows =
           timeSeriesDao.listAfterKeyset(filter, limitParam + 1, afterTs, afterFQNHash);
-      List<String> jsons = rows.stream().map(EntityTimeSeriesDAO.TimeSeriesRow::json).toList();
+      boolean hasMoreData = rows.size() > limitParam;
+      List<EntityTimeSeriesDAO.TimeSeriesRow> rowsToProcess =
+          hasMoreData ? rows.subList(0, limitParam) : rows;
+      List<String> jsons =
+          rowsToProcess.stream().map(EntityTimeSeriesDAO.TimeSeriesRow::json).toList();
       Map<String, List<?>> entityListMap = getEntityList(jsons, skipErrors);
       entityList = (List<T>) entityListMap.get("entityList");
       if (skipErrors) {
@@ -294,9 +298,8 @@ public abstract class EntityTimeSeriesRepository<T extends EntityTimeSeriesInter
       }
 
       String afterCursor = null;
-      if (rows.size() > limitParam) {
-        entityList.remove(limitParam);
-        EntityTimeSeriesDAO.TimeSeriesRow lastRow = rows.get(limitParam - 1);
+      if (hasMoreData) {
+        EntityTimeSeriesDAO.TimeSeriesRow lastRow = rowsToProcess.get(rowsToProcess.size() - 1);
         afterCursor = lastRow.timestamp() + "|" + lastRow.entityFQNHash();
       }
       if (errors == null || errors.isEmpty()) {

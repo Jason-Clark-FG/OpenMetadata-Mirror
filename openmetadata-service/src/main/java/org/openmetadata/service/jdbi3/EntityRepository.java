@@ -1134,8 +1134,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String afterName = FullyQualifiedName.unquoteName(cursorMap.get("name"));
       String afterId = cursorMap.get("id");
       List<String> jsons = dao.listAfter(filter, limitParam + 1, afterName, afterId);
+      boolean hasMoreData = jsons.size() > limitParam;
+      List<String> jsonsToProcess = hasMoreData ? jsons.subList(0, limitParam) : jsons;
 
-      Iterator<Either<T, EntityError>> iterator = serializeJsons(jsons, fields, null);
+      Iterator<Either<T, EntityError>> iterator = serializeJsons(jsonsToProcess, fields, null);
       while (iterator.hasNext()) {
         Either<T, EntityError> either = iterator.next();
         if (either.right().isPresent()) {
@@ -1157,12 +1159,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
 
       String afterCursor = null;
-      if (entities.size() > limitParam) {
-        entities.remove(limitParam);
-        afterCursor = getCursorValue(entities.get(limitParam - 1));
-      } else if (!entities.isEmpty()) {
-        // Last page — no more data after this
-        afterCursor = null;
+      if (hasMoreData && !entities.isEmpty()) {
+        afterCursor = getCursorValue(entities.get(entities.size() - 1));
       }
       return getResultList(entities, errors, null, afterCursor, cachedTotal);
     } else {
