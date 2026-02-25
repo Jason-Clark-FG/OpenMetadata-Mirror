@@ -98,9 +98,11 @@ import { Column } from '../generated/entity/data/table';
 import { ColumnLineage, LineageDetails } from '../generated/type/entityLineage';
 import { EntityReference } from '../generated/type/entityReference';
 import { TagSource } from '../generated/type/tagLabel';
+import { useLineageStore } from '../hooks/useLineageStore';
 import { addLineage, deleteLineageEdge } from '../rest/miscAPI';
 import entityUtilClassBase from '../utils/EntityUtilClassBase';
 import serviceUtilClassBase from '../utils/ServiceUtilClassBase';
+import { getNodeHeight } from './CanvasUtils';
 import { getPartialNameFromTableFQN, isDeleted } from './CommonUtils';
 import { getEntityName, getEntityReferenceFromEntity } from './EntityUtils';
 import Fqn from './Fqn';
@@ -203,15 +205,15 @@ export const getLayoutedElements = (
 export const getELKLayoutedElements = async (
   nodes: Node[],
   edges: Edge[],
-  isExpanded = true
+  columnsHavingLineage: Map<string, Set<string>> = new Map()
 ) => {
+  const { isColumnLevelLineage } = useLineageStore.getState();
   const elkNodes: ElkNode[] = nodes.map((node) => {
-    const nodeHeight =
-      node.height && node.height > NODE_HEIGHT
-        ? node.height
-        : isExpanded
-        ? 550
-        : NODE_HEIGHT;
+    const columns = columnsHavingLineage.get(node.id) ?? new Set<string>();
+
+    // Calculate node height
+    const nodeHeight = getNodeHeight(node, isColumnLevelLineage, columns.size);
+
     const nodeDepth = node.data?.nodeDepth;
 
     return {
@@ -660,9 +662,9 @@ export const checkUpstreamDownstream = (id: string, data: EdgeDetails[]) => {
 export const positionNodesUsingElk = async (
   nodes: Node[],
   edges: Edge[],
-  isColView: boolean
+  columnsHavingLineage: Map<string, Set<string>>
 ) => {
-  const obj = await getELKLayoutedElements(nodes, edges, isColView);
+  const obj = await getELKLayoutedElements(nodes, edges, columnsHavingLineage);
 
   return obj;
 };

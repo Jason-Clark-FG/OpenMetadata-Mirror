@@ -106,7 +106,7 @@ for (const EntityClass of entities) {
     page,
   }) => {
     // 5 minutes to avoid test timeout happening some times in AUTs
-    test.setTimeout(300_000);
+    test.setTimeout(120_000);
 
     const { currentEntity, entities, cleanup } = await setupEntitiesForLineage(
       page,
@@ -133,17 +133,16 @@ for (const EntityClass of entities) {
         await page.waitForSelector('[data-testid="edit-lineage"]', {
           state: 'visible',
         });
-        await editLineageClick(page);
-        await performZoomOut(page);
-        await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
+
+        await page.waitForTimeout(500);
+        await performZoomOut(page, 15);
 
         for (const entity of entities) {
           await verifyNodePresent(page, entity);
         }
-        await editLineageClick(page);
 
         // Check the Entity Drawer
-        await performZoomOut(page);
+        await performZoomOut(page, 15);
 
         for (const entity of entities) {
           const toNodeFqn = get(
@@ -168,10 +167,12 @@ for (const EntityClass of entities) {
 
       await test.step('Should create pipeline between entities', async () => {
         await editLineage(page);
+
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
         await page.waitForTimeout(500); // wait for the nodes to settle
 
+        await performZoomOut(page, 2);
         const fromNodeFqn = get(
           currentEntity,
           'entityResponseData.fullyQualifiedName'
@@ -186,6 +187,7 @@ for (const EntityClass of entities) {
 
       await test.step('Verify Lineage Export CSV', async () => {
         await editLineageClick(page);
+        await page.waitForTimeout(500);
         await verifyExportLineageCSV(page, currentEntity, entities, pipeline);
       });
 

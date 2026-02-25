@@ -433,7 +433,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       const positionedNodesEdges = await positionNodesUsingElk(
         initialNodes,
         updatedEdges,
-        activeLayer.includes(LineageLayer.ColumnLevelLineage)
+        columnsLineageSet
       );
 
       const visibleNodes = positionedNodesEdges.nodes.map((node) => ({

@@ -11,8 +11,18 @@
  *  limitations under the License.
  */
 import { Edge, Node, Position, Viewport } from 'reactflow';
+import { EntityChildren } from '../components/Entity/EntityLineage/NodeChildren/NodeChildren.interface';
 import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../constants/constants';
-import { getEdgePathData } from './EntityLineageUtils';
+import {
+  COLUMN_NODE_HEIGHT,
+  NODE_HEIGHT,
+  NODE_HEIGHT_WITH_CHILDREN,
+} from '../constants/Lineage.constants';
+import { EntityType } from '../enums/entity.enum';
+import {
+  getEdgePathData,
+  getEntityChildrenAndLabel,
+} from './EntityLineageUtils';
 
 export interface BoundingBox {
   minX: number;
@@ -51,14 +61,51 @@ export function setupCanvas(
   return ctx;
 }
 
-export function getNodeHeight(node: Node) {
+const getBaseNodeHeightFromType = (
+  entityType: string,
+  isRootNode: boolean = false,
+  children: { children: EntityChildren }
+) => {
+  const childrenPresent = children.children.length !== 0;
+
+  let baseHeight = childrenPresent ? NODE_HEIGHT_WITH_CHILDREN : NODE_HEIGHT;
+
+  switch (entityType) {
+    case EntityType.METRIC:
+      baseHeight = 48;
+
+      break;
+  }
+
+  return isRootNode ? baseHeight + 10 : baseHeight;
+};
+
+export function getNodeHeight(
+  node: Node,
+  isColumnLineage: boolean,
+  columnCount?: number
+) {
   const isRootNode = node.data?.isRootNode ?? false;
-  const columnCount = node.data?.node.columns?.length || 0;
 
-  let height = columnCount > 0 ? 107 : 56; // Base height for root nodes
+  const visibleColumnCount = isColumnLineage
+    ? columnCount ?? LINEAGE_CHILD_ITEMS_PER_PAGE
+    : columnCount ?? 0;
 
-  if (isRootNode) {
-    height += 10;
+  let height = getBaseNodeHeightFromType(
+    node.data.node?.entityType,
+    isRootNode,
+    getEntityChildrenAndLabel(node.data.node)
+  );
+
+  if (isColumnLineage) {
+    height += getNodeYPadding(node);
+
+    if (visibleColumnCount > 0) {
+      height += COLUMN_NODE_HEIGHT * visibleColumnCount;
+    }
+
+    // Navigation padding
+    height += 28 * 2;
   }
 
   return height;
@@ -66,15 +113,10 @@ export function getNodeHeight(node: Node) {
 
 const getNodeYPadding = (node: Node): number => {
   const columnsLength = node.data.node.columns?.length ?? 0;
-  let sourceYPadding = columnsLength > 0 ? 48 : 0;
-
-  const needsNavigation = columnsLength > LINEAGE_CHILD_ITEMS_PER_PAGE;
-  if (needsNavigation) {
-    sourceYPadding += 28;
-  }
+  const sourceYPadding = columnsLength > 0 ? 48 : 0;
 
   // Add padding for the node's border
-  return sourceYPadding + 32.85 / 2;
+  return sourceYPadding;
 };
 
 export function getEdgeCoordinates(
@@ -98,8 +140,16 @@ export function getEdgeCoordinates(
 
   const isColumnLineage = edge.data?.isColumnLineage ?? false;
 
-  const sourceNodeHeight = getNodeHeight(sourceNode);
-  const targetNodeHeight = getNodeHeight(targetNode);
+  const sourceNodeHeight = getNodeHeight(
+    sourceNode,
+    isColumnLineage,
+    columnsInCurrentPages?.size
+  );
+  const targetNodeHeight = getNodeHeight(
+    targetNode,
+    isColumnLineage,
+    columnsInCurrentPages?.size
+  );
 
   if (isColumnLineage && columnsInCurrentPages) {
     const sourceIds = columnsInCurrentPages.get(sourceNode.id) || [];
@@ -112,11 +162,9 @@ export function getEdgeCoordinates(
     }
 
     const sourceColumnPosition =
-      32.85 * sourceIndex +
-      (sourceIndex >= LINEAGE_CHILD_ITEMS_PER_PAGE ? 17 : 0);
+      COLUMN_NODE_HEIGHT * sourceIndex + COLUMN_NODE_HEIGHT / 2;
     const targetColumnPosition =
-      32.85 * targetIndex +
-      (targetIndex >= LINEAGE_CHILD_ITEMS_PER_PAGE ? 17 : 0);
+      COLUMN_NODE_HEIGHT * targetIndex + COLUMN_NODE_HEIGHT / 2;
 
     const sourceYPadding = getNodeYPadding(sourceNode);
     const targetYPadding = getNodeYPadding(targetNode);
@@ -140,9 +188,11 @@ export function getEdgeCoordinates(
 
   return {
     sourceX: sourceNode.position.x + (sourceNode.width ?? 0),
-    sourceY: sourceNode.position.y + sourceNodeHeight / 2,
+    sourceY:
+      sourceNode.position.y + getNodeHeight(sourceNode, isColumnLineage, 0) / 2,
     targetX: targetNode.position.x - 10, // reduce 20 for NodeHandles
-    targetY: targetNode.position.y + targetNodeHeight / 2,
+    targetY:
+      targetNode.position.y + getNodeHeight(targetNode, isColumnLineage, 0) / 2,
   };
 }
 

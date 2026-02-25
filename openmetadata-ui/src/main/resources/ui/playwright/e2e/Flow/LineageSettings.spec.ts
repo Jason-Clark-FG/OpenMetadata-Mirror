@@ -319,6 +319,8 @@ test.describe('Lineage Settings Tests', () => {
     await pipeline.visitEntityPage(dataStewardPage);
     await visitLineageTab(dataStewardPage);
 
+    await performZoomOut(dataStewardPage, 5);
+
     // Pipeline should be shown as Edge and not as Node
     await expect(
       dataStewardPage.getByTestId(

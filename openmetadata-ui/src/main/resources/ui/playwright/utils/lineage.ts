@@ -120,11 +120,11 @@ export const editLineage = async (page: Page) => {
   ).toBeVisible();
 };
 
-export const performZoomOut = async (page: Page) => {
+export const performZoomOut = async (page: Page, xTimes = 10) => {
   const zoomOutBtn = page.getByTestId('zoom-out');
   const enabled = await zoomOutBtn.isEnabled();
   if (enabled) {
-    for (const _index of Array.from({ length: 10 })) {
+    for (const _index of Array.from({ length: xTimes })) {
       await zoomOutBtn.dispatchEvent('click');
     }
   }
@@ -138,15 +138,15 @@ export const clickEdgeBetweenNodes = async (
   const fromNodeFqn = get(fromNode, 'entityResponseData.fullyQualifiedName');
   const toNodeFqn = get(toNode, 'entityResponseData.fullyQualifiedName');
 
-  const fromNodeLocator = page.locator(
-    `[data-testid="lineage-node-${fromNodeFqn}"] .lineage-node-handle.react-flow__handle-right`
+  const toNodeLocator = page.locator(
+    `[data-testid="lineage-node-${toNodeFqn}"] .lineage-node-handle.react-flow__handle-left`
   );
 
-  await fromNodeLocator.click();
+  await toNodeLocator.click();
 
-  const fromBox = await fromNodeLocator.boundingBox();
+  const toBox = await toNodeLocator.boundingBox();
 
-  if (!fromBox) {
+  if (!toBox) {
     throw new Error(`Could not find edge from ${fromNodeFqn} to ${toNodeFqn}`);
   }
 
@@ -157,19 +157,10 @@ export const clickEdgeBetweenNodes = async (
     throw new Error('Could not find react-flow pane');
   }
 
-  await page.mouse.move(
-    fromBox.x + fromBox.width + 10 * 0.65,
-    fromBox.y + fromBox.height / 2
-  );
+  await page.mouse.move(toBox.x - 1, toBox.y + toBox.height / 2);
 
-  await page.mouse.move(
-    fromBox.x + fromBox.width + 20 * 0.65,
-    fromBox.y + fromBox.height / 2
-  );
-  await page.mouse.click(
-    fromBox.x + fromBox.width + 20 * 0.65,
-    fromBox.y + fromBox.height / 2
-  );
+  await page.mouse.move(toBox.x - 2, toBox.y + toBox.height / 2);
+  await page.mouse.click(toBox.x - 2, toBox.y + toBox.height / 2);
 };
 
 export const deleteEdge = async (
@@ -238,6 +229,7 @@ export const dragConnection = async (
 export const rearrangeNodes = async (page: Page) => {
   await page.getByTestId('fit-screen').click();
   await page.getByRole('menuitem', { name: 'Rearrange Nodes' }).click();
+  await page.waitForTimeout(500);
 };
 
 export const connectEdgeBetweenNodes = async (
