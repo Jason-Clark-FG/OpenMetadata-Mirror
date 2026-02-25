@@ -111,6 +111,9 @@ public class ColumnSearchIndex implements SearchIndex {
 
     if (column.getExtension() != null) {
       doc.put("extension", column.getExtension());
+      doc.put(
+          "customPropertiesTyped",
+          SearchIndexUtils.buildTypedCustomProperties(column.getExtension(), Entity.TABLE_COLUMN));
     }
 
     return doc;
