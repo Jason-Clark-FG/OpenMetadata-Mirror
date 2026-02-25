@@ -170,7 +170,13 @@ export class OverviewPageObject extends RightPanelBase {
 
     await this.markdownEditor.clear();
     await this.markdownEditor.fill(description);
+
+    // Set up PATCH listener before clicking save so we don't race with the response.
+    // This ensures the description is committed to the server before the caller proceeds
+    // (particularly important when clearing description and then immediately reloading).
+    const patchPromise = this.waitForPatchResponse();
     await this.saveButton.click();
+    await patchPromise;
     return this;
   }
 
@@ -188,8 +194,12 @@ export class OverviewPageObject extends RightPanelBase {
     // Use semantic search bar selector
     await this.tagSearchBar.fill(tagName);
 
-    // Wait for loader to disappear
-    await this.loader.waitFor({ state: 'hidden' });
+    // Scope loader to the selectable-list to avoid strict-mode violations when
+    // multiple [data-testid="loader"] elements coexist on the page during
+    // parallel test runs (e.g. one inside lineage section, one inside the popover).
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'hidden' });
 
     // Use getByTitle to target the outer .selectable-list-item wrapper, which carries the
     // 'active' CSS class when the tag is already selected.
@@ -209,7 +219,8 @@ export class OverviewPageObject extends RightPanelBase {
     await this.updateButton.waitFor({ state: 'visible' });
     await this.updateButton.click();
 
-    await this.loader.waitFor({ state: 'hidden' });
+    // After update the popover closes; rely on tag list container assertions
+    // with built-in retry rather than a page-wide loader that may be ambiguous.
     await this.tagListContainer.waitFor({ state: 'visible' });
     await expect(this.tagListContainer).toContainText(tagName);
 
@@ -229,8 +240,11 @@ export class OverviewPageObject extends RightPanelBase {
     // Use semantic search bar selector
     await this.glossaryTermSearchBar.fill(termName);
 
-    // Wait for loader to disappear
-    await this.loader.waitFor({ state: 'hidden' });
+    // Scope loader to selectableList to avoid strict-mode violations when a
+    // parallel test has a lineage or other section loader visible at the same time.
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'hidden' });
 
     // Use getByTitle to target the outer .selectable-list-item wrapper, which carries the
     // 'active' CSS class when the term is already selected.
@@ -249,7 +263,8 @@ export class OverviewPageObject extends RightPanelBase {
 
     await this.updateButton.waitFor({ state: 'visible' });
     await this.updateButton.click();
-    await this.loader.waitFor({ state: 'hidden' });
+    // After update the popover closes; rely on glossary-term container assertion
+    // with built-in retry rather than a page-wide loader that may be ambiguous.
     await this.glossaryTermListContainer.waitFor({ state: 'visible' });
     await expect(this.glossaryTermListContainer).toContainText(termName);
     return this;
@@ -426,6 +441,7 @@ export class OverviewPageObject extends RightPanelBase {
       .waitFor({ state: 'visible' });
     await this.page.getByRole('tab', { name: type }).click();
 
+    let anyChangesMade = false;
     for (const ownerName of ownerNames) {
       const searchBarDataTestId =
         type === 'Users'
@@ -450,14 +466,23 @@ export class OverviewPageObject extends RightPanelBase {
 
       if (isActive) {
         await ownerItem.click();
+        anyChangesMade = true;
       }
     }
 
     const updateButton = this.page.getByTestId('selectable-list-update-btn');
     await updateButton.waitFor({ state: 'visible' });
-    const patchPromise = this.waitForPatchResponse();
-    await updateButton.click();
-    await patchPromise;
+
+    // Only wait for PATCH response if we actually deselected an owner.
+    // If no owner was active (already removed by a parallel test), clicking
+    // update sends no change and no PATCH is issued — waiting would hang forever.
+    if (anyChangesMade) {
+      const patchPromise = this.waitForPatchResponse();
+      await updateButton.click();
+      await patchPromise;
+    } else {
+      await updateButton.click();
+    }
     return this;
   }
 
@@ -469,7 +494,9 @@ export class OverviewPageObject extends RightPanelBase {
   async removeTag(tagDisplayNames: string[]): Promise<OverviewPageObject> {
     await this.editTagsIcon.click();
     await this.selectableList.waitFor({ state: 'visible' });
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     for (const tagName of tagDisplayNames) {
       const tagOption = this.page.getByTitle(tagName);
@@ -503,7 +530,9 @@ export class OverviewPageObject extends RightPanelBase {
     await this.editGlossaryTermsIcon.click({ force: true });
 
     await this.selectableList.waitFor({ state: 'visible' });
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     for (const termName of termDisplayNames) {
       const searchBar = this.page.getByTestId(
@@ -656,7 +685,9 @@ export class OverviewPageObject extends RightPanelBase {
   async verifyDeletedTagNotVisible(tagName: string): Promise<Locator> {
     await this.editTagsIcon.click();
     await this.selectableList.waitFor({ state: 'visible' });
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     const searchResponsePromise = this.page.waitForResponse(
       (response) =>
@@ -668,7 +699,9 @@ export class OverviewPageObject extends RightPanelBase {
     const searchResponse = await searchResponsePromise;
     expect(searchResponse.status()).toBe(200);
 
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     return this.page.getByTitle(tagName);
   }

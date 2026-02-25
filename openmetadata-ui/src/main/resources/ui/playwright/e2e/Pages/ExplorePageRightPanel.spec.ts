@@ -25,7 +25,6 @@ import { Glossary } from '../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../support/glossary/GlossaryTerm';
 import { uuid } from '../../utils/common';
 import { performAdminLogin } from '../../utils/admin';
-import { performUserLogin } from '../../utils/user';
 import { DashboardClass } from '../../support/entity/DashboardClass';
 import { DatabaseClass } from '../../support/entity/DatabaseClass';
 import { TopicClass } from '../../support/entity/TopicClass';
@@ -1627,36 +1626,33 @@ test.describe('Right Panel Test Suite', () => {
         });
 
         test(`Should follow Data Consumer role policies for ownerless ${entityType}`, async ({
-          browser,
+          dataConsumerPage,
         }) => {
-          const { page: dataConsumerPage, afterAction } =
-            await performUserLogin(browser, user1);
+          // Use the pre-configured DataConsumer fixture user (NOT user1).
+          // user1 is assigned as owner by the parallel "remove owner" tests,
+          // which would grant elevated permissions and make domain buttons
+          // visible unexpectedly. The fixture user is never set as owner.
+          const fqn = getEntityFqn(entityInstance);
+          await navigateToExploreAndSelectEntity(
+            dataConsumerPage,
+            entityInstance.entity.name,
+            entityInstance.endpoint,
+            fqn
+          );
+          await dataConsumerPage.waitForSelector(
+            '[data-testid="entity-summary-panel-container"]',
+            { state: 'visible' }
+          );
 
-          try {
-            const fqn = getEntityFqn(entityInstance);
-            await navigateToExploreAndSelectEntity(
-              dataConsumerPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await dataConsumerPage.waitForSelector(
-              '[data-testid="entity-summary-panel-container"]',
-              { state: 'visible' }
-            );
+          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+          rightPanelDC.setEntityConfig(entityInstance);
+          rightPanelDC.setRolePermissions('DataConsumer');
 
-            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-            rightPanelDC.setEntityConfig(entityInstance);
-            rightPanelDC.setRolePermissions('DataConsumer');
+          const overviewDC = new OverviewPageObject(rightPanelDC);
+          await overviewDC.navigateToOverviewTab();
 
-            const overviewDC = new OverviewPageObject(rightPanelDC);
-            await overviewDC.navigateToOverviewTab();
-
-            // DataConsumer: canEditDomains=false, canEditDataProducts=false
-            await rightPanelDC.verifyPermissions();
-          } finally {
-            await afterAction();
-          }
+          // DataConsumer: canEditDomains=false, canEditDataProducts=false
+          await rightPanelDC.verifyPermissions();
         });
       });
     });
@@ -1993,14 +1989,16 @@ test.describe('Right Panel Test Suite', () => {
             // Clear the description
             await localOverview.editDescription('');
 
-            // Reload the entity panel and verify description is gone
+            // Reload the entity panel and verify description is gone.
+            // waitForPanelLoaded waits for panel loaders to finish, ensuring the
+            // entity data (description) has been fetched from the server before asserting.
             await navigateToExploreAndSelectEntity(
               authenticatedPage,
               entityInstance.entity.name,
               entityInstance.endpoint,
               fqn
             );
-            await rightPanel.waitForPanelVisible();
+            await rightPanel.waitForPanelLoaded();
 
             // The description text should no longer be present
             const descElement = authenticatedPage
