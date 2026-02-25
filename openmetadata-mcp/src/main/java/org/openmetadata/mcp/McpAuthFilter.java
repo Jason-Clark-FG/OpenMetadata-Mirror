@@ -86,6 +86,12 @@ public class McpAuthFilter implements Filter {
 
       // Continue with the filter chain
       filterChain.doFilter(servletRequest, servletResponse);
+    } catch (Exception e) {
+      LOG.warn("JWT authentication failed for {}: {}", requestPath, e.getMessage());
+      sendError(
+          httpServletResponse,
+          e.getMessage() != null ? e.getMessage() : "Authentication failed",
+          HttpServletResponse.SC_UNAUTHORIZED);
     } finally {
       // Always clear the impersonation context after request processing
       ImpersonationContext.clear();

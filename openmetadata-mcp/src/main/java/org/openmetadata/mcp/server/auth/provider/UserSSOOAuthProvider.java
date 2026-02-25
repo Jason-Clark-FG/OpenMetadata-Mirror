@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +36,7 @@ import org.openmetadata.mcp.server.auth.repository.McpPendingAuthRequestReposito
 import org.openmetadata.mcp.server.auth.repository.OAuthAuthorizationCodeRepository;
 import org.openmetadata.mcp.server.auth.repository.OAuthClientRepository;
 import org.openmetadata.mcp.server.auth.repository.OAuthTokenRepository;
+import org.openmetadata.mcp.server.auth.util.UriUtils;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
 import org.openmetadata.schema.auth.ServiceTokenType;
 import org.openmetadata.schema.entity.teams.User;
@@ -590,13 +590,12 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
         throw new AuthorizeException("server_error", "Redirect URI not found");
       }
 
-      String redirectUrl =
-          redirectUri
-              + "?code="
-              + URLEncoder.encode(authCode, StandardCharsets.UTF_8)
-              + (state != null && !state.isEmpty()
-                  ? "&state=" + URLEncoder.encode(state, StandardCharsets.UTF_8)
-                  : "");
+      Map<String, String> queryParams = new HashMap<>();
+      queryParams.put("code", authCode);
+      if (state != null && !state.isEmpty()) {
+        queryParams.put("state", state);
+      }
+      String redirectUrl = UriUtils.constructRedirectUri(redirectUri, queryParams);
 
       LOG.info("Redirecting to client redirect_uri with authorization code");
 
@@ -711,12 +710,12 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
     LOG.info("Generated MCP authorization code for user: {} via SSO", userName);
 
-    // Build redirect URL with properly encoded query parameters to prevent injection attacks
-    String redirectUrl =
-        redirectUri
-            + "?code="
-            + URLEncoder.encode(authCode, StandardCharsets.UTF_8)
-            + (state != null ? "&state=" + URLEncoder.encode(state, StandardCharsets.UTF_8) : "");
+    Map<String, String> ssoQueryParams = new HashMap<>();
+    ssoQueryParams.put("code", authCode);
+    if (state != null) {
+      ssoQueryParams.put("state", state);
+    }
+    String redirectUrl = UriUtils.constructRedirectUri(redirectUri, ssoQueryParams);
 
     if (newSession != null) {
       newSession.removeAttribute(SESSION_MCP_PKCE_CHALLENGE);
@@ -817,13 +816,12 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
     // Build redirect URL with MCP state (original client state, not SSO state)
     // Properly encode query parameters to prevent injection attacks
-    String redirectUrl =
-        pendingRequest.redirectUri()
-            + "?code="
-            + URLEncoder.encode(authCode, StandardCharsets.UTF_8)
-            + (pendingRequest.mcpState() != null
-                ? "&state=" + URLEncoder.encode(pendingRequest.mcpState(), StandardCharsets.UTF_8)
-                : "");
+    Map<String, String> queryParams = new HashMap<>();
+    queryParams.put("code", authCode);
+    if (pendingRequest.mcpState() != null) {
+      queryParams.put("state", pendingRequest.mcpState());
+    }
+    String redirectUrl = UriUtils.constructRedirectUri(pendingRequest.redirectUri(), queryParams);
 
     // Cleanup pending request
     pendingAuthRepository.delete(authRequestId);

@@ -72,7 +72,12 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
 
   private final OAuthAuthorizationServerProvider authProvider;
 
-  // In-memory rate limiter for client registration: max 10 registrations per IP per hour
+  // In-memory rate limiter for client registration: max 10 registrations per IP per hour.
+  // NOTE: MCP spec (RFC 7591) requires open client registration, so authentication is not applied.
+  // Rate limiting is the primary mitigation against abuse. This in-memory implementation is
+  // per-JVM-instance; in clustered deployments the effective limit is 10 × N nodes per hour.
+  // For multi-node production deployments, consider database-backed rate limiting using
+  // COUNT(*) on oauth_clients with created_at and ip_address filters.
   private static final int REGISTRATION_MAX_PER_HOUR = 10;
   private final java.util.concurrent.ConcurrentHashMap<
           String, java.util.concurrent.atomic.AtomicInteger>
@@ -255,12 +260,12 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
     LOG.debug("Handling OAuth GET request: {}", request.getRequestURI());
     String path = request.getRequestURI();
 
-    // Handle OAuth GET routes
-    if (path.endsWith("/.well-known/oauth-authorization-server")) {
+    // Handle OAuth GET routes (exact path matching to prevent path confusion attacks)
+    if (path.equals("/mcp/.well-known/oauth-authorization-server")) {
       handleMetadataRequest(request, response);
-    } else if (path.endsWith("/.well-known/oauth-protected-resource")) {
+    } else if (path.equals("/mcp/.well-known/oauth-protected-resource")) {
       handleProtectedResourceMetadataRequest(request, response);
-    } else if (path.endsWith("/authorize")) {
+    } else if (path.equals("/mcp/authorize")) {
       handleAuthorizeRequest(request, response);
     } else {
       // Handle other GET requests using the parent class
@@ -367,14 +372,14 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
     LOG.debug("Handling OAuth POST request: {}", request.getRequestURI());
     String path = request.getRequestURI();
 
-    // Handle OAuth POST routes
-    if (path.endsWith("/token")) {
+    // Handle OAuth POST routes (exact path matching to prevent path confusion attacks)
+    if (path.equals("/mcp/token")) {
       handleTokenRequest(request, response);
-    } else if (path.endsWith("/authorize")) {
+    } else if (path.equals("/mcp/authorize")) {
       handleAuthorizeRequest(request, response);
-    } else if (path.endsWith("/register")) {
+    } else if (path.equals("/mcp/register")) {
       handleRegistrationRequest(request, response);
-    } else if (path.endsWith("/revoke")) {
+    } else if (path.equals("/mcp/revoke")) {
       handleRevocationRequest(request, response);
     } else {
       // Handle other POST requests using the parent class
@@ -421,11 +426,6 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
       getObjectMapper().writeValue(response.getOutputStream(), error);
     }
   }
-
-  // NOTE: Basic rate limiting implemented using SimpleRateLimiter (in-memory sliding window).
-  // For production deployments with multiple servers, consider migrating to a distributed
-  // rate limiting solution using Redis (Bucket4j + Redis) or database-backed state.
-  // See: https://datatracker.ietf.org/doc/html/rfc6749#section-10.11
 
   private void handleAuthorizeRequest(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
