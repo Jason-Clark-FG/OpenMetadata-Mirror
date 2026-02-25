@@ -49,7 +49,7 @@ public class BearerAuthenticator {
 
               // Check if token has expired
               if (accessToken.getExpiresAt() != null
-                  && accessToken.getExpiresAt() < System.currentTimeMillis() / 1000) {
+                  && accessToken.getExpiresAt() < System.currentTimeMillis()) {
                 return CompletableFuture.failedFuture(
                     new AuthenticationException("Access token has expired"));
               }

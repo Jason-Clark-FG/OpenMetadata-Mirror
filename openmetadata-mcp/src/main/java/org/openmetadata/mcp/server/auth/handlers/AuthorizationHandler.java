@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.mcp.auth.AuthorizationParams;
 import org.openmetadata.mcp.auth.InvalidRedirectUriException;
 import org.openmetadata.mcp.auth.InvalidScopeException;
@@ -12,9 +13,7 @@ import org.openmetadata.mcp.auth.exception.AuthorizeException;
 import org.openmetadata.mcp.server.auth.model.AuthorizationErrorResponse;
 import org.openmetadata.mcp.server.auth.util.UriUtils;
 
-/**
- * Handler for OAuth authorization requests.
- */
+@Slf4j
 public class AuthorizationHandler {
 
   private final OAuthAuthorizationServerProvider provider;
@@ -51,11 +50,10 @@ public class AuthorizationHandler {
               "unsupported_response_type", "Only 'code' response type is supported", state, null));
     }
 
-    // Validate code challenge method
-    if (codeChallengeMethod != null && !"S256".equals(codeChallengeMethod)) {
+    if (!"S256".equals(codeChallengeMethod)) {
       return CompletableFuture.completedFuture(
           createErrorResponse(
-              "invalid_request", "Only 'S256' code challenge method is supported", state, null));
+              "invalid_request", "code_challenge_method must be 'S256'", state, null));
     }
 
     // Get client information
@@ -129,14 +127,22 @@ public class AuthorizationHandler {
                         })
                     .exceptionally(
                         ex -> {
-                          if (ex.getCause() instanceof AuthorizeException) {
-                            AuthorizeException authEx = (AuthorizeException) ex.getCause();
+                          Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                          if (cause instanceof AuthorizeException authEx) {
+                            LOG.warn(
+                                "Authorization failed: {} - {}",
+                                authEx.getError(),
+                                authEx.getErrorDescription());
                             return createErrorResponse(
                                 authEx.getError(),
                                 authEx.getErrorDescription(),
                                 state,
                                 redirectUri);
                           } else {
+                            LOG.error(
+                                "Unexpected error during authorization for client: {}",
+                                clientId,
+                                cause);
                             return createErrorResponse(
                                 "server_error", "An unexpected error occurred", state, redirectUri);
                           }
