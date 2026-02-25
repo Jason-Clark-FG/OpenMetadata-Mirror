@@ -29,6 +29,7 @@ export interface VirtualColumnListProps {
   nodeId?: string;
   showDataObservabilitySummary: boolean;
   summary?: TestSummary;
+  pageSize?: number;
 }
 
 const VirtualColumnList = ({
@@ -38,13 +39,10 @@ const VirtualColumnList = ({
   nodeId,
   showDataObservabilitySummary,
   summary,
+  pageSize = LINEAGE_CHILD_ITEMS_PER_PAGE,
 }: VirtualColumnListProps) => {
-  const {
-    updateColumnsInCurrentPages,
-    selectedColumn,
-    tracedColumns,
-    isColumnLevelLineage,
-  } = useLineageStore();
+  const { updateColumnsInCurrentPages, selectedColumn, tracedColumns } =
+    useLineageStore();
   const [offset, setOffset] = useState(0);
 
   // Reset window to top when flatItems changes (filter/search)
@@ -52,9 +50,7 @@ const VirtualColumnList = ({
     setOffset(0);
   }, [flatItems]);
 
-  const endIndex = isColumnLevelLineage
-    ? flatItems.length - 1
-    : Math.min(flatItems.length - 1, offset + LINEAGE_CHILD_ITEMS_PER_PAGE - 1);
+  const endIndex = Math.min(flatItems.length - 1, offset + pageSize - 1);
 
   const visibleFlatItems = useMemo(
     () => flatItems.slice(offset, endIndex + 1),

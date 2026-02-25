@@ -11,12 +11,13 @@
  *  limitations under the License.
  */
 import { EntityType } from '../../enums/entity.enum';
+import { ContainerDataModel } from '../../generated/api/data/createContainer';
 import { EsLineageData } from '../../generated/api/lineage/esLineageData';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import { Chart } from '../../generated/entity/data/chart';
 import { MlFeature } from '../../generated/entity/data/mlmodel';
 import { SearchIndexField } from '../../generated/entity/data/searchIndex';
-import { Column, DataModel } from '../../generated/entity/data/table';
+import { Column } from '../../generated/entity/data/table';
 import { MessageSchemaObject } from '../../generated/entity/data/topic';
 import { EntityReference } from '../../generated/entity/type';
 import { TagLabel } from '../../generated/tests/testCase';
@@ -155,7 +156,7 @@ export interface LineageNodeType
   downstreamExpandPerformed?: boolean;
   upstreamLineage?: EsLineageData[];
   columns?: Flatten<Column>[];
-  dataModel?: DataModel;
+  dataModel?: ContainerDataModel;
   mlFeatures?: MlFeature[];
   charts?: Chart[];
   messageSchema?: MessageSchemaObject;

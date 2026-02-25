@@ -30,8 +30,8 @@ describe('ELKLayout', () => {
     expect(ELKLayout.layoutOptions).toEqual({
       'elk.algorithm': 'layered',
       'elk.direction': 'RIGHT',
-      'elk.spacing.nodeNode': '100',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '150',
+      'elk.spacing.nodeNode': '80',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '200',
       'elk.layered.nodePlacement.strategy': 'SIMPLE',
       'elk.partitioning.activate': 'true',
     });
@@ -335,13 +335,13 @@ describe('ELKLayout', () => {
   });
 
   it('has correct node spacing', () => {
-    expect(ELKLayout.layoutOptions['elk.spacing.nodeNode']).toBe('100');
+    expect(ELKLayout.layoutOptions['elk.spacing.nodeNode']).toBe('80');
   });
 
   it('has correct layer spacing', () => {
     expect(
       ELKLayout.layoutOptions['elk.layered.spacing.nodeNodeBetweenLayers']
-    ).toBe('150');
+    ).toBe('200');
   });
 
   it('uses simple node placement strategy', () => {

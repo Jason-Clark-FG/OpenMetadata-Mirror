@@ -135,14 +135,14 @@ for (const EntityClass of entities) {
         });
 
         await page.waitForTimeout(500);
-        await performZoomOut(page, 15);
+        await performZoomOut(page);
 
         for (const entity of entities) {
           await verifyNodePresent(page, entity);
         }
 
         // Check the Entity Drawer
-        await performZoomOut(page, 15);
+        await performZoomOut(page);
 
         for (const entity of entities) {
           const toNodeFqn = get(
@@ -171,8 +171,8 @@ for (const EntityClass of entities) {
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
         await page.waitForTimeout(500); // wait for the nodes to settle
+        await performZoomOut(page);
 
-        await performZoomOut(page, 2);
         const fromNodeFqn = get(
           currentEntity,
           'entityResponseData.fullyQualifiedName'
@@ -199,6 +199,10 @@ for (const EntityClass of entities) {
         'Remove lineage between nodes for the entity',
         async () => {
           await editLineage(page);
+          await page.getByTestId('fit-screen').click();
+          await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
+          await page.waitForTimeout(500); // wait for the nodes to settle
+
           await performZoomOut(page);
 
           for (const entity of entities) {

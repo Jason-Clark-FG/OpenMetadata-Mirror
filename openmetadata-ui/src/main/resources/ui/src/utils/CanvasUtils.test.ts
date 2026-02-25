@@ -132,25 +132,25 @@ describe('CanvasUtils', () => {
     it('returns base height for node without columns', () => {
       const node = createMockNode('node1', 0);
 
-      expect(getNodeHeight(node)).toBe(56);
+      expect(getNodeHeight(node, false)).toBe(66);
     });
 
     it('returns increased height for node with columns', () => {
       const node = createMockNode('node1', 5);
 
-      expect(getNodeHeight(node)).toBe(107);
+      expect(getNodeHeight(node, true, 5)).toBe(334.25);
     });
 
     it('adds extra height for root node', () => {
       const node = createMockNode('node1', 0, true);
 
-      expect(getNodeHeight(node)).toBe(66);
+      expect(getNodeHeight(node, false)).toBe(76);
     });
 
     it('combines column and root node height adjustments', () => {
       const node = createMockNode('node1', 5, true);
 
-      expect(getNodeHeight(node)).toBe(117);
+      expect(getNodeHeight(node, true, 5)).toBe(344.25);
     });
   });
 
@@ -195,9 +195,9 @@ describe('CanvasUtils', () => {
 
       expect(result).toEqual({
         sourceX: 400,
-        sourceY: 28,
+        sourceY: 33,
         targetX: 490,
-        targetY: 28,
+        targetY: 33,
       });
     });
 

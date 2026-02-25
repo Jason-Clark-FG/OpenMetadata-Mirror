@@ -617,19 +617,6 @@ describe('CustomNodeV1', () => {
         shouldBeDisabled: 'next',
       });
 
-      //   assertPaginationState({
-      //     columnsContainer,
-      //     expectedColumns: ['col10', 'col11'],
-      //     direction: 'prev',
-      //     shouldBeDisabled: 'next',
-      //   });
-
-      //   assertPaginationState({
-      //     columnsContainer,
-      //     expectedColumns: ['col5', 'col6', 'col7', 'col8', 'col9'],
-      //     direction: 'prev',
-      //   });
-
       assertPaginationState({
         columnsContainer,
         expectedColumns: [

@@ -159,8 +159,8 @@ export const clickEdgeBetweenNodes = async (
 
   await page.mouse.move(toBox.x - 1, toBox.y + toBox.height / 2);
 
-  await page.mouse.move(toBox.x - 2, toBox.y + toBox.height / 2);
-  await page.mouse.click(toBox.x - 2, toBox.y + toBox.height / 2);
+  await page.mouse.move(toBox.x, toBox.y + toBox.height / 2);
+  await page.mouse.click(toBox.x, toBox.y + toBox.height / 2);
 };
 
 export const deleteEdge = async (

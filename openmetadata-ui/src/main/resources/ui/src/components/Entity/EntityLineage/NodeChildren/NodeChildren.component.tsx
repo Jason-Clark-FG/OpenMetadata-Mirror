@@ -22,7 +22,10 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BORDER_COLOR } from '../../../../constants/constants';
+import {
+  BORDER_COLOR,
+  LINEAGE_CHILD_ITEMS_PER_PAGE,
+} from '../../../../constants/constants';
 import { LINEAGE_COLUMN_NODE_SUPPORTED } from '../../../../constants/Lineage.constants';
 import { EntityType } from '../../../../enums/entity.enum';
 import {
@@ -192,6 +195,11 @@ const NodeChildren = ({
                 isConnectable={isConnectable}
                 isLoading={isLoading}
                 nodeId={node.id}
+                pageSize={
+                  isOnlyShowColumnsWithLineageFilterActive
+                    ? filteredColumns.length
+                    : LINEAGE_CHILD_ITEMS_PER_PAGE
+                }
                 showDataObservabilitySummary={showDataObservabilitySummary}
                 summary={summary}
               />
