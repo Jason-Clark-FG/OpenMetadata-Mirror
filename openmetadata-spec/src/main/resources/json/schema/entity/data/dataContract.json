@@ -216,6 +216,15 @@
           "type": "string",
           "title": "Column Name",
           "description": "Column that represents the refresh time of the data (if applicable)"
+        },
+        "freshnessCheckTimes": {
+          "type": "array",
+          "title": "Freshness Check Times",
+          "description": "Specific times of day at which the data is expected to refresh (e.g. [\"09:00\", \"13:00\"]). Each entry is in HH:mm format (UTC unless timezone is specified).",
+          "items": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          }
         }
       }
     },

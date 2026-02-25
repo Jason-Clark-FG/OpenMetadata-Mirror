@@ -10,6 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { PlusOutlined } from '@ant-design/icons';
 import {
   Button,
   Card,
@@ -24,10 +25,11 @@ import {
 } from 'antd';
 import { FormProps } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as LeftOutlined } from '../../../assets/svg/left-arrow.svg';
+import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-delete.svg';
 import {
   MAX_LATENCY_UNITS,
   REFRESH_FREQUENCY_UNITS,
@@ -130,6 +132,16 @@ export const ContractSLAFormTab: React.FC<{
       };
     }
 
+    const freshnessCheckTimesRaw: (Moment | null)[] =
+      values.freshnessCheckTimes ?? [];
+    const freshnessCheckTimes = freshnessCheckTimesRaw
+      .filter(Boolean)
+      .map((t: Moment) => t.format(SLA_AVAILABILITY_TIME_FORMAT));
+
+    if (freshnessCheckTimes.length > 0) {
+      slaData.freshnessCheckTimes = freshnessCheckTimes;
+    }
+
     onChange({ sla: slaData });
   };
 
@@ -151,6 +163,11 @@ export const ContractSLAFormTab: React.FC<{
               SLA_AVAILABILITY_TIME_FORMAT
             )
           : undefined,
+        freshnessCheckTimes: initialValues.sla?.freshnessCheckTimes
+          ? initialValues.sla.freshnessCheckTimes.map((time) =>
+              moment(time, SLA_AVAILABILITY_TIME_FORMAT)
+            )
+          : [],
       });
     }
   }, [initialValues]);
@@ -398,6 +415,64 @@ export const ContractSLAFormTab: React.FC<{
                     })}
                   />
                 </Form.Item>
+              </div>
+            </Col>
+
+            <Col span={24}>
+              <div className="sla-form-card-container">
+                <Typography.Text className="sla-form-card-title">
+                  {t('label.freshness-check-times')}
+                </Typography.Text>
+                <Typography.Text className="sla-form-card-description">
+                  {t('message.contract-sla-freshness-check-times-description')}
+                </Typography.Text>
+
+                <Form.List name="freshnessCheckTimes">
+                  {(fields, { add, remove }) => (
+                    <>
+                      <div className="freshness-check-times-list">
+                        {fields.map((field, index) => (
+                          <div
+                            className="d-flex items-center gap-2 m-b-sm"
+                            data-testid={`freshness-check-time-row-${index}`}
+                            key={field.key}>
+                            <Form.Item
+                              className="m-0 flex-1"
+                              name={field.name}
+                              rules={[{ required: true }]}>
+                              <TimePicker
+                                className="w-full"
+                                data-testid={`freshness-check-time-picker-${index}`}
+                                format={SLA_AVAILABILITY_TIME_FORMAT}
+                                placeholder="09:00"
+                                showNow={false}
+                                suffixIcon={null}
+                              />
+                            </Form.Item>
+                            <Button
+                              className="flex-center"
+                              data-testid={`remove-freshness-check-time-${index}`}
+                              icon={
+                                <DeleteIcon height={16} width={16} />
+                              }
+                              type="text"
+                              onClick={() => remove(field.name)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        data-testid="add-freshness-check-time"
+                        icon={<PlusOutlined />}
+                        type="dashed"
+                        onClick={() => add()}>
+                        {t('label.add-entity', {
+                          entity: t('label.time'),
+                        })}
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
               </div>
             </Col>
           </Row>

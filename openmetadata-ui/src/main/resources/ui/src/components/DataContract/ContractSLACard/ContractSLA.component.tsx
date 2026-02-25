@@ -142,6 +142,25 @@ const ContractSLA: React.FC<{
       });
     }
 
+    if (
+      contract.sla?.freshnessCheckTimes &&
+      contract.sla.freshnessCheckTimes.length > 0
+    ) {
+      slaList.push({
+        key: DATA_CONTRACT_SLA.FRESHNESS_CHECK_TIMES,
+        label: (
+          <Transi18next
+            i18nKey="message.freshness-check-times-sla-description"
+            renderElement={<strong />}
+            values={{
+              label: t('label.freshness-check-times'),
+              data: contract.sla.freshnessCheckTimes.join(', '),
+            }}
+          />
+        ),
+      });
+    }
+
     return slaList;
   }, [contract.sla, tableColumnNameMap]);
 

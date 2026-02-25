@@ -21,6 +21,33 @@
     "actualLatency": {
       "description": "Actual latency in milliseconds.",
       "type": "integer"
+    },
+    "freshnessCheckTimesMet": {
+      "description": "Whether all scheduled freshness check times had data refreshed within the allowed latency window.",
+      "type": "boolean"
+    },
+    "freshnessCheckTimesResults": {
+      "description": "Per-timestamp results for each configured freshness check time.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "javaType": "org.openmetadata.schema.entity.datacontract.FreshnessCheckTimeResult",
+        "properties": {
+          "scheduledTime": {
+            "description": "The expected refresh time in HH:mm format.",
+            "type": "string"
+          },
+          "met": {
+            "description": "Whether data was refreshed within the allowed latency window of this scheduled time.",
+            "type": "boolean"
+          },
+          "actualRefreshTime": {
+            "description": "The actual data refresh timestamp detected (Unix epoch millis), if any.",
+            "type": "integer"
+          }
+        },
+        "required": ["scheduledTime", "met"]
+      }
     }
   },
   "additionalProperties": false

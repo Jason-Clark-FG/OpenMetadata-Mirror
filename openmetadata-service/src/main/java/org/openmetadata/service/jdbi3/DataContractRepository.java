@@ -27,6 +27,10 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 import com.google.gson.Gson;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -55,9 +59,11 @@ import org.openmetadata.schema.entity.data.Topic;
 import org.openmetadata.schema.entity.datacontract.ContractValidation;
 import org.openmetadata.schema.entity.datacontract.DataContractResult;
 import org.openmetadata.schema.entity.datacontract.FailedRule;
+import org.openmetadata.schema.entity.datacontract.FreshnessCheckTimeResult;
 import org.openmetadata.schema.entity.datacontract.QualityValidation;
 import org.openmetadata.schema.entity.datacontract.SchemaValidation;
 import org.openmetadata.schema.entity.datacontract.SemanticsValidation;
+import org.openmetadata.schema.entity.datacontract.SlaValidation;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.services.ingestionPipelines.AirflowConfig;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
@@ -1020,6 +1026,12 @@ public class DataContractRepository extends EntityRepository<DataContract> {
       result.withSemanticsValidation(semanticsValidation);
     }
 
+    if (dataContract.getSla() != null
+        && !nullOrEmpty(dataContract.getSla().getFreshnessCheckTimes())) {
+      SlaValidation slaValidation = validateFreshnessCheckTimes(dataContract);
+      result.withSlaValidation(slaValidation);
+    }
+
     // If we don't have quality expectations, flag the results based on schema and semantics
     // Otherwise, keep it Running and wait for the DQ results to kick in
     if (!nullOrEmpty(dataContract.getQualityExpectations())) {
@@ -1101,6 +1113,12 @@ public class DataContractRepository extends EntityRepository<DataContract> {
     if (!nullOrEmpty(effectiveContract.getSemantics())) {
       SemanticsValidation semanticsValidation = validateSemantics(effectiveContract);
       result.withSemanticsValidation(semanticsValidation);
+    }
+
+    if (effectiveContract.getSla() != null
+        && !nullOrEmpty(effectiveContract.getSla().getFreshnessCheckTimes())) {
+      SlaValidation slaValidation = validateFreshnessCheckTimes(effectiveContract);
+      result.withSlaValidation(slaValidation);
     }
 
     // Handle quality expectations
@@ -1267,6 +1285,81 @@ public class DataContractRepository extends EntityRepository<DataContract> {
         result.withContractExecutionStatus(ContractExecutionStatus.Failed);
       }
     }
+
+    if (result.getSlaValidation() != null
+        && Boolean.FALSE.equals(result.getSlaValidation().getFreshnessCheckTimesMet())) {
+      result.withContractExecutionStatus(ContractExecutionStatus.Failed);
+    }
+  }
+
+  private SlaValidation validateFreshnessCheckTimes(DataContract dataContract) {
+    org.openmetadata.schema.api.data.ContractSLA sla = dataContract.getSla();
+    List<String> checkTimes = sla.getFreshnessCheckTimes();
+    long lastRefreshMillis = getLastRefreshTimestampMillis(dataContract);
+    long toleranceMillis = getSlaToleranceMillis(sla);
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+    List<FreshnessCheckTimeResult> timeResults = new ArrayList<>();
+    boolean allMet = true;
+    for (String scheduledTime : checkTimes) {
+      LocalTime localTime = LocalTime.parse(scheduledTime, formatter);
+      ZonedDateTime scheduledDateTime =
+          now.toLocalDate().atTime(localTime).atZone(ZoneOffset.UTC);
+      if (scheduledDateTime.isAfter(now)) {
+        scheduledDateTime = scheduledDateTime.minusDays(1);
+      }
+      long scheduledMillis = scheduledDateTime.toInstant().toEpochMilli();
+      boolean met =
+          lastRefreshMillis > 0
+              && lastRefreshMillis >= (scheduledMillis - toleranceMillis)
+              && lastRefreshMillis <= (scheduledMillis + toleranceMillis);
+      if (!met) {
+        allMet = false;
+      }
+      timeResults.add(
+          new FreshnessCheckTimeResult()
+              .withScheduledTime(scheduledTime)
+              .withMet(met)
+              .withActualRefreshTime(lastRefreshMillis > 0 ? lastRefreshMillis : null));
+    }
+    return new SlaValidation()
+        .withFreshnessCheckTimesMet(allMet)
+        .withFreshnessCheckTimesResults(timeResults);
+  }
+
+  private long getLastRefreshTimestampMillis(DataContract dataContract) {
+    try {
+      EntityInterface entity =
+          Entity.getEntity(
+              dataContract.getEntity().getType(),
+              dataContract.getEntity().getId(),
+              "profile",
+              Include.NON_DELETED);
+      if (entity instanceof org.openmetadata.schema.entity.data.Table table) {
+        if (table.getProfile() != null && table.getProfile().getTimestamp() != null) {
+          return table.getProfile().getTimestamp();
+        }
+      }
+      return entity.getUpdatedAt() != null ? entity.getUpdatedAt() : 0L;
+    } catch (Exception e) {
+      LOG.warn(
+          "Could not determine last refresh timestamp for contract {}: {}",
+          dataContract.getFullyQualifiedName(),
+          e.getMessage());
+      return 0L;
+    }
+  }
+
+  private long getSlaToleranceMillis(org.openmetadata.schema.api.data.ContractSLA sla) {
+    if (sla.getMaxLatency() == null) {
+      return 60 * 60 * 1000L;
+    }
+    long value = sla.getMaxLatency().getValue();
+    return switch (sla.getMaxLatency().getUnit()) {
+      case MINUTE -> value * 60 * 1000L;
+      case HOUR -> value * 60 * 60 * 1000L;
+      case DAY -> value * 24 * 60 * 60 * 1000L;
+    };
   }
 
   public RestUtil.PutResponse<DataContractResult> addContractResult(

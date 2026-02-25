@@ -1246,6 +1246,11 @@ export interface ContractSLA {
      */
     columnName?: string;
     /**
+     * Specific times of day at which the data is expected to refresh (e.g. ["09:00", "13:00"]).
+     * Each entry is in HH:mm format (UTC unless timezone is specified).
+     */
+    freshnessCheckTimes?: string[];
+    /**
      * If the property is inherited from the Data Product
      */
     inherited?: boolean;

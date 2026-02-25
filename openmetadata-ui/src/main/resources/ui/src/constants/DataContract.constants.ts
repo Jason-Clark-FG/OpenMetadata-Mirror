@@ -77,6 +77,7 @@ export enum DATA_CONTRACT_SLA {
   TIME_AVAILABILITY = 'time_availability',
   RETENTION = 'retention',
   COLUMN_NAME = 'columnName',
+  FRESHNESS_CHECK_TIMES = 'freshnessCheckTimes',
 }
 
 export const DATA_CONTRACT_EXECUTION_CHART_COMMON_PROPS: {
