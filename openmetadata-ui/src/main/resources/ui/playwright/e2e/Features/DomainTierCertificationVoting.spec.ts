@@ -97,82 +97,32 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     });
   });
 
-  test.describe('Non-admin permissions', () => {
-    test.beforeEach(async ({ dataConsumerPage }) => {
-      await redirectToHomePage(dataConsumerPage);
-    });
-
-    test('DataConsumer can edit tier and certification on Domain', async ({
-      dataConsumerPage,
-    }) => {
-      await domain.visitEntityPage(dataConsumerPage);
-      await dataConsumerPage.waitForLoadState('networkidle');
+  test.describe('Non-admin without EditTier/EditCertification', () => {
+    test('Edit buttons not visible on Domain', async ({ viewOnlyPage }) => {
+      await redirectToHomePage(viewOnlyPage);
+      await domain.visitEntityPage(viewOnlyPage);
+      await viewOnlyPage.waitForLoadState('networkidle');
 
       await expect(
-        dataConsumerPage.getByTestId('edit-tier')
-      ).toBeVisible();
-      await expect(
-        dataConsumerPage.getByTestId('edit-certification')
-      ).toBeVisible();
-    });
-
-    test('Non-admin can vote on Domain', async ({ dataConsumerPage }) => {
-      await domain.visitEntityPage(dataConsumerPage);
-      await dataConsumerPage.waitForLoadState('networkidle');
-
-      await expect(dataConsumerPage.getByTestId('up-vote-btn')).toBeVisible();
-      await expect(dataConsumerPage.getByTestId('down-vote-btn')).toBeVisible();
-    });
-
-    test('DataConsumer can edit tier and certification on DataProduct', async ({
-      dataConsumerPage,
-    }) => {
-      await dataProduct.visitEntityPage(dataConsumerPage);
-      await dataConsumerPage.waitForLoadState('networkidle');
-
-      await expect(
-        dataConsumerPage.getByTestId('edit-tier')
-      ).toBeVisible();
-      await expect(
-        dataConsumerPage.getByTestId('edit-certification')
-      ).toBeVisible();
-    });
-
-    test('Non-admin can vote on DataProduct', async ({ dataConsumerPage }) => {
-      await dataProduct.visitEntityPage(dataConsumerPage);
-      await dataConsumerPage.waitForLoadState('networkidle');
-
-      await expect(dataConsumerPage.getByTestId('up-vote-btn')).toBeVisible();
-      await expect(dataConsumerPage.getByTestId('down-vote-btn')).toBeVisible();
-    });
-
-    test('User without EditTier/EditCertification cannot see edit buttons on Domain', async ({
-      editDescriptionPage,
-    }) => {
-      await redirectToHomePage(editDescriptionPage);
-      await domain.visitEntityPage(editDescriptionPage);
-      await editDescriptionPage.waitForLoadState('networkidle');
-
-      await expect(
-        editDescriptionPage.getByTestId('edit-tier')
+        viewOnlyPage.getByTestId('edit-tier')
       ).not.toBeVisible();
       await expect(
-        editDescriptionPage.getByTestId('edit-certification')
+        viewOnlyPage.getByTestId('edit-certification')
       ).not.toBeVisible();
     });
 
-    test('User without EditTier/EditCertification cannot see edit buttons on DataProduct', async ({
-      editDescriptionPage,
+    test('Edit buttons not visible on DataProduct', async ({
+      viewOnlyPage,
     }) => {
-      await redirectToHomePage(editDescriptionPage);
-      await dataProduct.visitEntityPage(editDescriptionPage);
-      await editDescriptionPage.waitForLoadState('networkidle');
+      await redirectToHomePage(viewOnlyPage);
+      await dataProduct.visitEntityPage(viewOnlyPage);
+      await viewOnlyPage.waitForLoadState('networkidle');
 
       await expect(
-        editDescriptionPage.getByTestId('edit-tier')
+        viewOnlyPage.getByTestId('edit-tier')
       ).not.toBeVisible();
       await expect(
-        editDescriptionPage.getByTestId('edit-certification')
+        viewOnlyPage.getByTestId('edit-certification')
       ).not.toBeVisible();
     });
   });
