@@ -193,6 +193,10 @@ public class ElasticSearchBulkSink implements BulkSink {
                               DOC_BUILD_SEMAPHORE.acquireUninterruptibly();
                               try {
                                 addEntity(entity, indexName, recreateIndex, tracker);
+                                // Index columns separately when processing table entities
+                                if (Entity.TABLE.equals(entityType)) {
+                                  indexTableColumns(entityInterfaces, recreateIndex);
+                                }
                               } finally {
                                 DOC_BUILD_SEMAPHORE.release();
                               }
@@ -204,11 +208,6 @@ public class ElasticSearchBulkSink implements BulkSink {
         // Process vector embeddings in batch (no-op in base class)
         if (embeddingsEnabled) {
           addEntitiesToVectorIndexBatch(bulkProcessor, entityInterfaces, recreateIndex);
-        }
-
-        // Index columns separately when processing table entities
-        if (Entity.TABLE.equals(entityType)) {
-          indexTableColumns(entityInterfaces, recreateIndex);
         }
       }
     } catch (Exception e) {

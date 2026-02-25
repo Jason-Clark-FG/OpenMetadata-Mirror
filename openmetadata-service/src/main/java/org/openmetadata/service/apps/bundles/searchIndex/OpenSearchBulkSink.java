@@ -237,7 +237,8 @@ public class OpenSearchBulkSink implements BulkSink {
                                     entity, indexName, recreateIndex, reindexContext, tracker);
                                 // Index columns separately when processing table entities
                                 if (Entity.TABLE.equals(entityType)) {
-                                  indexTableColumns(entityInterfaces, recreateIndex, reindexContext);
+                                  indexTableColumns(
+                                      entityInterfaces, recreateIndex, reindexContext);
                                 }
                               } finally {
                                 DOC_BUILD_SEMAPHORE.release();
