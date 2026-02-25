@@ -226,16 +226,25 @@ test.describe('Domain and Data Product Long Description Visibility', () => {
           domains: [domain.responseData.fullyQualifiedName],
         },
       });
+
+      if (!dpResponse.ok()) {
+        throw new Error(
+          `Failed to create data product: ${dpResponse.status()} ${await dpResponse.text()}`
+        );
+      }
+
       dataProductData = await dpResponse.json();
     }
   );
 
   test.afterAll('Cleanup', async () => {
-    await adminApiContext.delete(
-      `/api/v1/dataProducts/name/${encodeURIComponent(
-        dataProductData.fullyQualifiedName
-      )}`
-    );
+    if (dataProductData?.fullyQualifiedName) {
+      await adminApiContext.delete(
+        `/api/v1/dataProducts/name/${encodeURIComponent(
+          dataProductData.fullyQualifiedName
+        )}`
+      );
+    }
     await domain.delete(adminApiContext);
     await afterActionFn();
   });
@@ -270,11 +279,11 @@ test.describe('Domain and Data Product Long Description Visibility', () => {
     await expect(descContainer).toHaveClass(/\bexpanded\b/);
 
     // Collapse the card — 'expanded' class is removed, body gets height: 0
-    await descContainer.locator('.expand-collapse-icon').click();
+    await descContainer.getByTestId('expand-collapse-icon').click();
     await expect(descContainer).not.toHaveClass(/\bexpanded\b/);
 
     // Expand the card again
-    await descContainer.locator('.expand-collapse-icon').click();
+    await descContainer.getByTestId('expand-collapse-icon').click();
     await expect(descContainer).toHaveClass(/\bexpanded\b/);
 
     // After re-expanding, end content is still reachable via scroll
@@ -348,11 +357,11 @@ test.describe('Domain and Data Product Long Description Visibility', () => {
     await expect(descContainer).toHaveClass(/\bexpanded\b/);
 
     // Collapse — 'expanded' class is removed, body gets height: 0
-    await descContainer.locator('.expand-collapse-icon').click();
+    await descContainer.getByTestId('expand-collapse-icon').click();
     await expect(descContainer).not.toHaveClass(/\bexpanded\b/);
 
     // Expand
-    await descContainer.locator('.expand-collapse-icon').click();
+    await descContainer.getByTestId('expand-collapse-icon').click();
     await expect(descContainer).toHaveClass(/\bexpanded\b/);
   });
 });
