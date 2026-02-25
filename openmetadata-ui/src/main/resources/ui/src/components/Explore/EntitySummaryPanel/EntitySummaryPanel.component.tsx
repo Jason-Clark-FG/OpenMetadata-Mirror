@@ -909,6 +909,9 @@ export default function EntitySummaryPanel({
             <DataQualityTab
               entityFQN={entityDetails.details.fullyQualifiedName || ''}
               entityType={entityType}
+              hasViewTests={
+                entityPermissions.ViewTests || entityPermissions.ViewAll
+              }
             />
           </>
         );
