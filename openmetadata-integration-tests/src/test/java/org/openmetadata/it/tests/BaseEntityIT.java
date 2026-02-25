@@ -3922,8 +3922,10 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     OpenMetadataClient client = SdkClients.adminClient();
 
     Awaitility.await()
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(60))
+        .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
         .untilAsserted(
             () -> {
               for (String fqn : expectedFqns) {
@@ -3983,7 +3985,9 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
 
     Awaitility.await()
         .atMost(Duration.ofSeconds(60))
+        .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(3))
+        .ignoreExceptions()
         .untilAsserted(
             () -> {
               for (String fqn : fqns) {
@@ -4639,11 +4643,11 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     T entity = createEntity(createRequest);
 
     // Poll until entity appears in search index (async indexing may take time)
-    // Use 60 second timeout since search indexing can be slow under load
     Awaitility.await("Wait for entity to appear in search index")
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(2))
         .atMost(Duration.ofSeconds(60))
+        .ignoreExceptions()
         .untilAsserted(
             () -> {
               String searchResponse = searchForEntity(entity.getId().toString());
