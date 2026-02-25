@@ -474,7 +474,7 @@ const ClassificationDetails = forwardRef(
         )}
 
         <GenericProvider<Classification>
-          data={currentClassification as Classification}
+          data={(currentClassification as Classification) ?? {}}
           isVersionView={isVersionView}
           permissions={classificationPermissions}
           type={EntityType.CLASSIFICATION as CustomizeEntityType}
