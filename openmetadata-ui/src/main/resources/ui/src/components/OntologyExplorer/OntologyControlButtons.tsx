@@ -11,13 +11,8 @@
  *  limitations under the License.
  */
 
-import {
-  MenuItem,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  useTheme,
-} from '@mui/material';
+import { Button, ButtonUtility } from '@openmetadata/ui-core-components';
+import { RefreshCw01 } from '@untitledui/icons';
 import { FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FitScreenIcon } from '../../assets/svg/ic-fit-screen.svg';
@@ -25,10 +20,8 @@ import { ReactComponent as FitViewOptionsIcon } from '../../assets/svg/ic-fit-vi
 import { ReactComponent as HomeIcon } from '../../assets/svg/ic-home.svg';
 import { ReactComponent as MapIcon } from '../../assets/svg/ic-map.svg';
 import { ReactComponent as RearrangeNodesIcon } from '../../assets/svg/ic-rearrange-nodes.svg';
-import { ReactComponent as RefreshIcon } from '../../assets/svg/ic-sync.svg';
 import { ReactComponent as ZoomInIcon } from '../../assets/svg/ic-zoom-in.svg';
 import { ReactComponent as ZoomOutIcon } from '../../assets/svg/ic-zoom-out.svg';
-import { StyledMenu } from '../LineageTable/LineageTable.styled';
 
 export interface OntologyControlButtonsProps {
   onZoomIn: () => void;
@@ -56,144 +49,127 @@ const OntologyControlButtons: FC<OntologyControlButtonsProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation();
-  const theme = useTheme();
-  const [viewOptionsAnchorEl, setViewOptionsAnchorEl] =
-    useState<null | HTMLElement>(null);
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
 
   const handleFitView = useCallback(() => {
     onFitToScreen();
-    setViewOptionsAnchorEl(null);
+    setViewOptionsOpen(false);
   }, [onFitToScreen]);
 
   const handleRearrange = useCallback(() => {
     onRearrange?.();
-    setViewOptionsAnchorEl(null);
+    setViewOptionsOpen(false);
   }, [onRearrange]);
 
   const handleFocusSelected = useCallback(() => {
     onFocusSelected?.();
-    setViewOptionsAnchorEl(null);
+    setViewOptionsOpen(false);
   }, [onFocusSelected]);
 
   const handleFocusHome = useCallback(() => {
     onFocusHome?.();
-    setViewOptionsAnchorEl(null);
+    setViewOptionsOpen(false);
   }, [onFocusHome]);
 
   return (
-    <ToggleButtonGroup
-      exclusive
-      className="ontology-control-buttons"
-      color="primary"
-      sx={{
-        boxShadow: theme.shadows[1],
-        background: theme.palette.background.paper,
-        borderRadius: '8px',
-        '& .MuiToggleButton-root': {
-          border: 'none',
-          padding: '6px 10px',
-          '&:first-of-type': {
-            borderRadius: '8px 0 0 8px',
-          },
-          '&:last-of-type': {
-            borderRadius: '0 8px 8px 0',
-          },
-        },
-        svg: {
-          height: theme.spacing(4),
-          width: theme.spacing(4),
-        },
-      }}>
-      <Tooltip arrow placement="top" title={t('label.view-option-plural')}>
-        <ToggleButton
+    <div className="tw:flex tw:flex-shrink-0 tw:flex-wrap-nowrap tw:items-center tw:gap-1">
+      <div className="tw:relative">
+        <ButtonUtility
+          color={viewOptionsOpen ? 'secondary' : 'tertiary'}
           data-testid="view-options"
-          value="view-options"
-          onClick={(event) => setViewOptionsAnchorEl(event.currentTarget)}>
-          <FitViewOptionsIcon />
-        </ToggleButton>
-      </Tooltip>
+          icon={FitViewOptionsIcon}
+          size="sm"
+          tooltip={t('label.view-option-plural')}
+          onClick={() => setViewOptionsOpen((v) => !v)}
+        />
 
-      <StyledMenu
-        anchorEl={viewOptionsAnchorEl}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        id="ontology-view-options-menu"
-        open={Boolean(viewOptionsAnchorEl)}
-        slotProps={{
-          paper: {
-            sx: {
-              marginTop: '4px',
-            },
-          },
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        onClose={() => setViewOptionsAnchorEl(null)}>
-        <MenuItem onClick={handleFitView}>
-          <FitScreenIcon />
-          {t('label.fit-to-screen')}
-        </MenuItem>
-        {onFocusSelected && (
-          <MenuItem onClick={handleFocusSelected}>
-            <FitViewOptionsIcon />
-            {t('label.focus-selected')}
-          </MenuItem>
+        {viewOptionsOpen && (
+          <>
+            <button
+              aria-label="Close view options"
+              className="tw:fixed tw:inset-0 tw:z-[1040] tw:cursor-default tw:border-0 tw:bg-transparent tw:p-0"
+              type="button"
+              onClick={() => setViewOptionsOpen(false)}
+            />
+            <div className="tw:absolute tw:left-0 tw:top-full tw:z-[1041] tw:mt-1 tw:flex tw:flex-col tw:gap-1 tw:rounded-lg tw:bg-white tw:py-1 tw:shadow-lg tw:ring-1 tw:ring-gray-200">
+              <Button
+                color="tertiary"
+                iconLeading={FitScreenIcon}
+                size="sm"
+                onClick={handleFitView}>
+                {t('label.fit-to-screen')}
+              </Button>
+              {onFocusSelected && (
+                <Button
+                  color="tertiary"
+                  iconLeading={FitViewOptionsIcon}
+                  size="sm"
+                  onClick={handleFocusSelected}>
+                  {t('label.focus-selected')}
+                </Button>
+              )}
+              {onRearrange && (
+                <Button
+                  color="tertiary"
+                  iconLeading={RearrangeNodesIcon}
+                  size="sm"
+                  onClick={handleRearrange}>
+                  {t('label.rearrange-nodes')}
+                </Button>
+              )}
+              {onFocusHome && (
+                <Button
+                  color="tertiary"
+                  iconLeading={HomeIcon}
+                  size="sm"
+                  onClick={handleFocusHome}>
+                  {t('label.focus-home')}
+                </Button>
+              )}
+            </div>
+          </>
         )}
-        {onRearrange && (
-          <MenuItem onClick={handleRearrange}>
-            <RearrangeNodesIcon />
-            {t('label.rearrange-nodes')}
-          </MenuItem>
-        )}
-        {onFocusHome && (
-          <MenuItem onClick={handleFocusHome}>
-            <HomeIcon />
-            {t('label.focus-home')}
-          </MenuItem>
-        )}
-      </StyledMenu>
+      </div>
 
       {onToggleMinimap && (
-        <Tooltip arrow placement="top" title={t('label.mind-map')}>
-          <ToggleButton
-            data-testid="toggle-minimap"
-            selected={isMinimapVisible}
-            value="minimap"
-            onClick={onToggleMinimap}>
-            <MapIcon />
-          </ToggleButton>
-        </Tooltip>
+        <ButtonUtility
+          color={isMinimapVisible ? 'secondary' : 'tertiary'}
+          data-testid="toggle-minimap"
+          icon={MapIcon}
+          size="sm"
+          tooltip={t('label.mind-map')}
+          onClick={onToggleMinimap}
+        />
       )}
 
-      <Tooltip arrow placement="top" title={t('label.zoom-in')}>
-        <ToggleButton data-testid="zoom-in" value="zoom-in" onClick={onZoomIn}>
-          <ZoomInIcon />
-        </ToggleButton>
-      </Tooltip>
+      <ButtonUtility
+        color="tertiary"
+        data-testid="zoom-in"
+        icon={ZoomInIcon}
+        size="sm"
+        tooltip={t('label.zoom-in')}
+        onClick={onZoomIn}
+      />
 
-      <Tooltip arrow placement="top" title={t('label.zoom-out')}>
-        <ToggleButton
-          data-testid="zoom-out"
-          value="zoom-out"
-          onClick={onZoomOut}>
-          <ZoomOutIcon />
-        </ToggleButton>
-      </Tooltip>
+      <ButtonUtility
+        color="tertiary"
+        data-testid="zoom-out"
+        icon={ZoomOutIcon}
+        size="sm"
+        tooltip={t('label.zoom-out')}
+        onClick={onZoomOut}
+      />
 
-      <Tooltip arrow placement="top" title={t('label.refresh')}>
-        <ToggleButton
-          data-testid="refresh"
-          disabled={isLoading}
-          value="refresh"
-          onClick={onRefresh}>
-          <RefreshIcon className={isLoading ? 'rotate-animation' : ''} />
-        </ToggleButton>
-      </Tooltip>
-    </ToggleButtonGroup>
+      <ButtonUtility
+        color="tertiary"
+        data-testid="refresh"
+        icon={RefreshCw01}
+        isDisabled={isLoading}
+        size="sm"
+        tooltip={t('label.refresh')}
+        onClick={onRefresh}
+      />
+    </div>
   );
 };
 

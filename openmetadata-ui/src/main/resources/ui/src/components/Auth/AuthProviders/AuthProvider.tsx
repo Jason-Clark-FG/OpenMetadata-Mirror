@@ -655,7 +655,7 @@ export const AuthProvider = ({
             cacheLocation="memory"
             clientId={authConfig.clientId?.toString() ?? ''}
             domain={authConfig.authority?.toString() ?? ''}
-            redirectUri={authConfig.callbackUrl?.toString() ?? ''}>
+            redirectUri={authConfig.callbackUrl?.toString()}>
             <Auth0Authenticator ref={authenticatorRef}>
               {childElement}
             </Auth0Authenticator>

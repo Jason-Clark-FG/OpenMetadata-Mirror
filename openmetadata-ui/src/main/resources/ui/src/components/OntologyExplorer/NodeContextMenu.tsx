@@ -11,16 +11,16 @@
  *  limitations under the License.
  */
 
+import { Button } from '@openmetadata/ui-core-components';
 import {
-  AimOutlined,
-  CopyOutlined,
-  ExpandOutlined,
-  ExportOutlined,
-  InfoCircleOutlined,
-  PlusOutlined,
-  ShareAltOutlined,
-} from '@ant-design/icons';
-import { Menu, MenuProps } from 'antd';
+  Copy01,
+  Expand01,
+  InfoCircle,
+  LinkExternal01,
+  Plus,
+  Share01,
+  Target01,
+} from '@untitledui/icons';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useClipboard } from '../../hooks/useClipBoard';
@@ -36,6 +36,14 @@ export interface NodeContextMenuProps {
   onOpenInNewTab: (node: OntologyNode) => void;
   onAddRelation?: (node: OntologyNode) => void;
   onExpandNeighbors?: (node: OntologyNode, depth: number) => void;
+}
+
+interface MenuItemConfig {
+  key: string;
+  icon: React.ReactNode;
+  label: string;
+  disabled?: boolean;
+  isDividerBefore?: boolean;
 }
 
 const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
@@ -74,8 +82,8 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
     onClose();
   }, [node.fullyQualifiedName, onCopyToClipBoard, onClose, t]);
 
-  const handleMenuClick: MenuProps['onClick'] = useCallback(
-    ({ key }: { key: string }) => {
+  const handleMenuClick = useCallback(
+    (key: string) => {
       switch (key) {
         case 'focus':
           onFocus(node);
@@ -127,61 +135,59 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
     ]
   );
 
-  const menuItems: MenuProps['items'] = useMemo(() => {
-    const items: MenuProps['items'] = [
+  const menuItems = useMemo<MenuItemConfig[]>(() => {
+    const items: MenuItemConfig[] = [
       {
         key: 'focus',
-        icon: <AimOutlined />,
+        icon: <Target01 size={14} />,
         label: t('label.focus-on-node'),
       },
       {
         key: 'details',
-        icon: <InfoCircleOutlined />,
+        icon: <InfoCircle size={14} />,
         label: t('label.view-detail-plural'),
       },
       {
         key: 'open-new-tab',
-        icon: <ExportOutlined />,
+        icon: <LinkExternal01 size={14} />,
         label: t('label.open-in-new-tab'),
       },
-      { type: 'divider' },
       {
         key: 'copy-fqn',
-        icon: <CopyOutlined />,
+        icon: <Copy01 size={14} />,
         label: t('label.copy-fqn'),
         disabled: !node.fullyQualifiedName,
+        isDividerBefore: true,
       },
     ];
 
     if (onAddRelation && node.type !== 'dataAsset') {
-      items.push(
-        { type: 'divider' },
-        {
-          key: 'add-relation',
-          icon: <PlusOutlined />,
-          label: t('label.add-entity', { entity: t('label.relation') }),
-        }
-      );
+      items.push({
+        key: 'add-relation',
+        icon: <Plus size={14} />,
+        label: t('label.add-entity', { entity: t('label.relation') }),
+        isDividerBefore: true,
+      });
     }
 
     if (onExpandNeighbors) {
       items.push(
-        { type: 'divider' },
         {
           key: 'reveal-relations',
-          icon: <ShareAltOutlined />,
+          icon: <Share01 size={14} />,
           label: t('label.expand-1-hops'),
+          isDividerBefore: true,
         },
         {
           key: 'expand-2',
-          icon: <ExpandOutlined />,
+          icon: <Expand01 size={14} />,
           label: t('label.expand-2-hops'),
         }
       );
     }
 
     return items;
-  }, [node.fullyQualifiedName, onAddRelation, onExpandNeighbors, t]);
+  }, [node.fullyQualifiedName, node.type, onAddRelation, onExpandNeighbors, t]);
 
   return (
     <div
@@ -192,19 +198,40 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
         top: position.y,
         left: position.x,
         zIndex: 1050,
+        background: '#ffffff',
+        borderRadius: 8,
+        boxShadow: '0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.08)',
+        minWidth: 180,
+        padding: '4px 0',
       }}>
-      <Menu
-        items={menuItems}
-        mode="vertical"
-        selectable={false}
-        style={{
-          borderRadius: 8,
-          boxShadow:
-            '0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.08)',
-          minWidth: 180,
-        }}
-        onClick={handleMenuClick}
-      />
+      {menuItems.map((item) => (
+        <React.Fragment key={item.key}>
+          {item.isDividerBefore && (
+            <hr
+              style={{
+                margin: '4px 0',
+                border: 'none',
+                borderTop: '1px solid #f0f0f0',
+              }}
+            />
+          )}
+          <Button
+            color="tertiary"
+            isDisabled={item.disabled}
+            size="sm"
+            style={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              borderRadius: 0,
+            }}
+            onClick={() => !item.disabled && handleMenuClick(item.key)}>
+            <span style={{ color: 'rgba(0,0,0,0.45)', lineHeight: 0 }}>
+              {item.icon}
+            </span>
+            {item.label}
+          </Button>
+        </React.Fragment>
+      ))}
     </div>
   );
 };

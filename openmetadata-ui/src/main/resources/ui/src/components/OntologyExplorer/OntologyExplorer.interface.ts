@@ -72,49 +72,11 @@ export interface ConceptsTreeProps {
   onNodeFocus: (nodeId: string) => void;
 }
 
-export interface GraphCanvasProps {
-  data: OntologyGraphData | null;
-  loading: boolean;
-  selectedNodeId?: string;
-  depth: number;
-  layout: 'hierarchical' | 'force';
-  colorBy: 'type' | 'relationType' | 'domain';
-  relationTypes: string[];
-  onNodeClick: (node: OntologyNode) => void;
-  onNodeDoubleClick: (node: OntologyNode) => void;
-  onDepthChange: (depth: number) => void;
-  onLayoutChange: (layout: 'hierarchical' | 'force') => void;
-  onColorByChange: (colorBy: 'type' | 'relationType' | 'domain') => void;
-  onRelationTypesChange: (types: string[]) => void;
-  onRefresh: () => void;
-}
-
 export interface DetailsPanelProps {
   node: OntologyNode | null;
   onClose: () => void;
   onNavigate?: (node: OntologyNode) => void;
   onAddRelation?: (fromNode: OntologyNode) => void;
-}
-
-export interface GraphControlsProps {
-  depth: number;
-  layout: 'hierarchical' | 'force';
-  colorBy: 'type' | 'relationType' | 'domain';
-  relationTypes: string[];
-  availableRelationTypes: Array<{ name: string; displayName: string }>;
-  loading: boolean;
-  rdfEnabled: boolean;
-  useRdfSource: boolean;
-  onDepthChange: (depth: number) => void;
-  onLayoutChange: (layout: 'hierarchical' | 'force') => void;
-  onColorByChange: (colorBy: 'type' | 'relationType' | 'domain') => void;
-  onRelationTypesChange: (types: string[]) => void;
-  onRdfSourceChange: (useRdf: boolean) => void;
-  onRefresh: () => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onFitToScreen: () => void;
-  onFullscreen: () => void;
 }
 
 export type LayoutAlgorithm = 'force' | 'hierarchical' | 'radial' | 'circular';
@@ -171,13 +133,4 @@ export interface EnhancedOntologyNode extends OntologyNode {
   glossaryColor?: string;
   isHighlighted?: boolean;
   isFaded?: boolean;
-}
-
-export interface GraphStatistics {
-  totalNodes: number;
-  totalEdges: number;
-  isolatedNodes: number;
-  glossaryCount: number;
-  relationTypeCount: number;
-  maxDepth: number;
 }

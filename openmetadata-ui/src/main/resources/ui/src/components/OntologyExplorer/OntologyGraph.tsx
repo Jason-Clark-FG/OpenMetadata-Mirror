@@ -14,6 +14,7 @@
 import ELK, { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import React, {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -27,13 +28,13 @@ import ReactFlow, {
   EdgeTypes,
   MiniMap,
   Node,
+  NodeProps,
   NodeTypes,
   ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import GlossaryGroupNode, { GlossaryGroupNodeData } from './GlossaryGroupNode';
 import OntologyEdge, {
   OntologyEdgeData,
   RELATION_COLORS,
@@ -143,6 +144,31 @@ export interface OntologyGraphHandle {
   focusNode: (nodeId: string) => void;
   getNodePositions: () => Record<string, { x: number; y: number }>;
 }
+
+export interface GlossaryGroupNodeData {
+  glossaryId: string;
+  glossaryName: string;
+  color: string;
+}
+
+const GlossaryGroupNode = memo(function GlossaryGroupNode({
+  data,
+}: NodeProps<GlossaryGroupNodeData>) {
+  const borderColor = data?.color ?? '#94a3b8';
+  const backgroundColor = data?.color
+    ? `${data.color}18`
+    : 'rgba(148, 163, 184, 0.08)';
+
+  return (
+    <div
+      className="tw:box-border tw:h-full tw:w-full tw:overflow-visible tw:rounded-xl tw:border-2 tw:border-dashed"
+      style={{ backgroundColor, borderColor }}>
+      <span className="tw:absolute tw:left-0 tw:-top-5.5 tw:max-w-45 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:tw:text-xs tw:font-medium tw:text-slate-500">
+        {data?.glossaryName ?? ''}
+      </span>
+    </div>
+  );
+});
 
 const nodeTypes: NodeTypes = {
   ontologyNode: OntologyNode,
@@ -860,6 +886,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                   } as OntologyNodeData,
                   width: NODE_WIDTH,
                   height: nodeHeight,
+                  selected: isSelected,
                   zIndex: 2,
                 });
               });
@@ -893,6 +920,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                 } as OntologyNodeData,
                 width: NODE_WIDTH,
                 height: nodeHeight,
+                selected: isSelected,
               });
             }
           });
@@ -933,6 +961,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
                 } as OntologyNodeData,
                 width: NODE_WIDTH,
                 height: nodeHeight,
+                selected: isSelected,
               });
             });
           }
@@ -979,6 +1008,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             targetHandle: 'center',
             type: 'ontologyEdge',
             data: edgeData,
+            zIndex: isHighlighted ? 1001 : 10,
           };
         });
       },
@@ -1032,6 +1062,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
             data: nodeData,
             width: NODE_WIDTH,
             height: nodeHeight,
+            selected: isSelected,
           };
         });
       },
@@ -1150,6 +1181,7 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
               ...edge.data,
               isHighlighted,
             } as OntologyEdgeData,
+            zIndex: isHighlighted ? 1001 : 10,
           };
         })
       );
@@ -1234,9 +1266,11 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
     return (
       <div className="ontology-flow-container">
         <ReactFlow
+          elevateEdgesOnSelect
           fitView
           edgeTypes={edgeTypes}
           edges={edges}
+          elevateNodesOnSelect={false}
           maxZoom={MAX_ZOOM}
           minZoom={MIN_ZOOM}
           nodeTypes={nodeTypes}

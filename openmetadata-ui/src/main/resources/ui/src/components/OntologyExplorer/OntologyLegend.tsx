@@ -11,8 +11,7 @@
  *  limitations under the License.
  */
 
-import { DownOutlined, UpOutlined } from '@ant-design/icons';
-import { Typography } from 'antd';
+import { ChevronDown, ChevronUp } from '@untitledui/icons';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RELATION_META } from './OntologyExplorer.constants';
@@ -43,18 +42,19 @@ const OntologyLegend: React.FC<OntologyLegendProps> = ({ edges }) => {
 
   return (
     <div className="ontology-legend">
-      <div
+      <button
         className="ontology-legend__header"
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}>
-        <Typography.Text strong className="ontology-legend__title">
+        <span className="ontology-legend__title">
           {t('label.relation-type-plural')}
-        </Typography.Text>
+        </span>
         {isExpanded ? (
-          <DownOutlined className="ontology-legend__icon" />
+          <ChevronDown className="ontology-legend__icon" size={12} />
         ) : (
-          <UpOutlined className="ontology-legend__icon" />
+          <ChevronUp className="ontology-legend__icon" size={12} />
         )}
-      </div>
+      </button>
 
       {isExpanded && (
         <div className="ontology-legend__content">
@@ -68,9 +68,7 @@ const OntologyLegend: React.FC<OntologyLegendProps> = ({ edges }) => {
                   className="ontology-legend__line"
                   style={{ backgroundColor: meta?.color }}
                 />
-                <Typography.Text className="ontology-legend__label">
-                  {displayName}
-                </Typography.Text>
+                <span className="ontology-legend__label">{displayName}</span>
               </div>
             );
           })}

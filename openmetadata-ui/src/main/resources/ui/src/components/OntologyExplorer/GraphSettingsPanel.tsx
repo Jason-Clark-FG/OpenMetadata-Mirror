@@ -11,17 +11,10 @@
  *  limitations under the License.
  */
 
-import { SettingOutlined } from '@ant-design/icons';
-import {
-  Button,
-  Divider,
-  Popover,
-  Select,
-  Space,
-  Switch,
-  Typography,
-} from 'antd';
-import React, { useCallback } from 'react';
+import { Button, Dropdown, Toggle } from '@openmetadata/ui-core-components';
+import { ChevronDown, Settings01 } from '@untitledui/icons';
+import { Popover } from 'antd';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   GraphSettings,
@@ -40,24 +33,25 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
   onSettingsChange,
 }) => {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
 
   const handleLayoutChange = useCallback(
-    (layout: LayoutAlgorithm) => {
-      onSettingsChange({ ...settings, layout });
+    (value: LayoutAlgorithm) => {
+      onSettingsChange({ ...settings, layout: value });
     },
     [settings, onSettingsChange]
   );
 
   const handleNodeColorModeChange = useCallback(
-    (nodeColorMode: NodeColorMode) => {
-      onSettingsChange({ ...settings, nodeColorMode });
+    (value: NodeColorMode) => {
+      onSettingsChange({ ...settings, nodeColorMode: value });
     },
     [settings, onSettingsChange]
   );
 
   const handleNodeSizeModeChange = useCallback(
-    (nodeSizeMode: NodeSizeMode) => {
-      onSettingsChange({ ...settings, nodeSizeMode });
+    (value: NodeSizeMode) => {
+      onSettingsChange({ ...settings, nodeSizeMode: value });
     },
     [settings, onSettingsChange]
   );
@@ -69,140 +63,178 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
     [settings, onSettingsChange]
   );
 
-  const content = (
-    <div className="graph-settings-content" style={{ width: 280 }}>
-      <Typography.Text strong className="d-block m-b-sm">
-        {t('label.layout')}
-      </Typography.Text>
-      <Select
-        className="w-full m-b-md"
-        options={[
-          { value: 'force', label: t('label.force-directed') },
-          { value: 'hierarchical', label: t('label.hierarchical') },
-          { value: 'radial', label: t('label.radial') },
-          { value: 'circular', label: t('label.circular') },
-        ]}
-        value={settings.layout}
-        onChange={handleLayoutChange}
-      />
+  const layoutItems = useMemo(
+    () => [
+      { id: 'force' as const, label: t('label.force-directed') },
+      { id: 'hierarchical' as const, label: t('label.hierarchical') },
+      { id: 'radial' as const, label: t('label.radial') },
+      { id: 'circular' as const, label: t('label.circular') },
+    ],
+    [t]
+  );
 
-      <Divider className="m-y-sm" />
+  const nodeColorItems = useMemo(
+    () => [
+      { id: 'glossary' as const, label: t('label.by-glossary') },
+      { id: 'relationType' as const, label: t('label.by-relation-type') },
+      { id: 'hierarchyLevel' as const, label: t('label.by-hierarchy-level') },
+      {
+        id: 'connectionCount' as const,
+        label: t('label.by-connection-count'),
+      },
+    ],
+    [t]
+  );
 
-      <Typography.Text strong className="d-block m-b-sm">
-        {t('label.node-color')}
-      </Typography.Text>
-      <Select
-        className="w-full m-b-md"
-        options={[
-          { value: 'glossary', label: t('label.by-glossary') },
-          { value: 'relationType', label: t('label.by-relation-type') },
-          { value: 'hierarchyLevel', label: t('label.by-hierarchy-level') },
-          { value: 'connectionCount', label: t('label.by-connection-count') },
-        ]}
-        value={settings.nodeColorMode}
-        onChange={handleNodeColorModeChange}
-      />
+  const nodeSizeItems = useMemo(
+    () => [
+      { id: 'uniform' as const, label: t('label.uniform') },
+      {
+        id: 'connectionCount' as const,
+        label: t('label.by-connection-count'),
+      },
+      { id: 'childCount' as const, label: t('label.by-child-count') },
+    ],
+    [t]
+  );
 
-      <Typography.Text strong className="d-block m-b-sm">
-        {t('label.node-size')}
-      </Typography.Text>
-      <Select
-        className="w-full m-b-md"
-        options={[
-          { value: 'uniform', label: t('label.uniform') },
-          { value: 'connectionCount', label: t('label.by-connection-count') },
-          { value: 'childCount', label: t('label.by-child-count') },
-        ]}
-        value={settings.nodeSizeMode}
-        onChange={handleNodeSizeModeChange}
-      />
-
-      <Divider className="m-y-sm" />
-
-      <Space className="w-full" direction="vertical">
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>{t('label.edge-labels')}</Typography.Text>
-          <Switch
-            checked={settings.showEdgeLabels}
-            size="small"
-            onChange={(checked) => handleToggle('showEdgeLabels', checked)}
-          />
+  const popoverContent = (
+    <div className="tw:min-w-55 tw:space-y-3 tw:py-0.5">
+      <div className="tw:space-y-1">
+        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
+          {t('label.layout')}
         </div>
+        <Dropdown.Root>
+          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+            {layoutItems.find((i) => i.id === settings.layout)?.label ??
+              t('label.layout')}
+          </Button>
+          <Dropdown.Popover className="tw:min-w-45">
+            <Dropdown.Menu
+              items={layoutItems}
+              onAction={(key) => handleLayoutChange(key as LayoutAlgorithm)}>
+              {(item) => (
+                <Dropdown.Item id={item.id} label={item.label ?? ''} />
+              )}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
+      </div>
 
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>
-            {t('label.include-entity', {
-              entity: t('label.metric-plural'),
-            })}
-          </Typography.Text>
-          <Switch
-            checked={settings.showMetrics}
-            size="small"
-            onChange={(checked) => handleToggle('showMetrics', checked)}
-          />
-        </div>
+      <div className="tw:border-t tw:border-gray-200" />
 
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>
-            {t('label.glossary')} {t('label.group')}
-          </Typography.Text>
-          <Switch
-            checked={settings.showGlossaryHulls}
-            size="small"
-            onChange={(checked) => handleToggle('showGlossaryHulls', checked)}
-          />
+      <div className="tw:space-y-1">
+        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
+          {t('label.node-color')}
         </div>
+        <Dropdown.Root>
+          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+            {nodeColorItems.find((i) => i.id === settings.nodeColorMode)
+              ?.label ?? t('label.node-color')}
+          </Button>
+          <Dropdown.Popover className="tw:min-w-45">
+            <Dropdown.Menu
+              items={nodeColorItems}
+              onAction={(key) =>
+                handleNodeColorModeChange(key as NodeColorMode)
+              }>
+              {(item) => (
+                <Dropdown.Item id={item.id} label={item.label ?? ''} />
+              )}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
+      </div>
 
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>{t('label.edge-bundling')}</Typography.Text>
-          <Switch
-            checked={settings.edgeBundling}
-            size="small"
-            onChange={(checked) => handleToggle('edgeBundling', checked)}
-          />
+      <div className="tw:space-y-1">
+        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
+          {t('label.node-size')}
         </div>
+        <Dropdown.Root>
+          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+            {nodeSizeItems.find((i) => i.id === settings.nodeSizeMode)?.label ??
+              t('label.node-size')}
+          </Button>
+          <Dropdown.Popover className="tw:min-w-45">
+            <Dropdown.Menu
+              items={nodeSizeItems}
+              onAction={(key) => handleNodeSizeModeChange(key as NodeSizeMode)}>
+              {(item) => (
+                <Dropdown.Item id={item.id} label={item.label ?? ''} />
+              )}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
+      </div>
 
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>{t('label.highlight-on-hover')}</Typography.Text>
-          <Switch
-            checked={settings.highlightOnHover}
-            size="small"
-            onChange={(checked) => handleToggle('highlightOnHover', checked)}
-          />
-        </div>
+      <div className="tw:border-t tw:border-gray-200" />
 
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>{t('label.animate-transitions')}</Typography.Text>
-          <Switch
-            checked={settings.animateTransitions}
-            size="small"
-            onChange={(checked) => handleToggle('animateTransitions', checked)}
-          />
-        </div>
-
-        <div className="d-flex justify-between align-center">
-          <Typography.Text>{t('label.physics-simulation')}</Typography.Text>
-          <Switch
-            checked={settings.physicsEnabled}
-            size="small"
-            onChange={(checked) => handleToggle('physicsEnabled', checked)}
-          />
-        </div>
-      </Space>
+      <div className="tw:flex tw:flex-col tw:gap-1.5">
+        <Toggle
+          isSelected={settings.showEdgeLabels}
+          label={t('label.edge-labels')}
+          size="sm"
+          onChange={(checked) => handleToggle('showEdgeLabels', checked)}
+        />
+        <Toggle
+          isSelected={settings.showMetrics}
+          label={t('label.include-entity', {
+            entity: t('label.metric-plural'),
+          })}
+          size="sm"
+          onChange={(checked) => handleToggle('showMetrics', checked)}
+        />
+        <Toggle
+          isSelected={settings.showGlossaryHulls}
+          label={`${t('label.glossary')} ${t('label.group')}`}
+          size="sm"
+          onChange={(checked) => handleToggle('showGlossaryHulls', checked)}
+        />
+        <Toggle
+          isSelected={settings.edgeBundling}
+          label={t('label.edge-bundling')}
+          size="sm"
+          onChange={(checked) => handleToggle('edgeBundling', checked)}
+        />
+        <Toggle
+          isSelected={settings.highlightOnHover}
+          label={t('label.highlight-on-hover')}
+          size="sm"
+          onChange={(checked) => handleToggle('highlightOnHover', checked)}
+        />
+        <Toggle
+          isSelected={settings.animateTransitions}
+          label={t('label.animate-transitions')}
+          size="sm"
+          onChange={(checked) => handleToggle('animateTransitions', checked)}
+        />
+        <Toggle
+          isSelected={settings.physicsEnabled}
+          label={t('label.physics-simulation')}
+          size="sm"
+          onChange={(checked) => handleToggle('physicsEnabled', checked)}
+        />
+      </div>
     </div>
   );
 
   return (
-    <Popover
-      content={content}
-      placement="bottomRight"
-      title={t('label.graph-settings')}
-      trigger="click"
-    >
-      <Button icon={<SettingOutlined />} size="small">
-        {t('label.setting-plural')}
-      </Button>
-    </Popover>
+    <div>
+      <Popover
+        content={popoverContent}
+        open={open}
+        placement="bottomRight"
+        trigger="click"
+        onOpenChange={setOpen}>
+        <Button
+          color="secondary"
+          data-testid="ontology-graph-settings"
+          iconLeading={<Settings01 height={20} width={20} />}
+          size="sm">
+          {t('label.setting-plural')}
+        </Button>
+      </Popover>
+    </div>
   );
 };
 

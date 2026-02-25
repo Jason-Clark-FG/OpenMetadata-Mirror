@@ -1080,6 +1080,7 @@
     "latest-offset": "Dernier décalage",
     "layer": "Couche",
     "layer-plural": "Couches",
+    "layout": "Disposition",
     "ldap-group-dn": "DN de groupe LDAP",
     "ldap-group-mapping": "Mappage de groupe LDAP",
     "learn-how-this-feature-works": "Découvrez comment cette fonctionnalité fonctionne ?",

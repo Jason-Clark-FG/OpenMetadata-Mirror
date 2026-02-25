@@ -11,8 +11,7 @@
  *  limitations under the License.
  */
 
-import { BookOutlined, FileTextOutlined } from '@ant-design/icons';
-import { Tooltip, Typography } from 'antd';
+import { BookOpen01, File01 } from '@untitledui/icons';
 import classNames from 'classnames';
 import React, { memo, useCallback } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
@@ -73,6 +72,7 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
   return (
     <div
       className={nodeClassName}
+      data-testid={`ontology-node-${node.id}`}
       style={{
         borderColor: isSelected || isHighlighted ? glossaryColor : undefined,
         boxShadow: isSelected
@@ -84,7 +84,6 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}>
-      {/* Center handle - enables true straight line edges like professional ontology tools */}
       <Handle
         className="ontology-flow-handle"
         id="center"
@@ -117,31 +116,24 @@ const OntologyNode: React.FC<NodeProps<OntologyNodeData>> = ({ data }) => {
           className="ontology-flow-node__icon"
           style={{ backgroundColor: `${glossaryColor}15` }}>
           {isGlossary ? (
-            <BookOutlined style={{ color: glossaryColor }} />
+            <BookOpen01 size={14} style={{ color: glossaryColor }} />
           ) : (
-            <FileTextOutlined style={{ color: glossaryColor }} />
+            <File01 size={14} style={{ color: glossaryColor }} />
           )}
         </div>
 
         <div className="ontology-flow-node__info">
-          <Tooltip title={displayLabel}>
-            <Typography.Text
-              ellipsis
-              className="ontology-flow-node__label"
-              strong={isGlossary}>
-              {displayLabel}
-            </Typography.Text>
-          </Tooltip>
+          <span
+            className="ontology-flow-node__label"
+            style={{ fontWeight: isGlossary ? 600 : undefined }}
+            title={displayLabel}>
+            {displayLabel}
+          </span>
 
           {node.group && !isGlossary && (
-            <Tooltip title={node.group}>
-              <Typography.Text
-                ellipsis
-                className="ontology-flow-node__group"
-                type="secondary">
-                {node.group}
-              </Typography.Text>
-            </Tooltip>
+            <span className="ontology-flow-node__group" title={node.group}>
+              {node.group}
+            </span>
           )}
         </div>
 

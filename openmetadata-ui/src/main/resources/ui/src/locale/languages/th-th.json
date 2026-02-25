@@ -1080,6 +1080,7 @@
     "latest-offset": "ออฟเซ็ตล่าสุด",
     "layer": "ชั้น",
     "layer-plural": "ชั้นหลายรายการ",
+    "layout": "เค้าโครง",
     "ldap-group-dn": "LDAP กลุ่ม DN",
     "ldap-group-mapping": "การแมปกลุ่ม LDAP",
     "learn-how-this-feature-works": "เรียนรู้ว่าฟีเจอร์นี้ทำงานอย่างไร?",

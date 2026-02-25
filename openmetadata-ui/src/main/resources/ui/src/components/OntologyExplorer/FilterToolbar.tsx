@@ -12,21 +12,13 @@
  */
 
 import {
-  ClearOutlined,
-  FilterOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import {
-  AutoComplete,
   Button,
-  Input,
-  Segmented,
-  Select,
-  Space,
-  Switch,
-  Tag,
-  Tooltip,
-} from 'antd';
+  ButtonUtility,
+  Dropdown,
+  Tabs,
+  Toggle,
+} from '@openmetadata/ui-core-components';
+import { ChevronDown, X } from '@untitledui/icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Glossary } from '../../generated/entity/data/glossary';
@@ -37,102 +29,60 @@ interface FilterToolbarProps {
   filters: GraphFilters;
   glossaries: Glossary[];
   relationTypes: GlossaryTermRelationType[];
-  searchOptions?: {
-    label: React.ReactNode;
-    options: Array<{
-      label: React.ReactNode;
-      value: string;
-      type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
-      nodeId?: string;
-      glossaryId?: string;
-      relationType?: string;
-    }>;
-  }[];
   onFiltersChange: (filters: GraphFilters) => void;
-  onSearchSelect?: (
-    value: string,
-    option: {
-      type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
-      nodeId?: string;
-      glossaryId?: string;
-      relationType?: string;
-    }
-  ) => void;
   onViewModeChange?: (viewMode: GraphViewMode) => void;
 }
+
+const VIEW_MODES: { label: string; value: GraphViewMode }[] = [
+  { label: 'label.overview', value: 'overview' },
+  { label: 'label.hierarchy', value: 'hierarchy' },
+  { label: 'label.related', value: 'neighborhood' },
+  { label: 'label.cross-glossary', value: 'crossGlossary' },
+];
+
+const DEPTH_OPTION_IDS = ['0', '1', '2', '3'] as const;
 
 const FilterToolbar: React.FC<FilterToolbarProps> = ({
   filters,
   glossaries,
   relationTypes,
-  searchOptions,
   onFiltersChange,
-  onSearchSelect,
   onViewModeChange,
 }) => {
   const { t } = useTranslation();
 
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      onFiltersChange({ ...filters, searchQuery: value });
+  const handleDepthChange = useCallback(
+    (key: React.Key | null) => {
+      if (key != null) {
+        onFiltersChange({ ...filters, depth: Number(key) });
+      }
     },
     [filters, onFiltersChange]
   );
 
-  const handleSearchSelect = useCallback(
-    (value: string, option: unknown) => {
-      onFiltersChange({ ...filters, searchQuery: value });
-      onSearchSelect?.(
-        value,
-        option as {
-          type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
-          nodeId?: string;
-          glossaryId?: string;
-          relationType?: string;
-        }
-      );
-    },
-    [filters, onFiltersChange, onSearchSelect]
-  );
-
   const handleGlossaryChange = useCallback(
-    (glossaryIds: string[]) => {
-      onFiltersChange({ ...filters, glossaryIds });
+    (key: React.Key | null) => {
+      onFiltersChange({
+        ...filters,
+        glossaryIds: key ? [String(key)] : [],
+      });
     },
     [filters, onFiltersChange]
   );
 
   const handleRelationTypeChange = useCallback(
-    (types: string[]) => {
-      onFiltersChange({ ...filters, relationTypes: types });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleShowIsolatedChange = useCallback(
-    (showIsolatedNodes: boolean) => {
-      onFiltersChange({ ...filters, showIsolatedNodes });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleCrossGlossaryChange = useCallback(
-    (showCrossGlossaryOnly: boolean) => {
-      onFiltersChange({ ...filters, showCrossGlossaryOnly });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleDepthChange = useCallback(
-    (depth: number) => {
-      onFiltersChange({ ...filters, depth });
+    (key: React.Key | null) => {
+      onFiltersChange({
+        ...filters,
+        relationTypes: key ? [String(key)] : [],
+      });
     },
     [filters, onFiltersChange]
   );
 
   const handleViewModeChange = useCallback(
-    (viewMode: GraphViewMode) => {
-      onViewModeChange?.(viewMode);
+    (value: string | number) => {
+      onViewModeChange?.(value as GraphViewMode);
     },
     [onViewModeChange]
   );
@@ -162,149 +112,142 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
     );
   }, [filters]);
 
-  const glossaryOptions = useMemo(() => {
-    return glossaries.map((g) => ({
-      value: g.id,
-      label: g.displayName || g.name,
-    }));
-  }, [glossaries]);
-
-  const relationTypeOptions = useMemo(() => {
-    return relationTypes.map((rt) => ({
-      value: rt.name,
-      label: rt.displayName || rt.name,
-    }));
-  }, [relationTypes]);
-
-  const depthOptions = useMemo(
+  const depthItems = useMemo(
     () => [
-      { value: 0, label: t('label.all') },
-      { value: 1, label: '1' },
-      { value: 2, label: '2' },
-      { value: 3, label: '3' },
+      { id: '0', label: t('label.all') },
+      ...DEPTH_OPTION_IDS.slice(1).map((id) => ({ id, label: id })),
     ],
     [t]
   );
 
-  const viewModeOptions = useMemo(
-    () => [
-      { label: t('label.overview'), value: 'overview' },
-      { label: t('label.hierarchy'), value: 'hierarchy' },
-      { label: t('label.related'), value: 'neighborhood' },
-      { label: t('label.cross-glossary'), value: 'crossGlossary' },
-    ],
+  const glossaryItems = useMemo(
+    () =>
+      glossaries.map((g) => ({
+        id: g.id ?? '',
+        label: g.displayName || g.name,
+      })),
+    [glossaries]
+  );
+
+  const relationTypeItems = useMemo(
+    () =>
+      relationTypes.map((rt) => ({
+        id: rt.name,
+        label: rt.displayName || rt.name,
+      })),
+    [relationTypes]
+  );
+
+  const viewModeTabItems = useMemo(
+    () =>
+      VIEW_MODES.map(({ label, value }) => ({
+        id: value,
+        label: t(label),
+      })),
     [t]
   );
 
   return (
-    <div className="filter-toolbar">
-      <Space wrap size="small">
-        <Segmented
-          options={viewModeOptions}
-          size="small"
-          value={filters.viewMode}
-          onChange={(value) => handleViewModeChange(value as GraphViewMode)}
+    <div className="tw:flex tw:items-center tw:gap-2">
+      {/* Glossary filter */}
+      {glossaryItems.length > 0 && (
+        <Dropdown.Root>
+          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+            {glossaryItems.find((g) => g.id === filters.glossaryIds[0])
+              ?.label ?? t('label.glossary')}
+          </Button>
+          <Dropdown.Popover className="tw:min-w-45">
+            <Dropdown.Menu
+              items={glossaryItems}
+              onAction={(key) => handleGlossaryChange(key as string)}>
+              {(item) => (
+                <Dropdown.Item id={item.id} label={item.label ?? ''} />
+              )}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
+      )}
+
+      {/* Relation type filter */}
+      {relationTypeItems.length > 0 && (
+        <Dropdown.Root>
+          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+            {relationTypeItems.find((r) => r.id === filters.relationTypes[0])
+              ?.label ?? t('label.relation-type')}
+          </Button>
+          <Dropdown.Popover className="tw:min-w-45">
+            <Dropdown.Menu
+              items={relationTypeItems}
+              onAction={(key) => handleRelationTypeChange(key as string)}>
+              {(item) => (
+                <Dropdown.Item id={item.id} label={item.label ?? ''} />
+              )}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
+      )}
+
+      {/* Depth */}
+      <Dropdown.Root>
+        <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+          {depthItems.find((d) => d.id === String(filters.depth))?.label ??
+            t('label.depth')}
+        </Button>
+        <Dropdown.Popover className="tw:min-w-45">
+          <Dropdown.Menu
+            items={depthItems}
+            onAction={(key) => handleDepthChange(key as string)}>
+            {(item) => <Dropdown.Item id={item.id} label={item.label ?? ''} />}
+          </Dropdown.Menu>
+        </Dropdown.Popover>
+      </Dropdown.Root>
+
+      <div className="tw:w-fit tw:grow-0 tw:shrink-0">
+        <Tabs
+          className="tw:w-fit!"
+          selectedKey={filters.viewMode}
+          onSelectionChange={(key) =>
+            key != null && handleViewModeChange(key as GraphViewMode)
+          }>
+          <Tabs.List items={viewModeTabItems} size="sm" type="button-border" />
+          {viewModeTabItems.map((item) => (
+            <Tabs.Panel className="tw:hidden" id={item.id} key={item.id} />
+          ))}
+        </Tabs>
+      </div>
+
+      <Toggle
+        data-testid="ontology-isolated-toggle"
+        isSelected={filters.showIsolatedNodes}
+        label={t('label.isolated')}
+        size="sm"
+        onChange={(checked) =>
+          onFiltersChange({ ...filters, showIsolatedNodes: checked })
+        }
+      />
+
+      {/* Cross-glossary toggle */}
+      <Toggle
+        data-testid="ontology-cross-glossary-toggle"
+        isSelected={filters.showCrossGlossaryOnly}
+        label={t('label.cross-glossary')}
+        size="sm"
+        onChange={(checked) =>
+          onFiltersChange({ ...filters, showCrossGlossaryOnly: checked })
+        }
+      />
+
+      {/* Clear filters */}
+      {hasActiveFilters && (
+        <ButtonUtility
+          color="tertiary"
+          data-testid="ontology-clear-filters"
+          icon={X}
+          size="sm"
+          tooltip={t('label.clear-filter-plural')}
+          onClick={handleClearFilters}
         />
-
-        <AutoComplete
-          allowClear
-          className="filter-search"
-          options={searchOptions}
-          value={filters.searchQuery}
-          onSearch={handleSearchChange}
-          onSelect={handleSearchSelect}
-        >
-          <Input
-            allowClear
-            placeholder={t('label.search-in-graph')}
-            prefix={<SearchOutlined />}
-            style={{ width: 200 }}
-          />
-        </AutoComplete>
-
-        <Select
-          allowClear
-          maxTagCount={1}
-          mode="multiple"
-          options={glossaryOptions}
-          placeholder={
-            <Space>
-              <FilterOutlined />
-              {t('label.glossary')}
-            </Space>
-          }
-          style={{ minWidth: 150 }}
-          value={filters.glossaryIds}
-          onChange={handleGlossaryChange}
-        />
-
-        <Select
-          allowClear
-          maxTagCount={1}
-          mode="multiple"
-          options={relationTypeOptions}
-          placeholder={
-            <Space>
-              <FilterOutlined />
-              {t('label.relation-type')}
-            </Space>
-          }
-          style={{ minWidth: 150 }}
-          value={filters.relationTypes}
-          onChange={handleRelationTypeChange}
-        />
-
-        <Select
-          options={depthOptions}
-          placeholder={t('label.depth')}
-          style={{ width: 110 }}
-          value={filters.depth}
-          onChange={handleDepthChange}
-        />
-
-        <Tooltip title={t('label.show-isolated-nodes')}>
-          <Tag
-            className="cursor-pointer"
-            color={filters.showIsolatedNodes ? 'default' : 'blue'}
-          >
-            <Space>
-              <Switch
-                checked={filters.showIsolatedNodes}
-                size="small"
-                onChange={handleShowIsolatedChange}
-              />
-              {t('label.isolated')}
-            </Space>
-          </Tag>
-        </Tooltip>
-
-        <Tooltip title={t('label.cross-glossary')}>
-          <Tag
-            className="cursor-pointer"
-            color={filters.showCrossGlossaryOnly ? 'blue' : 'default'}
-          >
-            <Space>
-              <Switch
-                checked={filters.showCrossGlossaryOnly}
-                size="small"
-                onChange={handleCrossGlossaryChange}
-              />
-              {t('label.cross-glossary')}
-            </Space>
-          </Tag>
-        </Tooltip>
-
-        {hasActiveFilters && (
-          <Tooltip title={t('label.clear-filter-plural')}>
-            <Button
-              icon={<ClearOutlined />}
-              size="small"
-              type="text"
-              onClick={handleClearFilters}
-            />
-          </Tooltip>
-        )}
-      </Space>
+      )}
     </div>
   );
 };

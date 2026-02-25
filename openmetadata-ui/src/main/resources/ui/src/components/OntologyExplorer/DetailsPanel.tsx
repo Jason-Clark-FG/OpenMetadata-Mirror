@@ -11,27 +11,15 @@
  *  limitations under the License.
  */
 
+import { Button, ButtonUtility, Tabs } from '@openmetadata/ui-core-components';
 import {
-  AimOutlined,
-  ApartmentOutlined,
-  CloseOutlined,
-  ExportOutlined,
-  InfoCircleOutlined,
-  LinkOutlined,
-  PlusOutlined,
-  RightOutlined,
-} from '@ant-design/icons';
-import {
-  Breadcrumb,
-  Button,
-  Empty,
-  List,
-  Space,
-  Tabs,
-  Tag,
-  Tooltip,
-  Typography,
-} from 'antd';
+  ChevronRight,
+  Copy01,
+  LinkExternal01,
+  Plus,
+  Target01,
+  X,
+} from '@untitledui/icons';
 import { startCase } from 'lodash';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,7 +29,7 @@ import {
   getEntityDetailsPath,
   getGlossaryTermDetailsPath,
 } from '../../utils/RouterUtils';
-import RichTextEditorPreviewer from '../common/RichTextEditor/RichTextEditorPreviewer';
+import RichTextEditorPreviewerNew from '../common/RichTextEditor/RichTextEditorPreviewNew';
 import {
   DetailsPanelProps,
   OntologyEdge,
@@ -56,6 +44,8 @@ interface EnhancedDetailsPanelProps extends DetailsPanelProps {
   onFocusNode?: () => void;
 }
 
+type DetailsTabId = 'summary' | 'relations';
+
 const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   node,
   edges = [],
@@ -67,7 +57,7 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   onFocusNode,
 }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('summary');
+  const [activeTab, setActiveTab] = useState<DetailsTabId>('summary');
 
   const entityPath = useMemo(() => {
     if (!node?.fullyQualifiedName) {
@@ -175,7 +165,10 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
       const cardinality =
         relationType.cardinality ?? deriveCardinality(relationType);
       if (cardinality && cardinality !== 'CUSTOM') {
-        return cardinalityLabels[cardinality] ?? cardinality;
+        return (
+          cardinalityLabels[cardinality as keyof typeof cardinalityLabels] ??
+          cardinality
+        );
       }
 
       const source =
@@ -213,99 +206,192 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
 
       return typeMap[type] ?? type;
     },
-    [t]
+    [node?.entityRef?.type, t]
   );
 
-  const breadcrumbItems = useMemo(() => {
+  const breadcrumbParts = useMemo(() => {
     if (!node?.fullyQualifiedName) {
       return [];
     }
 
-    const parts = node.fullyQualifiedName.split('.');
-
-    return parts.map((part, index) => ({
-      key: index.toString(),
-      title:
-        index === parts.length - 1 ? (
-          <Typography.Text strong>{part}</Typography.Text>
-        ) : (
-          <Typography.Text type="secondary">{part}</Typography.Text>
-        ),
-    }));
+    return node.fullyQualifiedName.split('.');
   }, [node?.fullyQualifiedName]);
+
+  const typeColor = useMemo(() => {
+    if (node?.type === 'glossary') {
+      return '#7c3aed';
+    }
+    if (node?.type === 'dataAsset') {
+      return '#d97706';
+    }
+
+    return '#0891b2';
+  }, [node?.type]);
+
+  const totalRelations =
+    nodeRelations.incoming.length + nodeRelations.outgoing.length;
 
   if (!node) {
     return null;
   }
 
-  const summaryContent = (
-    <div className="details-tab-content">
-      {node.fullyQualifiedName && (
-        <div className="detail-section">
-          <div className="section-label">{t('label.fully-qualified-name')}</div>
-          <div className="section-value">
-            <Typography.Text
-              copyable={{ text: node.fullyQualifiedName }}
-              ellipsis={{ tooltip: node.fullyQualifiedName }}>
-              {node.fullyQualifiedName}
-            </Typography.Text>
-          </div>
+  return (
+    <div
+      className="ontology-explorer-details enhanced"
+      data-testid="ontology-details-panel">
+      {/* Header */}
+      <div className="details-header">
+        <div className="details-title">
+          <span
+            className="title-text"
+            data-testid="details-panel-title"
+            title={node.originalLabel ?? node.label}>
+            {node.originalLabel ?? node.label}
+          </span>
         </div>
-      )}
-
-      {node.description && (
-        <div className="detail-section">
-          <div className="section-label">{t('label.description')}</div>
-          <div className="section-value description-preview">
-            <RichTextEditorPreviewer markdown={node.description} />
-          </div>
-        </div>
-      )}
-
-      {node.group && (
-        <div className="detail-section">
-          <div className="section-label">{t('label.glossary')}</div>
-          <div className="section-value">
-            <Tag color="blue">{node.group}</Tag>
-          </div>
-        </div>
-      )}
-
-      <div className="detail-section">
-        <div className="section-label">{t('label.type')}</div>
-        <div className="section-value">
-          <Tag
-            color={
-              node.type === 'glossary'
-                ? 'purple'
-                : node.type === 'dataAsset'
-                ? 'gold'
-                : 'cyan'
-            }>
-            {getReadableType(node.type)}
-          </Tag>
+        <div className="details-header__actions">
+          {onFocusNode && (
+            <ButtonUtility
+              color="tertiary"
+              icon={Target01}
+              size="xs"
+              tooltip={t('label.focus-selected')}
+              onClick={onFocusNode}
+            />
+          )}
+          <ButtonUtility
+            color="tertiary"
+            data-testid="details-panel-close-button"
+            icon={X}
+            size="xs"
+            tooltip={t('label.close')}
+            onClick={onClose}
+          />
         </div>
       </div>
-    </div>
-  );
 
-  const relationsContent = (
-    <div className="details-tab-content">
-      {nodeRelations.outgoing.length > 0 && (
-        <div className="relations-section">
-          <Typography.Text strong className="d-block m-b-xs">
-            {t('label.outgoing-relation-plural')} (
-            {nodeRelations.outgoing.length})
-          </Typography.Text>
-          <List
-            dataSource={nodeRelations.outgoing}
-            renderItem={(rel) => (
-              <List.Item
-                className="relation-item cursor-pointer"
-                onClick={() =>
-                  rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }>
-                {(() => {
+      {/* Breadcrumb */}
+      {breadcrumbParts.length > 1 && (
+        <div className="details-breadcrumb">
+          {breadcrumbParts.map((part, index) => (
+            <span key={`${part}-${index}`}>
+              {index > 0 && (
+                <ChevronRight
+                  size={10}
+                  style={{ margin: '0 2px', opacity: 0.5 }}
+                />
+              )}
+              <span
+                style={{
+                  color:
+                    index === breadcrumbParts.length - 1
+                      ? 'inherit'
+                      : '#94a3b8',
+                  fontWeight:
+                    index === breadcrumbParts.length - 1 ? 600 : undefined,
+                }}>
+                {part}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="details-tabs">
+        <Tabs
+          selectedKey={activeTab}
+          onSelectionChange={(key) =>
+            key != null && setActiveTab(key as DetailsTabId)
+          }>
+          <Tabs.List
+            items={[
+              { id: 'summary', label: t('label.summary') },
+              {
+                id: 'relations',
+                label: `${t('label.relation-plural')} (${totalRelations})`,
+              },
+            ]}
+            size="sm"
+            type="button-border"
+          />
+          <Tabs.Panel
+            className="details-tab-content tw:flex-1 tw:min-h-0 tw:overflow-y-auto"
+            id="summary">
+            {node.fullyQualifiedName && (
+              <div className="detail-section">
+                <div className="section-label">
+                  {t('label.fully-qualified-name')}
+                </div>
+                <div className="section-value">
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'block',
+                    }}
+                    title={node.fullyQualifiedName}>
+                    {node.fullyQualifiedName}
+                  </span>
+                  <ButtonUtility
+                    color="tertiary"
+                    icon={Copy01}
+                    size="xs"
+                    tooltip={t('label.copy')}
+                    onClick={() =>
+                      navigator.clipboard.writeText(
+                        node.fullyQualifiedName ?? ''
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {node.description && (
+              <div className="detail-section">
+                <div className="section-label">{t('label.description')}</div>
+                <div className="section-value description-preview">
+                  <RichTextEditorPreviewerNew markdown={node.description} />
+                </div>
+              </div>
+            )}
+
+            {node.group && (
+              <div className="detail-section">
+                <div className="section-label">{t('label.glossary')}</div>
+                <div className="section-value">
+                  <span className="details-tag details-tag--blue">
+                    {node.group}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="detail-section">
+              <div className="section-label">{t('label.type')}</div>
+              <div className="section-value">
+                <span
+                  className="details-tag"
+                  style={{
+                    backgroundColor: `${typeColor}15`,
+                    color: typeColor,
+                  }}>
+                  {getReadableType(node.type)}
+                </span>
+              </div>
+            </div>
+          </Tabs.Panel>
+          <Tabs.Panel
+            className="details-tab-content tw:flex-1 tw:min-h-0 tw:overflow-y-auto"
+            id="relations">
+            {nodeRelations.outgoing.length > 0 && (
+              <div className="relations-section">
+                <div className="relations-section__title">
+                  {t('label.outgoing-relation-plural')} (
+                  {nodeRelations.outgoing.length})
+                </div>
+                {nodeRelations.outgoing.map((rel) => {
                   const relationMeta = relationTypeMap.get(rel.relationType);
                   const displayName =
                     relationMeta?.displayName ??
@@ -315,58 +401,54 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                   const cardinality = formatCardinality(relationMeta);
 
                   return (
-                    <Space direction="vertical" size={2}>
-                      <Space>
-                        <Tag
+                    <button
+                      className="relation-item"
+                      key={`${rel.from}-${rel.to}-${rel.relationType}`}
+                      type="button"
+                      onClick={() =>
+                        rel.relatedNode &&
+                        handleRelatedNodeClick(rel.relatedNode.id)
+                      }>
+                      <div className="relation-item__row">
+                        <span
+                          className="relation-item__tag"
                           style={
                             relationMeta?.color
                               ? {
                                   backgroundColor: relationMeta.color,
                                   borderColor: relationMeta.color,
-                                  color: '#ffffff',
+                                  color: '#fff',
                                 }
                               : undefined
                           }>
                           {displayName}
-                        </Tag>
-                        <Typography.Text>
+                        </span>
+                        <span className="relation-item__name">
                           {rel.relatedNode?.originalLabel ??
                             rel.relatedNode?.label ??
                             rel.to}
-                        </Typography.Text>
-                      </Space>
+                        </span>
+                      </div>
                       {(predicate || cardinality) && (
-                        <Typography.Text type="secondary">
-                          {predicate ? predicate : ''}
+                        <div className="relation-item__meta">
+                          {predicate}
                           {predicate && cardinality ? ' • ' : ''}
-                          {cardinality ? cardinality : ''}
-                        </Typography.Text>
+                          {cardinality}
+                        </div>
                       )}
-                    </Space>
+                    </button>
                   );
-                })()}
-              </List.Item>
+                })}
+              </div>
             )}
-            size="small"
-          />
-        </div>
-      )}
 
-      {nodeRelations.incoming.length > 0 && (
-        <div className="relations-section m-t-md">
-          <Typography.Text strong className="d-block m-b-xs">
-            {t('label.incoming-relation-plural')} (
-            {nodeRelations.incoming.length})
-          </Typography.Text>
-          <List
-            dataSource={nodeRelations.incoming}
-            renderItem={(rel) => (
-              <List.Item
-                className="relation-item cursor-pointer"
-                onClick={() =>
-                  rel.relatedNode && handleRelatedNodeClick(rel.relatedNode.id)
-                }>
-                {(() => {
+            {nodeRelations.incoming.length > 0 && (
+              <div className="relations-section">
+                <div className="relations-section__title">
+                  {t('label.incoming-relation-plural')} (
+                  {nodeRelations.incoming.length})
+                </div>
+                {nodeRelations.incoming.map((rel) => {
                   const relationMeta = relationTypeMap.get(rel.relationType);
                   const displayName =
                     relationMeta?.displayName ??
@@ -376,141 +458,74 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
                   const cardinality = formatCardinality(relationMeta);
 
                   return (
-                    <Space direction="vertical" size={2}>
-                      <Space>
-                        <Tag
+                    <button
+                      className="relation-item"
+                      key={`${rel.from}-${rel.to}-${rel.relationType}`}
+                      type="button"
+                      onClick={() =>
+                        rel.relatedNode &&
+                        handleRelatedNodeClick(rel.relatedNode.id)
+                      }>
+                      <div className="relation-item__row">
+                        <span
+                          className="relation-item__tag"
                           style={
                             relationMeta?.color
                               ? {
                                   backgroundColor: relationMeta.color,
                                   borderColor: relationMeta.color,
-                                  color: '#ffffff',
+                                  color: '#fff',
                                 }
                               : undefined
                           }>
                           {displayName}
-                        </Tag>
-                        <Typography.Text>
+                        </span>
+                        <span className="relation-item__name">
                           {rel.relatedNode?.originalLabel ??
                             rel.relatedNode?.label ??
                             rel.from}
-                        </Typography.Text>
-                      </Space>
+                        </span>
+                      </div>
                       {(predicate || cardinality) && (
-                        <Typography.Text type="secondary">
-                          {predicate ? predicate : ''}
+                        <div className="relation-item__meta">
+                          {predicate}
                           {predicate && cardinality ? ' • ' : ''}
-                          {cardinality ? cardinality : ''}
-                        </Typography.Text>
+                          {cardinality}
+                        </div>
                       )}
-                    </Space>
+                    </button>
                   );
-                })()}
-              </List.Item>
+                })}
+              </div>
             )}
-            size="small"
-          />
-        </div>
-      )}
 
-      {nodeRelations.outgoing.length === 0 &&
-        nodeRelations.incoming.length === 0 && (
-          <Empty
-            description={t('message.no-relations-found')}
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
-        )}
-    </div>
-  );
-
-  const tabItems = [
-    {
-      key: 'summary',
-      label: (
-        <Space>
-          <InfoCircleOutlined />
-          {t('label.summary')}
-        </Space>
-      ),
-      children: summaryContent,
-    },
-    {
-      key: 'relations',
-      label: (
-        <Space>
-          <LinkOutlined />
-          {t('label.relation-plural')} (
-          {nodeRelations.incoming.length + nodeRelations.outgoing.length})
-        </Space>
-      ),
-      children: relationsContent,
-    },
-  ];
-
-  return (
-    <div className="ontology-explorer-details enhanced">
-      <div className="details-header">
-        <div className="details-title">
-          <ApartmentOutlined className="m-r-xs" />
-          <Tooltip title={node.originalLabel ?? node.label}>
-            <Typography.Text ellipsis className="title-text">
-              {node.originalLabel ?? node.label}
-            </Typography.Text>
-          </Tooltip>
-        </div>
-        <Space size={4}>
-          {onFocusNode && (
-            <Tooltip title={t('label.focus-selected')}>
-              <Button
-                icon={<AimOutlined />}
-                size="small"
-                type="text"
-                onClick={onFocusNode}
-              />
-            </Tooltip>
-          )}
-          <Button
-            icon={<CloseOutlined />}
-            size="small"
-            type="text"
-            onClick={onClose}
-          />
-        </Space>
+            {totalRelations === 0 && (
+              <div className="details-empty">
+                {t('message.no-relations-found')}
+              </div>
+            )}
+          </Tabs.Panel>
+        </Tabs>
       </div>
 
-      {breadcrumbItems.length > 1 && (
-        <div className="details-breadcrumb">
-          <Breadcrumb separator={<RightOutlined style={{ fontSize: 10 }} />}>
-            {breadcrumbItems.map((item) => (
-              <Breadcrumb.Item key={item.key}>{item.title}</Breadcrumb.Item>
-            ))}
-          </Breadcrumb>
-        </div>
-      )}
-
-      <Tabs
-        activeKey={activeTab}
-        className="details-tabs"
-        items={tabItems}
-        size="small"
-        onChange={setActiveTab}
-      />
-
+      {/* Footer actions */}
       <div className="details-actions">
         {entityPath && (
-          <Tooltip title={t('label.view-in-new-tab')}>
-            <Button
-              icon={<ExportOutlined />}
-              type="default"
-              onClick={handleNavigateToEntity}>
-              {t('label.view')}
-            </Button>
-          </Tooltip>
+          <Button
+            color="secondary"
+            data-testid="details-panel-view-button"
+            iconLeading={LinkExternal01}
+            size="sm"
+            onClick={handleNavigateToEntity}>
+            {t('label.view')}
+          </Button>
         )}
         {onAddRelation && (
           <Button
-            icon={<PlusOutlined />}
-            type="primary"
+            color="primary"
+            data-testid="details-panel-add-relation-button"
+            iconLeading={Plus}
+            size="sm"
             onClick={() => onAddRelation(node)}>
             {t('label.add-entity', { entity: t('label.relation') })}
           </Button>

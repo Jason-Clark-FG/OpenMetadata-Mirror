@@ -11,12 +11,13 @@
  *  limitations under the License.
  */
 
-import { DownOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
-import { Input, Tooltip, Tree, Typography } from 'antd';
-import { DataNode, EventDataNode, TreeProps } from 'antd/es/tree';
+import { Input } from '@openmetadata/ui-core-components';
+import { SearchMd } from '@untitledui/icons';
+import { Tree, TreeDataNode } from 'antd';
+import { DataNode } from 'antd/es/tree';
 import { AxiosError } from 'axios';
 import { debounce, isEmpty } from 'lodash';
-import React, { Key, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconTerm } from '../../assets/svg/glossary-term-colored-new.svg';
 import { ReactComponent as GlossaryIcon } from '../../assets/svg/glossary.svg';
@@ -25,7 +26,6 @@ import { Glossary } from '../../generated/entity/data/glossary';
 import { GlossaryTerm } from '../../generated/entity/data/glossaryTerm';
 import { EntityReference } from '../../generated/type/entityReference';
 import { getGlossariesList, getGlossaryTerms } from '../../rest/glossaryAPI';
-import { stringToDOMElement } from '../../utils/StringsUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import Loader from '../common/Loader/Loader';
 import {
@@ -33,16 +33,44 @@ import {
   ConceptsTreeProps,
 } from './OntologyExplorer.interface';
 
-const getPlainTextFromHtml = (html: string): string => {
-  return stringToDOMElement(html).textContent || '';
-};
-
 const isValidUUID = (str: string): boolean => {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   return uuidRegex.test(str);
 };
+
+interface ConceptTreeDataNode extends TreeDataNode {
+  data?: { conceptNode: ConceptsTreeNode };
+}
+
+const convertToTreeData = (nodes: ConceptsTreeNode[]): ConceptTreeDataNode[] =>
+  nodes.map((node) => ({
+    key: node.key,
+    title: (
+      <span className="tw:flex tw:items-center tw:gap-2 tw:min-w-0">
+        {node.icon && (
+          <span className="tw:shrink-0 tw:flex tw:items-center">
+            {node.icon}
+          </span>
+        )}
+        <span className="tw:flex-1 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-sm">
+          {node.title}
+        </span>
+        {node.data?.relationsCount !== undefined &&
+          node.data.relationsCount > 0 && (
+            <span className="tw:shrink-0 tw:text-xs tw:text-gray-400 tw:bg-gray-100 tw:px-1.5 tw:py-0.5 tw:rounded-md">
+              {node.data.relationsCount}
+            </span>
+          )}
+      </span>
+    ),
+    isLeaf: node.isLeaf,
+    children: node.children?.length
+      ? convertToTreeData(node.children)
+      : undefined,
+    data: { conceptNode: node },
+  }));
 
 const ConceptsTree: React.FC<ConceptsTreeProps> = ({
   scope,
@@ -55,7 +83,7 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [treeData, setTreeData] = useState<ConceptsTreeNode[]>([]);
-  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [searchValue, setSearchValue] = useState('');
   const [filteredData, setFilteredData] = useState<ConceptsTreeNode[]>([]);
 
@@ -65,7 +93,7 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
         key: glossary.id,
         title: glossary.displayName || glossary.name,
         type: 'glossary' as const,
-        icon: <GlossaryIcon className="w-4 h-4" />,
+        icon: <GlossaryIcon className="tw:w-4 tw:h-4" />,
         isLeaf: false,
         data: {
           id: glossary.id,
@@ -85,7 +113,7 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
           key: child.id,
           title: child.displayName || child.name || child.id,
           type: 'term' as const,
-          icon: <IconTerm className="w-4 h-4" />,
+          icon: <IconTerm className="tw:w-4 tw:h-4" />,
           isLeaf: true,
           data: {
             id: child.id,
@@ -100,73 +128,58 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
 
   const buildTermTree = useCallback(
     (terms: GlossaryTerm[]): ConceptsTreeNode[] => {
-      return terms
-        .filter((term) => term.id && isValidUUID(term.id))
-        .map((term) => ({
+      return terms.map((term) => {
+        const childrenRefs = term.children?.length
+          ? buildChildrenFromRefs(term.children)
+          : undefined;
+
+        return {
           key: term.id,
           title: term.displayName || term.name,
           type: 'term' as const,
-          icon: <IconTerm className="w-4 h-4" />,
-          isLeaf: !term.children || term.children.length === 0,
+          icon: <IconTerm className="tw:w-4 tw:h-4" />,
+          isLeaf: !childrenRefs?.length,
+          children: childrenRefs,
           data: {
             id: term.id,
-            fullyQualifiedName: term.fullyQualifiedName || term.name,
+            fullyQualifiedName: term.fullyQualifiedName ?? term.name ?? '',
             description: term.description,
-            relationsCount: term.relatedTerms?.length || 0,
+            relationsCount:
+              term.relatedTerms?.length ?? term.childrenCount ?? 0,
           },
-          children:
-            term.children && term.children.length > 0
-              ? buildChildrenFromRefs(term.children)
-              : undefined,
-        }));
+        };
+      });
     },
     [buildChildrenFromRefs]
   );
 
-  const fetchGlossaries = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await getGlossariesList({
-        fields: 'owners,tags,reviewers,domains',
-        limit: 100,
+  const fetchGlossaryTerms = useCallback(
+    async (id: string): Promise<ConceptsTreeNode[]> => {
+      const res = await getGlossaryTerms({
+        glossary: id,
+        fields: [TabSpecificField.CHILDREN],
+        limit: 1000,
       });
 
+      return buildTermTree(res.data ?? []);
+    },
+    [buildTermTree]
+  );
+
+  const fetchGlossaries = useCallback(async () => {
+    try {
+      const response = await getGlossariesList({
+        limit: 1000,
+      });
       const glossaryNodes = buildGlossaryTree(response.data);
       setTreeData(glossaryNodes);
       setFilteredData(glossaryNodes);
-
-      if (glossaryNodes.length > 0) {
-        setExpandedKeys([glossaryNodes[0].key]);
-      }
-    } catch (error) {
-      showErrorToast(error as AxiosError);
+    } catch (err) {
+      showErrorToast(err as AxiosError);
     } finally {
       setLoading(false);
     }
   }, [buildGlossaryTree]);
-
-  const fetchGlossaryTerms = useCallback(
-    async (glossaryId: string) => {
-      try {
-        const response = await getGlossaryTerms({
-          glossary: glossaryId,
-          fields: [
-            TabSpecificField.RELATED_TERMS,
-            TabSpecificField.CHILDREN,
-            TabSpecificField.PARENT,
-          ],
-          limit: 1000,
-        });
-
-        return buildTermTree(response.data);
-      } catch (error) {
-        showErrorToast(error as AxiosError);
-
-        return [];
-      }
-    },
-    [buildTermTree]
-  );
 
   const updateTreeData = (
     list: ConceptsTreeNode[],
@@ -187,23 +200,6 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
       return node;
     });
   };
-
-  const loadTreeData: TreeProps['loadData'] = useCallback(
-    async (treeNode: EventDataNode<DataNode>) => {
-      const node = treeNode as unknown as ConceptsTreeNode;
-
-      if (node.children) {
-        return;
-      }
-
-      if (node.type === 'glossary' && node.data?.id) {
-        const terms = await fetchGlossaryTerms(node.data.id);
-        setTreeData((prev) => updateTreeData(prev, node.key, terms));
-        setFilteredData((prev) => updateTreeData(prev, node.key, terms));
-      }
-    },
-    [fetchGlossaryTerms]
-  );
 
   const filterTree = useCallback(
     (nodes: ConceptsTreeNode[], search: string): ConceptsTreeNode[] => {
@@ -251,8 +247,7 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
         if (value) {
           const filtered = filterTree(treeData, value);
           setFilteredData(filtered);
-          const allKeys = getAllKeys(filtered);
-          setExpandedKeys(allKeys);
+          setExpandedKeys(getAllKeys(filtered));
         } else {
           setFilteredData(treeData);
         }
@@ -260,46 +255,47 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
     [treeData, filterTree]
   );
 
-  const handleSelect: TreeProps['onSelect'] = useCallback(
-    (_: Key[], info: { node: EventDataNode<DataNode> }) => {
-      const node = info.node as unknown as ConceptsTreeNode;
-      onNodeSelect(node);
-      if (node.data?.id) {
-        onNodeFocus(node.data.id);
+  const handleLoadData = useCallback(
+    async (node: DataNode) => {
+      const conceptNode = (node as ConceptTreeDataNode).data?.conceptNode;
+      if (
+        !conceptNode ||
+        conceptNode.children?.length ||
+        conceptNode.type !== 'glossary' ||
+        !conceptNode.data?.id
+      ) {
+        return;
+      }
+      try {
+        const terms = await fetchGlossaryTerms(conceptNode.data.id);
+        setTreeData((prev) => updateTreeData(prev, node.key as string, terms));
+        setFilteredData((prev) =>
+          updateTreeData(prev, node.key as string, terms)
+        );
+      } catch (err) {
+        showErrorToast(err as AxiosError);
+      }
+    },
+    [fetchGlossaryTerms]
+  );
+
+  const handleSelect = useCallback(
+    (_: React.Key[], info: { node: DataNode }) => {
+      const conceptNode = (info.node as ConceptTreeDataNode).data?.conceptNode;
+      if (conceptNode) {
+        onNodeSelect(conceptNode);
+        if (conceptNode.data?.id) {
+          onNodeFocus(conceptNode.data.id);
+        }
       }
     },
     [onNodeSelect, onNodeFocus]
   );
 
-  const handleExpand: TreeProps['onExpand'] = useCallback((keys: Key[]) => {
-    setExpandedKeys(keys as string[]);
-  }, []);
-
-  const switcherIcon = useCallback(({ expanded }: { expanded?: boolean }) => {
-    return expanded ? (
-      <DownOutlined className="text-xs" />
-    ) : (
-      <RightOutlined className="text-xs" />
-    );
-  }, []);
-
-  const renderTitle = useCallback((node: ConceptsTreeNode) => {
-    const plainDescription = node.data?.description
-      ? getPlainTextFromHtml(node.data.description)
-      : undefined;
-
-    return (
-      <Tooltip title={plainDescription}>
-        <div className="concepts-tree-node">
-          <span className="node-title">{node.title}</span>
-          {node.data?.relationsCount !== undefined &&
-            node.data.relationsCount > 0 && (
-              <span className="node-count">{node.data.relationsCount}</span>
-            )}
-        </div>
-      </Tooltip>
-    );
-  }, []);
+  const treeDataNodes = useMemo(
+    () => convertToTreeData(filteredData),
+    [filteredData]
+  );
 
   useEffect(() => {
     if (scope === 'global') {
@@ -332,18 +328,21 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
   return (
     <div className="ontology-explorer-sidebar">
       <div className="sidebar-header">
-        <Typography.Text className="sidebar-title">
-          {t('label.concept-plural')}
-        </Typography.Text>
+        <span className="sidebar-title">{t('label.concept-plural')}</span>
         <Input
-          allowClear
           className="sidebar-search"
+          icon={
+            SearchMd as unknown as React.ComponentType<
+              React.HTMLAttributes<HTMLOrSVGElement>
+            >
+          }
           placeholder={t('label.search-entity', {
             entity: t('label.concept-plural'),
           })}
-          prefix={<SearchOutlined />}
-          size="small"
-          onChange={(e) => handleSearch(e.target.value)}
+          size="sm"
+          onChange={(value) =>
+            handleSearch(typeof value === 'string' ? value : '')
+          }
         />
       </div>
       <div className="sidebar-content">
@@ -356,14 +355,12 @@ const ConceptsTree: React.FC<ConceptsTreeProps> = ({
         ) : (
           <Tree
             blockNode
-            showIcon
             expandedKeys={expandedKeys}
-            loadData={loadTreeData}
+            loadData={handleLoadData}
             selectedKeys={selectedNodeId ? [selectedNodeId] : []}
-            switcherIcon={switcherIcon}
-            titleRender={(node) => renderTitle(node as ConceptsTreeNode)}
-            treeData={filteredData as DataNode[]}
-            onExpand={handleExpand}
+            showLine={false}
+            treeData={treeDataNodes}
+            onExpand={(keys) => setExpandedKeys(keys)}
             onSelect={handleSelect}
           />
         )}

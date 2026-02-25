@@ -1080,6 +1080,7 @@
     "latest-offset": "Последнее смещение",
     "layer": "Слой",
     "layer-plural": "Слои",
+    "layout": "Макет",
     "ldap-group-dn": "DN группы LDAP",
     "ldap-group-mapping": "Сопоставление группы LDAP",
     "learn-how-this-feature-works": "Узнайте, как работает эта функция?",

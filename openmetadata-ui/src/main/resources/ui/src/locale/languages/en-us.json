@@ -1080,6 +1080,7 @@
     "latest-offset": "Latest Offset",
     "layer": "Layer",
     "layer-plural": "Layers",
+    "layout": "Layout",
     "ldap-group-dn": "LDAP Group DN",
     "ldap-group-mapping": "LDAP Group Mapping",
     "learn-how-this-feature-works": "Learn how this feature works?",

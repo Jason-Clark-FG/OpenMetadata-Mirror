@@ -16,6 +16,7 @@ import {
   DownloadOutlined,
   ExpandOutlined,
 } from '@ant-design/icons';
+import { Tabs } from '@openmetadata/ui-core-components';
 import {
   Button,
   Divider,
@@ -27,7 +28,6 @@ import {
   List,
   MenuProps,
   Modal,
-  Segmented,
   Select,
   Space,
   Spin,
@@ -284,21 +284,43 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
       );
     }
 
-    // For term scope, filter to only show the selected term and its direct connections
-    if (scope === 'term' && entityId) {
-      // Find edges connected to the current term
-      filteredEdges = filteredEdges.filter(
-        (e) => e.from === entityId || e.to === entityId
-      );
-
-      // Find nodes that are directly connected to the current term
-      const connectedNodeIds = new Set<string>([entityId]);
-      filteredEdges.forEach((e) => {
-        connectedNodeIds.add(e.from);
-        connectedNodeIds.add(e.to);
+    // Term scope: Depth "All" = full graph; Depth 1/2/3 = that many hops from the term
+    if (scope === 'term' && entityId && filters.depth > 0) {
+      const adjacency = new Map<string, Set<string>>();
+      filteredEdges.forEach((edge) => {
+        if (!adjacency.has(edge.from)) {
+          adjacency.set(edge.from, new Set());
+        }
+        if (!adjacency.has(edge.to)) {
+          adjacency.set(edge.to, new Set());
+        }
+        adjacency.get(edge.from)?.add(edge.to);
+        adjacency.get(edge.to)?.add(edge.from);
       });
 
-      filteredNodes = filteredNodes.filter((n) => connectedNodeIds.has(n.id));
+      const visited = new Set<string>([entityId]);
+      let frontier = new Set<string>([entityId]);
+
+      for (let d = 0; d < filters.depth; d++) {
+        const next = new Set<string>();
+        frontier.forEach((nodeId) => {
+          adjacency.get(nodeId)?.forEach((neighbor) => {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              next.add(neighbor);
+            }
+          });
+        });
+        frontier = next;
+        if (frontier.size === 0) {
+          break;
+        }
+      }
+
+      filteredNodes = filteredNodes.filter((node) => visited.has(node.id));
+      filteredEdges = filteredEdges.filter(
+        (edge) => visited.has(edge.from) && visited.has(edge.to)
+      );
     }
 
     // Filter by glossary
@@ -465,101 +487,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 
     return 'all';
   }, [filters.glossaryIds]);
-
-  const searchOptions = useMemo(() => {
-    const termOptions =
-      combinedGraphData?.nodes
-        .filter(
-          (node) =>
-            node.type !== 'glossary' &&
-            node.type !== METRIC_NODE_TYPE &&
-            node.type !== ASSET_NODE_TYPE
-        )
-        .map((node) => ({
-          label: node.originalLabel ?? node.label,
-          value: node.originalLabel ?? node.label,
-          type: 'term' as const,
-          nodeId: node.id,
-        })) ?? [];
-
-    const metricOptions = settings.showMetrics
-      ? combinedGraphData?.nodes
-          .filter((node) => node.type === METRIC_NODE_TYPE)
-          .map((node) => ({
-            label: node.originalLabel ?? node.label,
-            value: node.originalLabel ?? node.label,
-            type: 'metric' as const,
-            nodeId: node.id,
-          })) ?? []
-      : [];
-
-    const assetOptions =
-      explorationMode === 'data'
-        ? combinedGraphData?.nodes
-            .filter((node) => node.type === ASSET_NODE_TYPE)
-            .map((node) => ({
-              label: node.originalLabel ?? node.label,
-              value: node.originalLabel ?? node.label,
-              type: 'asset' as const,
-              nodeId: node.id,
-            })) ?? []
-        : [];
-
-    const glossaryOptions = glossaries.map((glossary) => ({
-      label: glossary.displayName || glossary.name,
-      value: glossary.displayName || glossary.name,
-      type: 'glossary' as const,
-      glossaryId: glossary.id,
-    }));
-
-    const relationOptions = relationTypes.map((relationType) => ({
-      label: relationType.displayName || relationType.name,
-      value: relationType.displayName || relationType.name,
-      type: 'relationType' as const,
-      relationType: relationType.name,
-    }));
-
-    const groups = [];
-    if (glossaryOptions.length > 0) {
-      groups.push({
-        label: t('label.glossary'),
-        options: glossaryOptions,
-      });
-    }
-    if (termOptions.length > 0) {
-      groups.push({
-        label: t('label.term-plural'),
-        options: termOptions,
-      });
-    }
-    if (metricOptions.length > 0) {
-      groups.push({
-        label: t('label.metric-plural'),
-        options: metricOptions,
-      });
-    }
-    if (relationOptions.length > 0) {
-      groups.push({
-        label: t('label.relation-type'),
-        options: relationOptions,
-      });
-    }
-    if (assetOptions.length > 0) {
-      groups.push({
-        label: t('label.data-asset-plural'),
-        options: assetOptions,
-      });
-    }
-
-    return groups;
-  }, [
-    combinedGraphData,
-    glossaries,
-    relationTypes,
-    settings.showMetrics,
-    explorationMode,
-    t,
-  ]);
 
   const relationTypesForFilters = useMemo(() => {
     if (explorationMode !== 'data') {
@@ -1604,70 +1531,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     setSelectedNode(null);
   }, []);
 
-  const handleSearchSelect = useCallback(
-    (
-      value: string,
-      option: {
-        type?: 'term' | 'metric' | 'asset' | 'glossary' | 'relationType';
-        nodeId?: string;
-        glossaryId?: string;
-        relationType?: string;
-      }
-    ) => {
-      if (option.type === 'term' && option.nodeId) {
-        const node =
-          combinedGraphData?.nodes.find((n) => n.id === option.nodeId) ?? null;
-        if (node) {
-          setSelectedNode(node);
-          graphRef.current?.focusNode(node.id);
-        }
-
-        return;
-      }
-
-      if (option.type === 'metric' && option.nodeId) {
-        const node =
-          combinedGraphData?.nodes.find((n) => n.id === option.nodeId) ?? null;
-        if (node) {
-          setSelectedNode(node);
-          graphRef.current?.focusNode(node.id);
-        }
-
-        return;
-      }
-
-      if (option.type === 'asset' && option.nodeId) {
-        const node =
-          combinedGraphData?.nodes.find((n) => n.id === option.nodeId) ?? null;
-        if (node) {
-          setSelectedNode(node);
-          graphRef.current?.focusNode(node.id);
-        }
-
-        return;
-      }
-
-      if (option.type === 'glossary' && option.glossaryId) {
-        setFilters((prev) => ({
-          ...prev,
-          glossaryIds: [option.glossaryId ?? ''],
-          searchQuery: value,
-        }));
-
-        return;
-      }
-
-      if (option.type === 'relationType' && option.relationType) {
-        setFilters((prev) => ({
-          ...prev,
-          relationTypes: [option.relationType ?? ''],
-          searchQuery: value,
-        }));
-      }
-    },
-    [combinedGraphData]
-  );
-
   const handleViewModeChange = useCallback(
     (viewMode: GraphViewMode) => {
       setFilters((prev) => {
@@ -1759,33 +1622,42 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 
   return (
     <div
-      className={classNames('ontology-explorer', className)}
+      className={classNames(
+        'tw:flex tw:h-full tw:flex-col tw:bg-white',
+        className
+      )}
+      data-testid="ontology-explorer"
       style={{ height }}>
       {showHeader && (
-        <div className="ontology-explorer-header">
-          <Typography.Title className="header-title" level={4}>
+        <div
+          className="tw:flex tw:items-center tw:justify-between tw:border-b tw:border-gray-200 tw:bg-white tw:px-5 tw:py-3"
+          data-testid="ontology-explorer-header">
+          <Typography.Title
+            className="tw:m-0 tw:text-lg tw:font-semibold tw:text-gray-800"
+            level={4}>
             {t('label.ontology-explorer')}
           </Typography.Title>
           {filteredGraphData && (
-            <Typography.Text className="header-stats" type="secondary">
+            <Typography.Text
+              className="tw:text-xs tw:text-gray-500"
+              data-testid="ontology-explorer-stats"
+              type="secondary">
               {statsText}
             </Typography.Text>
           )}
         </div>
       )}
 
-      <div className="ontology-explorer-toolbar">
+      <div className="tw:flex tw:flex-col tw:gap-2.5 tw:border-b tw:border-gray-200 tw:bg-white tw:p-2.5 tw:px-4 tw:shadow-sm">
         <FilterToolbar
           filters={filters}
           glossaries={glossaries}
           relationTypes={relationTypesForFilters}
-          searchOptions={searchOptions}
           onFiltersChange={setFilters}
-          onSearchSelect={handleSearchSelect}
           onViewModeChange={handleViewModeChange}
         />
 
-        <div className="ontology-explorer-actionbar">
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:border-t tw:border-gray-200 tw:pt-2">
           <Space wrap size="small">
             <Tooltip
               title={
@@ -1794,7 +1666,8 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                   : t('message.available-on-global-view')
               }>
               <Select
-                className="actionbar-select"
+                className="tw:min-w-45"
+                data-testid="ontology-glossary-scope-select"
                 disabled={scope !== 'global'}
                 options={[
                   { label: t('label.all-glossaries'), value: 'all' },
@@ -1808,20 +1681,30 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               />
             </Tooltip>
 
-            <Segmented
-              options={[
-                { label: t('label.model'), value: 'model' },
-                { label: t('label.data'), value: 'data' },
-              ]}
-              size="small"
-              value={explorationMode}
-              onChange={(value) => handleModeChange(value as ExplorationMode)}
-            />
+            <div className="tw:w-fit tw:grow-0 tw:shrink-0">
+              <Tabs
+                className="tw:w-fit!"
+                selectedKey={explorationMode}
+                onSelectionChange={(key) =>
+                  key != null && handleModeChange(key as ExplorationMode)
+                }>
+                <Tabs.List
+                  items={[
+                    { label: t('label.model'), id: 'model' },
+                    { label: t('label.data'), id: 'data' },
+                  ]}
+                  size="sm"
+                  type="button-border"
+                />
+                <Tabs.Panel className="tw:hidden" id="model" />
+                <Tabs.Panel className="tw:hidden" id="data" />
+              </Tabs>
+            </div>
 
             <Dropdown
               menu={{
                 items: [
-                  { key: '1', label: t('label.expand-1-hop') },
+                  { key: '1', label: t('label.expand-1-hops') },
                   { key: '2', label: t('label.expand-2-hops') },
                 ],
                 onClick: ({ key }) => handleGrowSelection(Number(key)),
@@ -1835,6 +1718,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             </Dropdown>
 
             <Button
+              data-testid="ontology-quick-add-button"
               icon={<ApartmentOutlined />}
               size="small"
               onClick={() => handleQuickAddOpen(selectedNode ?? undefined)}>
@@ -1844,7 +1728,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         </div>
       </div>
 
-      <div className="ontology-explorer-content">
+      <div className="tw:flex tw:min-h-0 tw:flex-1 tw:overflow-hidden">
         {scope !== 'term' && (
           <ConceptsTree
             entityId={entityId}
@@ -1856,8 +1740,12 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
           />
         )}
 
-        <div className="ontology-explorer-graph">
-          <div className="ontology-explorer-controls">
+        <div className="tw:relative tw:flex tw:min-h-100 tw:min-w-0 tw:flex-1 tw:flex-col tw:overflow-hidden tw:bg-linear-to-b tw:from-slate-50 tw:to-slate-100">
+          <div
+            className={
+              'tw:absolute tw:right-3 tw:top-3 tw:z-100 tw:flex tw:shrink-0 tw:flex-nowrap tw:items-center tw:gap-3 ' +
+              'tw:rounded-lg tw:border tw:border-gray-200 tw:bg-white tw:px-3 tw:py-1.5 tw:shadow-sm [&>*]:tw:shrink-0'
+            }>
             <GraphSettingsPanel
               settings={settings}
               onSettingsChange={handleSettingsChange}
@@ -1895,21 +1783,25 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
           </div>
 
           {loading ? (
-            <div className="ontology-explorer-loading">
+            <div
+              className="tw:flex tw:min-h-100 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:bg-slate-100"
+              data-testid="ontology-graph-loading">
               <Spin size="large" />
-              <Typography.Text className="m-t-md" type="secondary">
+              <Typography.Text className="tw:mt-4" type="secondary">
                 {t('label.loading-graph')}
               </Typography.Text>
             </div>
           ) : !filteredGraphData || filteredGraphData.nodes.length === 0 ? (
-            <div className="ontology-explorer-empty">
+            <div
+              className="tw:flex tw:min-h-100 tw:flex-1 tw:flex-col tw:items-center tw:justify-center tw:bg-slate-100"
+              data-testid="ontology-graph-empty">
               <Empty
                 description={t('message.no-glossary-terms-found')}
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             </div>
           ) : (
-            <div className="ontology-explorer-canvas">
+            <div className="tw:absolute tw:inset-0 tw:bg-slate-100">
               <OntologyGraph
                 edges={filteredGraphData.edges}
                 glossaryColorMap={glossaryColorMap}
@@ -1934,7 +1826,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
               nodes={filteredGraphData?.nodes}
               relationTypes={relationTypes}
               onAddRelation={(node) => handleQuickAddOpen(node)}
-              onClose={() => setSelectedNode(null)}
+              onClose={() => {
+                setSelectedNode(null);
+                setSelectedTreeNode(null);
+              }}
               onFocusNode={handleFocusSelected}
               onNavigate={(node) => {
                 const path = getNodePath(node);
