@@ -52,3 +52,12 @@ SHOW CATALOGS
 TRINO_VIEW_DEFINITION = """
 SHOW CREATE VIEW {view_name}
 """
+
+TRINO_VIEW_DEFINITION_FALLBACK = textwrap.dedent(
+    """
+    SELECT view_definition
+    FROM {catalog_name}.information_schema.views
+    WHERE table_schema = '{schema_name}'
+    AND table_name = '{view_name}'
+    """
+)

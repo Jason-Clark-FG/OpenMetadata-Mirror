@@ -38,6 +38,7 @@ from metadata.ingestion.source.database.common_db_source import CommonDbSourceSe
 from metadata.ingestion.source.database.trino.queries import (
     TRINO_TABLE_COMMENTS,
     TRINO_VIEW_DEFINITION,
+    TRINO_VIEW_DEFINITION_FALLBACK,
 )
 from metadata.utils import fqn
 from metadata.utils.filters import filter_by_database
@@ -181,6 +182,10 @@ def get_view_definition(
     Default implementation from sqlalchemy uses view_definition column value
     from "information_schema"."views" view, which does not return the full definition
     of view. Hence, we should use SHOW CREATE VIEW statement to get full view definition.
+
+    When SHOW CREATE VIEW fails due to insufficient permissions (e.g. read-only service
+    accounts on Starburst Trino that lack ownership), falls back to querying
+    information_schema.views which is accessible with read-only permissions.
     """
     catalog_name = self._get_default_catalog_name(  # pylint: disable=protected-access
         connection
@@ -197,12 +202,46 @@ def get_view_definition(
         full_view_name = f"{schema}.{view_name}"
 
     try:
-        # Use SHOW CREATE VIEW to get the full DDL
         query = TRINO_VIEW_DEFINITION.format(view_name=full_view_name)
         res = connection.execute(sql.text(query))
         return res.scalar()
+    except error.TrinoQueryError as trino_err:
+        if trino_err.error_name in (error.PERMISSION_DENIED,):
+            logger.warning(
+                f"Insufficient permissions to run SHOW CREATE VIEW for [{full_view_name}]. "
+                f"Falling back to information_schema.views."
+            )
+            return _get_view_definition_from_information_schema(
+                connection, catalog_name, schema, view_name
+            )
+        logger.warning(f"Could not get view definition for view [{full_view_name}]")
     except Exception:
         logger.warning(f"Could not get view definition for view [{full_view_name}]")
+
+
+def _get_view_definition_from_information_schema(
+    connection: Connection,
+    catalog_name: Optional[str],
+    schema: str,
+    view_name: str,
+) -> Optional[str]:
+    if not catalog_name:
+        logger.warning(
+            f"Cannot fall back to information_schema.views for view [{view_name}]: catalog name is required."
+        )
+        return None
+    try:
+        query = TRINO_VIEW_DEFINITION_FALLBACK.format(
+            catalog_name=catalog_name,
+            schema_name=schema,
+            view_name=view_name,
+        )
+        res = connection.execute(sql.text(query))
+        return res.scalar()
+    except Exception:
+        logger.warning(
+            f"Could not get view definition from information_schema.views for view [{catalog_name}.{schema}.{view_name}]"
+        )
 
 
 TrinoDialect._get_columns = _get_columns  # pylint: disable=protected-access
