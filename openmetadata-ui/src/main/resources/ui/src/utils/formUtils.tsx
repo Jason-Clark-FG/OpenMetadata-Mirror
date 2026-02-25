@@ -460,13 +460,14 @@ export const getField = (field: FieldProp) => {
     }
 
     case FieldTypes.UT_SWITCH: {
-      const { disabled, onChange, ...switchRest } = props as SwitchProps;
+      const { disabled, onChange, size, ...switchRest } = props as SwitchProps;
 
       return (
         <Form.Item {...formProps} valuePropName="isSelected">
           <Toggle
             isDisabled={disabled}
             label={muiLabel as string}
+            size={size}
             onChange={onChange}
             {...switchRest}
           />
