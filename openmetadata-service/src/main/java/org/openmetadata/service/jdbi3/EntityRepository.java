@@ -7404,31 +7404,57 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     CollectionDAO dao = Entity.getCollectionDAO();
 
+    // Organization is an implicit parent for teams with no explicit parents,
+    // but its PARENT_OF relationships are not stored in the database.
+    // We need to include it so roles/policies from Organization are inherited.
+    UUID organizationId = getOrganizationId();
+
     while (!currentLevel.isEmpty()) {
       List<String> currentIds = currentLevel.stream().map(UUID::toString).toList();
 
-      // Batch query to find all parents for current level
-      // Relationship: Parent --(PARENT_OF)--> Child
-      // findFromBatch with toIds=currentIds finds Parents
       List<CollectionDAO.EntityRelationshipObject> parentRecords =
           dao.relationshipDAO()
               .findFromBatch(currentIds, Relationship.PARENT_OF.ordinal(), TEAM, TEAM, include);
 
-      // Collect parent IDs that we haven't visited yet
+      // Build set of teams that have at least one explicit parent
+      Set<UUID> teamsWithParents = new HashSet<>();
       Set<UUID> newParents = new HashSet<>();
       for (CollectionDAO.EntityRelationshipObject rec : parentRecords) {
+        UUID childId = UUID.fromString(rec.getToId());
         UUID parentId = UUID.fromString(rec.getFromId());
+        teamsWithParents.add(childId);
         if (!allTeamIds.contains(parentId)) {
           newParents.add(parentId);
           allTeamIds.add(parentId);
         }
       }
 
-      // Move to next level (parents become the new current level)
+      // For teams without explicit parents, add Organization as implicit parent
+      if (organizationId != null) {
+        for (UUID teamId : currentLevel) {
+          if (!teamsWithParents.contains(teamId)
+              && !teamId.equals(organizationId)
+              && !allTeamIds.contains(organizationId)) {
+            newParents.add(organizationId);
+            allTeamIds.add(organizationId);
+          }
+        }
+      }
+
       currentLevel = newParents;
     }
 
     return allTeamIds;
+  }
+
+  private static UUID getOrganizationId() {
+    try {
+      EntityReference orgRef =
+          Entity.getEntityReferenceByName(TEAM, Entity.ORGANIZATION_NAME, NON_DELETED);
+      return orgRef.getId();
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   /**
