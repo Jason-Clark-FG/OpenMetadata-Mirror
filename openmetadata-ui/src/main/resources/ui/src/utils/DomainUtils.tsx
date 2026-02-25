@@ -88,7 +88,10 @@ export const withDomainFilter = (
 
   if (isGetRequest && hasActiveDomain) {
     if (config.url?.includes('/search/query')) {
-      if (config.params?.index === SearchIndex.TAG) {
+      if (
+        config.params?.index === SearchIndex.TAG ||
+        config.params?.index === SearchIndex.DOMAIN
+      ) {
         return config;
       }
       let filter: QueryFilterInterface = { query: { bool: {} } };
