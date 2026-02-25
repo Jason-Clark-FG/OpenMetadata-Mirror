@@ -42,25 +42,22 @@
           "type": "object",
           "properties": {
             "addReviewers": {
-              "description": "Deprecated: use assigneeSources instead. Add the Reviewers to the assignees List.",
+              "description": "Add the Reviewers to the assignees List.",
+              "type": "boolean",
+              "default": true
+            },
+            "addOwners": {
+              "description": "Add the Owners to the assignees List.",
               "type": "boolean",
               "default": false
             },
-            "assigneeSource": {
-              "title": "Assignee Source",
-              "description": "Deprecated: use assigneeSources instead. Single source for Task assignees.",
-              "type": "string",
-              "enum": ["reviewers", "owners"],
-              "default": "reviewers"
-            },
-            "assigneeSources": {
-              "title": "Assignee Sources",
-              "description": "List of sources for the Task assignees. Each entry can be 'reviewers' (entity's reviewers), 'owners' (entity's owners), or a specific entity link string (e.g. '<#E::user::john.doe>'). Multiple sources are unioned together. When empty, the task is auto-approved.",
+            "candidates": {
+              "description": "List of specific candidates (users or teams) assigned to this task.",
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "../../../../../type/entityReference.json"
               },
-              "default": ["reviewers"]
+              "default": []
             }
           },
           "additionalProperties": false

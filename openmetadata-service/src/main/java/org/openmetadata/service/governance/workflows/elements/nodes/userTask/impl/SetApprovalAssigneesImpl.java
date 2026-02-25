@@ -17,6 +17,7 @@ import org.flowable.engine.delegate.BpmnError;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -39,62 +40,74 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       Map<String, Object> assigneesConfig =
           JsonUtils.readOrConvertValue(assigneesExpr.getValue(execution), Map.class);
 
-      // Resolve the list of sources to use. Precedence:
-      //   1. assigneeSources (new, supports multiple sources and specific user entity links)
-      //   2. assigneeSource  (single-value legacy field)
-      //   3. addReviewers=true (oldest legacy field)
-      List<String> sources = resolveSources(assigneesConfig);
+      // Get the entity
+      MessageParser.EntityLink entityLink =
+          MessageParser.EntityLink.parse(
+              (String)
+                  varHandler.getNamespacedVariable(
+                      inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
+      EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
 
-      // Use a set to deduplicate assignee entity-link strings across sources.
       Set<String> assignees = new LinkedHashSet<>();
 
-      if (!sources.isEmpty()) {
-        MessageParser.EntityLink entityLink =
-            MessageParser.EntityLink.parse(
-                (String)
-                    varHandler.getNamespacedVariable(
-                        inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
-        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+      // Process addReviewers flag
+      Boolean addReviewers = (Boolean) assigneesConfig.getOrDefault("addReviewers", true);
+      if (addReviewers) {
+        boolean entitySupportsReviewers =
+            Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
 
-        for (String source : sources) {
-          switch (source) {
-            case "reviewers" -> {
-              boolean entitySupportsReviewers =
-                  Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
-              if (entitySupportsReviewers) {
-                // Entity has the reviewers field: use reviewers as-is (even if empty).
-                // An empty reviewers list means auto-approve; do NOT fall back to owners.
-                List<EntityReference> reviewers = entity.getReviewers();
-                if (reviewers != null && !reviewers.isEmpty()) {
-                  assignees.addAll(getEntityLinkStringFromEntityReference(reviewers));
-                }
-              } else {
-                // Entity has no reviewers field: fall back to owners.
-                // If owners are also empty the task will be auto-approved.
-                List<EntityReference> owners = entity.getOwners();
-                if (owners != null && !owners.isEmpty()) {
-                  assignees.addAll(getEntityLinkStringFromEntityReference(owners));
-                }
+        if (entitySupportsReviewers
+            && entity.getReviewers() != null
+            && !entity.getReviewers().isEmpty()) {
+          List<String> reviewerAssignees =
+              getEntityLinkStringFromEntityReferenceWithTeamExpansion(entity.getReviewers());
+          assignees.addAll(reviewerAssignees);
+        } else if (!entitySupportsReviewers
+            && entity.getOwners() != null
+            && !entity.getOwners().isEmpty()) {
+          // Fallback to owners if entity doesn't support reviewers
+          List<String> ownerAssignees =
+              getEntityLinkStringFromEntityReferenceWithTeamExpansion(entity.getOwners());
+          assignees.addAll(ownerAssignees);
+        } else if (addReviewers && entity.getOwners() != null && !entity.getOwners().isEmpty()) {
+          // Final fallback to owners if no reviewers exist and addReviewers is true
+          List<String> ownerAssignees =
+              getEntityLinkStringFromEntityReferenceWithTeamExpansion(entity.getOwners());
+          assignees.addAll(ownerAssignees);
+        }
+      }
+
+      // Process addOwners flag
+      Boolean addOwners = (Boolean) assigneesConfig.getOrDefault("addOwners", false);
+      if (addOwners && entity.getOwners() != null) {
+        List<String> ownerAssignees =
+            getEntityLinkStringFromEntityReferenceWithTeamExpansion(entity.getOwners());
+        assignees.addAll(ownerAssignees);
+      }
+
+      // Process users array
+      List<String> userFqns = (List<String>) assigneesConfig.get("users");
+      if (userFqns != null) {
+        for (String userFqn : userFqns) {
+          if (userFqn != null && !userFqn.trim().isEmpty()) {
+            assignees.add(new MessageParser.EntityLink("user", userFqn).getLinkString());
+          }
+        }
+      }
+
+      // Process teams array and expand to individual users
+      List<String> teamFqns = (List<String>) assigneesConfig.get("teams");
+      if (teamFqns != null) {
+        for (String teamFqn : teamFqns) {
+          if (teamFqn != null && !teamFqn.trim().isEmpty()) {
+            try {
+              MessageParser.EntityLink teamLink = new MessageParser.EntityLink("team", teamFqn);
+              Team team = (Team) Entity.getEntity(teamLink, "users", Include.ALL);
+              if (team.getUsers() != null) {
+                assignees.addAll(getEntityLinkStringFromEntityReference(team.getUsers()));
               }
-            }
-            case "owners" -> {
-              List<EntityReference> owners = entity.getOwners();
-              if (owners != null && !owners.isEmpty()) {
-                assignees.addAll(getEntityLinkStringFromEntityReference(owners));
-              }
-            }
-            default -> {
-              // Treat as a specific entity link (e.g. <#E::user::john.doe>).
-              // Log a warning for invalid links and skip them rather than failing the whole task.
-              try {
-                assignees.add(MessageParser.EntityLink.parse(source).getLinkString());
-              } catch (Exception e) {
-                LOG.warn(
-                    "[Process: {}] Skipping invalid assignee entity link '{}': {}",
-                    execution.getProcessInstanceId(),
-                    source,
-                    e.getMessage());
-              }
+            } catch (Exception e) {
+              LOG.warn("Failed to expand team {}: {}", teamFqn, e.getMessage());
             }
           }
         }
@@ -160,5 +173,37 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
                 new MessageParser.EntityLink(reviewer.getType(), reviewer.getFullyQualifiedName())
                     .getLinkString())
         .toList();
+  }
+
+  private List<String> getEntityLinkStringFromEntityReferenceWithTeamExpansion(
+      List<EntityReference> assignees) {
+    List<String> result = new ArrayList<>();
+
+    for (EntityReference assignee : assignees) {
+      if ("team".equals(assignee.getType())) {
+        try {
+          MessageParser.EntityLink teamLink =
+              new MessageParser.EntityLink("team", assignee.getFullyQualifiedName());
+          Team team = Entity.getEntity(teamLink, "users", Include.ALL);
+          if (team.getUsers() != null && !team.getUsers().isEmpty()) {
+            List<String> teamMembers = getEntityLinkStringFromEntityReference(team.getUsers());
+            result.addAll(teamMembers);
+          } else {
+            LOG.warn(
+                "Team {} has no users or users list is null", assignee.getFullyQualifiedName());
+          }
+        } catch (Exception e) {
+          LOG.error(
+              "Failed to expand team {}: {}", assignee.getFullyQualifiedName(), e.getMessage());
+        }
+      } else {
+        String userLink =
+            new MessageParser.EntityLink(assignee.getType(), assignee.getFullyQualifiedName())
+                .getLinkString();
+        result.add(userLink);
+      }
+    }
+
+    return result;
   }
 }

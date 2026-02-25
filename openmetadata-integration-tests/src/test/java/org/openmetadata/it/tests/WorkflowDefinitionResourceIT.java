@@ -2758,15 +2758,23 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -2778,7 +2786,13 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "ApproveEntity",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "ApproveEntity",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ],
               "config": {
@@ -2800,6 +2814,10 @@ public class WorkflowDefinitionResourceIT {
 
       LOG.debug(
           "Workflow with user approval task for multiple non-reviewer entities created successfully");
+
+      // Clean up - delete the created workflow
+      client.workflowDefinitions().delete(created.getId());
+      LOG.debug("Test workflow deleted successfully");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -2844,15 +2862,23 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -2864,7 +2890,13 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "ApproveEntity",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "ApproveEntity",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ],
               "config": {
@@ -2885,6 +2917,10 @@ public class WorkflowDefinitionResourceIT {
       assertNotNull(created);
 
       LOG.debug("Workflow with user approval task for mixed entity types created successfully");
+
+      // Clean up - delete the created workflow
+      client.workflowDefinitions().delete(created.getId());
+      LOG.debug("Test workflow deleted successfully");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -3217,13 +3253,21 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -3235,7 +3279,13 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "approval",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "approval",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ]
             }
@@ -3276,7 +3326,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   },
                   "output": ["updatedBy"]
@@ -3928,7 +3980,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   },
                   "input": ["relatedEntity"],
@@ -4547,7 +4601,9 @@ public class WorkflowDefinitionResourceIT {
                           "displayName": "User Approval",
                           "config": {
                             "assignees": {
-                              "addReviewers": true
+                              "addReviewers": true,
+                              "addOwners": false,
+                              "candidates": []
                             },
                             "approvalThreshold": 1,
                             "rejectionThreshold": 1
@@ -5055,7 +5111,9 @@ public class WorkflowDefinitionResourceIT {
                   "displayName": "User Approval",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
@@ -5305,6 +5363,10 @@ public class WorkflowDefinitionResourceIT {
     assertEquals("updated string", updatedWorkflowDef.getDescription());
     LOG.debug("Updated workflow without entityTypes: {}", updatedWorkflowDef.getName());
 
+    // Clean up - delete the created workflow
+    client.workflowDefinitions().delete(updatedWorkflowDef.getId());
+    LOG.debug("Test workflow deleted successfully");
+
     LOG.info("test_CreateWorkflowWithoutEntityTypes completed successfully");
   }
 
@@ -5366,7 +5428,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1

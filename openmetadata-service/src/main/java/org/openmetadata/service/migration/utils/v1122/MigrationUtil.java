@@ -117,19 +117,73 @@ public class MigrationUtil {
 
   private static boolean needsMigration(ObjectNode obj) {
     JsonNode addReviewers = obj.get("addReviewers");
+    JsonNode assigneeSource = obj.get("assigneeSource");
     JsonNode assigneeSources = obj.get("assigneeSources");
-    return addReviewers != null
-        && addReviewers.isBoolean()
-        && addReviewers.asBoolean()
-        && assigneeSources == null;
+    JsonNode addOwners = obj.get("addOwners");
+    JsonNode candidates = obj.get("candidates");
+
+    // Only migrate if we have old fields AND don't have the complete new structure
+    boolean hasOldFields =
+        (assigneeSource != null
+            || assigneeSources != null
+            || (addReviewers != null && addOwners == null && candidates == null));
+    boolean hasNewStructure = (addReviewers != null && addOwners != null && candidates != null);
+
+    return hasOldFields && !hasNewStructure;
   }
 
   private static ObjectNode migrateAssigneesNode(ObjectNode assigneesObj) {
-    ObjectNode result = assigneesObj.deepCopy();
-    result.remove("addReviewers");
-    ArrayNode sources = MAPPER.createArrayNode();
-    sources.add("reviewers");
-    result.set("assigneeSources", sources);
+    ObjectNode result = MAPPER.createObjectNode();
+
+    // Set defaults
+    boolean addReviewers = true;
+    boolean addOwners = false;
+    ArrayNode candidates = MAPPER.createArrayNode();
+
+    // Handle old format conversions
+    JsonNode addReviewersNode = assigneesObj.get("addReviewers");
+    JsonNode assigneeSourceNode = assigneesObj.get("assigneeSource");
+    JsonNode assigneeSourcesNode = assigneesObj.get("assigneeSources");
+
+    // Process old addReviewers field
+    if (addReviewersNode != null && addReviewersNode.isBoolean()) {
+      addReviewers = addReviewersNode.asBoolean();
+    }
+
+    // Process assigneeSource (single source)
+    if (assigneeSourceNode != null) {
+      String source = assigneeSourceNode.asText();
+      if ("reviewers".equals(source)) {
+        addReviewers = true;
+      } else if ("owners".equals(source)) {
+        addOwners = true;
+      }
+    }
+
+    // Process assigneeSources (array)
+    if (assigneeSourcesNode != null && assigneeSourcesNode.isArray()) {
+      for (JsonNode sourceNode : assigneeSourcesNode) {
+        String source = sourceNode.asText();
+        if ("reviewers".equals(source)) {
+          addReviewers = true;
+        } else if ("owners".equals(source)) {
+          addOwners = true;
+        } else {
+          // It's an entity reference - add to candidates
+          // For now, create a simple entity reference structure
+          ObjectNode candidateRef = MAPPER.createObjectNode();
+          candidateRef.put("type", "user"); // Default assumption
+          candidateRef.put("fullyQualifiedName", source);
+          candidates.add(candidateRef);
+        }
+      }
+    }
+
+    // Set the new structure
+    result.put("addReviewers", addReviewers);
+    result.put("addOwners", addOwners);
+    result.set("candidates", candidates);
+
     return result;
   }
 }

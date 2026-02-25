@@ -2393,15 +2393,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             },
             "approvalThreshold": 1,
             "rejectionThreshold": 1
           }
         },
         {
-          "name": "end",
-          "displayName": "End",
+          "name": "endApproved",
+          "displayName": "End Approved",
+          "type": "endEvent",
+          "subType": "endEvent"
+        },
+        {
+          "name": "endRejected",
+          "displayName": "End Rejected",
           "type": "endEvent",
           "subType": "endEvent"
         }
@@ -2413,7 +2421,13 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
         },
         {
           "from": "ApproveDatabase",
-          "to": "end"
+          "to": "endApproved",
+          "condition": "true"
+        },
+        {
+          "from": "ApproveDatabase",
+          "to": "endRejected",
+          "condition": "false"
         }
       ],
       "config": {
@@ -2433,12 +2447,24 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     assertEquals(
         Response.Status.CREATED.getStatusCode(),
         response.getStatus(),
-        "Expected workflow creation to succeed for entity without reviewer support. Got: "
-            + response.readEntity(String.class));
+        "Expected workflow creation to succeed for entity without reviewer support");
 
     LOG.debug(
         "Workflow with user approval task for non-reviewer entity created successfully with status: {}",
         response.getStatus());
+
+    // Get the created workflow for cleanup
+    WorkflowDefinition created = response.readEntity(WorkflowDefinition.class);
+
+    // Cleanup - delete the created workflow
+    Response deleteResponse =
+        SecurityUtil.addHeaders(
+                getResource("governance/workflowDefinitions/" + created.getId()),
+                ADMIN_AUTH_HEADERS)
+            .delete();
+
+    assertEquals(Response.Status.OK.getStatusCode(), deleteResponse.getStatus());
+    LOG.debug("Workflow deleted successfully");
 
     LOG.info("test_UserApprovalTaskWithoutReviewerSupport completed successfully");
   }
@@ -3031,15 +3057,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             },
             "approvalThreshold": 1,
             "rejectionThreshold": 1
           }
         },
         {
-          "name": "end",
-          "displayName": "End",
+          "name": "endApproved",
+          "displayName": "End Approved",
+          "type": "endEvent",
+          "subType": "endEvent"
+        },
+        {
+          "name": "endRejected",
+          "displayName": "End Rejected",
           "type": "endEvent",
           "subType": "endEvent"
         }
@@ -3051,7 +3085,13 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
         },
         {
           "from": "ApproveEntity",
-          "to": "end"
+          "to": "endApproved",
+          "condition": "true"
+        },
+        {
+          "from": "ApproveEntity",
+          "to": "endRejected",
+          "condition": "false"
         }
       ],
       "config": {
@@ -3071,12 +3111,24 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     assertEquals(
         Response.Status.CREATED.getStatusCode(),
         response.getStatus(),
-        "Expected workflow creation to succeed for entities without reviewer support. Got: "
-            + response.readEntity(String.class));
+        "Expected workflow creation to succeed for entities without reviewer support");
 
     LOG.debug(
         "Workflow with user approval task for multiple non-reviewer entities created successfully with status: {}",
         response.getStatus());
+
+    // Get the created workflow for cleanup
+    WorkflowDefinition created = response.readEntity(WorkflowDefinition.class);
+
+    // Cleanup - delete the created workflow
+    Response deleteResponse =
+        SecurityUtil.addHeaders(
+                getResource("governance/workflowDefinitions/" + created.getId()),
+                ADMIN_AUTH_HEADERS)
+            .delete();
+
+    assertEquals(Response.Status.OK.getStatusCode(), deleteResponse.getStatus());
+    LOG.debug("Workflow deleted successfully");
 
     LOG.info("test_EventBasedMultipleEntitiesWithoutReviewerSupport completed successfully");
   }
@@ -3116,15 +3168,23 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             },
             "approvalThreshold": 1,
             "rejectionThreshold": 1
           }
         },
         {
-          "name": "end",
-          "displayName": "End",
+          "name": "endApproved",
+          "displayName": "End Approved",
+          "type": "endEvent",
+          "subType": "endEvent"
+        },
+        {
+          "name": "endRejected",
+          "displayName": "End Rejected",
           "type": "endEvent",
           "subType": "endEvent"
         }
@@ -3136,7 +3196,13 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
         },
         {
           "from": "ApproveEntity",
-          "to": "end"
+          "to": "endApproved",
+          "condition": "true"
+        },
+        {
+          "from": "ApproveEntity",
+          "to": "endRejected",
+          "condition": "false"
         }
       ],
       "config": {
@@ -3156,12 +3222,24 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
     assertEquals(
         Response.Status.CREATED.getStatusCode(),
         response.getStatus(),
-        "Expected workflow creation to succeed for mixed entity types. Got: "
-            + response.readEntity(String.class));
+        "Expected workflow creation to succeed for mixed entity types");
 
     LOG.debug(
         "Workflow with mixed entity types created successfully with status: {}",
         response.getStatus());
+
+    // Get the created workflow for cleanup
+    WorkflowDefinition created = response.readEntity(WorkflowDefinition.class);
+
+    // Cleanup - delete the created workflow
+    Response deleteResponse =
+        SecurityUtil.addHeaders(
+                getResource("governance/workflowDefinitions/" + created.getId()),
+                ADMIN_AUTH_HEADERS)
+            .delete();
+
+    assertEquals(Response.Status.OK.getStatusCode(), deleteResponse.getStatus());
+    LOG.debug("Workflow deleted successfully");
 
     LOG.info("test_MixedEntityTypesWithReviewerSupport completed successfully");
   }
@@ -3505,12 +3583,20 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             }
           }
         },
         {
-          "name": "end",
+          "name": "endTrue",
+          "displayName": "End",
+          "type": "endEvent",
+          "subType": "endEvent"
+        },
+                {
+          "name": "endFalse",
           "displayName": "End",
           "type": "endEvent",
           "subType": "endEvent"
@@ -3523,7 +3609,13 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
         },
         {
           "from": "approval",
-          "to": "end"
+          "to": "endTrue",
+          "condition": "true"
+        },
+        {
+          "from": "approval",
+          "to": "endFalse",
+          "condition": "false"
         }
       ]
     }
@@ -3572,7 +3664,9 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             }
           },
           "output": ["updatedBy"]
@@ -4271,7 +4365,9 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             }
           },
           "input": ["relatedEntity"],
@@ -4801,7 +4897,9 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
               "displayName": "User Approval",
               "config": {
                 "assignees": {
-                  "addReviewers": true
+                  "addReviewers": true,
+                  "addOwners": false,
+                  "candidates": []
                 },
                 "approvalThreshold": 1,
                 "rejectionThreshold": 1
@@ -5376,7 +5474,9 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "displayName": "User Approval",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             },
             "approvalThreshold": 1,
             "rejectionThreshold": 1
@@ -5673,7 +5773,9 @@ public class WorkflowDefinitionResourceTest extends OpenMetadataApplicationTest 
           "subType": "userApprovalTask",
           "config": {
             "assignees": {
-              "addReviewers": true
+              "addReviewers": true,
+              "addOwners": false,
+              "candidates": []
             },
             "approvalThreshold": 1,
             "rejectionThreshold": 1
