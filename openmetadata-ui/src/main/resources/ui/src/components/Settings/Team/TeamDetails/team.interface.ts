@@ -20,6 +20,7 @@ import {
 export interface TeamHierarchyProps {
   currentTeam?: Team;
   data: Team[];
+  teamAssetCounts: Record<string, number>;
   onTeamExpand: (
     loading?: boolean,
     parentTeam?: string,

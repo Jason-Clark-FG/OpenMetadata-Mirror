@@ -37,6 +37,7 @@ import { Include } from '../../generated/type/include';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useFqn } from '../../hooks/useFqn';
 import { searchQuery } from '../../rest/searchAPI';
+import { postAggregateFieldOptions } from '../../rest/miscAPI';
 import {
   createTeam,
   deleteUserFromTeam,
@@ -72,6 +73,7 @@ const TeamsPage = () => {
   const [isAddingTeam, setIsAddingTeam] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [assets, setAssets] = useState<number>(0);
+  const [teamAssetCounts, setTeamAssetCounts] = useState<Record<string, number>>({});
   const [parentTeams, setParentTeams] = useState<Team[]>([]);
   const { updateCurrentUser } = useApplicationStore();
 
@@ -144,7 +146,6 @@ const TeamsPage = () => {
         fields: [
           TabSpecificField.USER_COUNT,
           TabSpecificField.CHILDREN_COUNT,
-          TabSpecificField.OWNS,
           TabSpecificField.PARENTS,
         ],
       });
@@ -162,6 +163,7 @@ const TeamsPage = () => {
       } else {
         setChildTeams(modifiedTeams);
       }
+      fetchTeamAssetCounts();
     } catch (error) {
       showErrorToast(error as AxiosError, t('server.unexpected-response'));
     } finally {
@@ -191,6 +193,26 @@ const TeamsPage = () => {
       }
     } catch (error) {
       showErrorToast(error as AxiosError, t('server.unexpected-response'));
+    }
+  };
+
+  const fetchTeamAssetCounts = async () => {
+    try {
+      const res = await postAggregateFieldOptions({
+        fieldName: 'owners.id',
+        fieldValue: '',
+        index: SearchIndex.ALL,
+        size: 10000,
+      });
+      const buckets =
+        res.data.aggregations?.['sterms#owners.id']?.buckets ?? [];
+      const counts: Record<string, number> = {};
+      for (const bucket of buckets) {
+        counts[bucket.key as string] = bucket.doc_count;
+      }
+      setTeamAssetCounts(counts);
+    } catch {
+      // silent fail - counts default to 0
     }
   };
 
@@ -543,6 +565,7 @@ const TeamsPage = () => {
         parentTeams={parentTeams}
         removeUserFromTeam={removeUserFromTeam}
         showDeletedTeam={showDeletedTeam}
+        teamAssetCounts={teamAssetCounts}
         updateTeamHandler={updateTeamHandler}
         onDescriptionUpdate={onDescriptionUpdate}
         onShowDeletedTeamChange={toggleShowDeletedTeam}

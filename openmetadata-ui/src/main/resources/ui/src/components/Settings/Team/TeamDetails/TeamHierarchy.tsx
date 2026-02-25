@@ -46,6 +46,7 @@ import './teams.less';
 const TeamHierarchy: FC<TeamHierarchyProps> = ({
   currentTeam,
   data,
+  teamAssetCounts,
   onTeamExpand,
   isFetchingAllTeamAdvancedDetails,
   isSearchLoading,
@@ -133,22 +134,23 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         title: t('label.entity-count', {
           entity: t('label.asset'),
         }),
-        dataIndex: 'owns',
+        key: 'assetCount',
         width: 120,
-        key: 'owns',
-        render: (owns: Team['owns']) =>
+        render: (_: unknown, record: Team) =>
           isFetchingAllTeamAdvancedDetails ? (
             <Skeleton
               active={isFetchingAllTeamAdvancedDetails}
               paragraph={{ rows: 0 }}
             />
           ) : (
-            owns?.length ?? 0
+            <Typography.Text data-testid="team-asset-count">
+              {teamAssetCounts[record.id ?? ''] ?? 0}
+            </Typography.Text>
           ),
       },
       ...descriptionTableObject<Team>({ width: 300 }),
     ];
-  }, [data, isFetchingAllTeamAdvancedDetails, onTeamExpand]);
+  }, [data, isFetchingAllTeamAdvancedDetails, onTeamExpand, teamAssetCounts]);
 
   const handleTableHover = useCallback(
     (value: boolean) => setIsTableHovered(value),
@@ -218,18 +220,18 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   };
 
   const onTableRow = (record: Team, index?: number) =>
-    ({
-      index,
-      handleMoveRow,
-      handleTableHover,
-      record,
-    } as DraggableBodyRowProps<Team>);
+  ({
+    index,
+    handleMoveRow,
+    handleTableHover,
+    record,
+  } as DraggableBodyRowProps<Team>);
 
   const onTableHeader: TableProps<Team>['onHeaderRow'] = () =>
-    ({
-      handleMoveRow,
-      handleTableHover,
-    } as DraggableBodyRowProps<Team>);
+  ({
+    handleMoveRow,
+    handleTableHover,
+  } as DraggableBodyRowProps<Team>);
 
   const onDragConfirmationModalClose = useCallback(() => {
     setIsModalOpen(false);
