@@ -448,7 +448,7 @@ public class HtmlTemplates {
           <div class="success-container">
               <div class="success-icon">✓</div>
               <h1>Authentication Successful!</h1>
-              <p class="message">You have successfully signed in with Google SSO.</p>
+              <p class="message">You have successfully signed in via SSO.</p>
               <div class="info">
                   <p><strong>Note:</strong> This window will close automatically. You can return to your application.</p>
               </div>

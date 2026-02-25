@@ -26,9 +26,9 @@ This module implements a complete OAuth 2.0 Authorization Code Flow with PKCE fo
 ### Security Features
 - **PKCE Validation** - SHA-256 code challenge/verifier validation
 - **Token Expiry Management** - Configurable access token (1 hour) and refresh token (7 days) lifetimes
-- **Rate Limiting** - Token endpoint protection (100 requests/hour per client)
+- **Rate Limiting** - Client registration endpoint protection (10 registrations/hour per IP)
 - **Thread-Safe Concurrent Processing** - ThreadLocal storage for request isolation
-- **Comprehensive Audit Logging** - All OAuth operations logged to oauth_audit_log table
+- **Audit Logging** - OAuth operations logged via SLF4J (oauth_audit_log table available for future use)
 
 ### Database-Driven Configuration
 - **Runtime Configuration** - Update MCP settings without server restart via REST API
@@ -275,7 +275,7 @@ The OAuth server is configured in `openmetadata.yaml`:
 
 - **JWT Configuration** - RSA key pair for token signing, JWKS endpoint URL
 - **Token Expiry** - Access token (1 hour) and refresh token (7 days) lifetimes
-- **Rate Limiting** - Token endpoint rate limits (100 requests/hour per client)
+- **Rate Limiting** - Client registration rate limits (10 registrations/hour per IP)
 - **SSO Provider** - Google, Okta, Azure AD, etc. OAuth client ID and secret for SSO integration
 - **Callback URLs** - Allowed redirect URIs for OAuth clients
 
@@ -419,7 +419,7 @@ OAuth components initialized in `McpApplication`:
 - **Token Storage** - Refresh tokens encrypted at rest using Fernet
 - **Session Management** - Stateless design with database-backed state persistence
 - **Audit Trail** - All OAuth operations logged for compliance and forensics
-- **Rate Limiting** - Protection against brute force and token exhaustion attacks
+- **Rate Limiting** - Registration endpoint rate limiting to prevent abuse
 - **Single-Use Codes** - Authorization codes deleted after exchange
 - **Token Rotation** - Refresh tokens rotated on every refresh to limit exposure
 - **Timing-Safe Comparisons** - CSRF and PKCE validation use MessageDigest.isEqual() to prevent timing attacks

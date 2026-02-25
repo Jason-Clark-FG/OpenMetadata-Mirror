@@ -1,6 +1,7 @@
 package org.openmetadata.mcp.server.auth.handlers;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -117,7 +118,7 @@ public class AuthorizationHandler {
                             return new AuthorizationResponse(null, false, null);
                           } else {
                             // Authorization code - construct callback URL
-                            Map<String, String> queryParams = new java.util.HashMap<>();
+                            Map<String, String> queryParams = new HashMap<>();
                             queryParams.put("code", result);
                             if (authParams.getState() != null) {
                               queryParams.put("state", authParams.getState());

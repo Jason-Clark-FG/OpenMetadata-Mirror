@@ -57,27 +57,6 @@ public class OAuthWellKnownFilter implements Filter {
       return;
     }
 
-    // Handle OAuth endpoints at root level (forward to /mcp prefix)
-    if (path.equals("/register")) {
-      request.getRequestDispatcher("/mcp/register").forward(request, response);
-      return;
-    }
-
-    if (path.equals("/authorize")) {
-      request.getRequestDispatcher("/mcp/authorize").forward(request, response);
-      return;
-    }
-
-    if (path.equals("/token")) {
-      request.getRequestDispatcher("/mcp/token").forward(request, response);
-      return;
-    }
-
-    if (path.equals("/revoke")) {
-      request.getRequestDispatcher("/mcp/revoke").forward(request, response);
-      return;
-    }
-
     // Continue with the filter chain for other requests
     filterChain.doFilter(servletRequest, servletResponse);
   }

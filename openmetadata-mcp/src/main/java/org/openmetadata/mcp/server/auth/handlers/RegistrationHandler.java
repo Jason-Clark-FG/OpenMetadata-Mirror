@@ -2,6 +2,7 @@ package org.openmetadata.mcp.server.auth.handlers;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -64,11 +65,11 @@ public class RegistrationHandler {
             clientInfo.setGrantTypes(
                 metadata.getGrantTypes() != null && !metadata.getGrantTypes().isEmpty()
                     ? metadata.getGrantTypes()
-                    : java.util.Arrays.asList("authorization_code", "refresh_token"));
+                    : List.of("authorization_code", "refresh_token"));
             clientInfo.setResponseTypes(
                 metadata.getResponseTypes() != null && !metadata.getResponseTypes().isEmpty()
                     ? metadata.getResponseTypes()
-                    : java.util.Arrays.asList("code"));
+                    : List.of("code"));
             clientInfo.setScope(metadata.getScope());
 
             // Optional metadata

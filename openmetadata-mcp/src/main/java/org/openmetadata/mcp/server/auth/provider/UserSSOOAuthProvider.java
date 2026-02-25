@@ -538,6 +538,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
         String codeChallenge = (String) session.getAttribute(SESSION_MCP_PKCE_CHALLENGE);
         String redirectUri = (String) session.getAttribute(SESSION_MCP_REDIRECT_URI);
+        String state = (String) session.getAttribute(SESSION_MCP_STATE);
         String scopesStr = (String) session.getAttribute(SESSION_MCP_SCOPES);
 
         regenerateSession(session);
@@ -557,7 +558,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
         LOG.info("Generated authorization code for user: {}", user.getName());
 
-        return displayAuthorizationCode(authCode, currentRequest.get().getSession(false));
+        return displayAuthorizationCode(authCode, redirectUri, state);
 
       } catch (AuthenticationException e) {
         LOG.warn("Basic Auth login failed for user: {}", email);
@@ -582,24 +583,12 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
     }
   }
 
-  private CompletableFuture<String> displayAuthorizationCode(String authCode, HttpSession session)
-      throws AuthorizeException {
+  private CompletableFuture<String> displayAuthorizationCode(
+      String authCode, String redirectUri, String state) throws AuthorizeException {
     try {
-      String redirectUri = (String) session.getAttribute(SESSION_MCP_REDIRECT_URI);
-      String state = (String) session.getAttribute(SESSION_MCP_STATE);
-
       if (redirectUri == null || redirectUri.isEmpty()) {
-        throw new AuthorizeException("server_error", "Redirect URI not found in session");
+        throw new AuthorizeException("server_error", "Redirect URI not found");
       }
-
-      session.removeAttribute(SESSION_MCP_PKCE_CHALLENGE);
-      session.removeAttribute(SESSION_MCP_PKCE_METHOD);
-      session.removeAttribute(SESSION_MCP_CLIENT_ID);
-      session.removeAttribute(SESSION_MCP_REDIRECT_URI);
-      session.removeAttribute(SESSION_MCP_STATE);
-      session.removeAttribute(SESSION_MCP_SCOPES);
-      session.removeAttribute(SESSION_MCP_AUTH_METHOD);
-      session.removeAttribute(SESSION_MCP_CSRF_TOKEN);
 
       String redirectUrl =
           redirectUri

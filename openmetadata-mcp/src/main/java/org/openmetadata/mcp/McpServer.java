@@ -58,6 +58,7 @@ public class McpServer implements McpServerProvider {
             SecurityConfigurationManager.getCurrentAuthzConfig());
     this.authorizer = authorizer;
     this.limits = limits;
+    this.environment = environment;
     MutableServletContextHandler contextHandler = environment.getApplicationContext();
     McpAuthFilter authFilter =
         new McpAuthFilter(
@@ -113,6 +114,18 @@ public class McpServer implements McpServerProvider {
 
       // Initialize OAuth token cleanup scheduler (runs hourly to delete expired tokens)
       OAuthTokenCleanupScheduler.initialize();
+      environment
+          .lifecycle()
+          .manage(
+              new io.dropwizard.lifecycle.Managed() {
+                @Override
+                public void start() {}
+
+                @Override
+                public void stop() {
+                  OAuthTokenCleanupScheduler.shutdown();
+                }
+              });
 
       OAuthHttpStatelessServerTransportProvider statelessOauthTransport =
           new OAuthHttpStatelessServerTransportProvider(

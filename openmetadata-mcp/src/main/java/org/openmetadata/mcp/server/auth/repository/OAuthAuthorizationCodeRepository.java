@@ -54,14 +54,6 @@ public class OAuthAuthorizationCodeRepository {
   }
 
   /**
-   * Mark authorization code as used.
-   */
-  public void markAsUsed(String code) {
-    dao.markAsUsed(code);
-    LOG.debug("Marked authorization code as used");
-  }
-
-  /**
    * Atomically mark authorization code as used and return the updated record.
    * This prevents race conditions by using a database-level UPDATE with WHERE clause
    * that checks the code is not already used.

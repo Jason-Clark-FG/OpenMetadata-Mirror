@@ -64,15 +64,6 @@ public class McpAuthFilter implements Filter {
       return;
     }
 
-    // Check if MCP application is installed
-    if (ApplicationContext.getInstance().getAppIfExists("McpApplication") == null) {
-      sendError(
-          httpServletResponse,
-          "McpApplication is not installed. Please install it to use MCP features.",
-          HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-      return;
-    }
-
     try {
       String tokenWithType = httpServletRequest.getHeader("Authorization");
 
@@ -106,13 +97,14 @@ public class McpAuthFilter implements Filter {
    * OAuth discovery and flow endpoints must be accessible without authentication.
    */
   private boolean isOAuthEndpoint(String path) {
-    return path.endsWith("/.well-known/oauth-authorization-server")
-        || path.endsWith("/.well-known/oauth-protected-resource")
-        || path.endsWith("/.well-known/openid-configuration")
-        || path.endsWith("/register")
-        || path.endsWith("/authorize")
-        || path.endsWith("/token")
-        || path.endsWith("/revoke");
+    return path.equals("/mcp/.well-known/oauth-authorization-server")
+        || path.equals("/mcp/.well-known/oauth-protected-resource")
+        || path.equals("/mcp/.well-known/openid-configuration")
+        || path.equals("/mcp/register")
+        || path.equals("/mcp/authorize")
+        || path.equals("/mcp/token")
+        || path.equals("/mcp/revoke")
+        || path.equals("/mcp/callback");
   }
 
   private void sendError(HttpServletResponse response, String errorMessage, int statusCode)

@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
@@ -265,14 +266,10 @@ public class SSOCallbackServlet extends HttpServlet {
       claims.putAll(claimsSet.getClaims());
 
       String userName =
-          findUserNameFromClaims(
-              getClaimsMapping(), java.util.Arrays.asList(getClaimsOrder()), claims);
+          findUserNameFromClaims(getClaimsMapping(), List.of(getClaimsOrder()), claims);
       String email =
           findEmailFromClaims(
-              getClaimsMapping(),
-              java.util.Arrays.asList(getClaimsOrder()),
-              claims,
-              getPrincipalDomain());
+              getClaimsMapping(), List.of(getClaimsOrder()), claims, getPrincipalDomain());
 
       LOG.info("Extracted user identity from SSO: username={}, email={}", userName, email);
 
@@ -355,15 +352,10 @@ public class SSOCallbackServlet extends HttpServlet {
     Map<String, Object> claims = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     claims.putAll(claimsSet.getClaims());
 
-    String userName =
-        findUserNameFromClaims(
-            getClaimsMapping(), java.util.Arrays.asList(getClaimsOrder()), claims);
+    String userName = findUserNameFromClaims(getClaimsMapping(), List.of(getClaimsOrder()), claims);
     String email =
         findEmailFromClaims(
-            getClaimsMapping(),
-            java.util.Arrays.asList(getClaimsOrder()),
-            claims,
-            getPrincipalDomain());
+            getClaimsMapping(), List.of(getClaimsOrder()), claims, getPrincipalDomain());
 
     // Validate required user information was extracted
     if (userName == null || userName.trim().isEmpty()) {

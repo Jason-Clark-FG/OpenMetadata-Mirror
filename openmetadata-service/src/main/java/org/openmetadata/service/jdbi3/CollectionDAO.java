@@ -497,9 +497,6 @@ public interface CollectionDAO {
   OAuthRefreshTokenDAO oauthRefreshTokenDAO();
 
   @CreateSqlObject
-  OAuthAuditLogDAO oauthAuditLogDAO();
-
-  @CreateSqlObject
   McpPendingAuthRequestDAO mcpPendingAuthRequestDAO();
 
   interface DashboardDAO extends EntityDAO<Dashboard> {
@@ -10742,9 +10739,6 @@ public interface CollectionDAO {
         @Bind("scopes") String scopes,
         @Bind("expiresAt") long expiresAt);
 
-    @SqlUpdate("UPDATE oauth_authorization_codes SET used = TRUE WHERE code = :code")
-    void markAsUsed(@Bind("code") String code);
-
     @SqlUpdate(
         "UPDATE oauth_authorization_codes SET used = TRUE WHERE code = :code AND used = FALSE")
     int markAsUsedAtomic(@Bind("code") String code);
@@ -10815,26 +10809,6 @@ public interface CollectionDAO {
 
     @SqlUpdate("DELETE FROM oauth_refresh_tokens WHERE expires_at < :currentTime")
     void deleteExpired(@Bind("currentTime") long currentTime);
-  }
-
-  interface OAuthAuditLogDAO {
-    @ConnectionAwareSqlUpdate(
-        value =
-            "INSERT INTO oauth_audit_log (event_type, client_id, user_name, success, error_message, ip_address, user_agent, metadata) VALUES (:eventType, :clientId, :userName, :success, :errorMessage, :ipAddress, :userAgent, :metadata ::jsonb)",
-        connectionType = POSTGRES)
-    @ConnectionAwareSqlUpdate(
-        value =
-            "INSERT INTO oauth_audit_log (event_type, client_id, user_name, success, error_message, ip_address, user_agent, metadata) VALUES (:eventType, :clientId, :userName, :success, :errorMessage, :ipAddress, :userAgent, :metadata)",
-        connectionType = MYSQL)
-    void insert(
-        @Bind("eventType") String eventType,
-        @Bind("clientId") String clientId,
-        @Bind("userName") String userName,
-        @Bind("success") boolean success,
-        @Bind("errorMessage") String errorMessage,
-        @Bind("ipAddress") String ipAddress,
-        @Bind("userAgent") String userAgent,
-        @Bind("metadata") String metadata);
   }
 
   interface McpPendingAuthRequestDAO {

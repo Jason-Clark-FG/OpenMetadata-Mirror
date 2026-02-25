@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.mcp.auth.OAuthClientInformation;
-import org.openmetadata.mcp.auth.OAuthClientMetadata;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.fernet.Fernet;
@@ -63,15 +62,6 @@ public class OAuthClientRepository {
       return null;
     }
 
-    OAuthClientMetadata metadata = new OAuthClientMetadata();
-    metadata.setClientName(record.clientName());
-    metadata.setRedirectUris(
-        record.redirectUris().stream().map(URI::create).collect(Collectors.toList()));
-    metadata.setGrantTypes(record.grantTypes());
-    metadata.setTokenEndpointAuthMethod(record.tokenEndpointAuthMethod());
-    // Convert scope from List<String> to space-separated String
-    metadata.setScope(String.join(" ", record.scopes()));
-
     String decryptedSecret = null;
     if (record.clientSecretEncrypted() != null) {
       try {
@@ -97,11 +87,12 @@ public class OAuthClientRepository {
     OAuthClientInformation clientInfo = new OAuthClientInformation();
     clientInfo.setClientId(record.clientId());
     clientInfo.setClientSecret(decryptedSecret);
-    clientInfo.setClientName(metadata.getClientName());
-    clientInfo.setRedirectUris(metadata.getRedirectUris());
-    clientInfo.setGrantTypes(metadata.getGrantTypes());
-    clientInfo.setTokenEndpointAuthMethod(metadata.getTokenEndpointAuthMethod());
-    clientInfo.setScope(metadata.getScope());
+    clientInfo.setClientName(record.clientName());
+    clientInfo.setRedirectUris(
+        record.redirectUris().stream().map(URI::create).collect(Collectors.toList()));
+    clientInfo.setGrantTypes(record.grantTypes());
+    clientInfo.setTokenEndpointAuthMethod(record.tokenEndpointAuthMethod());
+    clientInfo.setScope(String.join(" ", record.scopes()));
 
     return clientInfo;
   }
