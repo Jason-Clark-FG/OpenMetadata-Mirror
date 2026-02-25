@@ -10,6 +10,7 @@ import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.TARG
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.isDataInsightIndex;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -850,11 +851,49 @@ public class SearchIndexExecutor implements AutoCloseable {
         entityBatchCounters.put(entityType, new AtomicInteger(numReaders));
 
         if (TIME_SERIES_ENTITIES.contains(entityType)) {
-          submitTimeSeriesReaders(
-              entityType, totalEntityRecords, fixedBatchSize, numReaders, producerLatch);
+          submitReaders(
+              entityType,
+              totalEntityRecords,
+              fixedBatchSize,
+              numReaders,
+              producerLatch,
+              () -> {
+                PaginatedEntityTimeSeriesSource source =
+                    new PaginatedEntityTimeSeriesSource(
+                        entityType,
+                        fixedBatchSize,
+                        getSearchIndexFields(entityType),
+                        totalEntityRecords);
+                return source::readWithCursor;
+              },
+              (readers, total) -> {
+                List<String> cursors = new ArrayList<>();
+                int perReader = total / readers;
+                for (int i = 1; i < readers; i++) {
+                  cursors.add(RestUtil.encodeCursor(String.valueOf(i * perReader)));
+                }
+                return cursors;
+              });
         } else {
-          submitEntityReaders(
-              entityType, totalEntityRecords, fixedBatchSize, numReaders, producerLatch);
+          PaginatedEntitiesSource entSource =
+              new PaginatedEntitiesSource(
+                  entityType, fixedBatchSize, getSearchIndexFields(entityType), totalEntityRecords);
+          submitReaders(
+              entityType,
+              totalEntityRecords,
+              fixedBatchSize,
+              numReaders,
+              producerLatch,
+              () -> {
+                PaginatedEntitiesSource source =
+                    new PaginatedEntitiesSource(
+                        entityType,
+                        fixedBatchSize,
+                        getSearchIndexFields(entityType),
+                        totalEntityRecords);
+                return source::readNextKeyset;
+              },
+              entSource::findBoundaryCursors);
         }
       } else {
         entityBatchCounters.put(entityType, new AtomicInteger(1));
@@ -872,30 +911,24 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
-  private void submitEntityReaders(
+  private void submitReaders(
       String entityType,
       int totalRecords,
       int fixedBatchSize,
       int numReaders,
-      CountDownLatch producerLatch) {
-    PaginatedEntitiesSource source =
-        new PaginatedEntitiesSource(
-            entityType, fixedBatchSize, getSearchIndexFields(entityType), totalRecords);
-
+      CountDownLatch producerLatch,
+      java.util.function.Supplier<KeysetBatchReader> readerFactory,
+      java.util.function.BiFunction<Integer, Integer, List<String>> boundaryFinder) {
     if (numReaders == 1) {
+      KeysetBatchReader reader = readerFactory.get();
       producerExecutor.submit(
           () ->
               processKeysetBatches(
-                  entityType,
-                  totalRecords,
-                  fixedBatchSize,
-                  null,
-                  source::readNextKeyset,
-                  producerLatch));
+                  entityType, totalRecords, fixedBatchSize, null, reader, producerLatch));
       return;
     }
 
-    List<String> boundaries = source.findBoundaryCursors(numReaders, totalRecords);
+    List<String> boundaries = boundaryFinder.apply(numReaders, totalRecords);
     int actualReaders = boundaries.size() + 1;
     int recordsPerReader = totalRecords / actualReaders;
 
@@ -918,9 +951,7 @@ public class SearchIndexExecutor implements AutoCloseable {
           (i == actualReaders - 1)
               ? totalRecords - recordsPerReader * (actualReaders - 1)
               : recordsPerReader;
-      PaginatedEntitiesSource readerSource =
-          new PaginatedEntitiesSource(
-              entityType, fixedBatchSize, getSearchIndexFields(entityType), totalRecords);
+      KeysetBatchReader readerSource = readerFactory.get();
       final int readerLimit = limit;
       producerExecutor.submit(
           () ->
@@ -929,69 +960,7 @@ public class SearchIndexExecutor implements AutoCloseable {
                   readerLimit,
                   fixedBatchSize,
                   startCursor,
-                  readerSource::readNextKeyset,
-                  producerLatch));
-    }
-  }
-
-  private void submitTimeSeriesReaders(
-      String entityType,
-      int totalRecords,
-      int fixedBatchSize,
-      int numReaders,
-      CountDownLatch producerLatch) {
-    PaginatedEntityTimeSeriesSource source =
-        new PaginatedEntityTimeSeriesSource(
-            entityType, fixedBatchSize, getSearchIndexFields(entityType), totalRecords);
-
-    if (numReaders == 1) {
-      producerExecutor.submit(
-          () ->
-              processKeysetBatches(
-                  entityType,
-                  totalRecords,
-                  fixedBatchSize,
-                  null,
-                  source::readNextKeyset,
-                  producerLatch));
-      return;
-    }
-
-    List<String> boundaries = source.findBoundaryCursors(numReaders, totalRecords);
-    int actualReaders = boundaries.size() + 1;
-    int recordsPerReader = totalRecords / actualReaders;
-
-    if (actualReaders < numReaders) {
-      LOG.warn(
-          "Boundary discovery for {} returned {} cursors (expected {}), using {} readers",
-          entityType,
-          boundaries.size(),
-          numReaders - 1,
-          actualReaders);
-      entityBatchCounters.get(entityType).set(actualReaders);
-      for (int j = 0; j < numReaders - actualReaders; j++) {
-        producerLatch.countDown();
-      }
-    }
-
-    for (int i = 0; i < actualReaders; i++) {
-      String startCursor = (i == 0) ? null : boundaries.get(i - 1);
-      int limit =
-          (i == actualReaders - 1)
-              ? totalRecords - recordsPerReader * (actualReaders - 1)
-              : recordsPerReader;
-      PaginatedEntityTimeSeriesSource readerSource =
-          new PaginatedEntityTimeSeriesSource(
-              entityType, fixedBatchSize, getSearchIndexFields(entityType), totalRecords);
-      final int readerLimit = limit;
-      producerExecutor.submit(
-          () ->
-              processKeysetBatches(
-                  entityType,
-                  readerLimit,
-                  fixedBatchSize,
-                  startCursor,
-                  readerSource::readNextKeyset,
+                  readerSource,
                   producerLatch));
     }
   }
