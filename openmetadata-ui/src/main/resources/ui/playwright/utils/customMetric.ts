@@ -17,6 +17,10 @@ import {
   NAME_VALIDATION_ERROR,
 } from '../constant/common';
 import { toastNotification } from './common';
+import {
+  ObservabilityFeature,
+  selectAddObservabilityFeature,
+} from './dataQuality';
 
 type CustomMetricDetails = {
   page: Page;
@@ -68,7 +72,7 @@ export const createCustomMetric = async ({
     })
     .click();
   await page.locator('[data-testid="profiler-add-table-test-btn"]').click();
-  await page.locator('[data-testid="custom-metric"]').click();
+  await selectAddObservabilityFeature(page, ObservabilityFeature.CUSTOM_METRIC);
 
   const customMetricResponse = page.waitForResponse(
     '/api/v1/tables/name/*?fields=customMetrics%2Ccolumns&include=all*'
