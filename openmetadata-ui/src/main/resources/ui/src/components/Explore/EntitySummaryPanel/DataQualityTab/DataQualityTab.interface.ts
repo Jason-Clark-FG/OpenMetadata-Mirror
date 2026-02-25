@@ -18,6 +18,7 @@ export interface DataQualityTabProps {
   entityFQN: string;
   entityType: string;
   isColumnDetailPanel?: boolean;
+  hasViewTests?: boolean;
 }
 
 export interface TestCaseStatusCounts {

@@ -40,6 +40,9 @@ import { navigateToExploreAndSelectEntity } from '../../utils/explore';
 import { getEntityFqn } from '../../utils/entityPanel';
 import { connectEdgeBetweenNodesViaAPI } from '../../utils/lineage';
 import { getCurrentMillis } from '../../utils/dateTime';
+import { PolicyClass } from '../../support/access-control/PoliciesClass';
+import { RolesClass } from '../../support/access-control/RolesClass';
+import { openColumnDetailPanel } from '../../utils/entity';
 
 // Test data setup
 const tableEntity = new TableClass();
@@ -58,6 +61,10 @@ const user1 = new UserClass();
 // Keeping it separate prevents race conditions with parallel tests that add/remove
 // owners on the shared entityMap entities.
 const dcOwnerTestTable = new TableClass();
+// Dedicated entity and user for ViewBasic permission guard tests.
+// Separate from other entities to avoid race conditions with parallel tests.
+const viewBasicTable = new TableClass();
+const viewBasicUser = new UserClass();
 
 const testClassification = new ClassificationClass();
 const testTag = new TagClass({
@@ -2127,5 +2134,137 @@ test.describe('Right Panel Test Suite', () => {
         }
       });
     });
+
+    test.describe(
+      'ViewBasic User - Column Detail Panel Permission Guard',
+      () => {
+        let viewBasicPolicy: PolicyClass;
+        let viewBasicRole: RolesClass;
+
+        test.beforeAll(async ({ browser }) => {
+          const { apiContext, afterAction } = await performAdminLogin(browser);
+          try {
+            await viewBasicTable.create(apiContext);
+
+            viewBasicPolicy = new PolicyClass();
+            await viewBasicPolicy.create(apiContext, [
+              {
+                name: 'ViewBasicOnly-Rule',
+                resources: ['All'],
+                operations: ['ViewBasic'],
+                effect: 'allow',
+              },
+            ]);
+
+            viewBasicRole = new RolesClass();
+            await viewBasicRole.create(apiContext, [
+              viewBasicPolicy.responseData.name,
+            ]);
+
+            // Create user WITHOUT the default DataConsumer role
+            await viewBasicUser.create(apiContext, false);
+
+            await viewBasicUser.patch({
+              apiContext,
+              patchData: [
+                {
+                  op: 'replace',
+                  path: '/roles',
+                  value: [
+                    {
+                      id: viewBasicRole.responseData.id,
+                      type: 'role',
+                      name: viewBasicRole.responseData.name,
+                    },
+                  ],
+                },
+              ],
+            });
+          } finally {
+            await afterAction();
+          }
+        });
+
+        test.afterAll(async ({ browser }) => {
+          const { apiContext, afterAction } = await performAdminLogin(browser);
+          try {
+            await viewBasicTable.delete(apiContext);
+            await viewBasicUser.delete(apiContext);
+            await viewBasicRole.delete(apiContext);
+            await viewBasicPolicy.delete(apiContext);
+          } finally {
+            await afterAction();
+          }
+        });
+
+        test('Data Quality tab should show permission placeholder for ViewBasic-only user in column detail panel', async ({
+          browser,
+        }) => {
+          const context = await browser.newContext();
+          const page = await context.newPage();
+
+          try {
+            await viewBasicUser.login(page);
+            await viewBasicTable.visitEntityPage(page);
+
+            const panelContainer = await openColumnDetailPanel({
+              page,
+              rowSelector: 'data-row-key',
+              columnId: viewBasicTable.childrenSelectorId ?? '',
+              columnNameTestId: 'column-name',
+              entityType: 'table',
+            });
+
+            await panelContainer.getByTestId('data-quality-tab').click();
+            await page.waitForLoadState('networkidle');
+
+            await expect(
+              panelContainer.locator(
+                '[data-testid="permission-error-placeholder"]'
+              )
+            ).toBeVisible();
+          } finally {
+            await context.close();
+          }
+        });
+
+        test('Should not make forbidden API calls when ViewBasic-only user opens column detail panel', async ({
+          browser,
+        }) => {
+          const context = await browser.newContext();
+          const page = await context.newPage();
+          const forbiddenUrls: string[] = [];
+
+          page.on('response', (response) => {
+            if (
+              response.status() === 403 &&
+              (response.url().includes('metadata/types/name/tableColumn') ||
+                response.url().includes('/testCases'))
+            ) {
+              forbiddenUrls.push(response.url());
+            }
+          });
+
+          try {
+            await viewBasicUser.login(page);
+            await viewBasicTable.visitEntityPage(page);
+
+            await openColumnDetailPanel({
+              page,
+              rowSelector: 'data-row-key',
+              columnId: viewBasicTable.childrenSelectorId ?? '',
+              columnNameTestId: 'column-name',
+              entityType: 'table',
+            });
+
+            await page.waitForLoadState('networkidle');
+
+            expect(forbiddenUrls).toHaveLength(0);
+          } finally {
+            await context.close();
+          }
+        });
+      }
+    );
   });
 });

@@ -388,6 +388,16 @@ export class DataQualityPageObject extends RightPanelBase {
   }
 
   /**
+   * Verify that the permission placeholder is shown when user lacks ViewTests permission
+   */
+  async shouldShowPermissionPlaceholder(): Promise<void> {
+    const placeholder = this.container.locator(
+      '[data-testid="permission-error-placeholder"]'
+    );
+    await expect(placeholder).toBeVisible();
+  }
+
+  /**
    * Assert internal fields of the Data Quality tab for Table (incidents tab presence).
    * Use only when Data Quality tab is available (e.g. Table). Call after navigating to Data Quality tab.
    *
