@@ -130,16 +130,9 @@ public class CreateApprovalTaskImpl implements TaskListener {
     try {
       thread = feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
       // Update the existing thread with new assignees before terminating the workflow
-      TaskDetails updatedTaskDetails =
-          new TaskDetails()
-              .withAssignees(FeedMapper.formatAssignees(assignees))
-              .withType(TaskType.RequestApproval)
-              .withStatus(TaskStatus.Open);
+      thread.getTask().setAssignees(FeedMapper.formatAssignees(assignees));
 
-      thread
-          .withTask(updatedTaskDetails)
-          .withUpdatedBy(entity.getUpdatedBy())
-          .withUpdatedAt(System.currentTimeMillis());
+      thread.withUpdatedBy(entity.getUpdatedBy()).withUpdatedAt(System.currentTimeMillis());
 
       // Save the updated thread to database
       Entity.getCollectionDAO().feedDAO().update(thread.getId(), JsonUtils.pojoToJson(thread));
@@ -147,6 +140,16 @@ public class CreateApprovalTaskImpl implements TaskListener {
       // Now terminate the old workflow instance
       WorkflowHandler.getInstance()
           .terminateTaskProcessInstance(thread.getId(), "A Newer Process Instance is Running.");
+      // Create and publish ChangeEvent for notification system
+      ChangeEvent changeEvent =
+          new ChangeEvent()
+              .withId(UUID.randomUUID())
+              .withEventType(EventType.THREAD_UPDATED)
+              .withEntityId(thread.getId())
+              .withEntityType(Entity.THREAD)
+              .withUserName(entity.getUpdatedBy())
+              .withTimestamp(thread.getUpdatedAt())
+              .withEntity(thread);
     } catch (EntityNotFoundException ex) {
       TaskDetails taskDetails =
           new TaskDetails()

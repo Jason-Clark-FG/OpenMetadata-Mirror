@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -58,6 +59,7 @@ import org.openmetadata.schema.api.services.CreateDashboardService;
 import org.openmetadata.schema.api.services.CreateDatabaseService;
 import org.openmetadata.schema.api.services.CreateDatabaseService.DatabaseServiceType;
 import org.openmetadata.schema.api.services.DatabaseConnection;
+import org.openmetadata.schema.api.teams.CreateTeam;
 import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.api.tests.CreateTestCase;
 import org.openmetadata.schema.api.tests.CreateTestDefinition;
@@ -81,6 +83,7 @@ import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.MlModelService;
+import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.services.connections.api.OpenAPISchemaURL;
@@ -101,6 +104,7 @@ import org.openmetadata.schema.type.MetricType;
 import org.openmetadata.schema.type.MetricUnitOfMeasurement;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskStatus;
+import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.sdk.client.OpenMetadataClient;
@@ -6448,5 +6452,747 @@ public class WorkflowDefinitionResourceIT {
                   Boolean.TRUE.equals(
                       client.eventSubscriptions().getByName("WorkflowEventConsumer").getEnabled()));
     }
+  }
+
+  @Test
+  @Order(40)
+  void test_WorkflowWithReviewersOwnersCandidates(TestNamespace ns) throws IOException {
+    LOG.info("Starting test_WorkflowWithReviewersOwnersCandidates");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Step 1: Create test users (2 candidates + 1 owner)
+    LOG.debug("Creating test users for comprehensive assignment testing");
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    CreateUser createCandidate1 =
+        new CreateUser()
+            .withName("candidate1_" + uniqueSuffix)
+            .withEmail("candidate1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Candidate 1");
+    User candidate1 = client.users().create(createCandidate1);
+    LOG.debug("Created candidate user 1: {}", candidate1.getName());
+
+    CreateUser createCandidate2 =
+        new CreateUser()
+            .withName("candidate2_" + uniqueSuffix)
+            .withEmail("candidate2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Candidate 2");
+    User candidate2 = client.users().create(createCandidate2);
+    LOG.debug("Created candidate user 2: {}", candidate2.getName());
+
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("tableowner_" + uniqueSuffix)
+            .withEmail("tableowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Table Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created owner user: {}", ownerUser.getName());
+
+    // Step 2: Create database infrastructure
+    LOG.debug("Creating database infrastructure");
+
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("test-db-service"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+    LOG.debug("Created database service: {}", dbService.getName());
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("test-database"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Test database for workflow assignment testing");
+    Database database = client.databases().create(createDb);
+    LOG.debug("Created database: {}", database.getName());
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema for workflow assignment testing");
+    DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
+    LOG.debug("Created database schema: {}", dbSchema.getName());
+
+    // Step 3: Create test table with owner
+    LOG.debug("Creating test table with owner assignment");
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName(ns.prefix("test_approval_table"))
+            .withDatabaseSchema(dbSchema.getFullyQualifiedName())
+            .withDescription("Test table for comprehensive workflow assignment testing")
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("name").withDataType(ColumnDataType.STRING),
+                    new Column().withName("created_date").withDataType(ColumnDataType.DATETIME)));
+
+    Table testTable = client.tables().create(createTable);
+    LOG.debug("Created test table: {} with owner: {}", testTable.getName(), ownerUser.getName());
+    String tableEntityLink = String.format("<#E::table::%s>", testTable.getFullyQualifiedName());
+
+    // Step 4: Create comprehensive workflow with all assignment types
+    LOG.debug("Creating workflow with reviewers, owners, and candidates assignment");
+
+    String workflowJson =
+        """
+            {
+              "name": "%s",
+              "displayName": "Comprehensive Assignment Test Workflow",
+              "description": "Workflow testing reviewers, owners, and candidates assignment",
+              "trigger": {
+                "type": "eventBasedEntity",
+                "config": {
+                  "entityTypes": ["table"],
+                  "events": ["Created", "Updated"],
+                  "exclude": ["reviewers"],
+                  "filter": {}
+                },
+                "output": ["relatedEntity", "updatedBy"]
+              },
+              "nodes": [
+                {
+                  "name": "start",
+                  "displayName": "Start",
+                  "type": "startEvent",
+                  "subType": "startEvent"
+                },
+                {
+                  "name": "ApproveTable",
+                  "displayName": "Approve Table",
+                  "type": "userTask",
+                  "subType": "userApprovalTask",
+                  "config": {
+                    "assignees": {
+                      "addReviewers": true,
+                      "addOwners": true,
+                      "candidates": [
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        },
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        }
+                      ]
+                    },
+                    "approvalThreshold": 1,
+                    "rejectionThreshold": 1
+                  },
+                  "input": ["relatedEntity"],
+                  "inputNamespaceMap": {
+                    "relatedEntity": "global"
+                  },
+                  "output": ["result"],
+                  "branches": ["true", "false"]
+                },
+                {
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                }
+              ],
+              "edges": [
+                {"from": "start", "to": "ApproveTable"},
+                {"from": "ApproveTable", "to": "endApproved", "condition": "true"},
+                {"from": "ApproveTable", "to": "endRejected", "condition": "false"}
+              ],
+              "config": {"storeStageStatus": false}
+            }
+            """
+            .formatted(
+                "TableApprovalWorkflow",
+                candidate1.getId(),
+                candidate1.getFullyQualifiedName(),
+                candidate1.getName(),
+                candidate2.getId(),
+                candidate2.getFullyQualifiedName(),
+                candidate2.getName());
+
+    CreateWorkflowDefinition comprehensiveWorkflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+
+    String workflowResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST,
+                BASE_PATH,
+                comprehensiveWorkflow,
+                RequestOptions.builder().build());
+
+    JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
+    String workflowId = workflowCreated.get("id").asText();
+    LOG.debug("Created comprehensive workflow: {}", workflowId);
+
+    // Step 5: Wait for initial workflow processing (table creation event)
+    LOG.info("Waiting for workflow to process table creation...");
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              boolean hasExpectedTasks = !threads.getData().isEmpty();
+              if (hasExpectedTasks) {
+                LOG.debug("Found {} tasks for table creation", threads.getData().size());
+              }
+              return hasExpectedTasks;
+            });
+
+    // Step 6: Verify initial task creation and assignees
+    LOG.info("Verifying initial task creation and assignees");
+    ResultList<Thread> initialThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    assertFalse(initialThreads.getData().isEmpty(), "Should have tasks created for table");
+
+    // Should have 1 task with 3 assignees: owner + 2 candidates (reviewers ignored for tables)
+    List<Thread> approvalTasks =
+        initialThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
+                            t.getTask().getType()))
+            .toList();
+
+    assertEquals(1, approvalTasks.size(), "Should have exactly 1 approval task");
+    LOG.debug("✓ Found exactly 1 approval task");
+
+    // Verify the single task has 3 assignees
+    Thread approvalTask = approvalTasks.get(0);
+    List<String> assigneeNames =
+        approvalTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    List<String> expectedAssignees =
+        Stream.of(ownerUser.getName(), candidate1.getName(), candidate2.getName())
+            .sorted()
+            .toList();
+
+    assertEquals(3, assigneeNames.size(), "Task should have exactly 3 assignees");
+    assertEquals(expectedAssignees, assigneeNames, "Task assignees should be owner + 2 candidates");
+    LOG.debug("✓ Verified task has 3 assignees: {}", assigneeNames);
+
+    // Verify the task has correct entity reference
+    assertTrue(
+        approvalTask.getAbout().contains(testTable.getFullyQualifiedName()),
+        "Task should reference the test table");
+    LOG.debug("✓ Task correctly references the test table");
+
+    // Step 7: Update table to trigger workflow again
+    LOG.info("Updating table to trigger workflow on update event");
+
+    String tablePatchJson =
+        "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Updated description for workflow testing\"}]";
+    JsonNode tablePatch = MAPPER.readTree(tablePatchJson);
+    client.tables().patch(testTable.getId(), tablePatch);
+
+    LOG.debug("Applied patch to table: {}", testTable.getName());
+
+    // Step 8: Wait for update event processing - should NOT create duplicate tasks
+    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    await()
+        .atMost(Duration.ofMinutes(1))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              // Should still have exactly 1 task (no duplicates)
+              boolean hasCorrectTaskCount = threads.getData().size() == 1;
+              if (hasCorrectTaskCount) {
+                LOG.debug("Confirmed 1 task exists after update (no duplicates)");
+              }
+              return hasCorrectTaskCount;
+            });
+
+    // Step 9: Verify no duplicate tasks created for update event
+    LOG.info("Verifying no duplicate tasks created for update event");
+    ResultList<Thread> updatedThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    List<Thread> allApprovalTasks =
+        updatedThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
+                            t.getTask().getType()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasks.size(),
+        "Should still have exactly 1 approval task (no duplicates after update)");
+    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
+
+    // Verify the task still has the same 3 assignees
+    Thread updatedTask = allApprovalTasks.getFirst();
+    List<String> updatedAssignees =
+        updatedTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    assertEquals(
+        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
+    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
+
+    // Step 10: Resolve the approval task to test workflow progression
+    LOG.info("Resolving the approval task");
+    ResolveTask resolveTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+
+    // Use owner client to resolve since they are an assignee
+    OpenMetadataClient ownerClient =
+        SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
+    ownerClient.feed().resolveTask(updatedTask.getTask().getId().toString(), resolveTask);
+    LOG.debug("✓ Resolved task: {}", updatedTask.getTask().getId());
+
+    // Verify task status changed
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              try {
+                ResultList<Thread> closedThreads =
+                    client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+                return !closedThreads.getData().isEmpty();
+              } catch (Exception e) {
+                return false;
+              }
+            });
+
+    ResultList<Thread> closedTasks =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+    assertFalse(closedTasks.getData().isEmpty(), "Should have at least one closed task");
+    LOG.debug("✓ Verified task resolution - found {} closed tasks", closedTasks.getData().size());
+
+    // Step 11: Cleanup
+    LOG.info("Cleaning up test resources");
+
+    // Delete workflow
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.DELETE,
+            BASE_PATH + "/" + workflowId,
+            null,
+            RequestOptions.builder().build());
+    LOG.debug("✓ Deleted workflow");
+
+    // Delete test entities
+    Map<String, String> params = new HashMap<>();
+    params.put("hardDelete", "true");
+    params.put("recursive", "true");
+    client.tables().delete(testTable.getId().toString(), params);
+    client.databaseSchemas().delete(dbSchema.getId().toString(), params);
+    client.databases().delete(database.getId().toString(), params);
+    client.databaseServices().delete(dbService.getId().toString(), params);
+    LOG.debug("✓ Deleted database infrastructure");
+
+    // Delete test users
+    client.users().delete(candidate1.getId().toString(), params);
+    client.users().delete(candidate2.getId().toString(), params);
+    client.users().delete(ownerUser.getId().toString(), params);
+    LOG.debug("✓ Deleted test users");
+
+    LOG.info("test_WorkflowWithReviewersOwnersCandidates completed successfully");
+  }
+
+  @Test
+  @Order(41)
+  void test_WorkflowWithTeamCandidates(TestNamespace ns) throws IOException {
+    LOG.info("Starting test_WorkflowWithTeamCandidates");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Step 1: Create test users (2 candidates + 1 owner)
+    LOG.debug("Creating test users for team-based assignment testing");
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    CreateUser createCandidate1 =
+        new CreateUser()
+            .withName("teamcandidate1_" + uniqueSuffix)
+            .withEmail("teamcandidate1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Candidate 1");
+    User candidate1 = client.users().create(createCandidate1);
+    LOG.debug("Created team candidate user 1: {}", candidate1.getName());
+
+    CreateUser createCandidate2 =
+        new CreateUser()
+            .withName("teamcandidate2_" + uniqueSuffix)
+            .withEmail("teamcandidate2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Candidate 2");
+    User candidate2 = client.users().create(createCandidate2);
+    LOG.debug("Created team candidate user 2: {}", candidate2.getName());
+
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("teamowner_" + uniqueSuffix)
+            .withEmail("teamowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created team owner user: {}", ownerUser.getName());
+
+    // Step 2: Create team with the 2 candidate users
+    LOG.debug("Creating team with candidate users");
+
+    CreateTeam createTeam =
+        new CreateTeam()
+            .withName("approval_team_" + uniqueSuffix)
+            .withDisplayName("Approval Team")
+            .withTeamType(CreateTeam.TeamType.GROUP)
+            .withUsers(List.of(candidate1.getId(), candidate2.getId()))
+            .withDescription("Team for workflow approval testing");
+    Team approvalTeam = client.teams().create(createTeam);
+    LOG.debug("Created approval team: {}", approvalTeam.getName());
+
+    // Step 3: Create database infrastructure
+    LOG.debug("Creating database infrastructure");
+
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("test-db-service"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+    LOG.debug("Created database service: {}", dbService.getName());
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("test-database"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Test database for team workflow assignment testing");
+    Database database = client.databases().create(createDb);
+    LOG.debug("Created database: {}", database.getName());
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema for team workflow assignment testing");
+    DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
+    LOG.debug("Created database schema: {}", dbSchema.getName());
+
+    // Step 4: Create test table with owner
+    LOG.debug("Creating test table with owner assignment");
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName(ns.prefix("test_team_approval_table"))
+            .withDatabaseSchema(dbSchema.getFullyQualifiedName())
+            .withDescription("Test table for team-based workflow assignment testing")
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("name").withDataType(ColumnDataType.STRING),
+                    new Column().withName("created_date").withDataType(ColumnDataType.DATETIME)));
+
+    Table testTable = client.tables().create(createTable);
+    LOG.debug("Created test table: {} with owner: {}", testTable.getName(), ownerUser.getName());
+    String tableEntityLink = String.format("<#E::table::%s>", testTable.getFullyQualifiedName());
+
+    // Step 5: Create team-based workflow
+    LOG.debug("Creating workflow with team candidates assignment");
+
+    String workflowJson =
+        """
+            {
+              "name": "%s",
+              "displayName": "Team Assignment Test Workflow",
+              "description": "Workflow testing team candidates assignment",
+              "trigger": {
+                "type": "eventBasedEntity",
+                "config": {
+                  "entityTypes": ["table"],
+                  "events": ["Created", "Updated"],
+                  "exclude": ["reviewers"],
+                  "filter": {}
+                },
+                "output": ["relatedEntity", "updatedBy"]
+              },
+              "nodes": [
+                {
+                  "name": "start",
+                  "displayName": "Start",
+                  "type": "startEvent",
+                  "subType": "startEvent"
+                },
+                {
+                  "name": "ApproveTable",
+                  "displayName": "Approve Table",
+                  "type": "userTask",
+                  "subType": "userApprovalTask",
+                  "config": {
+                    "assignees": {
+                      "addReviewers": true,
+                      "addOwners": true,
+                      "candidates": [
+                        {
+                          "id": "%s",
+                          "type": "team",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        }
+                      ]
+                    },
+                    "approvalThreshold": 1,
+                    "rejectionThreshold": 1
+                  },
+                  "input": ["relatedEntity"],
+                  "inputNamespaceMap": {
+                    "relatedEntity": "global"
+                  },
+                  "output": ["result"],
+                  "branches": ["true", "false"]
+                },
+                {
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                }
+              ],
+              "edges": [
+                {"from": "start", "to": "ApproveTable"},
+                {"from": "ApproveTable", "to": "endApproved", "condition": "true"},
+                {"from": "ApproveTable", "to": "endRejected", "condition": "false"}
+              ]
+            }
+            """
+            .formatted(
+                "TeamApprovalWorkflow",
+                approvalTeam.getId(),
+                approvalTeam.getFullyQualifiedName(),
+                approvalTeam.getName());
+
+    CreateWorkflowDefinition teamWorkflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+
+    String workflowResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, teamWorkflow, RequestOptions.builder().build());
+
+    JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
+    String workflowId = workflowCreated.get("id").asText();
+    LOG.debug("Created team workflow: {}", workflowId);
+
+    // Step 6: Wait for initial workflow processing (table creation event)
+    LOG.info("Waiting for workflow to process table creation...");
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              boolean hasExpectedTasks = !threads.getData().isEmpty();
+              if (hasExpectedTasks) {
+                LOG.debug("Found {} tasks for table creation", threads.getData().size());
+              }
+              return hasExpectedTasks;
+            });
+
+    // Step 7: Verify task creation and assignees (should have 3: owner + 2 team members)
+    LOG.info("Verifying initial task creation and assignees");
+    ResultList<Thread> initialThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    assertFalse(initialThreads.getData().isEmpty(), "Should have tasks created for table");
+
+    List<Thread> allApprovalTasks =
+        initialThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && TaskType.RequestApproval.equals(t.getTask().getType())
+                        && TaskStatus.Open.equals(t.getTask().getStatus()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasks.size(),
+        "Should have exactly 1 approval task (team expands to individual users)");
+    LOG.debug("✓ Confirmed exactly 1 approval task created");
+
+    Thread initialTask = allApprovalTasks.getFirst();
+    List<String> assigneeNames =
+        initialTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    List<String> expectedAssignees =
+        List.of(ownerUser.getName(), candidate1.getName(), candidate2.getName()).stream()
+            .sorted()
+            .toList();
+
+    assertEquals(
+        3, assigneeNames.size(), "Task should have exactly 3 assignees (owner + 2 team members)");
+    assertEquals(
+        expectedAssignees,
+        assigneeNames,
+        "Task assignees should include owner and both team members");
+    LOG.debug(
+        "✓ Verified task has 3 assignees: {} (team expanded to individual users)", assigneeNames);
+
+    // Step 8: Update the table to trigger workflow on update event
+    LOG.info("Updating table to trigger workflow on update event");
+    String tablePatchJson =
+        "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Updated description for team workflow testing\"}]";
+    JsonNode tablePatch = MAPPER.readTree(tablePatchJson);
+    client.tables().patch(testTable.getId(), tablePatch);
+    LOG.debug("Applied patch to table: {}", testTable.getName());
+
+    // Step 9: Wait and verify no duplicate tasks created
+    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () ->
+                client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10).getData().size()
+                    >= 1);
+
+    LOG.info("Verifying no duplicate tasks created for update event");
+    ResultList<Thread> threadsAfterUpdate =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+    List<Thread> allApprovalTasksAfterUpdate =
+        threadsAfterUpdate.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && TaskType.RequestApproval.equals(t.getTask().getType())
+                        && TaskStatus.Open.equals(t.getTask().getStatus()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasksAfterUpdate.size(),
+        "Should still have exactly 1 approval task (no duplicates after update)");
+    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
+
+    // Verify the task still has the same 3 assignees
+    Thread updatedTask = allApprovalTasksAfterUpdate.getFirst();
+    List<String> updatedAssignees =
+        updatedTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    assertEquals(
+        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
+    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
+
+    // Step 10: Resolve the approval task to test workflow progression
+    LOG.info("Resolving the approval task");
+    ResolveTask resolveTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+
+    // Use owner client to resolve since they are an assignee
+    OpenMetadataClient ownerClient =
+        SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
+    ownerClient.feed().resolveTask(updatedTask.getTask().getId().toString(), resolveTask);
+    LOG.debug("✓ Resolved task: {}", updatedTask.getTask().getId());
+
+    // Verify task status changed
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () ->
+                client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10).getData().size()
+                    >= 1);
+
+    ResultList<Thread> closedThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+    List<Thread> closedTasks = closedThreads.getData();
+    assertEquals(1, closedTasks.size(), "Should have exactly 1 closed task");
+    LOG.debug("✓ Task successfully resolved and closed");
+
+    // Step 11: Cleanup test resources
+    LOG.info("Cleaning up test resources");
+
+    // Delete workflow
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.DELETE,
+            BASE_PATH + "/" + workflowId,
+            null,
+            RequestOptions.builder().build());
+    LOG.debug("✓ Deleted workflow");
+
+    // Delete test entities
+    Map<String, String> params = new HashMap<>();
+    params.put("hardDelete", "true");
+    params.put("recursive", "true");
+    client.tables().delete(testTable.getId().toString(), params);
+    client.databaseSchemas().delete(dbSchema.getId().toString(), params);
+    client.databases().delete(database.getId().toString(), params);
+    client.databaseServices().delete(dbService.getId().toString(), params);
+    LOG.debug("✓ Deleted database infrastructure");
+
+    // Delete team
+    client.teams().delete(approvalTeam.getId().toString(), params);
+    LOG.debug("✓ Deleted approval team");
+
+    // Delete test users
+    client.users().delete(candidate1.getId().toString(), params);
+    client.users().delete(candidate2.getId().toString(), params);
+    client.users().delete(ownerUser.getId().toString(), params);
+    LOG.debug("✓ Deleted test users");
+
+    LOG.info("test_WorkflowWithTeamCandidates completed successfully");
   }
 }

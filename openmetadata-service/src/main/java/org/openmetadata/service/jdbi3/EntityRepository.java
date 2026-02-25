@@ -303,7 +303,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
           .build(new EntityLoaderWithId());
 
   private static final ExecutorService FIELD_FETCH_EXECUTOR =
-      Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("field-fetch-", 0).factory());
+      Executors.newThreadPerTaskExecutor(
+          java.lang.Thread.ofVirtual().name("field-fetch-", 0).factory());
 
   private static final LoadingCache<String, Integer> COUNT_CACHE =
       CacheBuilder.newBuilder()
