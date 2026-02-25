@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Box, useTheme } from '@mui/material';
 import { isUndefined } from 'lodash';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +24,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { CHART_BLUE_1 } from '../../../constants/Color.constants';
+import {
+  CHART_BLUE_1,
+  GREY_100,
+  GREY_200,
+} from '../../../constants/Color.constants';
 import { GRAPH_BACKGROUND_COLOR } from '../../../constants/constants';
 import { DEFAULT_HISTOGRAM_DATA } from '../../../constants/profiler.constant';
 import { HistogramClass } from '../../../generated/entity/data/table';
@@ -36,15 +39,20 @@ import {
 } from '../../../utils/ChartUtils';
 import { CustomDQTooltip } from '../../../utils/DataQuality/DataQualityUtils';
 import { customFormatDateTime } from '../../../utils/date-time/DateTimeUtils';
-import { DataPill } from '../../common/DataPill/DataPill.styled';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { DataDistributionHistogramProps } from './Chart.interface';
+
+// Skew color theme constants (replaces theme.palette.allShades.success/error/info)
+const SKEW_THEME = {
+  success: { bg: '#DCFAE6', text: '#067647' },
+  error: { bg: '#FEE4E2', text: '#912018' },
+  info: { bg: '#EFF8FF', text: '#1849A9' },
+};
 
 const DataDistributionHistogram = ({
   data,
   noDataPlaceholderText,
 }: DataDistributionHistogramProps) => {
-  const theme = useTheme();
   const { t } = useTranslation();
 
   const renderHorizontalGridLine = useMemo(
@@ -61,16 +69,9 @@ const DataDistributionHistogram = ({
     isUndefined(data.currentDayData?.histogram)
   ) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          width: '100%',
-        }}>
+      <div className="flex items-center justify-center h-full w-full">
         <ErrorPlaceHolder placeholderText={noDataPlaceholderText} />
-      </Box>
+      </div>
     );
   }
 
@@ -79,13 +80,7 @@ const DataDistributionHistogram = ({
   );
 
   return (
-    <Box
-      data-testid="chart-container"
-      sx={{
-        display: 'flex',
-        width: '100%',
-        gap: 0,
-      }}>
+    <div className="flex w-full" data-testid="chart-container">
       {dataEntries.map(([key, columnProfile], index) => {
         const histogramData =
           (columnProfile?.histogram as HistogramClass) ||
@@ -101,46 +96,45 @@ const DataDistributionHistogram = ({
           'MMM dd, yyyy'
         );
 
-        const skewColorTheme = columnProfile?.nonParametricSkew
+        const skewTheme = columnProfile?.nonParametricSkew
           ? columnProfile?.nonParametricSkew > 0
-            ? theme.palette.allShades.success
-            : theme.palette.allShades.error
-          : theme.palette.allShades.info;
+            ? SKEW_THEME.success
+            : SKEW_THEME.error
+          : SKEW_THEME.info;
+
+        const colStyle: React.CSSProperties = {
+          flex: showSingleGraph ? '1 1 100%' : '1 1 50%',
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          paddingLeft: showSingleGraph ? 16 : 12,
+          paddingRight: showSingleGraph ? 16 : 12,
+          paddingTop: 8,
+          paddingBottom: 8,
+          borderRight:
+            !showSingleGraph && index === 0 ? `1px solid ${GREY_200}` : 'none',
+        };
 
         return (
-          <Box
-            key={key}
-            sx={{
-              flex: showSingleGraph ? '1 1 100%' : '1 1 50%',
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              px: showSingleGraph ? 4 : 3,
-              py: 2,
-              borderRight:
-                !showSingleGraph && index === 0
-                  ? `1px solid ${theme.palette.grey[200]}`
-                  : 'none',
-            }}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 5,
-              }}>
-              <DataPill>{graphDate}</DataPill>
-              <DataPill
-                sx={{
-                  backgroundColor: skewColorTheme[100],
-                  color: skewColorTheme[900],
+          <div key={key} style={colStyle}>
+            <div className="flex items-center justify-between mb-5">
+              <span
+                className="inline-block rounded-md px-3 py-1.5 text-sm font-semibold"
+                style={{ backgroundColor: GREY_100, color: '#101828' }}>
+                {graphDate}
+              </span>
+              <span
+                className="inline-block rounded-md px-3 py-1.5 text-sm font-semibold"
+                style={{
+                  backgroundColor: skewTheme.bg,
+                  color: skewTheme.text,
                 }}>
                 {`${t('label.skew')}: ${
                   columnProfile?.nonParametricSkew || '--'
                 }`}
-              </DataPill>
-            </Box>
-            <Box sx={{ flex: 1, minHeight: 350 }}>
+              </span>
+            </div>
+            <div style={{ flex: 1, minHeight: 350 }}>
               <ResponsiveContainer
                 debounce={200}
                 height="100%"
@@ -180,8 +174,8 @@ const DataDistributionHistogram = ({
                       />
                     }
                     cursor={{
-                      fill: theme.palette.grey[100],
-                      stroke: theme.palette.grey[200],
+                      fill: GREY_100,
+                      stroke: GREY_200,
                       strokeDasharray: '3 3',
                     }}
                   />
@@ -193,11 +187,11 @@ const DataDistributionHistogram = ({
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </Box>
-          </Box>
+            </div>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 };
 

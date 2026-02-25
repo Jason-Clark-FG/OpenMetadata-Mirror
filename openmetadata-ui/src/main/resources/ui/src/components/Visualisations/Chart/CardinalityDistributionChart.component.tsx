@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Box, Card, Divider, Typography, useTheme } from '@mui/material';
 import { isUndefined } from 'lodash';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +25,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { CHART_BLUE_1 } from '../../../constants/Color.constants';
+import {
+  CHART_BLUE_1,
+  GREY_100,
+  GREY_200,
+} from '../../../constants/Color.constants';
 import { GRAPH_BACKGROUND_COLOR } from '../../../constants/constants';
 import { ColumnProfile } from '../../../generated/entity/data/table';
 import {
@@ -35,7 +38,6 @@ import {
   tooltipFormatter,
 } from '../../../utils/ChartUtils';
 import { customFormatDateTime } from '../../../utils/date-time/DateTimeUtils';
-import { DataPill } from '../../common/DataPill/DataPill.styled';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 
 export interface CardinalityDistributionChartProps {
@@ -46,11 +48,18 @@ export interface CardinalityDistributionChartProps {
   noDataPlaceholderText?: string | React.ReactNode;
 }
 
+// Hardcoded theme color constants
+const COLOR_PRIMARY = '#4689FF';
+const COLOR_GREY_400 = '#98A2B3';
+const COLOR_GREY_700 = '#535862';
+const COLOR_GREY_900 = '#101828';
+const COLOR_GREY_300 = '#D0D5DD';
+const COLOR_WHITE = '#FFFFFF';
+
 const CardinalityDistributionChart = ({
   data,
   noDataPlaceholderText,
 }: CardinalityDistributionChartProps) => {
-  const theme = useTheme();
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
@@ -71,17 +80,9 @@ const CardinalityDistributionChart = ({
   const renderPlaceholder = useMemo(
     () => (placeholderText: string | React.ReactNode) =>
       (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            width: '100%',
-            minHeight: 350,
-          }}>
+        <div className="flex items-center justify-center h-full w-full min-h-[350px]">
           <ErrorPlaceHolder placeholderText={placeholderText} />
-        </Box>
+        </div>
       ),
     []
   );
@@ -101,61 +102,37 @@ const CardinalityDistributionChart = ({
       const data = payload[0].payload;
 
       return (
-        <Card
-          sx={{
-            p: '10px',
-            bgcolor: theme.palette.allShades.white,
-          }}>
-          <Typography
-            sx={{
-              color: theme.palette.allShades.gray[900],
-              fontWeight: theme.typography.fontWeightMedium,
-              fontSize: theme.typography.pxToRem(12),
-            }}>
+        <div
+          className="rounded-md shadow-md p-[10px]"
+          style={{ backgroundColor: COLOR_WHITE }}>
+          <p className="font-medium text-xs" style={{ color: COLOR_GREY_900 }}>
             {data.name}
-          </Typography>
-          <Divider
-            sx={{
-              my: 2,
-              borderStyle: 'dashed',
-              borderColor: theme.palette.allShades.gray[300],
-            }}
+          </p>
+          <hr
+            className="my-2 border-dashed"
+            style={{ borderColor: COLOR_GREY_300 }}
           />
-          <Box className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[700],
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+          <div className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
+            <span className="text-[11px]" style={{ color: COLOR_GREY_700 }}>
               {t('label.count')}
-            </Typography>
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[900],
-                fontWeight: theme.typography.fontWeightMedium,
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+            <span
+              className="font-medium text-[11px]"
+              style={{ color: COLOR_GREY_900 }}>
               {tooltipFormatter(data.count)}
-            </Typography>
-          </Box>
-          <Box className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[700],
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+          </div>
+          <div className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
+            <span className="text-[11px]" style={{ color: COLOR_GREY_700 }}>
               {t('label.percentage')}
-            </Typography>
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[900],
-                fontWeight: theme.typography.fontWeightMedium,
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+            <span
+              className="font-medium text-[11px]"
+              style={{ color: COLOR_GREY_900 }}>
               {`${data.percentage}%`}
-            </Typography>
-          </Box>
-        </Card>
+            </span>
+          </div>
+        </div>
       );
     }
 
@@ -198,10 +175,10 @@ const CardinalityDistributionChart = ({
           dy={4}
           fill={
             isSelected
-              ? theme.palette.primary.main
+              ? COLOR_PRIMARY
               : isHighlighted
-              ? theme.palette.grey[400]
-              : theme.palette.grey[700]
+              ? COLOR_GREY_400
+              : COLOR_GREY_700
           }
           fontSize={12}
           fontWeight={isSelected ? 600 : 400}
@@ -218,13 +195,7 @@ const CardinalityDistributionChart = ({
   };
 
   return (
-    <Box
-      data-testid="chart-container"
-      sx={{
-        display: 'flex',
-        width: '100%',
-        gap: 0,
-      }}>
+    <div className="flex w-full" data-testid="chart-container">
       {bothAllUnique
         ? renderPlaceholder(allValuesUniqueMessage)
         : dataEntries.map(([key, columnProfile], index) => {
@@ -252,45 +223,52 @@ const CardinalityDistributionChart = ({
 
             const containerHeight = Math.max(350, graphData.length * 30);
 
+            const colStyle: React.CSSProperties = {
+              flex: showSingleGraph ? '1 1 100%' : '1 1 50%',
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              paddingLeft: showSingleGraph ? 16 : 24,
+              paddingRight: showSingleGraph ? 16 : 24,
+              paddingTop: 8,
+              paddingBottom: 8,
+              borderRight:
+                !showSingleGraph && index === 0
+                  ? `1px solid ${GREY_200}`
+                  : 'none',
+            };
+
             return (
-              <Box
-                key={key}
-                sx={{
-                  flex: showSingleGraph ? '1 1 100%' : '1 1 50%',
-                  minWidth: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  px: showSingleGraph ? 4 : 6,
-                  py: 2,
-                  borderRight:
-                    !showSingleGraph && index === 0
-                      ? `1px solid ${theme.palette.grey[200]}`
-                      : 'none',
-                }}>
+              <div key={key} style={colStyle}>
                 {isAllUnique ? (
                   renderPlaceholder(allValuesUniqueMessage)
                 ) : (
                   <>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        mb: 5,
-                      }}>
-                      <DataPill data-testid="date">{graphDate}</DataPill>
-                      <DataPill data-testid="cardinality-tag">
+                    <div className="flex items-center justify-between mb-5">
+                      <span
+                        className="inline-block rounded-md px-3 py-1.5 text-sm font-semibold"
+                        data-testid="date"
+                        style={{
+                          backgroundColor: GREY_100,
+                          color: COLOR_GREY_900,
+                        }}>
+                        {graphDate}
+                      </span>
+                      <span
+                        className="inline-block rounded-md px-3 py-1.5 text-sm font-semibold"
+                        data-testid="cardinality-tag"
+                        style={{
+                          backgroundColor: GREY_100,
+                          color: COLOR_GREY_900,
+                        }}>
                         {`${t('label.total-entity', {
                           entity: t('label.category-plural'),
                         })}: ${cardinalityData.categories?.length || 0}`}
-                      </DataPill>
-                    </Box>
-                    <Box
-                      sx={{
-                        flex: 1,
-                        minHeight: 350,
-                        overflowX: 'hidden',
-                      }}>
+                      </span>
+                    </div>
+                    <div
+                      className="overflow-x-hidden"
+                      style={{ flex: 1, minHeight: 350 }}>
                       <ResponsiveContainer
                         debounce={200}
                         height={containerHeight}
@@ -329,8 +307,8 @@ const CardinalityDistributionChart = ({
                           <Tooltip
                             content={renderTooltip}
                             cursor={{
-                              fill: theme.palette.grey[100],
-                              stroke: theme.palette.grey[200],
+                              fill: GREY_100,
+                              stroke: GREY_200,
                               strokeDasharray: '3 3',
                             }}
                           />
@@ -350,9 +328,9 @@ const CardinalityDistributionChart = ({
                                   cursor="pointer"
                                   fill={
                                     isSelected
-                                      ? theme.palette.primary.main
+                                      ? COLOR_PRIMARY
                                       : isHighlighted
-                                      ? theme.palette.grey[300]
+                                      ? COLOR_GREY_300
                                       : CHART_BLUE_1
                                   }
                                   key={`cell-${entry.name}`}
@@ -366,13 +344,13 @@ const CardinalityDistributionChart = ({
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
-                    </Box>
+                    </div>
                   </>
                 )}
-              </Box>
+              </div>
             );
           })}
-    </Box>
+    </div>
   );
 };
 

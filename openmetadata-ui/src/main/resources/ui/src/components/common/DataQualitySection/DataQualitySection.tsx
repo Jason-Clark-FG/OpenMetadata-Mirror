@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Divider } from '@mui/material';
 import { Typography } from 'antd';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,12 +73,7 @@ const DataQualitySection: React.FC<DataQualitySectionProps> = ({
         type="success"
         onClick={() => onFilterChange?.('success')}
       />
-      <Divider
-        flexItem
-        className="stat-card-vertical-divider"
-        orientation="vertical"
-        variant="middle"
-      />
+      <div className="stat-card-vertical-divider" />
       <DataQualityStatCard
         count={abortedTests}
         isActive={activeFilter === 'aborted'}
@@ -87,12 +81,7 @@ const DataQualitySection: React.FC<DataQualitySectionProps> = ({
         type="aborted"
         onClick={() => onFilterChange?.('aborted')}
       />
-      <Divider
-        flexItem
-        className="stat-card-vertical-divider"
-        orientation="vertical"
-        variant="middle"
-      />
+      <div className="stat-card-vertical-divider" />
       <DataQualityStatCard
         count={failedTests}
         isActive={activeFilter === 'failed'}

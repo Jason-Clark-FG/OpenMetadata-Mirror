@@ -10,14 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import {
-  Card,
-  Divider,
-  Grid,
-  Stack,
-  Typography,
-  useTheme,
-} from '@mui/material';
 import { FC, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Column } from '../../../../generated/entity/data/container';
@@ -32,7 +24,6 @@ interface ColumnSummaryProps {
 }
 
 const ColumnSummary: FC<ColumnSummaryProps> = ({ column }) => {
-  const theme = useTheme();
   const { t } = useTranslation();
 
   const { Classification, Glossary } = useMemo(() => {
@@ -40,59 +31,39 @@ const ColumnSummary: FC<ColumnSummaryProps> = ({ column }) => {
   }, [column.tags]);
 
   return (
-    <Card
-      sx={{
-        borderRadius: '10px',
-        border: `1px solid ${theme.palette.grey[200]}`,
-        boxShadow: 'none',
-        height: '100%',
-      }}>
-      <Stack alignItems="center" direction="row" spacing={3} sx={{ p: 4 }}>
-        <Typography
-          sx={{
-            fontSize: theme.typography.pxToRem(16),
-            fontWeight: theme.typography.fontWeightMedium,
-            color: theme.palette.grey[900],
-          }}>
+    <div className="tw:h-full tw:rounded-[10px] tw:border tw:border-border-secondary tw:shadow-none">
+      <div className="tw:flex tw:items-center tw:gap-3 tw:p-4">
+        <p className="tw:m-0 tw:text-base tw:font-medium tw:text-primary">
           {getEntityName(column)}
-        </Typography>
-        <DataPill
-          sx={{
-            border: `1px solid ${theme.palette.grey[200]}`,
-            backgroundColor: theme.palette.grey[50],
-            fontSize: theme.typography.pxToRem(12),
-            fontWeight: theme.typography.fontWeightMedium,
-            color: theme.palette.grey[700],
-            p: '3px 6px',
-          }}>
+        </p>
+        <DataPill className="tw:border tw:border-border-secondary tw:bg-quaternary tw:px-1.5 tw:py-0.5 tw:text-xs tw:font-medium tw:text-secondary">
           {column.dataType}
         </DataPill>
-      </Stack>
-      <Divider />
-      <Stack spacing={3} sx={{ p: 4 }}>
+      </div>
+      <hr className="tw:my-0 tw:h-px tw:border-0 tw:bg-border-secondary" />
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:p-4">
         <RichTextEditorPreviewerV1
           className="text-grey-muted m-t-xs"
           markdown={column.description ?? ''}
           maxLength={184}
         />
-        <Divider
-          sx={{
-            borderStyle: 'dashed',
-            borderColor: theme.palette.grey[200],
-          }}
-        />
-        <Grid container spacing={4}>
-          <Grid size={2}>{t('label.glossary-term-plural')}</Grid>
-          <Grid size={10}>
+        <hr className="tw:my-0 tw:h-px tw:border-0 tw:border-dashed tw:bg-border-secondary" />
+        <div className="tw:grid tw:grid-cols-12 tw:gap-4">
+          <div className="tw:col-span-2 tw:text-sm tw:text-secondary">
+            {t('label.glossary-term-plural')}
+          </div>
+          <div className="tw:col-span-10">
             <TagsViewer newLook sizeCap={3} tags={Glossary ?? []} />
-          </Grid>
-          <Grid size={2}>{t('label.tag-plural')}</Grid>
-          <Grid size={10}>
+          </div>
+          <div className="tw:col-span-2 tw:text-sm tw:text-secondary">
+            {t('label.tag-plural')}
+          </div>
+          <div className="tw:col-span-10">
             <TagsViewer newLook sizeCap={3} tags={Classification ?? []} />
-          </Grid>
-        </Grid>
-      </Stack>
-    </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

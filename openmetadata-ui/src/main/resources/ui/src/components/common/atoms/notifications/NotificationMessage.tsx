@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Box, useTheme } from '@mui/material';
 import { iconRingVariants } from '@openmetadata/ui-core-components';
 import {
   AlertCircle,
@@ -31,8 +30,6 @@ const NotificationMessage: React.FC<NotificationMessageProps> = ({
   message,
   variant,
 }) => {
-  const theme = useTheme();
-
   const getIcon = () => {
     const iconProps = {
       size: 20,
@@ -56,21 +53,15 @@ const NotificationMessage: React.FC<NotificationMessageProps> = ({
   const getIconColor = () => {
     switch (variant) {
       case 'success':
-        return (
-          theme.palette.allShades?.success?.[600] || theme.palette.success.main
-        );
+        return '#079455';
       case 'error':
-        return (
-          theme.palette.allShades?.error?.[600] || theme.palette.error.main
-        );
+        return '#D92D20';
       case 'warning':
-        return (
-          theme.palette.allShades?.warning?.[600] || theme.palette.warning.main
-        );
+        return '#DC6803';
       case 'info':
-        return theme.palette.allShades?.brand?.[600] || theme.palette.info.main;
+        return '#1570EF';
       default:
-        return theme.palette.text.primary;
+        return '#344054';
     }
   };
 
@@ -80,11 +71,11 @@ const NotificationMessage: React.FC<NotificationMessageProps> = ({
   }
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Box
+    <div className="flex items-center">
+      <div
         data-testid="alert-icon"
-        sx={{
-          ...iconRingVariants.notification,
+        style={{
+          ...(iconRingVariants.notification as React.CSSProperties),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -93,9 +84,9 @@ const NotificationMessage: React.FC<NotificationMessageProps> = ({
           margin: '0 19px 0 5px',
         }}>
         {icon}
-      </Box>
-      <Box sx={{ flex: 1 }}>{message}</Box>
-    </Box>
+      </div>
+      <div style={{ flex: 1 }}>{message}</div>
+    </div>
   );
 };
 

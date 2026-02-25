@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Box, Skeleton, Stack, useTheme } from '@mui/material';
 import { Form, Select } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
@@ -92,8 +91,6 @@ const IncidentManager = ({
   const location = useCustomLocation();
   const navigate = useNavigate();
   const { activeDomain } = useDomainStore();
-  const theme = useTheme();
-
   const allParams = useMemo(() => {
     const param = location.search;
     const searchData = QueryString.parse(
@@ -525,7 +522,12 @@ const IncidentManager = ({
     record?: TestCaseResolutionStatus
   ) => {
     if (isPermissionLoading) {
-      return <Skeleton height={24} variant="rectangular" width={100} />;
+      return (
+        <div
+          className="tw:h-6 tw:w-25 tw:animate-pulse tw:rounded tw:bg-quaternary"
+          data-testid="assignee-skeleton"
+        />
+      );
     }
 
     const hasPermission = testCasePermissions.find(
@@ -535,7 +537,7 @@ const IncidentManager = ({
     );
 
     return (
-      <Box data-testid="assignee">
+      <div data-testid="assignee">
         <OwnerLabel
           isCompactView
           className="m-0"
@@ -555,7 +557,7 @@ const IncidentManager = ({
             record && handleAssigneeUpdate(record, assignees)
           }
         />
-      </Box>
+      </div>
     );
   };
 
@@ -632,7 +634,12 @@ const IncidentManager = ({
         width: 100,
         render: (_, record: TestCaseResolutionStatus) => {
           if (isPermissionLoading) {
-            return <Skeleton height={24} variant="rectangular" width={100} />;
+            return (
+              <div
+                className="tw:h-6 tw:w-25 tw:animate-pulse tw:rounded tw:bg-quaternary"
+                data-testid="status-skeleton"
+              />
+            );
           }
           const hasPermission = testCasePermissions.find(
             (item) =>
@@ -657,7 +664,12 @@ const IncidentManager = ({
         width: 100,
         render: (value: Severities, record: TestCaseResolutionStatus) => {
           if (isPermissionLoading) {
-            return <Skeleton height={24} variant="rectangular" width={100} />;
+            return (
+              <div
+                className="tw:h-6 tw:w-25 tw:animate-pulse tw:rounded tw:bg-quaternary"
+                data-testid="severity-skeleton"
+              />
+            );
           }
 
           const hasPermission = testCasePermissions.find(
@@ -710,26 +722,9 @@ const IncidentManager = ({
   }
 
   return (
-    <Stack
-      sx={{
-        border: `1px solid ${theme.palette.grey[200]}`,
-        borderRadius: '10px',
-        backgroundColor: theme.palette.common.white,
-      }}>
-      <Box
-        className="new-form-style"
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          p: 4,
-          gap: 5,
-        }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          spacing={5}
-          width="100%">
+    <div className="tw:border tw:border-border-secondary tw:rounded-[10px] tw:bg-white">
+      <div className="new-form-style tw:flex tw:justify-between tw:items-center tw:p-8 tw:gap-10">
+        <div className="tw:flex tw:flex-row tw:justify-between tw:gap-10 tw:w-full">
           <AsyncSelect
             allowClear
             showArrow
@@ -742,7 +737,7 @@ const IncidentManager = ({
             value={filters.testCaseFQN}
             onChange={(value) => updateFilters({ testCaseFQN: value })}
           />
-          <Box display="flex" gap={5}>
+          <div className="tw:flex tw:gap-10">
             <Form.Item className="m-b-0" label={t('label.assignee')}>
               <Assignees
                 allowClear
@@ -785,9 +780,9 @@ const IncidentManager = ({
                 />
               </Form.Item>
             )}
-          </Box>
-        </Stack>
-      </Box>
+          </div>
+        </div>
+      </div>
 
       <Table
         columns={columns}
@@ -815,7 +810,7 @@ const IncidentManager = ({
         scroll={testCaseListData.data.length > 0 ? { x: '100%' } : undefined}
         size="small"
       />
-    </Stack>
+    </div>
   );
 };
 

@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Divider } from '@mui/material';
 import { Card, Col, Row, Tabs, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';

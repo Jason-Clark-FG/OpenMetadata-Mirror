@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { useTheme } from '@mui/material';
 import { Col, Row } from 'antd';
 import { useMemo, useState } from 'react';
 import {
@@ -45,7 +44,6 @@ const CustomBarChart = ({
   name,
   noDataPlaceholderText,
 }: CustomBarChartProps) => {
-  const theme = useTheme();
   const { data, information } = chartCollection;
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
@@ -117,8 +115,8 @@ const CustomBarChart = ({
             />
           }
           cursor={{
-            fill: theme.palette.grey[100],
-            stroke: theme.palette.grey[200],
+            fill: '#f5f5f5',
+            stroke: '#e8e8e8',
             strokeDasharray: '3 3',
           }}
         />

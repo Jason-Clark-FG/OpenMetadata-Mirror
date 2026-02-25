@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Box, Chip, IconButton, useTheme } from '@mui/material';
 import {
   ChevronDown,
   ChevronRight,
@@ -98,7 +97,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
   onColumnsUpdate,
 }: ColumnDetailPanelProps<T>) => {
   const { t } = useTranslation();
-  const theme = useTheme();
   const { permissions } = useGenericContext();
   const [isDescriptionLoading, setIsDescriptionLoading] = useState(false);
   const [isTestCaseLoading, setIsTestCaseLoading] = useState(false);
@@ -770,27 +768,20 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
 
   const columnTitle = activeColumn ? (
     <div className="title-section">
-      <Box sx={{ marginLeft: 4 }}>
+      <div className="tw:ml-4">
         {breadcrumbPath.length > 1 &&
           breadcrumbPath.map((breadcrumb, index) => {
             const isLastItem = index === breadcrumbPath.length - 1;
 
             return (
-              <Box
-                key={breadcrumb.fullyQualifiedName}
-                sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                  }}>
+              <div
+                className="tw:inline-flex tw:items-center"
+                key={breadcrumb.fullyQualifiedName}>
+                <div className="tw:inline-flex tw:items-center tw:gap-0.5">
                   <Typography.Text
                     style={{
                       fontSize: 12,
-                      color: isLastItem
-                        ? theme.palette.allShades?.gray?.[700]
-                        : theme.palette.allShades?.gray?.[500],
+                      color: isLastItem ? '#344054' : '#98a2b3',
                       fontWeight: isLastItem ? 500 : 400,
                       cursor: isLastItem ? 'default' : 'pointer',
                     }}
@@ -810,40 +801,25 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                     {getEntityName(breadcrumb)}
                   </Typography.Text>
                   {index < breadcrumbPath.length - 1 && (
-                    <ChevronRight
-                      color={theme.palette.allShades?.gray?.[400]}
-                      height={16}
-                      width={16}
-                    />
+                    <ChevronRight color="#98a2b3" height={16} width={16} />
                   )}
-                </Box>
-              </Box>
+                </div>
+              </div>
             );
           })}
-      </Box>
+      </div>
       <div className="title-container items-start gap-4">
         <div className="d-flex items-center justify-between w-full">
           <div className="d-flex items-center w-full">
-            <Box
-              sx={{
-                marginRight: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 40,
-                height: 40,
-                borderRadius: '4px',
-                boxShadow:
-                  '0 1px 2px -1px rgba(10, 13, 18, 0.1), 0 1px 3px 0 rgba(10, 13, 18, 0.1)',
-              }}>
+            <div className="tw:mr-2 tw:flex tw:h-10 tw:w-10 tw:items-center tw:justify-center tw:rounded tw:shadow-sm">
               <ColumnIcon
                 style={{
                   width: 20,
                   height: 20,
-                  color: theme.palette.allShades?.gray?.[700],
+                  color: '#344054',
                 }}
               />
-            </Box>
+            </div>
             <div className="d-flex flex-column w-full overflow-hidden">
               <div className="d-flex items-center gap-2 w-full">
                 <Tooltip
@@ -900,13 +876,12 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
             </div>
           </div>
           <div>
-            <IconButton data-testid="close-button" onClick={onClose}>
-              <XClose
-                color={theme.palette.allShades?.gray?.[600]}
-                height={16}
-                width={16}
-              />
-            </IconButton>
+            <button
+              className="tw:flex tw:h-8 tw:w-8 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-1 hover:tw:bg-primary_hover"
+              data-testid="close-button"
+              onClick={onClose}>
+              <XClose color="#667085" height={16} width={16} />
+            </button>
           </div>
         </div>
         <div className="d-flex items-center gap-2">
@@ -915,31 +890,25 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
               placement="bottom"
               title={getDataTypeDisplay(activeColumn)}
               trigger="hover">
-              <Chip
-                className="data-type-chip"
-                label={getDataTypeDisplay(activeColumn) || ''}
-                size="small"
-                sx={{
-                  maxWidth: '240px',
-                  '& .MuiChip-label': {
-                    display: 'block',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  },
-                }}
-                variant="outlined"
-              />
+              <span
+                className={
+                  'data-type-chip tw:max-w-60 tw:overflow-hidden tw:text-ellipsis' +
+                  ' tw:whitespace-nowrap tw:rounded-md tw:border tw:border-border-secondary' +
+                  ' tw:px-2 tw:py-0.5 tw:text-xs tw:text-secondary'
+                }>
+                {getDataTypeDisplay(activeColumn) || ''}
+              </span>
             </Tooltip>
           )}
           {isColumn(activeColumn) && isPrimaryKey && (
-            <Chip
-              className="data-type-chip"
-              icon={<KeyIcon height={12} width={12} />}
-              label={t('label.primary-key')}
-              size="small"
-              variant="outlined"
-            />
+            <span
+              className={
+                'data-type-chip tw:flex tw:items-center tw:gap-1 tw:rounded-md' +
+                ' tw:border tw:border-border-secondary tw:px-2 tw:py-0.5 tw:text-xs tw:text-secondary'
+              }>
+              <KeyIcon height={12} width={12} />
+              {t('label.primary-key')}
+            </span>
           )}
         </div>
       </div>
@@ -980,96 +949,54 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     return null;
   }
 
+  const navBtnCls =
+    'tw:flex tw:h-8 tw:w-8 tw:cursor-pointer tw:items-center tw:justify-center' +
+    ' tw:rounded-md tw:border-0 tw:bg-white tw:p-1 hover:tw:bg-primary_hover' +
+    ' disabled:tw:cursor-not-allowed disabled:tw:opacity-40';
+
+  const navFooter = (
+    <div className="d-flex justify-between items-center w-full navigation-container">
+      <div className="d-flex items-center gap-1 m-t-sm">
+        <button
+          className={navBtnCls}
+          disabled={isPreviousDisabled}
+          onClick={handlePreviousColumn}>
+          <ChevronUp color="#667085" height={16} width={16} />
+        </button>
+        <button
+          className={navBtnCls}
+          disabled={isNextDisabled}
+          onClick={handleNextColumn}>
+          <ChevronDown color="#667085" height={16} width={16} />
+        </button>
+        {isColumnInList && flattenedColumns.length > 0 && (
+          <Typography.Text className="pagination-header-text text-medium">
+            {actualColumnIndex + 1} {t('label.of-lowercase')}{' '}
+            {flattenedColumns.length} {t('label.column-plural').toLowerCase()}
+          </Typography.Text>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Drawer
       className="column-detail-panel"
       closable={false}
-      footer={
-        <div className="d-flex justify-between items-center w-full navigation-container">
-          <div className="d-flex items-center gap-1 m-t-sm">
-            <IconButton
-              disabled={isPreviousDisabled}
-              sx={{
-                height: 6,
-                width: 6,
-                backgroundColor: theme.palette.allShades?.white,
-                padding: 4,
-              }}
-              onClick={handlePreviousColumn}>
-              <ChevronUp
-                color={theme.palette.allShades?.gray?.[600]}
-                height={16}
-                width={16}
-              />
-            </IconButton>
-            <IconButton
-              disabled={isNextDisabled}
-              sx={{
-                height: 6,
-                width: 6,
-                padding: 4,
-                backgroundColor: theme.palette.allShades?.white,
-              }}
-              onClick={handleNextColumn}>
-              <ChevronDown
-                color={theme.palette.allShades?.gray?.[600]}
-                height={16}
-                width={16}
-              />
-            </IconButton>
-            {isColumnInList && flattenedColumns.length > 0 && (
-              <Typography.Text className="pagination-header-text text-medium">
-                {actualColumnIndex + 1} {t('label.of-lowercase')}{' '}
-                {flattenedColumns.length}{' '}
-                {t('label.column-plural').toLowerCase()}
-              </Typography.Text>
-            )}
-          </div>
-        </div>
-      }
+      footer={navFooter}
       open={isOpen}
       placement="right"
       title={columnTitle}
       width="40%"
       onClose={onClose}>
       {localToast.open && (
-        <Box
-          sx={{
-            position: 'sticky',
-            top: -20,
-            zIndex: 1,
-            margin: '0px 16px 16px 8px',
-            '& .ant-alert': {
-              minHeight: 48,
-              padding: '8px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              borderRadius: '6px',
-
-              '& .ant-alert-icon': {
-                display: 'flex',
-                alignItems: 'center',
-                marginRight: 1,
-              },
-
-              '& #alert-icon': {
-                padding: 0.5,
-                borderWidth: 2,
-                fontSize: 16,
-              },
-
-              '& .ant-alert-description': {
-                flex: 1,
-                wordBreak: 'break-word',
-              },
-            },
-          }}>
+        <div className="tw:sticky tw:top-[-20px] tw:z-10 tw:mx-2 tw:ml-2 tw:mb-4 tw:mr-4">
           <AlertBar
             defaultExpand
             message={localToast.message}
             type={localToast.type}
           />
-        </Box>
+        </div>
       )}
       <div className="column-detail-panel-container">
         <div className="d-flex gap-2">
