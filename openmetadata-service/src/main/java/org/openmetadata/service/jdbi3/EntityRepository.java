@@ -7398,7 +7398,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * @param include Include parameter for soft-deleted entities
    * @return Set of all team IDs including the input teams and all their ancestors
    */
-  protected static Set<UUID> batchLoadAncestorTeamIds(Set<UUID> teamIds, Include include) {
+  public static Set<UUID> batchLoadAncestorTeamIds(Set<UUID> teamIds, Include include) {
     Set<UUID> allTeamIds = new HashSet<>(teamIds);
     Set<UUID> currentLevel = new HashSet<>(teamIds);
 
@@ -7412,7 +7412,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       // findFromBatch with toIds=currentIds finds Parents
       List<CollectionDAO.EntityRelationshipObject> parentRecords =
           dao.relationshipDAO()
-              .findFromBatch(currentIds, Relationship.PARENT_OF.ordinal(), TEAM, TEAM);
+              .findFromBatch(currentIds, Relationship.PARENT_OF.ordinal(), TEAM, TEAM, include);
 
       // Collect parent IDs that we haven't visited yet
       Set<UUID> newParents = new HashSet<>();
@@ -7439,7 +7439,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * @param include Include parameter for soft-deleted entities
    * @return Set of all domain references from the teams and their ancestors
    */
-  protected static Set<EntityReference> batchLoadDomainsWithHierarchy(
+  public static Set<EntityReference> batchLoadDomainsWithHierarchy(
       List<EntityReference> teamRefs, Include include) {
     Set<EntityReference> allDomains = new TreeSet<>(EntityUtil.compareEntityReferenceById);
 
@@ -7476,6 +7476,78 @@ public abstract class EntityRepository<T extends EntityInterface> {
     allDomains.addAll(domainRefs);
 
     return allDomains;
+  }
+
+  /**
+   * Batch load all roles for a set of team IDs using a single query. Returns a map from team ID to
+   * list of role EntityReferences.
+   */
+  public static Map<UUID, List<EntityReference>> batchLoadTeamRoles(
+      Set<UUID> teamIds, Include include) {
+    Map<UUID, List<EntityReference>> teamToRoles = new HashMap<>();
+    if (teamIds == null || teamIds.isEmpty()) {
+      return teamToRoles;
+    }
+    List<String> teamIdStrings = teamIds.stream().map(UUID::toString).toList();
+    CollectionDAO dao = Entity.getCollectionDAO();
+    List<CollectionDAO.EntityRelationshipObject> roleRecords =
+        dao.relationshipDAO()
+            .findToBatch(teamIdStrings, Relationship.HAS.ordinal(), TEAM, Entity.ROLE);
+    for (CollectionDAO.EntityRelationshipObject rec : roleRecords) {
+      UUID teamId = UUID.fromString(rec.getFromId());
+      UUID roleId = UUID.fromString(rec.getToId());
+      EntityReference roleRef = Entity.getEntityReferenceById(Entity.ROLE, roleId, include);
+      teamToRoles.computeIfAbsent(teamId, k -> new ArrayList<>()).add(roleRef);
+    }
+    return teamToRoles;
+  }
+
+  /**
+   * Batch load all direct policies for a set of team IDs using a single query. Returns a map from
+   * team ID to list of policy EntityReferences.
+   */
+  public static Map<UUID, List<EntityReference>> batchLoadTeamPolicies(
+      Set<UUID> teamIds, Include include) {
+    Map<UUID, List<EntityReference>> teamToPolicies = new HashMap<>();
+    if (teamIds == null || teamIds.isEmpty()) {
+      return teamToPolicies;
+    }
+    List<String> teamIdStrings = teamIds.stream().map(UUID::toString).toList();
+    CollectionDAO dao = Entity.getCollectionDAO();
+    List<CollectionDAO.EntityRelationshipObject> policyRecords =
+        dao.relationshipDAO()
+            .findToBatch(teamIdStrings, Relationship.HAS.ordinal(), TEAM, Entity.POLICY);
+    for (CollectionDAO.EntityRelationshipObject rec : policyRecords) {
+      UUID teamId = UUID.fromString(rec.getFromId());
+      UUID policyId = UUID.fromString(rec.getToId());
+      EntityReference policyRef = Entity.getEntityReferenceById(Entity.POLICY, policyId, include);
+      teamToPolicies.computeIfAbsent(teamId, k -> new ArrayList<>()).add(policyRef);
+    }
+    return teamToPolicies;
+  }
+
+  /**
+   * Batch load all policies for a set of role IDs using a single query. Returns a map from role ID
+   * to list of policy EntityReferences.
+   */
+  public static Map<UUID, List<EntityReference>> batchLoadRolePolicies(
+      Set<UUID> roleIds, Include include) {
+    Map<UUID, List<EntityReference>> roleToPolicies = new HashMap<>();
+    if (roleIds == null || roleIds.isEmpty()) {
+      return roleToPolicies;
+    }
+    List<String> roleIdStrings = roleIds.stream().map(UUID::toString).toList();
+    CollectionDAO dao = Entity.getCollectionDAO();
+    List<CollectionDAO.EntityRelationshipObject> policyRecords =
+        dao.relationshipDAO()
+            .findToBatch(roleIdStrings, Relationship.HAS.ordinal(), Entity.ROLE, Entity.POLICY);
+    for (CollectionDAO.EntityRelationshipObject rec : policyRecords) {
+      UUID roleId = UUID.fromString(rec.getFromId());
+      UUID policyId = UUID.fromString(rec.getToId());
+      EntityReference policyRef = Entity.getEntityReferenceById(Entity.POLICY, policyId, include);
+      roleToPolicies.computeIfAbsent(roleId, k -> new ArrayList<>()).add(policyRef);
+    }
+    return roleToPolicies;
   }
 
   List<String> entityListToStrings(List<T> entities) {
