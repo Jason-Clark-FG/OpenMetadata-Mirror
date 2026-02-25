@@ -1236,7 +1236,7 @@ class TableauSource(DashboardServiceSource):
 
                 new_usage = current_views - latest_usage
                 if new_usage < 0:
-                    logger.debug(
+                    logger.warning(
                         f"Wrong computation of usage difference for {dashboard.fullyQualifiedName.root}."
                         f" Got new_usage={new_usage}."
                     )

@@ -283,7 +283,7 @@ class PipelineServiceSource(TopologyRunnerMixin, Source, ABC):
 
                     new_usage = current_task_usage - latest_usage
                     if new_usage < 0:
-                        logger.debug(
+                        logger.warning(
                             f"Wrong computation of usage difference for {pipeline.fullyQualifiedName.root}."
                             f" Got new_usage={new_usage}."
                         )
