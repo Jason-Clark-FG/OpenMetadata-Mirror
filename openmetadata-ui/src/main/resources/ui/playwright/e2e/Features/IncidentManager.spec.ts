@@ -766,7 +766,7 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await expect(page.getByTestId('page-indicator')).toContainText('1');
 
       const nextListRes = page.waitForResponse(
-        (res) => res.url().includes(listUrl) && res.url().includes('offset=10')
+        (res) => res.url().includes(listUrl) && res.url().includes('offset=15')
       );
       await page.getByTestId('next').click();
       await nextListRes;
