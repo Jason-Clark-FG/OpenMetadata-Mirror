@@ -59,28 +59,66 @@ export interface NodeConfiguration {
  */
 export interface Assignees {
     /**
-     * Deprecated: use assigneeSources instead. Add the Reviewers to the assignees List.
+     * Add the Owners to the assignees List.
+     */
+    addOwners?: boolean;
+    /**
+     * Add the Reviewers to the assignees List.
      */
     addReviewers?: boolean;
     /**
-     * Deprecated: use assigneeSources instead. Single source for Task assignees.
+     * List of specific candidates (users or teams) assigned to this task.
      */
-    assigneeSource?: AssigneeSource;
-    /**
-     * List of sources for the Task assignees. Each entry can be 'reviewers' (entity's
-     * reviewers), 'owners' (entity's owners), or a specific entity link string (e.g.
-     * '<#E::user::john.doe>'). Multiple sources are unioned together. When empty, the task is
-     * auto-approved.
-     */
-    assigneeSources?: string[];
+    candidates?: EntityReference[];
 }
 
 /**
- * Deprecated: use assigneeSources instead. Single source for Task assignees.
+ * This schema defines the EntityReference type used for referencing an entity.
+ * EntityReference is used for capturing relationships from one entity to another. For
+ * example, a table has an attribute called database of type EntityReference that captures
+ * the relationship of a table `belongs to a` database.
  */
-export enum AssigneeSource {
-    Owners = "owners",
-    Reviewers = "reviewers",
+export interface EntityReference {
+    /**
+     * If true the entity referred to has been soft-deleted.
+     */
+    deleted?: boolean;
+    /**
+     * Optional description of entity.
+     */
+    description?: string;
+    /**
+     * Display Name that identifies this entity.
+     */
+    displayName?: string;
+    /**
+     * Fully qualified name of the entity instance. For entities such as tables, databases
+     * fullyQualifiedName is returned in this field. For entities that don't have name hierarchy
+     * such as `user` and `team` this will be same as the `name` field.
+     */
+    fullyQualifiedName?: string;
+    /**
+     * Link to the entity resource.
+     */
+    href?: string;
+    /**
+     * Unique identifier that identifies an entity instance.
+     */
+    id: string;
+    /**
+     * If true the relationship indicated by this entity reference is inherited from the parent
+     * entity.
+     */
+    inherited?: boolean;
+    /**
+     * Name of the entity instance.
+     */
+    name?: string;
+    /**
+     * Entity type/class name - Examples: `database`, `table`, `metrics`, `databaseService`,
+     * `dashboardService`...
+     */
+    type: string;
 }
 
 export interface InputNamespaceMap {
