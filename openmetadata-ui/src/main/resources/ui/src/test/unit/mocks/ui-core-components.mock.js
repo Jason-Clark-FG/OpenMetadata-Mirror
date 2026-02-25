@@ -77,7 +77,13 @@ SlideoutMenu.Header = ({ children, onClose }) =>
 SlideoutMenu.Footer = ({ children }) =>
   React.createElement('div', null, children);
 
+// TODO: Temp Fix, Remove this when @openmetadata/ui-core-components is updated
+import { createTheme } from '@mui/material/styles';
+
+const createMuiTheme = jest.fn().mockImplementation(() => createTheme({}));
+
 module.exports = {
+  createMuiTheme,
   Toggle,
   Tooltip,
   TooltipTrigger,
