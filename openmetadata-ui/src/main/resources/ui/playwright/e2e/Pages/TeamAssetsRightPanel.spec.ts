@@ -193,20 +193,6 @@ test.describe('Team Details Assets Tab - Right Panel', () => {
     await overview.shouldShowTier('Tier1');
   });
 
-  test('Should edit owners from team assets context', async ({ adminPage }) => {
-    test.slow();
-    const fqn = getEntityFqn(tableEntity);
-    await navigateToTeamAssetsAndOpenPanel(adminPage, teamEntity, fqn!);
-
-    const rightPanel = new RightPanelPageObject(adminPage, tableEntity);
-    const overview = new OverviewPageObject(rightPanel);
-    await rightPanel.waitForPanelLoaded();
-
-    await overview.navigateToOverviewTab();
-    await overview.addOwnerWithoutValidation(ownerUser.getUserDisplayName());
-    await overview.shouldShowOwner(ownerUser.getUserDisplayName());
-  });
-
   test('Should edit domain from team assets context', async ({ adminPage }) => {
     test.slow();
     const fqn = getEntityFqn(tableEntity);
@@ -240,5 +226,19 @@ test.describe('Team Details Assets Tab - Right Panel', () => {
       testGlossaryTerm.data.displayName;
     await overview.editGlossaryTerms(termDisplayName);
     await overview.shouldShowGlossaryTermsSection();
+  });
+
+  test('Should edit owners from team assets context', async ({ adminPage }) => {
+    test.slow();
+    const fqn = getEntityFqn(tableEntity);
+    await navigateToTeamAssetsAndOpenPanel(adminPage, teamEntity, fqn!);
+
+    const rightPanel = new RightPanelPageObject(adminPage, tableEntity);
+    const overview = new OverviewPageObject(rightPanel);
+    await rightPanel.waitForPanelLoaded();
+
+    await overview.navigateToOverviewTab();
+    await overview.addOwnerWithoutValidation(ownerUser.getUserDisplayName());
+    await overview.shouldShowOwner(ownerUser.getUserDisplayName());
   });
 });

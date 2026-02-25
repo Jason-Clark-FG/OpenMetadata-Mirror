@@ -163,13 +163,18 @@ export class OverviewPageObject extends RightPanelBase {
    * @returns OverviewPageObject for method chaining
    */
   async editDescription(description: string): Promise<OverviewPageObject> {
-    await this.editDescriptionIcon.click();
+    await this.editDescriptionIcon.waitFor({ state: 'visible' });
+    await this.editDescriptionIcon.dispatchEvent('click');
 
     // Wait for the markdown editor modal to be fully visible - use semantic selector
     await this.markdownEditor.waitFor({ state: 'visible' });
 
-    await this.markdownEditor.clear();
-    await this.markdownEditor.fill(description);
+    await this.markdownEditor.click();
+    await this.page.keyboard.press('ControlOrMeta+a');
+    await this.page.keyboard.press('Backspace');
+    if (description) {
+      await this.markdownEditor.fill(description);
+    }
 
     // Set up PATCH listener before clicking save so we don't race with the response.
     // This ensures the description is committed to the server before the caller proceeds
@@ -186,7 +191,11 @@ export class OverviewPageObject extends RightPanelBase {
    * @returns OverviewPageObject for method chaining
    */
   async editTags(tagName: string): Promise<OverviewPageObject> {
-    await this.editTagsIcon.click();
+    // Use dispatchEvent to avoid Playwright's internal scroll-into-view on click().
+    // Scrolling the panel container triggers a React re-render that detaches the icon,
+    // causing Playwright to retry the scroll → re-render → infinite loop under load.
+    await this.editTagsIcon.waitFor({ state: 'visible' });
+    await this.editTagsIcon.dispatchEvent('click');
 
     // Wait for the tag selection modal to be visible
     await this.selectableList.waitFor({ state: 'visible' });
@@ -205,15 +214,15 @@ export class OverviewPageObject extends RightPanelBase {
     // 'active' CSS class when the tag is already selected.
     const tagItem = this.selectableList.getByTitle(tagName);
     await tagItem.waitFor({ state: 'visible' });
-    await tagItem.scrollIntoViewIfNeeded();
 
     // Only click if not already active — in parallel test runs another test may have added
     // this tag already. Clicking an already-active item would deselect (remove) it.
+    // Use dispatchEvent to avoid scroll-triggered re-renders.
     const isAlreadySelected = await tagItem.evaluate((el) =>
       el.classList.contains('active')
     );
     if (!isAlreadySelected) {
-      await tagItem.click();
+      await tagItem.dispatchEvent('click');
     }
 
     await this.updateButton.waitFor({ state: 'visible' });
@@ -370,9 +379,11 @@ export class OverviewPageObject extends RightPanelBase {
         await usersTab.click();
       }
     }
-    await this.page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+
+    await this.page.waitForSelector(
+      '[data-testid="select-owner-tabs"] [data-testid="loader"]',
+      { state: 'detached' }
+    );
     await this.userSearchBar.waitFor({ state: 'visible' });
 
     const searchUser = this.page.waitForResponse(
@@ -449,9 +460,12 @@ export class OverviewPageObject extends RightPanelBase {
           : 'owner-select-teams-search-bar';
       const searchBar = this.page.getByTestId(searchBarDataTestId);
 
-      if (await searchBar.isVisible()) {
-        await searchBar.fill(ownerName);
-      }
+      await this.page.waitForSelector(
+        '[data-testid="select-owner-tabs"] [data-testid="loader"]',
+        { state: 'detached' }
+      );
+      await searchBar.waitFor({ state: 'visible' });
+      await searchBar.fill(ownerName);
 
       const ownerItem = this.page
         .locator('.ant-list-item')
