@@ -130,6 +130,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -139,7 +141,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -235,6 +236,8 @@ import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.util.RestUtil.DeleteResponse;
 import org.openmetadata.service.util.RestUtil.PatchResponse;
 import org.openmetadata.service.util.RestUtil.PutResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.utils.Either;
 
 /**
@@ -268,9 +271,10 @@ import software.amazon.awssdk.utils.Either;
  * relationship table when required to ensure, the data stored is efficiently and consistently, and relationship
  * information does not become stale.
  */
-@Slf4j
 @Repository()
 public abstract class EntityRepository<T extends EntityInterface> {
+  private static final Logger LOG = LoggerFactory.getLogger(EntityRepository.class);
+
   public static final String BULK_IMPORT = "bulkImport";
 
   public record EntityHistoryWithOffset(EntityHistory entityHistory, int nextOffset) {}
@@ -7426,9 +7430,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private static final ExecutorService BOUNDED_BULK_EXECUTOR =
       Executors.newFixedThreadPool(20, Thread.ofVirtual().factory());
-  public boolean isUpdateForImport(T entity) {
-    return findByNameOrNull(entity.getFullyQualifiedName(), Include.ALL) != null;
-  }
 
   private static final ConcurrentHashMap<String, CompletableFuture<BulkOperationResult>> BULK_JOBS =
       new ConcurrentHashMap<>();
