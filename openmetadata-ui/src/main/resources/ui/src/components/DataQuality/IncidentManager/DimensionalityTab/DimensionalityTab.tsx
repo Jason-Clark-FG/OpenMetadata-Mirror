@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Tooltip } from '@openmetadata/ui-core-components';
+import { Skeleton, Tooltip } from '@openmetadata/ui-core-components';
 import { HelpCircle } from '@untitledui/icons';
 import { Select } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
@@ -64,7 +64,7 @@ const DimensionalityTab = () => {
 
     return {
       dimensionColumnsOptions: testCase?.dimensionColumns ?? [],
-      selectedColumn: column ? column : testCase?.dimensionColumns?.[0],
+      selectedColumn: column ?? testCase?.dimensionColumns?.[0],
     };
   }, [testCase, dimensionKey]);
 
@@ -252,8 +252,8 @@ const DimensionalityTab = () => {
     if (isLoading) {
       return (
         <div className="tw:flex tw:flex-col tw:gap-16">
-          <div className="tw:animate-pulse tw:bg-quaternary tw:rounded-lg tw:h-50 tw:w-full" />
-          <div className="tw:animate-pulse tw:bg-quaternary tw:rounded-lg tw:h-50 tw:w-full" />
+          <Skeleton height={200} variant="rounded" width="100%" />
+          <Skeleton height={200} variant="rounded" width="100%" />
         </div>
       );
     }
@@ -274,13 +274,13 @@ const DimensionalityTab = () => {
 
   return (
     <div className="tw:flex tw:flex-col tw:p-10 tw:gap-14">
-      <div className="tw:flex tw:items-center tw:flex-nowrap tw:gap-[60px]">
+      <div className="tw:flex tw:items-center tw:flex-nowrap tw:gap-15">
         <div className="tw:flex tw:items-center tw:flex-nowrap tw:gap-5">
           <p className="tw:m-0 tw:text-[13px] tw:font-medium tw:whitespace-nowrap tw:text-primary">
             {`${t('label.select-dimension')}:`}
           </p>
           <Select
-            className="tw:min-w-[150px]"
+            className="tw:min-w-37.5"
             data-testid="dimension-select"
             options={dimensionColumnsOptions.map((column) => ({
               label: column,
