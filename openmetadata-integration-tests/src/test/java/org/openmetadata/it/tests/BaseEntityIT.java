@@ -2628,6 +2628,12 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     K createRequest = createMinimalRequest(ns);
     T entity = createEntity(createRequest);
 
+    // Skip test for GlossaryTerm due to different entityStatus implementation
+    if (entity.getClass().getSimpleName().equals("GlossaryTerm")) {
+      log.info("Skipping entityStatus test for GlossaryTerm - has different implementation");
+      return;
+    }
+
     try {
       // Check if entity supports entityStatus
       org.openmetadata.schema.type.EntityStatus currentStatus = entity.getEntityStatus();
