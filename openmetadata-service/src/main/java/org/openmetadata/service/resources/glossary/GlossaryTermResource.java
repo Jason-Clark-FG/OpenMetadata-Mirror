@@ -51,7 +51,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 import org.openmetadata.schema.api.AddGlossaryToAssetsRequest;
 import org.openmetadata.schema.api.ValidateGlossaryTagsRequest;
 import org.openmetadata.schema.api.VoteRequest;
@@ -377,46 +376,10 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
               parentFqn, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     } else {
       // Search across all glossary terms without parent filter
-      ListFilter filter = new ListFilter(include);
-      if (entityStatus != null && !entityStatus.isEmpty()) {
-        filter.addQueryParam("entityStatus", entityStatus);
-      }
-      ResultList<GlossaryTerm> allTerms =
-          repository.listAfter(uriInfo, fields, filter, Integer.MAX_VALUE, null);
-      List<GlossaryTerm> matchingTerms;
-      if (query == null || query.trim().isEmpty()) {
-        matchingTerms = allTerms.getData();
-      } else {
-        String searchTerm = query.toLowerCase().trim();
-        matchingTerms =
-            allTerms.getData().stream()
-                .filter(
-                    term -> {
-                      if (term.getName() != null
-                          && term.getName().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      if (term.getDisplayName() != null
-                          && term.getDisplayName().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      if (term.getDescription() != null
-                          && term.getDescription().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      return false;
-                    })
-                .collect(Collectors.toList());
-      }
-      int total = matchingTerms.size();
-      int startIndex = Math.min(offsetParam, total);
-      int endIndex = Math.min(offsetParam + limitParam, total);
-      List<GlossaryTerm> paginatedResults =
-          startIndex < total ? matchingTerms.subList(startIndex, endIndex) : List.of();
-      String before =
-          offsetParam > 0 ? String.valueOf(Math.max(0, offsetParam - limitParam)) : null;
-      String after = endIndex < total ? String.valueOf(endIndex) : null;
-      result = new ResultList<>(paginatedResults, before, after, total);
+      // Uses efficient database-level search and pagination
+      result =
+          repository.searchGlossaryTermsByParentFQN(
+              null, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     }
 
     return addHref(uriInfo, result);

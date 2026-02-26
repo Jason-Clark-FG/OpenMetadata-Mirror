@@ -1694,20 +1694,6 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     return "%" + query.trim() + "%";
   }
 
-  private List<String> parseEntityStatusValues(String entityStatus) {
-    if (entityStatus == null || entityStatus.trim().isEmpty()) {
-      return Collections.emptyList();
-    }
-    Set<String> validStatuses =
-        Arrays.stream(EntityStatus.values()).map(EntityStatus::value).collect(Collectors.toSet());
-
-    return Arrays.stream(entityStatus.split(","))
-        .map(String::trim)
-        .filter(s -> !s.isEmpty())
-        .filter(validStatuses::contains)
-        .collect(Collectors.toList());
-  }
-
   private ResultList<GlossaryTerm> searchGlossaryTermsInternal(
       String parentFqn,
       String query,
@@ -1753,18 +1739,26 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     // Prepare search term for full-text search
     String searchTerm = prepareSearchTerm(query.trim());
 
-    // Parse entityStatus values for safe parameter binding
-    List<String> entityStatusValues = parseEntityStatusValues(entityStatus);
+    // Build status condition (validate against enum to prevent SQL injection)
+    String statusCondition = "";
+    if (entityStatus != null && !entityStatus.isBlank()) {
+      Set<String> validStatuses =
+          Arrays.stream(EntityStatus.values()).map(EntityStatus::value).collect(Collectors.toSet());
+      String validatedStatuses =
+          Arrays.stream(entityStatus.split(","))
+              .map(String::trim)
+              .filter(s -> !s.isEmpty())
+              .filter(validStatuses::contains)
+              .map(s -> "'" + s + "'")
+              .collect(Collectors.joining(","));
+      if (!validatedStatuses.isEmpty()) {
+        statusCondition = "AND entityStatus IN (" + validatedStatuses + ")";
+      }
+    }
 
     // Fetch limit+1 records to check if there's a next page
-    List<String> jsons;
-    if (entityStatusValues.isEmpty()) {
-      jsons = dao.searchGlossaryTerms(parentHash, searchTerm, limit + 1, offset);
-    } else {
-      jsons =
-          dao.searchGlossaryTermsWithStatus(
-              parentHash, searchTerm, entityStatusValues, limit + 1, offset);
-    }
+    List<String> jsons =
+        dao.searchGlossaryTerms(parentHash, searchTerm, statusCondition, limit + 1, offset);
 
     // Check if we have more than limit results
     boolean hasMore = jsons.size() > limit;
