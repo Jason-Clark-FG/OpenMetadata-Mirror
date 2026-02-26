@@ -418,6 +418,11 @@ class ColumnTypeParser:
                     )
                 field_name = field_name[1:-1]
             field_type = ColumnTypeParser._parse_datatype_string(name_and_type[1])
+            if isinstance(field_type, list):
+                field_type = {
+                    "dataType": "UNION",
+                    "dataTypeDisplay": name_and_type[1],
+                }
             field_type["name"] = field_name
             columns.append(field_type)
 

@@ -135,6 +135,31 @@ def test_check_datalake_type():
         ) == GenericDataFrameColumnParser.fetch_col_types(df, column_name)
 
 
+def test_struct_with_union_type_field():
+    """Regression test: struct fields with union types should not raise TypeError.
+
+    When a struct contains a field of uniontype<>, _parse_datatype_string returns a list.
+    _parse_struct_fields_string must handle this gracefully instead of failing with
+    TypeError: list indices must be integers or slices, not str
+    """
+    result = ColumnTypeParser._parse_datatype_string(  # pylint: disable=protected-access
+        "struct<a:uniontype<int,double>,b:string>"
+    )
+    assert result["dataType"] == "STRUCT"
+    children = result["children"]
+    assert len(children) == 2
+    assert children[0]["name"] == "a"
+    assert children[0]["dataType"] == "UNION"
+    assert children[1]["name"] == "b"
+
+    result2 = ColumnTypeParser._parse_datatype_string(  # pylint: disable=protected-access
+        "array<struct<x:uniontype<string,int>,y:bigint>>"
+    )
+    assert result2["dataType"] == "ARRAY"
+    assert result2["children"][0]["name"] == "x"
+    assert result2["children"][0]["dataType"] == "UNION"
+
+
 def test_superset_parse_array_data_type():
     """Test the parse_array_data_type method with different input scenarios"""
     col_parse = {"dataType": "ARRAY", "arrayDataType": "STRING"}
