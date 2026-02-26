@@ -344,7 +344,7 @@ const ClassificationDetails = forwardRef(
         const classificationChanged =
           previousClassificationRef.current !== undefined &&
           previousClassificationRef.current !==
-          currentClassification.fullyQualifiedName;
+            currentClassification.fullyQualifiedName;
 
         previousClassificationRef.current =
           currentClassification.fullyQualifiedName;
@@ -436,9 +436,10 @@ const ClassificationDetails = forwardRef(
                 <ButtonGroup className="spaced" size="small">
                   <Tooltip
                     title={t(
-                      `label.${isVersionView
-                        ? 'exit-version-history'
-                        : 'version-plural-history'
+                      `label.${
+                        isVersionView
+                          ? 'exit-version-history'
+                          : 'version-plural-history'
                       }`
                     )}>
                     <Button
@@ -475,7 +476,7 @@ const ClassificationDetails = forwardRef(
         )}
 
         {!currentClassification && isClassificationLoading && <Loader />}
-        {currentClassification &&
+        {currentClassification && (
           <GenericProvider<Classification>
             data={currentClassification}
             isVersionView={isVersionView}
@@ -545,7 +546,7 @@ const ClassificationDetails = forwardRef(
               </Col>
             </Row>
           </GenericProvider>
-        }
+        )}
       </div>
     );
   }
