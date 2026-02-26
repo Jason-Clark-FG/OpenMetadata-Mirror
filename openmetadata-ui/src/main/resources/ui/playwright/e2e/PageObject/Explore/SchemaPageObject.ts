@@ -32,7 +32,9 @@ export class SchemaPageObject extends RightPanelBase {
     super(rightPanel);
     this.container = this.getSummaryPanel();
     this.schemaSearchBar = this.page.getByTestId('searchbar');
-    this.schemaFieldsContainer = this.page.locator('.schema-field-cards-container');
+    this.schemaFieldsContainer = this.page.locator(
+      '.schema-field-cards-container'
+    );
     this.schemaFields = this.schemaFieldsContainer.locator('.field-card ');
     this.noDataContainer = this.getSummaryPanel().locator('.no-data-container');
   }
@@ -58,6 +60,71 @@ export class SchemaPageObject extends RightPanelBase {
     await this.shouldShowSchemaField();
   }
 
+  // ============ SEARCH METHODS ============
+
+  /**
+   * Type into the schema search bar and wait for results to update.
+   */
+  async searchFor(text: string): Promise<void> {
+    await this.schemaSearchBar.fill(text);
+    // Brief pause to let debounced filter settle
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Clear the schema search bar.
+   */
+  async clearSearch(): Promise<void> {
+    await this.schemaSearchBar.clear();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Assert a field card with the given name is visible.
+   * Uses the data-testid set by FieldCard: `field-card-{name}`.
+   */
+  async shouldShowFieldByName(name: string): Promise<void> {
+    await expect(
+      this.page.getByTestId(`field-card-${name}`),
+      `Expected field card "${name}" to be visible`
+    ).toBeVisible();
+  }
+
+  /**
+   * Assert a field card with the given name is NOT present in the DOM.
+   */
+  async shouldNotShowFieldByName(name: string): Promise<void> {
+    await expect(
+      this.page.getByTestId(`field-card-${name}`),
+      `Expected field card "${name}" to be hidden`
+    ).not.toBeVisible();
+  }
+
+  /**
+   * Assert the "Show Nested (n)" expand button is visible —
+   * meaning the search matched a nested child and the parent is shown collapsed.
+   */
+  async shouldShowExpandButton(): Promise<void> {
+    await expect(
+      this.schemaFieldsContainer.getByTestId('expand-icon').first(),
+      'Expected a nested expand button to be visible'
+    ).toBeVisible();
+  }
+
+  /**
+   * Assert the no-data message is shown (search returned no results).
+   */
+  async shouldShowNoResults(): Promise<void> {
+    await expect(this.noDataContainer).toBeVisible();
+  }
+
+  /**
+   * Return the current count of visible field cards.
+   */
+  async fieldCount(): Promise<number> {
+    return this.schemaFields.count();
+  }
+
   // ============ VERIFICATION METHODS (BDD Style) ============
 
   /**
@@ -78,15 +145,15 @@ export class SchemaPageObject extends RightPanelBase {
     expect(hasFields || hasEmptyState).toBe(true);
   }
 
-async schemaFieldsCount(): Promise<number> {
-  const count = await this.schemaFields.count();
-  return count;
-}
+  async schemaFieldsCount(): Promise<number> {
+    const count = await this.schemaFields.count();
+    return count;
+  }
 
-async shouldShowSchemaFieldsCount(expectedCount: number): Promise<void> {
-  const count = await this.schemaFieldsCount();
-  expect(count).toBe(expectedCount);
-}
+  async shouldShowSchemaFieldsCount(expectedCount: number): Promise<void> {
+    const count = await this.schemaFieldsCount();
+    expect(count).toBe(expectedCount);
+  }
 
   /**
    * Assert internal fields of the Schema tab (search bar, and either schema content or empty state).
@@ -95,7 +162,10 @@ async shouldShowSchemaFieldsCount(expectedCount: number): Promise<void> {
   async assertInternalFields(assetType?: string): Promise<void> {
     const tabLabel = 'Schema';
     const prefix = assetType ? `[Asset: ${assetType}] [Tab: ${tabLabel}] ` : '';
-    await expect(this.schemaSearchBar, `${prefix}Missing: schema search bar`).toBeVisible();
+    await expect(
+      this.schemaSearchBar,
+      `${prefix}Missing: schema search bar`
+    ).toBeVisible();
     const hasFields = (await this.schemaFields.count()) > 0;
     const hasEmptyState = await this.noDataContainer.isVisible();
     expect(

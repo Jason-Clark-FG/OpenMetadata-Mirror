@@ -13,6 +13,7 @@
 import { expect } from '@playwright/test';
 import { Page } from 'playwright';
 import { EXPECTED_BUCKETS } from '../constant/explore';
+import { SchemaPageObject } from '../e2e/PageObject/Explore/SchemaPageObject';
 import { getApiContext, redirectToExplorePage } from './common';
 import { openEntitySummaryPanel } from './entityPanel';
 
@@ -311,10 +312,31 @@ export const navigateToExploreAndSelectEntity = async (
     timeout: 30000,
   });
 
-  await openEntitySummaryPanel(
-    page,
-    entityName,
-    endpoint,
-    fullyQualifiedName
+  await openEntitySummaryPanel(page, entityName, endpoint, fullyQualifiedName);
+};
+
+export const openSchemaTab = async (
+  adminPage: Page,
+  entity: {
+    name: string;
+    endpoint: string;
+    entityResponseData:
+      | { fullyQualifiedName?: string }
+      | Record<string, unknown>;
+  },
+  rightPanel: { waitForPanelVisible: () => Promise<void> },
+  schemaObj: SchemaPageObject
+) => {
+  const fqn =
+    (entity.entityResponseData as { fullyQualifiedName?: string })
+      ?.fullyQualifiedName ?? entity.name;
+
+  await navigateToExploreAndSelectEntity(
+    adminPage,
+    entity.name,
+    undefined,
+    fqn
   );
+  await rightPanel.waitForPanelVisible();
+  await schemaObj.navigateToSchemaTab();
 };

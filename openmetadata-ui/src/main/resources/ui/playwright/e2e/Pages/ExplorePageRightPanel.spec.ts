@@ -36,7 +36,10 @@ import { ContainerClass } from '../../support/entity/ContainerClass';
 import { SearchIndexClass } from '../../support/entity/SearchIndexClass';
 import { Domain } from '../../support/domain/Domain';
 import { UserClass } from '../../support/user/UserClass';
-import { navigateToExploreAndSelectEntity } from '../../utils/explore';
+import {
+  navigateToExploreAndSelectEntity,
+  openSchemaTab,
+} from '../../utils/explore';
 import { getEntityFqn } from '../../utils/entityPanel';
 import { connectEdgeBetweenNodesViaAPI } from '../../utils/lineage';
 import { getCurrentMillis } from '../../utils/dateTime';
@@ -2266,5 +2269,130 @@ test.describe('Right Panel Test Suite', () => {
         });
       }
     );
+  });
+
+  test.describe('Schema Search', () => {
+    test.describe('Table - column search (server-side)', () => {
+      test('Should filter columns by name via server-side search', async ({
+        adminPage,
+        rightPanel,
+        schema,
+      }) => {
+        await openSchemaTab(
+          adminPage,
+          {
+            name: tableEntity.entity.name,
+            endpoint: tableEntity.endpoint,
+            entityResponseData: tableEntity.entityResponseData,
+          },
+          rightPanel,
+          schema
+        );
+
+        const columns =
+          (
+            tableEntity.entityResponseData as {
+              columns?: Array<{ name: string }>;
+            }
+          )?.columns ?? [];
+        if (columns.length < 2) {
+          test.skip();
+          return;
+        }
+
+        const searchRes = adminPage.waitForResponse(
+          (res) =>
+            res.url().includes('columns/search?q=') && res.status() === 200
+        );
+        await schema.searchFor(columns[0].name);
+        await searchRes;
+
+        await schema.shouldShowFieldByName(columns[0].name);
+        await schema.shouldNotShowFieldByName(columns[1].name);
+      });
+
+      test('Should show no results for a non-matching search', async ({
+        adminPage,
+        rightPanel,
+        schema,
+      }) => {
+        await openSchemaTab(
+          adminPage,
+          {
+            name: tableEntity.entity.name,
+            endpoint: tableEntity.endpoint,
+            entityResponseData: tableEntity.entityResponseData,
+          },
+          rightPanel,
+          schema
+        );
+
+        const searchRes = adminPage.waitForResponse(
+          (res) =>
+            res.url().includes('columns/search?q=') && res.status() === 200
+        );
+        await schema.searchFor('zzz_no_match_column_xyz');
+        await searchRes;
+
+        await schema.shouldShowNoResults();
+      });
+    });
+
+    // ── Dashboard Data Model ──────────────────────────────────────────────────
+    test.describe('DashboardDataModel - column search (server-side)', () => {
+      test('Should filter columns by name via server-side search', async ({
+        adminPage,
+        rightPanel,
+        schema,
+      }) => {
+        await openSchemaTab(
+          adminPage,
+          {
+            name: dashboardDataModelEntity.entity.name,
+            endpoint: dashboardDataModelEntity.endpoint,
+            entityResponseData: dashboardDataModelEntity.entityResponseData,
+          },
+          rightPanel,
+          schema
+        );
+
+        const searchRes = adminPage.waitForResponse(
+          (res) =>
+            res.url().includes('columns/search?q=') && res.status() === 200
+        );
+        // DashboardDataModelClass typically has 'merchant', 'notes', 'country_name'
+        await schema.searchFor('merchant');
+        await searchRes;
+
+        await schema.shouldShowFieldByName('merchant');
+        await schema.shouldNotShowFieldByName('notes');
+      });
+
+      test('Should show no results for a non-matching search', async ({
+        adminPage,
+        rightPanel,
+        schema,
+      }) => {
+        await openSchemaTab(
+          adminPage,
+          {
+            name: dashboardDataModelEntity.entity.name,
+            endpoint: dashboardDataModelEntity.endpoint,
+            entityResponseData: dashboardDataModelEntity.entityResponseData,
+          },
+          rightPanel,
+          schema
+        );
+
+        const searchRes = adminPage.waitForResponse(
+          (res) =>
+            res.url().includes('columns/search?q=') && res.status() === 200
+        );
+        await schema.searchFor('zzz_no_match_xyz');
+        await searchRes;
+
+        await schema.shouldShowNoResults();
+      });
+    });
   });
 });

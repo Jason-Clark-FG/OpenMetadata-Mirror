@@ -51,10 +51,11 @@ import {
   getTableList,
   searchTableColumnsByFQN,
 } from '../rest/tableAPI';
+import { GenericNestedField } from './EntitySummaryPanelUtilsV1.interface';
 import { getEntityName } from './EntityUtils';
 import { t } from './i18next/LocalUtil';
 
-import { flattenColumns, pruneEmptyChildren } from './TableUtils';
+import { pruneEmptyChildren } from './TableUtils';
 const { Text } = AntTypography;
 
 /**
@@ -272,6 +273,109 @@ const NestedFieldCard: React.FC<NestedFieldCardProps> = ({
   );
 };
 
+
+
+const NestedSchemaFieldCard: React.FC<{
+  field: GenericNestedField;
+  highlights?: Record<string, string[]>;
+  highlightKey?: string; // e.g. 'field', 'column'
+  level?: number;
+  expandedRowKeys: string[];
+  onToggleExpand: (key: string) => void;
+}> = ({ field, highlights, highlightKey = 'field', level = 0, expandedRowKeys, onToggleExpand }) => {
+  const theme = useTheme();
+  const hasChildren = !isEmpty(field.children);
+  const rowKey = field.fullyQualifiedName ?? field.name;
+  const isExpanded = expandedRowKeys.includes(rowKey);
+  const isHighlighted = highlights?.[highlightKey]?.includes(field.name);
+  const childrenCount = field.children?.length ?? 0;
+
+  return (
+    <div>
+      <div
+        className="nested-field-card-wrapper"
+        data-row-key={rowKey}
+        style={{
+          paddingLeft: `${level * 24}px`,
+          paddingBottom: hasChildren ? '8px' : '0',
+        }}>
+        <div className="field-card-no-border">
+          <FieldCard
+            dataType={field.dataType || 'Unknown'}
+            description={field.description}
+            fieldName={getEntityName(field)}
+            glossaryTerms={field.glossaryTerms}
+            isHighlighted={isHighlighted}
+            tags={field.tags}
+          />
+        </div>
+        {hasChildren && (
+          <div className="d-flex align-items-center m-l-md gap-1">
+            {!isExpanded && (
+              <span className="d-flex">
+                <NestedIcon />
+              </span>
+            )}
+            <Button
+              className="d-flex p-0 h-auto m-b-xs"
+              data-testid="expand-icon"
+              size="small"
+              type="link"
+              onClick={() => onToggleExpand(rowKey)}>
+              <Typography color={theme.palette.primary.main} variant="caption">
+                {isExpanded
+                  ? t('label.show-less')
+                  : `${t('label.show-nested')} (${childrenCount})`}
+              </Typography>
+            </Button>
+          </div>
+        )}
+      </div>
+      {hasChildren && isExpanded && (
+        <div>
+          {field.children?.map((child) => (
+            <NestedSchemaFieldCard
+              expandedRowKeys={expandedRowKeys}
+              field={child}
+              highlightKey={highlightKey}
+              highlights={highlights}
+              key={child.fullyQualifiedName ?? child.name}
+              level={level + 1}
+              onToggleExpand={onToggleExpand}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Shared recursive filter that preserves tree structure (used by Topic, Container, SearchIndex)
+const filterNestedFields = (
+  fieldList: GenericNestedField[],
+  searchText: string
+): GenericNestedField[] => {
+  const lowerSearch = searchText.toLowerCase();
+
+  return fieldList.reduce<GenericNestedField[]>((acc, field) => {
+    const nameMatch =
+      field.name?.toLowerCase().includes(lowerSearch) ||
+      getEntityName(field)?.toLowerCase().includes(lowerSearch);
+    const filteredChildren = field.children
+      ? filterNestedFields(field.children, searchText)
+      : [];
+
+    if (nameMatch || filteredChildren.length > 0) {
+      acc.push({
+        ...field,
+        children: nameMatch ? field.children : filteredChildren,
+      });
+    }
+
+    return acc;
+  }, []);
+};
+
 // Component for Table and Dashboard Data Model schema fields
 const SchemaFieldCardsV1: React.FC<{
   entityInfo: TableEntity;
@@ -475,15 +579,22 @@ const TopicFieldCardsV1: React.FC<{
   loading?: boolean;
   searchText?: string;
 }> = ({ entityInfo, highlights, loading, searchText }) => {
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const schemaFields = entityInfo.messageSchema?.schemaFields || [];
 
-  const filteredFields = useMemo(() => {
-    if (!searchText) {
-      return schemaFields;
-    }
+  const filteredFields = useMemo(
+    () =>
+      searchText
+        ? filterNestedFields(schemaFields as GenericNestedField[], searchText)
+        : schemaFields,
+    [schemaFields, searchText]
+  );
 
-    return filterItemsBySearchText(flattenColumns(schemaFields), searchText);
-  }, [schemaFields, searchText]);
+  const handleToggleExpand = useCallback((key: string) => {
+    setExpandedRowKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -503,24 +614,16 @@ const TopicFieldCardsV1: React.FC<{
 
   return (
     <div className="schema-field-cards-container">
-      <Row>
-        {filteredFields.map((field: any) => {
-          const isHighlighted = highlights?.field?.includes(field.name);
-
-          return (
-            <Col key={field.name} span={24}>
-              <FieldCard
-                dataType={field.dataType || 'Unknown'}
-                description={field.description}
-                fieldName={getEntityName(field)}
-                glossaryTerms={field.glossaryTerms}
-                isHighlighted={isHighlighted}
-                tags={field.tags}
-              />
-            </Col>
-          );
-        })}
-      </Row>
+      {filteredFields.map((field: any) => (
+        <NestedSchemaFieldCard
+          expandedRowKeys={expandedRowKeys}
+          field={field}
+          highlightKey="field"
+          highlights={highlights}
+          key={field.fullyQualifiedName ?? field.name}
+          onToggleExpand={handleToggleExpand}
+        />
+      ))}
     </div>
   );
 };
@@ -532,15 +635,22 @@ const ContainerFieldCardsV1: React.FC<{
   loading?: boolean;
   searchText?: string;
 }> = ({ entityInfo, highlights, loading, searchText }) => {
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const columns = entityInfo.dataModel?.columns || [];
 
-  const filteredColumns = useMemo(() => {
-    if (!searchText) {
-      return columns;
-    }
+  const filteredColumns = useMemo(
+    () =>
+      searchText
+        ? filterNestedFields(columns as GenericNestedField[], searchText)
+        : columns,
+    [columns, searchText]
+  );
 
-    return filterItemsBySearchText(flattenColumns(columns), searchText);
-  }, [columns, searchText]);
+  const handleToggleExpand = useCallback((key: string) => {
+    setExpandedRowKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -560,24 +670,16 @@ const ContainerFieldCardsV1: React.FC<{
 
   return (
     <div className="schema-field-cards-container">
-      <Row>
-        {filteredColumns.map((column: any) => {
-          const isHighlighted = highlights?.column?.includes(column.name);
-
-          return (
-            <Col key={column.name} span={24}>
-              <FieldCard
-                dataType={column.dataType || 'Unknown'}
-                description={column.description}
-                fieldName={getEntityName(column)}
-                glossaryTerms={column.glossaryTerms}
-                isHighlighted={isHighlighted}
-                tags={column.tags}
-              />
-            </Col>
-          );
-        })}
-      </Row>
+      {filteredColumns.map((column: any) => (
+        <NestedSchemaFieldCard
+          expandedRowKeys={expandedRowKeys}
+          field={column}
+          highlightKey="column"
+          highlights={highlights}
+          key={column.fullyQualifiedName ?? column.name}
+          onToggleExpand={handleToggleExpand}
+        />
+      ))}
     </div>
   );
 };
@@ -964,8 +1066,8 @@ const APIEndpointSchemaV1: React.FC<{
             children: nameMatch
               ? field.children
               : filteredChildren.length > 0
-              ? filteredChildren
-              : field.children,
+                ? filteredChildren
+                : field.children,
           });
         }
 
@@ -1179,15 +1281,22 @@ const SearchIndexFieldCardsV1: React.FC<{
   loading?: boolean;
   searchText?: string;
 }> = ({ entityInfo, highlights, loading, searchText }) => {
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const fields = entityInfo.fields || [];
 
-  const filteredFields = useMemo(() => {
-    if (!searchText) {
-      return fields;
-    }
+  const filteredFields = useMemo(
+    () =>
+      searchText
+        ? filterNestedFields(fields as GenericNestedField[], searchText)
+        : fields,
+    [fields, searchText]
+  );
 
-    return filterItemsBySearchText(flattenColumns(fields), searchText);
-  }, [fields, searchText]);
+  const handleToggleExpand = useCallback((key: string) => {
+    setExpandedRowKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -1207,24 +1316,16 @@ const SearchIndexFieldCardsV1: React.FC<{
 
   return (
     <div className="schema-field-cards-container">
-      <Row>
-        {filteredFields.map((field: any) => {
-          const isHighlighted = highlights?.field?.includes(field.name);
-
-          return (
-            <Col key={field.name} span={24}>
-              <FieldCard
-                dataType={field.dataType || 'Unknown'}
-                description={field.description}
-                fieldName={field.name}
-                glossaryTerms={field.glossaryTerms}
-                isHighlighted={isHighlighted}
-                tags={field.tags}
-              />
-            </Col>
-          );
-        })}
-      </Row>
+      {filteredFields.map((field: any) => (
+        <NestedSchemaFieldCard
+          expandedRowKeys={expandedRowKeys}
+          field={field}
+          highlightKey="field"
+          highlights={highlights}
+          key={field.fullyQualifiedName ?? field.name}
+          onToggleExpand={handleToggleExpand}
+        />
+      ))}
     </div>
   );
 };
