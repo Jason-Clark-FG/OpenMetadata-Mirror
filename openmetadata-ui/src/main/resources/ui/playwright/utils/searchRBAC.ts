@@ -10,8 +10,33 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page } from '@playwright/test';
+import { APIRequestContext, expect, Page } from '@playwright/test';
 import { waitForAllLoadersToDisappear } from './entity';
+
+export const enableDisableSearchRBAC = async (
+  apiContext: APIRequestContext,
+  enable: boolean
+) => {
+  const settingResponse = await apiContext.get(
+    '/api/v1/system/settings/searchSettings'
+  );
+  const initialSetting = await settingResponse.json();
+
+  const updatedSetting = {
+    ...initialSetting,
+    config_value: {
+      ...initialSetting.config_value,
+      globalSettings: {
+        ...initialSetting.config_value.globalSettings,
+        enableAccessControl: enable,
+      },
+    },
+  };
+
+  await apiContext.put('/api/v1/system/settings', {
+    data: updatedSetting,
+  });
+};
 
 export const searchForEntityShouldWork = async (
   fqn: string,
