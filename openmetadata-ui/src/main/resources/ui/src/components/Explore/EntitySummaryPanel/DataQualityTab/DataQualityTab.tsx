@@ -16,7 +16,7 @@ import { Card, Col, Row, Tabs, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { startCase } from 'lodash';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Transi18next } from '../../../../utils/CommonUtils';
 import { Link } from 'react-router-dom';
@@ -356,102 +356,105 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     }
   };
 
-  const fetchIncidents = useCallback(async () => {
-    if (!entityFQN) {
-      setIsIncidentsLoading(false);
+  const fetchIncidents = useCallback(
+    async (currentTestCases?: TestCase[]) => {
+      if (!entityFQN) {
+        setIsIncidentsLoading(false);
 
-      return;
-    }
-
-    try {
-      setIsIncidentsLoading(true);
-
-      const startTs = getEpochMillisForPastDays(
-        PROFILER_FILTER_RANGE.last30days.days
-      );
-      const endTs = getCurrentMillis();
-
-      const originFQN = isColumnDetailPanel
-        ? getTableFQNFromColumnFQN(entityFQN)
-        : entityFQN;
-
-      const response = await getListTestCaseIncidentStatus({
-        latest: true,
-        include: Include.NonDeleted,
-        originEntityFQN: originFQN,
-        startTs,
-        endTs,
-        limit: 100,
-      });
-
-      let allIncidents = response.data || [];
-
-      if (isColumnDetailPanel && testCases.length > 0) {
-        const testCaseFQNSet = new Set(
-          testCases.map((testCase) => testCase.fullyQualifiedName)
-        );
-        allIncidents = allIncidents.filter(
-          (incident) =>
-            incident.testCaseReference?.fullyQualifiedName &&
-            testCaseFQNSet.has(incident.testCaseReference.fullyQualifiedName)
-        );
+        return;
       }
 
-      setIncidents(allIncidents);
+      try {
+        setIsIncidentsLoading(true);
 
-      // Calculate incident status counts
-      const counts = allIncidents.reduce(
-        (acc, incident) => {
-          const status = incident.testCaseResolutionStatusType;
+        const startTs = getEpochMillisForPastDays(
+          PROFILER_FILTER_RANGE.last30days.days
+        );
+        const endTs = getCurrentMillis();
 
-          if (status) {
-            switch (status) {
-              case TestCaseResolutionStatusTypes.New:
-                acc.new++;
+        const originFQN = isColumnDetailPanel
+          ? getTableFQNFromColumnFQN(entityFQN)
+          : entityFQN;
 
-                break;
-              case TestCaseResolutionStatusTypes.Assigned:
-                acc.assigned++;
+        const response = await getListTestCaseIncidentStatus({
+          latest: true,
+          include: Include.NonDeleted,
+          originEntityFQN: originFQN,
+          startTs,
+          endTs,
+          limit: 100,
+        });
 
-                break;
-              case TestCaseResolutionStatusTypes.Resolved:
-                acc.resolved++;
+        let allIncidents = response.data || [];
 
-                break;
-              case TestCaseResolutionStatusTypes.ACK:
-                acc.ack++;
+        if (isColumnDetailPanel && currentTestCases && currentTestCases.length > 0) {
+          const testCaseFQNSet = new Set(
+            currentTestCases.map((testCase) => testCase.fullyQualifiedName)
+          );
+          allIncidents = allIncidents.filter(
+            (incident) =>
+              incident.testCaseReference?.fullyQualifiedName &&
+              testCaseFQNSet.has(incident.testCaseReference.fullyQualifiedName)
+          );
+        }
 
-                break;
+        setIncidents(allIncidents);
+
+        // Calculate incident status counts
+        const counts = allIncidents.reduce(
+          (acc, incident) => {
+            const status = incident.testCaseResolutionStatusType;
+
+            if (status) {
+              switch (status) {
+                case TestCaseResolutionStatusTypes.New:
+                  acc.new++;
+
+                  break;
+                case TestCaseResolutionStatusTypes.Assigned:
+                  acc.assigned++;
+
+                  break;
+                case TestCaseResolutionStatusTypes.Resolved:
+                  acc.resolved++;
+
+                  break;
+                case TestCaseResolutionStatusTypes.ACK:
+                  acc.ack++;
+
+                  break;
+              }
+              acc.total++;
             }
-            acc.total++;
-          }
 
-          return acc;
-        },
-        {
+            return acc;
+          },
+          {
+            new: 0,
+            assigned: 0,
+            resolved: 0,
+            ack: 0,
+            total: 0,
+          }
+        );
+
+        setIncidentCounts(counts);
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+        setIncidents([]);
+        setIncidentCounts({
           new: 0,
           assigned: 0,
           resolved: 0,
           ack: 0,
           total: 0,
-        }
-      );
-
-      setIncidentCounts(counts);
-    } catch (error) {
-      showErrorToast(error as AxiosError);
-      setIncidents([]);
-      setIncidentCounts({
-        new: 0,
-        assigned: 0,
-        resolved: 0,
-        ack: 0,
-        total: 0,
-      });
-    } finally {
-      setIsIncidentsLoading(false);
-    }
-  }, [entityFQN, isColumnDetailPanel, testCases]);
+        });
+      } finally {
+        setIsIncidentsLoading(false);
+      }
+    },
+    [entityFQN, isColumnDetailPanel]
+  );
 
   useEffect(() => {
     if (!hasViewTests) {
@@ -471,11 +474,18 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     }
   }, [entityFQN, hasViewTests, fetchIncidents, isColumnDetailPanel]);
 
+  const hasFetchedColumnIncidents = useRef(false);
+
   useEffect(() => {
-    if (isColumnDetailPanel && testCases.length > 0 && hasViewTests) {
-      fetchIncidents();
+    hasFetchedColumnIncidents.current = false;
+  }, [entityFQN]);
+
+  useEffect(() => {
+    if (isColumnDetailPanel && testCases.length > 0 && hasViewTests && !hasFetchedColumnIncidents.current) {
+      hasFetchedColumnIncidents.current = true;
+      fetchIncidents(testCases);
     }
-  }, [fetchIncidents, isColumnDetailPanel, testCases.length, hasViewTests]);
+  }, [fetchIncidents, isColumnDetailPanel, testCases, hasViewTests]);
 
   // Filter test cases based on active filter (search text is handled server-side)
   const filteredTestCases = useMemo(() => {
