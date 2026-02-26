@@ -342,6 +342,7 @@
         "type": "flattened"
       },
       "owners": {
+        "type": "nested",
         "properties": {
           "id": {
             "type": "keyword",

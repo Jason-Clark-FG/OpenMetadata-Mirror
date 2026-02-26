@@ -203,6 +203,7 @@
         "term_vector": "with_positions_offsets"
       },
       "owners": {
+        "type": "nested",
         "properties": {
           "id": {
             "type": "keyword",

@@ -403,6 +403,7 @@
         "normalizer": "lowercase_normalizer"
       },
       "owners": {
+        "type": "nested",
         "properties": {
           "id": {
             "type": "keyword"
