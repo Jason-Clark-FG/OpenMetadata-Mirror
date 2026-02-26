@@ -278,6 +278,64 @@ class OpenSearchVectorServiceTest {
   }
 
   @Test
+  void testPaginationSkipsParentsCorrectly() throws IOException {
+    String openSearchResponse =
+        """
+        {
+          "hits": {
+            "total": {"value": 5},
+            "hits": [
+              {"_id": "c1", "_score": 0.9, "_source": {"parentId": "p1", "chunkIndex": 0}},
+              {"_id": "c2", "_score": 0.85, "_source": {"parentId": "p1", "chunkIndex": 1}},
+              {"_id": "c3", "_score": 0.8, "_source": {"parentId": "p2", "chunkIndex": 0}},
+              {"_id": "c4", "_score": 0.7, "_source": {"parentId": "p3", "chunkIndex": 0}},
+              {"_id": "c5", "_score": 0.6, "_source": {"parentId": "p4", "chunkIndex": 0}}
+            ]
+          }
+        }
+        """;
+
+    mockOpenSearchResponse(openSearchResponse);
+
+    DTOs.VectorSearchResponse results =
+        vectorService.search("test query", Map.of(), 2, 1, 100, 0.0);
+
+    long distinctParents = results.hits.stream().map(r -> r.get("parentId")).distinct().count();
+    assertEquals(2, distinctParents, "Should return 2 distinct parents");
+    assertEquals(
+        "p2",
+        results.hits.get(0).get("parentId"),
+        "First result should be p2 (skipping p1 due to from=1)");
+    assertEquals(
+        "p3",
+        results.hits.get(1).get("parentId"),
+        "Second result should be p3");
+  }
+
+  @Test
+  void testPaginationFromBeyondResultsReturnsEmpty() throws IOException {
+    String openSearchResponse =
+        """
+        {
+          "hits": {
+            "total": {"value": 2},
+            "hits": [
+              {"_id": "c1", "_score": 0.9, "_source": {"parentId": "p1", "chunkIndex": 0}},
+              {"_id": "c2", "_score": 0.8, "_source": {"parentId": "p2", "chunkIndex": 0}}
+            ]
+          }
+        }
+        """;
+
+    mockOpenSearchResponse(openSearchResponse);
+
+    DTOs.VectorSearchResponse results =
+        vectorService.search("test query", Map.of(), 5, 10, 100, 0.0);
+
+    assertEquals(0, results.hits.size(), "Should return no results when from exceeds available parents");
+  }
+
+  @Test
   void testEnsureHybridSearchPipelineSendsCorrectRequest() throws IOException {
     mockOpenSearchResponse("{\"acknowledged\":true}");
 
@@ -298,7 +356,7 @@ class OpenSearchVectorServiceTest {
     assertTrue(body.contains("\"technique\":\"rrf\""));
     assertTrue(body.contains("\"rank_constant\":60"));
     assertTrue(body.contains("\"collapse\""));
-    assertTrue(body.contains("\"parent_id\""));
+    assertTrue(body.contains("\"parentId\""));
   }
 
   @Test

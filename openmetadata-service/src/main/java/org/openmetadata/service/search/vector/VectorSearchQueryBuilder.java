@@ -55,6 +55,9 @@ public class VectorSearchQueryBuilder {
       double threshold) {
     sb.append("{\"knn\":{\"embedding\":{\"vector\":").append(Arrays.toString(vector));
 
+    // OpenSearch KNN supports either min_score or k, not both. When min_score is set,
+    // it returns all neighbors above the threshold (unbounded count, capped by the outer
+    // "size" parameter). When k is set, it returns exactly k nearest neighbors.
     if (threshold > 0.0) {
       sb.append(",\"min_score\":").append(threshold);
     } else {

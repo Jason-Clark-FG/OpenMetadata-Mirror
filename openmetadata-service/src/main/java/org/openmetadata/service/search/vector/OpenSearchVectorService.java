@@ -75,14 +75,28 @@ public class OpenSearchVectorService implements VectorIndexService {
   }
 
   public void ensureHybridSearchPipeline(double keywordWeight, double semanticWeight) {
-    String pipelineBody =
-        String.format(
-            "{\"phase_results_processors\":[{\"score-ranker-processor\":{\"combination\":"
-                + "{\"technique\":\"rrf\",\"rank_constant\":60,\"parameters\":{\"weights\":[%s,%s]}}}}],"
-                + "\"response_processors\":[{\"collapse\":{\"field\":\"parent_id\"}}]}",
-            keywordWeight, semanticWeight);
+    var weights = MAPPER.createArrayNode().add(keywordWeight).add(semanticWeight);
+    var combination =
+        MAPPER
+            .createObjectNode()
+            .put("technique", "rrf")
+            .put("rank_constant", 60)
+            .set("parameters", MAPPER.createObjectNode().set("weights", weights));
+    var scoreRanker =
+        MAPPER
+            .createObjectNode()
+            .set("score-ranker-processor", MAPPER.createObjectNode().set("combination", combination));
+    var collapse =
+        MAPPER
+            .createObjectNode()
+            .set("collapse", MAPPER.createObjectNode().put("field", "parentId"));
 
-    executeGenericRequest("PUT", "/_search/pipeline/" + HYBRID_PIPELINE_NAME, pipelineBody);
+    var pipeline = MAPPER.createObjectNode();
+    pipeline.set("phase_results_processors", MAPPER.createArrayNode().add(scoreRanker));
+    pipeline.set("response_processors", MAPPER.createArrayNode().add(collapse));
+
+    executeGenericRequest(
+        "PUT", "/_search/pipeline/" + HYBRID_PIPELINE_NAME, pipeline.toString());
     LOG.info(
         "Hybrid search pipeline '{}' created/updated with weights keyword={}, semantic={}",
         HYBRID_PIPELINE_NAME,
@@ -126,10 +140,10 @@ public class OpenSearchVectorService implements VectorIndexService {
     long start = System.currentTimeMillis();
     try {
       float[] queryVector = embeddingClient.embed(query);
-      int overFetchSize = size * OVER_FETCH_MULTIPLIER;
+      int overFetchSize = (from + size) * OVER_FETCH_MULTIPLIER;
 
       String queryJson =
-          VectorSearchQueryBuilder.build(queryVector, overFetchSize, from, k, filters, threshold);
+          VectorSearchQueryBuilder.build(queryVector, overFetchSize, 0, k, filters, threshold);
       String aliasName = getSearchAlias();
       String responseBody = executeGenericRequest("POST", "/" + aliasName + "/_search", queryJson);
 
@@ -139,6 +153,9 @@ public class OpenSearchVectorService implements VectorIndexService {
       LinkedHashMap<String, List<Map<String, Object>>> byParent = new LinkedHashMap<>();
       for (JsonNode hit : hitsNode) {
         double score = hit.path("_score").asDouble(0.0);
+        // When threshold > 0, OpenSearch already applies min_score at the KNN query level.
+        // This post-filter acts as a safety net for the no-threshold case (k-based retrieval),
+        // where low-scoring neighbors may still be returned to fill the k count.
         if (score < threshold) {
           continue;
         }
@@ -152,7 +169,12 @@ public class OpenSearchVectorService implements VectorIndexService {
 
       List<Map<String, Object>> results = new ArrayList<>();
       int parentCount = 0;
+      int skipped = 0;
       for (List<Map<String, Object>> chunks : byParent.values()) {
+        if (skipped < from) {
+          skipped++;
+          continue;
+        }
         if (parentCount >= size) {
           break;
         }
