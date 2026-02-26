@@ -191,55 +191,13 @@ public class WorkflowHandler {
     String triggerWorkflowKey = workflow.getTriggerWorkflow().getWorkflowName();
     String workflowName = workflow.getWorkflowDefinition().getName();
 
-    // For scheduled workflows (periodicBatchEntity), terminate old instances and cancel timer jobs
-    // This prevents both duplicate executions and errors from schema changes
+    // For scheduled workflows (periodicBatchEntity), cancel timer jobs to prevent duplicates
+    // Let any currently running instances complete naturally
     if (workflow.getWorkflowDefinition().getTrigger() != null
         && "periodicBatchEntity".equals(workflow.getWorkflowDefinition().getTrigger().getType())) {
 
-      RuntimeService runtimeService = processEngine.getRuntimeService();
-
-      // Step 1: Terminate all old running instances
-      // Necessary when workflow task definitions change (e.g., setEntityCertificationTask ->
-      // setEntityAttributeTask)
       try {
-        // Terminate main workflow instances
-        List<ProcessInstance> runningInstances =
-            runtimeService.createProcessInstanceQuery().processDefinitionKey(workflowName).list();
-
-        if (!runningInstances.isEmpty()) {
-          LOG.info(
-              "Terminating {} old running instances of {} before redeployment",
-              runningInstances.size(),
-              workflowName);
-          for (ProcessInstance instance : runningInstances) {
-            runtimeService.deleteProcessInstance(instance.getId(), "Cleanup before redeployment");
-          }
-        }
-
-        // Terminate trigger workflow instances
-        List<ProcessInstance> triggerInstances =
-            runtimeService
-                .createProcessInstanceQuery()
-                .processDefinitionKey(triggerWorkflowKey)
-                .list();
-
-        if (!triggerInstances.isEmpty()) {
-          LOG.info(
-              "Terminating {} old trigger instances of {} before redeployment",
-              triggerInstances.size(),
-              triggerWorkflowKey);
-          for (ProcessInstance instance : triggerInstances) {
-            runtimeService.deleteProcessInstance(instance.getId(), "Cleanup before redeployment");
-          }
-        }
-      } catch (Exception e) {
-        LOG.warn(
-            "Error terminating old workflow instances for {}: {}", workflowName, e.getMessage());
-      }
-
-      // Step 2: Cancel old timer jobs to prevent duplicate scheduled executions
-      try {
-        // Find and delete timer jobs for the old deployment
+        // Cancel old timer jobs to prevent duplicate scheduled executions
         List<Job> timerJobs =
             managementService.createTimerJobQuery().processDefinitionKey(triggerWorkflowKey).list();
 
@@ -275,10 +233,9 @@ public class WorkflowHandler {
             e.getMessage());
       }
 
-      // Step 3: Delete old deployments (cascade=false) to remove orphaned process definitions.
+      // Delete old deployments (cascade=false) to remove orphaned process definitions.
       // cascade=false preserves act_hi_* history tables which can have millions of rows.
-      // Two-pass approach: multiple process definitions can share the same deployment,
-      // so we must clean up ALL runtime job FK references first, then delete deployments.
+      // Only delete deployments that have no running instances to avoid orphaning active workflows.
       try {
         List<ProcessDefinition> oldTriggerDefinitions =
             repositoryService
@@ -292,31 +249,43 @@ public class WorkflowHandler {
                 .processDefinitionKey(workflowName)
                 .list();
 
-        // Pass 1: Clean up runtime jobs for ALL process definitions first.
+        RuntimeService runtimeService = processEngine.getRuntimeService();
+
+        // First: Clean up runtime jobs for process definitions with no running instances
+        Set<String> deploymentsToDelete = new HashSet<>();
         for (ProcessDefinition pd : oldTriggerDefinitions) {
-          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+          List<ProcessInstance> runningInstances =
+              runtimeService.createProcessInstanceQuery().processDefinitionId(pd.getId()).list();
+          if (runningInstances.isEmpty()) {
+            deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+            deploymentsToDelete.add(pd.getDeploymentId());
+          } else {
+            LOG.info(
+                "Skipping cleanup of deployment {} (key: {}) - has {} running instances",
+                pd.getDeploymentId(),
+                pd.getKey(),
+                runningInstances.size());
+          }
         }
         for (ProcessDefinition pd : oldMainDefinitions) {
-          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+          List<ProcessInstance> runningInstances =
+              runtimeService.createProcessInstanceQuery().processDefinitionId(pd.getId()).list();
+          if (runningInstances.isEmpty()) {
+            deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+            deploymentsToDelete.add(pd.getDeploymentId());
+          } else {
+            LOG.info(
+                "Skipping cleanup of deployment {} (key: {}) - has {} running instances",
+                pd.getDeploymentId(),
+                pd.getKey(),
+                runningInstances.size());
+          }
         }
 
-        // Pass 2: Delete deployments (deduplicated — multiple PDs can share one deployment).
-        Set<String> deletedDeployments = new HashSet<>();
-        for (ProcessDefinition pd : oldTriggerDefinitions) {
-          if (deletedDeployments.add(pd.getDeploymentId())) {
-            LOG.info(
-                "Removing old trigger deployment: {} (key: {})", pd.getDeploymentId(), pd.getKey());
-            repositoryService.deleteDeployment(pd.getDeploymentId(), false);
-          }
-        }
-        for (ProcessDefinition pd : oldMainDefinitions) {
-          if (deletedDeployments.add(pd.getDeploymentId())) {
-            LOG.info(
-                "Removing old main workflow deployment: {} (key: {})",
-                pd.getDeploymentId(),
-                pd.getKey());
-            repositoryService.deleteDeployment(pd.getDeploymentId(), false);
-          }
+        // Second: Delete only deployments that have no running instances
+        for (String deploymentId : deploymentsToDelete) {
+          LOG.info("Removing old deployment: {}", deploymentId);
+          repositoryService.deleteDeployment(deploymentId, false);
         }
       } catch (Exception e) {
         LOG.warn(
@@ -369,30 +338,47 @@ public class WorkflowHandler {
             .processDefinitionKeyLike(triggerWorkflowId + "%")
             .list();
 
-    // Pass 1: Clean up runtime jobs for ALL process definitions first.
+    // First: Clean up runtime jobs only for process definitions with no running instances
+    RuntimeService runtimeService = processEngine.getRuntimeService();
+    Set<String> deploymentsToDelete = new HashSet<>();
     try {
       for (ProcessDefinition pd : processDefinitions) {
-        deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+        List<ProcessInstance> runningInstances =
+            runtimeService.createProcessInstanceQuery().processDefinitionId(pd.getId()).list();
+        if (runningInstances.isEmpty()) {
+          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+          deploymentsToDelete.add(pd.getDeploymentId());
+        } else {
+          LOG.info(
+              "Skipping deletion of workflow definition {} (deployment: {}) - has {} running instances",
+              pd.getKey(),
+              pd.getDeploymentId(),
+              runningInstances.size());
+        }
       }
       for (ProcessDefinition pd : triggerProcessDefinitions) {
-        deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+        List<ProcessInstance> runningInstances =
+            runtimeService.createProcessInstanceQuery().processDefinitionId(pd.getId()).list();
+        if (runningInstances.isEmpty()) {
+          deleteRuntimeJobsForProcessDefinition(managementService, pd.getId());
+          deploymentsToDelete.add(pd.getDeploymentId());
+        } else {
+          LOG.info(
+              "Skipping deletion of trigger workflow {} (deployment: {}) - has {} running instances",
+              pd.getKey(),
+              pd.getDeploymentId(),
+              runningInstances.size());
+        }
       }
     } catch (Exception e) {
       LOG.warn("Error cleaning up runtime jobs for workflow {}: {}", wf.getName(), e.getMessage());
     }
 
-    // Pass 2: Delete deployments (deduplicated — multiple PDs can share one deployment).
-    Set<String> deletedDeployments = new HashSet<>();
+    // Second: Delete only deployments that have no running instances
     try {
-      for (ProcessDefinition pd : processDefinitions) {
-        if (deletedDeployments.add(pd.getDeploymentId())) {
-          repositoryService.deleteDeployment(pd.getDeploymentId(), false);
-        }
-      }
-      for (ProcessDefinition pd : triggerProcessDefinitions) {
-        if (deletedDeployments.add(pd.getDeploymentId())) {
-          repositoryService.deleteDeployment(pd.getDeploymentId(), false);
-        }
+      for (String deploymentId : deploymentsToDelete) {
+        LOG.info("Deleting deployment: {}", deploymentId);
+        repositoryService.deleteDeployment(deploymentId, false);
       }
     } catch (Exception e) {
       LOG.warn("Error deleting deployments for workflow {}: {}", wf.getName(), e.getMessage());
@@ -402,15 +388,8 @@ public class WorkflowHandler {
   private void deleteRuntimeJobsForProcessDefinition(
       ManagementService managementService, String processDefinitionId) {
     RuntimeService runtimeService = processEngine.getRuntimeService();
-    for (ProcessInstance instance :
-        runtimeService
-            .createProcessInstanceQuery()
-            .processDefinitionId(processDefinitionId)
-            .list()) {
-      LOG.info(
-          "Deleting process instance {} for procDef {}", instance.getId(), processDefinitionId);
-      runtimeService.deleteProcessInstance(instance.getId(), "Cleanup before redeployment");
-    }
+
+    // Delete jobs first to avoid foreign key constraint violations
     for (Job job :
         managementService
             .createDeadLetterJobQuery()
@@ -432,6 +411,17 @@ public class WorkflowHandler {
     for (Job job :
         managementService.createJobQuery().processDefinitionId(processDefinitionId).list()) {
       managementService.deleteJob(job.getId());
+    }
+
+    // Delete process instances last, after all jobs have been cleaned up
+    for (ProcessInstance instance :
+        runtimeService
+            .createProcessInstanceQuery()
+            .processDefinitionId(processDefinitionId)
+            .list()) {
+      LOG.info(
+          "Deleting process instance {} for procDef {}", instance.getId(), processDefinitionId);
+      runtimeService.deleteProcessInstance(instance.getId(), "Cleanup before redeployment");
     }
   }
 
