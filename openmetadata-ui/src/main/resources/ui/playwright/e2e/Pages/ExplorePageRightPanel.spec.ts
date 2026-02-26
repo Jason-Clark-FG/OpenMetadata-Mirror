@@ -791,7 +791,101 @@ test.describe('Right Panel Test Suite', () => {
         }
       });
 
-      test('Should show incidents tab content when a failed test case exists', async ({
+      test('Should search and filter test cases in Data Quality tab', async ({
+        adminPage,
+      }) => {
+        test.slow();
+        const testTable = new TableClass();
+        const { apiContext, afterAction } = await performAdminLogin(
+          adminPage.context().browser()!
+        );
+        try {
+          await testTable.create(apiContext);
+          await testTable.createTestSuiteAndPipelines(apiContext);
+
+          const successCase1 = await testTable.createTestCase(apiContext, {
+            name: `pw_dq_search_target_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 100 },
+            ],
+          });
+          const successCase2 = await testTable.createTestCase(apiContext, {
+            name: `pw_dq_search_noise_${uuid()}`,
+            testDefinition: 'tableRowCountToBeBetween',
+            parameterValues: [
+              { name: 'minValue', value: 1 },
+              { name: 'maxValue', value: 100 },
+            ],
+          });
+
+          await testTable.addTestCaseResult(
+            apiContext,
+            successCase1.fullyQualifiedName,
+            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+          );
+          await testTable.addTestCaseResult(
+            apiContext,
+            successCase2.fullyQualifiedName,
+            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+          );
+
+          const fqn = getEntityFqn(testTable);
+          await navigateToExploreAndSelectEntity(
+            adminPage,
+            testTable.entity.name,
+            testTable.endpoint,
+            fqn
+          );
+          const rightPanel = new RightPanelPageObject(adminPage);
+          const localDQ = new DataQualityPageObject(rightPanel);
+          await rightPanel.waitForPanelLoaded();
+
+          await localDQ.navigateToDataQualityTab();
+          await localDQ.shouldBeVisible();
+          await localDQ.shouldShowTestCaseCardsCount(2);
+
+          // 1. Search for specific test case
+          const searchRes = adminPage.waitForResponse(
+            (res) =>
+              res.url().includes('dataQuality/testCases/search/list') &&
+              res.url().includes('q=')
+          );
+          await localDQ.searchFor('search_target');
+          const searchResponse = await searchRes;
+          await expect(searchResponse.status()).toBe(200);
+          await localDQ.shouldShowTestCaseCardsCount(1);
+          await localDQ.shouldShowTestCaseCardWithName(successCase1.name);
+
+          // 2. Clear Search
+          const clearRes = adminPage.waitForResponse(
+            (res) =>
+              res.url().includes('dataQuality/testCases/search/list') &&
+              !res.url().includes('q=')
+          );
+          await localDQ.clearSearch();
+          const clearResponse = await clearRes;
+          await expect(clearResponse.status()).toBe(200);
+          await localDQ.shouldShowTestCaseCardsCount(2);
+
+          // 3. Search for non-existent test case
+          const noMatchRes = adminPage.waitForResponse(
+            (res) =>
+              res.url().includes('dataQuality/testCases/search/list') &&
+              res.url().includes('q=') &&
+              res.status() === 200
+          );
+          await localDQ.searchFor('zzz_non_existent_search');
+          await noMatchRes;
+          await localDQ.shouldShowNoResults();
+        } finally {
+          await testTable.delete(apiContext);
+          await afterAction();
+        }
+      });
+
+      test('Should show incidents tab content and verify incident details when a failed test case exists', async ({
         adminPage,
       }) => {
         test.slow();
@@ -816,7 +910,7 @@ test.describe('Right Panel Test Suite', () => {
             incidentCase.fullyQualifiedName,
             {
               testCaseStatus: 'Failed',
-              result: 'Row count exceeded maximum',
+              result: 'Row count 15 exceeded maximum 10',
               timestamp: getCurrentMillis(),
             }
           );
@@ -845,6 +939,11 @@ test.describe('Right Panel Test Suite', () => {
           await expect(
             incidentsTabContent.locator('.incidents-stats-container')
           ).toBeVisible();
+
+          await localDQ.verifyIncidentCard({
+            status: 'Failed',
+            hasAssignee: false,
+          });
         } finally {
           await testTable.delete(apiContext);
           await afterAction();

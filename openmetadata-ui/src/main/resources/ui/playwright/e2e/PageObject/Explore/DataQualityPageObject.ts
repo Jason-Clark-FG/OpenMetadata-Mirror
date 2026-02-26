@@ -98,6 +98,26 @@ export class DataQualityPageObject extends RightPanelBase {
   // ============ ACTION METHODS (Fluent Interface) ============
 
   /**
+   * Type into the data quality search bar and wait for results to update.
+   */
+  async searchFor(text: string): Promise<DataQualityPageObject> {
+    const searchBar = this.container.getByTestId('searchbar');
+    await searchBar.fill(text);
+    await this.page.waitForTimeout(300); // Wait for debounce
+    return this;
+  }
+
+  /**
+   * Clear the data quality search bar.
+   */
+  async clearSearch(): Promise<DataQualityPageObject> {
+    const searchBar = this.container.getByTestId('searchbar');
+    await searchBar.clear();
+    await this.page.waitForTimeout(300); // Wait for debounce
+    return this;
+  }
+
+  /**
    * Click on a data quality stat card to filter test cases
    * @param statType - Type of stat card ('success', 'failed', 'aborted')
    * @returns DataQualityPageObject for method chaining
@@ -116,7 +136,9 @@ export class DataQualityPageObject extends RightPanelBase {
    * @param testCaseName - Name of the test case
    * @returns DataQualityPageObject for method chaining
    */
-  async clickTestCaseLink(testCaseName: string): Promise<DataQualityPageObject> {
+  async clickTestCaseLink(
+    testCaseName: string
+  ): Promise<DataQualityPageObject> {
     const testCaseLink = this.container
       .locator(`.test-case-name[data-testid="test-case-${testCaseName}"]`)
       .first();
@@ -217,7 +239,9 @@ export class DataQualityPageObject extends RightPanelBase {
     const card = cards.filter({ hasText: testCaseName }).first();
     await card.waitFor({ state: 'visible' });
 
-    const statusBadge = card.locator('.status-badge-label, .status-badge, [class*="status"]');
+    const statusBadge = card.locator(
+      '.status-badge-label, .status-badge, [class*="status"]'
+    );
     await statusBadge.waitFor({ state: 'visible' });
     await expect(statusBadge).toContainText(new RegExp(expectedStatus, 'i'));
   }
@@ -245,7 +269,10 @@ export class DataQualityPageObject extends RightPanelBase {
 
     if (details.entityLink) {
       const testCaseLink = card.locator('.test-case-name');
-      await expect(testCaseLink).toHaveAttribute('href', new RegExp(details.entityLink));
+      await expect(testCaseLink).toHaveAttribute(
+        'href',
+        new RegExp(details.entityLink)
+      );
     }
   }
 
@@ -257,7 +284,9 @@ export class DataQualityPageObject extends RightPanelBase {
     status?: string;
     hasAssignee?: boolean;
   }): Promise<void> {
-    const incidentsTabContent = this.container.locator('.incidents-tab-content');
+    const incidentsTabContent = this.container.locator(
+      '.incidents-tab-content'
+    );
     await incidentsTabContent.waitFor({ state: 'visible' });
 
     const incidentCard = incidentsTabContent.locator('.test-case-card').first();
@@ -286,6 +315,19 @@ export class DataQualityPageObject extends RightPanelBase {
    */
   async shouldShowTestCaseCardsCount(expectedCount: number): Promise<void> {
     await expect(this.testCaseCards).toHaveCount(expectedCount);
+  }
+
+  /**
+   * Verify that no test cases are shown, e.g. after a search with no matches
+   */
+  async shouldShowNoResults(): Promise<void> {
+    await expect(this.testCaseCards).toHaveCount(0);
+    const noDataPlaceholder = this.container
+      .locator(
+        '[data-testid="no-data-placeholder"], .no-data-placeholder, .ant-empty'
+      )
+      .first();
+    await expect(noDataPlaceholder).toBeVisible();
   }
 
   /**

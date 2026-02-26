@@ -22,7 +22,11 @@ import { Transi18next } from '../../../../utils/CommonUtils';
 import { Link } from 'react-router-dom';
 import { ReactComponent as AddPlaceHolderIcon } from '../../../../assets/svg/ic-no-records.svg';
 import { PROFILER_FILTER_RANGE } from '../../../../constants/profiler.constant';
-import { ERROR_PLACEHOLDER_TYPE } from '../../../../enums/common.enum';
+import {
+  ERROR_PLACEHOLDER_TYPE,
+  SORT_ORDER,
+} from '../../../../enums/common.enum';
+import { TestCaseType } from '../../../../enums/TestSuite.enum';
 import { TestCase, TestCaseStatus } from '../../../../generated/tests/testCase';
 import {
   TestCaseResolutionStatus,
@@ -30,7 +34,7 @@ import {
 } from '../../../../generated/tests/testCaseResolutionStatus';
 import { Include } from '../../../../generated/type/include';
 import { getListTestCaseIncidentStatus } from '../../../../rest/incidentManagerAPI';
-import { listTestCases } from '../../../../rest/testAPI';
+import { getListTestCaseBySearch } from '../../../../rest/testAPI';
 import { getTableFQNFromColumnFQN } from '../../../../utils/CommonUtils';
 import {
   getCurrentMillis,
@@ -280,7 +284,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     useState<IncidentFilterStatus>('new');
   const [isIncidentsLoading, setIsIncidentsLoading] = useState<boolean>(false);
 
-  const fetchTestCases = async () => {
+  const fetchTestCases = async (searchQuery: string = '') => {
     if (!entityFQN) {
       setIsLoading(false);
 
@@ -291,47 +295,62 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
       setIsLoading(true);
       const entityLink = generateEntityLink(entityFQN);
 
-      const response = await listTestCases({
+      const response = await getListTestCaseBySearch({
         entityLink,
+        q: searchQuery ? searchQuery : undefined,
         includeAllTests: true,
-        limit: 100, // Get more test cases to ensure accurate counts
-        fields: ['testCaseResult', 'incidentId'],
+        limit: 50,
+        fields: 'testCaseResult,incidentId',
+        include: Include.NonDeleted,
+        sortType: SORT_ORDER.DESC,
+        sortField: 'testCaseResult.timestamp',
+        testCaseType: TestCaseType.all,
       });
 
       setTestCases(response.data || []);
 
-      // Calculate status counts
-      const counts = (response.data || []).reduce(
-        (acc, testCase) => {
-          const status = testCase.testCaseResult?.testCaseStatus;
-          if (status) {
-            switch (status) {
-              case TestCaseStatus.Success:
-                acc.success++;
+      if (!searchQuery) {
+        // Calculate status counts only when there is no search query
+        const counts = (response.data || []).reduce(
+          (acc, testCase) => {
+            const status = testCase.testCaseResult?.testCaseStatus;
+            if (status) {
+              switch (status) {
+                case TestCaseStatus.Success:
+                  acc.success++;
 
-                break;
-              case TestCaseStatus.Failed:
-                acc.failed++;
+                  break;
+                case TestCaseStatus.Failed:
+                  acc.failed++;
 
-                break;
-              case TestCaseStatus.Aborted:
-                acc.aborted++;
+                  break;
+                case TestCaseStatus.Aborted:
+                  acc.aborted++;
 
-                break;
+                  break;
+              }
+              acc.total++;
             }
-            acc.total++;
-          }
 
-          return acc;
-        },
-        { success: 0, failed: 0, aborted: 0, ack: 0, total: 0 }
-      );
+            return acc;
+          },
+          { success: 0, failed: 0, aborted: 0, ack: 0, total: 0 }
+        );
 
-      setStatusCounts(counts);
+        setStatusCounts(counts);
+      }
     } catch (error) {
       showErrorToast(error as AxiosError);
       setTestCases([]);
-      setStatusCounts({ success: 0, failed: 0, aborted: 0, ack: 0, total: 0 });
+      if (!searchQuery) {
+        setStatusCounts({
+          success: 0,
+          failed: 0,
+          aborted: 0,
+          ack: 0,
+          total: 0,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -440,11 +459,17 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
 
       return;
     }
-    fetchTestCases();
+    fetchTestCases(searchText);
+  }, [entityFQN, hasViewTests, searchText]);
+
+  useEffect(() => {
+    if (!hasViewTests) {
+      return;
+    }
     if (!isColumnDetailPanel) {
       fetchIncidents();
     }
-  }, [entityFQN, hasViewTests]);
+  }, [entityFQN, hasViewTests, fetchIncidents, isColumnDetailPanel]);
 
   useEffect(() => {
     if (isColumnDetailPanel && testCases.length > 0 && hasViewTests) {
@@ -452,30 +477,14 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     }
   }, [fetchIncidents, isColumnDetailPanel, testCases.length, hasViewTests]);
 
-  // Filter test cases based on active filter and search text
+  // Filter test cases based on active filter (search text is handled server-side)
   const filteredTestCases = useMemo(() => {
     return testCases.filter((testCase) => {
       const status = testCase.testCaseResult?.testCaseStatus;
-      const matchesStatus = status?.toLowerCase() === activeFilter;
 
-      if (!searchText) {
-        return matchesStatus;
-      }
-
-      const searchLower = searchText.toLowerCase();
-      const testCaseName = testCase.name?.toLowerCase() || '';
-      const testCaseDisplayName =
-        testCase.displayName?.toLowerCase() ||
-        testCase.fullyQualifiedName?.toLowerCase() ||
-        '';
-
-      return (
-        matchesStatus &&
-        (testCaseName.includes(searchLower) ||
-          testCaseDisplayName.includes(searchLower))
-      );
+      return status?.toLowerCase() === activeFilter;
     });
-  }, [testCases, activeFilter, searchText]);
+  }, [testCases, activeFilter]);
 
   // Filter incidents based on active incident filter and search text
   const filteredIncidents = useMemo(() => {
@@ -543,8 +552,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
   ): TestCase => {
     const matchingTestCase = testCases.find(
       (tc) =>
-        tc.fullyQualifiedName ===
-        incident.testCaseReference?.fullyQualifiedName
+        tc.fullyQualifiedName === incident.testCaseReference?.fullyQualifiedName
     );
 
     return {
@@ -618,7 +626,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         </span>
       ),
       children:
-        statusCounts.total === 0 ? (
+        statusCounts.total === 0 && !isLoading ? (
           <ErrorPlaceHolderNew
             className="text-grey-14 m-t-lg"
             icon={<AddPlaceHolderIcon height={100} width={100} />}
@@ -658,7 +666,9 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                   onSearch={setSearchText}
                 />
               </div>
-              {filteredTestCases.length > 0 ? (
+              {isLoading ? (
+                <Loader />
+              ) : filteredTestCases.length > 0 ? (
                 <Row gutter={[0, 12]} style={{ marginLeft: '-16px' }}>
                   {filteredTestCases.map((testCase) => (
                     <Col key={testCase.id} span={24}>
@@ -695,7 +705,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         </span>
       ),
       children:
-        incidentCounts.total === 0 ? (
+        incidentCounts.total === 0 && !isIncidentsLoading ? (
           <div className="m-t-lg">
             <ErrorPlaceHolderNew
               className="text-grey-14"
@@ -816,16 +826,6 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             }}
           />
         </ErrorPlaceHolderNew>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="data-quality-tab-container p-md">
-        <div>
-          <Loader />
-        </div>
       </div>
     );
   }
