@@ -18,7 +18,7 @@ import classNames from 'classnames';
 import { startCase } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Transi18next } from '../../../../utils/CommonUtils';
+import { Transi18next, getTableFQNFromColumnFQN } from '../../../../utils/CommonUtils';
 import { Link } from 'react-router-dom';
 import { ReactComponent as AddPlaceHolderIcon } from '../../../../assets/svg/ic-no-records.svg';
 import { PROFILER_FILTER_RANGE } from '../../../../constants/profiler.constant';
@@ -35,7 +35,6 @@ import {
 import { Include } from '../../../../generated/type/include';
 import { getListTestCaseIncidentStatus } from '../../../../rest/incidentManagerAPI';
 import { getListTestCaseBySearch } from '../../../../rest/testAPI';
-import { getTableFQNFromColumnFQN } from '../../../../utils/CommonUtils';
 import {
   getCurrentMillis,
   getEpochMillisForPastDays,

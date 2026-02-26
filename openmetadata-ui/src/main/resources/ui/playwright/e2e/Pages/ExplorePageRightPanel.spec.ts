@@ -260,7 +260,9 @@ test.describe('Right Panel Test Suite', () => {
           });
 
           await test.step('Update owners', async () => {
-            await overview.addOwnerWithoutValidation(user1.getUserDisplayName());
+            await overview.addOwnerWithoutValidation(
+              user1.getUserDisplayName()
+            );
             await overview.shouldShowOwner(user1.getUserDisplayName());
           });
 
@@ -331,7 +333,9 @@ test.describe('Right Panel Test Suite', () => {
             rightPanel.setEntityConfig(entityInstance);
             await overview.navigateToOverviewTab();
 
-            const glossarySection = adminPage.locator('.glossary-terms-section');
+            const glossarySection = adminPage.locator(
+              '.glossary-terms-section'
+            );
             await expect(
               glossarySection.getByText(glossaryTermToUpdate)
             ).not.toBeVisible();
@@ -460,8 +464,7 @@ test.describe('Right Panel Test Suite', () => {
               if (usesServerSideSearch) {
                 clearRes = adminPage.waitForResponse(
                   (res) =>
-                    res.url().includes('columns/search?offset=') &&
-                    !res.url().includes('q=') &&
+                    res.url().includes('/columns?offset=') &&
                     res.status() === 200
                 );
               }
@@ -1166,544 +1169,670 @@ test.describe('Right Panel Test Suite', () => {
     });
 
     test.describe('Overview panel - Deleted entity verification', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should verify deleted user not visible in owner selection for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-          browser,
-        }) => {
-          const deletedUser = new UserClass();
-          const { apiContext, afterAction } = await performAdminLogin(browser);
+      const deletedEntityVerificationEntityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
 
-          try {
-            await deletedUser.create(apiContext);
-
-            const fqn = getEntityFqn(entityInstance);
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-
-            await overview.addOwnerWithoutValidation(
-              deletedUser.getUserDisplayName()
-            );
-            await overview.shouldShowOwner(deletedUser.getUserDisplayName());
-
-            await deletedUser.delete(apiContext);
-            await adminPage.reload();
-            await rightPanel.waitForPanelVisible();
-
-            const deletedOwnerLocator =
-              await overview.verifyDeletedOwnerNotVisible(
-                deletedUser.getUserDisplayName(),
-                'Users'
-              );
-            await expect(deletedOwnerLocator).not.toBeVisible();
-          } finally {
-            await afterAction();
-          }
-        });
-
-        test(`Should verify deleted tag not visible in tag selection for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-          browser,
-        }) => {
-          const deletedClassification = new ClassificationClass();
-          const deletedTag = new TagClass({
-            classification: deletedClassification.data.name,
-          });
-          const { apiContext, afterAction } = await performAdminLogin(browser);
-
-          try {
-            await deletedClassification.create(apiContext);
-            await deletedTag.create(apiContext);
-
-            const deletedTagDisplayName =
-              deletedTag.responseData?.displayName ??
-              deletedTag.data.displayName;
-
-            const fqn = getEntityFqn(entityInstance);
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-
-            await overview.editTags(deletedTagDisplayName);
-            await overview.shouldShowTag(deletedTagDisplayName);
-
-            await deletedTag.delete(apiContext);
-            await deletedClassification.delete(apiContext);
-            await adminPage.reload();
-            await rightPanel.waitForPanelVisible();
-
-            const deletedTagLocator = await overview.verifyDeletedTagNotVisible(
-              deletedTagDisplayName
-            );
-            await expect(deletedTagLocator).not.toBeVisible();
-          } finally {
-            await afterAction();
-          }
-        });
-
-        test(`Should verify deleted glossary term not visible in selection for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-          browser,
-        }) => {
-          const deletedGlossary = new Glossary();
-          const deletedGlossaryTerm = new GlossaryTerm(deletedGlossary);
-          const { apiContext, afterAction } = await performAdminLogin(browser);
-
-          try {
-            await deletedGlossary.create(apiContext);
-            await deletedGlossaryTerm.create(apiContext);
-
-            const deletedTermDisplayName =
-              deletedGlossaryTerm.responseData?.displayName ??
-              deletedGlossaryTerm.data.displayName;
-
-            const fqn = getEntityFqn(entityInstance);
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-
-            await overview.editGlossaryTerms(deletedTermDisplayName);
-            await overview.shouldShowGlossaryTermsSection();
-
-            await deletedGlossaryTerm.delete(apiContext);
-            await deletedGlossary.delete(apiContext);
-            await adminPage.reload();
-            await rightPanel.waitForPanelVisible();
-
-            const deletedTermLocator =
-              await overview.verifyDeletedGlossaryTermNotVisible(
-                deletedTermDisplayName
-              );
-            await expect(deletedTermLocator).not.toBeVisible();
-          } finally {
-            await afterAction();
-          }
-        });
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(deletedEntityVerificationEntityMap).map((e) =>
+              e.create(apiContext)
+            )
+          );
+        } finally {
+          await afterAction();
+        }
       });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(deletedEntityVerificationEntityMap).map((e) =>
+              e.delete(apiContext)
+            )
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      Object.entries(deletedEntityVerificationEntityMap).forEach(
+        ([entityType, entityInstance]) => {
+          test(`Should verify deleted user not visible in owner selection for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            overview,
+            browser,
+          }) => {
+            const deletedUser = new UserClass();
+            const { apiContext, afterAction } = await performAdminLogin(
+              browser
+            );
+
+            try {
+              await deletedUser.create(apiContext);
+
+              const fqn = getEntityFqn(entityInstance);
+              await navigateToExploreAndSelectEntity(
+                adminPage,
+                entityInstance.entity.name,
+                entityInstance.endpoint,
+                fqn
+              );
+              await rightPanel.waitForPanelVisible();
+              rightPanel.setEntityConfig(entityInstance);
+
+              await overview.addOwnerWithoutValidation(
+                deletedUser.getUserDisplayName()
+              );
+              await overview.shouldShowOwner(deletedUser.getUserDisplayName());
+
+              await deletedUser.delete(apiContext);
+              await adminPage.reload();
+              await rightPanel.waitForPanelVisible();
+
+              const deletedOwnerLocator =
+                await overview.verifyDeletedOwnerNotVisible(
+                  deletedUser.getUserDisplayName(),
+                  'Users'
+                );
+              await expect(deletedOwnerLocator).not.toBeVisible();
+            } finally {
+              await afterAction();
+            }
+          });
+
+          test(`Should verify deleted tag not visible in tag selection for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            overview,
+            browser,
+          }) => {
+            const deletedClassification = new ClassificationClass();
+            const deletedTag = new TagClass({
+              classification: deletedClassification.data.name,
+            });
+            const { apiContext, afterAction } = await performAdminLogin(
+              browser
+            );
+
+            try {
+              await deletedClassification.create(apiContext);
+              await deletedTag.create(apiContext);
+
+              const deletedTagDisplayName =
+                deletedTag.responseData?.displayName ??
+                deletedTag.data.displayName;
+
+              const fqn = getEntityFqn(entityInstance);
+              await navigateToExploreAndSelectEntity(
+                adminPage,
+                entityInstance.entity.name,
+                entityInstance.endpoint,
+                fqn
+              );
+              await rightPanel.waitForPanelVisible();
+              rightPanel.setEntityConfig(entityInstance);
+
+              await overview.editTags(deletedTagDisplayName);
+              await overview.shouldShowTag(deletedTagDisplayName);
+
+              await deletedTag.delete(apiContext);
+              await deletedClassification.delete(apiContext);
+              await adminPage.reload();
+              await rightPanel.waitForPanelVisible();
+
+              const deletedTagLocator =
+                await overview.verifyDeletedTagNotVisible(
+                  deletedTagDisplayName
+                );
+              await expect(deletedTagLocator).not.toBeVisible();
+            } finally {
+              await afterAction();
+            }
+          });
+
+          test(`Should verify deleted glossary term not visible in selection for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            overview,
+            browser,
+          }) => {
+            const deletedGlossary = new Glossary();
+            const deletedGlossaryTerm = new GlossaryTerm(deletedGlossary);
+            const { apiContext, afterAction } = await performAdminLogin(
+              browser
+            );
+
+            try {
+              await deletedGlossary.create(apiContext);
+              await deletedGlossaryTerm.create(apiContext);
+
+              const deletedTermDisplayName =
+                deletedGlossaryTerm.responseData?.displayName ??
+                deletedGlossaryTerm.data.displayName;
+
+              const fqn = getEntityFqn(entityInstance);
+              await navigateToExploreAndSelectEntity(
+                adminPage,
+                entityInstance.entity.name,
+                entityInstance.endpoint,
+                fqn
+              );
+              await rightPanel.waitForPanelVisible();
+              rightPanel.setEntityConfig(entityInstance);
+
+              await overview.editGlossaryTerms(deletedTermDisplayName);
+              await overview.shouldShowGlossaryTermsSection();
+
+              await deletedGlossaryTerm.delete(apiContext);
+              await deletedGlossary.delete(apiContext);
+              await adminPage.reload();
+              await rightPanel.waitForPanelVisible();
+
+              const deletedTermLocator =
+                await overview.verifyDeletedGlossaryTermNotVisible(
+                  deletedTermDisplayName
+                );
+              await expect(deletedTermLocator).not.toBeVisible();
+            } finally {
+              await afterAction();
+            }
+          });
+        }
+      );
     });
 
     test.describe('Data Steward User - Permission Verification', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should allow Data Steward to edit description for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
+      const dataStewardEntityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(dataStewardEntityMap).map((e) => e.create(apiContext))
           );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.navigateToOverviewTab();
-
-          const descriptionToUpdate = `DataSteward description - ${uuid()}`;
-          await overviewDS.editDescription(descriptionToUpdate);
-          await overviewDS.shouldShowDescriptionWithText(descriptionToUpdate);
-        });
-
-        test(`Should allow Data Steward to edit owners for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.addOwnerWithoutValidation(
-            user1.getUserDisplayName()
-          );
-          await overviewDS.shouldShowOwner(user1.getUserDisplayName());
-        });
-
-        test(`Should allow Data Steward to edit tags for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.editTags(tagToUpdate);
-          await overviewDS.shouldShowTag(tagToUpdate);
-        });
-
-        test(`Should allow Data Steward to edit glossary terms for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.editGlossaryTerms(glossaryTermToUpdate);
-          await overviewDS.shouldShowGlossaryTermsSection();
-        });
-
-        test(`Should allow Data Steward to edit tier for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.assignTier(testTier);
-          await overviewDS.shouldShowTier(testTier);
-        });
-
-        test(`Should allow Data Steward to view all tabs for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          if (rightPanelDS.isTabAvailable('schema')) {
-            const schemaDS = new SchemaPageObject(rightPanelDS);
-            await schemaDS.navigateToSchemaTab();
-            await schemaDS.shouldBeVisible();
-          }
-
-          if (rightPanelDS.isTabAvailable('lineage')) {
-            const lineageDS = new LineagePageObject(rightPanelDS);
-            await lineageDS.navigateToLineageTab();
-            await lineageDS.shouldBeVisible();
-          }
-
-          if (rightPanelDS.isTabAvailable('data quality')) {
-            const dataQualityDS = new DataQualityPageObject(rightPanelDS);
-            await dataQualityDS.navigateToDataQualityTab();
-            await dataQualityDS.shouldBeVisible();
-          }
-
-          if (rightPanelDS.isTabAvailable('custom property')) {
-            const customPropertiesDS = new CustomPropertiesPageObject(
-              rightPanelDS
-            );
-            await customPropertiesDS.navigateToCustomPropertiesTab();
-            await customPropertiesDS.shouldShowCustomPropertiesContainer();
-          }
-        });
-
-        test(`Should NOT show restricted edit buttons for Data Steward for ${entityType}`, async ({
-          dataStewardPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataStewardPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataStewardPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-
-          const rightPanelDS = new RightPanelPageObject(dataStewardPage);
-          rightPanelDS.setEntityConfig(entityInstance);
-          rightPanelDS.setRolePermissions('DataSteward');
-
-          const overviewDS = new OverviewPageObject(rightPanelDS);
-          await overviewDS.navigateToOverviewTab();
-
-          // DataSteward: canEditDomains=false, canEditDataProducts=false
-          await rightPanelDS.verifyPermissions();
-        });
+        } finally {
+          await afterAction();
+        }
       });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(dataStewardEntityMap).map((e) => e.delete(apiContext))
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      Object.entries(dataStewardEntityMap).forEach(
+        ([entityType, entityInstance]) => {
+          test(`Should allow Data Steward to edit description for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.navigateToOverviewTab();
+
+            const descriptionToUpdate = `DataSteward description - ${uuid()}`;
+            await overviewDS.editDescription(descriptionToUpdate);
+            await overviewDS.shouldShowDescriptionWithText(descriptionToUpdate);
+          });
+
+          test(`Should allow Data Steward to edit owners for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.addOwnerWithoutValidation(
+              user1.getUserDisplayName()
+            );
+            await overviewDS.shouldShowOwner(user1.getUserDisplayName());
+          });
+
+          test(`Should allow Data Steward to edit tags for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.editTags(tagToUpdate);
+            await overviewDS.shouldShowTag(tagToUpdate);
+          });
+
+          test(`Should allow Data Steward to edit glossary terms for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.editGlossaryTerms(glossaryTermToUpdate);
+            await overviewDS.shouldShowGlossaryTermsSection();
+          });
+
+          test(`Should allow Data Steward to edit tier for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.assignTier(testTier);
+            await overviewDS.shouldShowTier(testTier);
+          });
+
+          test(`Should allow Data Steward to view all tabs for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            if (rightPanelDS.isTabAvailable('schema')) {
+              const schemaDS = new SchemaPageObject(rightPanelDS);
+              await schemaDS.navigateToSchemaTab();
+              await schemaDS.shouldBeVisible();
+            }
+
+            if (rightPanelDS.isTabAvailable('lineage')) {
+              const lineageDS = new LineagePageObject(rightPanelDS);
+              await lineageDS.navigateToLineageTab();
+              await lineageDS.shouldBeVisible();
+            }
+
+            if (rightPanelDS.isTabAvailable('data quality')) {
+              const dataQualityDS = new DataQualityPageObject(rightPanelDS);
+              await dataQualityDS.navigateToDataQualityTab();
+              await dataQualityDS.shouldBeVisible();
+            }
+
+            if (rightPanelDS.isTabAvailable('custom property')) {
+              const customPropertiesDS = new CustomPropertiesPageObject(
+                rightPanelDS
+              );
+              await customPropertiesDS.navigateToCustomPropertiesTab();
+              await customPropertiesDS.shouldShowCustomPropertiesContainer();
+            }
+          });
+
+          test(`Should NOT show restricted edit buttons for Data Steward for ${entityType}`, async ({
+            dataStewardPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataStewardPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataStewardPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              { state: 'visible' }
+            );
+
+            const rightPanelDS = new RightPanelPageObject(dataStewardPage);
+            rightPanelDS.setEntityConfig(entityInstance);
+            rightPanelDS.setRolePermissions('DataSteward');
+
+            const overviewDS = new OverviewPageObject(rightPanelDS);
+            await overviewDS.navigateToOverviewTab();
+
+            // DataSteward: canEditDomains=false, canEditDataProducts=false
+            await rightPanelDS.verifyPermissions();
+          });
+        }
+      );
     });
 
     test.describe('Data Consumer User - Permission Verification', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should allow Data Consumer to edit description for ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
+      const dataConsumerEntityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(dataConsumerEntityMap).map((e) =>
+              e.create(apiContext)
+            )
           );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.navigateToOverviewTab();
-
-          const descriptionToUpdate = `DataConsumer description - ${uuid()}`;
-          await overviewDC.editDescription(descriptionToUpdate);
-          await overviewDC.shouldShowDescriptionWithText(descriptionToUpdate);
-        });
-
-        test(`Should allow Data Consumer to edit tags for ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.editTags(tagToUpdate);
-          await overviewDC.shouldShowTag(tagToUpdate);
-        });
-
-        test(`Should allow Data Consumer to edit glossary terms for ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.editGlossaryTerms(glossaryTermToUpdate);
-          await overviewDC.shouldShowGlossaryTermsSection();
-        });
-
-        test(`Should allow Data Consumer to edit tier for ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.assignTier(testTier);
-          await overviewDC.shouldShowTier(testTier);
-        });
-
-        test(`Should allow Data Consumer to view all tabs for ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            {
-              state: 'visible',
-            }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          if (rightPanelDC.isTabAvailable('schema')) {
-            const schemaDC = new SchemaPageObject(rightPanelDC);
-            await schemaDC.navigateToSchemaTab();
-            await schemaDC.shouldBeVisible();
-          }
-
-          if (rightPanelDC.isTabAvailable('lineage')) {
-            const lineageDC = new LineagePageObject(rightPanelDC);
-            await lineageDC.navigateToLineageTab();
-            await lineageDC.shouldBeVisible();
-          }
-
-          if (rightPanelDC.isTabAvailable('data quality')) {
-            const dataQualityDC = new DataQualityPageObject(rightPanelDC);
-            await dataQualityDC.navigateToDataQualityTab();
-            await dataQualityDC.shouldBeVisible();
-          }
-
-          if (rightPanelDC.isTabAvailable('custom property')) {
-            const customPropertiesDC = new CustomPropertiesPageObject(
-              rightPanelDC
-            );
-            await customPropertiesDC.navigateToCustomPropertiesTab();
-            await customPropertiesDC.shouldShowCustomPropertiesContainer();
-          }
-        });
-
-        test(`Should follow Data Consumer role policies for ownerless ${entityType}`, async ({
-          dataConsumerPage,
-        }) => {
-          // Use the pre-configured DataConsumer fixture user (NOT user1).
-          // user1 is assigned as owner by the parallel "remove owner" tests,
-          // which would grant elevated permissions and make domain buttons
-          // visible unexpectedly. The fixture user is never set as owner.
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            dataConsumerPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await dataConsumerPage.waitForSelector(
-            '[data-testid="entity-summary-panel-container"]',
-            { state: 'visible' }
-          );
-
-          const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
-          rightPanelDC.setEntityConfig(entityInstance);
-          rightPanelDC.setRolePermissions('DataConsumer');
-
-          const overviewDC = new OverviewPageObject(rightPanelDC);
-          await overviewDC.navigateToOverviewTab();
-
-          // DataConsumer: canEditDomains=false, canEditDataProducts=false
-          await rightPanelDC.verifyPermissions();
-        });
+        } finally {
+          await afterAction();
+        }
       });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(dataConsumerEntityMap).map((e) =>
+              e.delete(apiContext)
+            )
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      Object.entries(dataConsumerEntityMap).forEach(
+        ([entityType, entityInstance]) => {
+          test(`Should allow Data Consumer to edit description for ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.navigateToOverviewTab();
+
+            const descriptionToUpdate = `DataConsumer description - ${uuid()}`;
+            await overviewDC.editDescription(descriptionToUpdate);
+            await overviewDC.shouldShowDescriptionWithText(descriptionToUpdate);
+          });
+
+          test(`Should allow Data Consumer to edit tags for ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.editTags(tagToUpdate);
+            await overviewDC.shouldShowTag(tagToUpdate);
+          });
+
+          test(`Should allow Data Consumer to edit glossary terms for ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.editGlossaryTerms(glossaryTermToUpdate);
+            await overviewDC.shouldShowGlossaryTermsSection();
+          });
+
+          test(`Should allow Data Consumer to edit tier for ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.assignTier(testTier);
+            await overviewDC.shouldShowTier(testTier);
+          });
+
+          test(`Should allow Data Consumer to view all tabs for ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              {
+                state: 'visible',
+              }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            if (rightPanelDC.isTabAvailable('schema')) {
+              const schemaDC = new SchemaPageObject(rightPanelDC);
+              await schemaDC.navigateToSchemaTab();
+              await schemaDC.shouldBeVisible();
+            }
+
+            if (rightPanelDC.isTabAvailable('lineage')) {
+              const lineageDC = new LineagePageObject(rightPanelDC);
+              await lineageDC.navigateToLineageTab();
+              await lineageDC.shouldBeVisible();
+            }
+
+            if (rightPanelDC.isTabAvailable('data quality')) {
+              const dataQualityDC = new DataQualityPageObject(rightPanelDC);
+              await dataQualityDC.navigateToDataQualityTab();
+              await dataQualityDC.shouldBeVisible();
+            }
+
+            if (rightPanelDC.isTabAvailable('custom property')) {
+              const customPropertiesDC = new CustomPropertiesPageObject(
+                rightPanelDC
+              );
+              await customPropertiesDC.navigateToCustomPropertiesTab();
+              await customPropertiesDC.shouldShowCustomPropertiesContainer();
+            }
+          });
+
+          test(`Should follow Data Consumer role policies for ownerless ${entityType}`, async ({
+            dataConsumerPage,
+          }) => {
+            // Use the pre-configured DataConsumer fixture user (NOT user1).
+            // user1 is assigned as owner by the parallel "remove owner" tests,
+            // which would grant elevated permissions and make domain buttons
+            // visible unexpectedly. The fixture user is never set as owner.
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              dataConsumerPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await dataConsumerPage.waitForSelector(
+              '[data-testid="entity-summary-panel-container"]',
+              { state: 'visible' }
+            );
+
+            const rightPanelDC = new RightPanelPageObject(dataConsumerPage);
+            rightPanelDC.setEntityConfig(entityInstance);
+            rightPanelDC.setRolePermissions('DataConsumer');
+
+            const overviewDC = new OverviewPageObject(rightPanelDC);
+            await overviewDC.navigateToOverviewTab();
+
+            // DataConsumer: canEditDomains=false, canEditDataProducts=false
+            await rightPanelDC.verifyPermissions();
+          });
+        }
+      );
     });
 
     // Standalone test using a dedicated entity (dcOwnerTestTable) that no other
