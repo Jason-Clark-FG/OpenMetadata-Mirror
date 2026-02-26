@@ -170,7 +170,27 @@ test('Logical TestSuite', PLAYWRIGHT_INGESTION_TAG_OBJ, async ({ page, ownerPage
     await expect(page.getByTestId('add-placeholder-button')).toBeVisible();
 
     await page.getByTestId('add-placeholder-button').click();
-    await page.getByTestId('select-all-test-cases').click();
+
+    await page.waitForSelector('[data-testid="select-all-test-cases"]', {
+      state: 'visible',
+    });
+    await page
+      .waitForSelector('[data-testid="loader"]', { state: 'detached' })
+      .catch(() => {});
+
+    const selectAllBtn = page.getByTestId('select-all-test-cases');
+
+    await test.step('Select all in pipeline test case modal', async () => {
+      await selectAllBtn.click();
+      await expect(selectAllBtn).toContainText(/\(\d+\)/);
+    });
+
+    await test.step('Deselect all in pipeline test case modal', async () => {
+      await selectAllBtn.click();
+      await expect(selectAllBtn).not.toContainText(/\(\d+\)/);
+    });
+
+    await selectAllBtn.click();
 
     await expect(page.getByTestId('cron-type').getByText('Day')).toBeAttached();
 
