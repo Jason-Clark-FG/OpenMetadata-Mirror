@@ -1145,7 +1145,10 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         aliasState.indexAliases.containsKey("vector_search_index_rebuild_123"),
         "Staged vector index should exist after promotion");
     assertTrue(
-        aliasState.indexAliases.get("vector_search_index_rebuild_123").contains("dataAssetEmbeddings"),
+        aliasState
+            .indexAliases
+            .get("vector_search_index_rebuild_123")
+            .contains("dataAssetEmbeddings"),
         "Staged vector index should have the vectorEmbedding alias");
   }
 
@@ -1306,7 +1309,10 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         aliasState.deletedIndices.contains("vector_search_index_rebuild_old"),
         "Old vector index should be promoted and cleaned up");
     assertTrue(
-        aliasState.indexAliases.get("vector_search_index_rebuild_new").contains("dataAssetEmbeddings"),
+        aliasState
+            .indexAliases
+            .get("vector_search_index_rebuild_new")
+            .contains("dataAssetEmbeddings"),
         "Staged vector index should gain the vectorEmbedding alias");
   }
 
