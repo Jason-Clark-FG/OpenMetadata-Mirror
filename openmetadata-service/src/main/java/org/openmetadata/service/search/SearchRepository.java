@@ -306,12 +306,7 @@ public class SearchRepository {
   }
 
   public void updateIndexes() {
-    boolean isOpenSearch = getSearchType() == ElasticSearchConfiguration.SearchType.OPENSEARCH;
     for (Map.Entry<String, IndexMapping> entry : entityIndexMap.entrySet()) {
-      if (VectorIndexService.VECTOR_INDEX_KEY.equals(entry.getKey()) && !isOpenSearch) {
-        LOG.info("Skipping vector search index update - only supported with OpenSearch");
-        continue;
-      }
       updateIndex(entry.getValue());
     }
   }
@@ -348,14 +343,29 @@ public class SearchRepository {
       this.vectorEmbeddingHandler = new VectorEmbeddingHandler(vectorIndexService);
 
       vectorServiceInitialized = true;
+
+      NaturalLanguageSearchConfiguration nlConfig = cfg.getNaturalLanguageSearch();
+      double keywordWeight =
+          nlConfig.getKeywordWeight() != null ? nlConfig.getKeywordWeight() : 0.6;
+      double semanticWeight =
+          nlConfig.getSemanticWeight() != null ? nlConfig.getSemanticWeight() : 0.4;
+      ((OpenSearchVectorService) vectorIndexService)
+          .ensureHybridSearchPipeline(keywordWeight, semanticWeight);
+
       LOG.info(
           "Vector search service initialized with provider={}, dimension={}",
           cfg.getNaturalLanguageSearch().getEmbeddingProvider(),
           embeddingClient.getDimension());
-
-      ensureVectorIndexDimension();
     } catch (Exception e) {
       LOG.error("Failed to initialize vector search service: {}", e.getMessage(), e);
+    }
+  }
+
+  public void updateHybridSearchPipeline(double keywordWeight, double semanticWeight) {
+    if (vectorIndexService instanceof OpenSearchVectorService openSearchVectorService) {
+      openSearchVectorService.ensureHybridSearchPipeline(keywordWeight, semanticWeight);
+    } else {
+      LOG.warn("Hybrid search pipeline update is only supported with OpenSearch");
     }
   }
 
@@ -390,9 +400,6 @@ public class SearchRepository {
   }
 
   public void createIndex(IndexMapping indexMapping) {
-    if (isVectorEmbeddingEnabled() && vectorIndexService != null) {
-      ensureVectorIndexDimension();
-    }
     try {
       String indexName = indexMapping.getIndexName(clusterAlias);
       if (!indexExists(indexMapping)) {
@@ -2009,17 +2016,6 @@ public class SearchRepository {
         JsonUtils.deepCopyList(references, EntityReference.class);
     inheritedReferences.forEach(ref -> ref.setInherited(true));
     return inheritedReferences;
-  }
-
-  public void ensureVectorIndexDimension() {
-    if (embeddingClient == null || vectorIndexService == null) {
-      return;
-    }
-    try {
-      vectorIndexService.createOrUpdateIndex(embeddingClient.getDimension());
-    } catch (Exception e) {
-      LOG.error("Failed to ensure vector index dimension: {}", e.getMessage(), e);
-    }
   }
 
   private String reformatVectorIndexWithDimension(String mapping, int dimension) {

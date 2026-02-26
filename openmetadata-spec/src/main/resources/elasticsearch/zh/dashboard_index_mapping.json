@@ -1,7 +1,10 @@
 {
   "settings": {
     "index": {
-      "max_ngram_diff": 17
+      "max_ngram_diff": 17,
+      "knn": true,
+      "knn.algo_param.ef_search": 1000,
+      "knn.advanced.filtered_exact_search_threshold": 0
     },
     "analysis": {
       "normalizer": {
@@ -728,6 +731,34 @@
             "type": "keyword"
           }
         }
+      },
+      "embedding": {
+        "type": "knn_vector",
+        "dimension": 512,
+        "method": {
+          "name": "hnsw",
+          "engine": "lucene",
+          "space_type": "cosinesimil",
+          "parameters": {
+            "m": 48,
+            "ef_construction": 256
+          }
+        }
+      },
+      "fingerprint": {
+        "type": "keyword"
+      },
+      "textToEmbed": {
+        "type": "text"
+      },
+      "chunkIndex": {
+        "type": "integer"
+      },
+      "chunkCount": {
+        "type": "integer"
+      },
+      "parentId": {
+        "type": "keyword"
       }
     }
   }

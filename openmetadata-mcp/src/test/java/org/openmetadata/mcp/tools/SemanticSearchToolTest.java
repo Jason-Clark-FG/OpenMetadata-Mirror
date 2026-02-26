@@ -199,10 +199,11 @@ class SemanticSearchToolTest {
     hit.put("displayName", "Users");
     hit.put("serviceType", "BigQuery");
     hit.put("_score", 0.95);
-    hit.put("text_to_embed", "A short description");
+    hit.put("description", "A short description");
     hit.put("columns", List.of(Map.of("name", "id", "dataType", "INT")));
     hit.put("embedding", new float[] {0.1f, 0.2f});
     hit.put("fingerprint", "abc123");
+    hit.put("textToEmbed", "name: users; entityType: table | description: A short description");
 
     VectorSearchResponse response = new VectorSearchResponse(10L, List.of(hit));
 
@@ -232,6 +233,7 @@ class SemanticSearchToolTest {
       assertTrue(!cleaned.containsKey("_score"));
       assertTrue(!cleaned.containsKey("embedding"));
       assertTrue(!cleaned.containsKey("fingerprint"));
+      assertTrue(!cleaned.containsKey("textToEmbed"));
     }
   }
 
@@ -242,7 +244,7 @@ class SemanticSearchToolTest {
     String longText = "x".repeat(600);
     Map<String, Object> hit = new HashMap<>();
     hit.put("fullyQualifiedName", "db.schema.table");
-    hit.put("text_to_embed", longText);
+    hit.put("description", longText);
 
     VectorSearchResponse response = new VectorSearchResponse(10L, List.of(hit));
 
@@ -374,7 +376,7 @@ class SemanticSearchToolTest {
           .thenReturn(response);
 
       Map<String, Object> filters = new HashMap<>();
-      filters.put("entity_type", List.of("table", "topic"));
+      filters.put("entityType", List.of("table", "topic"));
       filters.put("service", "my_db");
 
       Map<String, Object> params = new HashMap<>();

@@ -119,12 +119,15 @@ public class SemanticSearchTool implements McpTool {
   private Map<String, Object> cleanHit(Map<String, Object> hit) {
     Map<String, Object> cleaned = new HashMap<>();
 
-    copyIfPresent(hit, cleaned, "parent_id");
+    copyIfPresent(hit, cleaned, "parentId");
     copyIfPresent(hit, cleaned, "entityType");
     copyIfPresent(hit, cleaned, "fullyQualifiedName");
     copyIfPresent(hit, cleaned, "name");
     copyIfPresent(hit, cleaned, "displayName");
     copyIfPresent(hit, cleaned, "serviceType");
+    copyIfPresent(hit, cleaned, "service");
+    copyIfPresent(hit, cleaned, "database");
+    copyIfPresent(hit, cleaned, "databaseSchema");
     copyIfPresent(hit, cleaned, "owners");
     copyIfPresent(hit, cleaned, "tier");
     copyIfPresent(hit, cleaned, "tags");
@@ -136,12 +139,12 @@ public class SemanticSearchTool implements McpTool {
       cleaned.put("similarityScore", hit.get("_score"));
     }
 
-    if (hit.containsKey("text_to_embed")) {
-      Object textObj = hit.get("text_to_embed");
-      if (textObj instanceof String text && text.length() > DESCRIPTION_MAX_LENGTH) {
-        cleaned.put("description", text.substring(0, DESCRIPTION_TRUNCATE_LENGTH) + "...");
+    if (hit.containsKey("description")) {
+      Object descObj = hit.get("description");
+      if (descObj instanceof String desc && desc.length() > DESCRIPTION_MAX_LENGTH) {
+        cleaned.put("description", desc.substring(0, DESCRIPTION_TRUNCATE_LENGTH) + "...");
       } else {
-        cleaned.put("description", textObj);
+        cleaned.put("description", descObj);
       }
     }
 

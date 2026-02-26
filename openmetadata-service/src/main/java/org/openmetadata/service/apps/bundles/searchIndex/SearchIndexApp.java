@@ -336,17 +336,6 @@ public class SearchIndexApp extends AbstractNativeApplication {
     monitorDistributedJob(jobExecutionContext, distributedJob.getId());
 
     if (searchIndexSink != null) {
-      // Wait for vector embedding tasks to complete before closing
-      int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
-      if (pendingVectorTasks > 0) {
-        LOG.info("Waiting for {} pending vector embedding tasks to complete", pendingVectorTasks);
-        boolean vectorComplete = searchIndexSink.awaitVectorCompletion(120);
-        if (!vectorComplete) {
-          LOG.warn("Vector embedding wait timed out - some tasks may not be reflected in stats");
-        }
-      }
-
-      // Flush and wait for pending bulk requests
       LOG.info("Flushing sink and waiting for pending bulk requests");
       boolean flushComplete = searchIndexSink.flushAndAwait(60);
       if (!flushComplete) {

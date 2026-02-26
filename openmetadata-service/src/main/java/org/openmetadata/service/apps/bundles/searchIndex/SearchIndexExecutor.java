@@ -1307,16 +1307,7 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private void closeSinkIfNeeded() throws IOException {
     if (searchIndexSink != null && sinkClosed.compareAndSet(false, true)) {
-      // Check for pending vector tasks before closing
-      int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
-      if (pendingVectorTasks > 0) {
-        LOG.info(
-            "Waiting for {} pending vector embedding tasks to complete before closing",
-            pendingVectorTasks);
-      }
-
-      LOG.info("Forcing final flush of bulk processor and vector embeddings");
-      // close() internally calls awaitVectorCompletion() first, then flushes search index
+      LOG.info("Forcing final flush of bulk processor");
       searchIndexSink.close();
       syncSinkStatsFromBulkSink();
     }

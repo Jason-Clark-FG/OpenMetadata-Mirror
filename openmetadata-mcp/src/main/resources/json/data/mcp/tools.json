@@ -112,7 +112,7 @@
           },
           "filters": {
             "type": "object",
-            "description": "Optional filters to narrow results. Keys are field names and values are arrays of allowed values. Supported filter fields: 'entity_type' (e.g., ['table', 'dashboard']), 'service' (e.g., ['BigQuery', 'Snowflake']), 'tags' (e.g., ['PII.Sensitive']). Example: {\"entity_type\": [\"table\"], \"service\": [\"BigQuery\"]}.",
+            "description": "Optional filters to narrow results. Keys are field names and values are arrays of allowed values. Supported filter fields: 'entityType' (e.g., ['table', 'dashboard']), 'service' (e.g., ['BigQuery', 'Snowflake']), 'tags' (e.g., ['PII.Sensitive']). Example: {\"entityType\": [\"table\"], \"service\": [\"BigQuery\"]}.",
             "additionalProperties": {
               "type": "array",
               "items": {
@@ -145,7 +145,7 @@
           {
             "description": "Find dashboards about revenue in BigQuery",
             "query": "revenue metrics dashboard",
-            "filters": {"entity_type": ["dashboard"], "service": ["BigQuery"]}
+            "filters": {"entityType": ["dashboard"], "service": ["BigQuery"]}
           },
           {
             "description": "High-confidence search for PII data",
@@ -155,7 +155,7 @@
           {
             "description": "Find pipeline assets processing user events",
             "query": "user event processing pipeline",
-            "filters": {"entity_type": ["pipeline"]}
+            "filters": {"entityType": ["pipeline"]}
           }
         ]
       }
