@@ -30,6 +30,12 @@ import {
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { ContractTab } from './ContractTab';
 
+jest.mock('../../../context/PermissionProvider/PermissionProvider', () => ({
+  usePermissionProvider: jest.fn(() => ({
+    getEntityPermission: jest.fn().mockResolvedValue({}),
+  })),
+}));
+
 jest.mock('../../../rest/contractAPI', () => ({
   getContractByEntityId: jest.fn(),
   deleteContractById: jest.fn(),

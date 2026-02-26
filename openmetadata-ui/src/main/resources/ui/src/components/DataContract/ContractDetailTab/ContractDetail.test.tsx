@@ -366,7 +366,7 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
-          contract={{ ...mockContract, description: '', termsOfUse: '' }}
+          contract={{ ...mockContract, description: '', termsOfUse: {} }}
           entityId="test-entity-id"
           entityType="table"
           onDelete={mockOnDelete}
@@ -429,6 +429,7 @@ describe('ContractDetail', () => {
     it('should call onEdit when edit button is clicked', () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="test-entity-id"
           entityType="table"
@@ -449,6 +450,7 @@ describe('ContractDetail', () => {
     it('should call onDelete when delete button is clicked', () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="test-entity-id"
           entityType="table"
@@ -473,7 +475,10 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
+          hasEditPermission
           contract={inheritedContract}
+          entityId="test-entity-id"
+          entityType="table"
           onDelete={mockOnDelete}
           onEdit={mockOnEdit}
         />,
@@ -503,7 +508,10 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
+          hasEditPermission
           contract={nonInheritedContract}
+          entityId="test-entity-id"
+          entityType="table"
           onDelete={mockOnDelete}
           onEdit={mockOnEdit}
         />,
@@ -522,6 +530,7 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="test-entity-id"
           entityType="table"
@@ -550,6 +559,7 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="test-entity-id"
           entityType="table"
@@ -574,6 +584,7 @@ describe('ContractDetail', () => {
 
       render(
         <ContractDetail
+          hasEditPermission
           contract={contractWithoutId}
           entityId="test-entity-id"
           entityType="table"
@@ -997,6 +1008,7 @@ describe('ContractDetail', () => {
     it('should show import ODCS option in dropdown menu', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
@@ -1017,6 +1029,7 @@ describe('ContractDetail', () => {
     it('should show import OpenMetadata option in dropdown menu', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
@@ -1037,6 +1050,7 @@ describe('ContractDetail', () => {
     it('should open import modal with ODCS format from contract actions', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
@@ -1061,6 +1075,7 @@ describe('ContractDetail', () => {
     it('should open import modal with OpenMetadata format from contract actions', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
@@ -1087,6 +1102,7 @@ describe('ContractDetail', () => {
     it('should call onContractUpdated on successful import', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
@@ -1267,6 +1283,7 @@ describe('ContractDetail', () => {
     it('should close import modal when close is clicked', async () => {
       render(
         <ContractDetail
+          hasEditPermission
           contract={mockContract}
           entityId="table-1"
           entityType="table"
