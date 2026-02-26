@@ -213,14 +213,15 @@ test.describe('Right Panel Test Suite', () => {
   });
 
   test.describe('Explore page right panel tests', () => {
-    test.describe('Overview panel CRUD operations', () => {
+    test.describe('Overview panel CRUD and Removal operations', () => {
       Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should update description for ${entityType}`, async ({
+        test(`Should perform CRUD and Removal operations for ${entityType}`, async ({
           adminPage,
           rightPanel,
           overview,
         }) => {
           const fqn = getEntityFqn(entityInstance);
+
           await test.step('Navigate to entity', async () => {
             await navigateToExploreAndSelectEntity(
               adminPage,
@@ -232,128 +233,35 @@ test.describe('Right Panel Test Suite', () => {
             rightPanel.setEntityConfig(entityInstance);
             await overview.navigateToOverviewTab();
             await overview.shouldBeVisible();
-            await overview.shouldShowDescriptionSection();
           });
 
           const descriptionToUpdate = `${entityType} Test description - ${uuid()}`;
           await test.step('Update description', async () => {
+            await overview.shouldShowDescriptionSection();
             await overview.editDescription(descriptionToUpdate);
             await overview.shouldShowDescriptionWithText(descriptionToUpdate);
           });
-        });
 
-        test(`Should update/edit tags for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await test.step('Navigate to entity', async () => {
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-          });
-
-          await test.step('Update tags', async () => {
+          await test.step('Update/edit tags', async () => {
             await overview.editTags(tagToUpdate);
             await overview.shouldShowTagsSection();
             await overview.shouldShowTag(tagToUpdate);
           });
-        });
 
-        test(`Should update/edit tier for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await test.step('Navigate to entity', async () => {
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-          });
-
-          await test.step('Update tier', async () => {
+          await test.step('Update/edit tier', async () => {
             await overview.assignTier(testTier);
             await overview.shouldShowTierSection();
             await overview.shouldShowTier(testTier);
           });
-        });
 
-        test(`Should update/edit glossary terms for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await test.step('Navigate to entity', async () => {
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-          });
-
-          await test.step('Update glossary terms', async () => {
+          await test.step('Update/edit glossary terms', async () => {
             await overview.editGlossaryTerms(glossaryTermToUpdate);
             await overview.shouldShowGlossaryTermsSection();
           });
-        });
-
-        test(`Should update owners for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await test.step('Navigate to entity', async () => {
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelLoaded();
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
-          });
 
           await test.step('Update owners', async () => {
-            await overview.addOwnerWithoutValidation(
-              user1.getUserDisplayName()
-            );
+            await overview.addOwnerWithoutValidation(user1.getUserDisplayName());
             await overview.shouldShowOwner(user1.getUserDisplayName());
-          });
-        });
-
-        test(`Should update domain for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await test.step('Navigate to entity', async () => {
-            await navigateToExploreAndSelectEntity(
-              adminPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
           });
 
           await test.step('Update domain', async () => {
@@ -361,188 +269,117 @@ test.describe('Right Panel Test Suite', () => {
             await overview.shouldShowDomainsSection();
             await overview.shouldShowDomain(domainToUpdate);
           });
-        });
-      });
-    });
 
-    test.describe('Overview panel - Removal operations', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should remove tag for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          // Removal operations
+          await test.step('Remove tag', async () => {
+            await overview.removeTag([tagToUpdate]);
+            await adminPage.waitForSelector('[data-testid="loader"]', {
+              state: 'detached',
+            });
 
-          await overview.editTags(tagToUpdate);
-          await overview.shouldShowTagsSection();
-          await overview.shouldShowTag(tagToUpdate);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+            await overview.navigateToOverviewTab();
 
-          await overview.removeTag([tagToUpdate]);
-          await adminPage.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
+            const tagElement = adminPage.getByTestId(
+              `tag-${testClassification.data.name}.${testTag.data.name}`
+            );
+            await expect(tagElement).not.toBeVisible();
           });
 
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          const tagElement = adminPage.getByTestId(
-            `tag-${testClassification.data.name}.${testTag.data.name}`
-          );
-          await expect(tagElement).not.toBeVisible();
-        });
+          await test.step('Remove tier', async () => {
+            await overview.removeTier();
+            await adminPage.waitForSelector('[data-testid="loader"]', {
+              state: 'detached',
+            });
 
-        test(`Should remove tier for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+            await overview.navigateToOverviewTab();
 
-          await overview.assignTier(testTier);
-          await overview.shouldShowTierSection();
-          await overview.shouldShowTier(testTier);
-
-          await overview.removeTier();
-          await adminPage.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
+            const tierElement = adminPage
+              .locator('.tier-section')
+              .getByText(testTier);
+            await expect(tierElement).not.toBeVisible();
           });
 
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          const tierElement = adminPage
-            .locator('.tier-section')
-            .getByText(testTier);
-          await expect(tierElement).not.toBeVisible();
-        });
+          await test.step('Remove glossary term', async () => {
+            await overview.removeGlossaryTerm([glossaryTermToUpdate]);
+            await adminPage.waitForSelector('[data-testid="loader"]', {
+              state: 'detached',
+            });
 
-        test(`Should remove glossary term for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+            await overview.navigateToOverviewTab();
 
-          await overview.editGlossaryTerms(glossaryTermToUpdate);
-          await overview.shouldShowGlossaryTermsSection();
-
-          await overview.removeGlossaryTerm([glossaryTermToUpdate]);
-          await adminPage.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
+            const glossarySection = adminPage.locator('.glossary-terms-section');
+            await expect(
+              glossarySection.getByText(glossaryTermToUpdate)
+            ).not.toBeVisible();
           });
 
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          const glossarySection = adminPage.locator('.glossary-terms-section');
-          await expect(
-            glossarySection.getByText(glossaryTermToUpdate)
-          ).not.toBeVisible();
-        });
+          await test.step('Remove domain', async () => {
+            await overview.removeDomain(domainToUpdate);
+            await adminPage.waitForSelector('[data-testid="loader"]', {
+              state: 'detached',
+            });
 
-        test(`Should remove domain for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+            await overview.navigateToOverviewTab();
 
-          await overview.editDomain(domainToUpdate);
-          await overview.shouldShowDomainsSection();
-          await overview.shouldShowDomain(domainToUpdate);
-
-          await overview.removeDomain(domainToUpdate);
-          await adminPage.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
+            const domainsSection = adminPage.locator('.domains-section');
+            await expect(
+              domainsSection.getByText(domainToUpdate)
+            ).not.toBeVisible();
           });
 
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          const domainsSection = adminPage.locator('.domains-section');
-          await expect(
-            domainsSection.getByText(domainToUpdate)
-          ).not.toBeVisible();
-        });
+          await test.step('Remove user owner', async () => {
+            await overview.removeOwner([user1.getUserDisplayName()], 'Users');
+            await adminPage.waitForSelector('[data-testid="loader"]', {
+              state: 'detached',
+            });
 
-        test(`Should remove user owner for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          overview,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+            await overview.navigateToOverviewTab();
 
-          await overview.addOwnerWithoutValidation(user1.getUserDisplayName());
-          await overview.shouldShowOwner(user1.getUserDisplayName());
-
-          await overview.removeOwner([user1.getUserDisplayName()], 'Users');
-          await adminPage.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
+            const ownerElement = adminPage
+              .locator('.owners-section')
+              .getByText(user1.getUserDisplayName());
+            await expect(ownerElement).not.toBeVisible();
           });
-
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          const ownerElement = adminPage
-            .locator('.owners-section')
-            .getByText(user1.getUserDisplayName());
-          await expect(ownerElement).not.toBeVisible();
         });
       });
     });
