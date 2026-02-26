@@ -242,7 +242,7 @@ const TagsPage = () => {
       navigate(
         getTagPath(
           updatedCurrentClassification?.fullyQualifiedName ??
-            updatedCurrentClassification?.name
+          updatedCurrentClassification?.name
         )
       );
     }
@@ -333,7 +333,7 @@ const TagsPage = () => {
 
           if (
             currentClassification?.fullyQualifiedName !==
-              updatedClassification.fullyQualifiedName ||
+            updatedClassification.fullyQualifiedName ||
             currentClassification?.name !== updatedClassification.name
           ) {
             navigate(getTagPath(response.fullyQualifiedName));
@@ -585,11 +585,11 @@ const TagsPage = () => {
     () =>
       editTag
         ? t('label.edit-entity', {
-            entity: t('label.tag'),
-          })
+          entity: t('label.tag'),
+        })
         : t('message.adding-new-tag', {
-            categoryName: getEntityName(currentClassification),
-          }),
+          categoryName: getEntityName(currentClassification),
+        }),
     [editTag, currentClassification]
   );
 
@@ -744,7 +744,7 @@ const TagsPage = () => {
                   category.termCount,
                   'self-center m-l-auto',
                   currentClassification?.fullyQualifiedName ===
-                    category.fullyQualifiedName
+                  category.fullyQualifiedName
                 )}
               </div>
             ))}
