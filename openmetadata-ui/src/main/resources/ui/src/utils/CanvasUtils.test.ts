@@ -155,100 +155,241 @@ describe('CanvasUtils', () => {
   });
 
   describe('getEdgeCoordinates', () => {
-    it('returns null when source node is missing', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2');
-      const targetNode = createMockNode('node2');
+    describe('validation', () => {
+      it('returns null when source node is missing', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2');
+        const targetNode = createMockNode('node2');
 
-      const result = getEdgeCoordinates(edge, undefined, targetNode);
+        const result = getEdgeCoordinates(edge, undefined, targetNode);
 
-      expect(result).toBeNull();
-    });
+        expect(result).toBeNull();
+      });
 
-    it('returns null when target node is missing', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2');
-      const sourceNode = createMockNode('node1');
+      it('returns null when target node is missing', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2');
+        const sourceNode = createMockNode('node1');
 
-      const result = getEdgeCoordinates(edge, sourceNode, undefined);
+        const result = getEdgeCoordinates(edge, sourceNode, undefined);
 
-      expect(result).toBeNull();
-    });
+        expect(result).toBeNull();
+      });
 
-    it('returns null when node dimensions are missing', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2');
-      const sourceNode = createMockNode('node1');
-      const targetNode = createMockNode('node2');
-      sourceNode.width = undefined;
+      it('returns null when source node width is missing', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2');
+        const sourceNode = createMockNode('node1');
+        const targetNode = createMockNode('node2');
+        sourceNode.width = undefined;
 
-      const result = getEdgeCoordinates(edge, sourceNode, targetNode);
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
 
-      expect(result).toBeNull();
-    });
+        expect(result).toBeNull();
+      });
 
-    it('calculates coordinates for node-level lineage', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2', false);
-      const sourceNode = createMockNode('node1');
-      sourceNode.position = { x: 0, y: 0 };
-      const targetNode = createMockNode('node2');
-      targetNode.position = { x: 500, y: 0 };
+      it('returns null when source node height is missing', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2');
+        const sourceNode = createMockNode('node1');
+        const targetNode = createMockNode('node2');
+        sourceNode.height = undefined;
 
-      const result = getEdgeCoordinates(edge, sourceNode, targetNode);
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
 
-      expect(result).toEqual({
-        sourceX: 400,
-        sourceY: 33,
-        targetX: 490,
-        targetY: 33,
+        expect(result).toBeNull();
+      });
+
+      it('returns null when target node dimensions are missing', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2');
+        const sourceNode = createMockNode('node1');
+        const targetNode = createMockNode('node2');
+        targetNode.width = undefined;
+
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
+
+        expect(result).toBeNull();
       });
     });
 
-    it('calculates coordinates for column-level lineage', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2', true);
-      edge.sourceHandle = 'col1';
-      edge.targetHandle = 'col2';
+    describe('entity lineage', () => {
+      it('calculates coordinates for node-level lineage', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', false);
+        const sourceNode = createMockNode('node1');
+        sourceNode.position = { x: 0, y: 0 };
+        const targetNode = createMockNode('node2');
+        targetNode.position = { x: 500, y: 0 };
 
-      const sourceNode = createMockNode('node1', 5);
-      sourceNode.position = { x: 0, y: 0 };
-      const targetNode = createMockNode('node2', 5);
-      targetNode.position = { x: 500, y: 0 };
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
 
-      const columnsInCurrentPages = new Map([
-        ['node1', ['col1', 'col2']],
-        ['node2', ['col1', 'col2']],
-      ]);
+        expect(result).toEqual({
+          sourceX: 400,
+          sourceY: 33,
+          targetX: 490,
+          targetY: 33,
+        });
+      });
 
-      const result = getEdgeCoordinates(
-        edge,
-        sourceNode,
-        targetNode,
-        columnsInCurrentPages
-      );
+      it('calculates coordinates at different positions', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', false);
+        const sourceNode = createMockNode('node1');
+        sourceNode.position = { x: 100, y: 200 };
+        const targetNode = createMockNode('node2');
+        targetNode.position = { x: 600, y: 300 };
 
-      expect(result).not.toBeNull();
-      expect(result?.sourceX).toBe(400);
-      expect(result?.targetX).toBe(500);
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
+
+        expect(result).not.toBeNull();
+        expect(result?.sourceX).toBe(500);
+        expect(result?.sourceY).toBe(233);
+        expect(result?.targetX).toBe(590);
+        expect(result?.targetY).toBe(333);
+      });
     });
 
-    it('returns null for column lineage when handle not in current page', () => {
-      const edge = createMockEdge('edge1', 'node1', 'node2', true);
-      edge.sourceHandle = 'col1';
-      edge.targetHandle = 'col2';
+    describe('column lineage', () => {
+      const createNodeWithFlattenColumns = (
+        id: string,
+        columnCount: number
+      ): Node => {
+        const node = createMockNode(id, columnCount);
+        node.data.node.flattenColumns = Array(columnCount).fill({});
 
-      const sourceNode = createMockNode('node1', 5);
-      const targetNode = createMockNode('node2', 5);
+        return node;
+      };
 
-      const columnsInCurrentPages = new Map([
-        ['node1', ['col3']],
-        ['node2', ['col4']],
-      ]);
+      it('calculates coordinates for column-level lineage', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        edge.sourceHandle = 'col1';
+        edge.targetHandle = 'col2';
 
-      const result = getEdgeCoordinates(
-        edge,
-        sourceNode,
-        targetNode,
-        columnsInCurrentPages
-      );
+        const sourceNode = createNodeWithFlattenColumns('node1', 5);
+        sourceNode.position = { x: 0, y: 0 };
+        const targetNode = createNodeWithFlattenColumns('node2', 5);
+        targetNode.position = { x: 500, y: 0 };
 
-      expect(result).toBeNull();
+        const columnsInCurrentPages = new Map([
+          ['node1', ['col1', 'col2']],
+          ['node2', ['col1', 'col2']],
+        ]);
+
+        const result = getEdgeCoordinates(
+          edge,
+          sourceNode,
+          targetNode,
+          columnsInCurrentPages
+        );
+
+        expect(result).not.toBeNull();
+        expect(result?.sourceX).toBe(400);
+        expect(result?.targetX).toBe(500);
+      });
+
+      it('returns null when source handle not in current page', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        edge.sourceHandle = 'col1';
+        edge.targetHandle = 'col2';
+
+        const sourceNode = createNodeWithFlattenColumns('node1', 5);
+        const targetNode = createNodeWithFlattenColumns('node2', 5);
+
+        const columnsInCurrentPages = new Map([
+          ['node1', ['col3']],
+          ['node2', ['col2']],
+        ]);
+
+        const result = getEdgeCoordinates(
+          edge,
+          sourceNode,
+          targetNode,
+          columnsInCurrentPages
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it('returns null when target handle not in current page', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        edge.sourceHandle = 'col1';
+        edge.targetHandle = 'col2';
+
+        const sourceNode = createNodeWithFlattenColumns('node1', 5);
+        const targetNode = createNodeWithFlattenColumns('node2', 5);
+
+        const columnsInCurrentPages = new Map([
+          ['node1', ['col1']],
+          ['node2', ['col4']],
+        ]);
+
+        const result = getEdgeCoordinates(
+          edge,
+          sourceNode,
+          targetNode,
+          columnsInCurrentPages
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it('returns null when both handles not in current page', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        edge.sourceHandle = 'col1';
+        edge.targetHandle = 'col2';
+
+        const sourceNode = createNodeWithFlattenColumns('node1', 5);
+        const targetNode = createNodeWithFlattenColumns('node2', 5);
+
+        const columnsInCurrentPages = new Map([
+          ['node1', ['col3']],
+          ['node2', ['col4']],
+        ]);
+
+        const result = getEdgeCoordinates(
+          edge,
+          sourceNode,
+          targetNode,
+          columnsInCurrentPages
+        );
+
+        expect(result).toBeNull();
+      });
+
+      it('handles column at different indices correctly', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        edge.sourceHandle = 'col3';
+        edge.targetHandle = 'col2';
+
+        const sourceNode = createNodeWithFlattenColumns('node1', 5);
+        sourceNode.position = { x: 0, y: 0 };
+        const targetNode = createNodeWithFlattenColumns('node2', 5);
+        targetNode.position = { x: 500, y: 0 };
+
+        const columnsInCurrentPages = new Map([
+          ['node1', ['col1', 'col2', 'col3']],
+          ['node2', ['col1', 'col2', 'col3']],
+        ]);
+
+        const result = getEdgeCoordinates(
+          edge,
+          sourceNode,
+          targetNode,
+          columnsInCurrentPages
+        );
+
+        expect(result).not.toBeNull();
+        expect(result?.sourceX).toBe(400);
+        expect(result?.targetX).toBe(500);
+      });
+
+      it('falls back to entity lineage when columnsInCurrentPages not provided', () => {
+        const edge = createMockEdge('edge1', 'node1', 'node2', true);
+        const sourceNode = createMockNode('node1', 5);
+        sourceNode.position = { x: 0, y: 0 };
+        const targetNode = createMockNode('node2', 5);
+        targetNode.position = { x: 500, y: 0 };
+
+        const result = getEdgeCoordinates(edge, sourceNode, targetNode);
+
+        expect(result).not.toBeNull();
+        expect(result?.sourceX).toBe(400);
+        expect(result?.targetX).toBe(490);
+      });
     });
   });
 

@@ -55,11 +55,10 @@ const EntityLabel = ({ node }: LineageNodeLabelProps) => {
     };
   }, [node]);
 
-  const { children } = useMemo(
+  const { childrenCount } = useMemo(
     () => getEntityChildrenAndLabel(node),
     [node.id]
   );
-  const childrenCount = children.length;
 
   const breadcrumbs = useMemo(
     () => getBreadcrumbsFromFqn(node.fullyQualifiedName ?? ''),
@@ -193,12 +192,10 @@ const EntityFooter = ({
 }: LineageNodeLabelProps) => {
   const { t } = useTranslation();
   const { isEditMode } = useLineageStore();
-  const { children, childrenHeading } = useMemo(
+  const { childrenHeading, childrenCount } = useMemo(
     () => getEntityChildrenAndLabel(node),
     [node.id]
   );
-
-  const childrenCount = children.length;
 
   const childrenInfoDropdownLabel = useMemo(
     () => `${childrenCount} ${childrenHeading}`,

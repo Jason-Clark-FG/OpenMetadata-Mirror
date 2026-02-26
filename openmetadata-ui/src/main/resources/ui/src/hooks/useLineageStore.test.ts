@@ -41,6 +41,8 @@ describe('useLineageStore', () => {
     expect(result.current.activeLayer).toEqual([]);
     expect(result.current.platformView).toBe(LineagePlatformView.None);
     expect(result.current.isPlatformLineage).toBe(false);
+    expect(result.current.columnsInCurrentPages).toEqual(new Map());
+    expect(result.current.nodeFilterState).toEqual(new Map());
   });
 
   it('sets lineage config', () => {
@@ -491,5 +493,89 @@ describe('useLineageStore', () => {
 
     expect(result.current.tracedColumns.size).toBe(0);
     expect(result.current.tracedNodes.size).toBe(0);
+  });
+
+  describe('Node Filter State', () => {
+    it('sets node filter state', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      act(() => {
+        result.current.setNodeFilterState('node1', true);
+      });
+
+      expect(result.current.nodeFilterState.get('node1')).toBe(true);
+
+      act(() => {
+        result.current.setNodeFilterState('node1', false);
+      });
+
+      expect(result.current.nodeFilterState.get('node1')).toBe(false);
+    });
+
+    it('sets filter state for multiple nodes', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      act(() => {
+        result.current.setNodeFilterState('node1', true);
+        result.current.setNodeFilterState('node2', false);
+        result.current.setNodeFilterState('node3', true);
+      });
+
+      expect(result.current.nodeFilterState.get('node1')).toBe(true);
+      expect(result.current.nodeFilterState.get('node2')).toBe(false);
+      expect(result.current.nodeFilterState.get('node3')).toBe(true);
+    });
+
+    it('updates existing node filter state', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      act(() => {
+        result.current.setNodeFilterState('node1', true);
+      });
+
+      expect(result.current.nodeFilterState.get('node1')).toBe(true);
+
+      act(() => {
+        result.current.setNodeFilterState('node1', false);
+      });
+
+      expect(result.current.nodeFilterState.get('node1')).toBe(false);
+    });
+
+    it('returns undefined for nodes without filter state', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      expect(result.current.nodeFilterState.get('nonexistent')).toBeUndefined();
+    });
+
+    it('resets node filter state on reset', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      act(() => {
+        result.current.setNodeFilterState('node1', true);
+        result.current.setNodeFilterState('node2', false);
+      });
+
+      expect(result.current.nodeFilterState.size).toBe(2);
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.nodeFilterState.size).toBe(0);
+    });
+
+    it('handles setting filter state for same node multiple times', () => {
+      const { result } = renderHook(() => useLineageStore());
+
+      act(() => {
+        result.current.setNodeFilterState('node1', true);
+        result.current.setNodeFilterState('node1', false);
+        result.current.setNodeFilterState('node1', true);
+      });
+
+      expect(result.current.nodeFilterState.size).toBe(1);
+      expect(result.current.nodeFilterState.get('node1')).toBe(true);
+    });
   });
 });

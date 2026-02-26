@@ -159,37 +159,11 @@ const CustomNodeV1 = (props: NodeProps) => {
     selectedNode,
     isColumnLevelLineage,
     isDQEnabled,
+    nodeFilterState,
+    setNodeFilterState,
   } = useLineageStore();
 
-  // by default it will be enabled
-  const [showColumnsWithLineageOnly, setShowColumnsWithLineageOnly] =
-    useState(false);
-
   const [columnsExpanded, setColumnsExpanded] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (isEditMode) {
-      setColumnsExpanded(true);
-      setShowColumnsWithLineageOnly(false);
-    }
-
-    // reset on unmount
-    return () => {
-      setColumnsExpanded(false);
-      setShowColumnsWithLineageOnly(true);
-    };
-  }, [isEditMode]);
-
-  useEffect(() => {
-    if (isColumnLevelLineage) {
-      setShowColumnsWithLineageOnly(true);
-    }
-
-    // reset on unmount
-    return () => {
-      setShowColumnsWithLineageOnly(false);
-    };
-  }, [isColumnLevelLineage]);
 
   const {
     label,
@@ -215,6 +189,32 @@ const CustomNodeV1 = (props: NodeProps) => {
     upstreamExpandPerformed = false,
     downstreamExpandPerformed = false,
   } = node;
+
+  const showColumnsWithLineageOnly = nodeFilterState.get(node.id) ?? false;
+
+  useEffect(() => {
+    if (isColumnLevelLineage) {
+      setNodeFilterState(node.id, true);
+    }
+
+    // reset on unmount
+    return () => {
+      setNodeFilterState(node.id, false);
+    };
+  }, [isColumnLevelLineage]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setColumnsExpanded(true);
+      setNodeFilterState(node.id, false);
+    }
+
+    // reset on unmount
+    return () => {
+      setColumnsExpanded(false);
+      setNodeFilterState(node.id, true);
+    };
+  }, [isEditMode]);
 
   const showDqTracing = useMemo(
     () =>
@@ -246,8 +246,11 @@ const CustomNodeV1 = (props: NodeProps) => {
   );
 
   const toggleShowColumnsWithLineageOnly = useCallback(() => {
-    setShowColumnsWithLineageOnly((prev) => !prev);
-  }, []);
+    if (!node.id) {
+      return;
+    }
+    setNodeFilterState(node.id, !showColumnsWithLineageOnly);
+  }, [showColumnsWithLineageOnly, setNodeFilterState, node.id]);
 
   const handleNodeRemove = useCallback(() => {
     removeNodeHandler(props);

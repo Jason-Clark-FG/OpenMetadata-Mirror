@@ -26,6 +26,7 @@ export interface NodeChildrenProps {
 
 export type EntityChildrenItem =
   | Flatten<Column>
+  | Column
   | EntityReference
   | MlFeature
   | Field
@@ -34,5 +35,5 @@ export type EntityChildrenItem =
 export type EntityChildren = EntityChildrenItem[];
 
 export type Flatten<T> = T & {
-  depth: number;
+  depth?: number;
 };

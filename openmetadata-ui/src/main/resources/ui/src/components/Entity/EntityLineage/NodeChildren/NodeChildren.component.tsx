@@ -52,6 +52,7 @@ const NodeChildren = ({
     columnsHavingLineage,
     selectedColumn,
     isCreatingEdge,
+    isEditMode,
   } = useLineageStore();
   const { entityType } = node;
   const [searchValue, setSearchValue] = useState('');
@@ -196,7 +197,7 @@ const NodeChildren = ({
                 isLoading={isLoading}
                 nodeId={node.id}
                 pageSize={
-                  isOnlyShowColumnsWithLineageFilterActive
+                  isOnlyShowColumnsWithLineageFilterActive || isEditMode
                     ? filteredColumns.length
                     : LINEAGE_CHILD_ITEMS_PER_PAGE
                 }

@@ -17,8 +17,10 @@ import {
   COLUMN_NODE_HEIGHT,
   NODE_HEIGHT,
   NODE_HEIGHT_WITH_CHILDREN,
+  NODE_WIDTH,
 } from '../constants/Lineage.constants';
 import { EntityType } from '../enums/entity.enum';
+import { useLineageStore } from '../hooks/useLineageStore';
 import {
   getEdgePathData,
   getEntityChildrenAndLabel,
@@ -119,6 +121,135 @@ const getNodeYPadding = (node: Node): number => {
   return sourceYPadding;
 };
 
+interface ColumnLineageData {
+  columnIds: string[];
+  columnIndex: number;
+  isFilterActive: boolean;
+  totalColumns: number;
+  navigationNeeded: boolean;
+}
+
+function getColumnLineageData(
+  nodeId: string,
+  node: Node,
+  handleId: string | null | undefined,
+  columnsInCurrentPages: Map<string, string[]>,
+  nodeFilterMap: Map<string, boolean>
+): ColumnLineageData | null {
+  const columnIds = columnsInCurrentPages.get(nodeId) || [];
+  const columnIndex = columnIds.findIndex((id) => id === handleId);
+
+  if (columnIndex === -1) {
+    return null;
+  }
+
+  const isFilterActive = nodeFilterMap.get(nodeId) ?? false;
+  const totalColumns = node.data.node.flattenColumns?.length ?? 0;
+  const navigationNeeded = !isFilterActive && columnIds.length !== totalColumns;
+
+  return {
+    columnIds,
+    columnIndex,
+    isFilterActive,
+    totalColumns,
+    navigationNeeded,
+  };
+}
+
+function calculateColumnPosition(
+  columnIndex: number,
+  navigationNeeded: boolean,
+  node: Node,
+  baseNodeHeight: number
+): number {
+  const columnCenterOffset =
+    COLUMN_NODE_HEIGHT * columnIndex + COLUMN_NODE_HEIGHT / 2;
+
+  const navigationOffset = columnIndex >= LINEAGE_CHILD_ITEMS_PER_PAGE ? 17 : 0;
+
+  const yPadding = navigationNeeded
+    ? getNodeYPadding(node) + 28
+    : getNodeYPadding(node);
+
+  return columnCenterOffset + navigationOffset + yPadding + baseNodeHeight;
+}
+
+function getColumnLineageCoordinates(
+  edge: Edge,
+  sourceNode: Node,
+  targetNode: Node,
+  columnsInCurrentPages: Map<string, string[]>,
+  nodeFilterMap: Map<string, boolean>
+): EdgeCoordinates | null {
+  const sourceData = getColumnLineageData(
+    sourceNode.id,
+    sourceNode,
+    edge.sourceHandle,
+    columnsInCurrentPages,
+    nodeFilterMap
+  );
+
+  const targetData = getColumnLineageData(
+    targetNode.id,
+    targetNode,
+    edge.targetHandle,
+    columnsInCurrentPages,
+    nodeFilterMap
+  );
+
+  if (!sourceData || !targetData) {
+    return null;
+  }
+
+  const sourceNodeHeight = getNodeHeight(
+    sourceNode,
+    false,
+    columnsInCurrentPages.size
+  );
+  const targetNodeHeight = getNodeHeight(
+    targetNode,
+    false,
+    columnsInCurrentPages.size
+  );
+
+  const sourceY = calculateColumnPosition(
+    sourceData.columnIndex,
+    sourceData.navigationNeeded,
+    sourceNode,
+    sourceNodeHeight
+  );
+
+  const targetY = calculateColumnPosition(
+    targetData.columnIndex,
+    targetData.navigationNeeded,
+    targetNode,
+    targetNodeHeight
+  );
+
+  return {
+    sourceX: sourceNode.position.x + NODE_WIDTH,
+    sourceY: sourceNode.position.y + sourceY,
+    targetX: targetNode.position.x,
+    targetY: targetNode.position.y + targetY,
+  };
+}
+
+function getEntityLineageCoordinates(
+  sourceNode: Node,
+  targetNode: Node,
+  isColumnLineage: boolean
+): EdgeCoordinates {
+  const sourceHeight = getNodeHeight(sourceNode, isColumnLineage, 0);
+  const targetHeight = getNodeHeight(targetNode, isColumnLineage, 0);
+
+  return {
+    sourceX: sourceNode.position.x + (sourceNode.width ?? 0),
+    sourceY: sourceNode.position.y + sourceHeight / 2,
+    targetX: targetNode.position.x - 10,
+    targetY: targetNode.position.y + targetHeight / 2,
+  };
+}
+
 export function getEdgeCoordinates(
   edge: Edge,
   sourceNode?: Node,
@@ -140,60 +271,19 @@ export function getEdgeCoordinates(
 
   const isColumnLineage = edge.data?.isColumnLineage ?? false;
 
-  const sourceNodeHeight = getNodeHeight(
-    sourceNode,
-    isColumnLineage,
-    columnsInCurrentPages?.size
-  );
-  const targetNodeHeight = getNodeHeight(
-    targetNode,
-    isColumnLineage,
-    columnsInCurrentPages?.size
-  );
-
   if (isColumnLineage && columnsInCurrentPages) {
-    const sourceIds = columnsInCurrentPages.get(sourceNode.id) || [];
-    const targetIds = columnsInCurrentPages.get(targetNode.id) || [];
-    const sourceIndex = sourceIds.findIndex((id) => id === edge?.sourceHandle);
-    const targetIndex = targetIds.findIndex((id) => id === edge?.targetHandle);
+    const nodeFilterMap = useLineageStore.getState().nodeFilterState;
 
-    if (sourceIndex === -1 || targetIndex === -1) {
-      return null;
-    }
-
-    const sourceColumnPosition =
-      COLUMN_NODE_HEIGHT * sourceIndex + COLUMN_NODE_HEIGHT / 2;
-    const targetColumnPosition =
-      COLUMN_NODE_HEIGHT * targetIndex + COLUMN_NODE_HEIGHT / 2;
-
-    const sourceYPadding = getNodeYPadding(sourceNode);
-    const targetYPadding = getNodeYPadding(targetNode);
-
-    return {
-      sourceX: sourceNode.position.x + 400,
-      sourceY:
-        sourceNode.position.y +
-        sourceColumnPosition +
-        sourceYPadding +
-        sourceNodeHeight,
-      // reduce 20 for NodeHandles
-      targetX: targetNode.position.x,
-      targetY:
-        targetNode.position.y +
-        targetColumnPosition +
-        targetYPadding +
-        targetNodeHeight,
-    };
+    return getColumnLineageCoordinates(
+      edge,
+      sourceNode,
+      targetNode,
+      columnsInCurrentPages,
+      nodeFilterMap
+    );
   }
 
-  return {
-    sourceX: sourceNode.position.x + (sourceNode.width ?? 0),
-    sourceY:
-      sourceNode.position.y + getNodeHeight(sourceNode, isColumnLineage, 0) / 2,
-    targetX: targetNode.position.x - 10, // reduce 20 for NodeHandles
-    targetY:
-      targetNode.position.y + getNodeHeight(targetNode, isColumnLineage, 0) / 2,
-  };
+  return getEntityLineageCoordinates(sourceNode, targetNode, isColumnLineage);
 }
 
 export function getEdgeBounds(

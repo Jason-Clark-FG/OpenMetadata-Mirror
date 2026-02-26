@@ -575,35 +575,42 @@ export const getEntityChildrenAndLabel = (node: LineageNodeType) => {
     return {
       children: [],
       childrenHeading: '',
+      childrenCount: 0,
     };
   }
   const entityMappings: Record<
     string,
-    { data: EntityChildren; label: string }
+    { data: EntityChildren; label: string; childrenCount: number }
   > = {
     [EntityType.TABLE]: {
-      data: node.columns ?? [],
+      data: node.flattenColumns ?? node.columns ?? [],
       label: t('label.column-plural'),
+      childrenCount: node.columns?.length ?? 0,
     },
     [EntityType.DASHBOARD]: {
       data: node.charts ?? [],
       label: t('label.chart-plural'),
+      childrenCount: node.charts?.length ?? 0,
     },
     [EntityType.MLMODEL]: {
       data: node.mlFeatures ?? [],
       label: t('label.feature-plural'),
+      childrenCount: node.mlFeatures?.length ?? 0,
     },
     [EntityType.DASHBOARD_DATA_MODEL]: {
-      data: node.columns ?? [],
+      data: node.flattenColumns ?? node.columns ?? [],
       label: t('label.column-plural'),
+      childrenCount: node.columns?.length ?? 0,
     },
     [EntityType.CONTAINER]: {
       data: node.dataModel?.columns ?? [],
       label: t('label.column-plural'),
+      childrenCount: node.dataModel?.columns?.length ?? 0,
     },
     [EntityType.TOPIC]: {
       data: node.messageSchema?.schemaFields ?? [],
       label: t('label.field-plural'),
+      childrenCount: node.messageSchema?.schemaFields?.length ?? 0,
     },
     [EntityType.API_ENDPOINT]: {
       data:
@@ -611,21 +618,30 @@ export const getEntityChildrenAndLabel = (node: LineageNodeType) => {
         node?.requestSchema?.schemaFields ??
         [],
       label: t('label.field-plural'),
+      childrenCount:
+        node?.responseSchema?.schemaFields?.length ??
+        node?.requestSchema?.schemaFields?.length ??
+        0,
     },
     [EntityType.SEARCH_INDEX]: {
       data: node.fields ?? [],
       label: t('label.field-plural'),
+      childrenCount: node.fields?.length ?? 0,
     },
   };
 
-  const { data, label } = entityMappings[node.entityType as EntityType] || {
+  const { data, label, childrenCount } = entityMappings[
+    node.entityType as EntityType
+  ] || {
     data: [],
     label: '',
+    childrenCount: 0,
   };
 
   return {
     children: data,
     childrenHeading: label,
+    childrenCount,
   };
 };
 
@@ -1302,6 +1318,7 @@ const createLoadMoreNode = (
 
   return {
     id: newNodeId,
+    columns: [],
     type: EntityLineageNodeType.LOAD_MORE,
     name: `load_more_${uniqueNodeId}_${parentNode.id}`,
     displayName: 'Load More',
@@ -1374,8 +1391,8 @@ const handleNodePagination = (
 };
 
 const flattenColumn = (column: Column, depth: number): Flatten<Column>[] => {
-  const result: Flatten<Column>[] = [
-    { ...omit<Column>(column, ['children']), depth },
+  const result = [
+    { ...omit<Column>(column, ['children']), depth } as Flatten<Column>,
   ];
 
   if (
@@ -1404,6 +1421,7 @@ const processNodeArray = (
         ...(pick(node.entity, [
           'id',
           'type',
+          'columns',
           'fullyQualifiedName',
           'name',
           'displayName',
@@ -1421,7 +1439,7 @@ const processNodeArray = (
           'testSuite',
         ]) as unknown as LineageEntityReference),
         ...('columns' in node.entity
-          ? { columns: flatItems(node.entity.columns as Column[]) }
+          ? { flattenColumns: flatItems(node.entity.columns as Column[]) }
           : {}),
         paging: {
           entityUpstreamCount: node.paging?.entityUpstreamCount ?? 0,

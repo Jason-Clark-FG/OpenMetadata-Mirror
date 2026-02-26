@@ -19,11 +19,12 @@ import { ReactComponent as MinusIcon } from '../../../assets/svg/control-minus.s
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { EntityLineageNodeType } from '../../../enums/entity.enum';
 import { LineageDirection } from '../../../generated/api/lineage/lineageDirection';
-import { Column } from '../../../generated/entity/data/table';
+import { DataType } from '../../../generated/entity/data/table';
 import { ColumnTestSummaryDefinition } from '../../../generated/tests/testCase';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getColumnDataTypeIcon } from '../../../utils/TableUtils';
+import { EntityChildrenItem } from './NodeChildren/NodeChildren.interface';
 import TestSuiteSummaryWidget from './TestSuiteSummaryWidget/TestSuiteSummaryWidget.component';
 
 const DEPTH_INDENT_PX = 16;
@@ -168,17 +169,20 @@ export const getCollapseHandle = (
   );
 };
 
-const getColumnNameContent = (column: Column, isLoading: boolean) => {
+const getColumnNameContent = (
+  column: EntityChildrenItem,
+  isLoading: boolean
+) => {
   if (isLoading) {
     return <Skeleton.Button active data-tesid="loader" size="small" />;
   }
 
   return (
     <>
-      {column.dataType && (
+      {'dataType' in column && column.dataType && (
         <div className="custom-node-name-icon">
           {getColumnDataTypeIcon({
-            dataType: column.dataType,
+            dataType: column.dataType as DataType,
             width: '14px',
           })}
         </div>
@@ -195,7 +199,7 @@ const getColumnNameContent = (column: Column, isLoading: boolean) => {
 };
 
 interface ColumnContentProps {
-  column: Column;
+  column: EntityChildrenItem;
   isConnectable: boolean;
   showDataObservabilitySummary: boolean;
   isLoading: boolean;
@@ -285,7 +289,7 @@ const ColumnContentInner = ({
           {columnNameContentRender}
         </div>
 
-        {column.constraint && (
+        {'constraint' in column && column.constraint && (
           <div
             className={
               showDataObservabilitySummary

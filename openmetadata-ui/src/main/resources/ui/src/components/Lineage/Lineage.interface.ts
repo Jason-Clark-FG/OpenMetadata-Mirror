@@ -139,7 +139,7 @@ export interface LineageNodeType
   extends Exclude<EntityReference, 'type'>,
     Pick<
       TableSearchSource,
-      'entityType' | 'deleted' | 'serviceType' | 'testSuite'
+      'entityType' | 'deleted' | 'serviceType' | 'testSuite' | 'columns'
     > {
   nodeDepth?: number;
   paging?: {
@@ -155,7 +155,7 @@ export interface LineageNodeType
   upstreamExpandPerformed?: boolean;
   downstreamExpandPerformed?: boolean;
   upstreamLineage?: EsLineageData[];
-  columns?: Flatten<Column>[];
+  flattenColumns?: Flatten<Column>[];
   dataModel?: ContainerDataModel;
   mlFeatures?: MlFeature[];
   charts?: Chart[];

@@ -13,12 +13,13 @@
 import { Button, Tag } from 'antd';
 import classNames from 'classnames';
 import React, { useMemo } from 'react';
-import { Edge, Position, useReactFlow, useViewport, Viewport } from 'reactflow';
+import { Edge, Position, useReactFlow, Viewport } from 'reactflow';
 import { ReactComponent as FunctionIcon } from '../../../assets/svg/ic-function.svg';
 import { ReactComponent as PipelineIcon } from '../../../assets/svg/pipeline-grey.svg';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
 import { StatusType } from '../../../generated/entity/data/pipeline';
 import { useLineageStore } from '../../../hooks/useLineageStore';
+import { useThrottledViewport } from '../../../hooks/useThrottledViewport';
 import { getEdgeCoordinates, transformPoint } from '../../../utils/CanvasUtils';
 import { getEdgePathData } from '../../../utils/EntityLineageUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -87,7 +88,7 @@ export const PipelineEdgeButtons: React.FC = () => {
     useLineageStore();
   const { onAddPipelineClick } = useLineageProvider();
   const { getNode } = useReactFlow();
-  const viewport = useViewport();
+  const viewport = useThrottledViewport(10);
 
   const computePathData = (edge: Edge): EdgePathData | null => {
     if (edge.data?.computedPath) {

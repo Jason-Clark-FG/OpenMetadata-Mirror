@@ -15,15 +15,14 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import { IconButton, Stack } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../../../../constants/constants';
-import { Column } from '../../../../generated/entity/data/table';
 import { TestSummary } from '../../../../generated/tests/testCase';
 import { useLineageStore } from '../../../../hooks/useLineageStore';
 import EntityLink from '../../../../utils/EntityLink';
 import { ColumnContent } from '../CustomNode.utils';
-import { Flatten } from './NodeChildren.interface';
+import { EntityChildren, EntityChildrenItem } from './NodeChildren.interface';
 
 export interface VirtualColumnListProps {
-  flatItems: Flatten<Column>[];
+  flatItems: EntityChildren;
   isConnectable: boolean;
   isLoading: boolean;
   nodeId?: string;
@@ -80,26 +79,26 @@ const VirtualColumnList = ({
   const canScrollUp = offset > 0;
   const canScrollDown = endIndex < flatItems.length - 1;
 
-  const handleUp = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    setOffset((prev) => Math.max(0, prev - LINEAGE_CHILD_ITEMS_PER_PAGE));
-  }, []);
+  const handleUp = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      setOffset((prev) => Math.max(0, prev - pageSize));
+    },
+    [pageSize]
+  );
 
   const handleDown = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       setOffset((prev) =>
-        Math.min(
-          flatItems.length - LINEAGE_CHILD_ITEMS_PER_PAGE,
-          prev + LINEAGE_CHILD_ITEMS_PER_PAGE
-        )
+        Math.min(flatItems.length - pageSize, prev + pageSize)
       );
     },
-    [flatItems.length]
+    [flatItems.length, pageSize]
   );
 
   const getColumnSummary = useCallback(
-    (column: Column) =>
+    (column: EntityChildrenItem) =>
       summary?.columnTestSummary?.find(
         (data) =>
           EntityLink.getEntityColumnFqn(data.entityLink ?? '') ===
@@ -109,8 +108,8 @@ const VirtualColumnList = ({
   );
 
   const renderFlatItem = useCallback(
-    (column: Flatten<Column>, className: string) => {
-      const { depth = 0 } = column;
+    (column: EntityChildrenItem, className: string) => {
+      const { depth = 0 } = 'depth' in column ? column : {};
       const columnSummary = getColumnSummary(column);
 
       return (
@@ -140,19 +139,21 @@ const VirtualColumnList = ({
     return null;
   }
 
-  const needsNavigation = flatItems.length > LINEAGE_CHILD_ITEMS_PER_PAGE;
+  const needsNavigation = flatItems.length > pageSize;
 
   return (
     <>
-      <Stack alignItems="center" justifyContent="center">
-        <IconButton
-          data-testid="column-scroll-up"
-          disabled={!canScrollUp}
-          size="small"
-          onClick={handleUp}>
-          <KeyboardArrowUpIcon fontSize="small" />
-        </IconButton>
-      </Stack>
+      {needsNavigation && (
+        <Stack alignItems="center" justifyContent="center">
+          <IconButton
+            data-testid="column-scroll-up"
+            disabled={!canScrollUp}
+            size="small"
+            onClick={handleUp}>
+            <KeyboardArrowUpIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      )}
 
       <div className="inside-current-page-items">
         {visibleFlatItems.map((fi) =>

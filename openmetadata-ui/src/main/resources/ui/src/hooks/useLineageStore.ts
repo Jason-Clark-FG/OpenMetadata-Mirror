@@ -38,6 +38,7 @@ interface LineageState {
   selectedColumn?: string;
   isCreatingEdge: boolean;
   columnsInCurrentPages: Map<string, string[]>;
+  nodeFilterState: Map<string, boolean>;
 
   // Actions
   setIsEditMode: (isEditMode: boolean) => void;
@@ -65,6 +66,7 @@ interface LineageState {
     columnsInCurrentPages: Map<string, string[]>
   ) => void;
   updateColumnsInCurrentPages: (nodeId: string, columnFqns: string[]) => void;
+  setNodeFilterState: (nodeId: string, isVisible: boolean) => void;
   reset: () => void;
 }
 
@@ -89,6 +91,7 @@ export const useLineageStore = create<LineageState>((set, get) => ({
   isDQEnabled: false,
   isCreatingEdge: false,
   columnsInCurrentPages: new Map(),
+  nodeFilterState: new Map(),
 
   // Actions
   setLineageConfig: (lineageConfig: LineageConfig) => set({ lineageConfig }),
@@ -217,6 +220,15 @@ export const useLineageStore = create<LineageState>((set, get) => ({
     });
   },
 
+  setNodeFilterState: (nodeId: string, isVisible: boolean) => {
+    set((state) => {
+      const updated = new Map(state.nodeFilterState);
+      updated.set(nodeId, isVisible);
+
+      return { nodeFilterState: updated };
+    });
+  },
+
   reset: () =>
     set({
       isEditMode: false,
@@ -236,5 +248,6 @@ export const useLineageStore = create<LineageState>((set, get) => ({
       selectedColumn: undefined,
       isCreatingEdge: false,
       columnsInCurrentPages: new Map(),
+      nodeFilterState: new Map(),
     }),
 }));
