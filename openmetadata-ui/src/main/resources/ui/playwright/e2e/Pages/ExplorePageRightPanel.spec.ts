@@ -214,7 +214,42 @@ test.describe('Right Panel Test Suite', () => {
 
   test.describe('Explore page right panel tests', () => {
     test.describe('Overview panel CRUD and Removal operations', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+      const crudEntityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(crudEntityMap).map((e) => e.create(apiContext))
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(crudEntityMap).map((e) => e.delete(apiContext))
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      Object.entries(crudEntityMap).forEach(([entityType, entityInstance]) => {
         test(`Should perform CRUD and Removal operations for ${entityType}`, async ({
           adminPage,
           rightPanel,
@@ -901,7 +936,7 @@ test.describe('Right Panel Test Suite', () => {
           );
           await localDQ.searchFor('search_target');
           const searchResponse = await searchRes;
-          await expect(searchResponse.status()).toBe(200);
+          expect(searchResponse.status()).toBe(200);
           await localDQ.shouldShowTestCaseCardsCount(1);
           await localDQ.shouldShowTestCaseCardWithName(successCase1.name);
 
@@ -913,7 +948,7 @@ test.describe('Right Panel Test Suite', () => {
           );
           await localDQ.clearSearch();
           const clearResponse = await clearRes;
-          await expect(clearResponse.status()).toBe(200);
+          expect(clearResponse.status()).toBe(200);
           await localDQ.shouldShowTestCaseCardsCount(2);
 
           // 3. Search for non-existent test case
@@ -2138,7 +2173,46 @@ test.describe('Right Panel Test Suite', () => {
     });
 
     test.describe('Overview panel - Description removal', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+      const descriptionRemovalEntityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(descriptionRemovalEntityMap).map((e) =>
+              e.create(apiContext)
+            )
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(descriptionRemovalEntityMap).map((e) =>
+              e.delete(apiContext)
+            )
+          );
+        } finally {
+          await afterAction();
+        }
+      });
+
+      Object.entries(descriptionRemovalEntityMap).forEach(([entityType, entityInstance]) => {
         test(`Should clear description for ${entityType}`, async ({
           adminPage,
         }) => {
