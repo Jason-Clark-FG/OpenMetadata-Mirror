@@ -94,7 +94,6 @@ export default defineConfig({
       name: 'SearchRBAC',
       testMatch: '**/SearchRBAC.spec.ts',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
       teardown: 'entity-data-teardown',
     },
     {
