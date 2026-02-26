@@ -340,7 +340,7 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
           Include include,
       @Parameter(
               description =
-                  "Filter by entity status (comma-separated: Approved,Draft,InReview,Rejected,Deprecated)")
+                  "Filter by entity status (comma-separated: Approved,Draft,In Review,Rejected,Deprecated,Unprocessed)")
           @QueryParam("entityStatus")
           String entityStatus) {
 
