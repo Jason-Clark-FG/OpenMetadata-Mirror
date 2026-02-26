@@ -40,8 +40,10 @@ const CertificationWidget = () => {
 
   const canEdit = useMemo(
     () =>
-      getPrioritizedEditPermission(permissions, Operation.EditCertification) &&
-      !isVersionView,
+      getPrioritizedEditPermission(
+        permissions,
+        Operation.EditCertification
+      ) && !isVersionView,
     [permissions, isVersionView]
   );
 
