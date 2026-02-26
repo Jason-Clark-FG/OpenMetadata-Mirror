@@ -8,6 +8,7 @@ import static org.openmetadata.service.Entity.TEST_CASE_RESULT;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -65,6 +66,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
 
   private volatile DistributedSearchIndexExecutor distributedExecutor;
   private volatile BulkSink searchIndexSink;
+  private volatile ReindexingConfiguration config;
 
   public DistributedIndexingStrategy(
       CollectionDAO collectionDAO,
@@ -102,6 +104,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       ReindexingConfiguration config, ReindexingJobContext context, long startTime)
       throws Exception {
 
+    this.config = config;
     LOG.info("Starting distributed reindexing for entities: {}", config.entities());
 
     Stats stats = initializeTotalRecords(config.entities());
@@ -520,8 +523,9 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     stats.setSinkStats(new StepStats());
     stats.setVectorStats(new StepStats());
 
+    List<String> ordered = EntityPriority.sortByPriority(entities);
     int total = 0;
-    for (String entityType : entities) {
+    for (String entityType : ordered) {
       int entityTotal = getEntityTotal(entityType);
       total += entityTotal;
 
@@ -572,6 +576,13 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
           repository = Entity.getEntityTimeSeriesRepository(correctedType);
         }
 
+        if (config != null) {
+          long startTs = config.getTimeSeriesStartTs(correctedType);
+          if (startTs > 0) {
+            long endTs = System.currentTimeMillis();
+            return repository.getTimeSeriesDao().listCount(listFilter, startTs, endTs, false);
+          }
+        }
         return repository.getTimeSeriesDao().listCount(listFilter);
       }
     } catch (Exception e) {

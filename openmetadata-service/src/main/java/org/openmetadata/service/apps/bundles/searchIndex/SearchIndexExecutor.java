@@ -62,6 +62,7 @@ import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.workflows.interfaces.Source;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntitiesSource;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntityTimeSeriesSource;
+import org.slf4j.MDC;
 
 /**
  * Core reindexing executor that handles entity indexing without any Quartz dependencies. Can be
@@ -448,9 +449,18 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private CountDownLatch startConsumerThreads(int numConsumers) {
     CountDownLatch consumerLatch = new CountDownLatch(numConsumers);
+    Map<String, String> mdc = MDC.getCopyOfContextMap();
     for (int i = 0; i < numConsumers; i++) {
       final int consumerId = i;
-      consumerExecutor.submit(() -> runConsumer(consumerId, consumerLatch));
+      consumerExecutor.submit(
+          () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            try {
+              runConsumer(consumerId, consumerLatch);
+            } finally {
+              MDC.clear();
+            }
+          });
     }
     return consumerLatch;
   }
@@ -714,7 +724,26 @@ public class SearchIndexExecutor implements AutoCloseable {
         new TuningContext(
             new MemoryInfo(), batchSize.get(), consecutiveErrors.get(), consecutiveSuccesses.get());
 
-    if (tuningContext.errorCount == 0
+    // Critical memory tier (>90%): halve batch size aggressively
+    if (tuningContext.memInfo.usageRatio > 0.9) {
+      int newBatchSize = Math.max(tuningContext.currentBatchSize / 2, 25);
+      if (newBatchSize != tuningContext.currentBatchSize) {
+        batchSize.set(newBatchSize);
+        LOG.warn(
+            "Auto-tune: Aggressively reduced batch size to {} due to critical memory ({}% used)",
+            newBatchSize, (int) (tuningContext.memInfo.usageRatio * 100));
+        updateSinkBatchSize(newBatchSize);
+      }
+    } else if (tuningContext.memInfo.usageRatio > 0.8) {
+      int newBatchSize = Math.max(tuningContext.currentBatchSize - 100, 50);
+      if (newBatchSize != tuningContext.currentBatchSize) {
+        batchSize.set(newBatchSize);
+        LOG.warn(
+            "Auto-tune: Reduced batch size to {} due to memory pressure ({}% used)",
+            newBatchSize, (int) (tuningContext.memInfo.usageRatio * 100));
+        updateSinkBatchSize(newBatchSize);
+      }
+    } else if (tuningContext.errorCount == 0
         && tuningContext.successCount > BATCH_SIZE_INCREASE_THRESHOLD
         && tuningContext.memInfo.usageRatio < 0.7) {
       int newBatchSize = Math.min(tuningContext.currentBatchSize + 50, 1000);
@@ -725,14 +754,6 @@ public class SearchIndexExecutor implements AutoCloseable {
             newBatchSize,
             String.format("%.1f", currentThroughput));
         updateSinkBatchSize(newBatchSize);
-      }
-    } else if (tuningContext.memInfo.usageRatio > 0.8) {
-      int newBatchSize = Math.max(tuningContext.currentBatchSize - 100, 50);
-      if (newBatchSize != tuningContext.currentBatchSize) {
-        batchSize.set(newBatchSize);
-        LOG.warn(
-            "Auto-tune: Reduced batch size to {} due to memory pressure ({}% used)",
-            newBatchSize, (int) (tuningContext.memInfo.usageRatio * 100));
       }
     }
   }
@@ -767,10 +788,21 @@ public class SearchIndexExecutor implements AutoCloseable {
     // Each entity type registers as a party, then dynamically registers its actual readers.
     // This eliminates the batch-size-snapshot mismatch where auto-tune could desynchronize
     // the pre-computed latch count from the actual number of readers created.
+    List<String> ordered = EntityPriority.sortByPriority(entities);
+    LOG.info("Entity processing order: {}", ordered);
     Phaser producerPhaser = new Phaser(entities.size());
+    Map<String, String> mdc = MDC.getCopyOfContextMap();
 
-    for (String entityType : entities) {
-      jobExecutor.submit(() -> processEntityType(entityType, producerPhaser));
+    for (String entityType : ordered) {
+      jobExecutor.submit(
+          () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            try {
+              processEntityType(entityType, producerPhaser);
+            } finally {
+              MDC.clear();
+            }
+          });
     }
 
     int phase = 0;
@@ -792,9 +824,7 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private void processEntityType(String entityType, Phaser producerPhaser) {
     try {
-      // Capture batch size at entity submission time so auto-tune changes
-      // don't affect already-running entity readers
-      int fixedBatchSize = batchSize.get();
+      int fixedBatchSize = EntityBatchSizeEstimator.estimateBatchSize(entityType, batchSize.get());
       int totalEntityRecords = getTotalEntityRecords(entityType);
       listeners.onEntityTypeStarted(entityType, totalEntityRecords);
 
@@ -811,6 +841,17 @@ public class SearchIndexExecutor implements AutoCloseable {
         producerPhaser.bulkRegister(numReaders);
 
         if (TIME_SERIES_ENTITIES.contains(entityType)) {
+          Long filterStartTs = null;
+          Long filterEndTs = null;
+          if (config != null) {
+            long startTs = config.getTimeSeriesStartTs(entityType);
+            if (startTs > 0) {
+              filterStartTs = startTs;
+              filterEndTs = System.currentTimeMillis();
+            }
+          }
+          final Long tsStart = filterStartTs;
+          final Long tsEnd = filterEndTs;
           submitReaders(
               entityType,
               totalEntityRecords,
@@ -819,11 +860,19 @@ public class SearchIndexExecutor implements AutoCloseable {
               producerPhaser,
               () -> {
                 PaginatedEntityTimeSeriesSource source =
-                    new PaginatedEntityTimeSeriesSource(
-                        entityType,
-                        fixedBatchSize,
-                        getSearchIndexFields(entityType),
-                        totalEntityRecords);
+                    (tsStart != null)
+                        ? new PaginatedEntityTimeSeriesSource(
+                            entityType,
+                            fixedBatchSize,
+                            getSearchIndexFields(entityType),
+                            totalEntityRecords,
+                            tsStart,
+                            tsEnd)
+                        : new PaginatedEntityTimeSeriesSource(
+                            entityType,
+                            fixedBatchSize,
+                            getSearchIndexFields(entityType),
+                            totalEntityRecords);
                 return source::readWithCursor;
               },
               (readers, total) -> {
@@ -881,13 +930,19 @@ public class SearchIndexExecutor implements AutoCloseable {
       Phaser producerPhaser,
       java.util.function.Supplier<KeysetBatchReader> readerFactory,
       java.util.function.BiFunction<Integer, Integer, List<String>> boundaryFinder) {
+    Map<String, String> mdc = MDC.getCopyOfContextMap();
     if (numReaders == 1) {
       KeysetBatchReader reader = readerFactory.get();
-      // Single reader: unbounded limit so it reads until cursor exhaustion
       producerExecutor.submit(
-          () ->
+          () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            try {
               processKeysetBatches(
-                  entityType, Integer.MAX_VALUE, fixedBatchSize, null, reader, producerPhaser));
+                  entityType, Integer.MAX_VALUE, fixedBatchSize, null, reader, producerPhaser);
+            } finally {
+              MDC.clear();
+            }
+          });
       return;
     }
 
@@ -918,14 +973,20 @@ public class SearchIndexExecutor implements AutoCloseable {
       KeysetBatchReader readerSource = readerFactory.get();
       final int readerLimit = limit;
       producerExecutor.submit(
-          () ->
+          () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            try {
               processKeysetBatches(
                   entityType,
                   readerLimit,
                   fixedBatchSize,
                   startCursor,
                   readerSource,
-                  producerPhaser));
+                  producerPhaser);
+            } finally {
+              MDC.clear();
+            }
+          });
     }
   }
 
@@ -943,6 +1004,7 @@ public class SearchIndexExecutor implements AutoCloseable {
 
       while (processed < recordLimit && !stopped.get()) {
         long backpressureWaitStart = System.currentTimeMillis();
+        AdaptiveBackoff backoff = new AdaptiveBackoff(50, 2000);
         while (isBackpressureActive()) {
           if (stopped.get()) {
             return;
@@ -952,11 +1014,11 @@ public class SearchIndexExecutor implements AutoCloseable {
             LOG.warn("Backpressure wait timeout for {}, proceeding anyway", entityType);
             break;
           }
-          Thread.sleep(500);
+          Thread.sleep(backoff.nextDelay());
         }
 
         try {
-          ResultList<?> result = batchReader.readNextKeyset(keysetCursor);
+          ResultList<?> result = readWithRetry(batchReader, keysetCursor, entityType);
           if (result == null || result.getData().isEmpty()) {
             LOG.debug(
                 "Reader for {} exhausted at processed={} of limit={} (empty result)",
@@ -966,8 +1028,6 @@ public class SearchIndexExecutor implements AutoCloseable {
             break;
           }
 
-          // Reader stats are tracked only on the consumer side (processTask) to avoid
-          // double-counting. The producer just enqueues tasks.
           if (!stopped.get()) {
             IndexingTask<?> task = new IndexingTask<>(entityType, result, processed);
             taskQueue.put(task);
@@ -995,7 +1055,6 @@ public class SearchIndexExecutor implements AutoCloseable {
                 entityType, e.getMessage(), ExceptionUtils.getStackTrace(e));
           }
           listeners.onError(entityType, e.getIndexingError(), stats.get());
-          // Failed reads don't go through processTask, so track stats here
           int failedCount =
               e.getIndexingError() != null && e.getIndexingError().getFailedCount() != null
                   ? e.getIndexingError().getFailedCount()
@@ -1036,8 +1095,8 @@ public class SearchIndexExecutor implements AutoCloseable {
         return;
       }
 
-      // Wait for backpressure to clear instead of dropping the batch
       long backpressureWaitStart = System.currentTimeMillis();
+      AdaptiveBackoff backoff = new AdaptiveBackoff(50, 2000);
       while (isBackpressureActive()) {
         if (stopped.get()) {
           return;
@@ -1050,7 +1109,7 @@ public class SearchIndexExecutor implements AutoCloseable {
               currentOffset);
           break;
         }
-        Thread.sleep(500);
+        Thread.sleep(backoff.nextDelay());
       }
 
       Source<?> source = createSource(entityType);
@@ -1110,7 +1169,60 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
+  private ResultList<?> readWithRetry(
+      KeysetBatchReader batchReader, String keysetCursor, String entityType)
+      throws SearchIndexException, InterruptedException {
+    int maxRetryAttempts = 3;
+    long retryBackoffMs = 500;
+    for (int attempt = 0; attempt <= maxRetryAttempts; attempt++) {
+      try {
+        return batchReader.readNextKeyset(keysetCursor);
+      } catch (SearchIndexException e) {
+        if (attempt >= maxRetryAttempts || !isTransientReadError(e)) {
+          throw e;
+        }
+        long backoffDelay = retryBackoffMs * (1L << attempt);
+        LOG.warn(
+            "Transient read failure for {} (attempt {}/{}), retrying in {}ms",
+            entityType,
+            attempt + 1,
+            maxRetryAttempts,
+            backoffDelay);
+        Thread.sleep(Math.min(backoffDelay, 10_000));
+      }
+    }
+    return null;
+  }
+
+  private boolean isTransientReadError(SearchIndexException e) {
+    String msg = e.getMessage();
+    if (msg == null) {
+      msg = "";
+    }
+    String lower = msg.toLowerCase();
+    return lower.contains("timeout")
+        || lower.contains("connection")
+        || lower.contains("pool exhausted")
+        || lower.contains("connectexception")
+        || lower.contains("sockettimeoutexception")
+        || lower.contains("remotetransportexception");
+  }
+
   private boolean isBackpressureActive() {
+    if (taskQueue != null) {
+      int size = taskQueue.size();
+      int capacity = size + taskQueue.remainingCapacity();
+      if (capacity > 0) {
+        int fillPercent = size * 100 / capacity;
+        ReindexingMetrics metrics = ReindexingMetrics.getInstance();
+        if (metrics != null) {
+          metrics.updateQueueFillRatio(fillPercent);
+        }
+        if (fillPercent > 90) {
+          return true;
+        }
+      }
+    }
     if (lastBackpressureTime == 0) {
       return false;
     }
@@ -1174,6 +1286,18 @@ public class SearchIndexExecutor implements AutoCloseable {
       return new PaginatedEntitiesSource(
           correctedEntityType, batchSize.get(), searchIndexFields, knownTotal);
     } else {
+      if (config != null) {
+        long startTs = config.getTimeSeriesStartTs(correctedEntityType);
+        if (startTs > 0) {
+          return new PaginatedEntityTimeSeriesSource(
+              correctedEntityType,
+              batchSize.get(),
+              searchIndexFields,
+              knownTotal,
+              startTs,
+              System.currentTimeMillis());
+        }
+      }
       return new PaginatedEntityTimeSeriesSource(
           correctedEntityType, batchSize.get(), searchIndexFields, knownTotal);
     }
@@ -1271,6 +1395,13 @@ public class SearchIndexExecutor implements AutoCloseable {
         } else {
           repository = Entity.getEntityTimeSeriesRepository(entityType);
         }
+        if (config != null) {
+          long startTs = config.getTimeSeriesStartTs(correctedEntityType);
+          if (startTs > 0) {
+            long endTs = System.currentTimeMillis();
+            return repository.getTimeSeriesDao().listCount(listFilter, startTs, endTs, false);
+          }
+        }
         return repository.getTimeSeriesDao().listCount(listFilter);
       }
     } catch (Exception e) {
@@ -1303,6 +1434,9 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
+  // Stats is published once via stats.set(initializeTotalRecords(...)) and all subsequent
+  // mutations operate on that same mutable object under synchronized methods.
+
   synchronized void updateStats(String entityType, StepStats currentEntityStats) {
     Stats jobDataStats = stats.get();
     if (jobDataStats == null) {
@@ -1311,7 +1445,6 @@ public class SearchIndexExecutor implements AutoCloseable {
 
     updateEntityStats(jobDataStats, entityType, currentEntityStats);
     updateJobStats(jobDataStats);
-    stats.set(jobDataStats);
   }
 
   synchronized void updateReaderStats(int successCount, int failedCount, int warningsCount) {
@@ -1335,8 +1468,6 @@ public class SearchIndexExecutor implements AutoCloseable {
     readerStats.setSuccessRecords(currentSuccess + successCount);
     readerStats.setFailedRecords(currentFailed + failedCount);
     readerStats.setWarningRecords(currentWarnings + warningsCount);
-
-    stats.set(jobDataStats);
   }
 
   synchronized void updateSinkTotalSubmitted(int submittedCount) {
@@ -1354,8 +1485,6 @@ public class SearchIndexExecutor implements AutoCloseable {
 
     int currentTotal = sinkStats.getTotalRecords() != null ? sinkStats.getTotalRecords() : 0;
     sinkStats.setTotalRecords(currentTotal + submittedCount);
-
-    stats.set(jobDataStats);
   }
 
   synchronized void syncSinkStatsFromBulkSink() {
@@ -1390,8 +1519,6 @@ public class SearchIndexExecutor implements AutoCloseable {
         && (vectorStats.getTotalRecords() != null && vectorStats.getTotalRecords() > 0)) {
       jobDataStats.setVectorStats(vectorStats);
     }
-
-    stats.set(jobDataStats);
   }
 
   private void updateEntityStats(Stats statsObj, String entityType, StepStats currentEntityStats) {
@@ -1461,16 +1588,20 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private void closeSinkIfNeeded() throws IOException {
     if (searchIndexSink != null && sinkClosed.compareAndSet(false, true)) {
-      // Check for pending vector tasks before closing
       int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
       if (pendingVectorTasks > 0) {
         LOG.info(
             "Waiting for {} pending vector embedding tasks to complete before closing",
             pendingVectorTasks);
+        VectorCompletionResult vcResult = searchIndexSink.awaitVectorCompletionWithDetails(300);
+        LOG.info(
+            "Vector completion: completed={}, pending={}, waited={}ms",
+            vcResult.completed(),
+            vcResult.pendingTaskCount(),
+            vcResult.waitedMillis());
       }
 
       LOG.info("Forcing final flush of bulk processor and vector embeddings");
-      // close() internally calls awaitVectorCompletion() first, then flushes search index
       searchIndexSink.close();
       syncSinkStatsFromBulkSink();
     }
@@ -1486,7 +1617,6 @@ public class SearchIndexExecutor implements AutoCloseable {
     Stats currentStats = stats.get();
     if (currentStats != null) {
       StatsReconciler.reconcile(currentStats);
-      stats.set(currentStats);
     }
 
     long endTime = System.currentTimeMillis();
@@ -1536,11 +1666,21 @@ public class SearchIndexExecutor implements AutoCloseable {
 
     listeners.onJobStopped(stats.get());
 
-    // Immediately interrupt producer and job threads (they may be blocked on DB reads)
+    if (searchIndexSink != null) {
+      LOG.info(
+          "Stopping executor: flushing sink ({} active bulk requests)",
+          searchIndexSink.getActiveBulkRequestCount());
+      searchIndexSink.flushAndAwait(10);
+    }
+
+    int dropped = taskQueue != null ? taskQueue.size() : 0;
+    if (dropped > 0) {
+      LOG.warn("Dropping {} queued tasks during shutdown", dropped);
+    }
+
     shutdownExecutor(producerExecutor, "producer");
     shutdownExecutor(jobExecutor, "job");
 
-    // Inject poison pills and give consumers a brief graceful shutdown window
     if (taskQueue != null) {
       taskQueue.clear();
       for (int i = 0; i < MAX_CONSUMER_THREADS; i++) {

@@ -6,6 +6,8 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +35,15 @@ public class ReindexingMetrics {
 
   // Backpressure
   private final Counter backpressureEvents;
+
+  // Circuit breaker
+  private final Map<String, Counter> circuitBreakerCounters = new ConcurrentHashMap<>();
+
+  // Vector timeouts
+  private final Counter vectorTimeouts;
+
+  // Queue fill ratio gauge
+  private final AtomicLong queueFillRatio = new AtomicLong();
 
   private ReindexingMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
@@ -134,6 +145,17 @@ public class ReindexingMetrics {
         Counter.builder("reindexing.backpressure.events")
             .description("Backpressure detections")
             .register(meterRegistry);
+
+    // Vector timeouts counter
+    this.vectorTimeouts =
+        Counter.builder("reindexing.vector.timeouts")
+            .description("Vector embedding completion timeouts")
+            .register(meterRegistry);
+
+    // Queue fill ratio gauge
+    Gauge.builder("reindexing.queue.fill_ratio", queueFillRatio, AtomicLong::get)
+        .description("Task queue fill ratio (0-100)")
+        .register(meterRegistry);
 
     LOG.info("Reindexing metrics initialized");
   }
@@ -260,5 +282,31 @@ public class ReindexingMetrics {
         .tag("result", "failure")
         .register(meterRegistry)
         .increment();
+  }
+
+  // --- Circuit breaker ---
+
+  public void recordCircuitBreakerTrip(String transition) {
+    circuitBreakerCounters
+        .computeIfAbsent(
+            transition,
+            t ->
+                Counter.builder("reindexing.circuitbreaker.trips")
+                    .description("Circuit breaker state transitions")
+                    .tag("transition", t)
+                    .register(meterRegistry))
+        .increment();
+  }
+
+  // --- Vector timeouts ---
+
+  public void recordVectorTimeout(int pendingCount) {
+    vectorTimeouts.increment();
+  }
+
+  // --- Queue fill ratio ---
+
+  public void updateQueueFillRatio(int percent) {
+    queueFillRatio.set(percent);
   }
 }

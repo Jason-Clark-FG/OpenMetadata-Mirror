@@ -54,12 +54,27 @@ public class EntityReader implements AutoCloseable {
     List<String> findBoundaries(int numReaders, int totalRecords);
   }
 
+  private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 3;
+  private static final long DEFAULT_RETRY_BACKOFF_MS = 500;
+
   private final ExecutorService producerExecutor;
   private final AtomicBoolean stopped;
+  private final int maxRetryAttempts;
+  private final long retryBackoffMs;
 
   public EntityReader(ExecutorService producerExecutor, AtomicBoolean stopped) {
+    this(producerExecutor, stopped, DEFAULT_MAX_RETRY_ATTEMPTS, DEFAULT_RETRY_BACKOFF_MS);
+  }
+
+  public EntityReader(
+      ExecutorService producerExecutor,
+      AtomicBoolean stopped,
+      int maxRetryAttempts,
+      long retryBackoffMs) {
     this.producerExecutor = producerExecutor;
     this.stopped = stopped;
+    this.maxRetryAttempts = maxRetryAttempts;
+    this.retryBackoffMs = retryBackoffMs;
   }
 
   /**
@@ -74,6 +89,17 @@ public class EntityReader implements AutoCloseable {
    */
   public int readEntity(
       String entityType, int totalRecords, int batchSize, Phaser phaser, BatchCallback callback) {
+    return readEntity(entityType, totalRecords, batchSize, phaser, callback, null, null);
+  }
+
+  public int readEntity(
+      String entityType,
+      int totalRecords,
+      int batchSize,
+      Phaser phaser,
+      BatchCallback callback,
+      Long timeSeriesStartTs,
+      Long timeSeriesEndTs) {
     if (totalRecords <= 0) {
       return 0;
     }
@@ -92,8 +118,16 @@ public class EntityReader implements AutoCloseable {
           callback,
           () -> {
             PaginatedEntityTimeSeriesSource source =
-                new PaginatedEntityTimeSeriesSource(
-                    entityType, batchSize, getSearchIndexFields(entityType), totalRecords);
+                (timeSeriesStartTs != null)
+                    ? new PaginatedEntityTimeSeriesSource(
+                        entityType,
+                        batchSize,
+                        getSearchIndexFields(entityType),
+                        totalRecords,
+                        timeSeriesStartTs,
+                        timeSeriesEndTs)
+                    : new PaginatedEntityTimeSeriesSource(
+                        entityType, batchSize, getSearchIndexFields(entityType), totalRecords);
             return source::readWithCursor;
           },
           (readers, total) -> {
@@ -195,7 +229,7 @@ public class EntityReader implements AutoCloseable {
       int processed = 0;
 
       while (processed < recordLimit && !stopped.get()) {
-        ResultList<?> result = batchReader.readNextKeyset(keysetCursor);
+        ResultList<?> result = readWithRetry(batchReader, keysetCursor, entityType);
         if (stopped.get()) {
           break;
         }
@@ -238,6 +272,42 @@ public class EntityReader implements AutoCloseable {
     } finally {
       phaser.arriveAndDeregister();
     }
+  }
+
+  private ResultList<?> readWithRetry(
+      KeysetBatchReader batchReader, String keysetCursor, String entityType)
+      throws SearchIndexException, InterruptedException {
+    for (int attempt = 0; attempt <= maxRetryAttempts; attempt++) {
+      try {
+        return batchReader.readNextKeyset(keysetCursor);
+      } catch (SearchIndexException e) {
+        if (attempt >= maxRetryAttempts || !isTransientError(e)) {
+          throw e;
+        }
+        long backoff = retryBackoffMs * (1L << attempt);
+        LOG.warn(
+            "Transient read failure for {} (attempt {}/{}), retrying in {}ms",
+            entityType,
+            attempt + 1,
+            maxRetryAttempts,
+            backoff);
+        Thread.sleep(Math.min(backoff, 10_000));
+      }
+    }
+    return null;
+  }
+
+  static boolean isTransientError(SearchIndexException e) {
+    String msg = e.getMessage();
+    if (msg == null) {
+      return false;
+    }
+    String lower = msg.toLowerCase();
+    return lower.contains("timeout")
+        || lower.contains("connection")
+        || lower.contains("pool exhausted")
+        || lower.contains("connectexception")
+        || lower.contains("sockettimeoutexception");
   }
 
   static List<String> getSearchIndexFields(String entityType) {

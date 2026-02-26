@@ -99,6 +99,7 @@ public class ElasticSearchBulkSink implements BulkSink {
         concurrentRequests,
         maxPayloadSizeBytes / (1024 * 1024));
 
+    BulkCircuitBreaker circuitBreaker = new BulkCircuitBreaker(5, 30_000, 10_000);
     return new CustomBulkProcessor(
         searchClient,
         bulkActions,
@@ -110,7 +111,8 @@ public class ElasticSearchBulkSink implements BulkSink {
         totalSubmitted,
         totalSuccess,
         totalFailed,
-        this::updateStats);
+        this::updateStats,
+        circuitBreaker);
   }
 
   @Override
@@ -405,6 +407,11 @@ public class ElasticSearchBulkSink implements BulkSink {
   }
 
   @Override
+  public int getActiveBulkRequestCount() {
+    return bulkProcessor.activeBulkRequests.get();
+  }
+
+  @Override
   public boolean flushAndAwait(int timeoutSeconds) {
     try {
       boolean completed = bulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
@@ -501,6 +508,7 @@ public class ElasticSearchBulkSink implements BulkSink {
     private final int maxRetries;
     private volatile boolean closed = false;
     private volatile FailureCallback failureCallback;
+    private final BulkCircuitBreaker circuitBreaker;
 
     CustomBulkProcessor(
         ElasticSearchClient client,
@@ -513,7 +521,8 @@ public class ElasticSearchBulkSink implements BulkSink {
         AtomicLong totalSubmitted,
         AtomicLong totalSuccess,
         AtomicLong totalFailed,
-        Runnable statsUpdater) {
+        Runnable statsUpdater,
+        BulkCircuitBreaker circuitBreaker) {
       this.asyncClient = new ElasticsearchAsyncClient(client.getNewClient()._transport());
       this.bulkActions = bulkActions;
       this.maxPayloadSizeBytes = maxPayloadSizeBytes;
@@ -524,6 +533,7 @@ public class ElasticSearchBulkSink implements BulkSink {
       this.totalSuccess = totalSuccess;
       this.totalFailed = totalFailed;
       this.statsUpdater = statsUpdater;
+      this.circuitBreaker = circuitBreaker;
       this.scheduler = Executors.newScheduledThreadPool(1);
 
       scheduler.scheduleAtFixedRate(
@@ -668,6 +678,18 @@ public class ElasticSearchBulkSink implements BulkSink {
 
     private void executeBulkWithRetry(
         List<BulkOperation> operations, long executionId, int numberOfActions, int attemptNumber) {
+      if (!circuitBreaker.allowRequest()) {
+        LOG.warn(
+            "Circuit breaker OPEN - fail-fast for bulk request {} with {} actions",
+            executionId,
+            numberOfActions);
+        totalFailed.addAndGet(numberOfActions);
+        statsUpdater.run();
+        activeBulkRequests.decrementAndGet();
+        concurrentRequestSemaphore.release();
+        return;
+      }
+
       CompletableFuture<BulkResponse> future =
           asyncClient.bulk(b -> b.operations(operations).refresh(Refresh.False));
 
@@ -675,10 +697,13 @@ public class ElasticSearchBulkSink implements BulkSink {
           (response, error) -> {
             try {
               if (error != null) {
+                circuitBreaker.recordFailure();
                 handleBulkFailure(operations, executionId, numberOfActions, attemptNumber, error);
               } else if (response.errors()) {
+                circuitBreaker.recordSuccess();
                 handlePartialFailure(response, executionId, numberOfActions);
               } else {
+                circuitBreaker.recordSuccess();
                 totalSuccess.addAndGet(numberOfActions);
                 LOG.debug(
                     "Bulk request {} completed successfully with {} actions",
@@ -723,7 +748,9 @@ public class ElasticSearchBulkSink implements BulkSink {
         int numberOfActions,
         int attemptNumber,
         Throwable error) {
-      if (shouldRetry(attemptNumber, error)) {
+      circuitBreaker.recordFailure();
+      if (shouldRetry(attemptNumber, error)
+          && circuitBreaker.getState() != BulkCircuitBreaker.State.OPEN) {
         long backoffTime = calculateBackoff(attemptNumber);
         LOG.warn(
             "Bulk request {} failed (attempt {}), retrying in {}ms: {}",

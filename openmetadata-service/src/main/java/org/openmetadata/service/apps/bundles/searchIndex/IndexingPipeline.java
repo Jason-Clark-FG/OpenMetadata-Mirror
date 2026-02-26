@@ -5,6 +5,7 @@ import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -30,6 +31,7 @@ import org.openmetadata.service.search.RecreateIndexHandler;
 import org.openmetadata.service.search.ReindexContext;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.workflows.searchIndex.ReindexingUtil;
+import org.slf4j.MDC;
 
 /**
  * Quartz-decoupled indexing pipeline that orchestrates: entity discovery -> reader -> queue -> sink.
@@ -120,13 +122,22 @@ public class IndexingPipeline implements AutoCloseable {
     entityReader = new EntityReader(producerExecutor, stopped);
 
     CountDownLatch consumerLatch = new CountDownLatch(numConsumers);
+    Map<String, String> mdc = MDC.getCopyOfContextMap();
     for (int i = 0; i < numConsumers; i++) {
       final int id = i;
-      consumerExecutor.submit(() -> runConsumer(id, consumerLatch));
+      consumerExecutor.submit(
+          () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
+            try {
+              runConsumer(id, consumerLatch);
+            } finally {
+              MDC.clear();
+            }
+          });
     }
 
     try {
-      readAllEntities(entities, batchSize);
+      readAllEntities(config, entities, batchSize);
       signalConsumersToStop(numConsumers);
       consumerLatch.await();
     } catch (InterruptedException e) {
@@ -138,30 +149,46 @@ public class IndexingPipeline implements AutoCloseable {
     }
   }
 
-  private void readAllEntities(Set<String> entities, int batchSize) throws InterruptedException {
+  private void readAllEntities(ReindexingConfiguration config, Set<String> entities, int batchSize)
+      throws InterruptedException {
+    List<String> ordered = EntityPriority.sortByPriority(entities);
     Phaser producerPhaser = new Phaser(entities.size());
+    Map<String, String> mdc = MDC.getCopyOfContextMap();
 
-    for (String entityType : entities) {
+    for (String entityType : ordered) {
       jobExecutor.submit(
           () -> {
+            if (mdc != null) MDC.setContextMap(mdc);
             try {
               int totalRecords = getTotalEntityRecords(entityType);
               listeners.onEntityTypeStarted(entityType, totalRecords);
 
+              int effectiveBatchSize =
+                  EntityBatchSizeEstimator.estimateBatchSize(entityType, batchSize);
+              Long filterStartTs = null;
+              Long filterEndTs = null;
+              long startTs = config.getTimeSeriesStartTs(entityType);
+              if (startTs > 0) {
+                filterStartTs = startTs;
+                filterEndTs = System.currentTimeMillis();
+              }
               entityReader.readEntity(
                   entityType,
                   totalRecords,
-                  batchSize,
+                  effectiveBatchSize,
                   producerPhaser,
                   (type, batch, offset) -> {
                     if (!stopped.get()) {
                       taskQueue.put(new IndexingTask<>(type, batch, offset));
                     }
-                  });
+                  },
+                  filterStartTs,
+                  filterEndTs);
             } catch (Exception e) {
               LOG.error("Error reading entity type {}", entityType, e);
             } finally {
               producerPhaser.arriveAndDeregister();
+              MDC.clear();
             }
           });
     }
@@ -251,6 +278,12 @@ public class IndexingPipeline implements AutoCloseable {
       int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
       if (pendingVectorTasks > 0) {
         LOG.info("Waiting for {} pending vector embedding tasks", pendingVectorTasks);
+        VectorCompletionResult vcResult = searchIndexSink.awaitVectorCompletionWithDetails(300);
+        LOG.info(
+            "Vector completion: completed={}, pending={}, waited={}ms",
+            vcResult.completed(),
+            vcResult.pendingTaskCount(),
+            vcResult.waitedMillis());
       }
       searchIndexSink.close();
       syncSinkStats();
@@ -458,6 +491,19 @@ public class IndexingPipeline implements AutoCloseable {
   public void stop() {
     stopped.set(true);
     if (entityReader != null) entityReader.stop();
+
+    if (searchIndexSink != null) {
+      LOG.info(
+          "Stopping pipeline: flushing sink ({} active bulk requests)",
+          searchIndexSink.getActiveBulkRequestCount());
+      searchIndexSink.flushAndAwait(10);
+    }
+
+    int dropped = taskQueue != null ? taskQueue.size() : 0;
+    if (dropped > 0) {
+      LOG.warn("Dropping {} queued tasks during shutdown", dropped);
+    }
+
     if (taskQueue != null) {
       taskQueue.clear();
       for (int i = 0; i < MAX_CONSUMER_THREADS; i++) {

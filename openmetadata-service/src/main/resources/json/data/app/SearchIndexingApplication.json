@@ -16,7 +16,8 @@
     "initialBackoff": 1000,
     "maxBackoff": 10000,
     "searchIndexMappingLanguage": "EN",
-    "autoTune": false
+    "autoTune": false,
+    "timeSeriesMaxDays": 15
   },
   "appSchedule": {
     "scheduleTimeline": "Custom",

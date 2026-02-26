@@ -22,6 +22,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.apps.bundles.searchIndex.EntityPriority;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -78,38 +79,6 @@ public class PartitionCalculator {
           Map.entry("testCaseResolutionStatus", 0.3), // Time series, simple structure
           Map.entry("queryCostRecord", 0.3) // Time series, simple structure
           );
-
-  /**
-   * Priority ordering for entity types during indexing. Higher priority entities should be indexed
-   * first as they may be referenced by others. This ensures that when indexing tables, their parent
-   * databases and schemas already exist in the search index.
-   */
-  private static final Map<String, Integer> ENTITY_PRIORITY =
-      Map.ofEntries(
-          Map.entry("databaseService", 100),
-          Map.entry("messagingService", 100),
-          Map.entry("dashboardService", 100),
-          Map.entry("pipelineService", 100),
-          Map.entry("mlmodelService", 100),
-          Map.entry("storageService", 100),
-          Map.entry("database", 90),
-          Map.entry("databaseSchema", 80),
-          Map.entry("glossary", 70),
-          Map.entry("classification", 70),
-          Map.entry("team", 65),
-          Map.entry("user", 60),
-          Map.entry("table", 50),
-          Map.entry("dashboard", 50),
-          Map.entry("pipeline", 50),
-          Map.entry("mlmodel", 50),
-          Map.entry("topic", 50),
-          Map.entry("container", 50),
-          Map.entry("glossaryTerm", 45),
-          Map.entry("tag", 40),
-          Map.entry("testCase", 30),
-          Map.entry("testCaseResult", 20),
-          Map.entry("testCaseResolutionStatus", 20),
-          Map.entry("queryCostRecord", 10));
 
   /** Time series entity types */
   private static final Set<String> TIME_SERIES_ENTITIES =
@@ -181,7 +150,7 @@ public class PartitionCalculator {
     }
 
     double complexityFactor = ENTITY_COMPLEXITY_FACTORS.getOrDefault(entityType, 1.0);
-    int priority = ENTITY_PRIORITY.getOrDefault(entityType, 50);
+    int priority = EntityPriority.getNumericPriority(entityType);
 
     // Adjust partition size based on complexity - more complex entities get smaller partitions
     long adjustedPartitionSizeLong = (long) (partitionSize / complexityFactor);
@@ -312,7 +281,7 @@ public class PartitionCalculator {
    * @return Priority value (higher = processed first)
    */
   public int getEntityPriority(String entityType) {
-    return ENTITY_PRIORITY.getOrDefault(entityType, 50);
+    return EntityPriority.getNumericPriority(entityType);
   }
 
   /**

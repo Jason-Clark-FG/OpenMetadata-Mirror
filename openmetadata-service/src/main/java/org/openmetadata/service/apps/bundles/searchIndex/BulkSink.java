@@ -82,6 +82,30 @@ public interface BulkSink {
     return 0;
   }
 
+  /**
+   * Returns the number of currently active (in-flight) bulk requests.
+   *
+   * @return Number of active bulk requests
+   */
+  default int getActiveBulkRequestCount() {
+    return 0;
+  }
+
+  /**
+   * Wait for vector embedding tasks to complete and return detailed result including timing.
+   *
+   * @param timeoutSeconds Maximum time to wait
+   * @return VectorCompletionResult with completion status, pending count, and wait time
+   */
+  default VectorCompletionResult awaitVectorCompletionWithDetails(int timeoutSeconds) {
+    long start = System.currentTimeMillis();
+    boolean ok = awaitVectorCompletion(timeoutSeconds);
+    long waited = System.currentTimeMillis() - start;
+    return ok
+        ? VectorCompletionResult.success(waited)
+        : VectorCompletionResult.timeout(getPendingVectorTaskCount(), waited);
+  }
+
   /** Key for passing StageStatsTracker through context data to the sink. */
   String STATS_TRACKER_CONTEXT_KEY = "stageStatsTracker";
 }

@@ -28,6 +28,7 @@ import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.SystemRepository;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.socket.WebSocketManager;
+import org.slf4j.MDC;
 
 @Slf4j
 public class ReindexingOrchestrator {
@@ -52,6 +53,9 @@ public class ReindexingOrchestrator {
     this.jobData = initialJobData;
     initializeState();
     initializeJobData();
+
+    String jobId = UUID.randomUUID().toString().substring(0, 8);
+    MDC.put("reindexJobId", jobId);
 
     ReindexingMetrics metrics = ReindexingMetrics.getInstance();
     Timer.Sample timerSample = null;
@@ -79,6 +83,8 @@ public class ReindexingOrchestrator {
           metrics.recordJobFailed(timerSample);
         }
       }
+
+      MDC.remove("reindexJobId");
     }
   }
 
