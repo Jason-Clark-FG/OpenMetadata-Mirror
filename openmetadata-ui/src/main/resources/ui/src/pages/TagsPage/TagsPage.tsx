@@ -82,9 +82,11 @@ const TagsPage = () => {
     useState<Classification>();
   const [editTag, setEditTag] = useState<Tag>();
   const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isClassificationsLoading, setIsClassificationsLoading] =
+    useState<boolean>(true);
   const [isClassificationLoading, setIsClassificationLoading] =
     useState<boolean>(false);
+  const isLoading = isClassificationsLoading || isClassificationLoading;
   const [isTagFormLoading, setIsTagFormLoading] = useState<boolean>(false);
   const [isClassificationFormLoading, setIsClassificationFormLoading] =
     useState<boolean>(false);
@@ -136,7 +138,7 @@ const TagsPage = () => {
   };
 
   const fetchClassifications = async (setCurrent?: boolean) => {
-    setIsLoading(true);
+    setIsClassificationsLoading(true);
 
     try {
       const response = await getAllClassifications({
@@ -163,7 +165,7 @@ const TagsPage = () => {
       showErrorToast(errMsg);
       setError(errMsg);
     } finally {
-      setIsLoading(false);
+      setIsClassificationsLoading(false);
     }
   };
 
