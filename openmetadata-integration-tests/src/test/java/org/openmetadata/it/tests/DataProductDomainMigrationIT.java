@@ -806,8 +806,9 @@ public class DataProductDomainMigrationIT {
     sharedSchema = SdkClients.adminClient().databaseSchemas().create(schemaReq);
   }
 
-  private void waitForSearchIndexUpdate() throws InterruptedException {
-    Thread.sleep(5000);
+  private void waitForSearchIndexUpdate() {
+    // Verification methods use Awaitility polling with explicit assertions.
+    // No fixed sleeps are needed here.
   }
 
   /**

@@ -75,6 +75,7 @@ import org.openmetadata.sdk.services.tests.TestDefinitionService;
 import org.openmetadata.sdk.services.tests.TestSuiteService;
 
 public class OpenMetadataClient {
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final OpenMetadataConfig config;
   private final HttpClient httpClient;
   private UUID cachedUserId = null;
@@ -659,7 +660,7 @@ public class OpenMetadataClient {
               RequestOptions.builder().queryParam("fields", "profile").build());
 
       // Parse the response to get the user ID
-      JsonNode jsonResponse = new ObjectMapper().readTree(response);
+      JsonNode jsonResponse = OBJECT_MAPPER.readTree(response);
 
       if (jsonResponse.has("id")) {
         cachedUserId = UUID.fromString(jsonResponse.get("id").asText());

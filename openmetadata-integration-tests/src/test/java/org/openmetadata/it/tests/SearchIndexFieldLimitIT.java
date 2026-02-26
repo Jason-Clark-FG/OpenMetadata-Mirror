@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -247,9 +249,7 @@ public class SearchIndexFieldLimitIT {
       propNames.add(propName);
       createdCustomPropertyNames.add(propName);
     }
-
-    // Wait for Type metadata cache to reflect all custom properties
-    Thread.sleep(2000);
+    waitForCustomProperties(client, propNames);
 
     Table table = createTestTable(ns, "field_limit_test");
 
@@ -258,8 +258,8 @@ public class SearchIndexFieldLimitIT {
       extension.put(propName, "test_value_for_" + propName);
     }
     updateTableExtension(client, table.getId().toString(), extension);
-
-    Thread.sleep(2000);
+    waitForExtensionToBeIndexed(
+        client, table, List.of(propNames.getFirst(), propNames.get(propNames.size() - 1)));
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -296,9 +296,8 @@ public class SearchIndexFieldLimitIT {
       Map<String, Object> extension = new HashMap<>();
       extension.put(propName, "value_" + tableNum);
       updateTableExtension(client, table.getId().toString(), extension);
+      waitForExtensionToBeIndexed(client, table, List.of(propName));
     }
-
-    Thread.sleep(2000);
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -362,8 +361,10 @@ public class SearchIndexFieldLimitIT {
     extension.put(timeIntervalPropName, timeInterval);
 
     updateTableExtension(client, table.getId().toString(), extension);
-
-    Thread.sleep(2000);
+    waitForExtensionToBeIndexed(
+        client,
+        table,
+        List.of(stringPropName, intPropName, entityRefPropName, timeIntervalPropName));
 
     int finalFieldCount = getFieldCount(searchClient, TABLE_INDEX);
 
@@ -580,13 +581,92 @@ public class SearchIndexFieldLimitIT {
         OBJECT_MAPPER.writeValueAsString(
             List.of(Map.of("op", "add", "path", "/extension", "value", extension)));
 
-    client
-        .getHttpClient()
-        .executeForString(
-            HttpMethod.PATCH,
-            "/v1/tables/" + tableId,
-            patchJson,
-            RequestOptions.builder().header("Content-Type", "application/json-patch+json").build());
+    Awaitility.await("Wait for table extension update to be accepted")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .until(
+            () -> {
+              try {
+                client
+                    .getHttpClient()
+                    .executeForString(
+                        HttpMethod.PATCH,
+                        "/v1/tables/" + tableId,
+                        patchJson,
+                        RequestOptions.builder()
+                            .header("Content-Type", "application/json-patch+json")
+                            .build());
+                return true;
+              } catch (Exception ignored) {
+                return false;
+              }
+            });
+  }
+
+  private void waitForCustomProperties(OpenMetadataClient client, List<String> propertyNames) {
+    Awaitility.await("Wait for type metadata cache to include custom properties")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(
+            () -> {
+              Type tableType =
+                  OBJECT_MAPPER.readValue(
+                      client
+                          .getHttpClient()
+                          .executeForString(
+                              HttpMethod.GET,
+                              "/v1/metadata/types/name/"
+                                  + TABLE_TYPE_NAME
+                                  + "?fields=customProperties",
+                              null),
+                      Type.class);
+              List<String> existingPropertyNames =
+                  tableType.getCustomProperties().stream().map(CustomProperty::getName).toList();
+              for (String propertyName : propertyNames) {
+                assertTrue(
+                    existingPropertyNames.contains(propertyName),
+                    "Expected custom property to be visible in type metadata: " + propertyName);
+              }
+            });
+  }
+
+  private void waitForExtensionToBeIndexed(
+      OpenMetadataClient client, Table table, List<String> expectedExtensionKeys) {
+    String queryFilter =
+        String.format(
+            "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"fullyQualifiedName\":\"%s\"}}]}}}",
+            escapeJson(table.getFullyQualifiedName()));
+
+    Awaitility.await("Wait for table extension to be indexed")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              String response =
+                  client
+                      .search()
+                      .query("*")
+                      .index("table_search_index")
+                      .queryFilter(queryFilter)
+                      .size(1)
+                      .execute();
+
+              JsonNode root = OBJECT_MAPPER.readTree(response);
+              JsonNode hits = root.path("hits").path("hits");
+              assertTrue(hits.isArray() && hits.size() > 0, "Expected indexed table document");
+
+              JsonNode extensionNode = hits.get(0).path("_source").path("extension");
+              assertTrue(extensionNode.isObject(), "Expected extension object in indexed document");
+
+              for (String key : expectedExtensionKeys) {
+                assertTrue(
+                    extensionNode.has(key), "Expected extension key in indexed document: " + key);
+              }
+            });
+  }
+
+  private String escapeJson(String input) {
+    return input.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   private int getFieldCount(Rest5Client searchClient, String indexName) throws Exception {

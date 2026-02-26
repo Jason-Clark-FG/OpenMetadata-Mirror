@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
@@ -29,6 +28,8 @@ import org.openmetadata.schema.type.Votes;
 final class ReadBundle {
   private final Map<RelationKey, List<EntityReference>> relationValues = new HashMap<>();
   private final Set<RelationKey> loadedRelations = new HashSet<>();
+  private final Map<UUID, Map<String, Set<Include>>> loadedRelationIncludesByField =
+      new HashMap<>();
 
   private final Map<UUID, List<TagLabel>> tagValues = new HashMap<>();
   private final Set<UUID> loadedTags = new HashSet<>();
@@ -40,9 +41,14 @@ final class ReadBundle {
   private final Set<UUID> loadedExtensions = new HashSet<>();
 
   void putRelations(UUID entityId, String field, Include include, List<EntityReference> refs) {
-    RelationKey key = new RelationKey(entityId, field, normalize(include));
+    Include normalizedInclude = normalize(include);
+    RelationKey key = new RelationKey(entityId, field, normalizedInclude);
     loadedRelations.add(key);
     relationValues.put(key, refs == null ? Collections.emptyList() : List.copyOf(refs));
+    loadedRelationIncludesByField
+        .computeIfAbsent(entityId, ignored -> new HashMap<>())
+        .computeIfAbsent(field, ignored -> new HashSet<>())
+        .add(normalizedInclude);
   }
 
   Optional<List<EntityReference>> getRelations(UUID entityId, String field, Include include) {
@@ -54,15 +60,17 @@ final class ReadBundle {
   }
 
   boolean hasLoadedRelationForField(UUID entityId, String field) {
-    return loadedRelations.stream()
-        .anyMatch(key -> key.entityId().equals(entityId) && key.field().equals(field));
+    Map<String, Set<Include>> includesByField = loadedRelationIncludesByField.get(entityId);
+    return includesByField != null && includesByField.containsKey(field);
   }
 
   Set<Include> getLoadedIncludesForField(UUID entityId, String field) {
-    return loadedRelations.stream()
-        .filter(key -> key.entityId().equals(entityId) && key.field().equals(field))
-        .map(RelationKey::include)
-        .collect(Collectors.toSet());
+    Map<String, Set<Include>> includesByField = loadedRelationIncludesByField.get(entityId);
+    if (includesByField == null) {
+      return Collections.emptySet();
+    }
+    Set<Include> includes = includesByField.get(field);
+    return includes == null ? Collections.emptySet() : Set.copyOf(includes);
   }
 
   void putTags(UUID entityId, List<TagLabel> tags) {
