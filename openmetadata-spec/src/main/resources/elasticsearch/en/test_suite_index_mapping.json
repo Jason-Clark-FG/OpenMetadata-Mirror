@@ -506,6 +506,14 @@
       "serviceType": {
         "type": "keyword",
         "normalizer": "lowercase_normalizer"
+      },
+      "ownerDisplayName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
+      "ownerName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       }
     }
   }
