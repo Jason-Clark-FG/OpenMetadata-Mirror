@@ -3,6 +3,10 @@ package org.openmetadata.service.apps.bundles.searchIndex;
 import java.util.Set;
 import org.openmetadata.schema.system.EventPublisherJob;
 import org.openmetadata.schema.type.IndexMappingLanguage;
+import org.openmetadata.service.search.SearchClusterMetrics;
+import org.openmetadata.service.search.SearchRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Immutable configuration for a reindexing job. This record encapsulates all the configuration
@@ -28,6 +32,8 @@ public record ReindexingConfiguration(
     String slackBotToken,
     String slackChannel) {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ReindexingConfiguration.class);
+
   private static final int DEFAULT_BATCH_SIZE = 100;
   private static final int DEFAULT_CONSUMER_THREADS = 1;
   private static final int DEFAULT_PRODUCER_THREADS = 1;
@@ -37,6 +43,47 @@ public record ReindexingConfiguration(
   private static final int DEFAULT_MAX_RETRIES = 5;
   private static final int DEFAULT_INITIAL_BACKOFF = 1000;
   private static final int DEFAULT_MAX_BACKOFF = 10000;
+
+  public static ReindexingConfiguration applyAutoTuning(
+      ReindexingConfiguration config, SearchRepository searchRepository) {
+    if (!config.autoTune()) {
+      return config;
+    }
+    SearchClusterMetrics metrics = fetchClusterMetrics(searchRepository);
+    if (metrics == null) {
+      return config;
+    }
+    return ReindexingConfiguration.builder()
+        .entities(config.entities())
+        .batchSize(metrics.getRecommendedBatchSize())
+        .consumerThreads(metrics.getRecommendedConsumerThreads())
+        .producerThreads(metrics.getRecommendedProducerThreads())
+        .queueSize(metrics.getRecommendedQueueSize())
+        .maxConcurrentRequests(metrics.getRecommendedConcurrentRequests())
+        .payloadSize(metrics.getMaxPayloadSizeBytes())
+        .recreateIndex(config.recreateIndex())
+        .autoTune(true)
+        .useDistributedIndexing(config.useDistributedIndexing())
+        .force(config.force())
+        .maxRetries(config.maxRetries())
+        .initialBackoff(config.initialBackoff())
+        .maxBackoff(config.maxBackoff())
+        .searchIndexMappingLanguage(config.searchIndexMappingLanguage())
+        .afterCursor(config.afterCursor())
+        .slackBotToken(config.slackBotToken())
+        .slackChannel(config.slackChannel())
+        .build();
+  }
+
+  private static SearchClusterMetrics fetchClusterMetrics(SearchRepository searchRepository) {
+    try {
+      return SearchClusterMetrics.fetchClusterMetrics(
+          searchRepository, 0, searchRepository.getMaxDBConnections());
+    } catch (Exception e) {
+      LOG.warn("Failed to fetch cluster metrics for auto-tuning, using configured values", e);
+      return null;
+    }
+  }
 
   /**
    * Creates a ReindexingConfiguration from an EventPublisherJob.

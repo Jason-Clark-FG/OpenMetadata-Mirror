@@ -4,6 +4,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.service.apps.bundles.searchIndex.ReindexingMetrics;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 
 /**
@@ -182,6 +183,19 @@ public class StageStatsTracker {
       operationCount.set(0);
       lastFlushTime = System.currentTimeMillis();
       return;
+    }
+
+    ReindexingMetrics metrics = ReindexingMetrics.getInstance();
+    if (metrics != null) {
+      if (rSuccess > 0) metrics.recordStageSuccess("reader", entityType, rSuccess);
+      if (rFailed > 0) metrics.recordStageFailed("reader", entityType, rFailed);
+      if (rWarnings > 0) metrics.recordStageWarnings("reader", entityType, rWarnings);
+      if (pSuccess > 0) metrics.recordStageSuccess("process", entityType, pSuccess);
+      if (pFailed > 0) metrics.recordStageFailed("process", entityType, pFailed);
+      if (sSuccess > 0) metrics.recordStageSuccess("sink", entityType, sSuccess);
+      if (sFailed > 0) metrics.recordStageFailed("sink", entityType, sFailed);
+      if (vSuccess > 0) metrics.recordStageSuccess("vector", entityType, vSuccess);
+      if (vFailed > 0) metrics.recordStageFailed("vector", entityType, vFailed);
     }
 
     try {

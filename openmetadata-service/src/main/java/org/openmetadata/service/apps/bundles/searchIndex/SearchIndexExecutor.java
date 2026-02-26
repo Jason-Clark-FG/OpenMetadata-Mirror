@@ -24,7 +24,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +56,6 @@ import org.openmetadata.service.search.DefaultRecreateHandler;
 import org.openmetadata.service.search.EntityReindexContext;
 import org.openmetadata.service.search.RecreateIndexHandler;
 import org.openmetadata.service.search.ReindexContext;
-import org.openmetadata.service.search.SearchClusterMetrics;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
@@ -263,9 +264,10 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private ExecutionResult executeSingleServer() throws Exception {
     Set<String> entities = expandEntities(config.entities());
-    ReindexingConfiguration effectiveConfig = applyAutoTuning(entities);
+    batchSize.set(config.batchSize());
+    originalBatchSize.set(config.batchSize());
 
-    listeners.onJobConfigured(context, effectiveConfig);
+    listeners.onJobConfigured(context, config);
 
     stats.set(initializeTotalRecords(entities));
 
@@ -284,20 +286,15 @@ public class SearchIndexExecutor implements AutoCloseable {
     this.failureRecorder = new IndexingFailureRecorder(collectionDAO, jobId, serverId);
     cleanupOldFailures();
 
-    initializeSink(effectiveConfig);
+    initializeSink(config);
 
-    if (effectiveConfig.recreateIndex()) {
+    if (config.recreateIndex()) {
       validateClusterCapacity(entities);
       listeners.onIndexRecreationStarted(entities);
       recreateContext = reCreateIndexes(entities);
     }
 
-    SearchClusterMetrics clusterMetrics = null;
-    if (effectiveConfig.autoTune()) {
-      clusterMetrics = fetchClusterMetrics();
-    }
-
-    reIndexFromStartToEnd(clusterMetrics, entities);
+    reIndexFromStartToEnd(entities);
     closeSinkIfNeeded();
     // Promote anything yet to be promoted such as vector search indexes which is not part of
     // entities set
@@ -311,59 +308,6 @@ public class SearchIndexExecutor implements AutoCloseable {
       return getAll();
     }
     return entities;
-  }
-
-  private ReindexingConfiguration applyAutoTuning(Set<String> entities) {
-    if (!config.autoTune()) {
-      batchSize.set(config.batchSize());
-      originalBatchSize.set(config.batchSize());
-      return config;
-    }
-
-    SearchClusterMetrics metrics = fetchClusterMetrics();
-    if (metrics == null) {
-      batchSize.set(config.batchSize());
-      originalBatchSize.set(config.batchSize());
-      return config;
-    }
-
-    batchSize.set(metrics.getRecommendedBatchSize());
-    originalBatchSize.set(metrics.getRecommendedBatchSize());
-
-    return ReindexingConfiguration.builder()
-        .entities(entities)
-        .batchSize(metrics.getRecommendedBatchSize())
-        .consumerThreads(metrics.getRecommendedConsumerThreads())
-        .producerThreads(metrics.getRecommendedProducerThreads())
-        .queueSize(metrics.getRecommendedQueueSize())
-        .maxConcurrentRequests(metrics.getRecommendedConcurrentRequests())
-        .payloadSize(metrics.getMaxPayloadSizeBytes())
-        .recreateIndex(config.recreateIndex())
-        .autoTune(true)
-        .useDistributedIndexing(config.useDistributedIndexing())
-        .force(config.force())
-        .maxRetries(config.maxRetries())
-        .initialBackoff(config.initialBackoff())
-        .maxBackoff(config.maxBackoff())
-        .searchIndexMappingLanguage(config.searchIndexMappingLanguage())
-        .afterCursor(config.afterCursor())
-        .slackBotToken(config.slackBotToken())
-        .slackChannel(config.slackChannel())
-        .build();
-  }
-
-  private SearchClusterMetrics fetchClusterMetrics() {
-    try {
-      long totalRecords =
-          stats.get() != null && stats.get().getJobStats() != null
-              ? stats.get().getJobStats().getTotalRecords()
-              : 0;
-      return SearchClusterMetrics.fetchClusterMetrics(
-          searchRepository, totalRecords, searchRepository.getMaxDBConnections());
-    } catch (Exception e) {
-      LOG.warn("Failed to fetch cluster metrics, using defaults", e);
-      return null;
-    }
   }
 
   private void validateClusterCapacity(Set<String> entities) {
@@ -410,14 +354,13 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
-  private void reIndexFromStartToEnd(SearchClusterMetrics clusterMetrics, Set<String> entities)
-      throws InterruptedException {
+  private void reIndexFromStartToEnd(Set<String> entities) throws InterruptedException {
     long totalEntities =
         stats.get() != null && stats.get().getJobStats() != null
             ? stats.get().getJobStats().getTotalRecords()
             : 0;
 
-    ThreadConfiguration threadConfig = calculateThreadConfiguration(totalEntities, clusterMetrics);
+    ThreadConfiguration threadConfig = calculateThreadConfiguration(totalEntities);
     int effectiveQueueSize = initializeQueueAndExecutors(threadConfig, entities.size());
 
     LOG.info(
@@ -429,16 +372,13 @@ public class SearchIndexExecutor implements AutoCloseable {
     executeReindexing(threadConfig.numConsumers(), entities);
   }
 
-  private ThreadConfiguration calculateThreadConfiguration(
-      long totalEntities, SearchClusterMetrics clusterMetrics) {
+  private ThreadConfiguration calculateThreadConfiguration(long totalEntities) {
     int numConsumers =
         config.consumerThreads() > 0 ? Math.min(config.consumerThreads(), MAX_CONSUMER_THREADS) : 2;
-    int numProducers = Math.clamp((int) (totalEntities / 10000), 2, MAX_PRODUCER_THREADS);
-
-    if (clusterMetrics != null) {
-      numConsumers = Math.min(clusterMetrics.getRecommendedConsumerThreads(), MAX_CONSUMER_THREADS);
-      numProducers = Math.min(clusterMetrics.getRecommendedProducerThreads(), MAX_PRODUCER_THREADS);
-    }
+    int numProducers =
+        config.producerThreads() > 1
+            ? Math.min(config.producerThreads(), MAX_PRODUCER_THREADS)
+            : Math.clamp((int) (totalEntities / 10000), 2, MAX_PRODUCER_THREADS);
 
     return adjustThreadsForLimit(numProducers, numConsumers);
   }
@@ -520,7 +460,7 @@ public class SearchIndexExecutor implements AutoCloseable {
     try {
       while (!stopped.get()) {
         try {
-          IndexingTask<?> task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+          IndexingTask<?> task = taskQueue.poll(200, TimeUnit.MILLISECONDS);
           if (task == null) {
             continue;
           }
@@ -700,6 +640,12 @@ public class SearchIndexExecutor implements AutoCloseable {
     if (errorMessage != null && isBackpressureError(errorMessage)) {
       consecutiveErrors.incrementAndGet();
       consecutiveSuccesses.set(0);
+
+      ReindexingMetrics metrics = ReindexingMetrics.getInstance();
+      if (metrics != null) {
+        metrics.recordBackpressureEvent();
+      }
+
       LOG.warn("Detected backpressure (consecutive errors: {})", consecutiveErrors.get());
 
       boolean isPayloadTooLarge = isPayloadTooLargeError(errorMessage);
@@ -817,27 +763,38 @@ public class SearchIndexExecutor implements AutoCloseable {
   }
 
   private void processEntityReindex(Set<String> entities) throws InterruptedException {
-    int snapshotBatchSize = batchSize.get();
-    int latchCount = getTotalLatchCount(entities, snapshotBatchSize);
-    CountDownLatch producerLatch = new CountDownLatch(latchCount);
+    // Use Phaser instead of pre-computed CountDownLatch to handle dynamic reader counts.
+    // Each entity type registers as a party, then dynamically registers its actual readers.
+    // This eliminates the batch-size-snapshot mismatch where auto-tune could desynchronize
+    // the pre-computed latch count from the actual number of readers created.
+    Phaser producerPhaser = new Phaser(entities.size());
 
     for (String entityType : entities) {
-      jobExecutor.submit(() -> processEntityType(entityType, producerLatch, snapshotBatchSize));
+      jobExecutor.submit(() -> processEntityType(entityType, producerPhaser));
     }
 
-    while (!producerLatch.await(1, TimeUnit.SECONDS)) {
+    int phase = 0;
+    while (!producerPhaser.isTerminated()) {
       if (stopped.get() || Thread.currentThread().isInterrupted()) {
         LOG.info("Stop signal received during reindexing");
         if (producerExecutor != null) producerExecutor.shutdownNow();
         if (jobExecutor != null) jobExecutor.shutdownNow();
         return;
       }
+      try {
+        producerPhaser.awaitAdvanceInterruptibly(phase, 1, TimeUnit.SECONDS);
+        break;
+      } catch (TimeoutException e) {
+        // Continue checking stop signal
+      }
     }
   }
 
-  private void processEntityType(
-      String entityType, CountDownLatch producerLatch, int fixedBatchSize) {
+  private void processEntityType(String entityType, Phaser producerPhaser) {
     try {
+      // Capture batch size at entity submission time so auto-tune changes
+      // don't affect already-running entity readers
+      int fixedBatchSize = batchSize.get();
       int totalEntityRecords = getTotalEntityRecords(entityType);
       listeners.onEntityTypeStarted(entityType, totalEntityRecords);
 
@@ -850,13 +807,16 @@ public class SearchIndexExecutor implements AutoCloseable {
                 MAX_READERS_PER_ENTITY);
         entityBatchCounters.put(entityType, new AtomicInteger(numReaders));
 
+        // Dynamically register actual readers with the phaser
+        producerPhaser.bulkRegister(numReaders);
+
         if (TIME_SERIES_ENTITIES.contains(entityType)) {
           submitReaders(
               entityType,
               totalEntityRecords,
               fixedBatchSize,
               numReaders,
-              producerLatch,
+              producerPhaser,
               () -> {
                 PaginatedEntityTimeSeriesSource source =
                     new PaginatedEntityTimeSeriesSource(
@@ -883,7 +843,7 @@ public class SearchIndexExecutor implements AutoCloseable {
               totalEntityRecords,
               fixedBatchSize,
               numReaders,
-              producerLatch,
+              producerPhaser,
               () -> {
                 PaginatedEntitiesSource source =
                     new PaginatedEntitiesSource(
@@ -898,7 +858,6 @@ public class SearchIndexExecutor implements AutoCloseable {
       } else {
         entityBatchCounters.put(entityType, new AtomicInteger(1));
         promoteEntityIndexIfReady(entityType);
-        producerLatch.countDown();
       }
 
       StepStats entityStats =
@@ -908,6 +867,9 @@ public class SearchIndexExecutor implements AutoCloseable {
       listeners.onEntityTypeCompleted(entityType, entityStats);
     } catch (Exception e) {
       LOG.error("Error processing entity type {}", entityType, e);
+    } finally {
+      // Deregister the entity coordinator party
+      producerPhaser.arriveAndDeregister();
     }
   }
 
@@ -916,21 +878,23 @@ public class SearchIndexExecutor implements AutoCloseable {
       int totalRecords,
       int fixedBatchSize,
       int numReaders,
-      CountDownLatch producerLatch,
+      Phaser producerPhaser,
       java.util.function.Supplier<KeysetBatchReader> readerFactory,
       java.util.function.BiFunction<Integer, Integer, List<String>> boundaryFinder) {
     if (numReaders == 1) {
       KeysetBatchReader reader = readerFactory.get();
+      // Single reader: unbounded limit so it reads until cursor exhaustion
       producerExecutor.submit(
           () ->
               processKeysetBatches(
-                  entityType, totalRecords, fixedBatchSize, null, reader, producerLatch));
+                  entityType, Integer.MAX_VALUE, fixedBatchSize, null, reader, producerPhaser));
       return;
     }
 
     List<String> boundaries = boundaryFinder.apply(numReaders, totalRecords);
     int actualReaders = boundaries.size() + 1;
-    int recordsPerReader = totalRecords / actualReaders;
+    // Use ceiling division to avoid rounding-related entity loss at reader boundaries
+    int recordsPerReader = (totalRecords + actualReaders - 1) / actualReaders;
 
     if (actualReaders < numReaders) {
       LOG.warn(
@@ -940,17 +904,17 @@ public class SearchIndexExecutor implements AutoCloseable {
           numReaders - 1,
           actualReaders);
       entityBatchCounters.get(entityType).set(actualReaders);
+      // Deregister extra reader parties from the phaser
       for (int j = 0; j < numReaders - actualReaders; j++) {
-        producerLatch.countDown();
+        producerPhaser.arriveAndDeregister();
       }
     }
 
     for (int i = 0; i < actualReaders; i++) {
       String startCursor = (i == 0) ? null : boundaries.get(i - 1);
-      int limit =
-          (i == actualReaders - 1)
-              ? totalRecords - recordsPerReader * (actualReaders - 1)
-              : recordsPerReader;
+      // Last reader is unbounded - reads until cursor exhaustion rather than
+      // stopping at a pre-calculated limit, preventing boundary entity loss
+      int limit = (i == actualReaders - 1) ? Integer.MAX_VALUE : recordsPerReader;
       KeysetBatchReader readerSource = readerFactory.get();
       final int readerLimit = limit;
       producerExecutor.submit(
@@ -961,7 +925,7 @@ public class SearchIndexExecutor implements AutoCloseable {
                   fixedBatchSize,
                   startCursor,
                   readerSource,
-                  producerLatch));
+                  producerPhaser));
     }
   }
 
@@ -971,7 +935,7 @@ public class SearchIndexExecutor implements AutoCloseable {
       int fixedBatchSize,
       String startCursor,
       KeysetBatchReader batchReader,
-      CountDownLatch producerLatch) {
+      Phaser producerPhaser) {
     boolean hadFailure = false;
     try {
       String keysetCursor = startCursor;
@@ -994,30 +958,33 @@ public class SearchIndexExecutor implements AutoCloseable {
         try {
           ResultList<?> result = batchReader.readNextKeyset(keysetCursor);
           if (result == null || result.getData().isEmpty()) {
+            LOG.debug(
+                "Reader for {} exhausted at processed={} of limit={} (empty result)",
+                entityType,
+                processed,
+                recordLimit);
             break;
+          }
+
+          // Reader stats are tracked only on the consumer side (processTask) to avoid
+          // double-counting. The producer just enqueues tasks.
+          if (!stopped.get()) {
+            IndexingTask<?> task = new IndexingTask<>(entityType, result, processed);
+            taskQueue.put(task);
           }
 
           int readerSuccessCount = result.getData().size();
           int readerFailedCount = listOrEmpty(result.getErrors()).size();
           int readerWarningsCount =
               result.getWarningsCount() != null ? result.getWarningsCount() : 0;
-          updateReaderStats(readerSuccessCount, readerFailedCount, readerWarningsCount);
-
-          StepStats batchStats =
-              new StepStats()
-                  .withSuccessRecords(readerSuccessCount)
-                  .withFailedRecords(readerFailedCount)
-                  .withWarningRecords(readerWarningsCount);
-          updateStats(entityType, batchStats);
-
-          if (!result.getData().isEmpty() && !stopped.get()) {
-            IndexingTask<?> task = new IndexingTask<>(entityType, result, processed);
-            taskQueue.put(task);
-          }
-
           processed += readerSuccessCount + readerFailedCount + readerWarningsCount;
           keysetCursor = result.getPaging() != null ? result.getPaging().getAfter() : null;
           if (keysetCursor == null) {
+            LOG.debug(
+                "Reader for {} exhausted at processed={} of limit={} (null cursor)",
+                entityType,
+                processed,
+                recordLimit);
             break;
           }
         } catch (SearchIndexException e) {
@@ -1028,6 +995,7 @@ public class SearchIndexExecutor implements AutoCloseable {
                 entityType, e.getMessage(), ExceptionUtils.getStackTrace(e));
           }
           listeners.onError(entityType, e.getIndexingError(), stats.get());
+          // Failed reads don't go through processTask, so track stats here
           int failedCount =
               e.getIndexingError() != null && e.getIndexingError().getFailedCount() != null
                   ? e.getIndexingError().getFailedCount()
@@ -1047,7 +1015,7 @@ public class SearchIndexExecutor implements AutoCloseable {
         LOG.error("Error in keyset processing for {}", entityType, e);
       }
     } finally {
-      producerLatch.countDown();
+      producerPhaser.arriveAndDeregister();
       if (hadFailure) {
         AtomicInteger failures = entityBatchFailures.get(entityType);
         if (failures != null) {
@@ -1311,18 +1279,6 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
-  private int getTotalLatchCount(Set<String> entities, int fixedBatchSize) {
-    return entities.stream()
-        .mapToInt(
-            entityType -> {
-              int total = getTotalEntityRecords(entityType);
-              if (total <= 0) return 1;
-              return Math.min(
-                  calculateNumberOfThreads(total, fixedBatchSize), MAX_READERS_PER_ENTITY);
-            })
-        .sum();
-  }
-
   private int getTotalEntityRecords(String entityType) {
     if (stats.get() == null
         || stats.get().getEntityStats() == null
@@ -1580,16 +1536,29 @@ public class SearchIndexExecutor implements AutoCloseable {
 
     listeners.onJobStopped(stats.get());
 
+    // Immediately interrupt producer and job threads (they may be blocked on DB reads)
+    shutdownExecutor(producerExecutor, "producer");
+    shutdownExecutor(jobExecutor, "job");
+
+    // Inject poison pills and give consumers a brief graceful shutdown window
     if (taskQueue != null) {
       taskQueue.clear();
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < MAX_CONSUMER_THREADS; i++) {
         taskQueue.offer(new IndexingTask<>(POISON_PILL, null, -1));
       }
     }
-
-    shutdownExecutor(producerExecutor, "producer");
-    shutdownExecutor(consumerExecutor, "consumer");
-    shutdownExecutor(jobExecutor, "job");
+    if (consumerExecutor != null && !consumerExecutor.isShutdown()) {
+      consumerExecutor.shutdown();
+      try {
+        if (!consumerExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+          consumerExecutor.shutdownNow();
+          LOG.warn("Consumer executor did not terminate within 5s, forced shutdown");
+        }
+      } catch (InterruptedException e) {
+        consumerExecutor.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
+    }
 
     LOG.info("Reindexing executor stopped");
   }

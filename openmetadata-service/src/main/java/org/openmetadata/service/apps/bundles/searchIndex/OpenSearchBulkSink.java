@@ -852,8 +852,15 @@ public class OpenSearchBulkSink implements BulkSink {
       }
 
       List<BulkOperation> toFlush = new ArrayList<>(buffer);
+      long payloadSize = currentBufferSize;
       buffer.clear();
       currentBufferSize = 0;
+
+      ReindexingMetrics metrics = ReindexingMetrics.getInstance();
+      if (metrics != null) {
+        metrics.recordPayloadSize(payloadSize);
+        metrics.incrementPendingBulkRequests();
+      }
 
       long executionId = executionIdCounter.incrementAndGet();
       int numberOfActions = toFlush.size();
@@ -876,10 +883,17 @@ public class OpenSearchBulkSink implements BulkSink {
 
     private void executeBulkWithRetry(
         List<BulkOperation> operations, long executionId, int numberOfActions, int attemptNumber) {
+      ReindexingMetrics metrics = ReindexingMetrics.getInstance();
+      io.micrometer.core.instrument.Timer.Sample bulkTimerSample =
+          metrics != null ? metrics.startBulkRequestTimer() : null;
+
       CompletableFuture<BulkResponse> future;
       try {
         future = asyncClient.bulk(b -> b.operations(operations).refresh(Refresh.False));
       } catch (IOException e) {
+        if (metrics != null && bulkTimerSample != null) {
+          metrics.recordBulkRequestCompleted(bulkTimerSample, false);
+        }
         handleBulkFailure(operations, executionId, numberOfActions, attemptNumber, e);
         return;
       }
@@ -888,10 +902,19 @@ public class OpenSearchBulkSink implements BulkSink {
           (response, error) -> {
             try {
               if (error != null) {
+                if (metrics != null && bulkTimerSample != null) {
+                  metrics.recordBulkRequestCompleted(bulkTimerSample, false);
+                }
                 handleBulkFailure(operations, executionId, numberOfActions, attemptNumber, error);
               } else if (response.errors()) {
+                if (metrics != null && bulkTimerSample != null) {
+                  metrics.recordBulkRequestCompleted(bulkTimerSample, false);
+                }
                 handlePartialFailure(response, executionId, numberOfActions);
               } else {
+                if (metrics != null && bulkTimerSample != null) {
+                  metrics.recordBulkRequestCompleted(bulkTimerSample, true);
+                }
                 totalSuccess.addAndGet(numberOfActions);
                 LOG.debug(
                     "Bulk request {} completed successfully with {} actions",
@@ -906,6 +929,9 @@ public class OpenSearchBulkSink implements BulkSink {
               } else {
                 activeBulkRequests.decrementAndGet();
                 concurrentRequestSemaphore.release();
+                if (metrics != null) {
+                  metrics.decrementPendingBulkRequests();
+                }
               }
             }
           });

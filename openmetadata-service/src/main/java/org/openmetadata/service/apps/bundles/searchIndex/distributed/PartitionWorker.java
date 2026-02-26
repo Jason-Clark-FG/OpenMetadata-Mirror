@@ -161,12 +161,18 @@ public class PartitionWorker {
           System.currentTimeMillis() - cursorInitStart);
 
       // Process in batches
-      while (currentOffset < rangeEnd && !stopped.get()) {
+      while (currentOffset < rangeEnd
+          && !stopped.get()
+          && !Thread.currentThread().isInterrupted()) {
         int currentBatchSize = (int) Math.min(batchSize, rangeEnd - currentOffset);
 
         try {
           BatchResult batchResult =
               processBatch(entityType, keysetCursor, currentBatchSize, statsTracker);
+          // Check for stop/interrupt after DB read completes
+          if (stopped.get() || Thread.currentThread().isInterrupted()) {
+            break;
+          }
           successCount.addAndGet(batchResult.successCount());
           failedCount.addAndGet(batchResult.failedCount());
           warningsCount.addAndGet(batchResult.warningsCount());
