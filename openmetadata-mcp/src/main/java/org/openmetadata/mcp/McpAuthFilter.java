@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.ApplicationContext;
+import org.openmetadata.service.security.AuthenticationException;
 import org.openmetadata.service.security.ImpersonationContext;
 import org.openmetadata.service.security.JwtFilter;
 
@@ -34,6 +35,7 @@ public class McpAuthFilter implements Filter {
     if (ApplicationContext.getInstance().getAppIfExists("McpApplication") == null) {
       sendError(
           httpServletResponse,
+          HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
           "McpApplication is not installed please install it to use MCP features.");
       return;
     }
@@ -60,18 +62,23 @@ public class McpAuthFilter implements Filter {
 
       // Continue with the filter chain
       filterChain.doFilter(servletRequest, servletResponse);
+    } catch (AuthenticationException e) {
+      sendError(httpServletResponse, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+    } catch (Exception e) {
+      sendError(httpServletResponse, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     } finally {
       // Always clear the impersonation context after request processing
       ImpersonationContext.clear();
     }
   }
 
-  private void sendError(HttpServletResponse response, String errorMessage) throws IOException {
+  private void sendError(HttpServletResponse response, int statusCode, String errorMessage)
+      throws IOException {
     Map<String, Object> error = new HashMap<>();
     error.put("error", errorMessage);
     String errorJson = JsonUtils.pojoToJson(error);
     response.setContentType("application/json");
-    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    response.setStatus(statusCode);
     response.getWriter().write(errorJson);
   }
 }
