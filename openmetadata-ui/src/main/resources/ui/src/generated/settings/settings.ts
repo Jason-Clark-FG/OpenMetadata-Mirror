@@ -2100,6 +2100,10 @@ export interface NaturalLanguageSearch {
      */
     enabled?: boolean;
     /**
+     * Weight for BM25 keyword search results in hybrid RRF pipeline (0.0-1.0)
+     */
+    keywordWeight?: number;
+    /**
      * OpenAI configuration for embedding generation. Supports both OpenAI and Azure OpenAI
      * endpoints.
      */
@@ -2112,6 +2116,10 @@ export interface NaturalLanguageSearch {
      * Enable or disable semantic search using vector embeddings
      */
     semanticSearchEnabled?: boolean;
+    /**
+     * Weight for semantic vector search results in hybrid RRF pipeline (0.0-1.0)
+     */
+    semanticWeight?: number;
 }
 
 /**
