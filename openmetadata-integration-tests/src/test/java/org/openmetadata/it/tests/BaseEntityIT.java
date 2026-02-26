@@ -2701,8 +2701,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
             "Version should increment when entityStatus is updated");
       }
 
-    } catch (Exception e) {
-      // If entity doesn't support entityStatus, skip this test
+    } catch (NoSuchMethodError | UnsupportedOperationException e) {
       log.info(
           "Entity "
               + entity.getClass().getSimpleName()
