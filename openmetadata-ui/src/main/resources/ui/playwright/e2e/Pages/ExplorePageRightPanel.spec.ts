@@ -607,7 +607,7 @@ test.describe('Right Panel Test Suite', () => {
               if (usesServerSideSearch) {
                 searchRes = adminPage.waitForResponse(
                   (res) =>
-                    res.url().includes('search?offset=') &&
+                    res.url().includes('columns/search?offset=') &&
                     res.url().includes('q=') &&
                     res.status() === 200
                 );
@@ -623,7 +623,7 @@ test.describe('Right Panel Test Suite', () => {
               if (usesServerSideSearch) {
                 clearRes = adminPage.waitForResponse(
                   (res) =>
-                    res.url().includes('offset=') &&
+                    res.url().includes('columns/search?offset=') &&
                     !res.url().includes('q=') &&
                     res.status() === 200
                 );
@@ -639,7 +639,7 @@ test.describe('Right Panel Test Suite', () => {
               if (usesServerSideSearch) {
                 noMatchRes = adminPage.waitForResponse(
                   (res) =>
-                    res.url().includes('search?offset=') &&
+                    res.url().includes('columns/search?offset=') &&
                     res.url().includes('q=') &&
                     res.status() === 200
                 );

@@ -97,11 +97,6 @@ export interface DataAssetConfig {
   childrenTabId?: string;
   availableTabs: string[];
   hasSchemaTab?: boolean;
-  hasTasksTab?: boolean;
-  hasFeaturesTab?: boolean;
-  hasFieldsTab?: boolean;
-  hasModelTab?: boolean;
-  hasChartsTab?: boolean;
   supportsDataQuality?: boolean;
   supportsCustomProperties?: boolean;
 }
@@ -743,78 +738,10 @@ export class RightPanelPageObject {
    * Verify content in the children tab based on entity type
    */
   private async verifyChildrenTabContent(): Promise<void> {
-    if (!this.entityConfig) {
+    if (!this.entityConfig?.hasSchemaTab) {
       return;
     }
-
-    // Verify entity-specific content based on type
-    if (this.entityConfig.hasSchemaTab) {
-      await this.verifySchemaTabContent();
-    } else if (this.entityConfig.hasTasksTab) {
-      await this.verifyTasksTabContent();
-    } else if (this.entityConfig.hasFeaturesTab) {
-      await this.verifyFeaturesTabContent();
-    } else if (this.entityConfig.hasFieldsTab) {
-      await this.verifyFieldsTabContent();
-    } else if (this.entityConfig.hasModelTab) {
-      await this.verifyModelTabContent();
-    } else if (this.entityConfig.hasChartsTab) {
-      await this.verifyChartsTabContent();
-    }
-  }
-
-  /**
-   * Verify schema tab content (for Tables, Topics, API Endpoints)
-   */
-  private async verifySchemaTabContent(): Promise<void> {
-    // Schema tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional schema-specific verifications can be added here
-  }
-
-  /**
-   * Verify tasks tab content (for Pipelines)
-   */
-  private async verifyTasksTabContent(): Promise<void> {
-    // Tasks tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional tasks-specific verifications can be added here
-  }
-
-  /**
-   * Verify features tab content (for ML Models)
-   */
-  private async verifyFeaturesTabContent(): Promise<void> {
-    // Features tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional features-specific verifications can be added here
-  }
-
-  /**
-   * Verify fields tab content (for Search Indexes)
-   */
-  private async verifyFieldsTabContent(): Promise<void> {
-    // Fields tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional fields-specific verifications can be added here
-  }
-
-  /**
-   * Verify model tab content (for Dashboard Data Models)
-   */
-  private async verifyModelTabContent(): Promise<void> {
-    // Model tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional model-specific verifications can be added here
-  }
-
-  /**
-   * Verify charts tab content (for Dashboards)
-   */
-  private async verifyChartsTabContent(): Promise<void> {
-    // Charts tab verification logic
-    await this.pageLoader.waitFor({ state: 'detached' });
-    // Additional charts-specific verifications can be added here
+    await this.schema.assertInternalFields(this.entityConfig.entityType);
   }
 
   /**

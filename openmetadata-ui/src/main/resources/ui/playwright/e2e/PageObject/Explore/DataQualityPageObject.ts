@@ -35,6 +35,7 @@ export class DataQualityPageObject extends RightPanelBase {
   private readonly testCaseCardsSection: Locator;
   private readonly testCaseCards: Locator;
   private readonly nameLink: Locator;
+  private readonly testCaseStatusBadge: Locator;
   private readonly searchBar: Locator;
   private readonly incidentsTabContent: Locator;
   private readonly noDataPlaceholder: Locator;
@@ -65,6 +66,9 @@ export class DataQualityPageObject extends RightPanelBase {
     this.nameLink = this.testCaseCards
       .locator('.test-case-name, [class*="name"], a')
       .first();
+    this.testCaseStatusBadge = this.testCaseCards.locator(
+      '.test-case-status-section .status-badge-label'
+    );
     this.searchBar = this.container.getByTestId('searchbar');
     this.incidentsTabContent = this.container.locator('.incidents-tab-content');
     this.noDataPlaceholder = this.container
@@ -245,9 +249,7 @@ export class DataQualityPageObject extends RightPanelBase {
     const card = cards.filter({ hasText: testCaseName }).first();
     await card.waitFor({ state: 'visible' });
 
-    const statusBadge = card.locator(
-      '.status-badge-label, .status-badge, [class*="status"]'
-    );
+    const statusBadge = card.locator('.status-badge-label');
     await statusBadge.waitFor({ state: 'visible' });
     await expect(statusBadge).toContainText(new RegExp(expectedStatus, 'i'));
   }
@@ -298,7 +300,8 @@ export class DataQualityPageObject extends RightPanelBase {
     await expect(incidentCard).toBeVisible();
 
     if (incidentData.status) {
-      await expect(incidentCard).toContainText(incidentData.status);
+      const statusBadge = incidentCard.locator('.status-badge-label');
+      await expect(statusBadge).toContainText('New');
     }
 
     if (incidentData.hasAssignee !== undefined) {
@@ -306,10 +309,16 @@ export class DataQualityPageObject extends RightPanelBase {
         .locator('.test-case-detail-item')
         .filter({ hasText: /assignee/i });
 
+      await expect(assigneeSection).toBeVisible();
+
       if (incidentData.hasAssignee) {
-        await expect(assigneeSection).toBeVisible();
+        await expect(
+          assigneeSection.getByTestId('no-owner-icon')
+        ).not.toBeVisible();
       } else {
-        await expect(assigneeSection).not.toBeVisible();
+        await expect(
+          assigneeSection.getByTestId('no-owner-icon')
+        ).toBeVisible();
       }
     }
   }
@@ -357,8 +366,7 @@ export class DataQualityPageObject extends RightPanelBase {
     status: 'success' | 'failed' | 'aborted',
     cardIndex: number = 0
   ): Promise<void> {
-    const cards = this.testCaseCards;
-    const card = cards.nth(cardIndex);
+    const card = this.testCaseCards.nth(cardIndex);
     await card.waitFor({ state: 'visible' });
     const expectedStatusText: Record<'success' | 'failed' | 'aborted', string> =
       {
@@ -372,9 +380,7 @@ export class DataQualityPageObject extends RightPanelBase {
         failed: 'failure',
         aborted: 'aborted',
       };
-    const statusBadge = card.locator(
-      '.test-case-status-section .status-badge-label'
-    );
+    const statusBadge = this.testCaseStatusBadge.nth(cardIndex);
     await statusBadge.waitFor({ state: 'visible' });
     await expect(statusBadge).toHaveText(expectedStatusText[status]);
     await expect(statusBadge).toHaveClass(

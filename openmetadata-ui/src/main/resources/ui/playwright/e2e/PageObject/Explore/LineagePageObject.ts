@@ -31,6 +31,9 @@ export class LineagePageObject extends RightPanelBase {
   private readonly upstreamLineageLink: Locator;
   private readonly upstreamCount: Locator;
   private readonly downstreamCount: Locator;
+  private readonly lineageCardTypeText: Locator;
+  private readonly lineageCardOwnerSection: Locator;
+  private readonly lineageCardLink: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
@@ -54,6 +57,15 @@ export class LineagePageObject extends RightPanelBase {
     );
     this.downstreamCount = this.getSummaryPanel().locator(
       '[data-testid="downstream-count"]'
+    );
+    this.lineageCardTypeText = this.lineageItemCards.locator(
+      '.item-entity-type-text'
+    );
+    this.lineageCardOwnerSection = this.lineageItemCards.locator(
+      '.lineage-info-container'
+    );
+    this.lineageCardLink = this.lineageItemCards.locator(
+      '.breadcrumb-menu-button'
     );
   }
 
@@ -264,24 +276,25 @@ export class LineagePageObject extends RightPanelBase {
     await expect(card).toBeVisible();
 
     if (details.hasServiceIcon) {
-      const serviceIcon = card.locator('.service-icon');
-      await expect(serviceIcon).toBeVisible();
+      await expect(card.locator('.service-icon')).toBeVisible();
     }
 
     if (details.entityType) {
-      const typeText = card.locator('.item-entity-type-text');
+      const typeText = this.lineageCardTypeText.filter({
+        hasText: new RegExp(details.entityType, 'i'),
+      });
       await expect(typeText).toBeVisible();
       await expect(typeText).toContainText(new RegExp(details.entityType, 'i'));
     }
 
     if (details.hasOwner) {
-      const ownerSection = card.locator('.lineage-info-container');
-      await expect(ownerSection).toBeVisible();
+      await expect(
+        card.filter({ has: this.lineageCardOwnerSection })
+      ).toBeVisible();
     }
 
     if (details.hasLink) {
-      const cardLink = card.locator('.breadcrumb-menu-button');
-      await expect(cardLink).toBeVisible();
+      await expect(card.filter({ has: this.lineageCardLink })).toBeVisible();
     }
   }
 
