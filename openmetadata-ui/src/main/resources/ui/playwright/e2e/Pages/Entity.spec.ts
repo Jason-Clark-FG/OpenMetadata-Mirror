@@ -10,9 +10,16 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import {
+  APIRequestContext,
+  test as base,
+  expect,
+  Page,
+} from '@playwright/test';
 import { isUndefined } from 'lodash';
+import { Column, Table } from '../../../src/generated/entity/data/table';
 import { COMMON_TIER_TAG, KEY_PROFILE_METRICS } from '../../constant/common';
+import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { CustomPropertySupportedEntityList } from '../../constant/customProperty';
 import { DATA_CONSUMER_RULES } from '../../constant/permission';
 import { PolicyClass } from '../../support/access-control/PoliciesClass';
@@ -23,6 +30,7 @@ import { ContainerClass } from '../../support/entity/ContainerClass';
 import { DashboardClass } from '../../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../../support/entity/DashboardDataModelClass';
 import { DirectoryClass } from '../../support/entity/DirectoryClass';
+import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { EntityType } from '../../support/entity/EntityDataClass.interface';
 import { FileClass } from '../../support/entity/FileClass';
@@ -46,14 +54,17 @@ import {
   getToken,
   redirectToHomePage,
   removeSingleSelectDomain,
-  toastNotification,
   uuid,
   verifyDomainPropagation,
 } from '../../utils/common';
 import {
+  createCustomPropertyForEntity,
+  CustomProperty,
   CustomPropertyTypeByName,
   updateCustomPropertyInRightPanel,
+  verifyTableColumnCustomPropertyPersistence,
 } from '../../utils/customProperty';
+import { getCurrentMillis } from '../../utils/dateTime';
 import {
   addMultiOwner,
   closeColumnDetailPanel,
@@ -62,11 +73,8 @@ import {
   removeOwnersFromList,
   waitForAllLoadersToDisappear,
 } from '../../utils/entity';
-import { visitServiceDetailsPage } from '../../utils/service';
-import { getCurrentMillis } from '../../utils/dateTime';
 import { clickDataQualityStatCard } from '../../utils/entityPanel';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
-import { Column, Table } from '../../../src/generated/entity/data/table';
+import { visitServiceDetailsPage } from '../../utils/service';
 
 const entities = {
   'Api Endpoint': ApiEndpointClass,
@@ -2002,195 +2010,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           }
         });
       }
-
-      if (entity.type === 'Table') {
-        // TODO: Fix this test once we have an endpoint for custom properties
-        test.fixme(
-          'Column detail panel - Custom Properties empty state',
-          async ({ page }) => {
-            test.slow();
-
-            await test.step(
-              'Open column detail panel and navigate to Custom Properties tab',
-              async () => {
-                await redirectToHomePage(page);
-                await entity.visitEntityPage(page);
-
-                await page.getByTestId(entity.childrenTabId ?? '').click();
-                await waitForAllLoadersToDisappear(page);
-
-                await openColumnDetailPanel({
-                  page,
-                  rowSelector,
-                  columnId: entity.childrenSelectorId ?? '',
-                  columnNameTestId: 'column-name',
-                  entityType: entity.type as EntityType,
-                });
-
-                const panelContainer = page.locator('.column-detail-panel');
-
-                // Check Custom Properties tab
-                // Wait for the tab to be available
-                await page.getByTestId('custom-properties-tab').click();
-                await waitForAllLoadersToDisappear(page);
-
-                // Assert that the CustomPropertiesSection is visible
-                const customPropertiesContainer = panelContainer
-                  .locator('.overview-tab-content')
-                  .filter({ has: page.getByTestId('custom-properties-table') })
-                  .or(panelContainer.getByText('No custom properties'));
-
-                await expect(customPropertiesContainer).toBeVisible();
-
-                await closeColumnDetailPanel(page);
-              }
-            );
-          }
-        );
-      }
-    }
-
-    if (entity.type === 'Table') {
-      test('Column detail panel - DisplayName editing', async ({ page }) => {
-        test.slow();
-
-        await test.step(
-          'Edit display name via column detail panel',
-          async () => {
-            await redirectToHomePage(page);
-            await entity.visitEntityPage(page);
-
-            await page.getByTestId(entity.childrenTabId ?? '').click();
-            await waitForAllLoadersToDisappear(page);
-
-            await openColumnDetailPanel({
-              page,
-              rowSelector,
-              columnId: entity.childrenSelectorId ?? '',
-              columnNameTestId: 'column-name',
-              entityType: entity.type as EntityType,
-            });
-
-            const panelContainer = page.locator('.column-detail-panel');
-
-            // Click edit displayName button
-            const editDisplayNameBtn = panelContainer.getByTestId(
-              'edit-displayName-button'
-            );
-            await expect(editDisplayNameBtn).toBeVisible();
-            await editDisplayNameBtn.click();
-
-            // EntityNameModal should appear
-            const modal = page.getByRole('dialog', {
-              name: 'Edit Display Name',
-            });
-            await expect(modal).toBeVisible();
-
-            // Fill in a new display name
-            const displayNameInput = modal.locator('#displayName');
-            await expect(displayNameInput).toBeVisible();
-            await displayNameInput.clear();
-            const newDisplayName = `PW Column Display ${Date.now()}`;
-            await displayNameInput.fill(newDisplayName);
-
-            // Save
-            const saveResponse = page.waitForResponse(
-              (response) =>
-                response.url().includes('/api/v1/columns/name/') &&
-                response.request().method() === 'PUT'
-            );
-            await modal.getByTestId('save-button').click();
-            await saveResponse;
-
-            // Verify display name is updated in the panel
-            await expect(
-              panelContainer.getByTestId('entity-link')
-            ).toContainText(newDisplayName);
-
-            // Clean up: remove display name
-            await editDisplayNameBtn.click();
-            await expect(modal).toBeVisible();
-            const cleanupInput = modal.locator('#displayName');
-            await cleanupInput.clear();
-            const cleanupResponse = page.waitForResponse(
-              (response) =>
-                response.url().includes('/api/v1/columns/name/') &&
-                response.request().method() === 'PUT'
-            );
-            await modal.getByTestId('save-button').click();
-            const response = await cleanupResponse;
-            expect(response.status()).toBe(200);
-
-            await closeColumnDetailPanel(page);
-          }
-        );
-      });
-    }
-
-    if (entity.type === 'Table') {
-      test('Column detail panel - Navigation boundary conditions', async ({
-        page,
-      }) => {
-        test.slow();
-
-        await test.step(
-          'Verify prev-disabled on first column and next-disabled on last',
-          async () => {
-            await redirectToHomePage(page);
-            await entity.visitEntityPage(page);
-
-            await page.getByTestId(entity.childrenTabId ?? '').click();
-            await waitForAllLoadersToDisappear(page);
-
-            await openColumnDetailPanel({
-              page,
-              rowSelector,
-              columnId: entity.childrenSelectorId ?? '',
-              columnNameTestId: 'column-name',
-              entityType: entity.type as EntityType,
-            });
-
-            const panelContainer = page.locator('.column-detail-panel');
-            const navContainer = panelContainer.locator(
-              '.navigation-container'
-            );
-            const prevButton = navContainer.locator('button').nth(0);
-            const nextButton = navContainer.locator('button').nth(1);
-
-            // On the first column, prev should be disabled
-            const paginationText = navContainer.locator(
-              '.pagination-header-text'
-            );
-            const paginationContent = await paginationText.textContent();
-            const match = paginationContent?.match(/(\d+)\s+of\s+(\d+)/i);
-
-            if (match) {
-              const currentIndex = parseInt(match[1], 10);
-              const totalCount = parseInt(match[2], 10);
-
-              if (currentIndex === 1) {
-                await expect(prevButton).toBeDisabled();
-              }
-
-              // Navigate to last column
-              if (totalCount > 1) {
-                for (let i = currentIndex; i < totalCount; i++) {
-                  await nextButton.click();
-                  await page.waitForLoadState('networkidle');
-                }
-
-                // At last column, next should be disabled
-                await expect(nextButton).toBeDisabled();
-
-                // Prev should be enabled at last column
-                await expect(prevButton).toBeEnabled();
-              }
-            }
-
-            await closeColumnDetailPanel(page);
-          }
-        );
-      });
     }
 
     /**
@@ -2290,6 +2109,60 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         );
 
         await entity.cleanupCustomProperty(apiContext);
+        await afterAction();
+      });
+    }
+
+    if (entity.type === 'Table') {
+      const properties = Object.values(CustomPropertyTypeByName);
+      let customPropertyValue: Record<
+        string,
+        {
+          value: string;
+          newValue: string;
+          property: CustomProperty;
+        }
+      >;
+      let cleanupUser: (apiContext: APIRequestContext) => Promise<void>;
+      let users: Record<string, string>;
+
+      const prepareCustomProperty = async (apiContext: APIRequestContext) => {
+        const data = await createCustomPropertyForEntity(
+          apiContext,
+          EntityTypeEndpoint.TableColumn
+        );
+
+        customPropertyValue = data.customProperties;
+        cleanupUser = data.cleanupUser;
+        users = data.userNames;
+      };
+
+      test('Set & update column-level custom property', async ({ page }) => {
+        test.slow(true);
+        const { apiContext, afterAction } = await getApiContext(page);
+
+        await prepareCustomProperty(apiContext);
+
+        const columnFqn =
+          (entity as TableClass).entityResponseData.columns[0]
+            .fullyQualifiedName ?? '';
+
+        for (const type of properties) {
+          await test.step(
+            `Set ${type} custom property on column and verify in UI`,
+            async () => {
+              await verifyTableColumnCustomPropertyPersistence({
+                page,
+                columnFqn,
+                propertyName: customPropertyValue[type].property.name,
+                propertyType: type,
+                users,
+              });
+            }
+          );
+        }
+
+        await cleanupUser(apiContext);
         await afterAction();
       });
     }
