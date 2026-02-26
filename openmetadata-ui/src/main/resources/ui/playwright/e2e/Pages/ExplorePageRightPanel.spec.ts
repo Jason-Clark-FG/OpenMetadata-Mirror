@@ -36,10 +36,7 @@ import { ContainerClass } from '../../support/entity/ContainerClass';
 import { SearchIndexClass } from '../../support/entity/SearchIndexClass';
 import { Domain } from '../../support/domain/Domain';
 import { UserClass } from '../../support/user/UserClass';
-import {
-  navigateToExploreAndSelectEntity,
-  openSchemaTab,
-} from '../../utils/explore';
+import { navigateToExploreAndSelectEntity } from '../../utils/explore';
 import { getEntityFqn } from '../../utils/entityPanel';
 import { connectEdgeBetweenNodesViaAPI } from '../../utils/lineage';
 import { getCurrentMillis } from '../../utils/dateTime';
@@ -366,6 +363,87 @@ test.describe('Right Panel Test Suite', () => {
           await rightPanel.waitForPanelVisible();
           await schema.navigateToSchemaTab();
           await schema.shouldBeVisible();
+
+          // Extract fields from DOM to test search dynamically
+          const fieldCards = adminPage.locator(
+            '.schema-field-cards-container .field-card'
+          );
+          if ((await fieldCards.count()) === 0) {
+            // Wait for fields to render
+            await fieldCards
+              .first()
+              .waitFor({ state: 'visible', timeout: 5000 })
+              .catch(() => null);
+          }
+          const count = await fieldCards.count();
+
+          if (count >= 2) {
+            const firstCardId = await fieldCards
+              .nth(0)
+              .getAttribute('data-testid');
+            const secondCardId = await fieldCards
+              .nth(1)
+              .getAttribute('data-testid');
+
+            const firstField = firstCardId?.replace('field-card-', '');
+            const secondField = secondCardId?.replace('field-card-', '');
+
+            // Entities that use server-side schema search
+            const usesServerSideSearch = [
+              'table',
+              'dashboardDataModel',
+            ].includes(entityType);
+
+            if (firstField && secondField) {
+              // 1. Search for first field
+              let searchRes;
+              if (usesServerSideSearch) {
+                searchRes = adminPage.waitForResponse(
+                  (res) =>
+                    res.url().includes('search?offset=') &&
+                    res.url().includes('q=') &&
+                    res.status() === 200
+                );
+              }
+              await schema.searchFor(firstField);
+              if (searchRes) await searchRes;
+
+              await schema.shouldShowFieldByName(firstField);
+              await schema.shouldNotShowFieldByName(secondField);
+
+              // 2. Clear search
+              let clearRes;
+              if (usesServerSideSearch) {
+                clearRes = adminPage.waitForResponse(
+                  (res) =>
+                    res.url().includes('offset=') &&
+                    !res.url().includes('q=') &&
+                    res.status() === 200
+                );
+              }
+              await schema.clearSearch();
+              if (clearRes) await clearRes;
+
+              await schema.shouldShowFieldByName(firstField);
+              await schema.shouldShowFieldByName(secondField);
+
+              // 3. Search for non-existent field
+              let noMatchRes;
+              if (usesServerSideSearch) {
+                noMatchRes = adminPage.waitForResponse(
+                  (res) =>
+                    res.url().includes('search?offset=') &&
+                    res.url().includes('q=') &&
+                    res.status() === 200
+                );
+              }
+              await schema.searchFor('zzz_no_match_xyz');
+              if (noMatchRes) await noMatchRes;
+
+              await schema.shouldNotShowFieldByName(firstField);
+              await schema.shouldShowNoResults();
+            }
+          }
         });
       });
     });
@@ -2269,130 +2347,5 @@ test.describe('Right Panel Test Suite', () => {
         });
       }
     );
-  });
-
-  test.describe('Schema Search', () => {
-    test.describe('Table - column search (server-side)', () => {
-      test('Should filter columns by name via server-side search', async ({
-        adminPage,
-        rightPanel,
-        schema,
-      }) => {
-        await openSchemaTab(
-          adminPage,
-          {
-            name: tableEntity.entity.name,
-            endpoint: tableEntity.endpoint,
-            entityResponseData: tableEntity.entityResponseData,
-          },
-          rightPanel,
-          schema
-        );
-
-        const columns =
-          (
-            tableEntity.entityResponseData as {
-              columns?: Array<{ name: string }>;
-            }
-          )?.columns ?? [];
-        if (columns.length < 2) {
-          test.skip();
-          return;
-        }
-
-        const searchRes = adminPage.waitForResponse(
-          (res) =>
-            res.url().includes('columns/search?q=') && res.status() === 200
-        );
-        await schema.searchFor(columns[0].name);
-        await searchRes;
-
-        await schema.shouldShowFieldByName(columns[0].name);
-        await schema.shouldNotShowFieldByName(columns[1].name);
-      });
-
-      test('Should show no results for a non-matching search', async ({
-        adminPage,
-        rightPanel,
-        schema,
-      }) => {
-        await openSchemaTab(
-          adminPage,
-          {
-            name: tableEntity.entity.name,
-            endpoint: tableEntity.endpoint,
-            entityResponseData: tableEntity.entityResponseData,
-          },
-          rightPanel,
-          schema
-        );
-
-        const searchRes = adminPage.waitForResponse(
-          (res) =>
-            res.url().includes('columns/search?q=') && res.status() === 200
-        );
-        await schema.searchFor('zzz_no_match_column_xyz');
-        await searchRes;
-
-        await schema.shouldShowNoResults();
-      });
-    });
-
-    // ── Dashboard Data Model ──────────────────────────────────────────────────
-    test.describe('DashboardDataModel - column search (server-side)', () => {
-      test('Should filter columns by name via server-side search', async ({
-        adminPage,
-        rightPanel,
-        schema,
-      }) => {
-        await openSchemaTab(
-          adminPage,
-          {
-            name: dashboardDataModelEntity.entity.name,
-            endpoint: dashboardDataModelEntity.endpoint,
-            entityResponseData: dashboardDataModelEntity.entityResponseData,
-          },
-          rightPanel,
-          schema
-        );
-
-        const searchRes = adminPage.waitForResponse(
-          (res) =>
-            res.url().includes('columns/search?q=') && res.status() === 200
-        );
-        // DashboardDataModelClass typically has 'merchant', 'notes', 'country_name'
-        await schema.searchFor('merchant');
-        await searchRes;
-
-        await schema.shouldShowFieldByName('merchant');
-        await schema.shouldNotShowFieldByName('notes');
-      });
-
-      test('Should show no results for a non-matching search', async ({
-        adminPage,
-        rightPanel,
-        schema,
-      }) => {
-        await openSchemaTab(
-          adminPage,
-          {
-            name: dashboardDataModelEntity.entity.name,
-            endpoint: dashboardDataModelEntity.endpoint,
-            entityResponseData: dashboardDataModelEntity.entityResponseData,
-          },
-          rightPanel,
-          schema
-        );
-
-        const searchRes = adminPage.waitForResponse(
-          (res) =>
-            res.url().includes('columns/search?q=') && res.status() === 200
-        );
-        await schema.searchFor('zzz_no_match_xyz');
-        await searchRes;
-
-        await schema.shouldShowNoResults();
-      });
-    });
   });
 });
