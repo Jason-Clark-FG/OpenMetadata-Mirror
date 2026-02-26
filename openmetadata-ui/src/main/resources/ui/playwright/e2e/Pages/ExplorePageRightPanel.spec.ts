@@ -44,17 +44,6 @@ import { PolicyClass } from '../../support/access-control/PoliciesClass';
 import { RolesClass } from '../../support/access-control/RolesClass';
 import { openColumnDetailPanel } from '../../utils/entity';
 
-// Test data setup
-const tableEntity = new TableClass();
-const dashboardEntity = new DashboardClass();
-const pipelineEntity = new PipelineClass();
-const topicEntity = new TopicClass();
-const databaseEntity = new DatabaseClass();
-const databaseSchemaEntity = new DatabaseSchemaClass();
-const dashboardDataModelEntity = new DashboardDataModelClass();
-const mlmodelEntity = new MlModelClass();
-const containerEntity = new ContainerClass();
-const searchIndexEntity = new SearchIndexClass();
 const domainEntity = new Domain();
 const user1 = new UserClass();
 // Dedicated entity for the DataConsumer owner-restriction test.
@@ -76,20 +65,6 @@ const testClassification2 = new ClassificationClass();
 const testTag2 = new TagClass({
   classification: testClassification2.data.name,
 });
-
-// Entity mapping for tests
-const entityMap = {
-  table: tableEntity,
-  dashboard: dashboardEntity,
-  pipeline: pipelineEntity,
-  topic: topicEntity,
-  database: databaseEntity,
-  databaseSchema: databaseSchemaEntity,
-  dashboardDataModel: dashboardDataModelEntity,
-  mlmodel: mlmodelEntity,
-  container: containerEntity,
-  searchIndex: searchIndexEntity,
-};
 
 // Define local fixture using test.extend
 const test = baseTest.extend<{
@@ -137,38 +112,6 @@ test.describe('Right Panel Test Suite', () => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
-      // Create all entities in parallel for better performance
-      await Promise.all(
-        Object.values(entityMap).map((entityInstance) =>
-          entityInstance.create(apiContext)
-        )
-      );
-
-      // Create custom properties sequentially to avoid timeout (each call creates 4 users + multiple properties)
-      // Only create for entities that support custom properties
-      for (const [entityType, entityInstance] of Object.entries(entityMap)) {
-        try {
-          await entityInstance.prepareCustomProperty(apiContext);
-
-          // Populate customPropertyData from entity's customPropertyValue
-          // Get the first property from customPropertyValue (which is keyed by property type names like 'string', 'integer', etc.)
-          const firstProperty = Object.values(
-            entityInstance.customPropertyValue
-          )[0];
-          if (firstProperty) {
-            customPropertyData[entityType] = {
-              property: firstProperty.property,
-            };
-          }
-        } catch (error) {
-          console.warn(
-            `Failed to create custom property for ${entityType}:`,
-            error
-          );
-          // Continue with other entities even if one fails
-        }
-      }
-
       await testClassification.create(apiContext);
       await testTag.create(apiContext);
       await testGlossary.create(apiContext);
@@ -193,11 +136,6 @@ test.describe('Right Panel Test Suite', () => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
-      await Promise.all(
-        Object.values(entityMap).map((entityInstance) =>
-          entityInstance.delete(apiContext)
-        )
-      );
       await testTag.delete(apiContext);
       await testClassification.delete(apiContext);
       await testTag2.delete(apiContext);
@@ -423,785 +361,844 @@ test.describe('Right Panel Test Suite', () => {
       });
     });
 
-    test.describe('Schema panel tests', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should display and verify schema fields for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          schema,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('schema'),
-            `Schema tab not available for ${entityType}`
+    test.describe('Entity validation with shared read-only entities', () => {
+      const entityMap = {
+        table: new TableClass(),
+        dashboard: new DashboardClass(),
+        pipeline: new PipelineClass(),
+        topic: new TopicClass(),
+        database: new DatabaseClass(),
+        databaseSchema: new DatabaseSchemaClass(),
+        dashboardDataModel: new DashboardDataModelClass(),
+        mlmodel: new MlModelClass(),
+        container: new ContainerClass(),
+        searchIndex: new SearchIndexClass(),
+      };
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await Promise.all(
+            Object.values(entityMap).map((e) => e.create(apiContext))
           );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await schema.navigateToSchemaTab();
-          await schema.shouldBeVisible();
-
-          // Extract fields from DOM to test search dynamically
-          const fieldCards = adminPage.locator(
-            '.schema-field-cards-container .field-card'
-          );
-          if ((await fieldCards.count()) === 0) {
-            // Wait for fields to render
-            await fieldCards
-              .first()
-              .waitFor({ state: 'visible', timeout: 5000 })
-              .catch(() => null);
-          }
-          const count = await fieldCards.count();
-
-          if (count >= 2) {
-            const firstCardId = await fieldCards
-              .nth(0)
-              .getAttribute('data-testid');
-            const secondCardId = await fieldCards
-              .nth(1)
-              .getAttribute('data-testid');
-
-            const firstField = firstCardId?.replace('field-card-', '');
-            const secondField = secondCardId?.replace('field-card-', '');
-
-            // Entities that use server-side schema search
-            const usesServerSideSearch = [
-              'table',
-              'dashboardDataModel',
-            ].includes(entityType);
-
-            if (firstField && secondField) {
-              // 1. Search for first field
-              let searchRes;
-              if (usesServerSideSearch) {
-                searchRes = adminPage.waitForResponse(
-                  (res) =>
-                    res.url().includes('columns/search?offset=') &&
-                    res.url().includes('q=') &&
-                    res.status() === 200
-                );
+          for (const [entityType, entityInstance] of Object.entries(
+            entityMap
+          )) {
+            try {
+              await entityInstance.prepareCustomProperty(apiContext);
+              const firstProperty = Object.values(
+                entityInstance.customPropertyValue
+              )[0];
+              if (firstProperty) {
+                customPropertyData[entityType] = {
+                  property: firstProperty.property,
+                };
               }
-              await schema.searchFor(firstField);
-              if (searchRes) await searchRes;
-
-              await schema.shouldShowFieldByName(firstField);
-              await schema.shouldNotShowFieldByName(secondField);
-
-              // 2. Clear search
-              let clearRes;
-              if (usesServerSideSearch) {
-                clearRes = adminPage.waitForResponse(
-                  (res) =>
-                    res.url().includes('/columns?offset=') &&
-                    res.status() === 200
-                );
-              }
-              await schema.clearSearch();
-              if (clearRes) await clearRes;
-
-              await schema.shouldShowFieldByName(firstField);
-              await schema.shouldShowFieldByName(secondField);
-
-              // 3. Search for non-existent field
-              let noMatchRes;
-              if (usesServerSideSearch) {
-                noMatchRes = adminPage.waitForResponse(
-                  (res) =>
-                    res.url().includes('columns/search?offset=') &&
-                    res.url().includes('q=') &&
-                    res.status() === 200
-                );
-              }
-              await schema.searchFor('zzz_no_match_xyz');
-              if (noMatchRes) await noMatchRes;
-
-              await schema.shouldNotShowFieldByName(firstField);
-              await schema.shouldShowNoResults();
+            } catch (error) {
+              console.warn(
+                `Failed to create custom property for ${entityType}:`,
+                error
+              );
             }
           }
-        });
-      });
-    });
-
-    test.describe('Right panel validation by asset type', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`validates visible/hidden tabs and tab content for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelLoaded();
-          await rightPanel.validateRightPanelForAsset(entityType);
-        });
-      });
-    });
-
-    test.describe('Lineage - Navigation and Expansion', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should navigate to lineage and test controls for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          lineage,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('lineage'),
-            `Lineage tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await lineage.navigateToLineageTab();
-          await lineage.shouldBeVisible();
-          await lineage.shouldShowLineageControls();
-        });
-
-        test(`Should handle lineage expansion buttons for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          lineage,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('lineage'),
-            `Lineage tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelLoaded();
-          await rightPanel.waitForPanelVisible();
-          await lineage.navigateToLineageTab();
-          const hasUpstreamButton = await lineage.hasUpstreamButton();
-          if (hasUpstreamButton) {
-            await lineage.clickUpstreamButton();
-          }
-
-          const hasDownstreamButton = await lineage.hasDownstreamButton();
-          if (hasDownstreamButton) {
-            await lineage.clickDownstreamButton();
-          }
-        });
-      });
-    });
-
-    test.describe('Lineage - With real upstream and downstream data', () => {
-      test('Should show lineage connections created via API in the lineage tab', async ({
-        adminPage,
-      }) => {
-        test.slow();
-        const testTable = new TableClass();
-        const upstreamTable = new TableClass();
-        const downstreamTable = new TableClass();
-        const { apiContext, afterAction } = await performAdminLogin(
-          adminPage.context().browser()!
-        );
-        try {
-          await testTable.create(apiContext);
-          await upstreamTable.create(apiContext);
-          await downstreamTable.create(apiContext);
-
-          await connectEdgeBetweenNodesViaAPI(
-            apiContext,
-            { id: upstreamTable.entityResponseData.id, type: 'table' },
-            { id: testTable.entityResponseData.id, type: 'table' },
-            []
-          );
-          await connectEdgeBetweenNodesViaAPI(
-            apiContext,
-            { id: testTable.entityResponseData.id, type: 'table' },
-            { id: downstreamTable.entityResponseData.id, type: 'table' },
-            []
-          );
-
-          const fqn = getEntityFqn(testTable);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            testTable.entity.name,
-            testTable.endpoint,
-            fqn
-          );
-
-          const rightPanel = new RightPanelPageObject(adminPage, testTable);
-          const localLineage = new LineagePageObject(rightPanel);
-          await rightPanel.waitForPanelLoaded();
-
-          await localLineage.navigateToLineageTab();
-          await localLineage.shouldBeVisible();
-          await localLineage.shouldShowLineageControls();
-
-          const summaryPanel = adminPage.locator(
-            '[data-testid="entity-summary-panel-container"]'
-          );
-          const lineageContainer = summaryPanel.locator('.lineage-tab-content');
-
-          // Default view is downstream — verify downstream entity card
-          const downstreamCard = lineageContainer
-            .locator('.lineage-item-card')
-            .first();
-          await expect(downstreamCard).toBeVisible();
-          await expect(downstreamCard).toContainText(
-            downstreamTable.entityResponseData?.displayName ??
-              downstreamTable.entity.name
-          );
-
-          // Switch to upstream view and verify upstream entity card
-          await localLineage.clickUpstreamButton();
-          const upstreamCard = lineageContainer
-            .locator('.lineage-item-card')
-            .first();
-          await expect(upstreamCard).toBeVisible();
-          await expect(upstreamCard).toContainText(
-            upstreamTable.entityResponseData?.displayName ??
-              upstreamTable.entity.displayName
-          );
         } finally {
-          await testTable.delete(apiContext);
-          await upstreamTable.delete(apiContext);
-          await downstreamTable.delete(apiContext);
           await afterAction();
         }
       });
-    });
 
-    test.describe('DataQuality - Comprehensive UI Verification', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should navigate to data quality and verify tab structure for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          dataQuality,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('data quality'),
-            `Data Quality tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelLoaded();
-          await rightPanel.waitForPanelVisible();
-          await dataQuality.navigateToDataQualityTab();
-          await dataQuality.shouldBeVisible();
-        });
-
-        test(`Should display incidents tab for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          dataQuality,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('data quality'),
-            `Data Quality tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelLoaded();
-          await rightPanel.waitForPanelVisible();
-          await dataQuality.navigateToDataQualityTab();
-          await dataQuality.shouldBeVisible();
-          await dataQuality.navigateToIncidentsTab();
-          await dataQuality.shouldShowIncidentsTab();
-        });
-
-        test(`Should verify empty state when no test cases for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          dataQuality,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('data quality'),
-            `Data Quality tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelLoaded();
-          await rightPanel.waitForPanelVisible();
-          await dataQuality.navigateToDataQualityTab();
-          await dataQuality.shouldBeVisible();
-          await dataQuality.shouldShowTestCaseCardsCount(0);
-        });
-      });
-    });
-
-    test.describe('DataQuality - With real test data and incidents', () => {
-      test('Should display stat cards and filterable test case cards when runs exist', async ({
-        adminPage,
-      }) => {
-        test.slow();
-        const testTable = new TableClass();
-        const { apiContext, afterAction } = await performAdminLogin(
-          adminPage.context().browser()!
-        );
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
         try {
-          await testTable.create(apiContext);
-          await testTable.createTestSuiteAndPipelines(apiContext);
-
-          const successCase = await testTable.createTestCase(apiContext, {
-            name: `pw_dq_success_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 100 },
-            ],
-          });
-          const failedCase = await testTable.createTestCase(apiContext, {
-            name: `pw_dq_failed_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 100 },
-            ],
-          });
-          const abortedCase = await testTable.createTestCase(apiContext, {
-            name: `pw_dq_aborted_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 100 },
-            ],
-          });
-
-          await testTable.addTestCaseResult(
-            apiContext,
-            successCase.fullyQualifiedName,
-            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+          await Promise.all(
+            Object.values(entityMap).map((e) => e.delete(apiContext))
           );
-          await testTable.addTestCaseResult(
-            apiContext,
-            failedCase.fullyQualifiedName,
-            {
-              testCaseStatus: 'Failed',
-              result: 'Test failed',
-              timestamp: getCurrentMillis(),
+        } finally {
+          await afterAction();
+        }
+      });
+
+      test.describe('Schema panel tests', () => {
+        Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+          test(`Should display and verify schema fields for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            schema,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('schema'),
+              `Schema tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await schema.navigateToSchemaTab();
+            await schema.shouldBeVisible();
+
+            // Extract fields from DOM to test search dynamically
+            const fieldCards = adminPage.locator(
+              '.schema-field-cards-container .field-card'
+            );
+            if ((await fieldCards.count()) === 0) {
+              // Wait for fields to render
+              await fieldCards
+                .first()
+                .waitFor({ state: 'visible', timeout: 5000 })
+                .catch(() => null);
             }
-          );
-          await testTable.addTestCaseResult(
-            apiContext,
-            abortedCase.fullyQualifiedName,
-            { testCaseStatus: 'Aborted', timestamp: getCurrentMillis() }
-          );
+            const count = await fieldCards.count();
 
-          const fqn = getEntityFqn(testTable);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            testTable.entity.name,
-            testTable.endpoint,
-            fqn
-          );
-          const rightPanel = new RightPanelPageObject(adminPage);
-          const localDQ = new DataQualityPageObject(rightPanel);
-          await rightPanel.waitForPanelLoaded();
+            if (count >= 2) {
+              const firstCardId = await fieldCards
+                .nth(0)
+                .getAttribute('data-testid');
+              const secondCardId = await fieldCards
+                .nth(1)
+                .getAttribute('data-testid');
 
-          await localDQ.navigateToDataQualityTab();
-          await localDQ.shouldBeVisible();
-          await localDQ.shouldShowAllStatCards();
-          await localDQ.shouldShowStatCardWithText('success', '1');
-          await localDQ.shouldShowStatCardWithText('failed', '1');
-          await localDQ.shouldShowStatCardWithText('aborted', '1');
+              const firstField = firstCardId?.replace('field-card-', '');
+              const secondField = secondCardId?.replace('field-card-', '');
 
-          const tabContent = adminPage.locator('.data-quality-tab-container');
-          // Validate each status filter shows the right single test case and badge
-          await localDQ.clickStatCard('success');
-          await localDQ.shouldShowTestCaseCardsCount(1);
-          await localDQ.shouldShowTestCaseCardWithName(successCase.name);
-          await localDQ.shouldShowTestCaseCardWithStatus('success');
+              // Entities that use server-side schema search
+              const usesServerSideSearch = [
+                'table',
+                'dashboardDataModel',
+              ].includes(entityType);
 
-          await localDQ.clickStatCard('aborted');
-          await localDQ.shouldShowTestCaseCardsCount(1);
-          await localDQ.shouldShowTestCaseCardWithName(abortedCase.name);
-          await localDQ.shouldShowTestCaseCardWithStatus('aborted');
+              if (firstField && secondField) {
+                // 1. Search for first field
+                let searchRes;
+                if (usesServerSideSearch) {
+                  searchRes = adminPage.waitForResponse(
+                    (res) =>
+                      res.url().includes('columns/search?offset=') &&
+                      res.url().includes('q=') &&
+                      res.status() === 200
+                  );
+                }
+                await schema.searchFor(firstField);
+                if (searchRes) await searchRes;
 
-          await localDQ.clickStatCard('failed');
-          await localDQ.shouldShowTestCaseCardsCount(1);
-          await localDQ.shouldShowTestCaseCardWithName(failedCase.name);
-          await localDQ.shouldShowTestCaseCardWithStatus('failed');
+                await schema.shouldShowFieldByName(firstField);
+                await schema.shouldNotShowFieldByName(secondField);
 
-          // Verify the test case link navigates to the correct detail page
-          const testCaseLink = tabContent
-            .locator(`[data-testid="test-case-${failedCase.name}"]`)
-            .first();
-          await testCaseLink.waitFor({ state: 'visible' });
-          const href = await testCaseLink.getAttribute('href');
-          expect(href).toContain(failedCase.fullyQualifiedName);
-        } finally {
-          await testTable.delete(apiContext);
-          await afterAction();
-        }
-      });
+                // 2. Clear search
+                let clearRes;
+                if (usesServerSideSearch) {
+                  clearRes = adminPage.waitForResponse(
+                    (res) =>
+                      res.url().includes('/columns?offset=') &&
+                      res.status() === 200
+                  );
+                }
+                await schema.clearSearch();
+                if (clearRes) await clearRes;
 
-      test('Should search and filter test cases in Data Quality tab', async ({
-        adminPage,
-      }) => {
-        test.slow();
-        const testTable = new TableClass();
-        const { apiContext, afterAction } = await performAdminLogin(
-          adminPage.context().browser()!
-        );
-        try {
-          await testTable.create(apiContext);
-          await testTable.createTestSuiteAndPipelines(apiContext);
+                await schema.shouldShowFieldByName(firstField);
+                await schema.shouldShowFieldByName(secondField);
 
-          const successCase1 = await testTable.createTestCase(apiContext, {
-            name: `pw_dq_search_target_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 100 },
-            ],
-          });
-          const successCase2 = await testTable.createTestCase(apiContext, {
-            name: `pw_dq_search_noise_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 100 },
-            ],
-          });
+                // 3. Search for non-existent field
+                let noMatchRes;
+                if (usesServerSideSearch) {
+                  noMatchRes = adminPage.waitForResponse(
+                    (res) =>
+                      res.url().includes('columns/search?offset=') &&
+                      res.url().includes('q=') &&
+                      res.status() === 200
+                  );
+                }
+                await schema.searchFor('zzz_no_match_xyz');
+                if (noMatchRes) await noMatchRes;
 
-          await testTable.addTestCaseResult(
-            apiContext,
-            successCase1.fullyQualifiedName,
-            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
-          );
-          await testTable.addTestCaseResult(
-            apiContext,
-            successCase2.fullyQualifiedName,
-            { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
-          );
-
-          const fqn = getEntityFqn(testTable);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            testTable.entity.name,
-            testTable.endpoint,
-            fqn
-          );
-          const rightPanel = new RightPanelPageObject(adminPage);
-          const localDQ = new DataQualityPageObject(rightPanel);
-          await rightPanel.waitForPanelLoaded();
-
-          await localDQ.navigateToDataQualityTab();
-          await localDQ.shouldBeVisible();
-          await localDQ.shouldShowTestCaseCardsCount(2);
-
-          // 1. Search for specific test case
-          const searchRes = adminPage.waitForResponse(
-            (res) =>
-              res.url().includes('dataQuality/testCases/search/list') &&
-              res.url().includes('q=')
-          );
-          await localDQ.searchFor('search_target');
-          const searchResponse = await searchRes;
-          expect(searchResponse.status()).toBe(200);
-          await localDQ.shouldShowTestCaseCardsCount(1);
-          await localDQ.shouldShowTestCaseCardWithName(successCase1.name);
-
-          // 2. Clear Search
-          const clearRes = adminPage.waitForResponse(
-            (res) =>
-              res.url().includes('dataQuality/testCases/search/list') &&
-              !res.url().includes('q=')
-          );
-          await localDQ.clearSearch();
-          const clearResponse = await clearRes;
-          expect(clearResponse.status()).toBe(200);
-          await localDQ.shouldShowTestCaseCardsCount(2);
-
-          // 3. Search for non-existent test case
-          const noMatchRes = adminPage.waitForResponse(
-            (res) =>
-              res.url().includes('dataQuality/testCases/search/list') &&
-              res.url().includes('q=') &&
-              res.status() === 200
-          );
-          await localDQ.searchFor('zzz_non_existent_search');
-          await noMatchRes;
-          await localDQ.shouldShowNoResults();
-        } finally {
-          await testTable.delete(apiContext);
-          await afterAction();
-        }
-      });
-
-      test('Should show incidents tab content and verify incident details when a failed test case exists', async ({
-        adminPage,
-      }) => {
-        test.slow();
-        const testTable = new TableClass();
-        const { apiContext, afterAction } = await performAdminLogin(
-          adminPage.context().browser()!
-        );
-        try {
-          await testTable.create(apiContext);
-          await testTable.createTestSuiteAndPipelines(apiContext);
-
-          const incidentCase = await testTable.createTestCase(apiContext, {
-            name: `pw_incident_${uuid()}`,
-            testDefinition: 'tableRowCountToBeBetween',
-            parameterValues: [
-              { name: 'minValue', value: 1 },
-              { name: 'maxValue', value: 10 },
-            ],
-          });
-          await testTable.addTestCaseResult(
-            apiContext,
-            incidentCase.fullyQualifiedName,
-            {
-              testCaseStatus: 'Failed',
-              result: 'Row count 15 exceeded maximum 10',
-              timestamp: getCurrentMillis(),
+                await schema.shouldNotShowFieldByName(firstField);
+                await schema.shouldShowNoResults();
+              }
             }
-          );
-
-          const fqn = getEntityFqn(testTable);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            testTable.entity.name,
-            testTable.endpoint,
-            fqn
-          );
-          const rightPanel = new RightPanelPageObject(adminPage);
-          const localDQ = new DataQualityPageObject(rightPanel);
-          await rightPanel.waitForPanelLoaded();
-
-          await localDQ.navigateToDataQualityTab();
-          await localDQ.shouldBeVisible();
-          await localDQ.navigateToIncidentsTab();
-          await localDQ.shouldShowIncidentsTab();
-
-          const tabContent = adminPage.locator('.data-quality-tab-container');
-          const incidentsTabContent = tabContent.locator(
-            '.incidents-tab-content'
-          );
-          await expect(incidentsTabContent).toBeVisible();
-          await expect(
-            incidentsTabContent.locator('.incidents-stats-container')
-          ).toBeVisible();
-
-          await localDQ.verifyIncidentCard({
-            status: 'Failed',
-            hasAssignee: false,
           });
-        } finally {
-          await testTable.delete(apiContext);
-          await afterAction();
-        }
+        });
       });
-    });
 
-    test.describe('CustomProperties - Comprehensive Testing', () => {
-      Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should navigate to custom properties and show interface for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          customProperties,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('custom property'),
-            `Custom Property tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
+      test.describe('Right panel validation by asset type', () => {
+        Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+          test(`validates visible/hidden tabs and tab content for ${entityType}`, async ({
             adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await customProperties.navigateToCustomPropertiesTab();
-          await customProperties.shouldShowCustomPropertiesContainer();
+            rightPanel,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelLoaded();
+            await rightPanel.validateRightPanelForAsset(entityType);
+          });
         });
+      });
 
-        test(`Should display custom properties for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          customProperties,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('custom property'),
-            `Custom Property tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
+      test.describe('Lineage - Navigation and Expansion', () => {
+        Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+          test(`Should navigate to lineage and test controls for ${entityType}`, async ({
             adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await customProperties.navigateToCustomPropertiesTab();
-          await customProperties.shouldShowCustomPropertiesContainer();
+            rightPanel,
+            lineage,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('lineage'),
+              `Lineage tab not available for ${entityType}`
+            );
 
-          const propertyName = customPropertyData[entityType]?.property?.name;
-          if (propertyName) {
-            await customProperties.shouldShowCustomProperty(propertyName);
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await lineage.navigateToLineageTab();
+            await lineage.shouldBeVisible();
+            await lineage.shouldShowLineageControls();
+          });
+
+          test(`Should handle lineage expansion buttons for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            lineage,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('lineage'),
+              `Lineage tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelLoaded();
+            await rightPanel.waitForPanelVisible();
+            await lineage.navigateToLineageTab();
+            const hasUpstreamButton = await lineage.hasUpstreamButton();
+            if (hasUpstreamButton) {
+              await lineage.clickUpstreamButton();
+            }
+
+            const hasDownstreamButton = await lineage.hasDownstreamButton();
+            if (hasDownstreamButton) {
+              await lineage.clickDownstreamButton();
+            }
+          });
+        });
+      });
+
+      test.describe('Lineage - With real upstream and downstream data', () => {
+        test('Should show lineage connections created via API in the lineage tab', async ({
+          adminPage,
+        }) => {
+          test.slow();
+          const testTable = new TableClass();
+          const upstreamTable = new TableClass();
+          const downstreamTable = new TableClass();
+          const { apiContext, afterAction } = await performAdminLogin(
+            adminPage.context().browser()!
+          );
+          try {
+            await testTable.create(apiContext);
+            await upstreamTable.create(apiContext);
+            await downstreamTable.create(apiContext);
+
+            await connectEdgeBetweenNodesViaAPI(
+              apiContext,
+              { id: upstreamTable.entityResponseData.id, type: 'table' },
+              { id: testTable.entityResponseData.id, type: 'table' },
+              []
+            );
+            await connectEdgeBetweenNodesViaAPI(
+              apiContext,
+              { id: testTable.entityResponseData.id, type: 'table' },
+              { id: downstreamTable.entityResponseData.id, type: 'table' },
+              []
+            );
+
+            const fqn = getEntityFqn(testTable);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              testTable.entity.name,
+              testTable.endpoint,
+              fqn
+            );
+
+            const rightPanel = new RightPanelPageObject(adminPage, testTable);
+            const localLineage = new LineagePageObject(rightPanel);
+            await rightPanel.waitForPanelLoaded();
+
+            await localLineage.navigateToLineageTab();
+            await localLineage.shouldBeVisible();
+            await localLineage.shouldShowLineageControls();
+
+            const summaryPanel = adminPage.locator(
+              '[data-testid="entity-summary-panel-container"]'
+            );
+            const lineageContainer = summaryPanel.locator(
+              '.lineage-tab-content'
+            );
+
+            // Default view is downstream — verify downstream entity card
+            const downstreamCard = lineageContainer
+              .locator('.lineage-item-card')
+              .first();
+            await expect(downstreamCard).toBeVisible();
+            await expect(downstreamCard).toContainText(
+              downstreamTable.entityResponseData?.displayName ??
+                downstreamTable.entity.name
+            );
+
+            // Switch to upstream view and verify upstream entity card
+            await localLineage.clickUpstreamButton();
+            const upstreamCard = lineageContainer
+              .locator('.lineage-item-card')
+              .first();
+            await expect(upstreamCard).toBeVisible();
+            await expect(upstreamCard).toContainText(
+              upstreamTable.entityResponseData?.displayName ??
+                upstreamTable.entity.displayName
+            );
+          } finally {
+            await testTable.delete(apiContext);
+            await upstreamTable.delete(apiContext);
+            await downstreamTable.delete(apiContext);
+            await afterAction();
+          }
+        });
+      });
+
+      test.describe('DataQuality - Comprehensive UI Verification', () => {
+        Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+          test(`Should navigate to data quality and verify tab structure for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            dataQuality,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('data quality'),
+              `Data Quality tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelLoaded();
+            await rightPanel.waitForPanelVisible();
+            await dataQuality.navigateToDataQualityTab();
+            await dataQuality.shouldBeVisible();
+          });
+
+          test(`Should display incidents tab for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            dataQuality,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('data quality'),
+              `Data Quality tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelLoaded();
+            await rightPanel.waitForPanelVisible();
+            await dataQuality.navigateToDataQualityTab();
+            await dataQuality.shouldBeVisible();
+            await dataQuality.navigateToIncidentsTab();
+            await dataQuality.shouldShowIncidentsTab();
+          });
+
+          test(`Should verify empty state when no test cases for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            dataQuality,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('data quality'),
+              `Data Quality tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelLoaded();
+            await rightPanel.waitForPanelVisible();
+            await dataQuality.navigateToDataQualityTab();
+            await dataQuality.shouldBeVisible();
+            await dataQuality.shouldShowTestCaseCardsCount(0);
+          });
+        });
+      });
+
+      test.describe('DataQuality - With real test data and incidents', () => {
+        test('Should display stat cards and filterable test case cards when runs exist', async ({
+          adminPage,
+        }) => {
+          test.slow();
+          const testTable = new TableClass();
+          const { apiContext, afterAction } = await performAdminLogin(
+            adminPage.context().browser()!
+          );
+          try {
+            await testTable.create(apiContext);
+            await testTable.createTestSuiteAndPipelines(apiContext);
+
+            const successCase = await testTable.createTestCase(apiContext, {
+              name: `pw_dq_success_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 100 },
+              ],
+            });
+            const failedCase = await testTable.createTestCase(apiContext, {
+              name: `pw_dq_failed_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 100 },
+              ],
+            });
+            const abortedCase = await testTable.createTestCase(apiContext, {
+              name: `pw_dq_aborted_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 100 },
+              ],
+            });
+
+            await testTable.addTestCaseResult(
+              apiContext,
+              successCase.fullyQualifiedName,
+              { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+            );
+            await testTable.addTestCaseResult(
+              apiContext,
+              failedCase.fullyQualifiedName,
+              {
+                testCaseStatus: 'Failed',
+                result: 'Test failed',
+                timestamp: getCurrentMillis(),
+              }
+            );
+            await testTable.addTestCaseResult(
+              apiContext,
+              abortedCase.fullyQualifiedName,
+              { testCaseStatus: 'Aborted', timestamp: getCurrentMillis() }
+            );
+
+            const fqn = getEntityFqn(testTable);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              testTable.entity.name,
+              testTable.endpoint,
+              fqn
+            );
+            const rightPanel = new RightPanelPageObject(adminPage);
+            const localDQ = new DataQualityPageObject(rightPanel);
+            await rightPanel.waitForPanelLoaded();
+
+            await localDQ.navigateToDataQualityTab();
+            await localDQ.shouldBeVisible();
+            await localDQ.shouldShowAllStatCards();
+            await localDQ.shouldShowStatCardWithText('success', '1');
+            await localDQ.shouldShowStatCardWithText('failed', '1');
+            await localDQ.shouldShowStatCardWithText('aborted', '1');
+
+            const tabContent = adminPage.locator('.data-quality-tab-container');
+            // Validate each status filter shows the right single test case and badge
+            await localDQ.clickStatCard('success');
+            await localDQ.shouldShowTestCaseCardsCount(1);
+            await localDQ.shouldShowTestCaseCardWithName(successCase.name);
+            await localDQ.shouldShowTestCaseCardWithStatus('success');
+
+            await localDQ.clickStatCard('aborted');
+            await localDQ.shouldShowTestCaseCardsCount(1);
+            await localDQ.shouldShowTestCaseCardWithName(abortedCase.name);
+            await localDQ.shouldShowTestCaseCardWithStatus('aborted');
+
+            await localDQ.clickStatCard('failed');
+            await localDQ.shouldShowTestCaseCardsCount(1);
+            await localDQ.shouldShowTestCaseCardWithName(failedCase.name);
+            await localDQ.shouldShowTestCaseCardWithStatus('failed');
+
+            // Verify the test case link navigates to the correct detail page
+            const testCaseLink = tabContent
+              .locator(`[data-testid="test-case-${failedCase.name}"]`)
+              .first();
+            await testCaseLink.waitFor({ state: 'visible' });
+            const href = await testCaseLink.getAttribute('href');
+            expect(href).toContain(failedCase.fullyQualifiedName);
+          } finally {
+            await testTable.delete(apiContext);
+            await afterAction();
           }
         });
 
-        test(`Should search custom properties for ${entityType}`, async ({
+        test('Should search and filter test cases in Data Quality tab', async ({
           adminPage,
-          rightPanel,
-          customProperties,
         }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('custom property'),
-            `Custom Property tab not available for ${entityType}`
+          test.slow();
+          const testTable = new TableClass();
+          const { apiContext, afterAction } = await performAdminLogin(
+            adminPage.context().browser()!
           );
+          try {
+            await testTable.create(apiContext);
+            await testTable.createTestSuiteAndPipelines(apiContext);
 
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await customProperties.navigateToCustomPropertiesTab();
-          await customProperties.shouldShowCustomPropertiesContainer();
+            const successCase1 = await testTable.createTestCase(apiContext, {
+              name: `pw_dq_search_target_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 100 },
+              ],
+            });
+            const successCase2 = await testTable.createTestCase(apiContext, {
+              name: `pw_dq_search_noise_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 100 },
+              ],
+            });
 
-          const propertyName = customPropertyData[entityType]?.property?.name;
-          if (propertyName) {
-            await customProperties.searchCustomProperties(propertyName);
-            await customProperties.shouldShowCustomProperty(propertyName);
+            await testTable.addTestCaseResult(
+              apiContext,
+              successCase1.fullyQualifiedName,
+              { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+            );
+            await testTable.addTestCaseResult(
+              apiContext,
+              successCase2.fullyQualifiedName,
+              { testCaseStatus: 'Success', timestamp: getCurrentMillis() }
+            );
+
+            const fqn = getEntityFqn(testTable);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              testTable.entity.name,
+              testTable.endpoint,
+              fqn
+            );
+            const rightPanel = new RightPanelPageObject(adminPage);
+            const localDQ = new DataQualityPageObject(rightPanel);
+            await rightPanel.waitForPanelLoaded();
+
+            await localDQ.navigateToDataQualityTab();
+            await localDQ.shouldBeVisible();
+            await localDQ.shouldShowTestCaseCardsCount(2);
+
+            // 1. Search for specific test case
+            const searchRes = adminPage.waitForResponse(
+              (res) =>
+                res.url().includes('dataQuality/testCases/search/list') &&
+                res.url().includes('q=')
+            );
+            await localDQ.searchFor('search_target');
+            const searchResponse = await searchRes;
+            expect(searchResponse.status()).toBe(200);
+            await localDQ.shouldShowTestCaseCardsCount(1);
+            await localDQ.shouldShowTestCaseCardWithName(successCase1.name);
+
+            // 2. Clear Search
+            const clearRes = adminPage.waitForResponse(
+              (res) =>
+                res.url().includes('dataQuality/testCases/search/list') &&
+                !res.url().includes('q=')
+            );
+            await localDQ.clearSearch();
+            const clearResponse = await clearRes;
+            expect(clearResponse.status()).toBe(200);
+            await localDQ.shouldShowTestCaseCardsCount(2);
+
+            // 3. Search for non-existent test case
+            const noMatchRes = adminPage.waitForResponse(
+              (res) =>
+                res.url().includes('dataQuality/testCases/search/list') &&
+                res.url().includes('q=') &&
+                res.status() === 200
+            );
+            await localDQ.searchFor('zzz_non_existent_search');
+            await noMatchRes;
+            await localDQ.shouldShowNoResults();
+          } finally {
+            await testTable.delete(apiContext);
+            await afterAction();
           }
         });
 
-        test(`Should clear search and show all properties for ${entityType}`, async ({
+        test('Should show incidents tab content and verify incident details when a failed test case exists', async ({
           adminPage,
-          rightPanel,
-          customProperties,
         }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('custom property'),
-            `Custom Property tab not available for ${entityType}`
+          test.slow();
+          const testTable = new TableClass();
+          const { apiContext, afterAction } = await performAdminLogin(
+            adminPage.context().browser()!
           );
+          try {
+            await testTable.create(apiContext);
+            await testTable.createTestSuiteAndPipelines(apiContext);
 
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
+            const incidentCase = await testTable.createTestCase(apiContext, {
+              name: `pw_incident_${uuid()}`,
+              testDefinition: 'tableRowCountToBeBetween',
+              parameterValues: [
+                { name: 'minValue', value: 1 },
+                { name: 'maxValue', value: 10 },
+              ],
+            });
+            await testTable.addTestCaseResult(
+              apiContext,
+              incidentCase.fullyQualifiedName,
+              {
+                testCaseStatus: 'Failed',
+                result: 'Row count 15 exceeded maximum 10',
+                timestamp: getCurrentMillis(),
+              }
+            );
+
+            const fqn = getEntityFqn(testTable);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              testTable.entity.name,
+              testTable.endpoint,
+              fqn
+            );
+            const rightPanel = new RightPanelPageObject(adminPage);
+            const localDQ = new DataQualityPageObject(rightPanel);
+            await rightPanel.waitForPanelLoaded();
+
+            await localDQ.navigateToDataQualityTab();
+            await localDQ.shouldBeVisible();
+            await localDQ.navigateToIncidentsTab();
+            await localDQ.shouldShowIncidentsTab();
+
+            const tabContent = adminPage.locator('.data-quality-tab-container');
+            const incidentsTabContent = tabContent.locator(
+              '.incidents-tab-content'
+            );
+            await expect(incidentsTabContent).toBeVisible();
+            await expect(
+              incidentsTabContent.locator('.incidents-stats-container')
+            ).toBeVisible();
+
+            await localDQ.verifyIncidentCard({
+              status: 'Failed',
+              hasAssignee: false,
+            });
+          } finally {
+            await testTable.delete(apiContext);
+            await afterAction();
+          }
+        });
+      });
+
+      test.describe('CustomProperties - Comprehensive Testing', () => {
+        Object.entries(entityMap).forEach(([entityType, entityInstance]) => {
+          test(`Should navigate to custom properties and show interface for ${entityType}`, async ({
             adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await customProperties.navigateToCustomPropertiesTab();
-          await customProperties.shouldShowCustomPropertiesContainer();
+            rightPanel,
+            customProperties,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('custom property'),
+              `Custom Property tab not available for ${entityType}`
+            );
 
-          const propertyName = customPropertyData[entityType]?.property?.name;
-          if (propertyName) {
-            await customProperties.searchCustomProperties(propertyName);
-            await customProperties.shouldShowCustomProperty(propertyName);
-
-            await customProperties.clearSearch();
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await customProperties.navigateToCustomPropertiesTab();
             await customProperties.shouldShowCustomPropertiesContainer();
-          }
-        });
-        // TODO: Remove skip once the we have search support for custom properties to avoid flakiness
-        test.skip(`Should show no results for invalid search for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          customProperties,
-        }) => {
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
-            adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(entityInstance);
+          });
 
-          if (rightPanel.isTabAvailable('custom property')) {
+          test(`Should display custom properties for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            customProperties,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('custom property'),
+              `Custom Property tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
             await customProperties.navigateToCustomPropertiesTab();
             await customProperties.shouldShowCustomPropertiesContainer();
 
-            await customProperties.searchCustomProperties(
-              'nonexistent_property_xyz123'
-            );
-            await customProperties.shouldShowEmptyCustomPropertiesContainer();
-          }
-        });
+            const propertyName = customPropertyData[entityType]?.property?.name;
+            if (propertyName) {
+              await customProperties.shouldShowCustomProperty(propertyName);
+            }
+          });
 
-        test(`Should verify property name is visible for ${entityType}`, async ({
-          adminPage,
-          rightPanel,
-          customProperties,
-        }) => {
-          rightPanel.setEntityConfig(entityInstance);
-          test.skip(
-            !rightPanel.isTabAvailable('custom property'),
-            `Custom Property tab not available for ${entityType}`
-          );
-
-          const fqn = getEntityFqn(entityInstance);
-          await navigateToExploreAndSelectEntity(
+          test(`Should search custom properties for ${entityType}`, async ({
             adminPage,
-            entityInstance.entity.name,
-            entityInstance.endpoint,
-            fqn
-          );
-          await rightPanel.waitForPanelVisible();
-          await customProperties.navigateToCustomPropertiesTab();
-          await customProperties.shouldShowCustomPropertiesContainer();
+            rightPanel,
+            customProperties,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('custom property'),
+              `Custom Property tab not available for ${entityType}`
+            );
 
-          const propertyName = customPropertyData[entityType]?.property?.name;
-          if (propertyName) {
-            await customProperties.verifyPropertyType(propertyName);
-          }
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await customProperties.navigateToCustomPropertiesTab();
+            await customProperties.shouldShowCustomPropertiesContainer();
+
+            const propertyName = customPropertyData[entityType]?.property?.name;
+            if (propertyName) {
+              await customProperties.searchCustomProperties(propertyName);
+              await customProperties.shouldShowCustomProperty(propertyName);
+            }
+          });
+
+          test(`Should clear search and show all properties for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            customProperties,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('custom property'),
+              `Custom Property tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await customProperties.navigateToCustomPropertiesTab();
+            await customProperties.shouldShowCustomPropertiesContainer();
+
+            const propertyName = customPropertyData[entityType]?.property?.name;
+            if (propertyName) {
+              await customProperties.searchCustomProperties(propertyName);
+              await customProperties.shouldShowCustomProperty(propertyName);
+
+              await customProperties.clearSearch();
+              await customProperties.shouldShowCustomPropertiesContainer();
+            }
+          });
+          // TODO: Remove skip once the we have search support for custom properties to avoid flakiness
+          test.skip(`Should show no results for invalid search for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            customProperties,
+          }) => {
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            rightPanel.setEntityConfig(entityInstance);
+
+            if (rightPanel.isTabAvailable('custom property')) {
+              await customProperties.navigateToCustomPropertiesTab();
+              await customProperties.shouldShowCustomPropertiesContainer();
+
+              await customProperties.searchCustomProperties(
+                'nonexistent_property_xyz123'
+              );
+              await customProperties.shouldShowEmptyCustomPropertiesContainer();
+            }
+          });
+
+          test(`Should verify property name is visible for ${entityType}`, async ({
+            adminPage,
+            rightPanel,
+            customProperties,
+          }) => {
+            rightPanel.setEntityConfig(entityInstance);
+            test.skip(
+              !rightPanel.isTabAvailable('custom property'),
+              `Custom Property tab not available for ${entityType}`
+            );
+
+            const fqn = getEntityFqn(entityInstance);
+            await navigateToExploreAndSelectEntity(
+              adminPage,
+              entityInstance.entity.name,
+              entityInstance.endpoint,
+              fqn
+            );
+            await rightPanel.waitForPanelVisible();
+            await customProperties.navigateToCustomPropertiesTab();
+            await customProperties.shouldShowCustomPropertiesContainer();
+
+            const propertyName = customPropertyData[entityType]?.property?.name;
+            if (propertyName) {
+              await customProperties.verifyPropertyType(propertyName);
+            }
+          });
         });
       });
-    });
+    }); // end: Entity validation with shared read-only entities
 
     test.describe('Overview panel - Deleted entity verification', () => {
       const deletedEntityVerificationEntityMap = {
@@ -2212,59 +2209,86 @@ test.describe('Right Panel Test Suite', () => {
         }
       });
 
-      Object.entries(descriptionRemovalEntityMap).forEach(([entityType, entityInstance]) => {
-        test(`Should clear description for ${entityType}`, async ({
-          adminPage,
-        }) => {
-          const { page: authenticatedPage, afterAction } =
-            await performAdminLogin(adminPage.context().browser()!);
-          const rightPanel = new RightPanelPageObject(authenticatedPage);
-          const localOverview = new OverviewPageObject(rightPanel);
+      Object.entries(descriptionRemovalEntityMap).forEach(
+        ([entityType, entityInstance]) => {
+          test(`Should clear description for ${entityType}`, async ({
+            adminPage,
+          }) => {
+            const { page: authenticatedPage, afterAction } =
+              await performAdminLogin(adminPage.context().browser()!);
+            const rightPanel = new RightPanelPageObject(authenticatedPage);
+            const localOverview = new OverviewPageObject(rightPanel);
 
-          // Use the shared entity instance from entityMap which is already created in beforeAll
-          try {
-            const fqn = getEntityFqn(entityInstance);
-            await navigateToExploreAndSelectEntity(
-              authenticatedPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelVisible();
-            rightPanel.setEntityConfig(entityInstance);
+            // Use the shared entity instance from entityMap which is already created in beforeAll
+            try {
+              const fqn = getEntityFqn(entityInstance);
+              await navigateToExploreAndSelectEntity(
+                authenticatedPage,
+                entityInstance.entity.name,
+                entityInstance.endpoint,
+                fqn
+              );
+              await rightPanel.waitForPanelVisible();
+              rightPanel.setEntityConfig(entityInstance);
 
-            // First, ensure there is a description
-            const descriptionText = `Description to remove - ${uuid()}`;
-            await localOverview.editDescription(descriptionText);
-            await localOverview.shouldShowDescriptionWithText(descriptionText);
+              // First, ensure there is a description
+              const descriptionText = `Description to remove - ${uuid()}`;
+              await localOverview.editDescription(descriptionText);
+              await localOverview.shouldShowDescriptionWithText(
+                descriptionText
+              );
 
-            // Clear the description
-            await localOverview.editDescription('');
+              // Clear the description
+              await localOverview.editDescription('');
 
-            // Reload the entity panel and verify description is gone.
-            // waitForPanelLoaded waits for panel loaders to finish, ensuring the
-            // entity data (description) has been fetched from the server before asserting.
-            await navigateToExploreAndSelectEntity(
-              authenticatedPage,
-              entityInstance.entity.name,
-              entityInstance.endpoint,
-              fqn
-            );
-            await rightPanel.waitForPanelLoaded();
+              // Reload the entity panel and verify description is gone.
+              // waitForPanelLoaded waits for panel loaders to finish, ensuring the
+              // entity data (description) has been fetched from the server before asserting.
+              await navigateToExploreAndSelectEntity(
+                authenticatedPage,
+                entityInstance.entity.name,
+                entityInstance.endpoint,
+                fqn
+              );
+              await rightPanel.waitForPanelLoaded();
 
-            // The description text should no longer be present
-            const descElement = authenticatedPage
-              .locator('.description-section')
-              .getByText(descriptionText);
-            await expect(descElement).not.toBeVisible();
-          } finally {
-            await afterAction();
-          }
-        });
-      });
+              // The description text should no longer be present
+              const descElement = authenticatedPage
+                .locator('.description-section')
+                .getByText(descriptionText);
+              await expect(descElement).not.toBeVisible();
+            } finally {
+              await afterAction();
+            }
+          });
+        }
+      );
     });
 
     test.describe('Entity switch - Panel content reload', () => {
+      const entitySwitchTable = new TableClass();
+      const entitySwitchDashboard = new DashboardClass();
+
+      test.beforeAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await entitySwitchTable.create(apiContext);
+          await entitySwitchDashboard.create(apiContext);
+        } finally {
+          await afterAction();
+        }
+      });
+
+      test.afterAll(async ({ browser }) => {
+        const { apiContext, afterAction } = await performAdminLogin(browser);
+        try {
+          await entitySwitchTable.delete(apiContext);
+          await entitySwitchDashboard.delete(apiContext);
+        } finally {
+          await afterAction();
+        }
+      });
+
       test('Should update panel content when switching between entities', async ({
         adminPage,
       }) => {
@@ -2274,57 +2298,51 @@ test.describe('Right Panel Test Suite', () => {
         const localOverview = new OverviewPageObject(rightPanel);
 
         try {
-          // Navigate to the first entity (table)
-          const tableFqn = getEntityFqn(tableEntity);
+          const tableFqn = getEntityFqn(entitySwitchTable);
           await navigateToExploreAndSelectEntity(
             authenticatedPage,
-            tableEntity.entity.displayName,
-            tableEntity.endpoint,
+            entitySwitchTable.entity.displayName,
+            entitySwitchTable.endpoint,
             tableFqn
           );
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(tableEntity);
+          rightPanel.setEntityConfig(entitySwitchTable);
           await localOverview.navigateToOverviewTab();
           await localOverview.shouldBeVisible();
 
-          // Verify table-specific content is visible
           const panelContainer = authenticatedPage.locator(
             '[data-testid="entity-summary-panel-container"]'
           );
           await expect(panelContainer).toBeVisible();
           const tableNameInPanel = panelContainer
             .getByTestId('entity-link')
-            .getByText(tableEntity.entity.displayName);
+            .getByText(entitySwitchTable.entity.displayName);
           await expect(tableNameInPanel).toBeVisible();
 
-          // Switch to a different entity (dashboard)
-          const dashboardFqn = getEntityFqn(dashboardEntity);
+          const dashboardFqn = getEntityFqn(entitySwitchDashboard);
           await navigateToExploreAndSelectEntity(
             authenticatedPage,
-            dashboardEntity.entity.displayName,
-            dashboardEntity.endpoint,
+            entitySwitchDashboard.entity.displayName,
+            entitySwitchDashboard.endpoint,
             dashboardFqn
           );
           await rightPanel.waitForPanelLoaded();
           await rightPanel.waitForPanelVisible();
-          rightPanel.setEntityConfig(dashboardEntity);
+          rightPanel.setEntityConfig(entitySwitchDashboard);
 
-          // Verify dashboard-specific content is now visible (not stale table data)
           const updatedPanel = authenticatedPage.locator(
             '[data-testid="entity-summary-panel-container"]'
           );
           await expect(updatedPanel).toBeVisible();
           const dashboardNameInPanel = updatedPanel
             .getByTestId('entity-link')
-            .getByText(dashboardEntity.entity.displayName);
-          // Explicitly wait for the dashboard name to appear before checking absence of table name
+            .getByText(entitySwitchDashboard.entity.displayName);
           await dashboardNameInPanel.waitFor({ state: 'visible' });
           await expect(dashboardNameInPanel).toBeVisible();
 
-          // Verify the old entity name is no longer visible in the panel
           const staleTableName = updatedPanel
             .getByTestId('entity-link')
-            .getByText(tableEntity.entity.displayName, { exact: true });
+            .getByText(entitySwitchTable.entity.displayName, { exact: true });
           await expect(staleTableName).not.toBeVisible();
         } finally {
           await afterAction();
