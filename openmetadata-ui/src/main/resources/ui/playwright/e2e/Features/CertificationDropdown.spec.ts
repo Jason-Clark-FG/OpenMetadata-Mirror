@@ -148,7 +148,6 @@ test.describe.serial('Certification Dropdown', () => {
       await closeCertificationDropdown(page);
 
       await setTagDisabled(apiContext, tag.responseData.id, false);
-      await page.waitForTimeout(1000);
 
       await redirectToHomePage(page);
       await table.visitEntityPage(page);
@@ -186,7 +185,6 @@ test.describe.serial('Certification Dropdown', () => {
       await closeCertificationDropdown(page);
 
       await setCertificationClassificationDisabled(apiContext, false);
-      await page.waitForTimeout(1000);
 
       await redirectToHomePage(page);
       await table.visitEntityPage(page);
