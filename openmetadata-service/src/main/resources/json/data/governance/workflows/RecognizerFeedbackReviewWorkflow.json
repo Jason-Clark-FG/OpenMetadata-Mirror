@@ -10,7 +10,7 @@
     "config": {
       "entityTypes": ["recognizerFeedback"],
       "events": ["Created", "Updated"],
-      "exclude": ["reviewers"],
+      "exclude": [],
       "filter": {}
     },
     "output": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"]

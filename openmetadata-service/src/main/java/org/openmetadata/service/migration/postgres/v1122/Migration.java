@@ -14,6 +14,6 @@ public class Migration extends MigrationProcessImpl {
   @Override
   @SneakyThrows
   public void runDataMigration() {
-    MigrationUtil.migrateWorkflowAssigneeSources();
+    MigrationUtil.migrateWorkflowDefinitions();
   }
 }

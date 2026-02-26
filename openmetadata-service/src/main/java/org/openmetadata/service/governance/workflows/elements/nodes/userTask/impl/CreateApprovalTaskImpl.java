@@ -75,7 +75,7 @@ public class CreateApprovalTaskImpl implements TaskListener {
         }
       }
 
-      Thread task = createApprovalTask(entity, assignees, approvalThreshold, rejectionThreshold);
+      Thread task = createApprovalTask(entity, assignees);
       WorkflowHandler.getInstance().setCustomTaskId(delegateTask.getId(), task.getId());
 
       // Set the thresholds as task variables for use in WorkflowHandler
@@ -115,11 +115,7 @@ public class CreateApprovalTaskImpl implements TaskListener {
         assigneeEntityLink.getEntityType(), assigneeEntityLink.getEntityFQN(), Include.NON_DELETED);
   }
 
-  private Thread createApprovalTask(
-      EntityInterface entity,
-      List<EntityReference> assignees,
-      Integer approvalThreshold,
-      Integer rejectionThreshold) {
+  private Thread createApprovalTask(EntityInterface entity, List<EntityReference> assignees) {
     FeedRepository feedRepository = Entity.getFeedRepository();
     MessageParser.EntityLink about =
         new MessageParser.EntityLink(
@@ -127,6 +123,7 @@ public class CreateApprovalTaskImpl implements TaskListener {
 
     Thread thread;
 
+    ChangeEvent changeEvent;
     try {
       thread = feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
       // Update the existing thread with new assignees before terminating the workflow
@@ -141,7 +138,7 @@ public class CreateApprovalTaskImpl implements TaskListener {
       WorkflowHandler.getInstance()
           .terminateTaskProcessInstance(thread.getId(), "A Newer Process Instance is Running.");
       // Create and publish ChangeEvent for notification system
-      ChangeEvent changeEvent =
+      changeEvent =
           new ChangeEvent()
               .withId(UUID.randomUUID())
               .withEventType(EventType.THREAD_UPDATED)
@@ -171,7 +168,7 @@ public class CreateApprovalTaskImpl implements TaskListener {
       feedRepository.create(thread);
 
       // Create and publish ChangeEvent for notification system
-      ChangeEvent changeEvent =
+      changeEvent =
           new ChangeEvent()
               .withId(UUID.randomUUID())
               .withEventType(EventType.THREAD_CREATED)
@@ -180,12 +177,10 @@ public class CreateApprovalTaskImpl implements TaskListener {
               .withUserName(entity.getUpdatedBy())
               .withTimestamp(thread.getUpdatedAt())
               .withEntity(thread);
-
-      Entity.getCollectionDAO().changeEventDAO().insert(JsonUtils.pojoToMaskedJson(changeEvent));
-
-      // Send WebSocket Notification
-      WebsocketNotificationHandler.handleTaskNotification(thread);
     }
+    Entity.getCollectionDAO().changeEventDAO().insert(JsonUtils.pojoToMaskedJson(changeEvent));
+    // Send WebSocket Notification
+    WebsocketNotificationHandler.handleTaskNotification(thread);
     return thread;
   }
 }

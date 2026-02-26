@@ -14,7 +14,13 @@ import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.util.EntityUtil;
 
 /**
- * Migrates workflow definitions that use the deprecated {@code addReviewers: true} assignees
+ * Migrates workflow definitions for v1.12.2 changes:
+ *
+ * <p>1. Removes "reviewers" from excludeFields in workflow trigger configurations.
+ * This allows workflow triggers to respond to reviewer changes, enabling proper
+ * workflow execution when reviewers are updated.
+ *
+ * <p>2. Migrates workflow definitions that use the deprecated {@code addReviewers: true} assignees
  * config to the new {@code assigneeSources: ["reviewers"]} format.
  *
  * <p>For each workflow definition node whose assignees config contains {@code addReviewers: true}
@@ -34,8 +40,9 @@ public class MigrationUtil {
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String ADMIN_USER_NAME = "admin";
 
-  public static void migrateWorkflowAssigneeSources() {
-    LOG.info("Starting v1122 migration: converting addReviewers to assigneeSources");
+  public static void migrateWorkflowDefinitions() {
+    LOG.info(
+        "Starting v1122 migration: converting addReviewers to assigneeSources and removing reviewers from excludeFields");
 
     WorkflowDefinitionRepository repository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
@@ -48,12 +55,15 @@ public class MigrationUtil {
       try {
         String originalJson = JsonUtils.pojoToJson(workflow);
         JsonNode originalNode = MAPPER.readTree(originalJson);
-        JsonNode migratedNode = migrateNodes(originalNode);
 
-        if (migratedNode != originalNode) {
+        // First migrate exclude fields, then assignee sources
+        JsonNode excludeFieldsMigrated = migrateExcludeFields(originalNode);
+        JsonNode fullyMigrated = migrateNodes(excludeFieldsMigrated);
+
+        if (fullyMigrated != originalNode) {
           WorkflowDefinition updated =
               JsonUtils.readValue(
-                  MAPPER.writeValueAsString(migratedNode), WorkflowDefinition.class);
+                  MAPPER.writeValueAsString(fullyMigrated), WorkflowDefinition.class);
           repository.createOrUpdate(null, updated, ADMIN_USER_NAME);
           totalUpdated++;
           LOG.debug("Migrated workflow definition: {}", workflow.getFullyQualifiedName());
@@ -67,7 +77,9 @@ public class MigrationUtil {
       }
     }
 
-    LOG.info("Completed v1122 migration: {} workflow definitions updated", totalUpdated);
+    LOG.info(
+        "Completed v1122 migration: {} workflow definitions updated with assignee sources and exclude fields changes",
+        totalUpdated);
   }
 
   /**
@@ -185,5 +197,71 @@ public class MigrationUtil {
     result.set("candidates", candidates);
 
     return result;
+  }
+
+  /**
+   * Recursively walks the workflow JSON and removes "reviewers" from any "exclude" array in trigger config.
+   */
+  private static JsonNode migrateExcludeFields(JsonNode node) {
+    if (node == null || node.isNull()) {
+      return node;
+    }
+
+    if (node.isObject()) {
+      ObjectNode obj = (ObjectNode) node;
+      boolean changed = false;
+      ObjectNode result = MAPPER.createObjectNode();
+
+      for (java.util.Iterator<java.util.Map.Entry<String, JsonNode>> it = obj.fields();
+          it.hasNext(); ) {
+        java.util.Map.Entry<String, JsonNode> entry = it.next();
+        String fieldName = entry.getKey();
+        JsonNode fieldValue = entry.getValue();
+
+        if ("exclude".equals(fieldName) && fieldValue.isArray()) {
+          ArrayNode excludeArray = (ArrayNode) fieldValue;
+          ArrayNode newExcludeArray = MAPPER.createArrayNode();
+          boolean excludeArrayChanged = false;
+
+          for (JsonNode element : excludeArray) {
+            if (element.isTextual() && "reviewers".equals(element.asText())) {
+              excludeArrayChanged = true; // Skip this element (remove "reviewers")
+            } else {
+              newExcludeArray.add(element);
+            }
+          }
+
+          if (excludeArrayChanged) {
+            result.set(fieldName, newExcludeArray);
+            changed = true;
+          } else {
+            result.set(fieldName, fieldValue);
+          }
+        } else {
+          JsonNode migratedChild = migrateExcludeFields(fieldValue);
+          result.set(fieldName, migratedChild);
+          if (migratedChild != fieldValue) {
+            changed = true;
+          }
+        }
+      }
+      return changed ? result : node;
+    }
+
+    if (node.isArray()) {
+      ArrayNode arr = (ArrayNode) node;
+      boolean changed = false;
+      ArrayNode result = MAPPER.createArrayNode();
+      for (JsonNode element : arr) {
+        JsonNode migratedElement = migrateExcludeFields(element);
+        result.add(migratedElement);
+        if (migratedElement != element) {
+          changed = true;
+        }
+      }
+      return changed ? result : node;
+    }
+
+    return node;
   }
 }

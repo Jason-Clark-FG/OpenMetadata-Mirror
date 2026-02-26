@@ -1101,17 +1101,6 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     }
 
     @Override
-    public void updateReviewers() {
-      super.updateReviewers();
-      // adding the reviewer should add the person as assignee to the task
-      if (original.getReviewers() != null
-          && updated.getReviewers() != null
-          && !original.getReviewers().equals(updated.getReviewers())) {
-        updateTaskWithNewReviewers(updated);
-      }
-    }
-
-    @Override
     protected boolean consolidateChanges(TestCase original, TestCase updated, Operation operation) {
       return false;
     }
