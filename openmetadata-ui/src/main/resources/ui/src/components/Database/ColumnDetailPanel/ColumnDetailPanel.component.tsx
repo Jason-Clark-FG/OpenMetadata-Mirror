@@ -266,7 +266,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     }
   }, [
     isOpen,
-    activeColumn,
     fetchTestCases,
     permissions.ViewTests,
     permissions.ViewAll,

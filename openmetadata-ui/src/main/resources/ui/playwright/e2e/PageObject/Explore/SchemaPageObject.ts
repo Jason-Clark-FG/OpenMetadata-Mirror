@@ -27,6 +27,7 @@ export class SchemaPageObject extends RightPanelBase {
   private readonly schemaFieldsContainer: Locator;
   private readonly schemaFields: Locator;
   private readonly noDataContainer: Locator;
+  private readonly expandIcon: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
@@ -37,6 +38,9 @@ export class SchemaPageObject extends RightPanelBase {
     );
     this.schemaFields = this.schemaFieldsContainer.locator('.field-card ');
     this.noDataContainer = this.getSummaryPanel().locator('.no-data-container');
+    this.expandIcon = this.schemaFieldsContainer
+      .getByTestId('expand-icon')
+      .first();
   }
 
   // ============ NAVIGATION METHODS (Fluent Interface) ============
@@ -106,7 +110,7 @@ export class SchemaPageObject extends RightPanelBase {
    */
   async shouldShowExpandButton(): Promise<void> {
     await expect(
-      this.schemaFieldsContainer.getByTestId('expand-icon').first(),
+      this.expandIcon,
       'Expected a nested expand button to be visible'
     ).toBeVisible();
   }

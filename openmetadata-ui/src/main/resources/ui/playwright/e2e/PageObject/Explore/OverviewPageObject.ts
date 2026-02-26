@@ -79,6 +79,18 @@ export class OverviewPageObject extends RightPanelBase {
   private readonly updateOwnersButton: Locator;
   private readonly dataQualitySectionInOverview: Locator;
   private readonly lineageSection: Locator;
+  private readonly selectOwnerTabs: Locator;
+  private readonly selectOwnerTabsRoleTab: Locator;
+  private readonly selectOwnerTabsLoader: Locator;
+  private readonly selectOwnerUsersTab: Locator;
+  private readonly teamsSearchBar: Locator;
+  private readonly listItem: Locator;
+  private readonly domainTree: Locator;
+  private readonly domainTreeNode: Locator;
+  private readonly clearTierButton: Locator;
+  private readonly tagsSection: Locator;
+  private readonly tierSection: Locator;
+  private readonly domainsSection: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
@@ -109,9 +121,8 @@ export class OverviewPageObject extends RightPanelBase {
     );
     this.searchBar = this.page.getByTestId('search-bar-container');
     this.tagSearchBar = this.searchBar.getByTestId('tag-select-search-bar');
-    this.domainSearchBar = this.page
-      .getByTestId('domain-selectable-tree')
-      .getByTestId('searchbar');
+    this.domainTree = this.page.getByTestId('domain-selectable-tree');
+    this.domainSearchBar = this.domainTree.getByTestId('searchbar');
     this.domainList = this.page.locator('.domains-content');
     this.glossaryTermSearchBar = this.searchBar.getByTestId(
       'glossary-term-select-search-bar'
@@ -131,6 +142,27 @@ export class OverviewPageObject extends RightPanelBase {
     );
     this.dataQualitySectionInOverview = this.getSummaryPanel().locator(
       '.data-quality-section, .data-quality-content'
+    );
+    this.selectOwnerTabs = this.page.getByTestId('select-owner-tabs');
+    this.selectOwnerTabsRoleTab = this.page
+      .locator('[data-testid="select-owner-tabs"] [role="tab"]')
+      .first();
+    this.selectOwnerTabsLoader = this.page.locator(
+      '[data-testid="select-owner-tabs"] .ant-spin-dot'
+    );
+    this.selectOwnerUsersTab = this.selectOwnerTabs.getByRole('tab', {
+      name: 'Users',
+    });
+    this.teamsSearchBar = this.page.getByTestId(
+      'owner-select-teams-search-bar'
+    );
+    this.listItem = this.page.locator('.ant-list-item');
+    this.domainTreeNode = this.domainTree.locator('.ant-tree-treenode');
+    this.clearTierButton = this.tierListContainer.getByTestId('clear-tier');
+    this.tagsSection = this.container.locator('.tags-section, [class*="tags"]');
+    this.tierSection = this.container.locator('.tier-section, [class*="tier"]');
+    this.domainsSection = this.container.locator(
+      '.domains-section, [class*="domain"]'
     );
   }
 
@@ -335,14 +367,10 @@ export class OverviewPageObject extends RightPanelBase {
 
       await this.loader.waitFor({ state: 'detached' });
 
-      await this.page
-        .locator('.ant-tree-treenode')
+      await this.domainTreeNode
         .filter({ hasText: domainName })
         .waitFor({ state: 'visible' });
-      await this.page
-        .locator('.ant-tree-treenode')
-        .filter({ hasText: domainName })
-        .click();
+      await this.domainTreeNode.filter({ hasText: domainName }).click();
 
       await this.loader.waitFor({ state: 'hidden' });
     }
@@ -358,32 +386,19 @@ export class OverviewPageObject extends RightPanelBase {
   ): Promise<OverviewPageObject> {
     await this.editOwnersIcon.click();
 
-    // Wait for the select-owner-tabs container to be visible
-    await this.page
-      .getByTestId('select-owner-tabs')
-      .waitFor({ state: 'visible' });
-
-    // Wait for the tab bar itself to be rendered before inspecting individual tabs
-    await this.page.waitForSelector(
-      '[data-testid="select-owner-tabs"] [role="tab"]',
-      { state: 'visible' }
-    );
+    await this.selectOwnerTabs.waitFor({ state: 'visible' });
+    await this.selectOwnerTabsRoleTab.waitFor({ state: 'visible' });
 
     if (type === 'Users') {
-      const usersTab = this.page
-        .getByTestId('select-owner-tabs')
-        .getByRole('tab', { name: 'Users' });
-
-      const isAlreadyActive = await usersTab.getAttribute('aria-selected');
+      const isAlreadyActive = await this.selectOwnerUsersTab.getAttribute(
+        'aria-selected'
+      );
       if (isAlreadyActive !== 'true') {
-        await usersTab.click();
+        await this.selectOwnerUsersTab.click();
       }
     }
 
-    await this.page.waitForSelector(
-      '[data-testid="select-owner-tabs"] [data-testid="loader"]',
-      { state: 'detached' }
-    );
+    await expect(this.selectOwnerTabsLoader).toHaveCount(0);
     await this.userSearchBar.waitFor({ state: 'visible' });
 
     const searchUser = this.page.waitForResponse(
@@ -393,11 +408,7 @@ export class OverviewPageObject extends RightPanelBase {
 
     await searchUser;
 
-    // Wait for loader to disappear after search
-    await this.page.waitForSelector(
-      '[data-testid="select-owner-tabs"] [data-testid="loader"]',
-      { state: 'detached' }
-    );
+    await expect(this.selectOwnerTabsLoader).toHaveCount(0);
 
     if (type === 'Teams') {
       await this.page
@@ -447,29 +458,19 @@ export class OverviewPageObject extends RightPanelBase {
     await this.editOwnersIcon.waitFor({ state: 'visible' });
     await this.editOwnersIcon.click({ force: true });
 
-    await this.page
-      .getByTestId('select-owner-tabs')
-      .waitFor({ state: 'visible' });
+    await this.selectOwnerTabs.waitFor({ state: 'visible' });
     await this.page.getByRole('tab', { name: type }).click();
 
     let anyChangesMade = false;
     for (const ownerName of ownerNames) {
-      const searchBarDataTestId =
-        type === 'Users'
-          ? 'owner-select-users-search-bar'
-          : 'owner-select-teams-search-bar';
-      const searchBar = this.page.getByTestId(searchBarDataTestId);
+      const searchBar =
+        type === 'Users' ? this.userSearchBar : this.teamsSearchBar;
 
-      await this.page.waitForSelector(
-        '[data-testid="select-owner-tabs"] [data-testid="loader"]',
-        { state: 'detached' }
-      );
+      await expect(this.selectOwnerTabsLoader).toHaveCount(0);
       await searchBar.waitFor({ state: 'visible' });
       await searchBar.fill(ownerName);
 
-      const ownerItem = this.page
-        .locator('.ant-list-item')
-        .filter({ hasText: ownerName });
+      const ownerItem = this.listItem.filter({ hasText: ownerName });
       await ownerItem.waitFor({ state: 'visible' });
 
       // Check if it's currently selected (active) before clicking
@@ -484,18 +485,17 @@ export class OverviewPageObject extends RightPanelBase {
       }
     }
 
-    const updateButton = this.page.getByTestId('selectable-list-update-btn');
-    await updateButton.waitFor({ state: 'visible' });
+    await this.updateButton.waitFor({ state: 'visible' });
 
     // Only wait for PATCH response if we actually deselected an owner.
     // If no owner was active (already removed by a parallel test), clicking
     // update sends no change and no PATCH is issued — waiting would hang forever.
     if (anyChangesMade) {
       const patchPromise = this.waitForPatchResponse();
-      await updateButton.click();
+      await this.updateButton.click();
       await patchPromise;
     } else {
-      await updateButton.click();
+      await this.updateButton.click();
     }
     return this;
   }
@@ -549,14 +549,9 @@ export class OverviewPageObject extends RightPanelBase {
       .waitFor({ state: 'detached' });
 
     for (const termName of termDisplayNames) {
-      const searchBar = this.page.getByTestId(
-        'glossary-term-select-search-bar'
-      );
-      await searchBar.fill(termName);
+      await this.glossaryTermSearchBar.fill(termName);
 
-      const termItem = this.page
-        .locator('.ant-list-item')
-        .filter({ hasText: termName });
+      const termItem = this.listItem.filter({ hasText: termName });
       await termItem.waitFor({ state: 'visible' });
 
       // Only click if it's currently active (selected)
@@ -567,7 +562,7 @@ export class OverviewPageObject extends RightPanelBase {
         await termItem.click();
       }
 
-      await searchBar.clear();
+      await this.glossaryTermSearchBar.clear();
     }
 
     const patchPromise = this.waitForPatchResponse();
@@ -586,14 +581,11 @@ export class OverviewPageObject extends RightPanelBase {
     await this.editTierIcon.waitFor({ state: 'visible' });
     await this.editTierIcon.click({ force: true });
 
-    const tierPopover = this.page.getByTestId('cards');
-    await tierPopover.waitFor({ state: 'visible' });
-
-    const clearButton = tierPopover.getByTestId('clear-tier');
-    await clearButton.waitFor({ state: 'visible' });
+    await this.tierListContainer.waitFor({ state: 'visible' });
+    await this.clearTierButton.waitFor({ state: 'visible' });
 
     const patchPromise = this.waitForPatchResponse();
-    await clearButton.click();
+    await this.clearTierButton.click();
     await patchPromise;
 
     return this;
@@ -608,8 +600,7 @@ export class OverviewPageObject extends RightPanelBase {
     await this.addDomainIcon.waitFor({ state: 'visible' });
     await this.addDomainIcon.click({ force: true });
 
-    const domainTree = this.page.getByTestId('domain-selectable-tree');
-    await domainTree.waitFor({ state: 'visible' });
+    await this.domainTree.waitFor({ state: 'visible' });
 
     const searchDomainPromise = this.page.waitForResponse(
       (response) =>
@@ -617,12 +608,10 @@ export class OverviewPageObject extends RightPanelBase {
         response.url().includes(`q=`)
     );
 
-    await domainTree.getByTestId('searchbar').fill(domainName);
+    await this.domainSearchBar.fill(domainName);
     await searchDomainPromise;
 
-    const domainItem = domainTree
-      .locator('.ant-tree-treenode')
-      .filter({ hasText: domainName });
+    const domainItem = this.domainTreeNode.filter({ hasText: domainName });
     const patchPromise = this.waitForPatchResponse();
 
     await domainItem.click();
@@ -650,30 +639,21 @@ export class OverviewPageObject extends RightPanelBase {
 
     await this.editOwnersIcon.click({ force: true });
 
-    // Wait for the tab bar itself to be rendered before inspecting individual tabs
-    await this.page.waitForSelector(
-      '[data-testid="select-owner-tabs"] [role="tab"]',
-      { state: 'visible' }
-    );
+    await this.selectOwnerTabsRoleTab.waitFor({ state: 'visible' });
 
     if (type === 'Users') {
-      const usersTab = this.page
-        .getByTestId('select-owner-tabs')
-        .getByRole('tab', { name: 'Users' });
-
-      const isAlreadyActive = await usersTab.getAttribute('aria-selected');
+      const isAlreadyActive = await this.selectOwnerUsersTab.getAttribute(
+        'aria-selected'
+      );
       if (isAlreadyActive !== 'true') {
-        await usersTab.click();
+        await this.selectOwnerUsersTab.click();
       }
     }
-    const searchBarDataTestId =
-      type === 'Users'
-        ? 'owner-select-users-search-bar'
-        : 'owner-select-teams-search-bar';
 
-    const searchBar = await this.page.waitForSelector(
-      `[data-testid="${searchBarDataTestId}"]`
-    );
+    const searchBar =
+      type === 'Users' ? this.userSearchBar : this.teamsSearchBar;
+    await searchBar.waitFor({ state: 'visible' });
+
     const searchResponsePromise = this.page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/search/query') &&
@@ -684,9 +664,7 @@ export class OverviewPageObject extends RightPanelBase {
     const searchResponse = await searchResponsePromise;
     expect(searchResponse.status()).toBe(200);
 
-    await this.page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await expect(this.selectOwnerTabsLoader).toHaveCount(0);
 
     return this.page.getByTitle(ownerName);
   }
@@ -730,7 +708,9 @@ export class OverviewPageObject extends RightPanelBase {
   ): Promise<Locator> {
     await this.editGlossaryTermsIcon.click();
     await this.selectableList.waitFor({ state: 'visible' });
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     const searchResponsePromise = this.page.waitForResponse(
       (response) =>
@@ -742,7 +722,9 @@ export class OverviewPageObject extends RightPanelBase {
     const searchResponse = await searchResponsePromise;
     expect(searchResponse.status()).toBe(200);
 
-    await this.loader.waitFor({ state: 'detached' });
+    await this.selectableList
+      .getByTestId('loader')
+      .waitFor({ state: 'detached' });
 
     return this.page.getByTitle(termName);
   }
@@ -824,10 +806,7 @@ export class OverviewPageObject extends RightPanelBase {
    * @param tagName - Name of the tag to verify
    */
   async shouldShowTag(tagName: string): Promise<void> {
-    const tagsSection = this.container.locator(
-      '.tags-section, [class*="tags"]'
-    );
-    await tagsSection.getByText(tagName).waitFor({ state: 'visible' });
+    await this.tagsSection.getByText(tagName).waitFor({ state: 'visible' });
   }
 
   /**
@@ -835,10 +814,7 @@ export class OverviewPageObject extends RightPanelBase {
    * @param tierName - Name of the tier to verify
    */
   async shouldShowTier(tierName: string): Promise<void> {
-    const tierSection = this.container.locator(
-      '.tier-section, [class*="tier"]'
-    );
-    await tierSection.getByText(tierName).waitFor({ state: 'visible' });
+    await this.tierSection.getByText(tierName).waitFor({ state: 'visible' });
   }
 
   /**
@@ -846,10 +822,9 @@ export class OverviewPageObject extends RightPanelBase {
    * @param domainName - Name of the domain to verify
    */
   async shouldShowDomain(domainName: string): Promise<void> {
-    const domainsSection = this.container.locator(
-      '.domains-section, [class*="domain"]'
-    );
-    await domainsSection.getByText(domainName).waitFor({ state: 'visible' });
+    await this.domainsSection
+      .getByText(domainName)
+      .waitFor({ state: 'visible' });
   }
 
   /**

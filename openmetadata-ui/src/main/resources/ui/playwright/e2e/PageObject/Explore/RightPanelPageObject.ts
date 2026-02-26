@@ -126,6 +126,17 @@ export class RightPanelPageObject {
     selectableList: '[data-testid="selectable-list"]',
   };
 
+  // Locators for verifyPermissions and panel load checks
+  private readonly panelEditDescription: Locator;
+  private readonly panelEditOwners: Locator;
+  private readonly panelEditTags: Locator;
+  private readonly panelEditGlossaryTerms: Locator;
+  private readonly panelEditTier: Locator;
+  private readonly panelAddDomain: Locator;
+  private readonly panelEditDataProducts: Locator;
+  private readonly panelLoaders: Locator;
+  private readonly pageLoader: Locator;
+
   // Data asset configurations aligned with EntityRightPanelVerticalNav (hasSchemaTab, hasLineageTab, data quality for Table only, hasCustomPropertiesTab)
   private static readonly DATA_ASSET_CONFIGS: Record<string, DataAssetConfig> =
     {
@@ -339,6 +350,29 @@ export class RightPanelPageObject {
     this.dataQuality = new DataQualityPageObject(this);
     this.customProperties = new CustomPropertiesPageObject(this);
 
+    this.panelEditDescription = this.getSummaryPanel().locator(
+      '[data-testid="edit-description"]'
+    );
+    this.panelEditOwners = this.getSummaryPanel().locator(
+      '[data-testid="edit-owners"]'
+    );
+    this.panelEditTags = this.getSummaryPanel().locator(
+      '[data-testid="edit-icon-tags"]'
+    );
+    this.panelEditGlossaryTerms = this.getSummaryPanel().locator(
+      '[data-testid="edit-glossary-terms"]'
+    );
+    this.panelEditTier = this.getSummaryPanel().locator(
+      '[data-testid="edit-icon-tier"]'
+    );
+    this.panelAddDomain = this.getSummaryPanel().getByTestId('add-domain');
+    this.panelEditDataProducts =
+      this.getSummaryPanel().getByTestId('edit-data-products');
+    this.panelLoaders = this.getSummaryPanel().locator(
+      '[data-testid="loader"]'
+    );
+    this.pageLoader = this.page.locator('[data-testid="loader"]');
+
     // Set entity configuration if provided
     if (entity) {
       this.setEntityConfig(entity);
@@ -451,87 +485,63 @@ export class RightPanelPageObject {
    */
   public async verifyPermissions(isOwnerless: boolean = true): Promise<void> {
     if (!this.rolePermissions) {
-      throw new Error('Role permissions not set. Call setRolePermissions first.');
+      throw new Error(
+        'Role permissions not set. Call setRolePermissions first.'
+      );
     }
-
-    const summaryPanel = this.page.locator(this.summaryPanel);
 
     // 1. Description
     if (this.rolePermissions.canEditDescription) {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-description"]')
-      ).toBeVisible();
+      await expect(this.panelEditDescription).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-description"]')
-      ).not.toBeVisible();
+      await expect(this.panelEditDescription).not.toBeVisible();
     }
 
     // 2. Owners
     if (this.rolePermissions.canEditOwners) {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-owners"]')
-      ).toBeVisible();
+      await expect(this.panelEditOwners).toBeVisible();
     } else {
       // In OpenMetadata, if an entity has no owner, any user can claim it.
       // Therefore, the edit-owners button will be visible even if the user
       // lacks EditOwners permission, provided the entity is ownerless.
       if (!isOwnerless) {
-        await expect(
-          summaryPanel.locator('[data-testid="edit-owners"]')
-        ).not.toBeVisible();
+        await expect(this.panelEditOwners).not.toBeVisible();
       }
     }
 
     // 3. Tags
     if (this.rolePermissions.canEditTags) {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-icon-tags"]')
-      ).toBeVisible();
+      await expect(this.panelEditTags).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-icon-tags"]')
-      ).not.toBeVisible();
+      await expect(this.panelEditTags).not.toBeVisible();
     }
 
     // 4. Glossary Terms
     if (this.rolePermissions.canEditGlossaryTerms) {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-glossary-terms"]')
-      ).toBeVisible();
+      await expect(this.panelEditGlossaryTerms).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-glossary-terms"]')
-      ).not.toBeVisible();
+      await expect(this.panelEditGlossaryTerms).not.toBeVisible();
     }
 
     // 5. Tier
     if (this.rolePermissions.canEditTier) {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-icon-tier"]')
-      ).toBeVisible();
+      await expect(this.panelEditTier).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.locator('[data-testid="edit-icon-tier"]')
-      ).not.toBeVisible();
+      await expect(this.panelEditTier).not.toBeVisible();
     }
 
     // 6. Domains
     if (this.rolePermissions.canEditDomains) {
-      await expect(summaryPanel.getByTestId('add-domain')).toBeVisible();
+      await expect(this.panelAddDomain).toBeVisible();
     } else {
-      await expect(summaryPanel.getByTestId('add-domain')).not.toBeVisible();
+      await expect(this.panelAddDomain).not.toBeVisible();
     }
 
     // 7. Data Products
     if (this.rolePermissions.canEditDataProducts) {
-      await expect(
-        summaryPanel.getByTestId('edit-data-products')
-      ).toBeVisible();
+      await expect(this.panelEditDataProducts).toBeVisible();
     } else {
-      await expect(
-        summaryPanel.getByTestId('edit-data-products')
-      ).not.toBeVisible();
+      await expect(this.panelEditDataProducts).not.toBeVisible();
     }
 
     // 8. Custom Properties (Edit)
@@ -758,9 +768,7 @@ export class RightPanelPageObject {
    */
   private async verifySchemaTabContent(): Promise<void> {
     // Schema tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional schema-specific verifications can be added here
   }
 
@@ -769,9 +777,7 @@ export class RightPanelPageObject {
    */
   private async verifyTasksTabContent(): Promise<void> {
     // Tasks tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional tasks-specific verifications can be added here
   }
 
@@ -780,9 +786,7 @@ export class RightPanelPageObject {
    */
   private async verifyFeaturesTabContent(): Promise<void> {
     // Features tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional features-specific verifications can be added here
   }
 
@@ -791,9 +795,7 @@ export class RightPanelPageObject {
    */
   private async verifyFieldsTabContent(): Promise<void> {
     // Fields tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional fields-specific verifications can be added here
   }
 
@@ -802,9 +804,7 @@ export class RightPanelPageObject {
    */
   private async verifyModelTabContent(): Promise<void> {
     // Model tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional model-specific verifications can be added here
   }
 
@@ -813,9 +813,7 @@ export class RightPanelPageObject {
    */
   private async verifyChartsTabContent(): Promise<void> {
     // Charts tab verification logic
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
     // Additional charts-specific verifications can be added here
   }
 
@@ -1001,19 +999,10 @@ export class RightPanelPageObject {
     await this.getSummaryPanel().waitFor({ state: 'visible', timeout });
 
     // Step 2: Wait for all loaders within the panel to disappear
-    // Use the summary panel as the scope for loaders
-    const panelLoaders = this.getSummaryPanel().locator(
-      '[data-testid="loader"]'
-    );
-
-    // Wait for loader count to become 0 within the panel
-    await expect(panelLoaders).toHaveCount(0, { timeout });
+    await expect(this.panelLoaders).toHaveCount(0, { timeout });
 
     // Step 3: Wait for any remaining loaders on the page (fallback)
-    await this.page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-      timeout,
-    });
+    await this.pageLoader.waitFor({ state: 'detached', timeout });
 
     // Step 4: Ensure panel is still visible and stable
     await this.getSummaryPanel().waitFor({ state: 'visible' });
@@ -1025,9 +1014,7 @@ export class RightPanelPageObject {
   async navigateToTab(tabName: string) {
     const tab = this.getTabLocator(tabName);
     await tab.click();
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
   }
 
   /**
@@ -1102,9 +1089,7 @@ export class RightPanelPageObject {
    * Wait for all loaders to disappear
    */
   async waitForLoadersToDisappear() {
-    await this.page.waitForSelector(this.testIds.loader, {
-      state: 'detached',
-    });
+    await this.pageLoader.waitFor({ state: 'detached' });
   }
 
   /**

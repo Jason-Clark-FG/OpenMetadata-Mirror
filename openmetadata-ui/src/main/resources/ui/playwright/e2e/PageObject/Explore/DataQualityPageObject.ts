@@ -35,6 +35,9 @@ export class DataQualityPageObject extends RightPanelBase {
   private readonly testCaseCardsSection: Locator;
   private readonly testCaseCards: Locator;
   private readonly nameLink: Locator;
+  private readonly searchBar: Locator;
+  private readonly incidentsTabContent: Locator;
+  private readonly noDataPlaceholder: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
@@ -62,9 +65,14 @@ export class DataQualityPageObject extends RightPanelBase {
     this.nameLink = this.testCaseCards
       .locator('.test-case-name, [class*="name"], a')
       .first();
+    this.searchBar = this.container.getByTestId('searchbar');
+    this.incidentsTabContent = this.container.locator('.incidents-tab-content');
+    this.noDataPlaceholder = this.container
+      .locator(
+        '[data-testid="no-data-placeholder"], .no-data-placeholder, .ant-empty'
+      )
+      .first();
   }
-
-  // ============ NAVIGATION METHODS (Fluent Interface) ============
 
   /**
    * Navigate to the Data Quality tab
@@ -101,8 +109,7 @@ export class DataQualityPageObject extends RightPanelBase {
    * Type into the data quality search bar and wait for results to update.
    */
   async searchFor(text: string): Promise<DataQualityPageObject> {
-    const searchBar = this.container.getByTestId('searchbar');
-    await searchBar.fill(text);
+    await this.searchBar.fill(text);
     await this.page.waitForTimeout(300); // Wait for debounce
     return this;
   }
@@ -111,8 +118,7 @@ export class DataQualityPageObject extends RightPanelBase {
    * Clear the data quality search bar.
    */
   async clearSearch(): Promise<DataQualityPageObject> {
-    const searchBar = this.container.getByTestId('searchbar');
-    await searchBar.clear();
+    await this.searchBar.clear();
     await this.page.waitForTimeout(300); // Wait for debounce
     return this;
   }
@@ -284,12 +290,11 @@ export class DataQualityPageObject extends RightPanelBase {
     status?: string;
     hasAssignee?: boolean;
   }): Promise<void> {
-    const incidentsTabContent = this.container.locator(
-      '.incidents-tab-content'
-    );
-    await incidentsTabContent.waitFor({ state: 'visible' });
+    await this.incidentsTabContent.waitFor({ state: 'visible' });
 
-    const incidentCard = incidentsTabContent.locator('.test-case-card').first();
+    const incidentCard = this.incidentsTabContent
+      .locator('.test-case-card')
+      .first();
     await expect(incidentCard).toBeVisible();
 
     if (incidentData.status) {
@@ -322,12 +327,7 @@ export class DataQualityPageObject extends RightPanelBase {
    */
   async shouldShowNoResults(): Promise<void> {
     await expect(this.testCaseCards).toHaveCount(0);
-    const noDataPlaceholder = this.container
-      .locator(
-        '[data-testid="no-data-placeholder"], .no-data-placeholder, .ant-empty'
-      )
-      .first();
-    await expect(noDataPlaceholder).toBeVisible();
+    await expect(this.noDataPlaceholder).toBeVisible();
   }
 
   /**

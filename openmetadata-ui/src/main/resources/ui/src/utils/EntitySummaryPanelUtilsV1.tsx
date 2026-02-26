@@ -78,122 +78,6 @@ const filterItemsBySearchText = <T extends { name?: string }>(
   );
 };
 
-export const getEntityChildDetailsV1 = (
-  entityType: EntityType,
-  entityInfo: SearchedDataProps['data'][number]['_source'],
-  highlights?: SearchedDataProps['data'][number]['highlight'],
-  loading?: boolean,
-  searchText?: string
-) => {
-  // kept for potential future use; remove unused to satisfy linter
-  switch (entityType) {
-    case EntityType.TABLE:
-    case EntityType.DASHBOARD_DATA_MODEL:
-      return (
-        <SchemaFieldCardsV1
-          entityInfo={entityInfo as TableEntity}
-          entityType={entityType}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.DATABASE_SCHEMA:
-      return (
-        <DatabaseSchemaTablesV1
-          entityInfo={entityInfo as DatabaseSchema}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.DASHBOARD:
-      return (
-        <DashboardChartsV1
-          entityInfo={entityInfo as Dashboard}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.TOPIC:
-      return (
-        <TopicFieldCardsV1
-          entityInfo={entityInfo as Topic}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.CONTAINER:
-      return (
-        <ContainerFieldCardsV1
-          entityInfo={entityInfo as Container}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.SEARCH_INDEX:
-      return (
-        <SearchIndexFieldCardsV1
-          entityInfo={entityInfo as SearchIndex}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.API_ENDPOINT:
-      return (
-        <APIEndpointSchemaV1
-          entityInfo={entityInfo as APIEndpoint}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.DATABASE:
-      return (
-        <DatabaseSchemasV1
-          entityInfo={entityInfo}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.PIPELINE:
-      return (
-        <PipelineTasksV1
-          entityInfo={entityInfo as Pipeline}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    case EntityType.API_COLLECTION:
-      return (
-        <APICollectionEndpointsV1
-          entityInfo={entityInfo as APICollection}
-          highlights={highlights}
-          loading={loading}
-          searchText={searchText}
-        />
-      );
-
-    default:
-      return null;
-  }
-};
-
 // Recursive component to render nested columns
 const NestedFieldCard: React.FC<NestedFieldCardProps> = ({
   column,
@@ -273,8 +157,6 @@ const NestedFieldCard: React.FC<NestedFieldCardProps> = ({
   );
 };
 
-
-
 const NestedSchemaFieldCard: React.FC<{
   field: GenericNestedField;
   highlights?: Record<string, string[]>;
@@ -282,73 +164,80 @@ const NestedSchemaFieldCard: React.FC<{
   level?: number;
   expandedRowKeys: string[];
   onToggleExpand: (key: string) => void;
-}> = ({ field, highlights, highlightKey = 'field', level = 0, expandedRowKeys, onToggleExpand }) => {
-  const theme = useTheme();
-  const hasChildren = !isEmpty(field.children);
-  const rowKey = field.fullyQualifiedName ?? field.name;
-  const isExpanded = expandedRowKeys.includes(rowKey);
-  const isHighlighted = highlights?.[highlightKey]?.includes(field.name);
-  const childrenCount = field.children?.length ?? 0;
+}> = ({
+  field,
+  highlights,
+  highlightKey = 'field',
+  level = 0,
+  expandedRowKeys,
+  onToggleExpand,
+}) => {
+    const theme = useTheme();
+    const hasChildren = !isEmpty(field.children);
+    const rowKey = field.fullyQualifiedName ?? field.name;
+    const isExpanded = expandedRowKeys.includes(rowKey);
+    const isHighlighted = highlights?.[highlightKey]?.includes(field.name);
+    const childrenCount = field.children?.length ?? 0;
 
-  return (
-    <div>
-      <div
-        className="nested-field-card-wrapper"
-        data-row-key={rowKey}
-        style={{
-          paddingLeft: `${level * 24}px`,
-          paddingBottom: hasChildren ? '8px' : '0',
-        }}>
-        <div className="field-card-no-border">
-          <FieldCard
-            dataType={field.dataType || 'Unknown'}
-            description={field.description}
-            fieldName={getEntityName(field)}
-            glossaryTerms={field.glossaryTerms}
-            isHighlighted={isHighlighted}
-            tags={field.tags}
-          />
+    return (
+      <div>
+        <div
+          className="nested-field-card-wrapper"
+          data-row-key={rowKey}
+          style={{
+            paddingLeft: `${level * 24}px`,
+            paddingBottom: hasChildren ? '8px' : '0',
+          }}>
+          <div className="field-card-no-border">
+            <FieldCard
+              dataType={field.dataType || 'Unknown'}
+              description={field.description}
+              fieldName={getEntityName(field)}
+              glossaryTerms={field.glossaryTerms}
+              isHighlighted={isHighlighted}
+              tags={field.tags}
+            />
+          </div>
+          {hasChildren && (
+            <div className="d-flex align-items-center m-l-md gap-1">
+              {!isExpanded && (
+                <span className="d-flex">
+                  <NestedIcon />
+                </span>
+              )}
+              <Button
+                className="d-flex p-0 h-auto m-b-xs"
+                data-testid="expand-icon"
+                size="small"
+                type="link"
+                onClick={() => onToggleExpand(rowKey)}>
+                <Typography color={theme.palette.primary.main} variant="caption">
+                  {isExpanded
+                    ? t('label.show-less')
+                    : `${t('label.show-nested')} (${childrenCount})`}
+                </Typography>
+              </Button>
+            </div>
+          )}
         </div>
-        {hasChildren && (
-          <div className="d-flex align-items-center m-l-md gap-1">
-            {!isExpanded && (
-              <span className="d-flex">
-                <NestedIcon />
-              </span>
-            )}
-            <Button
-              className="d-flex p-0 h-auto m-b-xs"
-              data-testid="expand-icon"
-              size="small"
-              type="link"
-              onClick={() => onToggleExpand(rowKey)}>
-              <Typography color={theme.palette.primary.main} variant="caption">
-                {isExpanded
-                  ? t('label.show-less')
-                  : `${t('label.show-nested')} (${childrenCount})`}
-              </Typography>
-            </Button>
+        {hasChildren && isExpanded && (
+          <div>
+            {field.children?.map((child) => (
+              <NestedSchemaFieldCard
+                expandedRowKeys={expandedRowKeys}
+                field={child}
+                highlightKey={highlightKey}
+                highlights={highlights}
+                key={child.fullyQualifiedName ?? child.name}
+                level={level + 1}
+                onToggleExpand={onToggleExpand}
+              />
+            ))}
           </div>
         )}
       </div>
-      {hasChildren && isExpanded && (
-        <div>
-          {field.children?.map((child) => (
-            <NestedSchemaFieldCard
-              expandedRowKeys={expandedRowKeys}
-              field={child}
-              highlightKey={highlightKey}
-              highlights={highlights}
-              key={child.fullyQualifiedName ?? child.name}
-              level={level + 1}
-              onToggleExpand={onToggleExpand}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
 // Shared recursive filter that preserves tree structure (used by Topic, Container, SearchIndex)
 const filterNestedFields = (
@@ -523,14 +412,6 @@ const SchemaFieldCardsV1: React.FC<{
     );
   }
 
-  if (isEmpty(columns) && hasInitialized) {
-    return (
-      <div className="no-data-container">
-        <Text className="no-data-text">{t('message.no-data-available')}</Text>
-      </div>
-    );
-  }
-
   if (!hasInitialized) {
     return (
       <div className="flex-center p-lg">
@@ -539,7 +420,7 @@ const SchemaFieldCardsV1: React.FC<{
     );
   }
 
-  if (isEmpty(columns) && searchText && hasInitialized) {
+  if (isEmpty(columns) && searchText) {
     return (
       <div className="no-data-container">
         <Text className="no-data-text">
@@ -548,6 +429,14 @@ const SchemaFieldCardsV1: React.FC<{
             name: searchText,
           })}
         </Text>
+      </div>
+    );
+  }
+
+  if (isEmpty(columns)) {
+    return (
+      <div className="no-data-container">
+        <Text className="no-data-text">{t('message.no-data-available')}</Text>
       </div>
     );
   }
@@ -1328,4 +1217,120 @@ const SearchIndexFieldCardsV1: React.FC<{
       ))}
     </div>
   );
+};
+
+export const getEntityChildDetailsV1 = (
+  entityType: EntityType,
+  entityInfo: SearchedDataProps['data'][number]['_source'],
+  highlights?: SearchedDataProps['data'][number]['highlight'],
+  loading?: boolean,
+  searchText?: string
+) => {
+  // kept for potential future use; remove unused to satisfy linter
+  switch (entityType) {
+    case EntityType.TABLE:
+    case EntityType.DASHBOARD_DATA_MODEL:
+      return (
+        <SchemaFieldCardsV1
+          entityInfo={entityInfo as TableEntity}
+          entityType={entityType}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.DATABASE_SCHEMA:
+      return (
+        <DatabaseSchemaTablesV1
+          entityInfo={entityInfo as DatabaseSchema}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.DASHBOARD:
+      return (
+        <DashboardChartsV1
+          entityInfo={entityInfo as Dashboard}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.TOPIC:
+      return (
+        <TopicFieldCardsV1
+          entityInfo={entityInfo as Topic}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.CONTAINER:
+      return (
+        <ContainerFieldCardsV1
+          entityInfo={entityInfo as Container}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.SEARCH_INDEX:
+      return (
+        <SearchIndexFieldCardsV1
+          entityInfo={entityInfo as SearchIndex}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.API_ENDPOINT:
+      return (
+        <APIEndpointSchemaV1
+          entityInfo={entityInfo as APIEndpoint}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.DATABASE:
+      return (
+        <DatabaseSchemasV1
+          entityInfo={entityInfo}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.PIPELINE:
+      return (
+        <PipelineTasksV1
+          entityInfo={entityInfo as Pipeline}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    case EntityType.API_COLLECTION:
+      return (
+        <APICollectionEndpointsV1
+          entityInfo={entityInfo as APICollection}
+          highlights={highlights}
+          loading={loading}
+          searchText={searchText}
+        />
+      );
+
+    default:
+      return null;
+  }
 };

@@ -27,14 +27,34 @@ export class LineagePageObject extends RightPanelBase {
   private readonly downstreamButton: Locator;
   private readonly nodes: Locator;
   private readonly edges: Locator;
+  private readonly lineageItemCards: Locator;
+  private readonly upstreamLineageLink: Locator;
+  private readonly upstreamCount: Locator;
+  private readonly downstreamCount: Locator;
 
   constructor(rightPanel: RightPanelPageObject) {
     super(rightPanel);
     this.container = this.getSummaryPanel().locator('.lineage-tab-content');
-    this.upstreamButton = this.container.locator('[data-testid="upstream-button-text"]');
-    this.downstreamButton = this.container.locator('[data-testid="downstream-button-text"]');
-    this.nodes = this.container.locator('.lineage-node, [data-testid*="lineage-node"]');
+    this.upstreamButton = this.container.locator(
+      '[data-testid="upstream-button-text"]'
+    );
+    this.downstreamButton = this.container.locator(
+      '[data-testid="downstream-button-text"]'
+    );
+    this.nodes = this.container.locator(
+      '.lineage-node, [data-testid*="lineage-node"]'
+    );
     this.edges = this.container.locator('.lineage-edge, .react-flow__edge');
+    this.lineageItemCards = this.container.locator('.lineage-item-card');
+    this.upstreamLineageLink = this.getSummaryPanel().locator(
+      '[data-testid="upstream-lineage"]'
+    );
+    this.upstreamCount = this.getSummaryPanel().locator(
+      '[data-testid="upstream-count"]'
+    );
+    this.downstreamCount = this.getSummaryPanel().locator(
+      '[data-testid="downstream-count"]'
+    );
   }
 
   // ============ NAVIGATION METHODS (Fluent Interface) ============
@@ -86,9 +106,7 @@ export class LineagePageObject extends RightPanelBase {
    * @returns LineagePageObject for method chaining
    */
   async clickLineageCard(entityName: string): Promise<LineagePageObject> {
-    const card = this.container
-      .locator('.lineage-item-card')
-      .filter({ hasText: entityName });
+    const card = this.lineageItemCards.filter({ hasText: entityName });
     await card.waitFor({ state: 'visible' });
     await card.click();
     await this.page.waitForLoadState('networkidle');
@@ -100,15 +118,11 @@ export class LineagePageObject extends RightPanelBase {
    * @returns LineagePageObject for method chaining
    */
   async navigateToFullLineage(): Promise<LineagePageObject> {
-    const lineageSection = this.getSummaryPanel().locator(
-      '[data-testid="upstream-lineage"]'
-    );
-    await lineageSection.waitFor({ state: 'visible' });
-    await lineageSection.click();
+    await this.upstreamLineageLink.waitFor({ state: 'visible' });
+    await this.upstreamLineageLink.click();
     await this.page.waitForURL(/.*\/lineage$/);
     return this;
   }
-
 
   // ============ VERIFICATION METHODS (BDD Style) ============
 
@@ -197,10 +211,8 @@ export class LineagePageObject extends RightPanelBase {
    * @param expectedCount - Expected number of upstream entities
    */
   async verifyUpstreamCount(expectedCount: number): Promise<void> {
-    const summaryPanel = this.getSummaryPanel();
-    const upstreamCountElement = summaryPanel.locator('[data-testid="upstream-count"]');
-    await expect(upstreamCountElement).toBeVisible();
-    await expect(upstreamCountElement).toHaveText(expectedCount.toString());
+    await expect(this.upstreamCount).toBeVisible();
+    await expect(this.upstreamCount).toHaveText(expectedCount.toString());
   }
 
   /**
@@ -208,12 +220,8 @@ export class LineagePageObject extends RightPanelBase {
    * @param expectedCount - Expected number of downstream entities
    */
   async verifyDownstreamCount(expectedCount: number): Promise<void> {
-    const summaryPanel = this.getSummaryPanel();
-    const downstreamCountElement = summaryPanel.locator(
-      '[data-testid="downstream-count"]'
-    );
-    await expect(downstreamCountElement).toBeVisible();
-    await expect(downstreamCountElement).toHaveText(expectedCount.toString());
+    await expect(this.downstreamCount).toBeVisible();
+    await expect(this.downstreamCount).toHaveText(expectedCount.toString());
   }
 
   /**
@@ -225,15 +233,13 @@ export class LineagePageObject extends RightPanelBase {
     entityName: string,
     direction: 'upstream' | 'downstream'
   ): Promise<void> {
-    const card = this.container
-      .locator('.lineage-item-card') 
-      .filter({ hasText: entityName });
+    const card = this.lineageItemCards.filter({ hasText: entityName });
 
     // Verify visibility based on direction
     if (direction === 'upstream') {
       await this.shouldShowExpandUpstreamButton();
     } else {
-       await this.shouldShowExpandDownstreamButton();
+      await this.shouldShowExpandDownstreamButton();
     }
 
     await expect(card).toBeVisible();
@@ -254,9 +260,7 @@ export class LineagePageObject extends RightPanelBase {
       hasLink?: boolean;
     }
   ): Promise<void> {
-    const card = this.container
-      .locator('.lineage-item-card')
-      .filter({ hasText: entityName });
+    const card = this.lineageItemCards.filter({ hasText: entityName });
     await expect(card).toBeVisible();
 
     if (details.hasServiceIcon) {
@@ -288,7 +292,13 @@ export class LineagePageObject extends RightPanelBase {
   async assertInternalFields(assetType?: string): Promise<void> {
     const tabLabel = 'Lineage';
     const prefix = assetType ? `[Asset: ${assetType}] [Tab: ${tabLabel}] ` : '';
-    await expect(this.upstreamButton, `${prefix}Missing: upstream control`).toBeVisible();
-    await expect(this.downstreamButton, `${prefix}Missing: downstream control`).toBeVisible();
+    await expect(
+      this.upstreamButton,
+      `${prefix}Missing: upstream control`
+    ).toBeVisible();
+    await expect(
+      this.downstreamButton,
+      `${prefix}Missing: downstream control`
+    ).toBeVisible();
   }
 }
