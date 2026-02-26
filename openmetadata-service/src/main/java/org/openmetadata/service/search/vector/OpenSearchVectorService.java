@@ -85,7 +85,9 @@ public class OpenSearchVectorService implements VectorIndexService {
     var scoreRanker =
         MAPPER
             .createObjectNode()
-            .set("score-ranker-processor", MAPPER.createObjectNode().set("combination", combination));
+            .set(
+                "score-ranker-processor",
+                MAPPER.createObjectNode().set("combination", combination));
     var collapse =
         MAPPER
             .createObjectNode()
@@ -95,8 +97,7 @@ public class OpenSearchVectorService implements VectorIndexService {
     pipeline.set("phase_results_processors", MAPPER.createArrayNode().add(scoreRanker));
     pipeline.set("response_processors", MAPPER.createArrayNode().add(collapse));
 
-    executeGenericRequest(
-        "PUT", "/_search/pipeline/" + HYBRID_PIPELINE_NAME, pipeline.toString());
+    executeGenericRequest("PUT", "/_search/pipeline/" + HYBRID_PIPELINE_NAME, pipeline.toString());
     LOG.info(
         "Hybrid search pipeline '{}' created/updated with weights keyword={}, semantic={}",
         HYBRID_PIPELINE_NAME,

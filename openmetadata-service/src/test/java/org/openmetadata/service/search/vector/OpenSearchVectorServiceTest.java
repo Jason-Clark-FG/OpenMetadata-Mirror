@@ -306,10 +306,7 @@ class OpenSearchVectorServiceTest {
         "p2",
         results.hits.get(0).get("parentId"),
         "First result should be p2 (skipping p1 due to from=1)");
-    assertEquals(
-        "p3",
-        results.hits.get(1).get("parentId"),
-        "Second result should be p3");
+    assertEquals("p3", results.hits.get(1).get("parentId"), "Second result should be p3");
   }
 
   @Test
@@ -332,7 +329,8 @@ class OpenSearchVectorServiceTest {
     DTOs.VectorSearchResponse results =
         vectorService.search("test query", Map.of(), 5, 10, 100, 0.0);
 
-    assertEquals(0, results.hits.size(), "Should return no results when from exceeds available parents");
+    assertEquals(
+        0, results.hits.size(), "Should return no results when from exceeds available parents");
   }
 
   @Test
