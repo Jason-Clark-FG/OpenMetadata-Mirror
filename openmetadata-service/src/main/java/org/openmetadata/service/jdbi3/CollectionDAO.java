@@ -10313,6 +10313,9 @@ public interface CollectionDAO {
         "DELETE FROM search_index_retry_queue WHERE entityId = :entityId AND entityFqn = :entityFqn")
     int deleteByEntity(@Bind("entityId") String entityId, @Bind("entityFqn") String entityFqn);
 
+    @SqlUpdate("DELETE FROM search_index_retry_queue WHERE status IN (<statuses>)")
+    int deleteByStatuses(@BindList("statuses") List<String> statuses);
+
     @SqlQuery("SELECT COUNT(*) FROM search_index_retry_queue WHERE status = :status")
     int countByStatus(@Bind("status") String status);
 
