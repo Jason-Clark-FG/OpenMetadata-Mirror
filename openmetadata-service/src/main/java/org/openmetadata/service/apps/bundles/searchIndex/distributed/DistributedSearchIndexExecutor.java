@@ -306,7 +306,10 @@ public class DistributedSearchIndexExecutor {
    * @return Execution result with statistics
    */
   public ExecutionResult execute(
-      BulkSink bulkSink, ReindexContext recreateContext, boolean recreateIndex) {
+      BulkSink bulkSink,
+      ReindexContext recreateContext,
+      boolean recreateIndex,
+      ReindexingConfiguration reindexConfig) {
 
     if (currentJob == null) {
       throw new IllegalStateException("No job to execute - call createJob() or joinJob() first");
@@ -342,11 +345,9 @@ public class DistributedSearchIndexExecutor {
     // Notify listeners that job has started
     listeners.onJobStarted(jobContext);
 
-    // Notify listeners with configuration
-    if (currentJob.getJobConfiguration() != null) {
-      ReindexingConfiguration config =
-          ReindexingConfiguration.from(currentJob.getJobConfiguration());
-      listeners.onJobConfigured(jobContext, config);
+    // Notify listeners with auto-tuned configuration
+    if (reindexConfig != null) {
+      listeners.onJobConfigured(jobContext, reindexConfig);
     }
 
     // Create stats aggregator with app context for proper WebSocket matching
@@ -402,13 +403,13 @@ public class DistributedSearchIndexExecutor {
             .name("partition-heartbeat-" + jobId.toString().substring(0, 8))
             .start(() -> runPartitionHeartbeatLoop());
 
-    // Calculate worker threads based on configuration
-    int numWorkers =
-        Math.min(
-            currentJob.getJobConfiguration().getConsumerThreads() != null
-                ? currentJob.getJobConfiguration().getConsumerThreads()
-                : 4,
-            MAX_WORKER_THREADS);
+    // Calculate worker threads from auto-tuned configuration
+    int numWorkers = Math.min(Math.max(1, reindexConfig.consumerThreads()), MAX_WORKER_THREADS);
+    LOG.info(
+        "Distributed executor using {} workers, batch size {} (autoTune={})",
+        numWorkers,
+        reindexConfig.batchSize(),
+        reindexConfig.autoTune());
 
     workerExecutor =
         Executors.newFixedThreadPool(
@@ -419,10 +420,7 @@ public class DistributedSearchIndexExecutor {
     CountDownLatch workerLatch = new CountDownLatch(numWorkers);
 
     // Start worker threads that continuously claim and process partitions
-    int batchSize =
-        currentJob.getJobConfiguration().getBatchSize() != null
-            ? currentJob.getJobConfiguration().getBatchSize()
-            : 500;
+    int batchSize = reindexConfig.batchSize();
 
     for (int i = 0; i < numWorkers; i++) {
       final int workerId = i;
