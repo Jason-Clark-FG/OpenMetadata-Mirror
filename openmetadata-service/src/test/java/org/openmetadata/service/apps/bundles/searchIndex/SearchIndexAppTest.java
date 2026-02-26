@@ -1105,7 +1105,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
   void testFinalizeAllEntityReindexPromotesVectorIndexOnCompleted() throws Exception {
     AliasState aliasState = new AliasState();
     aliasState.put(
-        "vector_search_index_rebuild_old", Set.of("vectorEmbedding", "vector_search_index"));
+        "vector_search_index_rebuild_old", Set.of("dataAssetEmbeddings", "vector_search_index"));
     aliasState.put("vector_search_index_rebuild_123", new HashSet<>());
 
     SearchClient client = aliasState.toMock();
@@ -1119,12 +1119,12 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
 
       ReindexContext context = new ReindexContext();
       context.add(
-          "vectorEmbedding",
+          "dataAssetEmbeddings",
           "vector_search_index",
           "vector_search_index_rebuild_old",
           "vector_search_index_rebuild_123",
-          Set.of("vectorEmbedding", "vector_search_index"),
-          "vectorEmbedding",
+          Set.of("dataAssetEmbeddings", "vector_search_index"),
+          "dataAssetEmbeddings",
           List.of());
 
       setPrivateField(app, "recreateContext", context);
@@ -1145,7 +1145,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         aliasState.indexAliases.containsKey("vector_search_index_rebuild_123"),
         "Staged vector index should exist after promotion");
     assertTrue(
-        aliasState.indexAliases.get("vector_search_index_rebuild_123").contains("vectorEmbedding"),
+        aliasState.indexAliases.get("vector_search_index_rebuild_123").contains("dataAssetEmbeddings"),
         "Staged vector index should have the vectorEmbedding alias");
   }
 
@@ -1153,7 +1153,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
   void testFinalizeAllEntityReindexPromotesVectorIndexOnActiveError() throws Exception {
     AliasState aliasState = new AliasState();
     aliasState.put(
-        "vector_search_index_rebuild_old", Set.of("vectorEmbedding", "vector_search_index"));
+        "vector_search_index_rebuild_old", Set.of("dataAssetEmbeddings", "vector_search_index"));
     aliasState.put("vector_search_index_rebuild_123", new HashSet<>());
 
     SearchClient client = aliasState.toMock();
@@ -1167,12 +1167,12 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
 
       ReindexContext context = new ReindexContext();
       context.add(
-          "vectorEmbedding",
+          "dataAssetEmbeddings",
           "vector_search_index",
           "vector_search_index_rebuild_old",
           "vector_search_index_rebuild_123",
-          Set.of("vectorEmbedding", "vector_search_index"),
-          "vectorEmbedding",
+          Set.of("dataAssetEmbeddings", "vector_search_index"),
+          "dataAssetEmbeddings",
           List.of());
 
       setPrivateField(app, "recreateContext", context);
@@ -1195,7 +1195,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         aliasState
             .indexAliases
             .getOrDefault("vector_search_index_rebuild_123", Set.of())
-            .contains("vectorEmbedding"),
+            .contains("dataAssetEmbeddings"),
         "Staged vector index should have the vectorEmbedding alias on ACTIVE_ERROR");
   }
 
@@ -1203,7 +1203,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
   void testFinalizeAllEntityReindexDeletesVectorIndexOnFailed() throws Exception {
     AliasState aliasState = new AliasState();
     aliasState.put(
-        "vector_search_index_rebuild_old", Set.of("vectorEmbedding", "vector_search_index"));
+        "vector_search_index_rebuild_old", Set.of("dataAssetEmbeddings", "vector_search_index"));
     aliasState.put("vector_search_index_rebuild_123", new HashSet<>());
 
     SearchClient client = aliasState.toMock();
@@ -1217,12 +1217,12 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
 
       ReindexContext context = new ReindexContext();
       context.add(
-          "vectorEmbedding",
+          "dataAssetEmbeddings",
           "vector_search_index",
           "vector_search_index_rebuild_old",
           "vector_search_index_rebuild_123",
-          Set.of("vectorEmbedding", "vector_search_index"),
-          "vectorEmbedding",
+          Set.of("dataAssetEmbeddings", "vector_search_index"),
+          "dataAssetEmbeddings",
           List.of());
 
       setPrivateField(app, "recreateContext", context);
@@ -1252,7 +1252,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         Set.of("table", "table_search_index", "all", "dataAsset"));
     aliasState.put("table_search_index_rebuild_new", new HashSet<>());
     aliasState.put(
-        "vector_search_index_rebuild_old", Set.of("vectorEmbedding", "vector_search_index"));
+        "vector_search_index_rebuild_old", Set.of("dataAssetEmbeddings", "vector_search_index"));
     aliasState.put("vector_search_index_rebuild_new", new HashSet<>());
 
     SearchClient client = aliasState.toMock();
@@ -1274,12 +1274,12 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
           "table",
           List.of("all", "dataAsset"));
       context.add(
-          "vectorEmbedding",
+          "dataAssetEmbeddings",
           "vector_search_index",
           "vector_search_index_rebuild_old",
           "vector_search_index_rebuild_new",
-          Set.of("vectorEmbedding", "vector_search_index"),
-          "vectorEmbedding",
+          Set.of("dataAssetEmbeddings", "vector_search_index"),
+          "dataAssetEmbeddings",
           List.of());
 
       setPrivateField(app, "recreateContext", context);
@@ -1306,7 +1306,7 @@ class SearchIndexAppTest extends OpenMetadataApplicationTest {
         aliasState.deletedIndices.contains("vector_search_index_rebuild_old"),
         "Old vector index should be promoted and cleaned up");
     assertTrue(
-        aliasState.indexAliases.get("vector_search_index_rebuild_new").contains("vectorEmbedding"),
+        aliasState.indexAliases.get("vector_search_index_rebuild_new").contains("dataAssetEmbeddings"),
         "Staged vector index should gain the vectorEmbedding alias");
   }
 
