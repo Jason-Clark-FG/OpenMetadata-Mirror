@@ -16,6 +16,7 @@ from metadata.generated.schema.type.tagLabel import (
 )
 from metadata.generated.schema.type.tagLabelMetadata import TagLabelMetadata
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.pii.algorithms.preprocessing import MAX_NLP_TEXT_LENGTH
 from metadata.pii.algorithms.presidio_utils import load_nlp_engine
 from metadata.pii.algorithms.tag_scoring import ScoreTagsForColumnService
 from metadata.pii.base_processor import AutoClassificationProcessor
@@ -83,6 +84,8 @@ class TagProcessor(AutoClassificationProcessor):
                     classification_language=self.classification_language
                 ),
                 language=self.classification_language,
+                max_nlp_text_length=self.source_config.maxNlpTextLength
+                or MAX_NLP_TEXT_LENGTH,
             )
         self.score_tags_for_column = score_tags_for_column
 

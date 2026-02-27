@@ -57,7 +57,7 @@ class NLPEngineModel(BaseModel):
 class NERScanner(BaseScanner):
     """Based on https://microsoft.github.io/presidio/"""
 
-    def __init__(self):
+    def __init__(self, max_nlp_text_length: int = MAX_NLP_TEXT_LENGTH):
         from presidio_analyzer import AnalyzerEngine
         from presidio_analyzer.nlp_engine.spacy_nlp_engine import SpacyNlpEngine
 
@@ -77,6 +77,7 @@ class NERScanner(BaseScanner):
         self.analyzer = AnalyzerEngine(
             nlp_engine=SpacyNlpEngine(models=[nlp_engine_model.model_dump()])
         )
+        self.max_nlp_text_length = max_nlp_text_length
 
     @staticmethod
     def get_highest_score_label(
@@ -119,7 +120,7 @@ class NERScanner(BaseScanner):
         )
 
         str_sample_data_rows = [
-            str(row)[:MAX_NLP_TEXT_LENGTH] for row in data if row is not None
+            str(row)[: self.max_nlp_text_length] for row in data if row is not None
         ]
         for row in str_sample_data_rows:
             try:
@@ -147,17 +148,18 @@ class NERScanner(BaseScanner):
 
     def process_data(self, row: str, entities_score: Dict[str, StringAnalysis]) -> None:
         """Process the Sample Data rows, checking if they are of JSON format as well"""
-        # first, check if the data is JSON or we can work with strings
         is_json, value = self.is_json_data(row)
         if is_json and isinstance(value, dict):
             for val in value.values():
                 self.process_data(
-                    row=str(val)[:MAX_NLP_TEXT_LENGTH], entities_score=entities_score
+                    row=str(val)[: self.max_nlp_text_length],
+                    entities_score=entities_score,
                 )
         elif is_json and isinstance(value, list):
             for val in value:
                 self.process_data(
-                    row=str(val)[:MAX_NLP_TEXT_LENGTH], entities_score=entities_score
+                    row=str(val)[: self.max_nlp_text_length],
+                    entities_score=entities_score,
                 )
         else:
             self.scan_value(value=row, entities_score=entities_score)
