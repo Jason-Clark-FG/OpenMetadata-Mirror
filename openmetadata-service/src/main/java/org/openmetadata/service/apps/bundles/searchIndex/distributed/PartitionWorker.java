@@ -78,6 +78,12 @@ public class PartitionWorker {
   /** Progress update interval (every N entities) */
   private static final int PROGRESS_UPDATE_INTERVAL = 100;
 
+  /** Overall deadline for waiting on sink operations to complete */
+  private static final long SINK_WAIT_DEADLINE_MS = 300_000;
+
+  /** Timeout per flush cycle when retrying sink completion */
+  private static final int FLUSH_CYCLE_SECONDS = 30;
+
   private final DistributedSearchIndexCoordinator coordinator;
   private final BulkSink searchIndexSink;
   private final int batchSize;
@@ -349,7 +355,7 @@ public class PartitionWorker {
   private void waitForSinkOperations(StageStatsTracker statsTracker) {
     // Flush the bulk processor to send any pending documents immediately
     // Without this, documents wait for the periodic flush interval (5 seconds)
-    searchIndexSink.flushAndAwait(30);
+    searchIndexSink.flushAndAwait(FLUSH_CYCLE_SECONDS);
 
     // Check if there are pending vector tasks - if so, we need a longer timeout
     int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
@@ -361,7 +367,6 @@ public class PartitionWorker {
           pendingVectorTasks,
           statsTracker.getEntityType());
 
-      // Wait for vector operations to complete first (up to 120 seconds for vectors)
       boolean vectorComplete = searchIndexSink.awaitVectorCompletion(120);
       if (!vectorComplete) {
         LOG.warn(
@@ -371,15 +376,39 @@ public class PartitionWorker {
       }
     }
 
-    // Now wait for the stats tracker to have all callbacks accounted for
-    // Use a longer timeout if we had vector tasks since callbacks may be delayed
-    long statsTimeout = hasVectorTasks ? 60000 : 30000;
-    boolean statsComplete = statsTracker.awaitSinkCompletion(statsTimeout);
-    if (!statsComplete) {
-      LOG.warn(
-          "Timed out waiting for sink stats completion, {} operations still pending for entity {}",
-          statsTracker.getPendingSinkOps(),
-          statsTracker.getEntityType());
+    // Wait for all sink callbacks with retries. The bulk processor is shared across
+    // partition workers, so slow batches from other entity types (e.g. testCaseResult
+    // writes taking 70+ seconds) can delay our callbacks. Instead of a single fixed
+    // timeout, retry flush cycles until all pending operations complete.
+    long deadline = System.currentTimeMillis() + SINK_WAIT_DEADLINE_MS;
+    int retryCount = 0;
+
+    while (statsTracker.getPendingSinkOps() > 0 && System.currentTimeMillis() < deadline) {
+      long remainingMs = deadline - System.currentTimeMillis();
+      long waitMs = Math.min(30_000, remainingMs);
+
+      if (statsTracker.awaitSinkCompletion(waitMs)) {
+        break;
+      }
+
+      if (statsTracker.getPendingSinkOps() > 0 && System.currentTimeMillis() < deadline) {
+        retryCount++;
+        LOG.info(
+            "Retry {} - {} sink operations still pending for entity {}, re-flushing bulk processor",
+            retryCount,
+            statsTracker.getPendingSinkOps(),
+            statsTracker.getEntityType());
+        searchIndexSink.flushAndAwait(FLUSH_CYCLE_SECONDS);
+      }
+    }
+
+    if (statsTracker.getPendingSinkOps() > 0) {
+      LOG.error(
+          "Failed to complete all sink operations after {} retries for entity {} "
+              + "({} operations still pending). Records may be missing from the index.",
+          retryCount,
+          statsTracker.getEntityType(),
+          statsTracker.getPendingSinkOps());
     }
 
     statsTracker.flush();

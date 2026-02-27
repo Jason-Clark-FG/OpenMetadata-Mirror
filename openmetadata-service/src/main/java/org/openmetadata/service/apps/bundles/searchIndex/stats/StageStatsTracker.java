@@ -114,8 +114,8 @@ public class StageStatsTracker {
     long deadline = System.currentTimeMillis() + timeoutMs;
     while (pendingSinkOps.get() > 0) {
       if (System.currentTimeMillis() >= deadline) {
-        LOG.warn(
-            "Timed out waiting for {} pending sink operations for job {} entity {}",
+        LOG.debug(
+            "Await cycle expired with {} pending sink operations for job {} entity {}",
             pendingSinkOps.get(),
             jobId,
             entityType);
