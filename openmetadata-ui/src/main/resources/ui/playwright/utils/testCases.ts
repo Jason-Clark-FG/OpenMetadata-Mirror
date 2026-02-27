@@ -187,7 +187,7 @@ export const findSystemTestDefinition = async (page: Page) => {
       response.request().method() === 'GET'
   );
 
-  await page.goto('/rules-library');
+  await page.goto('/test-library');
   let response = await responsePromise;
   let data = await response.json();
 
