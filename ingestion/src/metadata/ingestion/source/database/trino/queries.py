@@ -53,8 +53,8 @@ TRINO_VIEW_DEFINITION = textwrap.dedent(
     """
     SELECT "view_definition"
     FROM "information_schema"."views"
-    WHERE "table_schema" = {schema}
-        AND "table_name" = {view}
+    WHERE "table_schema" = '{schema}'
+        AND "table_name" = '{view}'
     """
 )
 
