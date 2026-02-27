@@ -64,7 +64,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getEntityLinkCondition());
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
-    conditions.add(getEntityStatusCondition());
+    conditions.add(getEntityStatusCondition(tableName));
     String condition = addCondition(conditions);
     return condition.isEmpty() ? "WHERE TRUE" : "WHERE " + condition;
   }
@@ -129,13 +129,12 @@ public class ListFilter extends Filter<ListFilter> {
     return entityLinkStr == null ? "" : "entityLink = :entityLink";
   }
 
-  private String getEntityStatusCondition() {
+  private String getEntityStatusCondition(String tableName) {
     String entityStatus = queryParams.get("entityStatus");
     if (entityStatus == null || entityStatus.trim().isEmpty()) {
       return "";
     }
 
-    // Split and filter empty values - bind params are SQL-injection safe
     List<String> statusValues =
         Arrays.stream(entityStatus.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
 
@@ -150,6 +149,11 @@ public class ListFilter extends Filter<ListFilter> {
       bindParams.add(":" + key);
     }
     String inCondition = String.join(",", bindParams);
+
+    // glossary_term_entity has indexed entityStatus column, use it directly
+    if (Entity.getCollectionDAO().glossaryTermDAO().getTableName().equals(tableName)) {
+      return String.format("entityStatus IN (%s)", inCondition);
+    }
 
     if (Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())) {
       return String.format(
