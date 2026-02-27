@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 @import 'tailwindcss/theme.css' prefix(tw);
+@import 'tailwindcss/preflight.css' prefix(tw);
 @import 'tailwindcss/utilities.css' prefix(tw);
 
 /* Importing the theme.css from ui-core-components to ensure that the theme 

@@ -116,8 +116,7 @@ const App: FC = () => {
               <ErrorBoundary>
                 <AntDConfigProvider>
                   <UntitledUIThemeProvider
-                    brandColors={applicationConfig?.customTheme}
-                    defaultTheme="dark">
+                    brandColors={applicationConfig?.customTheme}>
                     <ThemeProvider theme={muiTheme}>
                       <GlobalStyles styles={{ html: { fontSize: '14px' } }} />
                       <SnackbarProvider

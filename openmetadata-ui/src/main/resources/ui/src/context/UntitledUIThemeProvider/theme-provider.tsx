@@ -77,7 +77,7 @@ interface ThemeProviderProps {
  *   errorColor    → error-600 (solid bg, fg-error-primary, borders)
  *   successColor  → success-600 (solid bg, fg-success-primary)
  *   warningColor  → warning-600 (solid bg, fg-warning-primary)
- *   infoColor     → info-600 (focus ring, border)
+ *   infoColor     → blue-600 (utility-blue-600, maps to UntitledUI's blue/tertiary palette)
  */
 const applyBrandCssVars = (colors: BrandColors, root: HTMLElement) => {
   const {
@@ -87,6 +87,7 @@ const applyBrandCssVars = (colors: BrandColors, root: HTMLElement) => {
     errorColor,
     successColor,
     warningColor,
+    infoColor,
   } = colors;
 
   if (primaryColor) {
@@ -210,6 +211,12 @@ const applyBrandCssVars = (colors: BrandColors, root: HTMLElement) => {
       warningColor
     );
   }
+
+  if (infoColor) {
+    root.style.setProperty('--tw-color-blue-600', infoColor);
+    root.style.setProperty('--tw-color-utility-blue-600', infoColor);
+    root.style.setProperty('--tw-color-utility-blue-600_alt', infoColor);
+  }
 };
 
 const clearBrandCssVars = (root: HTMLElement) => {
@@ -221,7 +228,9 @@ const clearBrandCssVars = (root: HTMLElement) => {
         (p.includes('brand') ||
           p.includes('error') ||
           p.includes('success') ||
-          p.includes('warning'))
+          p.includes('warning') ||
+          p.includes('info') ||
+          p.includes('blue'))
     )
     .forEach((p) => root.style.removeProperty(p));
 };
@@ -279,10 +288,9 @@ export const ThemeProvider = ({
   useEffect(() => {
     const root = window.document.documentElement;
 
+    clearBrandCssVars(root);
     if (brandColors && Object.values(brandColors).some(Boolean)) {
       applyBrandCssVars(brandColors, root);
-    } else {
-      clearBrandCssVars(root);
     }
   }, [
     brandColors?.primaryColor,
