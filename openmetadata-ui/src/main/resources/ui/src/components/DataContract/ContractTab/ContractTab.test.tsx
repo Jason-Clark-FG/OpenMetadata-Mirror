@@ -52,6 +52,7 @@ jest.mock('../../Customization/GenericProvider/GenericProvider', () => ({
       id: 'table-1',
       name: 'test-table',
     },
+    permissions: { EditAll: false },
   })),
 }));
 
@@ -112,9 +113,22 @@ jest.mock('../AddDataContract/AddDataContract', () => {
 });
 
 jest.mock('../ContractDetailTab/ContractDetail', () => ({
-  ContractDetail: ({ contract, onEdit, onDelete }: any) => (
+  ContractDetail: ({
+    contract,
+    hasEditPermission,
+    onEdit,
+    onDelete,
+  }: {
+    contract: DataContract | null | undefined;
+    hasEditPermission: boolean;
+    onEdit: () => void;
+    onDelete: () => void;
+  }) => (
     <div data-testid="contract-detail">
       <div>Contract: {contract?.name || 'No Contract'}</div>
+      <div data-testid="has-edit-permission">
+        {hasEditPermission ? 'true' : 'false'}
+      </div>
       <button data-testid="edit-contract" onClick={onEdit}>
         Edit
       </button>
@@ -418,6 +432,7 @@ describe('ContractTab', () => {
 
       mockUseGenericContext.mockReturnValue({
         data: { id: 'table-2', name: 'different-table' },
+        permissions: { EditAll: false },
       });
 
       rerender(<ContractTab />);
@@ -435,7 +450,10 @@ describe('ContractTab', () => {
       const mockUseGenericContext = jest.requireMock(
         '../../Customization/GenericProvider/GenericProvider'
       ).useGenericContext;
-      mockUseGenericContext.mockReturnValue({ data: undefined });
+      mockUseGenericContext.mockReturnValue({
+        data: undefined,
+        permissions: undefined,
+      });
 
       expect(() => {
         render(<ContractTab />);
@@ -488,6 +506,94 @@ describe('ContractTab', () => {
       });
 
       expect(screen.getByText('Contract: Test Contract')).toBeInTheDocument();
+    });
+  });
+
+  describe('Permissions', () => {
+    const mockUseGenericContext = () =>
+      jest.requireMock('../../Customization/GenericProvider/GenericProvider')
+        .useGenericContext;
+
+    it('should pass hasEditPermission=false when no contract and entity lacks EditAll', async () => {
+      (getContractByEntityId as jest.Mock).mockRejectedValue(
+        new Error('Not found')
+      );
+      mockUseGenericContext().mockReturnValue({
+        data: { id: 'table-1', name: 'test-table' },
+        permissions: { EditAll: false },
+      });
+
+      render(<ContractTab />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('contract-detail')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('has-edit-permission')).toHaveTextContent(
+        'false'
+      );
+    });
+
+    it('should pass hasEditPermission=true when no contract and entity has EditAll', async () => {
+      (getContractByEntityId as jest.Mock).mockRejectedValue(
+        new Error('Not found')
+      );
+      mockUseGenericContext().mockReturnValue({
+        data: { id: 'table-1', name: 'test-table' },
+        permissions: { EditAll: true },
+      });
+
+      render(<ContractTab />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('contract-detail')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('has-edit-permission')).toHaveTextContent(
+        'true'
+      );
+    });
+
+    it('should pass hasEditPermission=true when contract exists and contract has EditAll', async () => {
+      const mockGetEntityPermission = jest.fn().mockResolvedValue({
+        EditAll: true,
+      });
+      jest
+        .requireMock('../../../context/PermissionProvider/PermissionProvider')
+        .usePermissionProvider.mockReturnValue({
+          getEntityPermission: mockGetEntityPermission,
+        });
+
+      render(<ContractTab />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('contract-detail')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('has-edit-permission')).toHaveTextContent(
+        'true'
+      );
+    });
+
+    it('should pass hasEditPermission=false when contract exists but lacks EditAll', async () => {
+      const mockGetEntityPermission = jest.fn().mockResolvedValue({
+        EditAll: false,
+      });
+      jest
+        .requireMock('../../../context/PermissionProvider/PermissionProvider')
+        .usePermissionProvider.mockReturnValue({
+          getEntityPermission: mockGetEntityPermission,
+        });
+
+      render(<ContractTab />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('contract-detail')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('has-edit-permission')).toHaveTextContent(
+        'false'
+      );
     });
   });
 });

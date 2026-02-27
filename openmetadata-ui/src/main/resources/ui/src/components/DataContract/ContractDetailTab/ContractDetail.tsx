@@ -501,6 +501,7 @@ const ContractDetail: React.FC<{
 
               <Dropdown
                 destroyPopupOnHide
+                data-testid="contract-action-dropdown"
                 getPopupContainer={getPopupContainer}
                 menu={{
                   items: contractActionsItems,
@@ -630,6 +631,20 @@ const ContractDetail: React.FC<{
   }, [contract]);
 
   if (!contract) {
+    if (!hasEditPermission) {
+      return (
+        <ErrorPlaceHolder
+          icon={
+            <EmptyContractIcon className="empty-contract-icon" height={140} />
+          }
+          type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}>
+          <Typography.Paragraph className="m-t-md w-80" type="secondary">
+            {t('message.no-contract-description')}
+          </Typography.Paragraph>
+        </ErrorPlaceHolder>
+      );
+    }
+
     return (
       <>
         <ContractImportModal

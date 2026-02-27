@@ -36,7 +36,8 @@ import { ContractDetail } from '../ContractDetailTab/ContractDetail';
 import './contract-tab.less';
 
 export const ContractTab = () => {
-  const { data: entityData } = useGenericContext();
+  const { data: entityData, permissions: entityPermissions } =
+    useGenericContext();
   const { getEntityPermission } = usePermissionProvider();
   const { t } = useTranslation();
   const [tabMode, setTabMode] = useState<DataContractTabMode>(
@@ -50,7 +51,9 @@ export const ContractTab = () => {
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
   const { id, name: entityName } = entityData ?? {};
 
-  const hasEditPermission = Boolean(contractPermissions?.EditAll);
+  const hasEditPermission = contract
+    ? Boolean(contractPermissions?.EditAll)
+    : Boolean(entityPermissions?.EditAll);
 
   const fetchContractPermissions = async (contractId: string) => {
     try {

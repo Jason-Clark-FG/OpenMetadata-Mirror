@@ -244,7 +244,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(page, tableWithContract);
 
       await page.getByTestId('manage-contract-actions').click();
-      await page.waitForSelector('.contract-action-dropdown', {
+      await page.getByTestId('contract-action-dropdown').waitFor({
               state: 'visible',
             });
       await verifyContractButtonVisibility(page, {
@@ -263,7 +263,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(page, tableWithContract);
 
       await page.getByTestId('manage-contract-actions').click();
-      await page.waitForSelector('.contract-action-dropdown', {
+      await page.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       const download = await performODCSExport(page);
@@ -295,7 +295,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataConsumerPage, tableWithContract);
 
       await dataConsumerPage.getByTestId('manage-contract-actions').click();
-      await dataConsumerPage.waitForSelector('.contract-action-dropdown', {
+      await dataConsumerPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
 
@@ -317,7 +317,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataConsumerPage, tableWithContract);
 
       await dataConsumerPage.getByTestId('manage-contract-actions').click();
-      await dataConsumerPage.waitForSelector('.contract-action-dropdown', {
+      await dataConsumerPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       const download = await performODCSExport(dataConsumerPage);
@@ -336,7 +336,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataStewardPage, tableWithContract);
 
       await dataStewardPage.getByTestId('manage-contract-actions').click();
-      await dataStewardPage.waitForSelector('.contract-action-dropdown', {
+      await dataStewardPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       await verifyContractButtonVisibility(dataStewardPage, {
@@ -357,7 +357,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataStewardPage, tableWithContract);
 
       await dataStewardPage.getByTestId('manage-contract-actions').click();
-      await dataStewardPage.waitForSelector('.contract-action-dropdown', {
+      await dataStewardPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       const download = await performODCSExport(dataStewardPage);
@@ -376,7 +376,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataContractEditPage, tableWithContract);
 
       await dataContractEditPage.getByTestId('manage-contract-actions').click();
-      await dataContractEditPage.waitForSelector('.contract-action-dropdown', {
+      await dataContractEditPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       await verifyContractButtonVisibility(dataContractEditPage, {
@@ -397,7 +397,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataContractEditPage, tableWithContract);
 
       await dataContractEditPage.getByTestId('manage-contract-actions').click();
-      await dataContractEditPage.waitForSelector('.contract-action-dropdown', {
+      await dataContractEditPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       const download = await performODCSExport(dataContractEditPage);
@@ -455,7 +455,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataContractViewPage, tableWithContract);
 
       await dataContractViewPage.getByTestId('manage-contract-actions').click();
-      await dataContractViewPage.waitForSelector('.contract-action-dropdown', {
+      await dataContractViewPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       await verifyContractButtonVisibility(dataContractViewPage, {
@@ -476,7 +476,7 @@ test.describe('ODCS Import/Export - RBAC Permissions', () => {
       await navigateToContractTab(dataContractViewPage, tableWithContract);
 
       await dataContractViewPage.getByTestId('manage-contract-actions').click();
-      await dataContractViewPage.waitForSelector('.contract-action-dropdown', {
+      await dataContractViewPage.getByTestId('contract-action-dropdown').waitFor({
         state: 'visible',
       });
       const download = await performODCSExport(dataContractViewPage);
