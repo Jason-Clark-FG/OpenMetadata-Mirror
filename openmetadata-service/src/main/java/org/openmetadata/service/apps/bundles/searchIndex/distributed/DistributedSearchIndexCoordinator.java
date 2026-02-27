@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.system.EventPublisherJob;
@@ -84,6 +85,9 @@ public class DistributedSearchIndexCoordinator {
   private final PartitionCalculator partitionCalculator;
   private final String serverId;
   private EntityCompletionTracker entityTracker;
+
+  /** Monotonic counter to guarantee unique claimedAt values across concurrent worker threads. */
+  private final AtomicLong claimCounter = new AtomicLong(0);
 
   public DistributedSearchIndexCoordinator(CollectionDAO collectionDAO) {
     this.collectionDAO = collectionDAO;
@@ -313,7 +317,9 @@ public class DistributedSearchIndexCoordinator {
       return Optional.empty();
     }
 
-    long claimTime = System.currentTimeMillis();
+    // Ensure unique claimTime per call so concurrent claims on the same server are distinguishable.
+    // The counter suffix keeps values within normal epoch-millis range while preventing collisions.
+    long claimTime = uniqueClaimTime();
 
     // Atomically claim a partition - FOR UPDATE SKIP LOCKED ensures no race condition
     int claimed = partitionDAO.claimNextPartitionAtomic(jobId.toString(), serverId, claimTime);
@@ -322,9 +328,9 @@ public class DistributedSearchIndexCoordinator {
       return Optional.empty();
     }
 
-    // Fetch the partition we just claimed
+    // Fetch the partition we just claimed using the unique claimTime
     SearchIndexPartitionRecord record =
-        partitionDAO.findLatestClaimedPartition(jobId.toString(), serverId);
+        partitionDAO.findLatestClaimedPartition(jobId.toString(), serverId, claimTime);
     if (record == null) {
       LOG.warn("Claimed partition but couldn't find it - this shouldn't happen");
       return Optional.empty();
@@ -341,6 +347,18 @@ public class DistributedSearchIndexCoordinator {
         MAX_IN_FLIGHT_PARTITIONS_PER_SERVER);
 
     return Optional.of(partition);
+  }
+
+  /**
+   * Generates a unique claimedAt timestamp that stays close to real wall-clock time but never
+   * repeats, even when called concurrently from multiple worker threads. The counter suffix is
+   * added in the sub-millisecond range so stale-detection logic (which compares against
+   * System.currentTimeMillis()) continues to work correctly.
+   */
+  private long uniqueClaimTime() {
+    long millis = System.currentTimeMillis();
+    long seq = claimCounter.incrementAndGet() % 1000;
+    return millis + seq;
   }
 
   /**

@@ -9614,10 +9614,13 @@ public interface CollectionDAO {
 
     @SqlQuery(
         "SELECT * FROM search_index_partition WHERE jobId = :jobId AND status = 'PROCESSING' "
-            + "AND assignedServer = :serverId ORDER BY claimedAt DESC LIMIT 1")
+            + "AND assignedServer = :serverId AND claimedAt = :claimedAt "
+            + "ORDER BY priority DESC, entityType, partitionIndex LIMIT 1")
     @RegisterRowMapper(SearchIndexPartitionMapper.class)
     SearchIndexPartitionRecord findLatestClaimedPartition(
-        @Bind("jobId") String jobId, @Bind("serverId") String serverId);
+        @Bind("jobId") String jobId,
+        @Bind("serverId") String serverId,
+        @Bind("claimedAt") long claimedAt);
 
     @SqlQuery(
         "SELECT * FROM search_index_partition WHERE jobId = :jobId AND status = :status "
