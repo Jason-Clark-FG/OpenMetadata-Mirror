@@ -2149,6 +2149,49 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
     assertEquals(testUser2().getId(), updated.getOwners().get(0).getId());
   }
 
+  /**
+   * Helper method to search glossary terms with pagination and filters.
+   * This is test-only code that directly calls the search API endpoint.
+   */
+  private ResultList<GlossaryTerm> searchGlossaryTerms(
+      OpenMetadataClient client,
+      String query,
+      String glossaryFqn,
+      String entityStatus,
+      Integer limit,
+      Integer offset) {
+    org.openmetadata.sdk.network.RequestOptions.Builder optionsBuilder =
+        org.openmetadata.sdk.network.RequestOptions.builder();
+
+    if (query != null) {
+      optionsBuilder.queryParam("q", query);
+    }
+    if (glossaryFqn != null) {
+      optionsBuilder.queryParam("glossaryFqn", glossaryFqn);
+    }
+    if (entityStatus != null) {
+      optionsBuilder.queryParam("entityStatus", entityStatus);
+    }
+    if (limit != null) {
+      optionsBuilder.queryParam("limit", limit.toString());
+    }
+    if (offset != null) {
+      optionsBuilder.queryParam("offset", offset.toString());
+    }
+
+    return client
+        .getHttpClient()
+        .execute(
+            org.openmetadata.sdk.network.HttpMethod.GET,
+            "/v1/glossaryTerms/search",
+            null,
+            GlossaryTermResultList.class,
+            optionsBuilder.build());
+  }
+
+  /** Result list type for deserializing glossary term search results. */
+  private static class GlossaryTermResultList extends ResultList<GlossaryTerm> {}
+
   @Test
   void test_glossaryTermEntityStatusFiltering(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
@@ -2184,7 +2227,7 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
 
     // Step 4: Search without entityStatus filter - both terms should be returned
     ResultList<GlossaryTerm> allTerms =
-        client.glossaryTerms().search(null, glossary.getFullyQualifiedName(), null, 1000, 0);
+        searchGlossaryTerms(client, null, glossary.getFullyQualifiedName(), null, 1000, 0);
 
     assertNotNull(allTerms);
     assertNotNull(allTerms.getData());
@@ -2201,9 +2244,8 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
 
     // Step 5: Search with APPROVED status - only the first term should be returned
     ResultList<GlossaryTerm> approvedTerms =
-        client
-            .glossaryTerms()
-            .search(null, glossary.getFullyQualifiedName(), EntityStatus.APPROVED.value(), 1000, 0);
+        searchGlossaryTerms(
+            client, null, glossary.getFullyQualifiedName(), EntityStatus.APPROVED.value(), 1000, 0);
 
     assertNotNull(approvedTerms);
     assertNotNull(approvedTerms.getData());
@@ -2224,10 +2266,13 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
 
     // Step 6: Search with IN_REVIEW status - only the second term should be returned
     ResultList<GlossaryTerm> reviewTerms =
-        client
-            .glossaryTerms()
-            .search(
-                null, glossary.getFullyQualifiedName(), EntityStatus.IN_REVIEW.value(), 1000, 0);
+        searchGlossaryTerms(
+            client,
+            null,
+            glossary.getFullyQualifiedName(),
+            EntityStatus.IN_REVIEW.value(),
+            1000,
+            0);
 
     assertNotNull(reviewTerms);
     assertNotNull(reviewTerms.getData());
@@ -2248,9 +2293,8 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
 
     // Additional test: Multiple status filter (APPROVED,IN_REVIEW) - both terms should be returned
     ResultList<GlossaryTerm> multiStatusTerms =
-        client
-            .glossaryTerms()
-            .search(null, glossary.getFullyQualifiedName(), "Approved,In Review", 1000, 0);
+        searchGlossaryTerms(
+            client, null, glossary.getFullyQualifiedName(), "Approved,In Review", 1000, 0);
 
     assertNotNull(multiStatusTerms);
     assertNotNull(multiStatusTerms.getData());
