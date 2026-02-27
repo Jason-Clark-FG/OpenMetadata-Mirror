@@ -228,7 +228,7 @@ const clearBrandCssVars = (root: HTMLElement) => {
 export const ThemeProvider = ({
   children,
   brandColors,
-  defaultTheme = 'dark',
+  defaultTheme = 'system',
   storageKey = 'ui-theme',
   darkModeClass = 'dark-mode',
 }: ThemeProviderProps) => {
