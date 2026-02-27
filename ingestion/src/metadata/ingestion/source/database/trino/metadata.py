@@ -196,14 +196,14 @@ def get_view_definition(
         raise exc.NoSuchTableError("schema is required")
 
     if catalog_name:
-        full_view_name = f"{catalog_name}.{schema}.{view_name}"
+        full_view_name = f'"{catalog_name}"."{schema}"."{view_name}"'
     else:
-        full_view_name = f"{schema}.{view_name}"
+        full_view_name = f'"{schema}"."{view_name}"'
 
     try:
         # Fetch from information_schema.views (requires only read permissions)
-        query = TRINO_VIEW_DEFINITION.format(schema=schema, view=view_name)
-        res = connection.execute(sql.text(query))
+        query = TRINO_VIEW_DEFINITION
+        res = connection.execute(sql.text(query), {"schema": schema, "view": view_name})
         view_definition = res.scalar()
 
         if not view_definition:
