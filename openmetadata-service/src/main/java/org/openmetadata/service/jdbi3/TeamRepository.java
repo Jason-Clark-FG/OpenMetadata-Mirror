@@ -252,7 +252,9 @@ public class TeamRepository extends EntityRepository<Team> {
       EntityReference personaRef =
           Entity.getEntityReferenceById(
               Entity.PERSONA, UUID.fromString(record.getToId()), Include.ALL);
-      teamToPersona.put(teamId, personaRef);
+      if (!Boolean.TRUE.equals(personaRef.getDeleted())) {
+        teamToPersona.put(teamId, personaRef);
+      }
     }
 
     for (Team team : teams) {

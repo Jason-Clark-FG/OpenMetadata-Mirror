@@ -690,7 +690,10 @@ public class UserRepository extends EntityRepository<User> {
     for (CollectionDAO.EntityRelationshipObject record : personaRecords) {
       UUID personaId = UUID.fromString(record.getToId());
       if (seen.add(personaId)) {
-        inherited.add(Entity.getEntityReferenceById(Entity.PERSONA, personaId, Include.ALL));
+        EntityReference ref = Entity.getEntityReferenceById(Entity.PERSONA, personaId, Include.ALL);
+        if (!Boolean.TRUE.equals(ref.getDeleted())) {
+          inherited.add(ref);
+        }
       }
     }
     return inherited;
@@ -1031,42 +1034,35 @@ public class UserRepository extends EntityRepository<User> {
       return;
     }
 
-    // Step 1: Collect all team IDs across all users
+    // Step 1: Collect all team IDs across all users.
+    // Use pre-loaded teams when available, batch-fetch only for users that need it.
     Map<UUID, List<UUID>> userToTeamIds = new HashMap<>();
     Set<String> allTeamIds = new HashSet<>();
 
-    // Check if any user needs team fetching
-    boolean needTeamFetch = users.stream().anyMatch(u -> u.getTeams() == null);
-
-    if (needTeamFetch) {
-      List<String> userIds =
-          users.stream()
-              .filter(u -> !Boolean.TRUE.equals(u.getIsBot()))
-              .map(User::getId)
-              .map(UUID::toString)
-              .distinct()
-              .toList();
-
-      if (!userIds.isEmpty()) {
-        List<CollectionDAO.EntityRelationshipObject> teamRecords =
-            daoCollection
-                .relationshipDAO()
-                .findFromBatch(userIds, Relationship.HAS.ordinal(), Entity.TEAM, USER);
-
-        for (CollectionDAO.EntityRelationshipObject record : teamRecords) {
-          UUID userId = UUID.fromString(record.getToId());
-          UUID teamId = UUID.fromString(record.getFromId());
-          userToTeamIds.computeIfAbsent(userId, k -> new ArrayList<>()).add(teamId);
-          allTeamIds.add(teamId.toString());
-        }
-      }
-    } else {
-      for (User user : users) {
-        if (Boolean.TRUE.equals(user.getIsBot())) continue;
+    List<String> usersNeedingTeamFetch = new ArrayList<>();
+    for (User user : users) {
+      if (Boolean.TRUE.equals(user.getIsBot())) continue;
+      if (user.getTeams() != null) {
         List<UUID> teamIds =
             listOrEmpty(user.getTeams()).stream().map(EntityReference::getId).toList();
         userToTeamIds.put(user.getId(), teamIds);
         teamIds.forEach(id -> allTeamIds.add(id.toString()));
+      } else {
+        usersNeedingTeamFetch.add(user.getId().toString());
+      }
+    }
+
+    if (!usersNeedingTeamFetch.isEmpty()) {
+      List<CollectionDAO.EntityRelationshipObject> teamRecords =
+          daoCollection
+              .relationshipDAO()
+              .findFromBatch(usersNeedingTeamFetch, Relationship.HAS.ordinal(), Entity.TEAM, USER);
+
+      for (CollectionDAO.EntityRelationshipObject record : teamRecords) {
+        UUID userId = UUID.fromString(record.getToId());
+        UUID teamId = UUID.fromString(record.getFromId());
+        userToTeamIds.computeIfAbsent(userId, k -> new ArrayList<>()).add(teamId);
+        allTeamIds.add(teamId.toString());
       }
     }
 
@@ -1088,7 +1084,9 @@ public class UserRepository extends EntityRepository<User> {
       EntityReference personaRef =
           Entity.getEntityReferenceById(
               Entity.PERSONA, UUID.fromString(record.getToId()), Include.ALL);
-      teamToPersona.put(teamId, personaRef);
+      if (!Boolean.TRUE.equals(personaRef.getDeleted())) {
+        teamToPersona.put(teamId, personaRef);
+      }
     }
 
     // Step 3: Distribute inherited personas to each user

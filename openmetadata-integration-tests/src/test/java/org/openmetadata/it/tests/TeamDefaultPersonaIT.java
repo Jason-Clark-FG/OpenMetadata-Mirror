@@ -772,6 +772,52 @@ public class TeamDefaultPersonaIT {
     assertTrue(updated.getInheritedPersonas().isEmpty());
   }
 
+  // ===================================================================
+  // SOFT-DELETED PERSONA FILTERING
+  // ===================================================================
+
+  @Test
+  void test_softDeletedPersonaExcludedFromInheritedPersonas(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    Persona persona = createPersona(ns, "softDelPersona");
+    Team team = createGroupTeam(ns, "softDelTeam", persona.getId());
+    User user = createTestUser(ns, "softDelUser", List.of(team.getId()));
+
+    // Verify inherited persona exists
+    User fetched = client.users().get(user.getId().toString(), "personas");
+    assertEquals(1, fetched.getInheritedPersonas().size());
+    assertEquals(persona.getId(), fetched.getInheritedPersonas().get(0).getId());
+
+    // Soft-delete the persona
+    client.personas().delete(persona.getId());
+
+    // Inherited personas should no longer include the deleted persona
+    User afterDelete = client.users().get(user.getId().toString(), "personas");
+    assertNotNull(afterDelete.getInheritedPersonas());
+    assertTrue(afterDelete.getInheritedPersonas().isEmpty());
+  }
+
+  @Test
+  void test_softDeletedPersonaExcludedFromTeamDefaultPersona(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    Persona persona = createPersona(ns, "softDelTeamPersona");
+    Team team = createGroupTeam(ns, "softDelTeamDp", persona.getId());
+
+    // Verify team has defaultPersona
+    Team fetched = client.teams().get(team.getId().toString(), "defaultPersona");
+    assertNotNull(fetched.getDefaultPersona());
+    assertEquals(persona.getId(), fetched.getDefaultPersona().getId());
+
+    // Soft-delete the persona
+    client.personas().delete(persona.getId());
+
+    // Team's defaultPersona should be null since the persona is deleted
+    Team afterDelete = client.teams().get(team.getId().toString(), "defaultPersona");
+    assertNull(afterDelete.getDefaultPersona());
+  }
+
   private String toEmail(String name) {
     String sanitized = name.replaceAll("[^a-zA-Z0-9._-]", "");
     if (sanitized.length() > 60) {
