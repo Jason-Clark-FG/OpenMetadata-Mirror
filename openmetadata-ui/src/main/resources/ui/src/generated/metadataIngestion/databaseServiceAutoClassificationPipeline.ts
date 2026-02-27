@@ -45,6 +45,23 @@ export interface DatabaseServiceAutoClassificationPipeline {
      */
     includeViews?: boolean;
     /**
+     * Maximum character length for individual cell values in sample data. Cell values exceeding
+     * this limit will be truncated during sampling to prevent memory issues. The default of
+     * 1000 characters is recommended for auto classification pipelines. Increase this value if
+     * you need to preserve longer text content for classification analysis, but be aware that
+     * larger values consume more memory (~1KB per character across all sampled rows).
+     */
+    maxCellLength?: number;
+    /**
+     * Maximum character length for text fields during NLP processing and pattern recognition in
+     * auto classification. Text exceeding this limit will be truncated before analysis. The
+     * default of 1000 characters balances accuracy and performance for most use cases. Increase
+     * this value if your sensitive data patterns appear in longer text fields, but note that
+     * larger values significantly increase processing time and memory usage during
+     * classification.
+     */
+    maxNlpTextLength?: number;
+    /**
      * Number of sample rows to ingest when 'Generate Sample Data' is enabled
      */
     sampleDataCount?: number;
