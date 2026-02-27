@@ -81,14 +81,14 @@
       "title": "Classification Language"
     },
     "maxCellLength": {
-      "description": "Maximum character length for individual cell values in sample data. Values exceeding this limit will be truncated to prevent memory issues. Larger values allow preserving more data but consume more memory.",
+      "description": "Maximum character length for individual cell values in sample data. Cell values exceeding this limit will be truncated during sampling to prevent memory issues. The default of 1000 characters is recommended for auto classification pipelines. Increase this value if you need to preserve longer text content for classification analysis, but be aware that larger values consume more memory (~1KB per character across all sampled rows).",
       "type": "integer",
       "default": 1000,
       "minimum": 1000,
       "title": "Maximum Cell Length"
     },
     "maxNlpTextLength": {
-      "description": "Maximum character length for text fields during NLP processing in auto classification. Larger values may improve classification accuracy for long text fields but consume more memory and processing time.",
+      "description": "Maximum character length for text fields during NLP processing and pattern recognition in auto classification. Text exceeding this limit will be truncated before analysis. The default of 1000 characters balances accuracy and performance for most use cases. Increase this value if your sensitive data patterns appear in longer text fields, but note that larger values significantly increase processing time and memory usage during classification.",
       "type": "integer",
       "default": 1000,
       "minimum": 1000,

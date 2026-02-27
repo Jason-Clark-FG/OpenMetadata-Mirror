@@ -492,6 +492,8 @@ export const ADVANCED_PROPERTIES = [
   'samplingMethodType',
   'randomizedSample',
   'sampleDataCount',
+  'maxCellLength',
+  'maxNlpTextLength',
   'threadCount',
   'timeoutSeconds',
   'sslConfig',

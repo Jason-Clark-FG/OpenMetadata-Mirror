@@ -101,3 +101,34 @@ $$section
 ### Sample Data Rows Count $(id="sampleDataCount")
 Set the number of rows to ingest when `Ingest Sample Data` toggle is on. Defaults to 50.
 $$
+
+$$section
+### Maximum Cell Length $(id="maxCellLength")
+
+Controls the maximum character length for individual cell values in sample data during auto classification. Cell values exceeding this limit will be truncated to prevent memory issues during sampling and processing.
+
+**Default**: 1000 characters
+
+**When to increase**: If your sensitive data patterns or PII information appears in longer text fields (e.g., large JSON blobs, long descriptions, or comments), you may need to increase this value to preserve the full content for accurate classification.
+
+**Performance impact**: Larger values consume more memory during sampling. Each character adds approximately 1KB of memory across all sampled rows. For example, setting this to 10,000 characters on a table with 50 sample rows would use roughly 500KB per column containing long text.
+
+**Recommendation**: Start with the default 1000 characters. Only increase if you notice that important classification patterns are being missed due to truncation. Monitor memory usage when increasing this value for tables with many text columns.
+$$
+
+$$section
+### Maximum NLP Text Length $(id="maxNlpTextLength")
+
+Controls the maximum character length for text fields during NLP (Natural Language Processing) analysis and pattern recognition in auto classification. Text exceeding this limit will be truncated before being analyzed for sensitive information patterns.
+
+**Default**: 1000 characters
+
+**When to increase**: If your sensitive data patterns (like email addresses, phone numbers, or credit card numbers) frequently appear later in long text fields, or if you're using custom recognizers that need to analyze larger text segments, you should increase this value.
+
+**Performance impact**: Larger values significantly increase NLP processing time and memory consumption during classification. NLP analysis is computationally expensive, and doubling this value can more than double the processing time per column. This also impacts the overall pipeline execution time.
+
+**Recommendation**: The default 1000 characters balances accuracy and performance for most use cases. For tables with very long text columns (e.g., articles, logs, or transcripts), consider:
+- First, verifying that sensitive data actually appears beyond the 1000-character mark
+- Testing with a slightly higher value (e.g., 2000-3000) on a subset of tables before applying broadly
+- Monitoring pipeline execution times to ensure they remain acceptable
+$$
