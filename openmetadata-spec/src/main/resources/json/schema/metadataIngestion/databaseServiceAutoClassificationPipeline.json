@@ -79,6 +79,20 @@
       "$ref": "../type/classificationLanguages.json",
       "default": "en",
       "title": "Classification Language"
+    },
+    "maxCellLength": {
+      "description": "Maximum character length for individual cell values in sample data. Values exceeding this limit will be truncated to prevent memory issues. Larger values allow preserving more data but consume more memory.",
+      "type": "integer",
+      "default": 1000,
+      "minimum": 1000,
+      "title": "Maximum Cell Length"
+    },
+    "maxNlpTextLength": {
+      "description": "Maximum character length for text fields during NLP processing in auto classification. Larger values may improve classification accuracy for long text fields but consume more memory and processing time.",
+      "type": "integer",
+      "default": 1000,
+      "minimum": 1000,
+      "title": "Maximum NLP Text Length"
     }
   },
   "additionalProperties": false

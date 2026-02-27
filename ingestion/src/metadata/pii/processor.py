@@ -22,6 +22,7 @@ For migration, use TagProcessor instead:
 import warnings
 from typing import Any, Sequence
 
+from metadata.pii.algorithms.preprocessing import MAX_NLP_TEXT_LENGTH
 from metadata.pii.algorithms.presidio_patches import ResultCapturingPatcher
 from metadata.pii.algorithms.presidio_utils import explain_recognition_results
 
@@ -108,7 +109,11 @@ class PIIProcessor(AutoClassificationProcessor):
         # Build classifier with the results capturing patcher
         result_capturer = ResultCapturingPatcher()
         classifier: ColumnClassifier[PIISensitivityTag] = PIISensitiveClassifier(
-            HeuristicPIIClassifier(extra_patchers=(result_capturer,))
+            HeuristicPIIClassifier(
+                extra_patchers=(result_capturer,),
+                max_nlp_text_length=self.source_config.maxNlpTextLength
+                or MAX_NLP_TEXT_LENGTH,
+            )
         )
 
         # Get the tags and confidence
