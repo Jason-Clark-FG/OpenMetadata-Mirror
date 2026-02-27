@@ -38,6 +38,7 @@ from metadata.ingestion.source.database.common_db_source import CommonDbSourceSe
 from metadata.ingestion.source.database.trino.queries import (
     TRINO_TABLE_COMMENTS,
     TRINO_VIEW_DEFINITION,
+    TRINO_VIEW_DEFINITION_FALLBACK,
 )
 from metadata.utils import fqn
 from metadata.utils.filters import filter_by_database
@@ -197,10 +198,32 @@ def get_view_definition(
         full_view_name = f"{schema}.{view_name}"
 
     try:
-        # Use SHOW CREATE VIEW to get the full DDL
-        query = TRINO_VIEW_DEFINITION.format(view_name=full_view_name)
+        # View definitions fetched from information_schema.views does not contain
+        # CREATE VIEW prefix and starts with SELECT statement, while the SHOW CREATE VIEW
+        # returns the full DDL with CREATE VIEW prefix but requires owner permissions, hence
+        # that has been added as a fallback.
+        query = TRINO_VIEW_DEFINITION.format(schema=schema, view=view_name)
         res = connection.execute(sql.text(query))
-        return res.scalar()
+        view_definition = res.scalar()
+
+        if not view_definition:
+            # Use SHOW CREATE VIEW to get the full DDL
+            query = TRINO_VIEW_DEFINITION_FALLBACK.format(view_name=full_view_name)
+            res = connection.execute(sql.text(query))
+            view_definition = res.scalar()
+
+        # If the view definition does not contain a CREATE VIEW statement (including
+        # variants like CREATE OR REPLACE VIEW), add a CREATE VIEW prefix to make
+        # sure the lineage parser can parse it correctly.
+        create_view_pattern = re.compile(
+            r"CREATE\s+(OR\s+REPLACE\s+)?VIEW", re.IGNORECASE
+        )
+        if not create_view_pattern.search(view_definition):
+            view_definition = (
+                f"CREATE VIEW {full_view_name} AS {view_definition}\n\n-- Homemade"
+            )
+
+        return view_definition
     except Exception:
         logger.warning(f"Could not get view definition for view [{full_view_name}]")
 
