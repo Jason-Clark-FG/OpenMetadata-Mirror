@@ -2025,30 +2025,17 @@ public class SearchRepository {
       JsonNode root = mapper.readTree(mapping);
       if (root.has("mappings")) {
         JsonNode mappings = root.get("mappings");
-        if (mappings.has("properties")) {
-          JsonNode properties = mappings.get("properties");
-          if (properties.has("embedding")) {
-            ((com.fasterxml.jackson.databind.node.ObjectNode) properties.get("embedding"))
-                .put("dimension", dimension);
-          }
-        }
-        JsonNode meta =
+        com.fasterxml.jackson.databind.node.ObjectNode meta =
             ((com.fasterxml.jackson.databind.node.ObjectNode) mappings).putObject("_meta");
-        ((com.fasterxml.jackson.databind.node.ObjectNode) meta)
-            .put(
+        meta.put(
                 "embedding_model",
                 embeddingClient != null ? embeddingClient.getModelId() : "unknown")
             .put("embedding_dimension", dimension);
       }
       return mapper.writeValueAsString(root);
     } catch (Exception e) {
-      LOG.warn(
-          "Failed to parse mapping JSON for dimension patching, falling back to string replace");
-      return mapping
-          .replace("\"dimension\": 768", "\"dimension\": " + dimension)
-          .replace("\"dimension\":768", "\"dimension\":" + dimension)
-          .replace("\"dimension\": 512", "\"dimension\": " + dimension)
-          .replace("\"dimension\":512", "\"dimension\":" + dimension);
+      LOG.warn("Failed to set embedding _meta in mapping JSON", e);
+      return mapping;
     }
   }
 

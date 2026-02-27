@@ -11,11 +11,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.hc.core5.http.HttpHost;
+import org.openmetadata.service.search.opensearch.OsUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -270,11 +272,13 @@ class VectorEmbeddingIntegrationIT {
 
   private void createEntityIndex() throws Exception {
     InputStream indexStream =
-        getClass().getResourceAsStream("/elasticsearch/en/table_search_index.json");
-    JsonNode indexConfig = mapper.readTree(indexStream);
+        getClass().getResourceAsStream("/elasticsearch/en/table_index_mapping.json");
+    String rawMapping = new String(indexStream.readAllBytes(), StandardCharsets.UTF_8);
 
+    String enrichedMapping = OsUtils.enrichIndexMappingForOpenSearch(rawMapping);
+
+    JsonNode indexConfig = mapper.readTree(enrichedMapping);
     int actualDimension = embeddingClient.getDimension();
-
     ((ObjectNode) indexConfig.get("mappings").get("properties").get("embedding"))
         .put("dimension", actualDimension);
 

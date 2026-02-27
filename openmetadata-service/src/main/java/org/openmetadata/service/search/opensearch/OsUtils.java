@@ -593,6 +593,53 @@ public class OsUtils {
       ((ObjectNode) rootNode).set("mappings", transformedMappings);
     }
 
+    // Add knn_vector settings for embedding-enabled indexes
+    addKnnVectorSettings(rootNode);
+
     return rootNode.toString();
+  }
+
+  /**
+   * Adds OpenSearch-specific knn_vector field and index settings for indexes that support
+   * embeddings. Detects embedding support by the presence of a "fingerprint" field in mappings.
+   * This keeps the static mapping files search-engine-agnostic while enabling vector search on
+   * OpenSearch.
+   */
+  static void addKnnVectorSettings(JsonNode rootNode) {
+    JsonNode properties = rootNode.path("mappings").path("properties");
+    if (properties.isMissingNode() || !properties.has("fingerprint")) {
+      return;
+    }
+
+    ObjectNode indexSettings = (ObjectNode) rootNode.path("settings").path("index");
+    if (!indexSettings.isMissingNode()) {
+      indexSettings.put("knn", true);
+      indexSettings.put("knn.algo_param.ef_search", 1000);
+      indexSettings.put("knn.advanced.filtered_exact_search_threshold", 0);
+    }
+
+    int dimension = 512;
+    JsonNode meta = rootNode.path("mappings").path("_meta");
+    if (!meta.isMissingNode() && meta.has("embedding_dimension")) {
+      dimension = meta.get("embedding_dimension").asInt(512);
+    }
+
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode embeddingNode = mapper.createObjectNode();
+    embeddingNode.put("type", "knn_vector");
+    embeddingNode.put("dimension", dimension);
+
+    ObjectNode methodNode = mapper.createObjectNode();
+    methodNode.put("name", "hnsw");
+    methodNode.put("engine", "lucene");
+    methodNode.put("space_type", "cosinesimil");
+
+    ObjectNode paramsNode = mapper.createObjectNode();
+    paramsNode.put("m", 48);
+    paramsNode.put("ef_construction", 256);
+    methodNode.set("parameters", paramsNode);
+
+    embeddingNode.set("method", methodNode);
+    ((ObjectNode) properties).set("embedding", embeddingNode);
   }
 }
