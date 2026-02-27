@@ -201,16 +201,10 @@ function getColumnLineageCoordinates(
     return null;
   }
 
-  const sourceNodeHeight = getNodeHeight(
-    sourceNode,
-    false,
-    columnsInCurrentPages.size
-  );
-  const targetNodeHeight = getNodeHeight(
-    targetNode,
-    false,
-    columnsInCurrentPages.size
-  );
+  // Passing column count as 0 since we don't want to consider columns
+  // we are calculating column position separately
+  const sourceNodeHeight = getNodeHeight(sourceNode, false, 0);
+  const targetNodeHeight = getNodeHeight(targetNode, false, 0);
 
   const sourceY = calculateColumnPosition(
     sourceData.columnIndex,

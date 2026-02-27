@@ -40,7 +40,6 @@ export const CanvasLayerWrapper = ({
       />
       <PipelineEdgeButtons />
       <EdgeInteractionOverlay
-        hoveredEdge={hoverEdge}
         onEdgeRemove={onEdgeRemove}
         onPipelineClick={onPipelineClick}
       />

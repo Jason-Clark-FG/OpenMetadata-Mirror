@@ -85,7 +85,7 @@ describe('VirtualColumnList', () => {
 
     render(<VirtualColumnList {...defaultProps} flatItems={flatItems} />);
 
-    expect(screen.getByTestId('column-scroll-up')).toBeInTheDocument();
+    expect(screen.queryByTestId('column-scroll-up')).not.toBeInTheDocument();
     expect(screen.queryByTestId('column-scroll-down')).not.toBeInTheDocument();
 
     flatItems.forEach((item) => {
