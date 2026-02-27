@@ -104,7 +104,7 @@ class DistributedSearchIndexCoordinatorTest {
     Set<String> entities = Set.of("table", "user");
     EventPublisherJob jobConfig = new EventPublisherJob().withEntities(entities).withBatchSize(500);
 
-    when(partitionCalculator.getEntityCounts(entities))
+    when(partitionCalculator.getEntityCounts(entities, null))
         .thenReturn(java.util.Map.of("table", 10000L, "user", 5000L));
 
     SearchIndexJob job = coordinator.createJob(entities, jobConfig, "admin");
@@ -194,7 +194,7 @@ class DistributedSearchIndexCoordinatorTest {
                 .cursor(5000)
                 .build());
 
-    when(partitionCalculator.calculatePartitions(jobId, entities)).thenReturn(mockPartitions);
+    when(partitionCalculator.calculatePartitions(jobId, entities, null)).thenReturn(mockPartitions);
 
     SearchIndexJob result = coordinator.initializePartitions(jobId);
 

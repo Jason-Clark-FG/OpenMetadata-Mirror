@@ -243,8 +243,9 @@ public class DistributedSearchIndexExecutor {
     }
 
     try {
-      // Create the job
-      SearchIndexJob job = coordinator.createJob(entities, jobConfiguration, createdBy);
+      // Create the job (pass reindexConfig so time-series date filtering is applied to totals)
+      SearchIndexJob job =
+          coordinator.createJob(entities, jobConfiguration, createdBy, reindexConfig);
 
       // Initialize partitions (with date filtering for time series entities)
       currentJob = coordinator.initializePartitions(job.getId(), reindexConfig);

@@ -126,12 +126,20 @@ public class DistributedSearchIndexCoordinator {
    */
   public SearchIndexJob createJob(
       Set<String> entities, EventPublisherJob jobConfiguration, String createdBy) {
+    return createJob(entities, jobConfiguration, createdBy, null);
+  }
+
+  public SearchIndexJob createJob(
+      Set<String> entities,
+      EventPublisherJob jobConfiguration,
+      String createdBy,
+      ReindexingConfiguration reindexConfig) {
 
     UUID jobId = UUID.randomUUID();
     long now = System.currentTimeMillis();
 
-    // Calculate entity statistics
-    Map<String, Long> entityCounts = partitionCalculator.getEntityCounts(entities);
+    // Calculate entity statistics (with time-series date filtering if config is provided)
+    Map<String, Long> entityCounts = partitionCalculator.getEntityCounts(entities, reindexConfig);
     long totalRecords = entityCounts.values().stream().mapToLong(Long::longValue).sum();
 
     // Build entity stats map
@@ -279,10 +287,22 @@ public class DistributedSearchIndexCoordinator {
       }
     }
 
+    // Reconcile totalRecords from actual partitions (accounts for time-series filtering)
+    long actualTotalRecords =
+        partitions.stream().mapToLong(SearchIndexPartition::getEstimatedCount).sum();
+    if (actualTotalRecords != job.getTotalRecords()) {
+      LOG.info(
+          "Reconciled totalRecords for job {}: {} → {} (after partition calculation)",
+          jobId,
+          job.getTotalRecords(),
+          actualTotalRecords);
+    }
+
     // Update job status
     SearchIndexJob updatedJob =
         job.toBuilder()
             .status(IndexJobStatus.READY)
+            .totalRecords(actualTotalRecords)
             .entityStats(updatedStats)
             .updatedAt(System.currentTimeMillis())
             .build();

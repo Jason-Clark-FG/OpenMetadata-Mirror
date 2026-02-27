@@ -298,9 +298,14 @@ public class PartitionCalculator {
    * @return Map of entity type to count
    */
   public Map<String, Long> getEntityCounts(Set<String> entityTypes) {
+    return getEntityCounts(entityTypes, null);
+  }
+
+  public Map<String, Long> getEntityCounts(
+      Set<String> entityTypes, ReindexingConfiguration reindexConfig) {
     Map<String, Long> counts = new HashMap<>();
     for (String entityType : entityTypes) {
-      counts.put(entityType, getEntityCount(entityType));
+      counts.put(entityType, getEntityCount(entityType, reindexConfig));
     }
     return counts;
   }
