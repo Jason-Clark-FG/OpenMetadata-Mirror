@@ -166,6 +166,7 @@ const applyBrandCssVars = (colors: BrandColors, root: HTMLElement) => {
     root.style.setProperty('--tw-color-icon-fg-brand_on-brand', hoverColor);
     root.style.setProperty('--tw-text-color-secondary_on-brand', hoverColor);
     root.style.setProperty('--tw-text-color-tertiary_on-brand', hoverColor);
+    root.style.setProperty('--tw-text-color-brand-secondary_hover', hoverColor);
   }
 
   if (errorColor) {
