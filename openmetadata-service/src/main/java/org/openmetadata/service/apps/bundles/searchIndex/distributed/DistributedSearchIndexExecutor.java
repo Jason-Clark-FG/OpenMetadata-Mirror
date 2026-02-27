@@ -207,7 +207,10 @@ public class DistributedSearchIndexExecutor {
    * @return The created job
    */
   public SearchIndexJob createJob(
-      Set<String> entities, EventPublisherJob jobConfiguration, String createdBy) {
+      Set<String> entities,
+      EventPublisherJob jobConfiguration,
+      String createdBy,
+      ReindexingConfiguration reindexConfig) {
 
     LOG.info("Creating distributed indexing job for {} entity types", entities.size());
 
@@ -243,8 +246,8 @@ public class DistributedSearchIndexExecutor {
       // Create the job
       SearchIndexJob job = coordinator.createJob(entities, jobConfiguration, createdBy);
 
-      // Initialize partitions
-      currentJob = coordinator.initializePartitions(job.getId());
+      // Initialize partitions (with date filtering for time series entities)
+      currentJob = coordinator.initializePartitions(job.getId(), reindexConfig);
 
       // Atomically transfer lock to real job ID
       boolean transferred = coordinator.transferReindexLock(tempJobId, currentJob.getId());
@@ -434,7 +437,8 @@ public class DistributedSearchIndexExecutor {
                   recreateContext,
                   recreateIndex,
                   totalSuccess,
-                  totalFailed);
+                  totalFailed,
+                  reindexConfig);
             } finally {
               workerLatch.countDown();
             }
@@ -536,13 +540,20 @@ public class DistributedSearchIndexExecutor {
       ReindexContext recreateContext,
       boolean recreateIndex,
       AtomicLong totalSuccess,
-      AtomicLong totalFailed) {
+      AtomicLong totalFailed,
+      ReindexingConfiguration reindexConfig) {
 
     LOG.info("Worker {} starting for job {}", workerId, currentJob.getId());
 
     PartitionWorker worker =
         new PartitionWorker(
-            coordinator, bulkSink, batchSize, recreateContext, recreateIndex, failureRecorder);
+            coordinator,
+            bulkSink,
+            batchSize,
+            recreateContext,
+            recreateIndex,
+            failureRecorder,
+            reindexConfig);
 
     synchronized (activeWorkers) {
       activeWorkers.add(worker);

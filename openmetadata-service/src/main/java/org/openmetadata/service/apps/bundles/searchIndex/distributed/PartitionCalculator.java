@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.searchIndex.EntityPriority;
+import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -113,10 +114,16 @@ public class PartitionCalculator {
    * @throws IllegalStateException if partition count would exceed safe limits
    */
   public List<SearchIndexPartition> calculatePartitions(UUID jobId, Set<String> entityTypes) {
+    return calculatePartitions(jobId, entityTypes, null);
+  }
+
+  public List<SearchIndexPartition> calculatePartitions(
+      UUID jobId, Set<String> entityTypes, ReindexingConfiguration reindexConfig) {
     List<SearchIndexPartition> partitions = new ArrayList<>();
 
     for (String entityType : entityTypes) {
-      List<SearchIndexPartition> entityPartitions = calculatePartitionsForEntity(jobId, entityType);
+      List<SearchIndexPartition> entityPartitions =
+          calculatePartitionsForEntity(jobId, entityType, reindexConfig);
       partitions.addAll(entityPartitions);
 
       if (partitions.size() > MAX_TOTAL_PARTITIONS) {
@@ -143,7 +150,12 @@ public class PartitionCalculator {
    * @return List of partitions for this entity type
    */
   public List<SearchIndexPartition> calculatePartitionsForEntity(UUID jobId, String entityType) {
-    long totalCount = getEntityCount(entityType);
+    return calculatePartitionsForEntity(jobId, entityType, null);
+  }
+
+  public List<SearchIndexPartition> calculatePartitionsForEntity(
+      UUID jobId, String entityType, ReindexingConfiguration reindexConfig) {
+    long totalCount = getEntityCount(entityType, reindexConfig);
     if (totalCount == 0) {
       LOG.debug("No entities found for type: {}", entityType);
       return List.of();
@@ -222,10 +234,14 @@ public class PartitionCalculator {
    * @return Total count of entities
    */
   public long getEntityCount(String entityType) {
+    return getEntityCount(entityType, null);
+  }
+
+  public long getEntityCount(String entityType, ReindexingConfiguration reindexConfig) {
     try {
       long count;
       if (TIME_SERIES_ENTITIES.contains(entityType)) {
-        count = getTimeSeriesEntityCount(entityType);
+        count = getTimeSeriesEntityCount(entityType, reindexConfig);
       } else {
         count = getRegularEntityCount(entityType);
       }
@@ -242,7 +258,7 @@ public class PartitionCalculator {
     return repository.getDao().listTotalCount();
   }
 
-  private long getTimeSeriesEntityCount(String entityType) {
+  private long getTimeSeriesEntityCount(String entityType, ReindexingConfiguration reindexConfig) {
     ListFilter listFilter = new ListFilter(Include.ALL);
     EntityTimeSeriesRepository<?> repository;
 
@@ -251,6 +267,21 @@ public class PartitionCalculator {
       repository = Entity.getEntityTimeSeriesRepository(Entity.ENTITY_REPORT_DATA);
     } else {
       repository = Entity.getEntityTimeSeriesRepository(entityType);
+    }
+
+    if (reindexConfig != null) {
+      long startTs = reindexConfig.getTimeSeriesStartTs(entityType);
+      if (startTs > 0) {
+        long endTs = System.currentTimeMillis();
+        long count = repository.getTimeSeriesDao().listCount(listFilter, startTs, endTs, false);
+        LOG.info(
+            "Time series date filter for {}: last {} days → {} records (was {} total)",
+            entityType,
+            reindexConfig.timeSeriesMaxDays(),
+            count,
+            repository.getTimeSeriesDao().listCount(listFilter));
+        return count;
+      }
     }
 
     return repository.getTimeSeriesDao().listCount(listFilter);

@@ -117,7 +117,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     distributedExecutor.addListener(listeners);
 
     SearchIndexJob distributedJob =
-        distributedExecutor.createJob(config.entities(), jobData, createdBy);
+        distributedExecutor.createJob(config.entities(), jobData, createdBy, config);
 
     LOG.info(
         "Created distributed job {} with {} total records",

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.system.EventPublisherJob;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.CollectionDAO.SearchIndexJobDAO;
 import org.openmetadata.service.jdbi3.CollectionDAO.SearchIndexJobDAO.SearchIndexJobRecord;
@@ -187,6 +188,10 @@ public class DistributedSearchIndexCoordinator {
    * @return Updated job with partition information
    */
   public SearchIndexJob initializePartitions(UUID jobId) {
+    return initializePartitions(jobId, null);
+  }
+
+  public SearchIndexJob initializePartitions(UUID jobId, ReindexingConfiguration reindexConfig) {
     SearchIndexJobDAO jobDAO = collectionDAO.searchIndexJobDAO();
     SearchIndexPartitionDAO partitionDAO = collectionDAO.searchIndexPartitionDAO();
 
@@ -200,9 +205,9 @@ public class DistributedSearchIndexCoordinator {
     // Get entity types from job configuration
     Set<String> entityTypes = Set.copyOf(job.getJobConfiguration().getEntities());
 
-    // Calculate partitions
+    // Calculate partitions (with date filtering for time series if config provided)
     List<SearchIndexPartition> partitions =
-        partitionCalculator.calculatePartitions(jobId, entityTypes);
+        partitionCalculator.calculatePartitions(jobId, entityTypes, reindexConfig);
 
     if (partitions.isEmpty()) {
       LOG.warn(

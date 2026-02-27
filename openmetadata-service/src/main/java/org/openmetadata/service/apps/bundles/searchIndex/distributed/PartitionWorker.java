@@ -33,6 +33,7 @@ import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder;
+import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
 import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker;
 import org.openmetadata.service.exception.SearchIndexException;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -84,6 +85,7 @@ public class PartitionWorker {
   private final boolean recreateIndex;
   private final AtomicBoolean stopped = new AtomicBoolean(false);
   private final IndexingFailureRecorder failureRecorder;
+  private final ReindexingConfiguration reindexConfig;
 
   public PartitionWorker(
       DistributedSearchIndexCoordinator coordinator,
@@ -91,7 +93,7 @@ public class PartitionWorker {
       int batchSize,
       ReindexContext recreateContext,
       boolean recreateIndex) {
-    this(coordinator, searchIndexSink, batchSize, recreateContext, recreateIndex, null);
+    this(coordinator, searchIndexSink, batchSize, recreateContext, recreateIndex, null, null);
   }
 
   public PartitionWorker(
@@ -101,12 +103,31 @@ public class PartitionWorker {
       ReindexContext recreateContext,
       boolean recreateIndex,
       IndexingFailureRecorder failureRecorder) {
+    this(
+        coordinator,
+        searchIndexSink,
+        batchSize,
+        recreateContext,
+        recreateIndex,
+        failureRecorder,
+        null);
+  }
+
+  public PartitionWorker(
+      DistributedSearchIndexCoordinator coordinator,
+      BulkSink searchIndexSink,
+      int batchSize,
+      ReindexContext recreateContext,
+      boolean recreateIndex,
+      IndexingFailureRecorder failureRecorder,
+      ReindexingConfiguration reindexConfig) {
     this.coordinator = coordinator;
     this.searchIndexSink = searchIndexSink;
     this.batchSize = batchSize;
     this.recreateContext = recreateContext;
     this.recreateIndex = recreateIndex;
     this.failureRecorder = failureRecorder;
+    this.reindexConfig = reindexConfig;
   }
 
   /**
@@ -435,8 +456,20 @@ public class PartitionWorker {
       PaginatedEntitiesSource source = new PaginatedEntitiesSource(entityType, limit, fields, 0);
       return source.readNextKeyset(keysetCursor);
     } else {
+      Long filterStartTs = null;
+      Long filterEndTs = null;
+      if (reindexConfig != null) {
+        long startTs = reindexConfig.getTimeSeriesStartTs(entityType);
+        if (startTs > 0) {
+          filterStartTs = startTs;
+          filterEndTs = System.currentTimeMillis();
+        }
+      }
       PaginatedEntityTimeSeriesSource source =
-          new PaginatedEntityTimeSeriesSource(entityType, limit, fields, 0);
+          (filterStartTs != null)
+              ? new PaginatedEntityTimeSeriesSource(
+                  entityType, limit, fields, filterStartTs, filterEndTs)
+              : new PaginatedEntityTimeSeriesSource(entityType, limit, fields, 0);
       return source.readWithCursor(keysetCursor);
     }
   }
