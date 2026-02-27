@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { expect, Page, test as base } from '@playwright/test';
+import { test, expect } from '../../support/fixtures/userPages';
 import { DELETE_TERM } from '../../constant/common';
 import { GlobalSettingOptions } from '../../constant/settings';
 import { PersonaClass } from '../../support/persona/PersonaClass';
@@ -44,23 +44,6 @@ const PERSONA_DETAILS = {
 const user = new UserClass();
 const persona1 = new PersonaClass();
 const persona2 = new PersonaClass();
-
-const test = base.extend<{
-  adminPage: Page;
-  userPage: Page;
-}>({
-  adminPage: async ({ browser }, use) => {
-    const adminPage = await browser.newPage();
-    await adminPage.goto('/');
-    await use(adminPage);
-    await adminPage.close();
-  },
-  userPage: async ({ browser }, use) => {
-    const userPage = await browser.newPage();
-    await use(userPage);
-    await userPage.close();
-  },
-});
 
 // use the admin user to login
 test.use({
@@ -316,30 +299,6 @@ test.describe.serial('Persona operations', () => {
 });
 
 test.describe.serial('Default persona setting and removal flow', () => {
-  const test = base.extend<{
-    adminPage: Page;
-    userPage: Page;
-  }>({
-    adminPage: async ({ browser }, use) => {
-      const adminContext = await browser.newContext({
-        storageState: 'playwright/.auth/admin.json',
-      });
-      const page = await adminContext.newPage();
-      await page.goto('/');
-      await use(page);
-      await adminContext.close();
-    },
-    userPage: async ({ browser }, use) => {
-      const userContext = await browser.newContext({
-        storageState: undefined,
-      });
-      const page = await userContext.newPage();
-      await user.login(page);
-      await use(page);
-      await userContext.close();
-    },
-  });
-
   test.beforeAll('Setup user for default persona flow', async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
     await user.create(apiContext);
@@ -353,8 +312,12 @@ test.describe.serial('Default persona setting and removal flow', () => {
 
   test('Set and remove default persona should work properly', async ({
     adminPage,
-    userPage,
+    browser,
   }) => {
+    const userContext = await browser.newContext({ storageState: undefined });
+    const userPage = await userContext.newPage();
+    await user.login(userPage);
+
     test.slow(true);
 
     await test.step(
@@ -506,20 +469,6 @@ test.describe.serial('Team persona setting flow', () => {
   const teamPersona2 = new PersonaClass();
   const teamUser = new UserClass();
   const testTeam = new TeamClass();
-
-  const test = base.extend<{
-    adminPage: Page;
-  }>({
-    adminPage: async ({ browser }, use) => {
-      const adminContext = await browser.newContext({
-        storageState: 'playwright/.auth/admin.json',
-      });
-      const page = await adminContext.newPage();
-      await page.goto('/');
-      await use(page);
-      await adminContext.close();
-    },
-  });
 
   test.beforeAll(
     'Setup user, team and persona for team persona flow',
@@ -693,5 +642,77 @@ test.describe.serial('Team persona setting flow', () => {
         ).toBeVisible();
       }
     );
+  });
+
+  test('Admin can remove the default persona for a team', async ({
+    adminPage,
+  }) => {
+    await test.step(
+      'Admin removes the default persona for a team',
+      async () => {
+        await redirectToHomePage(adminPage);
+        await testTeam.visitTeamPage(adminPage);
+
+        await adminPage.getByTestId('default-edit-user-persona').click();
+        await adminPage.waitForSelector('.ant-select-dropdown', {
+          state: 'visible',
+        });
+
+        // Clear selection
+        await adminPage.locator('.profile-edit-popover').hover();
+        await adminPage.locator('.ant-select-clear').click();
+
+        const teamPatchRemoveResponse =
+          adminPage.waitForResponse('/api/v1/teams/*');
+        await adminPage
+          .getByTestId('user-profile-default-persona-edit-save')
+          .click();
+        await teamPatchRemoveResponse;
+
+        await expect(adminPage.getByTestId('team-persona')).toContainText(
+          'No persona assigned'
+        );
+      }
+    );
+  });
+
+  test('User without permissions cannot edit team persona', async ({
+    dataConsumerPage,
+  }) => {
+    await test.step(
+      'User without permissions cannot edit team persona',
+      async () => {
+        await redirectToHomePage(dataConsumerPage);
+        await testTeam.visitTeamPage(dataConsumerPage);
+
+        await expect(
+          dataConsumerPage.getByTestId('default-edit-user-persona')
+        ).not.toBeVisible();
+      }
+    );
+  });
+
+  test('Non-group team types do not have a default persona setting', async ({
+    adminPage,
+    browser,
+  }) => {
+    await test.step('Verify non-group teams cannot set a persona', async () => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      const businessUnitTeam = new TeamClass();
+      businessUnitTeam.setTeamType('BusinessUnit');
+      await businessUnitTeam.create(apiContext);
+
+      await redirectToHomePage(adminPage);
+      await businessUnitTeam.visitTeamPage(adminPage);
+
+      await expect(adminPage.getByTestId('team-persona')).not.toBeVisible();
+      await expect(
+        adminPage.getByTestId('default-edit-user-persona')
+      ).not.toBeVisible();
+
+      // Cleanup
+      await businessUnitTeam.delete(apiContext);
+      await afterAction();
+    });
   });
 });
