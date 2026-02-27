@@ -376,6 +376,7 @@ test.describe('Right Panel Test Suite', () => {
       };
 
       test.beforeAll(async ({ browser }) => {
+        test.slow(true);
         const { apiContext, afterAction } = await performAdminLogin(browser);
         try {
           await Promise.all(
@@ -1652,6 +1653,7 @@ test.describe('Right Panel Test Suite', () => {
       };
 
       test.beforeAll(async ({ browser }) => {
+        test.slow(true);
         const { apiContext, afterAction } = await performAdminLogin(browser);
         try {
           await Promise.all(
@@ -1659,6 +1661,14 @@ test.describe('Right Panel Test Suite', () => {
               e.create(apiContext)
             )
           );
+          for (const entityInstance of Object.values(dataConsumerEntityMap)) {
+            try {
+              await entityInstance.prepareCustomProperty(apiContext);
+            } catch {
+              // Custom property type may already exist from another describe block;
+              // continue so remaining entity types still get registered.
+            }
+          }
         } finally {
           await afterAction();
         }
