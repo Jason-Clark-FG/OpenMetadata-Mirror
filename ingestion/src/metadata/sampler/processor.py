@@ -36,6 +36,7 @@ from metadata.ingestion.api.parser import parse_workflow_config_gracefully
 from metadata.ingestion.api.step import Step
 from metadata.ingestion.api.steps import Processor
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.pii.algorithms.preprocessing import MAX_NLP_TEXT_LENGTH
 from metadata.profiler.api.models import ProfilerProcessorConfig
 from metadata.profiler.source.metadata import ProfilerSourceAndEntity
 from metadata.sampler.config import get_config_for_table
@@ -125,7 +126,7 @@ class SamplerProcessor(Processor):
                 table_config=get_config_for_table(entity, self.profiler_config),
                 default_sample_config=SampleConfig(),
                 default_sample_data_count=self.source_config.sampleDataCount,
-                max_cell_length=self.source_config.maxCellLength,
+                max_cell_length=self.source_config.maxCellLength or MAX_NLP_TEXT_LENGTH,
             )
             sample_data = SampleData(
                 data=sampler_interface.generate_sample_data(),
