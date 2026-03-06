@@ -79,6 +79,7 @@ import {
 import './ColumnDetailPanel.less';
 import { KeyProfileMetrics } from './KeyProfileMetrics';
 import { NestedColumnsSection } from './NestedColumnsSection';
+import { DataQualityTest } from '../../common/DataQualitySection/DataQualitySection.interface';
 
 const isColumn = (item: ColumnOrTask | null): item is Column => {
   return item !== null && 'dataType' in item;
@@ -100,14 +101,35 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
   const { t } = useTranslation();
   const theme = useTheme();
   const { permissions } = useGenericContext();
+
+  const previousFqnRef = useRef<string | undefined>();
+  const fetchedColumnFqnRef = useRef<string | undefined>();
+
   const [isDescriptionLoading, setIsDescriptionLoading] = useState(false);
   const [isTestCaseLoading, setIsTestCaseLoading] = useState(false);
   const [isDisplayNameEditing, setIsDisplayNameEditing] = useState(false);
+  const [isColumnDataLoading, setIsColumnDataLoading] = useState(false);
   const [localToast, setLocalToast] = useState<{
     open: boolean;
     message: string;
     type: 'success' | 'error';
   }>({ open: false, message: '', type: 'success' });
+  const [activeTab, setActiveTab] = useState<EntityRightPanelTab>(
+    EntityRightPanelTab.OVERVIEW
+  );
+  const [statusCounts, setStatusCounts] = useState<TestCaseStatusCounts>({
+    success: 0,
+    failed: 0,
+    aborted: 0,
+    total: 0,
+  });
+  const [lineageData] = useState<LineageData | null>(null);
+  const [isLineageLoading] = useState<boolean>(false);
+  const [entityTypeDetail, setEntityTypeDetail] = useState<Type>();
+  const [activeColumn, setActiveColumn] = useState<Column>(column);
+  const [lineageFilter, setLineageFilter] = useState<'upstream' | 'downstream'>(
+    'downstream'
+  );
 
   const hasEditPermission = useMemo(
     () => ({
@@ -131,153 +153,12 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     }),
     [permissions]
   );
-  const [activeTab, setActiveTab] = useState<EntityRightPanelTab>(
-    EntityRightPanelTab.OVERVIEW
-  );
-  const [statusCounts, setStatusCounts] = useState<TestCaseStatusCounts>({
-    success: 0,
-    failed: 0,
-    aborted: 0,
-    total: 0,
-  });
-  const [lineageData] = useState<LineageData | null>(null);
-  const [isLineageLoading] = useState<boolean>(false);
-  const [lineageFilter, setLineageFilter] = useState<'upstream' | 'downstream'>(
-    'downstream'
-  );
 
-  const fetchTestCases = useCallback(async () => {
-    if (!column?.fullyQualifiedName) {
-      setIsTestCaseLoading(false);
-
-      return;
-    }
-
-    try {
-      setIsTestCaseLoading(true);
-      const entityLink = generateEntityLink(column.fullyQualifiedName);
-
-      const response = await listTestCases({
-        entityLink,
-        includeAllTests: true,
-        limit: 100,
-        fields: ['testCaseResult', 'incidentId'],
-      });
-
-      const counts = calculateTestCaseStatusCounts(response.data || []);
-      setStatusCounts(counts);
-    } catch (error) {
-      showErrorToast(error as AxiosError);
-      setStatusCounts({ success: 0, failed: 0, aborted: 0, total: 0 });
-    } finally {
-      setIsTestCaseLoading(false);
-    }
-  }, [column?.fullyQualifiedName]);
-
-  const [entityTypeDetail, setEntityTypeDetail] = useState<Type>();
-
-  const fetchEntityTypeDetail = async () => {
-    try {
-      const res = await getTypeByFQN(ENTITY_PATH.column);
-      setEntityTypeDetail(res);
-    } catch (error) {
-      setLocalToast({
-        open: true,
-        message: getErrorText(error as AxiosError, t('message.error')),
-        type: 'error',
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (hasViewPermission.customProperties) {
-      fetchEntityTypeDetail();
-    }
-  }, [hasViewPermission.customProperties]);
-
-  useEffect(() => {
-    if (localToast.open) {
-      const timer = setTimeout(() => {
-        setLocalToast((prev) => ({ ...prev, open: false }));
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    }
-
-    return undefined;
-  }, [localToast]);
-
-  const [activeColumn, setActiveColumn] = useState<T | null>(column);
-
-  useEffect(() => {
-    setActiveColumn(column);
-  }, [column]);
-
-  const fetchColumnDetails = useCallback(async () => {
-    const targetFqn = column?.fullyQualifiedName;
-    if (!targetFqn || !isOpen || !tableFqn) {
-      return;
-    }
-
-    const col = column as Column;
-    // If extension is missing, fetch full details using list
-    if (entityType === EntityType.TABLE && !col.extension) {
-      try {
-        const response = await getTableColumnsByFQN(tableFqn, {
-          fields: 'tags,customMetrics,extension',
-          limit: PAGE_SIZE_LARGE,
-        });
-
-        const latestColumn = response.data.find(
-          (c) => c.fullyQualifiedName === targetFqn
-        );
-
-        if (latestColumn) {
-          setActiveColumn((prev) => {
-            // Discard stale response if column changed during fetch
-            if (prev?.fullyQualifiedName !== targetFqn) {
-              return prev;
-            }
-
-            return { ...prev, ...latestColumn } as T;
-          });
-        }
-
-        if (onColumnsUpdate) {
-          onColumnsUpdate(response.data);
-        }
-      } catch (error) {
-        // Fallback to existing data if fetch fails
-      }
-    }
-  }, [column?.fullyQualifiedName, isOpen, entityType, tableFqn]);
-
-  useEffect(() => {
-    fetchColumnDetails();
-  }, [fetchColumnDetails]);
-
-  useEffect(() => {
-    if (
-      isOpen &&
-      entityType === EntityType.TABLE &&
-      (permissions.ViewTests || permissions.ViewAll)
-    ) {
-      fetchTestCases();
-    }
-  }, [
-    isOpen,
-    fetchTestCases,
-    permissions.ViewTests,
-    permissions.ViewAll,
-  ]);
-
-  // Flatten all columns including nested children for accurate counting and navigation
   const flattenedColumns = useMemo(
     () => flattenColumns(allColumns as Column[]),
     [allColumns]
   );
 
-  // Find the actual index in the flattened array and track if column was found
   const { actualColumnIndex, isColumnInList } = useMemo(() => {
     if (!activeColumn?.fullyQualifiedName) {
       return {
@@ -311,6 +192,118 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
 
     return activeColumn.children || [];
   }, [activeColumn]);
+
+  const dataQualityTests = useMemo(
+    (): DataQualityTest[] => [
+      { type: 'success', count: statusCounts.success },
+      { type: 'aborted', count: statusCounts.aborted },
+      { type: 'failed', count: statusCounts.failed },
+    ],
+    [statusCounts]
+  );
+
+  const classificationTags = useMemo(
+    () =>
+      activeColumn?.tags?.filter((tag) => tag.source !== TagSource.Glossary) ||
+      [],
+    [activeColumn?.tags]
+  );
+
+  const isPrimaryKey = useMemo(() => {
+    const columnName = activeColumn?.name;
+    if (!columnName) {
+      return false;
+    }
+
+    return tableConstraints.some(
+      (constraint: TableConstraint) =>
+        constraint.constraintType === 'PRIMARY_KEY' &&
+        constraint.columns?.includes(columnName)
+    );
+  }, [activeColumn?.name, tableConstraints]);
+
+  const isPreviousDisabled = !isColumnInList || actualColumnIndex === 0;
+  const isNextDisabled =
+    !isColumnInList || actualColumnIndex === flattenedColumns.length - 1;
+
+  const fetchTestCases = useCallback(async () => {
+    if (!column?.fullyQualifiedName) {
+      setIsTestCaseLoading(false);
+
+      return;
+    }
+
+    try {
+      setIsTestCaseLoading(true);
+      const entityLink = generateEntityLink(column.fullyQualifiedName);
+
+      const response = await listTestCases({
+        entityLink,
+        includeAllTests: true,
+        limit: 100,
+        fields: ['testCaseResult', 'incidentId'],
+      });
+
+      const counts = calculateTestCaseStatusCounts(response.data || []);
+      setStatusCounts(counts);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+      setStatusCounts({ success: 0, failed: 0, aborted: 0, total: 0 });
+    } finally {
+      setIsTestCaseLoading(false);
+    }
+  }, [column?.fullyQualifiedName]);
+
+  const fetchColumnDetails = useCallback(async () => {
+    const targetFqn = column?.fullyQualifiedName;
+    if (!targetFqn || !isOpen || !tableFqn) {
+      return;
+    }
+
+    if (
+      entityType === EntityType.TABLE &&
+      fetchedColumnFqnRef.current !== targetFqn
+    ) {
+      try {
+        setIsColumnDataLoading(true);
+        const response = await getTableColumnsByFQN(tableFqn, {
+          fields: 'tags,customMetrics,extension,profile',
+          limit: PAGE_SIZE_LARGE,
+        });
+
+        const latestColumn = response.data.find(
+          (c) => c.fullyQualifiedName === targetFqn
+        );
+
+        if (latestColumn) {
+          setActiveColumn((prev) => {
+            // Discard stale response if column changed during fetch
+            if (prev?.fullyQualifiedName !== targetFqn) {
+              return prev;
+            }
+
+            return { ...prev, ...latestColumn } as Column;
+          });
+        }
+
+        fetchedColumnFqnRef.current = targetFqn;
+
+        if (onColumnsUpdate) {
+          onColumnsUpdate(response.data);
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      } finally {
+        setIsColumnDataLoading(false);
+      }
+    }
+  }, [
+    column?.fullyQualifiedName,
+    isOpen,
+    entityType,
+    tableFqn,
+    onColumnsUpdate,
+  ]);
 
   const handleNestedColumnClick = useCallback(
     (nestedColumn: Column) => {
@@ -358,7 +351,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     [flattenedColumns, allColumns, onNavigate]
   );
 
-  // Common handler for column field updates
   const performColumnFieldUpdate = useCallback(
     async (
       update: ColumnFieldUpdate,
@@ -370,17 +362,16 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
 
       const response = onColumnFieldUpdate
         ? await onColumnFieldUpdate(
-          activeColumn.fullyQualifiedName,
-          update,
-          true
-        )
+            activeColumn.fullyQualifiedName,
+            update,
+            true
+          )
         : // Fallback to direct API call for Table entities when used outside GenericProvider
-        ((await updateTableColumn(
-          activeColumn.fullyQualifiedName,
-          update
-        )) as T);
+          ((await updateTableColumn(
+            activeColumn.fullyQualifiedName,
+            update
+          )) as T);
 
-      // Only show success toast if we got a valid response
       if (response) {
         setLocalToast({
           open: true,
@@ -421,11 +412,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     [performColumnFieldUpdate, t]
   );
 
-  // Prepare tags for classification tag updates (preserve glossary and tier tags)
+  // Preserve glossary and tier tags when updating classification tags
   const prepareClassificationTags = useCallback(
     (updatedTags: TagLabel[]): TagLabel[] => {
       if (updatedTags.length === 0) {
-        // Clear all classification tags but preserve glossary terms and tier tags
         return normalizeTags(
           (activeColumn?.tags ?? []).filter(
             (tag) =>
@@ -435,7 +425,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         );
       }
 
-      // Merge updated classification tags with existing glossary tags
       return normalizeTags(
         (mergeTagsWithGlossary(activeColumn?.tags, updatedTags) ??
           []) as TagLabel[]
@@ -454,7 +443,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         );
 
         if (response) {
-          setActiveColumn((prev) => ({ ...prev, tags: response.tags } as T));
+          setActiveColumn((prev: Column) => ({
+            ...prev,
+            tags: response.tags,
+          }));
         }
 
         return response?.tags;
@@ -495,7 +487,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         );
 
         if (response) {
-          setActiveColumn((prev) => ({ ...prev, tags: response.tags } as T));
+          setActiveColumn((prev: Column) => ({
+            ...prev,
+            tags: response.tags,
+          }));
         }
 
         return response?.tags;
@@ -546,13 +541,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
           'label.display-name'
         );
         if (response) {
-          setActiveColumn(
-            (prev) =>
-            ({
-              ...prev,
-              displayName: (response as { displayName?: string }).displayName,
-            } as T)
-          );
+          setActiveColumn((prev: Column) => ({
+            ...prev,
+            displayName: (response as { displayName?: string }).displayName,
+          }));
         }
       } catch (error) {
         setLocalToast({
@@ -570,25 +562,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     },
     [performColumnFieldUpdate, t]
   );
-
-  const previousFqnRef = useRef<string | undefined>();
-
-  useEffect(() => {
-    if (isOpen && activeColumn) {
-      if (activeColumn.fullyQualifiedName !== previousFqnRef.current) {
-        if (previousFqnRef.current === undefined) {
-          setActiveTab(EntityRightPanelTab.OVERVIEW);
-        }
-        previousFqnRef.current = activeColumn.fullyQualifiedName;
-      }
-    } else if (!isOpen) {
-      previousFqnRef.current = undefined;
-    }
-  }, [isOpen, activeColumn?.fullyQualifiedName]);
-
-  const handleTabChange = (tab: EntityRightPanelTab) => {
-    setActiveTab(tab);
-  };
 
   const handleColumnNavigation = useCallback(
     (direction: 'previous' | 'next') => {
@@ -632,27 +605,82 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
     [handleColumnNavigation]
   );
 
-  const isPreviousDisabled = !isColumnInList || actualColumnIndex === 0;
-  const isNextDisabled =
-    !isColumnInList || actualColumnIndex === flattenedColumns.length - 1;
+  useEffect(() => {
+    const fetchEntityTypeDetail = async () => {
+      try {
+        const res = await getTypeByFQN(ENTITY_PATH.column);
+        setEntityTypeDetail(res);
+      } catch (error) {
+        setLocalToast({
+          open: true,
+          message: getErrorText(error as AxiosError, t('message.error')),
+          type: 'error',
+        });
+      }
+    };
 
-  const dataQualityTests = useMemo(
-    () => [
-      { type: 'success' as const, count: statusCounts.success },
-      { type: 'aborted' as const, count: statusCounts.aborted },
-      { type: 'failed' as const, count: statusCounts.failed },
-    ],
-    [statusCounts]
-  );
+    if (hasViewPermission.customProperties) {
+      fetchEntityTypeDetail();
+    }
+  }, [hasViewPermission.customProperties]);
 
-  const classificationTags = useMemo(
-    () =>
-      activeColumn?.tags?.filter((tag) => tag.source !== TagSource.Glossary) ||
-      [],
-    [activeColumn?.tags]
-  );
+  useEffect(() => {
+    if (localToast.open) {
+      const timer = setTimeout(() => {
+        setLocalToast((prev) => ({ ...prev, open: false }));
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [localToast]);
+
+  useEffect(() => {
+    setActiveColumn(column);
+  }, [column]);
+
+  useEffect(() => {
+    fetchColumnDetails();
+  }, [fetchColumnDetails]);
+
+  useEffect(() => {
+    if (
+      isOpen &&
+      entityType === EntityType.TABLE &&
+      (permissions.ViewTests || permissions.ViewAll)
+    ) {
+      fetchTestCases();
+    }
+  }, [isOpen, fetchTestCases, permissions.ViewTests, permissions.ViewAll]);
+
+  useEffect(() => {
+    if (isOpen && activeColumn) {
+      if (activeColumn.fullyQualifiedName !== previousFqnRef.current) {
+        if (previousFqnRef.current === undefined) {
+          setActiveTab(EntityRightPanelTab.OVERVIEW);
+        }
+        previousFqnRef.current = activeColumn.fullyQualifiedName;
+      }
+    } else if (!isOpen) {
+      previousFqnRef.current = undefined;
+      fetchedColumnFqnRef.current = undefined;
+    }
+  }, [isOpen, activeColumn?.fullyQualifiedName]);
+
+  const handleTabChange = (tab: EntityRightPanelTab) => {
+    setActiveTab(tab);
+  };
 
   const renderOverviewTab = () => {
+    if (isColumnDataLoading) {
+      return (
+        <div className="flex-center p-lg">
+          <Loader size="default" />
+        </div>
+      );
+    }
+
     return (
       <Space className="w-full" direction="vertical" size="large">
         {isDescriptionLoading ? (
@@ -670,10 +698,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         )}
 
         {isColumn(activeColumn ?? null) && entityType === EntityType.TABLE && (
-          <KeyProfileMetrics
-            columnFqn={activeColumn!.fullyQualifiedName}
-            tableFqn={tableFqn}
-          />
+          <KeyProfileMetrics profile={activeColumn.profile} />
         )}
 
         {isColumn(activeColumn ?? null) && (
@@ -684,16 +709,15 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
           />
         )}
 
-        {isTestCaseLoading ? (
-          <Loader size="small" />
-        ) : (
-          statusCounts.total > 0 && (
+        {statusCounts.total > 0 &&
+          (isTestCaseLoading ? (
+            <Loader size="small" />
+          ) : (
             <DataQualitySection
               tests={dataQualityTests}
               totalTests={statusCounts.total}
             />
-          )
-        )}
+          ))}
 
         <GlossaryTermsSection
           entityId={activeColumn?.fullyQualifiedName || ''}
@@ -766,18 +790,6 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
       </div>
     );
   };
-  const isPrimaryKey = useMemo(() => {
-    const columnName = activeColumn?.name;
-    if (!columnName) {
-      return false;
-    }
-
-    return tableConstraints.some(
-      (constraint: TableConstraint) =>
-        constraint.constraintType === 'PRIMARY_KEY' &&
-        constraint.columns?.includes(columnName)
-    );
-  }, [activeColumn?.name, tableConstraints]);
 
   const columnTitle = activeColumn ? (
     <div className="title-section">
@@ -868,8 +880,8 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                     ellipsis={{ tooltip: true }}>
                     {stringToHTML(
                       (activeColumn as { displayName?: string }).displayName ||
-                      activeColumn.name ||
-                      ''
+                        activeColumn.name ||
+                        ''
                     )}
                   </Typography.Text>
                 </Tooltip>
@@ -897,8 +909,8 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
                     />
                   )}
               </div>
-              {(activeColumn as any).displayName &&
-                (activeColumn as any).displayName !== activeColumn.name &&
+              {activeColumn.displayName &&
+                activeColumn.displayName !== activeColumn.name &&
                 (entityType === EntityType.TABLE ||
                   entityType === EntityType.DASHBOARD_DATA_MODEL) && (
                   <Typography.Text
@@ -1104,8 +1116,10 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
         <EntityNameModal
           entity={{
             name: isString(activeColumn.name) ? activeColumn.name : '',
-            displayName: isString((activeColumn as any).displayName)
-              ? (activeColumn as any).displayName
+            displayName: isString(
+              (activeColumn as { displayName?: string }).displayName
+            )
+              ? (activeColumn as { displayName?: string }).displayName
               : undefined,
           }}
           title={t('label.edit-entity', {

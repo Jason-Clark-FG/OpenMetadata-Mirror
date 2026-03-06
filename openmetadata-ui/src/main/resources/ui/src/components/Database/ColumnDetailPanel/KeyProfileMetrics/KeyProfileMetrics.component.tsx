@@ -12,95 +12,22 @@
  */
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Box, Chip, Stack, Tooltip, Typography, useTheme } from '@mui/material';
-import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TabSpecificField } from '../../../../enums/entity.enum';
-import { ColumnProfile } from '../../../../generated/entity/data/table';
-import { getTableColumnsByFQN } from '../../../../rest/tableAPI';
 import { getKeyProfileMetrics } from '../../../../utils/TableProfilerUtils';
-import { showErrorToast } from '../../../../utils/ToastUtils';
-import Loader from '../../../common/Loader/Loader';
 import {
   KeyProfileMetricsProps,
   ProfileMetric,
 } from './KeyProfileMetrics.interface';
 
-export const KeyProfileMetrics = ({
-  columnFqn,
-  tableFqn,
-}: KeyProfileMetricsProps) => {
+export const KeyProfileMetrics = ({ profile }: KeyProfileMetricsProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [isLoading, setIsLoading] = useState(false);
-  const [profile, setProfile] = useState<ColumnProfile | undefined>(undefined);
-
-  const fetchColumnProfile = useCallback(async () => {
-    if (!columnFqn || !tableFqn) {
-      setProfile(undefined);
-      setIsLoading(false);
-
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const response = await getTableColumnsByFQN(tableFqn, {
-        fields: TabSpecificField.PROFILE,
-        limit: 50,
-      });
-
-      const columnData = response.data?.find(
-        (col) => col.fullyQualifiedName === columnFqn
-      );
-
-      setProfile(columnData?.profile);
-    } catch (error) {
-      showErrorToast(error as AxiosError);
-      setProfile(undefined);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [columnFqn, tableFqn]);
-
-  useEffect(() => {
-    fetchColumnProfile();
-  }, [fetchColumnProfile]);
 
   const metrics: ProfileMetric[] = useMemo(
     () => getKeyProfileMetrics(profile, t),
     [profile, t]
   );
-
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          borderBottom: `0.6px solid ${theme.palette.allShades.gray[100]}`,
-          marginTop: theme.spacing(-2),
-          paddingBottom: theme.spacing(4),
-          paddingX: theme.spacing(4),
-        }}>
-        <Typography
-          sx={{
-            fontSize: theme.typography.pxToRem(13),
-            fontWeight: 600,
-            marginBottom: theme.spacing(1.5),
-          }}>
-          {t('label.key-profile-metric-plural')}
-        </Typography>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: theme.spacing(3),
-          }}>
-          <Loader size="small" />
-        </Box>
-      </Box>
-    );
-  }
 
   return (
     <Box
