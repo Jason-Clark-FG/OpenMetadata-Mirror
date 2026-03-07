@@ -27,6 +27,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -324,8 +325,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       entityFqn,
       incomingMap,
       outgoingMap,
-      isColumnLevelLineage,
-      undefined
+      isColumnLevelLineage
     );
   }, [
     cachedEdgesAndMaps,
@@ -829,12 +829,16 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     (
       entityType: EntityType,
       entity?: SourceType,
-      isPlatformLineage?: boolean
+      isPlatformLineage: boolean = false
     ) => {
-      setEntity(entity);
-      setEntityFqn(entity?.fullyQualifiedName ?? '');
-      setEntityType(entityType);
-      setIsPlatformLineage(isPlatformLineage ?? false);
+      flushSync(() => {
+        setEntity(entity);
+        setEntityFqn(entity?.fullyQualifiedName ?? '');
+        setEntityType(entityType);
+      });
+
+      // This runs after React states are committed
+      setIsPlatformLineage(isPlatformLineage);
       if (isPlatformLineage && !entity) {
         onPlatformViewChange(LineagePlatformView.Service);
       }
@@ -1492,7 +1496,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         if (selectedEdge?.id) {
           updateEdge(selectedEdge.id, (edge) => ({
             ...edge,
-            animated: isEmpty(pipelineData) ? false : true,
+            animated: !isEmpty(pipelineData),
             data: {
               ...edge.data,
               edge: {
@@ -1880,33 +1884,33 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     }
   }, [dataQualityLineage, edges, dqHighlightedEdges]);
 
-  const breadcrumbs = useMemo(
-    () =>
-      entity
-        ? [
-            ...getEntityBreadcrumbs(entity, entityType, isFullScreen),
-            {
-              name: t('label.lineage'),
-              url: '',
-              activeTitle: true,
-            },
-          ]
-        : platformView
-        ? [
-            {
-              name: '',
-              icon: <Home02 size={12} />,
-              url: '/',
-              activeTitle: true,
-            },
-            {
-              name: t('label.lineage'),
-              url: '',
-            },
-          ]
-        : [],
-    [entity, isFullScreen, entityType]
-  );
+  const breadcrumbs = useMemo(() => {
+    const platformBreadcrumbs = platformView
+      ? [
+          {
+            name: '',
+            icon: <Home02 size={12} />,
+            url: '/',
+            activeTitle: true,
+          },
+          {
+            name: t('label.lineage'),
+            url: '',
+          },
+        ]
+      : [];
+
+    return entity
+      ? [
+          ...getEntityBreadcrumbs(entity, entityType, isFullScreen),
+          {
+            name: t('label.lineage'),
+            url: '',
+            activeTitle: true,
+          },
+        ]
+      : platformBreadcrumbs;
+  }, [entity, isFullScreen, entityType]);
 
   // flush store values
   useEffect(() => {
