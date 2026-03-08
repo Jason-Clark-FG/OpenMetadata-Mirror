@@ -27,7 +27,7 @@ WHERE JSON_CONTAINS_PATH(json, 'one', '$.preview');
 SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'changeDescriptionDoc');
 SET @sql = IF(@col_exists = 0,
-  'ALTER TABLE entity_extension ADD COLUMN changeDescriptionDoc TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(json, ''$.changeDescription''))) STORED',
+  'ALTER TABLE entity_extension ADD COLUMN changeDescriptionDoc TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(json, ''$.changeDescription''))) VIRTUAL',
   'SELECT 1');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;

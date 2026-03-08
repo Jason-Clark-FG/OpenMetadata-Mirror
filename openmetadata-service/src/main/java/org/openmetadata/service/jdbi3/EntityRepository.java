@@ -1263,13 +1263,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
       UUID id, int limit, int offset, String fieldChanged) {
     String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
 
-    if (fieldChanged != null && !fieldChanged.isEmpty()) {
-      String sanitized = fieldChanged.replace("!", "!!").replace("%", "!%").replace("_", "!_");
-      return listVersionsWithFieldFilter(id, extensionPrefix, limit, offset, sanitized);
-    }
-
     T latest = setFieldsInternal(find(id, ALL), putFields);
     setInheritedFields(latest, putFields);
+
+    if (fieldChanged != null && !fieldChanged.isEmpty()) {
+      String sanitized = fieldChanged.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+      return listVersionsWithFieldFilter(
+          id, latest, extensionPrefix, limit, offset, sanitized, fieldChanged);
+    }
 
     final List<Object> versions = new ArrayList<>();
     int dbLimit;
@@ -1305,21 +1306,46 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private EntityHistoryWithOffset listVersionsWithFieldFilter(
-      UUID id, String extensionPrefix, int limit, int offset, String fieldChanged) {
+      UUID id,
+      T latest,
+      String extensionPrefix,
+      int limit,
+      int offset,
+      String sanitizedFieldChanged,
+      String rawFieldChanged) {
     final List<Object> versions = new ArrayList<>();
+    boolean latestMatches = latestVersionMatchesFieldChanged(latest, rawFieldChanged);
 
-    if (limit > 0) {
+    int dbLimit;
+    int dbOffset;
+
+    if (latestMatches) {
+      if (offset == 0) {
+        versions.add(JsonUtils.pojoToJson(latest));
+        dbLimit = limit - 1;
+      } else {
+        dbLimit = limit;
+      }
+      dbOffset = Math.max(0, offset - 1);
+    } else {
+      dbLimit = limit;
+      dbOffset = offset;
+    }
+
+    if (dbLimit > 0) {
       List<ExtensionRecord> records =
           daoCollection
               .entityExtensionDAO()
-              .getExtensionsWithFieldChanged(id, extensionPrefix, fieldChanged, limit, offset);
+              .getExtensionsWithFieldChanged(
+                  id, extensionPrefix, sanitizedFieldChanged, dbLimit, dbOffset);
       records.forEach(r -> versions.add(new EntityVersionPair(r).getEntityJson()));
     }
 
-    int total =
+    int extensionCount =
         daoCollection
             .entityExtensionDAO()
-            .getExtensionCountWithFieldChanged(id, extensionPrefix, fieldChanged);
+            .getExtensionCountWithFieldChanged(id, extensionPrefix, sanitizedFieldChanged);
+    int total = extensionCount + (latestMatches ? 1 : 0);
 
     Paging paging = new Paging();
     paging.setOffset(offset);
@@ -1329,6 +1355,29 @@ public abstract class EntityRepository<T extends EntityInterface> {
     EntityHistory entityHistory =
         new EntityHistory().withEntityType(entityType).withVersions(versions).withPaging(paging);
     return new EntityHistoryWithOffset(entityHistory, Math.min(offset + limit, total));
+  }
+
+  private boolean latestVersionMatchesFieldChanged(T latest, String fieldChanged) {
+    ChangeDescription cd = latest.getChangeDescription();
+    if (cd == null) {
+      return false;
+    }
+    return fieldChangeListContains(cd.getFieldsAdded(), fieldChanged)
+        || fieldChangeListContains(cd.getFieldsUpdated(), fieldChanged)
+        || fieldChangeListContains(cd.getFieldsDeleted(), fieldChanged);
+  }
+
+  private boolean fieldChangeListContains(List<FieldChange> fieldChanges, String fieldName) {
+    if (fieldChanges == null) {
+      return false;
+    }
+    for (FieldChange fc : fieldChanges) {
+      if (fc.getName() != null
+          && (fc.getName().equals(fieldName) || fc.getName().endsWith("." + fieldName))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public final ResultList<T> listWithOffset(
