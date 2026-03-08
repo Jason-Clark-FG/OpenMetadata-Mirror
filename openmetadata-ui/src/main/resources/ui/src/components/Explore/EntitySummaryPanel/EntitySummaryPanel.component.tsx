@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { CloseOutlined } from '@mui/icons-material';
 import { Button, Card } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -87,6 +86,7 @@ import {
   patchContainerDetails,
 } from '../../../rest/storageAPI';
 
+import { X } from '@untitledui/icons';
 import {
   getStoredProceduresByFqn,
   patchStoredProceduresDetails,
@@ -168,9 +168,10 @@ export default function EntitySummaryPanel({
     return entityDetails?.details?.id ?? '';
   }, [entityDetails?.details?.id]);
 
-  const entityType = useMemo(() => {
-    return get(entityDetails, 'details.entityType');
-  }, [entityDetails]);
+  const entityType = useMemo(
+    () => get(entityDetails, 'details.entityType') as EntityType | undefined,
+    [entityDetails]
+  );
 
   const fetchResourcePermission = async (entityFqn: string) => {
     try {
@@ -464,8 +465,8 @@ export default function EntitySummaryPanel({
 
       try {
         const apiFunc =
-          entityUpdateMap[entityType] ??
-          entityUtilClassBase.getEntityPatchAPI(entityType);
+          entityUpdateMap[entityType!] ??
+          entityUtilClassBase.getEntityPatchAPI(entityType!);
         if (apiFunc && id) {
           const res = await apiFunc(id, jsonPatch);
           setEntityData(
@@ -544,8 +545,8 @@ export default function EntitySummaryPanel({
 
       try {
         const apiFunc =
-          entityUpdateMap[entityType] ??
-          entityUtilClassBase.getEntityPatchAPI(entityType);
+          entityUpdateMap[entityType!] ??
+          entityUtilClassBase.getEntityPatchAPI(entityType!);
         if (apiFunc && id) {
           const res = await apiFunc(id, jsonPatch);
           setEntityData(
@@ -614,8 +615,8 @@ export default function EntitySummaryPanel({
 
         try {
           const apiFunc =
-            entityUpdateMap[entityType] ??
-            entityUtilClassBase.getEntityPatchAPI(entityType);
+            entityUpdateMap[entityType!] ??
+            entityUtilClassBase.getEntityPatchAPI(entityType!);
           if (apiFunc && id) {
             const res = await apiFunc(id, jsonPatch);
             setEntityData(
@@ -853,12 +854,14 @@ export default function EntitySummaryPanel({
               />
             )}
             <div className="entity-summary-panel-tab-content">
-              <EntityDetailsSection
-                dataAsset={entityDetails.details}
-                entityType={entityType}
-                highlights={highlights}
-                isLoading={isPermissionLoading}
-              />
+              {entityType && (
+                <EntityDetailsSection
+                  dataAsset={entityDetails.details}
+                  entityType={entityType}
+                  highlights={highlights}
+                  isLoading={isPermissionLoading}
+                />
+              )}
             </div>
           </>
         );
@@ -911,25 +914,27 @@ export default function EntitySummaryPanel({
                 entityLink={entityLink}
               />
             )}
-            <CustomPropertiesSection
-              emptyStateMessage={entityUtilClassBase.getFormattedEntityType(
-                entityType
-              )}
-              entityData={entityData ?? undefined}
-              entityDetails={entityDetails}
-              entityType={entityType}
-              entityTypeDetail={entityTypeDetail}
-              hasEditPermissions={getPrioritizedEditPermission(
-                entityPermissions,
-                Operation.EditCustomFields
-              )}
-              isEntityDataLoading={isEntityDataLoading || isEntityTypeLoading}
-              viewCustomPropertiesPermission={getPrioritizedViewPermission(
-                entityPermissions,
-                Operation.ViewCustomFields
-              )}
-              onExtensionUpdate={handleExtensionUpdate}
-            />
+            {entityType && (
+              <CustomPropertiesSection
+                emptyStateMessage={entityUtilClassBase.getFormattedEntityType(
+                  entityType
+                )}
+                entityData={entityData ?? undefined}
+                entityDetails={entityDetails}
+                entityType={entityType}
+                entityTypeDetail={entityTypeDetail}
+                hasEditPermissions={getPrioritizedEditPermission(
+                  entityPermissions,
+                  Operation.EditCustomFields
+                )}
+                isEntityDataLoading={isEntityDataLoading || isEntityTypeLoading}
+                viewCustomPropertiesPermission={getPrioritizedViewPermission(
+                  entityPermissions,
+                  Operation.ViewCustomFields
+                )}
+                onExtensionUpdate={handleExtensionUpdate}
+              />
+            )}
           </>
         );
       }
@@ -945,7 +950,8 @@ export default function EntitySummaryPanel({
         lineage: panelPath === 'lineage',
         'glossary-term-assets-tab': panelPath === 'glossary-term-assets-tab',
       })}
-      data-testid="entity-summary-panel-container">
+      data-testid="entity-summary-panel-container"
+    >
       {isSideDrawer && (
         <div className="d-flex items-center justify-between">
           <EntityTitleSection
@@ -966,7 +972,7 @@ export default function EntitySummaryPanel({
             aria-label={t('label.close')}
             className="drawer-close-icon flex-center mr-2"
             data-testid="drawer-close-icon"
-            icon={<CloseOutlined />}
+            icon={<X size={16} />}
             size="small"
             onClick={handleClosePanel}
           />
@@ -977,21 +983,25 @@ export default function EntitySummaryPanel({
           bordered={false}
           className={`summary-panel-container ${
             isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          }`}
+        >
           <Card
             className={`content-area ${
               isSideDrawer ? 'drawer-content-area' : ''
             }`}
-            style={{ width: '100%', display: 'block' }}>
+            style={{ width: '100%', display: 'block' }}
+          >
             {renderTabContent()}
           </Card>
         </Card>
-        <EntityRightPanelVerticalNav
-          activeTab={activeTab}
-          entityType={entityType}
-          isSideDrawer={isSideDrawer}
-          onTabChange={handleTabChange}
-        />
+        {entityType && (
+          <EntityRightPanelVerticalNav
+            activeTab={activeTab}
+            entityType={entityType}
+            isSideDrawer={isSideDrawer}
+            onTabChange={handleTabChange}
+          />
+        )}
       </div>
     </div>
   );
