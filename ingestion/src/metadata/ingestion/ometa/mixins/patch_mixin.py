@@ -613,15 +613,15 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
                 data=json.dumps([result_data, status_data]),
             )
             if resp is None:
-                raise RuntimeError(
-                    "PATCH returned None — the server may have rejected the request"
+                logger.error(
+                    "PATCH returned None for automation workflow "
+                    f"[{model_str(automation_workflow)}] — the server may have rejected the request"
                 )
         except Exception as exc:
             logger.debug(traceback.format_exc())
             logger.error(
                 f"Error trying to PATCH status for automation workflow [{model_str(automation_workflow)}]: {exc}"
             )
-            raise
 
     def patch_life_cycle(
         self, entity: Entity, life_cycle: LifeCycle
