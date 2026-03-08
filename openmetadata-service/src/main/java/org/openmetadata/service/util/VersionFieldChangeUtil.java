@@ -44,6 +44,13 @@ public final class VersionFieldChangeUtil {
     return extractFieldChangeKeys(changeDescription).contains(fieldChanged);
   }
 
+  public static boolean matchesFieldChanged(String entityJson, String fieldChanged) {
+    if (nullOrEmpty(fieldChanged)) {
+      return false;
+    }
+    return extractFieldChangeKeys(entityJson).contains(fieldChanged);
+  }
+
   public static Set<String> extractFieldChangeKeys(ChangeDescription changeDescription) {
     Set<String> fieldChangeKeys = new LinkedHashSet<>();
     addFieldChangeKeys(

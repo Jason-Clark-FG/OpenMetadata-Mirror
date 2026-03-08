@@ -1,6 +1,7 @@
 package org.openmetadata.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
@@ -45,5 +46,34 @@ class VersionFieldChangeUtilTest {
     assertTrue(keys.contains("schema.fields.description"));
     assertTrue(keys.contains("fields.description"));
     assertTrue(keys.contains("description"));
+  }
+
+  @Test
+  void matchesExactSuffixesButNotSubstrings() {
+    ChangeDescription changeDescription =
+        new ChangeDescription()
+            .withFieldsUpdated(
+                java.util.List.of(new FieldChange().withName("schema.fields.description")));
+
+    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "description"));
+    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "fields.description"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "script"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "fields"));
+  }
+
+  @Test
+  void matchesFieldChangedFromSerializedEntityJson() {
+    String entityJson =
+        JsonUtils.pojoToJson(
+            java.util.Map.of(
+                "changeDescription",
+                new ChangeDescription()
+                    .withFieldsUpdated(
+                        java.util.List.of(
+                            new FieldChange().withName("schema.fields.description")))));
+
+    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "description"));
+    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "fields.description"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "owners"));
   }
 }

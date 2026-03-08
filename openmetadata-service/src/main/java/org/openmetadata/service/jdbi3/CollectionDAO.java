@@ -1481,6 +1481,7 @@ public interface CollectionDAO {
         value =
             "SELECT extension, json FROM entity_extension "
                 + "WHERE id = :id "
+                + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND JSON_CONTAINS(changedFieldKeys, JSON_ARRAY(:fieldPath)) "
                 + "ORDER BY versionNum DESC "
                 + "LIMIT :limit OFFSET :offset",
@@ -1489,6 +1490,7 @@ public interface CollectionDAO {
         value =
             "SELECT extension, json FROM entity_extension "
                 + "WHERE id = :id "
+                + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND jsonb_exists(changedFieldKeys, :fieldPath) "
                 + "ORDER BY versionNum DESC "
                 + "LIMIT :limit OFFSET :offset",
@@ -1496,6 +1498,7 @@ public interface CollectionDAO {
     @RegisterRowMapper(ExtensionMapper.class)
     List<ExtensionRecord> getExtensionsWithFieldChanged(
         @BindUUID("id") UUID id,
+        @Bind("extensionPrefix") String extensionPrefix,
         @Bind("fieldPath") String fieldPath,
         @Bind("limit") int limit,
         @Bind("offset") int offset);
@@ -1503,15 +1506,19 @@ public interface CollectionDAO {
     @ConnectionAwareSqlQuery(
         value =
             "SELECT COUNT(*) FROM entity_extension WHERE id = :id "
+                + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND JSON_CONTAINS(changedFieldKeys, JSON_ARRAY(:fieldPath))",
         connectionType = MYSQL)
     @ConnectionAwareSqlQuery(
         value =
             "SELECT COUNT(*) FROM entity_extension WHERE id = :id "
+                + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND jsonb_exists(changedFieldKeys, :fieldPath)",
         connectionType = POSTGRES)
     int getExtensionCountByFieldChanged(
-        @BindUUID("id") UUID id, @Bind("fieldPath") String fieldPath);
+        @BindUUID("id") UUID id,
+        @Bind("extensionPrefix") String extensionPrefix,
+        @Bind("fieldPath") String fieldPath);
 
     @SqlQuery(
         "SELECT COUNT(*) FROM entity_extension WHERE id = :id AND extension "

@@ -43,7 +43,9 @@ import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.sdk.fluent.Users;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.util.TestUtils;
+import org.openmetadata.service.util.VersionFieldChangeUtil;
 
 /**
  * Base class for all entity integration tests.
@@ -1480,6 +1482,52 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     assertNotNull(noMatch);
     assertEquals(0, noMatch.getVersions().size(), "No versions should match a bogus field name");
     assertEquals(0, (int) noMatch.getPaging().getTotal());
+  }
+
+  @Test
+  void get_entityVersionHistory_fieldChanged_ignoresWrongExtensionPrefix(TestNamespace ns) {
+    if (!supportsPatch) return;
+
+    K createRequest = createMinimalRequest(ns);
+    T created = createEntity(createRequest);
+
+    created.setDescription("Description change for extension prefix test");
+    patchEntity(created.getId().toString(), created);
+
+    org.openmetadata.schema.type.EntityHistory baseline =
+        getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "description");
+    assertNotNull(baseline);
+    assertNotNull(baseline.getPaging());
+
+    String rogueExtension = "rogue.version.999.0";
+    try {
+      Entity.getCollectionDAO()
+          .entityExtensionDAO()
+          .insertVersionExtension(
+              new VersionFieldChangeUtil.VersionExtensionRecord(
+                  created.getId(),
+                  rogueExtension,
+                  getEntityType(),
+                  JsonUtils.pojoToJson(created),
+                  999.0,
+                  JsonUtils.pojoToJson(List.of("description"))));
+
+      org.openmetadata.schema.type.EntityHistory filtered =
+          getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "description");
+
+      assertNotNull(filtered);
+      assertNotNull(filtered.getPaging());
+      assertEquals(
+          baseline.getPaging().getTotal(),
+          filtered.getPaging().getTotal(),
+          "Filtered history should ignore extension rows outside the entity version prefix");
+      assertEquals(
+          baseline.getVersions().size(),
+          filtered.getVersions().size(),
+          "Filtered history should not include rows from a rogue extension prefix");
+    } finally {
+      Entity.getCollectionDAO().entityExtensionDAO().delete(created.getId(), rogueExtension);
+    }
   }
 
   private double versionOfHistoryEntry(Object versionEntry) {
