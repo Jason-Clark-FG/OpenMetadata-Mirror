@@ -235,7 +235,9 @@ const TableV2 = <T extends object>(
         return String((rest.rowKey as (record: T) => string | number)(record));
       }
       if (typeof rest.rowKey === 'string') {
-        return String((record as Record<string, unknown>)[rest.rowKey]);
+        const val = (record as Record<string, unknown>)[rest.rowKey];
+
+        return val !== undefined && val !== null ? String(val) : String(index);
       }
 
       return String(index);

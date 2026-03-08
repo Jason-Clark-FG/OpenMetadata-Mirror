@@ -31,7 +31,7 @@ import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { settingClick, SettingOptionsType } from '../../utils/sidebar';
 
 type CustomPropertyEntity =
-  typeof CUSTOM_PROPERTIES_ENTITIES[keyof typeof CUSTOM_PROPERTIES_ENTITIES];
+  (typeof CUSTOM_PROPERTIES_ENTITIES)[keyof typeof CUSTOM_PROPERTIES_ENTITIES];
 
 const propertiesWithConfigList = [
   {
@@ -120,65 +120,63 @@ test.describe('Custom properties with custom property config', () => {
   });
 
   Object.values(CUSTOM_PROPERTIES_ENTITIES).forEach(async (entity) => {
-    test.describe.serial(
-      `Add update and delete custom properties for ${entity.name}`,
-      () => {
-        propertiesWithConfigList.forEach((propertyConfig) => {
-          test(propertyConfig.name, async ({ page }) => {
-            const propertyName = `pwcp${Date.now()}test${entity.name}`;
-            await settingClick(
-              page,
-              entity.entityApiType as SettingOptionsType,
-              true
-            );
+    test.describe
+      .serial(`Add update and delete custom properties for ${entity.name}`, () => {
+      propertiesWithConfigList.forEach((propertyConfig) => {
+        test(propertyConfig.name, async ({ page }) => {
+          const propertyName = `pwcp${Date.now()}test${entity.name}`;
+          await settingClick(
+            page,
+            entity.entityApiType as SettingOptionsType,
+            true
+          );
 
-            await addCustomPropertiesForEntity({
+          await addCustomPropertiesForEntity({
+            page,
+            propertyName,
+            customPropertyData: entity,
+            customType: propertyConfig.name,
+            ...propertyConfig.getConfig(entity),
+          });
+
+          if (propertyConfig.editPropertyType) {
+            await editCreatedProperty(
               page,
               propertyName,
-              customPropertyData: entity,
-              customType: propertyConfig.name,
-              ...propertyConfig.getConfig(entity),
-            });
+              propertyConfig.editPropertyType
+            );
+          } else {
+            await editCreatedProperty(page, propertyName);
+          }
 
-            if (propertyConfig.editPropertyType) {
-              await editCreatedProperty(
+          if (propertyConfig.verifyAdvancedSearch) {
+            if (propertyConfig.searchTableColumns) {
+              await verifyCustomPropertyInAdvancedSearch(
                 page,
-                propertyName,
-                propertyConfig.editPropertyType
+                propertyName.toUpperCase(),
+                entity.name.charAt(0).toUpperCase() + entity.name.slice(1),
+                propertyConfig.name,
+                entity.tableConfig.columns
               );
             } else {
-              await editCreatedProperty(page, propertyName);
+              await verifyCustomPropertyInAdvancedSearch(
+                page,
+                propertyName.toUpperCase(),
+                entity.name.charAt(0).toUpperCase() + entity.name.slice(1)
+              );
             }
+          }
 
-            if (propertyConfig.verifyAdvancedSearch) {
-              if (propertyConfig.searchTableColumns) {
-                await verifyCustomPropertyInAdvancedSearch(
-                  page,
-                  propertyName.toUpperCase(),
-                  entity.name.charAt(0).toUpperCase() + entity.name.slice(1),
-                  propertyConfig.name,
-                  entity.tableConfig.columns
-                );
-              } else {
-                await verifyCustomPropertyInAdvancedSearch(
-                  page,
-                  propertyName.toUpperCase(),
-                  entity.name.charAt(0).toUpperCase() + entity.name.slice(1)
-                );
-              }
-            }
+          await settingClick(
+            page,
+            entity.entityApiType as SettingOptionsType,
+            true
+          );
 
-            await settingClick(
-              page,
-              entity.entityApiType as SettingOptionsType,
-              true
-            );
-
-            await deleteCreatedProperty(page, propertyName);
-          });
+          await deleteCreatedProperty(page, propertyName);
         });
-      }
-    );
+      });
+    });
   });
 
   test.describe.serial('Custom property layout, scroll and count', () => {
@@ -302,32 +300,75 @@ test.describe('Custom properties with custom property config', () => {
         });
       });
 
-      await test.step('Add 5 rows of data to table property', async () => {
+      const container = page.locator(
+        `[data-testid="custom-property-${propertyName}-card"]`
+      );
+
+      await test.step('Navigate to entity custom properties tab', async () => {
         await redirectToHomePage(page);
         await adminTestEntity.visitEntityPage(page);
         await waitForAllLoadersToDisappear(page);
         await page.getByTestId('custom_properties').click();
+      });
 
-        const container = page.locator(
-          `[data-testid="custom-property-${propertyName}-card"]`
-        );
+      await test.step('Add 1 row — container should not yet be scrollable', async () => {
         const editButton = container.getByTestId('edit-icon');
         await editButton.scrollIntoViewIfNeeded();
         await expect(editButton).toBeVisible();
         await expect(editButton).toBeEnabled();
         await editButton.click();
 
-        for (let i = 0; i < 5; i++) {
+        await page.getByTestId('add-new-row').click();
+        await expect(page.locator('.om-rdg')).toBeVisible();
+        await fillTableColumnInputDetails(
+          page,
+          'alpha',
+          entity.tableConfig.columns[0]
+        );
+        await fillTableColumnInputDetails(
+          page,
+          'beta',
+          entity.tableConfig.columns[1]
+        );
+
+        const patchResponse = page.waitForResponse(
+          `/api/v1/${entity.entityApiType}/*`
+        );
+        await page.getByTestId('update-table-type-property').click();
+        expect((await patchResponse).status()).toBe(200);
+        await waitForAllLoadersToDisappear(page);
+
+        const scrollContainer = container.locator(
+          '.custom-property-scrollable-container'
+        );
+        await expect(scrollContainer).toBeVisible();
+        const isScrollable = await scrollContainer.evaluate(
+          (el) => el.scrollHeight > el.clientHeight
+        );
+        expect(isScrollable).toBeFalsy();
+      });
+
+      await test.step('Add 2 more rows (3 total) — container should become scrollable', async () => {
+        const editButton = container.getByTestId('edit-icon');
+        await editButton.scrollIntoViewIfNeeded();
+        await expect(editButton).toBeVisible();
+        await editButton.click();
+
+        const additionalRows = [
+          { col1: 'gamma', col2: 'delta' },
+          { col1: 'epsilon', col2: 'zeta' },
+        ];
+        for (const row of additionalRows) {
           await page.getByTestId('add-new-row').click();
           await expect(page.locator('.om-rdg')).toBeVisible();
           await fillTableColumnInputDetails(
             page,
-            `row${i + 1}-col1`,
+            row.col1,
             entity.tableConfig.columns[0]
           );
           await fillTableColumnInputDetails(
             page,
-            `row${i + 1}-col2`,
+            row.col2,
             entity.tableConfig.columns[1]
           );
         }
@@ -338,38 +379,24 @@ test.describe('Custom properties with custom property config', () => {
         await page.getByTestId('update-table-type-property').click();
         expect((await patchResponse).status()).toBe(200);
         await waitForAllLoadersToDisappear(page);
+
+        const scrollContainer = container.locator(
+          '.custom-property-scrollable-container'
+        );
+        await expect(scrollContainer).toBeVisible();
+        const isScrollable = await scrollContainer.evaluate(
+          (el) => el.scrollHeight > el.clientHeight
+        );
+        expect(isScrollable).toBeTruthy();
       });
 
-      await test.step('Verify row count (5) in property name', async () => {
-        const container = page.locator(
-          `[data-testid="custom-property-${propertyName}-card"]`
-        );
+      await test.step('Verify row count (3) in property name', async () => {
         await expect(container.getByTestId('property-name')).toContainText(
-          '(5)'
+          '(3)'
         );
       });
-
-      await test.step(
-        'Verify .custom-property-scrollable-container is scrollable',
-        async () => {
-          const container = page.locator(
-            `[data-testid="custom-property-${propertyName}-card"]`
-          );
-          const scrollContainer = container.locator(
-            '.custom-property-scrollable-container'
-          );
-          await expect(scrollContainer).toBeVisible();
-          const isScrollable = await scrollContainer.evaluate(
-            (el) => el.scrollHeight > el.clientHeight
-          );
-          expect(isScrollable).toBeTruthy();
-        }
-      );
 
       await test.step('Verify expand/collapse toggle is hidden', async () => {
-        const container = page.locator(
-          `[data-testid="custom-property-${propertyName}-card"]`
-        );
         await expect(
           container.getByTestId(`toggle-${propertyName}`)
         ).not.toBeVisible();
