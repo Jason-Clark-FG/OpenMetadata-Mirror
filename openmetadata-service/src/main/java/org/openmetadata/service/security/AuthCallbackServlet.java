@@ -12,14 +12,14 @@ public class AuthCallbackServlet extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
-    AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler();
+    AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler(req.getServletContext());
     handler.handleCallback(req, resp);
   }
 
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
     // SAML uses POST for callback with SAMLResponse
-    AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler();
+    AuthServeletHandler handler = AuthServeletHandlerRegistry.getHandler(req.getServletContext());
     handler.handleCallback(req, resp);
   }
 }

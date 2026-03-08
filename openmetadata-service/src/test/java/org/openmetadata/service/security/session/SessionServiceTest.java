@@ -1,0 +1,411 @@
+package org.openmetadata.service.security.session;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.openmetadata.schema.api.security.AuthenticationConfiguration;
+import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.service.fernet.Fernet;
+import org.openmetadata.service.jdbi3.SessionRepository;
+
+@ExtendWith(MockitoExtension.class)
+class SessionServiceTest {
+
+  private static final String FERNET_KEY = "jJ/9sz0g0OHxsfxOoSfdFdmk3ysNmPRnH3TUAbz3IHA=";
+
+  @Mock private AuthenticationConfiguration authConfig;
+  @Mock private SessionRepository repository;
+  @Mock private ScheduledExecutorService scheduler;
+  @Mock private HttpServletRequest request;
+  @Mock private HttpServletResponse response;
+
+  private SessionService sessionService;
+
+  @BeforeEach
+  void setUp() {
+    Fernet.getInstance().setFernetKey(FERNET_KEY);
+    lenient().when(authConfig.getForceSecureSessionCookie()).thenReturn(false);
+    lenient().when(request.isSecure()).thenReturn(false);
+    sessionService =
+        new SessionService(authConfig, repository, Caffeine.newBuilder().build(), scheduler);
+  }
+
+  @AfterEach
+  void tearDown() {
+    Fernet.getInstance().setFernetKey((String) null);
+  }
+
+  @Test
+  void createPendingSession_persistsSessionAndSetsCookie() {
+    UserSession session =
+        sessionService.createPendingSession(
+            request,
+            response,
+            "basic",
+            "http://localhost:3000/callback",
+            "state-123",
+            "nonce-123",
+            "pkce-123");
+
+    ArgumentCaptor<UserSession> sessionCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).create(sessionCaptor.capture());
+    verify(response)
+        .addHeader(eq("Set-Cookie"), org.mockito.ArgumentMatchers.contains("OM_SESSION="));
+
+    UserSession storedSession = sessionCaptor.getValue();
+    assertEquals(session.getId(), storedSession.getId());
+    assertEquals(SessionStatus.PENDING, storedSession.getStatus());
+    assertEquals("state-123", storedSession.getState());
+    assertEquals("nonce-123", storedSession.getNonce());
+    assertEquals("pkce-123", storedSession.getPkceVerifier());
+  }
+
+  @Test
+  void activatePendingSession_promotesPendingSessionAndEncryptsTokens() {
+    long now = System.currentTimeMillis();
+    UserSession pendingSession =
+        UserSession.builder()
+            .id("pending-session")
+            .status(SessionStatus.PENDING)
+            .state("state")
+            .nonce("nonce")
+            .pkceVerifier("pkce")
+            .version(0L)
+            .expiresAt(now + 1_000)
+            .idleExpiresAt(now + 1_000)
+            .build();
+    User user =
+        new User()
+            .withId(UUID.randomUUID())
+            .withName("oidc-user")
+            .withEmail("oidc-user@example.com");
+    when(repository.updateIfVersion(any(UserSession.class), eq(0L))).thenReturn(true);
+    when(repository.findByUserIdAndStatus(eq(user.getId().toString()), eq(SessionStatus.ACTIVE)))
+        .thenReturn(List.of());
+
+    UserSession activated =
+        sessionService
+            .activatePendingSession(
+                request, response, pendingSession, user, "om-refresh", "provider-refresh")
+            .orElseThrow();
+
+    assertEquals(SessionStatus.ACTIVE, activated.getStatus());
+    assertEquals(user.getId().toString(), activated.getUserId());
+    assertNull(activated.getState());
+    assertNull(activated.getNonce());
+    assertNull(activated.getPkceVerifier());
+    assertTrue(activated.getExpiresAt() > now + 60_000);
+    assertNotEquals("om-refresh", activated.getOmRefreshToken());
+    assertNotEquals("provider-refresh", activated.getProviderRefreshToken());
+    assertEquals("om-refresh", sessionService.decryptOmRefreshToken(activated));
+    assertEquals("provider-refresh", sessionService.decryptProviderRefreshToken(activated));
+  }
+
+  @Test
+  void getActiveSession_expiredSessionIsMarkedExpiredAndCookieCleared() {
+    String sessionId = validSessionId('e');
+    UserSession expiredSession =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.ACTIVE)
+            .version(3L)
+            .expiresAt(System.currentTimeMillis() - 1_000)
+            .idleExpiresAt(System.currentTimeMillis() - 1_000)
+            .updatedAt(System.currentTimeMillis() - 2_000)
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId)).thenReturn(Optional.of(expiredSession));
+    when(repository.updateIfVersion(any(UserSession.class), anyLong())).thenReturn(true);
+
+    Optional<UserSession> maybeSession = sessionService.getActiveSession(request, response);
+
+    ArgumentCaptor<UserSession> sessionCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).updateIfVersion(sessionCaptor.capture(), eq(3L));
+    verify(response)
+        .addHeader(eq("Set-Cookie"), org.mockito.ArgumentMatchers.contains("Max-Age=0"));
+
+    assertTrue(maybeSession.isEmpty());
+    assertEquals(SessionStatus.EXPIRED, sessionCaptor.getValue().getStatus());
+  }
+
+  @Test
+  void getSession_ignoresInvalidSessionCookieWithoutDatabaseLookup() {
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", "invalid")});
+
+    Optional<UserSession> maybeSession = sessionService.getSession(request);
+
+    assertTrue(maybeSession.isEmpty());
+    verify(repository, never()).findById(any());
+  }
+
+  @Test
+  void getSessionById_returnsCachedSessionWithoutDatabaseLookup() {
+    UserSession createdSession =
+        sessionService.createPendingSession(
+            request,
+            response,
+            "basic",
+            "http://localhost:3000/callback",
+            "state-123",
+            "nonce-123",
+            "pkce-123");
+
+    Optional<UserSession> maybeSession = sessionService.getSessionById(createdSession.getId());
+
+    assertTrue(maybeSession.isPresent());
+    assertEquals(createdSession.getId(), maybeSession.get().getId());
+    verify(repository, never()).findById(createdSession.getId());
+  }
+
+  @Test
+  void acquireRefreshLease_throwsRetryableExceptionWhenLeaseIsHeld() {
+    String sessionId = validSessionId('r');
+    long now = System.currentTimeMillis();
+    UserSession refreshingSession =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.REFRESHING)
+            .refreshLeaseUntil(now + 5_000)
+            .version(2L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId)).thenReturn(Optional.of(refreshingSession));
+
+    SessionRefreshInProgressException exception =
+        assertThrows(
+            SessionRefreshInProgressException.class,
+            () -> sessionService.acquireRefreshLease(request, response));
+
+    assertTrue(exception.getRetryAfterSeconds() >= 1);
+  }
+
+  @Test
+  void acquireRefreshLease_reclaimsStaleLease() {
+    String sessionId = validSessionId('s');
+    long now = System.currentTimeMillis();
+    UserSession staleLease =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.REFRESHING)
+            .refreshLeaseUntil(now - 1_000)
+            .version(4L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId)).thenReturn(Optional.of(staleLease));
+    when(repository.updateIfVersion(any(UserSession.class), eq(4L))).thenReturn(true);
+
+    UserSession leased = sessionService.acquireRefreshLease(request, response).orElseThrow();
+
+    assertEquals(SessionStatus.REFRESHING, leased.getStatus());
+    assertTrue(leased.getRefreshLeaseUntil() > now);
+    assertEquals(5L, leased.getVersion());
+  }
+
+  @Test
+  void acquireRefreshLease_reloadsOnVersionConflictAndReturnsBusyState() {
+    String sessionId = validSessionId('l');
+    long now = System.currentTimeMillis();
+    UserSession activeSession =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.ACTIVE)
+            .version(7L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+    UserSession busySession =
+        activeSession.toBuilder()
+            .status(SessionStatus.REFRESHING)
+            .refreshLeaseUntil(now + 5_000)
+            .version(8L)
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId))
+        .thenReturn(Optional.of(activeSession))
+        .thenReturn(Optional.of(busySession));
+    when(repository.updateIfVersion(any(UserSession.class), eq(7L))).thenReturn(false);
+
+    assertThrows(
+        SessionRefreshInProgressException.class,
+        () -> sessionService.acquireRefreshLease(request, response));
+  }
+
+  @Test
+  void completeRefresh_restoresActiveSessionAndEncryptsTokens() {
+    long now = System.currentTimeMillis();
+    UserSession leasedSession =
+        UserSession.builder()
+            .id("leased-session")
+            .status(SessionStatus.REFRESHING)
+            .version(1L)
+            .refreshLeaseUntil(now + 5_000)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+    when(repository.updateIfVersion(any(UserSession.class), eq(1L))).thenReturn(true);
+
+    UserSession refreshed =
+        sessionService
+            .completeRefresh(leasedSession, "rotated-om", "rotated-provider")
+            .orElseThrow();
+
+    assertEquals(SessionStatus.ACTIVE, refreshed.getStatus());
+    assertNull(refreshed.getRefreshLeaseUntil());
+    assertEquals("rotated-om", sessionService.decryptOmRefreshToken(refreshed));
+    assertEquals("rotated-provider", sessionService.decryptProviderRefreshToken(refreshed));
+  }
+
+  @Test
+  void revokeSession_marksSessionRevokedAndClearsCookie() {
+    String sessionId = validSessionId('a');
+    UserSession activeSession =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.ACTIVE)
+            .version(4L)
+            .updatedAt(System.currentTimeMillis())
+            .lastAccessedAt(System.currentTimeMillis())
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId)).thenReturn(Optional.of(activeSession));
+    when(repository.updateIfVersion(any(UserSession.class), anyLong())).thenReturn(true);
+
+    sessionService.revokeSession(request, response);
+
+    ArgumentCaptor<UserSession> sessionCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).updateIfVersion(sessionCaptor.capture(), eq(4L));
+    verify(response)
+        .addHeader(eq("Set-Cookie"), org.mockito.ArgumentMatchers.contains("Max-Age=0"));
+
+    assertEquals(SessionStatus.REVOKED, sessionCaptor.getValue().getStatus());
+  }
+
+  @Test
+  void createActiveSession_appliesUserSessionLimitAndEncryptsRefreshToken() {
+    String oldestSessionId = validSessionId('o');
+    User user =
+        new User()
+            .withId(UUID.randomUUID())
+            .withName("session-user")
+            .withEmail("session-user@example.com");
+    UserSession oldestSession =
+        UserSession.builder()
+            .id(oldestSessionId)
+            .status(SessionStatus.ACTIVE)
+            .userId(user.getId().toString())
+            .version(9L)
+            .lastAccessedAt(1L)
+            .build();
+    List<UserSession> activeSessions =
+        List.of(
+            oldestSession,
+            activeSession(validSessionId('b'), user, 2L, 2L),
+            activeSession(validSessionId('c'), user, 3L, 3L),
+            activeSession(validSessionId('d'), user, 4L, 4L),
+            activeSession(validSessionId('f'), user, 5L, 5L),
+            activeSession(validSessionId('g'), user, 6L, 6L));
+    List<UserSession> remainingSessions = activeSessions.stream().skip(1).toList();
+    when(repository.findByUserIdAndStatus(eq(user.getId().toString()), eq(SessionStatus.ACTIVE)))
+        .thenReturn(activeSessions, remainingSessions);
+    when(repository.findById(oldestSessionId)).thenReturn(Optional.of(oldestSession));
+    when(repository.updateIfVersion(any(UserSession.class), anyLong())).thenReturn(true);
+
+    UserSession session =
+        sessionService.createActiveSession(request, response, "basic", user, "refresh-token");
+
+    assertEquals(SessionStatus.ACTIVE, session.getStatus());
+    assertEquals(user.getId().toString(), session.getUserId());
+    assertEquals("refresh-token", sessionService.decryptOmRefreshToken(session));
+    verify(repository).findById(oldestSessionId);
+  }
+
+  @Test
+  void runCleanupOnce_batchesExpiringAndPruningSessions() {
+    long now = System.currentTimeMillis();
+    UserSession expiredActive =
+        UserSession.builder()
+            .id("expired-active")
+            .status(SessionStatus.ACTIVE)
+            .version(1L)
+            .expiresAt(now - 1_000)
+            .idleExpiresAt(now - 1_000)
+            .updatedAt(now - 2_000)
+            .build();
+    UserSession expiredRefreshing =
+        UserSession.builder()
+            .id("expired-refreshing")
+            .status(SessionStatus.REFRESHING)
+            .version(2L)
+            .expiresAt(now - 1_000)
+            .idleExpiresAt(now - 1_000)
+            .updatedAt(now - 2_000)
+            .build();
+    UserSession pruned =
+        UserSession.builder().id("pruned-session").status(SessionStatus.REVOKED).build();
+
+    when(repository.findSessionsToExpire(anyLong(), anyInt()))
+        .thenReturn(List.of(expiredActive, expiredRefreshing), List.of());
+    when(repository.findSessionsToPrune(anyLong(), anyInt()))
+        .thenReturn(List.of(pruned), List.of());
+    when(repository.updateIfVersion(any(UserSession.class), anyLong())).thenReturn(true);
+
+    sessionService.runCleanupOnce();
+
+    ArgumentCaptor<UserSession> updateCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository, atLeast(2)).updateIfVersion(updateCaptor.capture(), anyLong());
+    assertTrue(
+        updateCaptor.getAllValues().stream()
+            .allMatch(session -> session.getStatus() == SessionStatus.EXPIRED));
+    verify(repository).delete("pruned-session");
+  }
+
+  private UserSession activeSession(String id, User user, long version, long lastAccessedAt) {
+    return UserSession.builder()
+        .id(id)
+        .status(SessionStatus.ACTIVE)
+        .userId(user.getId().toString())
+        .version(version)
+        .lastAccessedAt(lastAccessedAt)
+        .build();
+  }
+
+  private String validSessionId(char value) {
+    return String.valueOf(value).repeat(43);
+  }
+}

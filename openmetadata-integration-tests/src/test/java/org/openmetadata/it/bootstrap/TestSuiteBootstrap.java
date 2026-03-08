@@ -28,6 +28,8 @@ import io.dropwizard.testing.junit5.DropwizardAppExtension;
 import jakarta.validation.Validator;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
@@ -129,6 +131,8 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
   private static GenericContainer<?> FUSEKI_CONTAINER;
   private static K3sContainer K3S_CONTAINER;
   private static DropwizardAppExtension<OpenMetadataApplicationConfig> APP;
+  private static final List<DropwizardAppExtension<OpenMetadataApplicationConfig>> ADDITIONAL_APPS =
+      java.util.Collections.synchronizedList(new ArrayList<>());
   private static Jdbi jdbi;
 
   private static String searchHost;
@@ -397,48 +401,10 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
 
   private void startApplication() throws Exception {
     LOG.info("Starting OpenMetadata application...");
-
-    OpenMetadataApplicationConfig config = readTestAppConfig(CONFIG_PATH);
-
-    HikariCPDataSourceFactory dataSourceFactory =
-        (config.getDataSourceFactory() instanceof HikariCPDataSourceFactory)
-            ? (HikariCPDataSourceFactory) config.getDataSourceFactory()
-            : new HikariCPDataSourceFactory();
-    dataSourceFactory.setUrl(DATABASE_CONTAINER.getJdbcUrl());
-    dataSourceFactory.setUser(DATABASE_CONTAINER.getUsername());
-    dataSourceFactory.setPassword(DATABASE_CONTAINER.getPassword());
-    dataSourceFactory.setDriverClass(DATABASE_CONTAINER.getDriverClassName());
-    dataSourceFactory.setMaxSize(100);
-    dataSourceFactory.setMinSize(20);
-    dataSourceFactory.setInitialSize(20);
-    dataSourceFactory.setMaxWaitForConnection(io.dropwizard.util.Duration.seconds(30));
-    config.setDataSourceFactory(dataSourceFactory);
-
-    String projectRoot = System.getProperty("user.dir");
-    if (projectRoot.endsWith("openmetadata-integration-tests")) {
-      projectRoot = projectRoot.substring(0, projectRoot.lastIndexOf("/"));
-    }
-    String flyWayMigrationScriptsLocation =
-        projectRoot + "/bootstrap/sql/migrations/flyway/" + DATABASE_CONTAINER.getDriverClassName();
-    String nativeMigrationScriptsLocation = projectRoot + "/bootstrap/sql/migrations/native/";
-
-    config.setElasticSearchConfiguration(getSearchConfig());
-
-    if (config.getMigrationConfiguration() == null) {
-      config.setMigrationConfiguration(
-          new org.openmetadata.service.migration.MigrationConfiguration());
-    }
-    config.getMigrationConfiguration().setFlywayPath(flyWayMigrationScriptsLocation);
-    config.getMigrationConfiguration().setNativePath(nativeMigrationScriptsLocation);
-
-    String testResourcesPath = projectRoot + "/openmetadata-integration-tests/src/test/resources/";
-    config
-        .getJwtTokenConfiguration()
-        .setRsaprivateKeyFilePath(testResourcesPath + "private_key.der");
-    config.getJwtTokenConfiguration().setRsapublicKeyFilePath(testResourcesPath + "public_key.der");
-
-    configurePipelineServiceClient(config);
-    configureRdf(config);
+    OpenMetadataApplicationConfig config = buildRuntimeApplicationConfig();
+    String projectRoot = getProjectRoot();
+    String flyWayMigrationScriptsLocation = getFlywayMigrationScriptsLocation(projectRoot);
+    String nativeMigrationScriptsLocation = getNativeMigrationScriptsLocation(projectRoot);
 
     IndexMappingLoader.init(getSearchConfig());
 
@@ -506,7 +472,7 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
     }
   }
 
-  private OpenMetadataApplicationConfig readTestAppConfig(String path)
+  private static OpenMetadataApplicationConfig readTestAppConfig(String path)
       throws ConfigurationException, IOException {
     ObjectMapper objectMapper = Jackson.newObjectMapper();
     objectMapper.registerSubtypes(AuditExcludeFilterFactory.class, AuditOnlyFilterFactory.class);
@@ -560,7 +526,7 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
     searchRepository.createIndexes();
   }
 
-  private ElasticSearchConfiguration getSearchConfig() {
+  private static ElasticSearchConfiguration getSearchConfig() {
     ElasticSearchConfiguration config = new ElasticSearchConfiguration();
     ElasticSearchConfiguration.SearchType type =
         "opensearch".equalsIgnoreCase(searchType)
@@ -583,7 +549,7 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
     return config;
   }
 
-  private void configurePipelineServiceClient(OpenMetadataApplicationConfig config) {
+  private static void configurePipelineServiceClient(OpenMetadataApplicationConfig config) {
     if (kubeConfigYaml != null) {
       PipelineServiceClientConfiguration pipelineConfig = new PipelineServiceClientConfiguration();
       LOG.info("Configuring K8sPipelineClient for pipeline operations");
@@ -607,7 +573,7 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
     }
   }
 
-  private void configureRdf(OpenMetadataApplicationConfig config) {
+  private static void configureRdf(OpenMetadataApplicationConfig config) {
     LOG.info("Configuring RDF with Fuseki endpoint: {}", fusekiEndpoint);
 
     RdfConfiguration rdfConfig = config.getRdfConfiguration();
@@ -634,6 +600,21 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
       }
     } catch (Exception e) {
       LOG.warn("Error cleaning up shared entities", e);
+    }
+
+    try {
+      synchronized (ADDITIONAL_APPS) {
+        for (DropwizardAppExtension<OpenMetadataApplicationConfig> app : ADDITIONAL_APPS) {
+          try {
+            app.after();
+          } catch (Exception e) {
+            LOG.warn("Error stopping additional Dropwizard app", e);
+          }
+        }
+        ADDITIONAL_APPS.clear();
+      }
+    } catch (Exception e) {
+      LOG.warn("Error stopping additional Dropwizard apps", e);
     }
 
     try {
@@ -842,6 +823,88 @@ public class TestSuiteBootstrap implements LauncherSessionListener {
           "JDBI is not initialized. Ensure TestSuiteBootstrap has initialized.");
     }
     return jdbi;
+  }
+
+  public static OpenMetadataApplicationConfig createApplicationConfigCopy() {
+    if (APP == null || DATABASE_CONTAINER == null || searchHost == null || fusekiEndpoint == null) {
+      throw new IllegalStateException(
+          "Application is not running. Ensure TestSuiteBootstrap has initialized.");
+    }
+    try {
+      return buildRuntimeApplicationConfig();
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to clone OpenMetadata application config", e);
+    }
+  }
+
+  private static OpenMetadataApplicationConfig buildRuntimeApplicationConfig()
+      throws ConfigurationException, IOException {
+    OpenMetadataApplicationConfig config = readTestAppConfig(CONFIG_PATH);
+
+    HikariCPDataSourceFactory dataSourceFactory =
+        (config.getDataSourceFactory() instanceof HikariCPDataSourceFactory)
+            ? (HikariCPDataSourceFactory) config.getDataSourceFactory()
+            : new HikariCPDataSourceFactory();
+    dataSourceFactory.setUrl(DATABASE_CONTAINER.getJdbcUrl());
+    dataSourceFactory.setUser(DATABASE_CONTAINER.getUsername());
+    dataSourceFactory.setPassword(DATABASE_CONTAINER.getPassword());
+    dataSourceFactory.setDriverClass(DATABASE_CONTAINER.getDriverClassName());
+    dataSourceFactory.setMaxSize(100);
+    dataSourceFactory.setMinSize(20);
+    dataSourceFactory.setInitialSize(20);
+    dataSourceFactory.setMaxWaitForConnection(io.dropwizard.util.Duration.seconds(30));
+    config.setDataSourceFactory(dataSourceFactory);
+
+    String projectRoot = getProjectRoot();
+    config.setElasticSearchConfiguration(getSearchConfig());
+
+    if (config.getMigrationConfiguration() == null) {
+      config.setMigrationConfiguration(
+          new org.openmetadata.service.migration.MigrationConfiguration());
+    }
+    config
+        .getMigrationConfiguration()
+        .setFlywayPath(getFlywayMigrationScriptsLocation(projectRoot));
+    config
+        .getMigrationConfiguration()
+        .setNativePath(getNativeMigrationScriptsLocation(projectRoot));
+
+    String testResourcesPath = getTestResourcesPath(projectRoot);
+    config
+        .getJwtTokenConfiguration()
+        .setRsaprivateKeyFilePath(testResourcesPath + "private_key.der");
+    config.getJwtTokenConfiguration().setRsapublicKeyFilePath(testResourcesPath + "public_key.der");
+
+    configurePipelineServiceClient(config);
+    configureRdf(config);
+    return config;
+  }
+
+  private static String getProjectRoot() {
+    String projectRoot = System.getProperty("user.dir");
+    if (projectRoot.endsWith("openmetadata-integration-tests")) {
+      projectRoot = projectRoot.substring(0, projectRoot.lastIndexOf("/"));
+    }
+    return projectRoot;
+  }
+
+  private static String getFlywayMigrationScriptsLocation(String projectRoot) {
+    return projectRoot
+        + "/bootstrap/sql/migrations/flyway/"
+        + DATABASE_CONTAINER.getDriverClassName();
+  }
+
+  private static String getNativeMigrationScriptsLocation(String projectRoot) {
+    return projectRoot + "/bootstrap/sql/migrations/native/";
+  }
+
+  private static String getTestResourcesPath(String projectRoot) {
+    return projectRoot + "/openmetadata-integration-tests/src/test/resources/";
+  }
+
+  public static void registerAdditionalApp(
+      DropwizardAppExtension<OpenMetadataApplicationConfig> app) {
+    ADDITIONAL_APPS.add(app);
   }
 
   /**

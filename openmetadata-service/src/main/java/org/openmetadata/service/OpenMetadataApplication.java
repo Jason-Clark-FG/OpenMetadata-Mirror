@@ -139,9 +139,9 @@ import org.openmetadata.service.security.AuthCallbackServlet;
 import org.openmetadata.service.security.AuthLoginServlet;
 import org.openmetadata.service.security.AuthLogoutServlet;
 import org.openmetadata.service.security.AuthRefreshServlet;
+import org.openmetadata.service.security.AuthServeletHandler;
 import org.openmetadata.service.security.AuthServeletHandlerFactory;
 import org.openmetadata.service.security.AuthServeletHandlerRegistry;
-import org.openmetadata.service.security.AuthenticationCodeFlowHandler;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.ContainerRequestFilterManager;
 import org.openmetadata.service.security.DelegatingContainerRequestFilter;
@@ -162,6 +162,7 @@ import org.openmetadata.service.security.saml.SamlLogoutServlet;
 import org.openmetadata.service.security.saml.SamlMetadataServlet;
 import org.openmetadata.service.security.saml.SamlSettingsHolder;
 import org.openmetadata.service.security.saml.SamlTokenRefreshServlet;
+import org.openmetadata.service.security.session.SessionService;
 import org.openmetadata.service.socket.FeedServlet;
 import org.openmetadata.service.socket.Jetty12WebSocketHandler;
 import org.openmetadata.service.socket.OpenMetadataAssetServlet;
@@ -430,9 +431,16 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
   }
 
   private void registerAuthServlets(OpenMetadataApplicationConfig config, Environment environment) {
-    AuthServeletHandlerRegistry.setHandler(AuthServeletHandlerFactory.getHandler(config));
-    // Set up a Session Manager
     MutableServletContextHandler contextHandler = environment.getApplicationContext();
+    SessionService sessionService =
+        new SessionService(SecurityConfigurationManager.getCurrentAuthConfig());
+    environment.lifecycle().manage(sessionService);
+    setAuthServletAttributes(
+        contextHandler,
+        AuthServeletHandlerFactory.getHandler(config, sessionService),
+        sessionService);
+    // Jetty HttpSession is still required by the OneLogin SAML library. OM_SESSION carries the
+    // application session state for the unified auth flows.
     SessionHandler sessionHandler = contextHandler.getSessionHandler();
     if (contextHandler.getSessionHandler() == null) {
       sessionHandler = new SessionHandler();
@@ -785,7 +793,18 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       OpenMetadataApplicationConfig config, Environment environment) {
     try {
       LOG.info("Starting authentication system reinitialization");
-      AuthServeletHandlerRegistry.setHandler(AuthServeletHandlerFactory.getHandler(config));
+      MutableServletContextHandler contextHandler = environment.getApplicationContext();
+      SessionService sessionService =
+          AuthServeletHandlerRegistry.getSessionService(contextHandler.getServletContext());
+      if (sessionService == null) {
+        sessionService = new SessionService(SecurityConfigurationManager.getCurrentAuthConfig());
+        environment.lifecycle().manage(sessionService);
+        sessionService.start();
+      } else {
+        sessionService.updateConfiguration(SecurityConfigurationManager.getCurrentAuthConfig());
+      }
+      AuthServeletHandler handler = AuthServeletHandlerFactory.getHandler(config, sessionService);
+      setAuthServletAttributes(contextHandler, handler, sessionService);
 
       // Update JWT configuration first
       JWTTokenGenerator.getInstance()
@@ -798,16 +817,6 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       reRegisterAuthorizer(config, environment);
       config.setAuthenticationConfiguration(SecurityConfigurationManager.getCurrentAuthConfig());
       authenticatorHandler.init(config);
-
-      // Re-register servlets
-      if (AuthServeletHandlerFactory.getHandler(config) instanceof AuthenticationCodeFlowHandler) {
-        AuthenticationCodeFlowHandler.getInstance(
-                SecurityConfigurationManager.getCurrentAuthConfig(),
-                SecurityConfigurationManager.getCurrentAuthzConfig())
-            .updateConfiguration(
-                SecurityConfigurationManager.getCurrentAuthConfig(),
-                SecurityConfigurationManager.getCurrentAuthzConfig());
-      }
 
       // Reinitialize SAML settings if SAML is enabled
       if (SecurityConfigurationManager.getCurrentAuthConfig() != null
@@ -825,6 +834,18 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       // Rollback is handled internally by SecurityConfigurationManager
       throw new RuntimeException("Authentication system reinitialization failed", e);
     }
+  }
+
+  private void setAuthServletAttributes(
+      MutableServletContextHandler contextHandler,
+      AuthServeletHandler handler,
+      SessionService sessionService) {
+    contextHandler.setAttribute(AuthServeletHandlerRegistry.AUTH_HANDLER_ATTRIBUTE, handler);
+    contextHandler.setAttribute(
+        AuthServeletHandlerRegistry.SESSION_SERVICE_ATTRIBUTE, sessionService);
+    AuthServeletHandlerRegistry.setHandler(contextHandler.getServletContext(), handler);
+    AuthServeletHandlerRegistry.setSessionService(
+        contextHandler.getServletContext(), sessionService);
   }
 
   private void registerAuthorizer(

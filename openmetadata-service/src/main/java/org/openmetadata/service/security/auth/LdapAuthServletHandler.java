@@ -3,11 +3,12 @@ package org.openmetadata.service.security.auth;
 import static jakarta.ws.rs.core.Response.Status.FORBIDDEN;
 import static jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 import static jakarta.ws.rs.core.Response.Status.UNAUTHORIZED;
+import static org.openmetadata.service.security.SecurityUtil.writeErrorResponse;
 import static org.openmetadata.service.security.SecurityUtil.writeJsonResponse;
+import static org.openmetadata.service.security.SecurityUtil.writeMessageResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Base64;
@@ -16,54 +17,33 @@ import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.LoginRequest;
 import org.openmetadata.schema.auth.TokenRefreshRequest;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
+import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.auth.JwtResponse;
 import org.openmetadata.service.exception.CustomExceptionMessage;
+import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.AuthServeletHandler;
+import org.openmetadata.service.security.policyevaluator.SubjectCache;
+import org.openmetadata.service.security.session.SessionRefreshInProgressException;
+import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.UserSession;
+import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
 public class LdapAuthServletHandler implements AuthServeletHandler {
-  private static final String SESSION_REFRESH_TOKEN = "refreshToken";
-  private static final String SESSION_USER_ID = "userId";
-
   final LdapAuthenticator authenticator;
   final AuthenticationConfiguration authConfig;
+  final SessionService sessionService;
 
-  private static class Holder {
-    private static volatile LdapAuthServletHandler instance;
-    private static volatile AuthenticationConfiguration lastAuthConfig;
-    private static volatile AuthorizerConfiguration lastAuthzConfig;
-  }
-
-  public static LdapAuthServletHandler getInstance(
-      AuthenticationConfiguration authConfig, AuthorizerConfiguration authorizerConfig) {
-    // Check if configuration has changed
-    if (Holder.instance == null || !isSameConfig(authConfig, authorizerConfig)) {
-      synchronized (LdapAuthServletHandler.class) {
-        if (Holder.instance == null || !isSameConfig(authConfig, authorizerConfig)) {
-          // Clean up old instance resources if exists
-          if (Holder.instance != null && Holder.instance.authenticator != null) {
-            // LdapAuthenticator might have connection pools to close
-            LOG.info("Replacing LDAP handler due to config change");
-          }
-          Holder.instance = new LdapAuthServletHandler(authConfig, authorizerConfig);
-          Holder.lastAuthConfig = authConfig;
-          Holder.lastAuthzConfig = authorizerConfig;
-        }
-      }
-    }
-    return Holder.instance;
-  }
-
-  private static boolean isSameConfig(
-      AuthenticationConfiguration authConfig, AuthorizerConfiguration authorizerConfig) {
-    return authConfig == Holder.lastAuthConfig && authorizerConfig == Holder.lastAuthzConfig;
-  }
-
-  private LdapAuthServletHandler(
-      AuthenticationConfiguration authConfig, AuthorizerConfiguration authorizerConfig) {
+  public LdapAuthServletHandler(
+      AuthenticationConfiguration authConfig,
+      AuthorizerConfiguration authorizerConfig,
+      SessionService sessionService) {
     this.authConfig = authConfig;
+    this.sessionService = sessionService;
     this.authenticator = new LdapAuthenticator();
     try {
       OpenMetadataApplicationConfig config = new OpenMetadataApplicationConfig();
@@ -96,12 +76,9 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
 
       // Use existing LdapAuthenticator logic
       JwtResponse jwtResponse = authenticator.loginUser(loginRequest);
-
-      HttpSession session = req.getSession(true);
-      if (jwtResponse.getRefreshToken() != null) {
-        session.setAttribute(SESSION_REFRESH_TOKEN, jwtResponse.getRefreshToken());
-      }
-      session.setAttribute(SESSION_USER_ID, loginRequest.getEmail());
+      User user = getUserByEmail(loginRequest.getEmail());
+      sessionService.createActiveSession(
+          req, resp, authConfig.getProvider().value(), user, jwtResponse.getRefreshToken());
 
       JwtResponse responseToClient = new JwtResponse();
       responseToClient.setAccessToken(jwtResponse.getAccessToken());
@@ -137,7 +114,7 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
     // The login already redirects with the token
     try {
       resp.setStatus(HttpServletResponse.SC_OK);
-      writeJsonResponse(resp, "{\"message\":\"Callback handled by frontend\"}");
+      writeMessageResponse(resp, HttpServletResponse.SC_OK, "Callback handled by frontend");
     } catch (IOException e) {
       LOG.error("Error handling callback", e);
     }
@@ -154,14 +131,15 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
         return;
       }
 
-      HttpSession session = req.getSession(false);
+      UserSession session = sessionService.acquireRefreshLease(req, resp).orElse(null);
       if (session == null) {
         sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "No active session");
         return;
       }
 
-      String refreshToken = (String) session.getAttribute(SESSION_REFRESH_TOKEN);
+      String refreshToken = sessionService.decryptOmRefreshToken(session);
       if (refreshToken == null) {
+        sessionService.revokeSession(req, resp);
         sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "No refresh token in session");
         return;
       }
@@ -171,11 +149,10 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
       tokenRequest.setRefreshToken(refreshToken);
       JwtResponse newTokens = authenticator.getNewAccessToken(tokenRequest);
 
-      // Update session with new refresh token if changed
-      if (newTokens.getRefreshToken() != null
-          && !newTokens.getRefreshToken().equals(refreshToken)) {
-        session.setAttribute(SESSION_REFRESH_TOKEN, newTokens.getRefreshToken());
-      }
+      sessionService.completeRefresh(
+          session,
+          newTokens.getRefreshToken() != null ? newTokens.getRefreshToken() : refreshToken,
+          null);
 
       // Return JSON response WITHOUT refresh token (security: refresh token stays server-side)
       JwtResponse responseToClient = new JwtResponse();
@@ -188,6 +165,9 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
       resp.setContentType("application/json");
       writeJsonResponse(resp, JsonUtils.pojoToJson(responseToClient));
 
+    } catch (SessionRefreshInProgressException e) {
+      resp.setHeader("Retry-After", Integer.toString(e.getRetryAfterSeconds()));
+      sendError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, e.getMessage());
     } catch (Exception e) {
       LOG.error("Error handling refresh", e);
       sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
@@ -197,14 +177,32 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
   @Override
   public void handleLogout(HttpServletRequest req, HttpServletResponse resp) {
     try {
-      HttpSession session = req.getSession(false);
+      UserSession session = sessionService.getSession(req).orElse(null);
       if (session != null) {
-        // Clear session
-        session.invalidate();
+        if (session.getUsername() != null) {
+          SubjectCache.invalidateUser(session.getUsername());
+        }
+        String refreshToken = sessionService.decryptOmRefreshToken(session);
+        if (refreshToken != null) {
+          Entity.getTokenRepository().deleteToken(refreshToken);
+        }
+        if (Entity.getAuditLogRepository() != null
+            && session.getUserId() != null
+            && session.getUsername() != null) {
+          try {
+            Entity.getAuditLogRepository()
+                .writeAuthEvent(
+                    AuditLogRepository.AUTH_EVENT_LOGOUT,
+                    session.getUsername(),
+                    java.util.UUID.fromString(session.getUserId()));
+          } catch (Exception e) {
+            LOG.debug("Could not write logout audit event for user {}", session.getUsername(), e);
+          }
+        }
       }
+      sessionService.revokeSession(req, resp);
 
-      resp.setStatus(HttpServletResponse.SC_OK);
-      writeJsonResponse(resp, "{\"message\":\"Logged out successfully\"}");
+      writeMessageResponse(resp, HttpServletResponse.SC_OK, "Logged out successfully");
     } catch (IOException e) {
       LOG.error("Error handling logout", e);
       sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
@@ -240,10 +238,14 @@ public class LdapAuthServletHandler implements AuthServeletHandler {
 
   private void sendError(HttpServletResponse resp, int status, String message) {
     try {
-      resp.setStatus(status);
-      writeJsonResponse(resp, String.format("{\"message\":\"%s\"}", message));
+      writeErrorResponse(resp, status, message);
     } catch (IOException e) {
       LOG.error("Error writing error response", e);
     }
+  }
+
+  private User getUserByEmail(String email) {
+    UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
+    return userRepository.getByEmail(null, email, Fields.EMPTY_FIELDS);
   }
 }

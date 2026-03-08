@@ -36,15 +36,20 @@ public class SecurityConfigurationManager {
     private static final SecurityConfigurationManager INSTANCE = new SecurityConfigurationManager();
   }
 
-  private AuthenticationConfiguration currentAuthConfig;
-  private AuthorizerConfiguration currentAuthzConfig;
+  private record SecurityState(
+      AuthenticationConfiguration authenticationConfiguration,
+      AuthorizerConfiguration authorizerConfiguration) {}
 
-  public void setCurrentAuthConfig(AuthenticationConfiguration authConfig) {
-    this.currentAuthConfig = authConfig;
+  private volatile SecurityState currentState = new SecurityState(null, null);
+
+  public synchronized void setCurrentAuthConfig(AuthenticationConfiguration authConfig) {
+    SecurityState state = currentState;
+    currentState = new SecurityState(authConfig, state.authorizerConfiguration());
   }
 
-  public void setCurrentAuthzConfig(AuthorizerConfiguration authzConfig) {
-    this.currentAuthzConfig = authzConfig;
+  public synchronized void setCurrentAuthzConfig(AuthorizerConfiguration authzConfig) {
+    SecurityState state = currentState;
+    currentState = new SecurityState(state.authenticationConfiguration(), authzConfig);
   }
 
   private SecurityConfiguration previousSecurityConfig;
@@ -62,11 +67,11 @@ public class SecurityConfigurationManager {
   }
 
   public static AuthenticationConfiguration getCurrentAuthConfig() {
-    return getInstance().currentAuthConfig;
+    return getInstance().currentState.authenticationConfiguration();
   }
 
   public static AuthorizerConfiguration getCurrentAuthzConfig() {
-    return getInstance().currentAuthzConfig;
+    return getInstance().currentState.authorizerConfiguration();
   }
 
   public void setAuthenticatorHandler(AuthenticatorHandler handler) {
@@ -81,20 +86,24 @@ public class SecurityConfigurationManager {
 
     // Try to load from database first
     try {
-      currentAuthConfig =
-          SettingsCache.getSetting(AUTHENTICATION_CONFIGURATION, AuthenticationConfiguration.class);
-      currentAuthzConfig =
-          SettingsCache.getSetting(AUTHORIZER_CONFIGURATION, AuthorizerConfiguration.class);
+      currentState =
+          new SecurityState(
+              SettingsCache.getSetting(
+                  AUTHENTICATION_CONFIGURATION, AuthenticationConfiguration.class),
+              SettingsCache.getSetting(AUTHORIZER_CONFIGURATION, AuthorizerConfiguration.class));
       LOG.info("Loaded security configuration from database");
     } catch (Exception e) {
       // If not in database, use the one from YAML
-      currentAuthConfig = config.getAuthenticationConfiguration();
-      currentAuthzConfig = config.getAuthorizerConfiguration();
+      currentState =
+          new SecurityState(
+              config.getAuthenticationConfiguration(), config.getAuthorizerConfiguration());
       LOG.info("Using security configuration from YAML");
     }
   }
 
   public SecurityConfiguration getCurrentSecurityConfig() {
+    SecurityState state = currentState;
+    AuthenticationConfiguration currentAuthConfig = state.authenticationConfiguration();
     // Apply LDAP default values before returning to prevent JSON PATCH errors
     // when updating fields that were previously null in the database
     if (currentAuthConfig != null && currentAuthConfig.getLdapConfiguration() != null) {
@@ -104,20 +113,22 @@ public class SecurityConfigurationManager {
 
     return new SecurityConfiguration()
         .withAuthenticationConfiguration(currentAuthConfig)
-        .withAuthorizerConfiguration(currentAuthzConfig);
+        .withAuthorizerConfiguration(state.authorizerConfiguration());
   }
 
   public void reloadSecuritySystem() {
     try {
       previousSecurityConfig = getCurrentSecurityConfig();
-      currentAuthConfig =
-          SettingsCache.getSetting(AUTHENTICATION_CONFIGURATION, AuthenticationConfiguration.class);
-      currentAuthzConfig =
-          SettingsCache.getSetting(AUTHORIZER_CONFIGURATION, AuthorizerConfiguration.class);
+      currentState =
+          new SecurityState(
+              SettingsCache.getSetting(
+                  AUTHENTICATION_CONFIGURATION, AuthenticationConfiguration.class),
+              SettingsCache.getSetting(AUTHORIZER_CONFIGURATION, AuthorizerConfiguration.class));
 
       OpenMetadataApplicationConfig appConfig = this.config;
-      appConfig.setAuthenticationConfiguration(currentAuthConfig);
-      appConfig.setAuthorizerConfiguration(currentAuthzConfig);
+      SecurityState state = currentState;
+      appConfig.setAuthenticationConfiguration(state.authenticationConfiguration());
+      appConfig.setAuthorizerConfiguration(state.authorizerConfiguration());
 
       application.reinitializeAuthSystem(appConfig, environment);
 
@@ -131,8 +142,10 @@ public class SecurityConfigurationManager {
 
   private void rollbackConfiguration() {
     if (previousSecurityConfig != null) {
-      currentAuthConfig = previousSecurityConfig.getAuthenticationConfiguration();
-      currentAuthzConfig = previousSecurityConfig.getAuthorizerConfiguration();
+      currentState =
+          new SecurityState(
+              previousSecurityConfig.getAuthenticationConfiguration(),
+              previousSecurityConfig.getAuthorizerConfiguration());
       LOG.info("Rolled back to previous security configuration");
     }
   }
@@ -145,7 +158,7 @@ public class SecurityConfigurationManager {
 
   public static boolean isBasicAuth() {
     AuthenticationConfiguration authConfig = getCurrentAuthConfig();
-    return authConfig != null && AuthProvider.BASIC.equals(authConfig.getProvider());
+    return authConfig != null && isNativePasswordProvider(authConfig.getProvider());
   }
 
   public static boolean isLdap() {
@@ -170,5 +183,9 @@ public class SecurityConfigurationManager {
   public static boolean isConfidentialClient() {
     AuthenticationConfiguration authConfig = getCurrentAuthConfig();
     return authConfig != null && ClientType.CONFIDENTIAL.equals(authConfig.getClientType());
+  }
+
+  public static boolean isNativePasswordProvider(AuthProvider provider) {
+    return AuthProvider.BASIC.equals(provider) || AuthProvider.OPENMETADATA.equals(provider);
   }
 }

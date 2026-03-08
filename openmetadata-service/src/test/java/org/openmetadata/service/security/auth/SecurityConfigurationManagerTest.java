@@ -77,6 +77,15 @@ public class SecurityConfigurationManagerTest {
   }
 
   @Test
+  void testIsBasicAuth_WithOpenMetadataProvider() {
+    AuthenticationConfiguration authConfig =
+        new AuthenticationConfiguration().withProvider(AuthProvider.OPENMETADATA);
+    manager.setCurrentAuthConfig(authConfig);
+
+    assertTrue(SecurityConfigurationManager.isBasicAuth());
+  }
+
+  @Test
   void testIsBasicAuth_WithNonBasicProvider() {
     AuthenticationConfiguration authConfig =
         new AuthenticationConfiguration().withProvider(AuthProvider.GOOGLE);

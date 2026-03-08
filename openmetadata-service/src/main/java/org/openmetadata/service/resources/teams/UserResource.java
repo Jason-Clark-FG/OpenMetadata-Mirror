@@ -54,6 +54,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonPatch;
 import jakarta.json.JsonValue;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -114,7 +116,6 @@ import org.openmetadata.schema.auth.TokenRefreshRequest;
 import org.openmetadata.schema.auth.TokenType;
 import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.entity.teams.User;
-import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
@@ -141,6 +142,7 @@ import org.openmetadata.service.resources.EntityResource;
 import org.openmetadata.service.secrets.SecretsManager;
 import org.openmetadata.service.secrets.SecretsManagerFactory;
 import org.openmetadata.service.secrets.masker.EntityMaskerFactory;
+import org.openmetadata.service.security.AuthServeletHandlerRegistry;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.CatalogPrincipal;
@@ -154,6 +156,7 @@ import org.openmetadata.service.security.mask.PIIMasker;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContext;
 import org.openmetadata.service.security.saml.JwtTokenCacheManager;
+import org.openmetadata.service.security.session.SessionService;
 import org.openmetadata.service.util.CSVExportResponse;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -575,6 +578,8 @@ public class UserResource extends EntityResource<User, UserRepository> {
   public Response logoutUser(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
+      @Context HttpServletRequest httpServletRequest,
+      @Context HttpServletResponse httpServletResponse,
       @Valid LogoutRequest request) {
     Date logoutTime = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
     JwtTokenCacheManager.getInstance()
@@ -586,6 +591,11 @@ public class UserResource extends EntityResource<User, UserRepository> {
     if (isBasicAuth() && request.getRefreshToken() != null) {
       // need to clear the refresh token as well
       tokenRepository.deleteToken(request.getRefreshToken());
+    }
+    SessionService sessionService =
+        AuthServeletHandlerRegistry.getSessionService(httpServletRequest.getServletContext());
+    if (sessionService != null) {
+      sessionService.revokeSession(httpServletRequest, httpServletResponse);
     }
     return Response.status(200).entity("Logout Successful").build();
   }
@@ -738,7 +748,8 @@ public class UserResource extends EntityResource<User, UserRepository> {
   }
 
   private boolean isBasicAuth() {
-    return authenticationConfiguration.getProvider().equals(AuthProvider.BASIC);
+    return SecurityConfigurationManager.isNativePasswordProvider(
+        authenticationConfiguration.getProvider());
   }
 
   @PUT

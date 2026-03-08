@@ -59,6 +59,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
+import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.RestUtil.PutResponse;
@@ -107,7 +108,7 @@ public final class UserUtil {
         updatedUser = originalUser;
 
         // Update Auth Mechanism if not present, and send mail to the user
-        if (authProvider.equals(AuthProvider.BASIC)) {
+        if (SecurityConfigurationManager.isNativePasswordProvider(authProvider)) {
           if (originalUser.getAuthenticationMechanism() == null
               || originalUser.getAuthenticationMechanism().equals(new AuthenticationMechanism())) {
             updateUserWithHashedPwd(updatedUser, password);
@@ -133,7 +134,7 @@ public final class UserUtil {
     } catch (EntityNotFoundException e) {
       updatedUser = user(username, domain, username).withIsAdmin(isAdmin).withIsEmailVerified(true);
       // Update Auth Mechanism if not present, and send mail to the user
-      if (authProvider.equals(AuthProvider.BASIC)) {
+      if (SecurityConfigurationManager.isNativePasswordProvider(authProvider)) {
         updateUserWithHashedPwd(updatedUser, password);
         EmailUtil.sendInviteMailToAdmin(updatedUser, password);
       }

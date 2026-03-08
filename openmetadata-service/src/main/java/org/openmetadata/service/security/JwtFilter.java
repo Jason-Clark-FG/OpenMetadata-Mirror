@@ -156,52 +156,59 @@ public class JwtFilter implements ContainerRequestFilter {
       return;
     }
 
+    ImpersonationContext.clear();
     // Extract token from the header
     String tokenFromHeader = extractToken(requestContext.getHeaders());
-    LOG.debug("Token from header:{}", tokenFromHeader);
+    LOG.debug("Authorization header present: {}", !nullOrEmpty(tokenFromHeader));
 
-    Map<String, Claim> claims = validateJwtAndGetClaims(tokenFromHeader);
-    String userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
-    String email =
-        findEmailFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
-    boolean isBotUser = isBot(claims);
+    try {
+      Map<String, Claim> claims = validateJwtAndGetClaims(tokenFromHeader);
+      String userName =
+          findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
+      String email =
+          findEmailFromClaims(
+              jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
+      boolean isBotUser = isBot(claims);
 
-    // Check for impersonation header - authorization will be checked later
-    String impersonateUser = requestContext.getHeaderString("X-Impersonate-User");
-    String impersonatedBy = null;
+      // Check for impersonation header - authorization will be checked later
+      String impersonateUser = requestContext.getHeaderString("X-Impersonate-User");
+      String impersonatedBy = null;
 
-    if (impersonateUser != null && !impersonateUser.isEmpty()) {
-      // Only bots can impersonate
-      if (!isBotUser) {
-        throw new AuthorizationException("Only bot users can impersonate other users");
+      if (impersonateUser != null && !impersonateUser.isEmpty()) {
+        // Only bots can impersonate
+        if (!isBotUser) {
+          throw new AuthorizationException("Only bot users can impersonate other users");
+        }
+
+        // Set impersonatedBy to the bot's name
+        impersonatedBy = userName;
+        // Switch userName to the target user for SecurityContext
+        userName = impersonateUser;
       }
 
-      // Set impersonatedBy to the bot's name
-      impersonatedBy = userName;
-      // Switch userName to the target user for SecurityContext
-      userName = impersonateUser;
-    }
+      checkValidationsForToken(claims, tokenFromHeader, userName, impersonatedBy);
 
-    checkValidationsForToken(claims, tokenFromHeader, userName, impersonatedBy);
+      CatalogPrincipal catalogPrincipal = new CatalogPrincipal(userName, email);
+      String scheme = requestContext.getUriInfo().getRequestUri().getScheme();
+      CatalogSecurityContext catalogSecurityContext =
+          new CatalogSecurityContext(
+              catalogPrincipal,
+              scheme,
+              SecurityContext.DIGEST_AUTH,
+              getUserRolesFromClaims(claims, isBotUser),
+              isBotUser,
+              impersonatedBy);
+      LOG.debug("SecurityContext {}", catalogSecurityContext);
+      requestContext.setSecurityContext(catalogSecurityContext);
 
-    CatalogPrincipal catalogPrincipal = new CatalogPrincipal(userName, email);
-    String scheme = requestContext.getUriInfo().getRequestUri().getScheme();
-    CatalogSecurityContext catalogSecurityContext =
-        new CatalogSecurityContext(
-            catalogPrincipal,
-            scheme,
-            SecurityContext.DIGEST_AUTH,
-            getUserRolesFromClaims(claims, isBotUser),
-            isBotUser,
-            impersonatedBy);
-    LOG.debug("SecurityContext {}", catalogSecurityContext);
-    requestContext.setSecurityContext(catalogSecurityContext);
-
-    // Set impersonatedBy in thread-local context
-    if (impersonatedBy != null) {
-      ImpersonationContext.setImpersonatedBy(impersonatedBy);
-    } else {
+      if (impersonatedBy != null) {
+        ImpersonationContext.setImpersonatedBy(impersonatedBy);
+      } else {
+        ImpersonationContext.clear();
+      }
+    } catch (Throwable t) {
       ImpersonationContext.clear();
+      throw t;
     }
   }
 
@@ -276,13 +283,11 @@ public class JwtFilter implements ContainerRequestFilter {
   }
 
   protected static String extractToken(MultivaluedMap<String, String> headers) {
-    LOG.debug("Request Headers:{}", headers);
     String source = headers.getFirst(AUTHORIZATION_HEADER);
     return extractTokenFromString(source);
   }
 
   public static String extractToken(String tokenFromHeader) {
-    LOG.debug("Request Token:{}", tokenFromHeader);
     return extractTokenFromString(tokenFromHeader);
   }
 
@@ -309,13 +314,11 @@ public class JwtFilter implements ContainerRequestFilter {
 
   private void validatePersonalAccessToken(
       Map<String, Claim> claims, String tokenFromHeader, String userName) {
+    Claim tokenType = claims.get(TOKEN_TYPE);
     if (claims.containsKey(TOKEN_TYPE)
         && ServiceTokenType.PERSONAL_ACCESS
             .value()
-            .equals(
-                claims.get(TOKEN_TYPE) != null
-                    ? StringUtils.EMPTY
-                    : claims.get(TOKEN_TYPE).asString())) {
+            .equals(tokenType == null ? StringUtils.EMPTY : tokenType.asString())) {
       Set<String> userTokens = UserTokenCache.getToken(userName);
       if (userTokens != null && userTokens.contains(tokenFromHeader)) {
         return;
@@ -326,7 +329,9 @@ public class JwtFilter implements ContainerRequestFilter {
 
   private void validateTokenIsNotUsedAfterLogout(String authToken) {
     // Only OMD generated Tokens
-    if (AuthProvider.BASIC.equals(providerType) || AuthProvider.SAML.equals(providerType)) {
+    if (AuthProvider.BASIC.equals(providerType)
+        || AuthProvider.OPENMETADATA.equals(providerType)
+        || AuthProvider.SAML.equals(providerType)) {
       LogoutRequest previouslyLoggedOutEvent =
           JwtTokenCacheManager.getInstance().getLogoutEventForToken(authToken);
       if (previouslyLoggedOutEvent != null) {

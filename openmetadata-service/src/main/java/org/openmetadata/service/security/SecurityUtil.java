@@ -27,10 +27,14 @@ import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.UriBuilder;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +43,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.openmetadata.common.utils.CommonUtil;
 import org.openmetadata.schema.api.configuration.LoginConfiguration;
 import org.openmetadata.schema.settings.SettingsType;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
@@ -374,7 +379,22 @@ public final class SecurityUtil {
     response.setCharacterEncoding("UTF-8");
     response.getOutputStream().print(message);
     response.getOutputStream().flush();
-    response.setStatus(HttpServletResponse.SC_OK);
+  }
+
+  public static void writeErrorResponse(HttpServletResponse response, int status, String message)
+      throws IOException {
+    response.setStatus(status);
+    writeJsonResponse(
+        response,
+        JsonUtils.pojoToJson(Map.of("error", message == null ? StringUtils.EMPTY : message)));
+  }
+
+  public static void writeMessageResponse(HttpServletResponse response, int status, String message)
+      throws IOException {
+    response.setStatus(status);
+    writeJsonResponse(
+        response,
+        JsonUtils.pojoToJson(Map.of("message", message == null ? StringUtils.EMPTY : message)));
   }
 
   public static boolean isBot(Map<String, Claim> claims) {
@@ -384,5 +404,87 @@ public final class SecurityUtil {
   public static boolean isBotW(Map<String, ?> claims) {
     Claim isBotClaim = (Claim) claims.get("isBot");
     return isBotClaim != null && Boolean.TRUE.equals(isBotClaim.asBoolean());
+  }
+
+  public static String validateRedirectUri(
+      String redirectUri, Collection<String> trustedRedirects) {
+    if (StringUtils.isBlank(redirectUri)) {
+      throw new IllegalArgumentException("Redirect URI is required");
+    }
+
+    List<URI> trustedUris =
+        new ArrayList<>(
+            trustedRedirects == null
+                ? List.of()
+                : trustedRedirects.stream()
+                    .filter(StringUtils::isNotBlank)
+                    .map(SecurityUtil::parseTrustedRedirectUri)
+                    .toList());
+    if (trustedUris.isEmpty()) {
+      throw new IllegalArgumentException("No trusted redirect URI is configured");
+    }
+
+    String normalizedRedirect = redirectUri.trim();
+    if (normalizedRedirect.startsWith("//")) {
+      throw new IllegalArgumentException("Redirect URI must be same-origin");
+    }
+
+    URI candidate = parseTrustedRedirectUri(normalizedRedirect);
+    if (!candidate.isAbsolute()) {
+      String rawPath = candidate.getRawPath();
+      if (nullOrEmpty(rawPath) || !rawPath.startsWith("/")) {
+        throw new IllegalArgumentException("Redirect URI must be absolute or root-relative");
+      }
+      return trustedUris.get(0).resolve(candidate).toString();
+    }
+
+    if (!trustedUris.stream().anyMatch(trustedUri -> sameOrigin(trustedUri, candidate))) {
+      throw new IllegalArgumentException("Redirect URI must match a trusted origin");
+    }
+    return candidate.toString();
+  }
+
+  public static String buildRedirectWithToken(
+      String redirectUri, String accessToken, String email, String name) {
+    return UriBuilder.fromUri(redirectUri)
+        .queryParam("id_token", accessToken)
+        .queryParam("email", email)
+        .queryParam("name", name)
+        .build()
+        .toString();
+  }
+
+  public static Set<String> trustedRedirects(String... trustedRedirects) {
+    LinkedHashSet<String> redirects = new LinkedHashSet<>();
+    if (trustedRedirects == null) {
+      return redirects;
+    }
+    for (String trustedRedirect : trustedRedirects) {
+      if (StringUtils.isNotBlank(trustedRedirect)) {
+        redirects.add(trustedRedirect);
+      }
+    }
+    return redirects;
+  }
+
+  private static URI parseTrustedRedirectUri(String value) {
+    try {
+      return new URI(value);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException("Redirect URI is invalid", e);
+    }
+  }
+
+  private static boolean sameOrigin(URI trustedUri, URI candidate) {
+    return StringUtils.equalsIgnoreCase(trustedUri.getScheme(), candidate.getScheme())
+        && StringUtils.equalsIgnoreCase(trustedUri.getHost(), candidate.getHost())
+        && normalizedPort(trustedUri) == normalizedPort(candidate);
+  }
+
+  private static int normalizedPort(URI uri) {
+    if (uri.getPort() != -1) {
+      return uri.getPort();
+    }
+    return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
   }
 }

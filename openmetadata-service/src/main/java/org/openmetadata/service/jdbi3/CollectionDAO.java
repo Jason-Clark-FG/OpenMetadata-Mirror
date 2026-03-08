@@ -174,6 +174,7 @@ import org.openmetadata.service.jdbi3.locator.ConnectionAwareSqlUpdate;
 import org.openmetadata.service.resources.events.subscription.TypedEvent;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.tags.TagLabelUtil;
+import org.openmetadata.service.security.session.UserSession;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.jdbi.BindConcat;
@@ -407,6 +408,9 @@ public interface CollectionDAO {
 
   @CreateSqlObject
   TokenDAO getTokenDAO();
+
+  @CreateSqlObject
+  UserSessionDAO getUserSessionDAO();
 
   @CreateSqlObject
   KpiDAO kpiDAO();
@@ -8343,6 +8347,13 @@ public interface CollectionDAO {
     }
   }
 
+  class UserSessionRowMapper implements RowMapper<UserSession> {
+    @Override
+    public UserSession map(ResultSet rs, StatementContext ctx) throws SQLException {
+      return JsonUtils.readValue(rs.getString("json"), UserSession.class);
+    }
+  }
+
   interface TokenDAO {
     @SqlQuery("SELECT tokenType, json FROM user_tokens WHERE token = :token")
     @RegisterRowMapper(TokenRowMapper.class)
@@ -8380,6 +8391,64 @@ public interface CollectionDAO {
     @SqlUpdate(value = "DELETE from user_tokens WHERE userid = :userid AND tokenType = :tokenType")
     void deleteTokenByUserAndType(
         @BindUUID("userid") UUID userid, @Bind("tokenType") String tokenType);
+  }
+
+  interface UserSessionDAO {
+    @SqlQuery("SELECT json FROM user_session WHERE id = :id")
+    @RegisterRowMapper(UserSessionRowMapper.class)
+    UserSession findById(@Bind("id") String id) throws StatementException;
+
+    @SqlQuery(
+        "SELECT json FROM user_session WHERE userId = :userId AND status = :status LIMIT :limit")
+    @RegisterRowMapper(UserSessionRowMapper.class)
+    List<UserSession> findByUserIdAndStatus(
+        @Bind("userId") String userId, @Bind("status") String status, @Bind("limit") int limit)
+        throws StatementException;
+
+    @SqlQuery(
+        "SELECT json FROM user_session "
+            + "WHERE status IN (<statuses>) AND (expiresAt <= :now OR idleExpiresAt <= :now) "
+            + "ORDER BY updatedAt ASC LIMIT :limit")
+    @RegisterRowMapper(UserSessionRowMapper.class)
+    List<UserSession> findSessionsToExpire(
+        @BindList("statuses") List<String> statuses,
+        @Bind("now") long now,
+        @Bind("limit") int limit)
+        throws StatementException;
+
+    @SqlQuery(
+        "SELECT json FROM user_session WHERE status IN (<statuses>) AND updatedAt <= :cutoff "
+            + "ORDER BY updatedAt ASC LIMIT :limit")
+    @RegisterRowMapper(UserSessionRowMapper.class)
+    List<UserSession> findSessionsToPrune(
+        @BindList("statuses") List<String> statuses,
+        @Bind("cutoff") long cutoff,
+        @Bind("limit") int limit)
+        throws StatementException;
+
+    @ConnectionAwareSqlUpdate(
+        value = "INSERT INTO user_session (json) VALUES (:json)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value = "INSERT INTO user_session (json) VALUES (:json :: jsonb)",
+        connectionType = POSTGRES)
+    void insert(@Bind("json") String json);
+
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE user_session SET json = :json WHERE id = :id AND version = :expectedVersion",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE user_session SET json = (:json :: jsonb) WHERE id = :id AND version = :expectedVersion",
+        connectionType = POSTGRES)
+    int updateIfVersion(
+        @Bind("id") String id,
+        @Bind("expectedVersion") long expectedVersion,
+        @Bind("json") String json);
+
+    @SqlUpdate("DELETE FROM user_session WHERE id = :id")
+    void delete(@Bind("id") String id);
   }
 
   interface KpiDAO extends EntityDAO<Kpi> {

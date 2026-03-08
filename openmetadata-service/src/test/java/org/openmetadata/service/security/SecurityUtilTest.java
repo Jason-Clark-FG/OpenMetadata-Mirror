@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -274,5 +275,87 @@ class SecurityUtilTest {
     String displayName = SecurityUtil.extractDisplayNameFromClaims(claims);
 
     assertEquals(null, displayName);
+  }
+
+  @Test
+  void validateRedirectUri_acceptsTrustedAbsoluteUrl() {
+    String redirectUri =
+        SecurityUtil.validateRedirectUri(
+            "https://app.example.com/callback", List.of("https://app.example.com/callback"));
+
+    assertEquals("https://app.example.com/callback", redirectUri);
+  }
+
+  @Test
+  void validateRedirectUri_resolvesTrustedRootRelativeUrl() {
+    String redirectUri =
+        SecurityUtil.validateRedirectUri(
+            "/auth/callback", List.of("https://app.example.com/callback"));
+
+    assertEquals("https://app.example.com/auth/callback", redirectUri);
+  }
+
+  @Test
+  void validateRedirectUri_rejectsDifferentOrigin() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                SecurityUtil.validateRedirectUri(
+                    "https://evil.example.com/callback",
+                    List.of("https://app.example.com/callback")));
+
+    assertEquals("Redirect URI must match a trusted origin", exception.getMessage());
+  }
+
+  @Test
+  void validateRedirectUri_rejectsProtocolRelativeRedirects() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                SecurityUtil.validateRedirectUri(
+                    "//evil.example.com/callback", List.of("https://app.example.com/callback")));
+
+    assertEquals("Redirect URI must be same-origin", exception.getMessage());
+  }
+
+  @Test
+  void validateRedirectUri_rejectsNullOrEmptyRedirect() {
+    IllegalArgumentException nullException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> SecurityUtil.validateRedirectUri(null, List.of("https://app.example.com")));
+    IllegalArgumentException emptyException =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> SecurityUtil.validateRedirectUri("  ", List.of("https://app.example.com")));
+
+    assertEquals("Redirect URI is required", nullException.getMessage());
+    assertEquals("Redirect URI is required", emptyException.getMessage());
+  }
+
+  @Test
+  void validateRedirectUri_rejectsMissingTrustedRedirects() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> SecurityUtil.validateRedirectUri("https://app.example.com/callback", List.of()));
+
+    assertEquals("No trusted redirect URI is configured", exception.getMessage());
+  }
+
+  @Test
+  void buildRedirectWithToken_encodesQueryParameters() {
+    String redirectUrl =
+        SecurityUtil.buildRedirectWithToken(
+            "https://app.example.com/callback", "token-value", "user@example.com", "Jane & John");
+
+    String rawQuery = URI.create(redirectUrl).getRawQuery();
+
+    assertEquals(3, rawQuery.split("&").length);
+    assertTrue(rawQuery.contains("email="));
+    assertTrue(rawQuery.contains("name="));
+    assertTrue(rawQuery.contains("%26"));
   }
 }

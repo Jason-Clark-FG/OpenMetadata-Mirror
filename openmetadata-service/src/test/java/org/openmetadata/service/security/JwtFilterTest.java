@@ -42,9 +42,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.openmetadata.schema.auth.ServiceTokenType;
+import org.openmetadata.service.security.auth.UserTokenCache;
 
 class JwtFilterTest {
 
@@ -87,7 +91,8 @@ class JwtFilterTest {
     List<String> principalClaims = List.of("EMAIL", "sub");
     String domain = "openmetadata.org";
     boolean enforcePrincipalDomain = true;
-    jwtFilter = new JwtFilter(jwkProvider, principalClaims, domain, enforcePrincipalDomain);
+    JwtFilter domainEnforcingFilter =
+        new JwtFilter(jwkProvider, principalClaims, domain, enforcePrincipalDomain);
 
     // success case
     String jwt =
@@ -98,7 +103,7 @@ class JwtFilterTest {
 
     ContainerRequestContext context = createRequestContextWithJwt(jwt);
 
-    jwtFilter.filter(context);
+    domainEnforcingFilter.filter(context);
 
     ArgumentCaptor<SecurityContext> securityContextArgument =
         ArgumentCaptor.forClass(SecurityContext.class);
@@ -115,7 +120,7 @@ class JwtFilterTest {
     ContainerRequestContext newContext = createRequestContextWithJwt(jwt);
 
     Exception exception =
-        assertThrows(AuthenticationException.class, () -> jwtFilter.filter(newContext));
+        assertThrows(AuthenticationException.class, () -> domainEnforcingFilter.filter(newContext));
     assertTrue(
         exception
             .getMessage()
@@ -233,6 +238,27 @@ class JwtFilterTest {
         assertThrows(AuthenticationException.class, () -> jwtFilter.filter(context));
     assertTrue(
         exception.getMessage().toLowerCase(Locale.ROOT).contains("token verification failed"));
+  }
+
+  @Test
+  void testPersonalAccessTokenValidationUsesTokenClaimValue() {
+    String jwt =
+        JWT.create()
+            .withExpiresAt(Date.from(Instant.now().plus(1, ChronoUnit.DAYS)))
+            .withClaim("sub", "sam")
+            .withClaim("tokenType", ServiceTokenType.PERSONAL_ACCESS.value())
+            .sign(algorithm);
+
+    ContainerRequestContext context = createRequestContextWithJwt(jwt);
+
+    try (MockedStatic<UserTokenCache> userTokenCache =
+        org.mockito.Mockito.mockStatic(UserTokenCache.class)) {
+      userTokenCache.when(() -> UserTokenCache.getToken("sam")).thenReturn(Set.of(jwt));
+      jwtFilter.filter(context);
+    }
+
+    verify(context, times(1))
+        .setSecurityContext(org.mockito.ArgumentMatchers.any(SecurityContext.class));
   }
 
   /**
