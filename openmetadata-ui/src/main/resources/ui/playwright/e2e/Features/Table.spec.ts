@@ -740,7 +740,8 @@ test.describe(
             .includes(
               `/api/v1/tables/name/${encodeURIComponent(createdTable.fullyQualifiedName!)}/columns`
             ) &&
-          response.url().includes('fields=profile') &&
+          response.url().includes('fields=') &&
+          response.url().includes('profile') &&
           response.request().method() === 'GET'
       );
       const visitLinkResponse = page.waitForResponse((response) =>
