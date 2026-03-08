@@ -21,6 +21,12 @@
  *  - expandable  (React Aria has no built-in expandable rows)
  *  - components  (AntD custom cell/header renderers)
  *
+ * Not in props type (compile-time error if passed):
+ *  - className   → use containerClassName instead
+ *
+ * Partially supported:
+ *  - onRow       → onClick and onDoubleClick are forwarded to the row element
+ *
  * Sorting:
  *  - sorter: (a, b) => number  → applied client-side on full dataset before pagination
  *  - sorter: true              → visual indicator only; parent must handle via onChange
@@ -275,7 +281,7 @@ const TableV2 = <T extends object>(
         type: selectionMode === 'single' ? 'single' : 'multiple',
       });
     },
-    [rest.rowSelection, sortedDataSource, getRowKey]
+    [rest.rowSelection, sortedDataSource, getRowKey, selectionMode]
   );
 
   // ─── Column resize ────────────────────────────────────────────────────────
@@ -617,6 +623,8 @@ const TableV2 = <T extends object>(
                   pageLocalIdx
                 : pageLocalIdx;
 
+              const rowHandlers = rest.onRow?.(record, actualIndex) ?? {};
+
               return (
                 <UntitledTable.Row
                   className={
@@ -626,7 +634,9 @@ const TableV2 = <T extends object>(
                   }
                   data-row-key={getRowKey(record, actualIndex)}
                   id={getRowKey(record, actualIndex)}
-                  key={getRowKey(record, actualIndex)}>
+                  key={getRowKey(record, actualIndex)}
+                  onClick={rowHandlers.onClick}
+                  onDoubleClick={rowHandlers.onDoubleClick}>
                   {propsColumns.map((col, colIdx) => {
                     const cellKey = String(
                       col.key ?? (col as ColumnType<T>).dataIndex ?? colIdx

@@ -14,7 +14,7 @@ import { TableProps } from 'antd/lib/table';
 import { NextPreviousProps } from '../NextPrevious/NextPrevious.interface';
 import { SearchBarProps } from '../SearchBarComponent/SearchBar.component';
 
-export interface TableComponentProps<T> extends TableProps<T> {
+export interface TableComponentProps<T> extends Omit<TableProps<T>, 'className'> {
   containerClassName?: string; // Applied to the table container
   resizableColumns?: boolean;
   /** Filter's in ReactNode that will be aligned with TableColumnFilter. Example: GlossaryTableFilter */
