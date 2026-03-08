@@ -247,6 +247,7 @@ import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.util.RestUtil.DeleteResponse;
 import org.openmetadata.service.util.RestUtil.PatchResponse;
 import org.openmetadata.service.util.RestUtil.PutResponse;
+import org.openmetadata.service.util.VersionFieldChangeUtil;
 import software.amazon.awssdk.utils.Either;
 
 /**
@@ -1267,7 +1268,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     setInheritedFields(latest, putFields);
 
     if (fieldChanged != null && !fieldChanged.isEmpty()) {
-      return listVersionsWithFieldFilter(id, latest, extensionPrefix, limit, offset, fieldChanged);
+      return listVersionsWithFieldFilter(id, latest, limit, offset, fieldChanged);
     }
 
     final List<Object> versions = new ArrayList<>();
@@ -1304,20 +1305,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private EntityHistoryWithOffset listVersionsWithFieldFilter(
-      UUID id, T latest, String extensionPrefix, int limit, int offset, String rawFieldChanged) {
+      UUID id, T latest, int limit, int offset, String rawFieldChanged) {
     final List<Object> versions = new ArrayList<>();
     boolean latestMatches = latestVersionMatchesFieldChanged(latest, rawFieldChanged);
-
-    List<EntityVersionPair> matchingHistoricalVersions = new ArrayList<>();
-    List<ExtensionRecord> records =
-        daoCollection.entityExtensionDAO().getExtensions(id, extensionPrefix);
-    records.forEach(
-        record -> {
-          if (historicalVersionMatchesFieldChanged(record, rawFieldChanged)) {
-            matchingHistoricalVersions.add(new EntityVersionPair(record));
-          }
-        });
-    matchingHistoricalVersions.sort(EntityUtil.compareVersion.reversed());
+    int matchingHistoricalVersionCount =
+        daoCollection.entityExtensionDAO().getExtensionCountByFieldChanged(id, rawFieldChanged);
 
     int historicalOffset = offset;
     int historicalLimit = limit;
@@ -1329,14 +1321,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
       historicalOffset = Math.max(0, offset - 1);
     }
 
-    if (historicalLimit > 0 && historicalOffset < matchingHistoricalVersions.size()) {
-      int toIndex = Math.min(historicalOffset + historicalLimit, matchingHistoricalVersions.size());
-      matchingHistoricalVersions
-          .subList(historicalOffset, toIndex)
-          .forEach(version -> versions.add(version.getEntityJson()));
+    if (historicalLimit > 0 && historicalOffset < matchingHistoricalVersionCount) {
+      List<ExtensionRecord> records =
+          daoCollection
+              .entityExtensionDAO()
+              .getExtensionsWithFieldChanged(
+                  id, rawFieldChanged, historicalLimit, historicalOffset);
+      records.forEach(record -> versions.add(new EntityVersionPair(record).getEntityJson()));
     }
 
-    int total = matchingHistoricalVersions.size() + (latestMatches ? 1 : 0);
+    int total = matchingHistoricalVersionCount + (latestMatches ? 1 : 0);
 
     Paging paging = new Paging();
     paging.setOffset(offset);
@@ -1349,32 +1343,22 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private boolean latestVersionMatchesFieldChanged(T latest, String fieldChanged) {
-    ChangeDescription cd = latest.getChangeDescription();
-    if (cd == null) {
-      return false;
-    }
-    return fieldChangeListContains(cd.getFieldsAdded(), fieldChanged)
-        || fieldChangeListContains(cd.getFieldsUpdated(), fieldChanged)
-        || fieldChangeListContains(cd.getFieldsDeleted(), fieldChanged);
+    return VersionFieldChangeUtil.matchesFieldChanged(latest.getChangeDescription(), fieldChanged);
   }
 
-  private boolean fieldChangeListContains(List<FieldChange> fieldChanges, String fieldName) {
-    if (fieldChanges == null) {
-      return false;
-    }
-    for (FieldChange fc : fieldChanges) {
-      if (fc.getName() != null
-          && (fc.getName().equals(fieldName) || fc.getName().endsWith("." + fieldName))) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean historicalVersionMatchesFieldChanged(
-      ExtensionRecord extensionRecord, String fieldChanged) {
-    T historicalVersion = JsonUtils.readValue(extensionRecord.extensionJson(), entityClass);
-    return latestVersionMatchesFieldChanged(historicalVersion, fieldChanged);
+  private VersionFieldChangeUtil.VersionExtensionRecord buildVersionExtensionRecord(
+      UUID id,
+      String extensionName,
+      String entityJson,
+      Double version,
+      ChangeDescription changeDescription) {
+    return new VersionFieldChangeUtil.VersionExtensionRecord(
+        id,
+        extensionName,
+        entityType,
+        entityJson,
+        version,
+        VersionFieldChangeUtil.getChangedFieldKeysJson(changeDescription));
   }
 
   public final ResultList<T> listWithOffset(
@@ -6342,7 +6326,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
       String extensionName = EntityUtil.getVersionExtension(entityType, original.getVersion());
       daoCollection
           .entityExtensionDAO()
-          .insert(original.getId(), extensionName, entityType, JsonUtils.pojoToJson(original));
+          .insertVersionExtension(
+              buildVersionExtensionRecord(
+                  original.getId(),
+                  extensionName,
+                  JsonUtils.pojoToJson(original),
+                  original.getVersion(),
+                  original.getChangeDescription()));
     }
 
     private void removeEntityHistory(Double version) {
@@ -7907,7 +7897,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
     String extensionName = EntityUtil.getVersionExtension(entityType, original.getVersion());
     daoCollection
         .entityExtensionDAO()
-        .insert(original.getId(), extensionName, entityType, JsonUtils.pojoToJson(original));
+        .insertVersionExtension(
+            buildVersionExtensionRecord(
+                original.getId(),
+                extensionName,
+                JsonUtils.pojoToJson(original),
+                original.getVersion(),
+                original.getChangeDescription()));
 
     // Directly update the entity in the database without calling other versioning methods
     dao.update(updated.getId(), updated.getFullyQualifiedName(), JsonUtils.pojoToJson(updated));
@@ -8104,21 +8100,20 @@ public abstract class EntityRepository<T extends EntityInterface> {
     // Batch DB writes
     try {
       // Batch version history inserts
-      List<UUID> historyIds = new ArrayList<>();
-      List<String> historyExtensions = new ArrayList<>();
-      List<String> historyJsons = new ArrayList<>();
+      List<VersionFieldChangeUtil.VersionExtensionRecord> historyRecords = new ArrayList<>();
       for (EntityUpdater updater : updaters) {
         if (updater.isVersionChanged()) {
-          historyIds.add(updater.getOriginal().getId());
-          historyExtensions.add(
-              EntityUtil.getVersionExtension(entityType, updater.getOriginal().getVersion()));
-          historyJsons.add(JsonUtils.pojoToJson(updater.getOriginal()));
+          historyRecords.add(
+              buildVersionExtensionRecord(
+                  updater.getOriginal().getId(),
+                  EntityUtil.getVersionExtension(entityType, updater.getOriginal().getVersion()),
+                  JsonUtils.pojoToJson(updater.getOriginal()),
+                  updater.getOriginal().getVersion(),
+                  updater.getOriginal().getChangeDescription()));
         }
       }
-      if (!historyIds.isEmpty()) {
-        daoCollection
-            .entityExtensionDAO()
-            .insertMany(historyIds, historyExtensions, entityType, historyJsons);
+      if (!historyRecords.isEmpty()) {
+        daoCollection.entityExtensionDAO().insertVersionExtensions(historyRecords);
       }
 
       // Batch entity row updates

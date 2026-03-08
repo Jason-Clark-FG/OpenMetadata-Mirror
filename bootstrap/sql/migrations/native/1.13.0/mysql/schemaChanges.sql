@@ -22,12 +22,37 @@ SET json = JSON_SET(
 )
 WHERE JSON_CONTAINS_PATH(json, 'one', '$.preview');
 
--- Add changeDescriptionDoc generated column to entity_extension for efficient field-change filtering
--- Supports filtering entity versions by specific metadata changes (e.g., tags, schema, description)
-SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'changeDescriptionDoc');
-SET @sql = IF(@col_exists = 0,
-  'ALTER TABLE entity_extension ADD COLUMN changeDescriptionDoc TEXT GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(json, ''$.changeDescription''))) VIRTUAL',
+SET @version_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'versionNum');
+SET @sql = IF(@version_col_exists = 0,
+  'ALTER TABLE entity_extension ADD COLUMN versionNum DOUBLE NULL',
+  'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @changed_fields_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'changedFieldKeys');
+SET @sql = IF(@changed_fields_col_exists = 0,
+  'ALTER TABLE entity_extension ADD COLUMN changedFieldKeys JSON NULL',
+  'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @version_index_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND INDEX_NAME = 'idx_entity_extension_version_order');
+SET @sql = IF(@version_index_exists = 0,
+  'CREATE INDEX idx_entity_extension_version_order ON entity_extension (id, versionNum)',
+  'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @changed_fields_index_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND INDEX_NAME = 'idx_entity_extension_changed_field_keys');
+SET @sql = IF(@changed_fields_index_exists = 0,
+  'CREATE INDEX idx_entity_extension_changed_field_keys ON entity_extension ((CAST(changedFieldKeys->''$'' AS CHAR(512) ARRAY)))',
   'SELECT 1');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;

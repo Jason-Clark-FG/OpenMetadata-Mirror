@@ -103,6 +103,8 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
 public abstract class EntityResource<T extends EntityInterface, K extends EntityRepository<T>> {
+  private static final int DEFAULT_FIELD_CHANGED_VERSION_LIMIT = 100;
+
   protected final Class<T> entityClass;
   protected final String entityType;
   protected final Set<String> allowedFields;
@@ -373,13 +375,14 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       OperationContext operationContext,
       ResourceContextInterface resourceContext) {
     authorizer.authorize(securityContext, operationContext, resourceContext);
-    if (limit > 0) {
-      return repository.listVersionsWithOffset(id, limit, offset, fieldChanged).entityHistory();
-    }
-    if (fieldChanged != null && !fieldChanged.isEmpty()) {
+    if (!nullOrEmpty(fieldChanged)) {
+      int effectiveLimit = limit > 0 ? limit : DEFAULT_FIELD_CHANGED_VERSION_LIMIT;
       return repository
-          .listVersionsWithOffset(id, Integer.MAX_VALUE, offset, fieldChanged)
+          .listVersionsWithOffset(id, effectiveLimit, offset, fieldChanged)
           .entityHistory();
+    }
+    if (limit > 0) {
+      return repository.listVersionsWithOffset(id, limit, offset, null).entityHistory();
     }
     return repository.listVersions(id);
   }

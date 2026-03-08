@@ -1453,6 +1453,19 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
         "Should have at least 1 version with description change");
     assertTrue(filtered.getPaging().getTotal() >= 1, "Total should reflect filtered count");
 
+    org.openmetadata.schema.type.EntityHistory filteredWithDefaultLimit =
+        getVersionHistoryWithFieldChanged(created.getId(), 0, 0, "description");
+    assertNotNull(filteredWithDefaultLimit);
+    assertNotNull(filteredWithDefaultLimit.getPaging());
+    assertEquals(
+        100,
+        (int) filteredWithDefaultLimit.getPaging().getLimit(),
+        "Filtered history should use a bounded default page size when limit is omitted");
+    assertEquals(
+        filtered.getPaging().getTotal(),
+        filteredWithDefaultLimit.getPaging().getTotal(),
+        "Default pagination should preserve the same filtered total");
+
     org.openmetadata.schema.type.EntityHistory substringNoMatch =
         getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "script");
     assertNotNull(substringNoMatch);

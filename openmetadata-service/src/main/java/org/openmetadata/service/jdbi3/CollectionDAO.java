@@ -176,6 +176,8 @@ import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.tags.TagLabelUtil;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
+import org.openmetadata.service.util.VersionFieldChangeUtil.VersionExtensionMetadata;
+import org.openmetadata.service.util.VersionFieldChangeUtil.VersionExtensionRecord;
 import org.openmetadata.service.util.jdbi.BindConcat;
 import org.openmetadata.service.util.jdbi.BindFQN;
 import org.openmetadata.service.util.jdbi.BindJsonContains;
@@ -1281,6 +1283,35 @@ public interface CollectionDAO {
         @Bind("json") List<String> json);
 
     @ConnectionAwareSqlUpdate(
+        value =
+            "REPLACE INTO entity_extension(id, extension, jsonSchema, json, versionNum, changedFieldKeys) "
+                + "VALUES (:id, :extension, :jsonSchema, :json, :versionNum, :changedFieldKeys)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "INSERT INTO entity_extension(id, extension, jsonSchema, json, versionNum, changedFieldKeys) "
+                + "VALUES (:id, :extension, :jsonSchema, (:json :: jsonb), :versionNum, (:changedFieldKeys :: jsonb)) "
+                + "ON CONFLICT (id, extension) DO UPDATE SET jsonSchema = EXCLUDED.jsonSchema, "
+                + "json = EXCLUDED.json, versionNum = EXCLUDED.versionNum, changedFieldKeys = EXCLUDED.changedFieldKeys",
+        connectionType = POSTGRES)
+    void insertVersionExtension(@BindBean VersionExtensionRecord versionExtensionRecord);
+
+    @Transaction
+    @ConnectionAwareSqlBatch(
+        value =
+            "REPLACE INTO entity_extension(id, extension, jsonSchema, json, versionNum, changedFieldKeys) "
+                + "VALUES (:id, :extension, :jsonSchema, :json, :versionNum, :changedFieldKeys)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlBatch(
+        value =
+            "INSERT INTO entity_extension(id, extension, jsonSchema, json, versionNum, changedFieldKeys) "
+                + "VALUES (:id, :extension, :jsonSchema, (:json :: jsonb), :versionNum, (:changedFieldKeys :: jsonb)) "
+                + "ON CONFLICT (id, extension) DO UPDATE SET jsonSchema = EXCLUDED.jsonSchema, "
+                + "json = EXCLUDED.json, versionNum = EXCLUDED.versionNum, changedFieldKeys = EXCLUDED.changedFieldKeys",
+        connectionType = POSTGRES)
+    void insertVersionExtensions(@BindBean List<VersionExtensionRecord> versionExtensionRecords);
+
+    @ConnectionAwareSqlUpdate(
         value = "UPDATE entity_extension SET json = :json where (json -> '$.id') = :id",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
@@ -1339,6 +1370,22 @@ public interface CollectionDAO {
         connectionType = POSTGRES)
     void bulkUpsertExtensions(
         @BindBean List<ExtensionWithIdAndSchemaObject> extensionWithIdObjects);
+
+    @Transaction
+    @ConnectionAwareSqlBatch(
+        value =
+            "UPDATE entity_extension "
+                + "SET versionNum = :versionNum, changedFieldKeys = :changedFieldKeys "
+                + "WHERE id = :id AND extension = :extension",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlBatch(
+        value =
+            "UPDATE entity_extension "
+                + "SET versionNum = :versionNum, changedFieldKeys = (:changedFieldKeys :: jsonb) "
+                + "WHERE id = :id AND extension = :extension",
+        connectionType = POSTGRES)
+    void updateVersionExtensionMetadata(
+        @BindBean List<VersionExtensionMetadata> versionExtensionMetadata);
 
     @RegisterRowMapper(ExtensionMapper.class)
     @SqlQuery(
@@ -1413,18 +1460,14 @@ public interface CollectionDAO {
         value =
             "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
                 + "LIKE CONCAT(:extensionPrefix, '.%') "
-                + "ORDER BY "
-                + "CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(extension, '.', 3), '.', -1) AS UNSIGNED) DESC, "
-                + "CAST(SUBSTRING_INDEX(extension, '.', -1) AS UNSIGNED) DESC "
+                + "ORDER BY versionNum DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = MYSQL)
     @ConnectionAwareSqlQuery(
         value =
             "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
                 + "LIKE CONCAT(:extensionPrefix, '.%') "
-                + "ORDER BY "
-                + "CAST(split_part(extension, '.', 3) AS INTEGER) DESC, "
-                + "CAST(split_part(extension, '.', 4) AS INTEGER) DESC "
+                + "ORDER BY versionNum DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = POSTGRES)
     @RegisterRowMapper(ExtensionMapper.class)
@@ -1433,6 +1476,42 @@ public interface CollectionDAO {
         @Bind("extensionPrefix") String extensionPrefix,
         @Bind("limit") int limit,
         @Bind("offset") int offset);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT extension, json FROM entity_extension "
+                + "WHERE id = :id "
+                + "AND JSON_CONTAINS(changedFieldKeys, JSON_ARRAY(:fieldPath)) "
+                + "ORDER BY versionNum DESC "
+                + "LIMIT :limit OFFSET :offset",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT extension, json FROM entity_extension "
+                + "WHERE id = :id "
+                + "AND jsonb_exists(changedFieldKeys, :fieldPath) "
+                + "ORDER BY versionNum DESC "
+                + "LIMIT :limit OFFSET :offset",
+        connectionType = POSTGRES)
+    @RegisterRowMapper(ExtensionMapper.class)
+    List<ExtensionRecord> getExtensionsWithFieldChanged(
+        @BindUUID("id") UUID id,
+        @Bind("fieldPath") String fieldPath,
+        @Bind("limit") int limit,
+        @Bind("offset") int offset);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COUNT(*) FROM entity_extension WHERE id = :id "
+                + "AND JSON_CONTAINS(changedFieldKeys, JSON_ARRAY(:fieldPath))",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COUNT(*) FROM entity_extension WHERE id = :id "
+                + "AND jsonb_exists(changedFieldKeys, :fieldPath)",
+        connectionType = POSTGRES)
+    int getExtensionCountByFieldChanged(
+        @BindUUID("id") UUID id, @Bind("fieldPath") String fieldPath);
 
     @SqlQuery(
         "SELECT COUNT(*) FROM entity_extension WHERE id = :id AND extension "
