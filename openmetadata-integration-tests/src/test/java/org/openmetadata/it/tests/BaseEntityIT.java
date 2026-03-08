@@ -1366,39 +1366,28 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     OpenMetadataClient admin = SdkClients.adminClient();
     OpenMetadataClient user1 = SdkClients.user1Client();
 
-    admin
-        .getHttpClient()
-        .executeForString(
-            HttpMethod.PATCH,
-            patchPath,
-            "[{\"op\":\"add\",\"path\":\"/description\",\"value\":\"Admin patch 1\"}]",
-            patchOptions);
-
-    try {
-      user1
-          .getHttpClient()
-          .executeForString(
-              HttpMethod.PATCH,
-              patchPath,
-              "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"User1 patch 2\"}]",
-              patchOptions);
-    } catch (Exception e) {
-      Assumptions.assumeTrue(
-          false, "Skipping: user1 cannot patch this entity type - " + e.getMessage());
+    for (int i = 1; i <= 10; i++) {
+      OpenMetadataClient patchClient = i % 2 == 0 ? user1 : admin;
+      String op = i == 1 ? "add" : "replace";
+      String value = (i % 2 == 0 ? "User1" : "Admin") + " patch " + i;
+      try {
+        patchClient
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.PATCH,
+                patchPath,
+                String.format(
+                    "[{\"op\":\"%s\",\"path\":\"/description\",\"value\":\"%s\"}]", op, value),
+                patchOptions);
+      } catch (Exception e) {
+        Assumptions.assumeTrue(
+            false, "Skipping: user1 cannot patch this entity type - " + e.getMessage());
+      }
     }
-
-    admin
-        .getHttpClient()
-        .executeForString(
-            HttpMethod.PATCH,
-            patchPath,
-            "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Admin patch 3\"}]",
-            patchOptions);
 
     org.openmetadata.schema.type.EntityHistory allVersions = getVersionHistory(created.getId());
     int totalVersions = allVersions.getVersions().size();
-    assertTrue(
-        totalVersions >= 3, "Should have at least 3 versions after alternating-user patches");
+    assertTrue(totalVersions >= 11, "Should have at least 11 versions after repeated patches");
 
     org.openmetadata.schema.type.EntityHistory page1 =
         getVersionHistoryPaginated(created.getId(), 1, 0);
@@ -1415,6 +1404,11 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     assertEquals(1, (int) page2.getPaging().getOffset());
     assertEquals(totalVersions, (int) page2.getPaging().getTotal());
     assertEquals(1, page2.getVersions().size());
+
+    double page1Version = versionOfHistoryEntry(page1.getVersions().get(0));
+    double page2Version = versionOfHistoryEntry(page2.getVersions().get(0));
+    assertTrue(page1Version > 1.0, "First page should contain a version after the 1.0 boundary");
+    assertTrue(page1Version > page2Version, "Paginated results should remain newest-first");
 
     org.openmetadata.schema.type.EntityHistory unpaginated = getVersionHistory(created.getId());
     assertNotNull(unpaginated.getVersions());
@@ -1459,11 +1453,29 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
         "Should have at least 1 version with description change");
     assertTrue(filtered.getPaging().getTotal() >= 1, "Total should reflect filtered count");
 
+    org.openmetadata.schema.type.EntityHistory substringNoMatch =
+        getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "script");
+    assertNotNull(substringNoMatch);
+    assertEquals(
+        0,
+        substringNoMatch.getVersions().size(),
+        "Substring matches should not be treated as field-name matches");
+    assertEquals(0, (int) substringNoMatch.getPaging().getTotal());
+
     org.openmetadata.schema.type.EntityHistory noMatch =
         getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "nonExistentField_xyz_12345");
     assertNotNull(noMatch);
     assertEquals(0, noMatch.getVersions().size(), "No versions should match a bogus field name");
     assertEquals(0, (int) noMatch.getPaging().getTotal());
+  }
+
+  private double versionOfHistoryEntry(Object versionEntry) {
+    JsonNode node =
+        versionEntry instanceof String versionJson
+            ? JsonUtils.readValue(versionJson, JsonNode.class)
+            : JsonUtils.pojoToJsonNode(versionEntry);
+    assertTrue(node.hasNonNull("version"), "Version history entry should include version");
+    return node.get("version").asDouble();
   }
 
   protected org.openmetadata.schema.type.EntityHistory getVersionHistory(UUID id) {

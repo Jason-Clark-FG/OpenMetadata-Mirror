@@ -1409,12 +1409,25 @@ public interface CollectionDAO {
         @Bind("endTs") long endTs,
         @Bind("entityType") String entityType);
 
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
+                + "LIKE CONCAT(:extensionPrefix, '.%') "
+                + "ORDER BY "
+                + "CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(extension, '.', 3), '.', -1) AS UNSIGNED) DESC, "
+                + "CAST(SUBSTRING_INDEX(extension, '.', -1) AS UNSIGNED) DESC "
+                + "LIMIT :limit OFFSET :offset",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
+                + "LIKE CONCAT(:extensionPrefix, '.%') "
+                + "ORDER BY "
+                + "CAST(split_part(extension, '.', 3) AS INTEGER) DESC, "
+                + "CAST(split_part(extension, '.', 4) AS INTEGER) DESC "
+                + "LIMIT :limit OFFSET :offset",
+        connectionType = POSTGRES)
     @RegisterRowMapper(ExtensionMapper.class)
-    @SqlQuery(
-        "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
-            + "LIKE CONCAT(:extensionPrefix, '.%') "
-            + "ORDER BY extension DESC "
-            + "LIMIT :limit OFFSET :offset")
     List<ExtensionRecord> getExtensionsWithOffset(
         @BindUUID("id") UUID id,
         @Bind("extensionPrefix") String extensionPrefix,
@@ -1425,29 +1438,6 @@ public interface CollectionDAO {
         "SELECT COUNT(*) FROM entity_extension WHERE id = :id AND extension "
             + "LIKE CONCAT(:extensionPrefix, '.%')")
     int getExtensionCount(@BindUUID("id") UUID id, @Bind("extensionPrefix") String extensionPrefix);
-
-    @RegisterRowMapper(ExtensionMapper.class)
-    @SqlQuery(
-        "SELECT extension, json FROM entity_extension WHERE id = :id "
-            + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
-            + "AND changeDescriptionDoc LIKE CONCAT('%', :fieldName, '%') ESCAPE '!' "
-            + "ORDER BY extension DESC "
-            + "LIMIT :limit OFFSET :offset")
-    List<ExtensionRecord> getExtensionsWithFieldChanged(
-        @BindUUID("id") UUID id,
-        @Bind("extensionPrefix") String extensionPrefix,
-        @Bind("fieldName") String fieldName,
-        @Bind("limit") int limit,
-        @Bind("offset") int offset);
-
-    @SqlQuery(
-        "SELECT COUNT(*) FROM entity_extension WHERE id = :id "
-            + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
-            + "AND changeDescriptionDoc LIKE CONCAT('%', :fieldName, '%') ESCAPE '!' ")
-    int getExtensionCountWithFieldChanged(
-        @BindUUID("id") UUID id,
-        @Bind("extensionPrefix") String extensionPrefix,
-        @Bind("fieldName") String fieldName);
 
     @SqlUpdate("DELETE FROM entity_extension WHERE id = :id AND extension = :extension")
     void delete(@BindUUID("id") UUID id, @Bind("extension") String extension);

@@ -65,6 +65,30 @@ for file_path in MISSING_IMPORTS:
                 file_.write("from typing import Union  # custom generate import\n\n")
 
 
+# datamodel-code-generator emits a module alias for paging.json that pydantic
+# later fails to resolve while importing the generated model during pytest
+# plugin bootstrap. Import the concrete type directly instead.
+DIRECT_IMPORT_FIXES = {
+    f"{ingestion_path}src/metadata/generated/schema/type/entityHistory.py": [
+        (
+            "from . import changeSummaryMap, paging",
+            "from . import changeSummaryMap\nfrom .paging import Paging",
+        ),
+        ("from . import paging as paging_module", "from .paging import Paging"),
+        ("Optional[paging.Paging]", "Optional[Paging]"),
+        ("Optional[paging_module.Paging]", "Optional[Paging]"),
+    ],
+}
+
+for file_path, replacements in DIRECT_IMPORT_FIXES.items():
+    with open(file_path, "r", encoding=UTF_8) as file_:
+        content = file_.read()
+    for old_value, new_value in replacements:
+        content = content.replace(old_value, new_value)
+    with open(file_path, "w", encoding=UTF_8) as file_:
+        file_.write(content)
+
+
 # unsupported rust regex pattern for pydantic v2
 # https://docs.pydantic.dev/2.7/api/config/#pydantic.config.ConfigDict.regex_engine
 # We'll remove validation from the client and let it fail on the server, rather than on the model generation

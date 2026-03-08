@@ -14,7 +14,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import okhttp3.HttpUrl;
+import org.openmetadata.schema.system.EntityError;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.Paging;
 import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.sdk.exceptions.OpenMetadataException;
@@ -651,7 +653,8 @@ public abstract class EntityServiceBase<T> {
       queryParams.put("after", after);
     }
     RequestOptions options = RequestOptions.builder().queryParams(queryParams).build();
-    return httpClient.execute(HttpMethod.GET, path, null, ResultList.class, options);
+    String responseStr = httpClient.executeForString(HttpMethod.GET, path, null, options);
+    return deserializeResultList(responseStr);
   }
 
   /**
@@ -712,5 +715,42 @@ public abstract class EntityServiceBase<T> {
   @SuppressWarnings("unchecked")
   protected Class<ListResponse<T>> getListResponseClass() {
     return (Class<ListResponse<T>>) (Class<?>) ListResponse.class;
+  }
+
+  protected ResultList<T> deserializeResultList(String json) throws OpenMetadataException {
+    try {
+      JsonNode rootNode = objectMapper.readTree(json);
+
+      ResultList<T> result = new ResultList<>();
+
+      if (rootNode.has("data") && rootNode.get("data").isArray()) {
+        List<T> items = new ArrayList<>();
+        for (JsonNode node : rootNode.get("data")) {
+          items.add(objectMapper.treeToValue(node, getEntityClass()));
+        }
+        result.setData(items);
+      }
+
+      if (rootNode.has("paging") && !rootNode.get("paging").isNull()) {
+        result.setPaging(objectMapper.treeToValue(rootNode.get("paging"), Paging.class));
+      }
+
+      if (rootNode.has("errors") && rootNode.get("errors").isArray()) {
+        List<EntityError> errors = new ArrayList<>();
+        for (JsonNode node : rootNode.get("errors")) {
+          errors.add(objectMapper.treeToValue(node, EntityError.class));
+        }
+        result.setErrors(errors);
+      }
+
+      if (rootNode.has("warningsCount") && !rootNode.get("warningsCount").isNull()) {
+        result.setWarningsCount(rootNode.get("warningsCount").asInt());
+      }
+
+      return result;
+    } catch (Exception e) {
+      throw new OpenMetadataException(
+          "Failed to deserialize result list response: " + e.getMessage(), e);
+    }
   }
 }
