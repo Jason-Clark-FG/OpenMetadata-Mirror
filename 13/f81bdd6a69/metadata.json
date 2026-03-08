@@ -3,7 +3,7 @@
   "checkpoint_id": "13f81bdd6a69",
   "strategy": "manual-commit",
   "branch": "columns",
-  "checkpoints_count": 5,
+  "checkpoints_count": 6,
   "files_touched": [
     "openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts",
     "openmetadata-ui/src/main/resources/ui/src/components/Settings/Team/TeamDetails/TeamDetailsV1.tsx",
@@ -15,13 +15,19 @@
       "transcript": "/13/f81bdd6a69/0/full.jsonl",
       "content_hash": "/13/f81bdd6a69/0/content_hash.txt",
       "prompt": "/13/f81bdd6a69/0/prompt.txt"
+    },
+    {
+      "metadata": "/13/f81bdd6a69/1/metadata.json",
+      "transcript": "/13/f81bdd6a69/1/full.jsonl",
+      "content_hash": "/13/f81bdd6a69/1/content_hash.txt",
+      "prompt": "/13/f81bdd6a69/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 110,
-    "cache_creation_tokens": 183154,
-    "cache_read_tokens": 8110563,
-    "output_tokens": 56424,
-    "api_call_count": 100
+    "input_tokens": 6892,
+    "cache_creation_tokens": 1488687,
+    "cache_read_tokens": 40246172,
+    "output_tokens": 154024,
+    "api_call_count": 490
   }
 }

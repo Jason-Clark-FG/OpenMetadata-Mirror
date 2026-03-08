@@ -1,0 +1,73 @@
+there were 2 failures right?
+
+---
+
+check if this is a tually issue :  1) [ingestion] › playwright/e2e/Features/Table.spec.ts:691:9 › Large Table Column Search & Copy Link › Search for column, copy link, and verify side panel behavior @sample-data 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForResponse: Target page, context or browser has been closed
+
+      734 |
+      735 |       // 5. Visit the copied Link
+    > 736 |       const keyProfileMetricsResponse = page.waitForResponse(
+          |                                              ^
+      737 |         (response) =>
+      738 |           response
+      739 |             .url()
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts:736:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForResponse: Target page, context or browser has been closed
+
+      734 |
+      735 |       // 5. Visit the copied Link
+    > 736 |       const keyProfileMetricsResponse = page.waitForResponse(
+          |                                              ^
+      737 |         (response) =>
+      738 |           response
+      739 |             .url()
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts:736:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+---
+
+seieng this while committing our changes Done in 18.61s.
+openmetadata-ui/src/main/resources/ui/.husky/prepare-commit-msg: line 2: /Applications: is a directory
+openmetadata-ui/src/main/resources/ui/.husky/prepare-commit-msg: line 3: APPLICATION.md: command not found
+openmetadata-ui/src/main/resources/ui/.husky/prepare-commit-msg: line 4: syntax error near unexpected token `('
+openmetadata-ui/src/main/resources/ui/.husky/prepare-commit-msg: line 4: ` * Licensed under the Apache License, Version 2.0 (the "License");'
+
+---
+
+still seeing same
+
+---
+
+still same i installed entire cli an enabled
