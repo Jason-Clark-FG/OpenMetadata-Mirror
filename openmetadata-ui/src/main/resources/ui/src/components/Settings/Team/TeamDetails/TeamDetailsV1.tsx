@@ -741,7 +741,13 @@ const TeamDetailsV1 = ({
         onAssetClick={setPreviewAsset}
       />
     ),
-    [entityPermissions, assetsCount, setPreviewAsset, isTeamDeleted]
+    [
+      entityPermissions,
+      assetsCount,
+      setPreviewAsset,
+      isTeamDeleted,
+      currentTeam.id,
+    ]
   );
 
   const rolesTabRender = useMemo(
