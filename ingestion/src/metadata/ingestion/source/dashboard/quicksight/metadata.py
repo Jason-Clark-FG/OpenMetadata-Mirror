@@ -539,7 +539,8 @@ class QuicksightSource(DashboardServiceSource):
             try:
                 data_model_entity = self._get_datamodel(
                     datamodel_id=datamodel.dataset_id
-                    or datamodel.DataSource.DataSourceId
+                    if datamodel.dataset_id is not None
+                    else datamodel.DataSource.DataSourceId
                 )
                 if isinstance(
                     datamodel.DataSource.data_source_resp, DataSourceRespQuery
@@ -685,9 +686,13 @@ class QuicksightSource(DashboardServiceSource):
         self.data_models: List[
             DescribeDataSourceResponse
         ] = self._get_dashboard_datamodels(dashboard_details)
-        dataset_groups: dict = {}
+        dataset_groups: dict[str, List[DescribeDataSourceResponse]] = {}
         for data_model in self.data_models:
-            key = data_model.dataset_id or data_model.DataSource.DataSourceId
+            key = (
+                data_model.dataset_id
+                if data_model.dataset_id is not None
+                else data_model.DataSource.DataSourceId
+            )
             if key not in dataset_groups:
                 dataset_groups[key] = []
             dataset_groups[key].append(data_model)
