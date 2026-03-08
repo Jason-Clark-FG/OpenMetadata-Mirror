@@ -712,7 +712,6 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   private void addUserAuthForBasic(User user, CreateUser create) {
     if (isBasicAuth()) {
-      user.setName(user.getEmail().split("@")[0]);
       if (Boolean.FALSE.equals(create.getIsBot())
           && create.getCreatePasswordType() == ADMIN_CREATE) {
         addAuthMechanismToUser(user, create);
@@ -1344,16 +1343,17 @@ public class UserResource extends EntityResource<User, UserRepository> {
         @ApiResponse(responseCode = "400", description = "Bad request")
       })
   public Response generateResetPasswordLink(@Context UriInfo uriInfo, @Valid EmailRequest request) {
-    String userName = request.getEmail().split("@")[0];
     User registeredUser;
     try {
       registeredUser =
-          repository.getByName(
-              uriInfo, userName, new Fields(Set.of(USER_PROTECTED_FIELDS), USER_PROTECTED_FIELDS));
+          repository.getByEmail(
+              uriInfo,
+              request.getEmail().toLowerCase(),
+              new Fields(Set.of(USER_PROTECTED_FIELDS), USER_PROTECTED_FIELDS));
     } catch (EntityNotFoundException ex) {
       LOG.error(
           "[GeneratePasswordReset] Got Error while fetching user : {},  error message {}",
-          userName,
+          request.getEmail(),
           ex.getMessage());
       return Response.status(Response.Status.OK)
           .entity("Please check your mail to for Reset Password Link.")
@@ -1453,8 +1453,8 @@ public class UserResource extends EntityResource<User, UserRepository> {
       })
   public Response checkEmailVerified(@Context UriInfo uriInfo, @Valid EmailRequest request) {
     User user =
-        repository.getByName(
-            uriInfo, request.getEmail().split("@")[0], getFields("isEmailVerified"));
+        repository.getByEmail(
+            uriInfo, request.getEmail().toLowerCase(), getFields("isEmailVerified"));
     return Response.status(Response.Status.OK).entity(user.getIsEmailVerified()).build();
   }
 
