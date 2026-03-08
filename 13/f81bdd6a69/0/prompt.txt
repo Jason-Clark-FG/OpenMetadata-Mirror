@@ -1,0 +1,146 @@
+There are some column related changes in the branch . From playwright these 2 test are consistently failing   1 failed
+    [chromium] › playwright/e2e/Pages/Teams.spec.ts:556:3 › Teams Page › Team assets should ──────── and  1 failed
+    [ingestion] › playwright/e2e/Features/Table.spec.ts:691:9 › Large Table Column Search & Copy Link › Search for column, copy link, and verify side panel behavior @sample-data  . can you investigate , i can share the error trace
+
+---
+
+this is for  1) [ingestion] › playwright/e2e/Features/Table.spec.ts:691:9 › Large Table Column Search & Copy Link › Search for column, copy link, and verify side panel behavior @sample-data 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForResponse: Target page, context or browser has been closed
+
+      734 |
+      735 |       // 5. Visit the copied Link
+    > 736 |       const keyProfileMetricsResponse = page.waitForResponse(
+          |                                              ^
+      737 |         (response) =>
+      738 |           response
+      739 |             .url()
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts:736:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForResponse: Target page, context or browser has been closed
+
+      734 |
+      735 |       // 5. Visit the copied Link
+    > 736 |       const keyProfileMetricsResponse = page.waitForResponse(
+          |                                              ^
+      737 |         (response) =>
+      738 |           response
+      739 |             .url()
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts:736:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace playwright/output/test-results/Features-Table-Large-Table-a0812--verify-side-panel-behavior-ingestion-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+ Search Column one
+
+---
+
+yes
+
+---
+
+now this one ?
+
+---
+
+1) [chromium] › playwright/e2e/Pages/Teams.spec.ts:556:3 › Teams Page › Team assets should ───────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByTestId('assets').getByTestId('filter-count')
+    Expected: "1"
+    Received: "10"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for getByTestId('assets').getByTestId('filter-count')
+        8 × locator resolved to <span title="10" class="text-xs" data-testid="filter-count">10</span>
+          - unexpected value "10"
+
+
+       at ../utils/team.ts:369
+
+      367 |   await expect(
+      368 |     page.getByTestId('assets').getByTestId('filter-count')
+    > 369 |   ).toHaveText(expectedCount.toString());
+          |     ^
+      370 | };
+      371 |
+      372 | export const addUserInTeam = async (page: Page, user: UserClass) => {
+        at verifyTeamListingAssetCount (/home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/utils/team.ts:369:5)
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Pages/Teams.spec.ts:611:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  getByTestId('assets').getByTestId('filter-count')
+    Expected: "1"
+    Received: "10"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 5000ms
+      - waiting for getByTestId('assets').getByTestId('filter-count')
+        8 × locator resolved to <span title="10" class="text-xs" data-testid="filter-count">10</span>
+          - unexpected value "10"
+
+
+       at ../utils/team.ts:369
+
+      367 |   await expect(
+      368 |     page.getByTestId('assets').getByTestId('filter-count')
+    > 369 |   ).toHaveText(expectedCount.toString());
+          |     ^
+      370 | };
+      371 |
+      372 | export const addUserInTeam = async (page: Page, user: UserClass) => {
+        at verifyTeamListingAssetCount (/home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/utils/team.ts:369:5)
+        at /home/runner/work/OpenMetadata/OpenMetadata/***-ui/src/main/resources/ui/playwright/e2e/Pages/Teams.spec.ts:611:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace playwright/output/test-results/Pages-Teams-Teams-Page-Team-assets-should-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
