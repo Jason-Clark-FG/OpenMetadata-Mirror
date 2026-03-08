@@ -338,6 +338,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected final boolean supportsFollower;
   protected final boolean supportsExtension;
   protected final boolean supportsVotes;
+  private volatile boolean versionFieldMetadataColumnsAvailable;
   @Getter protected final boolean supportsDomains;
   protected final boolean supportsDataProducts;
   @Getter protected final boolean supportsReviewers;
@@ -1285,11 +1286,20 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     if (dbLimit > 0) {
-      List<ExtensionRecord> records =
-          daoCollection
-              .entityExtensionDAO()
-              .getExtensionsWithOffset(id, extensionPrefix, dbLimit, dbOffset);
-      records.forEach(r -> versions.add(new EntityVersionPair(r).getEntityJson()));
+      if (hasVersionFieldMetadataColumns()) {
+        List<ExtensionRecord> records =
+            daoCollection
+                .entityExtensionDAO()
+                .getExtensionsWithOffset(id, extensionPrefix, dbLimit, dbOffset);
+        records.forEach(r -> versions.add(new EntityVersionPair(r).getEntityJson()));
+      } else {
+        daoCollection.entityExtensionDAO().getExtensions(id, extensionPrefix).stream()
+            .map(EntityVersionPair::new)
+            .sorted(EntityUtil.compareVersion.reversed())
+            .skip(dbOffset)
+            .limit(dbLimit)
+            .forEach(version -> versions.add(version.getEntityJson()));
+      }
     }
 
     int extensionCount = daoCollection.entityExtensionDAO().getExtensionCount(id, extensionPrefix);
@@ -1306,18 +1316,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private EntityHistoryWithOffset listVersionsWithFieldFilter(
       UUID id, T latest, int limit, int offset, String rawFieldChanged) {
-    try {
+    if (hasVersionFieldMetadataColumns()) {
       return listVersionsWithFieldFilterIndexed(id, latest, limit, offset, rawFieldChanged);
-    } catch (RuntimeException e) {
-      if (!isVersionFieldMetadataSchemaMissing(e)) {
-        throw e;
-      }
-      LOG.debug(
-          "Version history metadata columns are unavailable for entityType={}; using in-memory fieldChanged filtering",
-          entityType,
-          e);
-      return listVersionsWithFieldFilterFallback(id, latest, limit, offset, rawFieldChanged);
     }
+    LOG.debug(
+        "Version history metadata columns are unavailable for entityType={}; using in-memory fieldChanged filtering",
+        entityType);
+    return listVersionsWithFieldFilterFallback(id, latest, limit, offset, rawFieldChanged);
   }
 
   private EntityHistoryWithOffset listVersionsWithFieldFilterIndexed(
@@ -1413,20 +1418,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return VersionFieldChangeUtil.matchesFieldChanged(latest.getChangeDescription(), fieldChanged);
   }
 
-  private boolean isVersionFieldMetadataSchemaMissing(Throwable throwable) {
-    Throwable current = throwable;
-    while (current != null) {
-      String message = current.getMessage();
-      if (message != null) {
-        String normalizedMessage = message.toLowerCase(Locale.ROOT);
-        if (normalizedMessage.contains("changedfieldkeys")
-            || normalizedMessage.contains("versionnum")) {
-          return true;
-        }
-      }
-      current = current.getCause();
+  private boolean hasVersionFieldMetadataColumns() {
+    if (versionFieldMetadataColumnsAvailable) {
+      return true;
     }
-    return false;
+    versionFieldMetadataColumnsAvailable =
+        daoCollection.entityExtensionDAO().getVersionFieldMetadataColumnCount() >= 2;
+    return versionFieldMetadataColumnsAvailable;
   }
 
   private VersionFieldChangeUtil.VersionExtensionRecord buildVersionExtensionRecord(
@@ -1446,12 +1444,17 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private void insertVersionExtensionRecord(
       VersionFieldChangeUtil.VersionExtensionRecord versionExtensionRecord) {
-    try {
-      daoCollection.entityExtensionDAO().insertVersionExtension(versionExtensionRecord);
-    } catch (RuntimeException e) {
-      if (!isVersionFieldMetadataSchemaMissing(e)) {
-        throw e;
-      }
+    if (hasVersionFieldMetadataColumns()) {
+      daoCollection
+          .entityExtensionDAO()
+          .insertVersionExtension(
+              versionExtensionRecord.getId(),
+              versionExtensionRecord.getExtension(),
+              versionExtensionRecord.getJsonSchema(),
+              versionExtensionRecord.getJson(),
+              versionExtensionRecord.getVersionNum(),
+              versionExtensionRecord.getChangedFieldKeys());
+    } else {
       daoCollection
           .entityExtensionDAO()
           .insert(
@@ -1464,12 +1467,27 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private void insertVersionExtensionRecords(
       List<VersionFieldChangeUtil.VersionExtensionRecord> versionExtensionRecords) {
-    try {
-      daoCollection.entityExtensionDAO().insertVersionExtensions(versionExtensionRecords);
-    } catch (RuntimeException e) {
-      if (!isVersionFieldMetadataSchemaMissing(e)) {
-        throw e;
-      }
+    if (hasVersionFieldMetadataColumns()) {
+      daoCollection
+          .entityExtensionDAO()
+          .insertVersionExtensions(
+              versionExtensionRecords.stream()
+                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getId)
+                  .toList(),
+              versionExtensionRecords.stream()
+                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getExtension)
+                  .toList(),
+              entityType,
+              versionExtensionRecords.stream()
+                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getJson)
+                  .toList(),
+              versionExtensionRecords.stream()
+                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getVersionNum)
+                  .toList(),
+              versionExtensionRecords.stream()
+                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getChangedFieldKeys)
+                  .toList());
+    } else {
       daoCollection
           .entityExtensionDAO()
           .insertMany(

@@ -495,24 +495,18 @@ const EntityVersionPage: FunctionComponent = () => {
         limit: VERSION_PAGE_SIZE,
         offset: currentOffset,
       });
+      const appendedVersions = moreVersions.versions ?? [];
+      const totalLoaded = currentOffset + appendedVersions.length;
+
+      setHasMoreVersions(
+        moreVersions.paging ? totalLoaded < moreVersions.paging.total : false
+      );
 
       setVersionList((prev) => {
-        const combined = {
+        return {
           ...moreVersions,
-          versions: [
-            ...(prev.versions ?? []),
-            ...(moreVersions.versions ?? []),
-          ],
+          versions: [...(prev.versions ?? []), ...appendedVersions],
         };
-
-        if (moreVersions.paging) {
-          const totalLoaded = combined.versions?.length ?? 0;
-          setHasMoreVersions(totalLoaded < moreVersions.paging.total);
-        } else {
-          setHasMoreVersions(false);
-        }
-
-        return combined;
       });
     } finally {
       setIsLoadingMore(false);

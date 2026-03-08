@@ -3,6 +3,24 @@ SET json = JSON_REMOVE(json, '$.sourceConfig.config.computeMetrics')
 WHERE JSON_EXTRACT(json, '$.sourceConfig.config.computeMetrics') IS NOT NULL
 AND pipelineType = 'profiler';
 
+SET @post_version_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'versionNum');
+SET @post_add_version_num_sql = IF(@post_version_col_exists = 0,
+  'ALTER TABLE entity_extension ADD COLUMN versionNum DOUBLE NULL',
+  'SELECT 1');
+PREPARE post_add_version_num_stmt FROM @post_add_version_num_sql;
+EXECUTE post_add_version_num_stmt;
+DEALLOCATE PREPARE post_add_version_num_stmt;
+
+SET @post_changed_fields_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'changedFieldKeys');
+SET @post_add_changed_field_keys_sql = IF(@post_changed_fields_col_exists = 0,
+  'ALTER TABLE entity_extension ADD COLUMN changedFieldKeys JSON NULL',
+  'SELECT 1');
+PREPARE post_add_changed_field_keys_stmt FROM @post_add_changed_field_keys_sql;
+EXECUTE post_add_changed_field_keys_stmt;
+DEALLOCATE PREPARE post_add_changed_field_keys_stmt;
+
 WITH RECURSIVE
 field_changes AS (
     SELECT e.id, e.extension, jt.field_name

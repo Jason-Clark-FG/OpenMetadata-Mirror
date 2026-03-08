@@ -177,7 +177,6 @@ import org.openmetadata.service.resources.tags.TagLabelUtil;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.VersionFieldChangeUtil.VersionExtensionMetadata;
-import org.openmetadata.service.util.VersionFieldChangeUtil.VersionExtensionRecord;
 import org.openmetadata.service.util.jdbi.BindConcat;
 import org.openmetadata.service.util.jdbi.BindFQN;
 import org.openmetadata.service.util.jdbi.BindJsonContains;
@@ -1294,7 +1293,13 @@ public interface CollectionDAO {
                 + "ON CONFLICT (id, extension) DO UPDATE SET jsonSchema = EXCLUDED.jsonSchema, "
                 + "json = EXCLUDED.json, versionNum = EXCLUDED.versionNum, changedFieldKeys = EXCLUDED.changedFieldKeys",
         connectionType = POSTGRES)
-    void insertVersionExtension(@BindBean VersionExtensionRecord versionExtensionRecord);
+    void insertVersionExtension(
+        @BindUUID("id") UUID id,
+        @Bind("extension") String extension,
+        @Bind("jsonSchema") String jsonSchema,
+        @Bind("json") String json,
+        @Bind("versionNum") Double versionNum,
+        @Bind("changedFieldKeys") String changedFieldKeys);
 
     @Transaction
     @ConnectionAwareSqlBatch(
@@ -1309,7 +1314,13 @@ public interface CollectionDAO {
                 + "ON CONFLICT (id, extension) DO UPDATE SET jsonSchema = EXCLUDED.jsonSchema, "
                 + "json = EXCLUDED.json, versionNum = EXCLUDED.versionNum, changedFieldKeys = EXCLUDED.changedFieldKeys",
         connectionType = POSTGRES)
-    void insertVersionExtensions(@BindBean List<VersionExtensionRecord> versionExtensionRecords);
+    void insertVersionExtensions(
+        @BindUUID("id") List<UUID> id,
+        @Bind("extension") List<String> extension,
+        @Bind("jsonSchema") String jsonSchema,
+        @Bind("json") List<String> json,
+        @Bind("versionNum") List<Double> versionNum,
+        @Bind("changedFieldKeys") List<String> changedFieldKeys);
 
     @ConnectionAwareSqlUpdate(
         value = "UPDATE entity_extension SET json = :json where (json -> '$.id') = :id",
@@ -1460,14 +1471,14 @@ public interface CollectionDAO {
         value =
             "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
                 + "LIKE CONCAT(:extensionPrefix, '.%') "
-                + "ORDER BY versionNum DESC "
+                + "ORDER BY COALESCE(versionNum, CAST(SUBSTRING_INDEX(extension, '.version.', -1) AS DOUBLE)) DESC, extension DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = MYSQL)
     @ConnectionAwareSqlQuery(
         value =
             "SELECT extension, json FROM entity_extension WHERE id = :id AND extension "
                 + "LIKE CONCAT(:extensionPrefix, '.%') "
-                + "ORDER BY versionNum DESC "
+                + "ORDER BY COALESCE(versionNum, split_part(extension, '.version.', 2)::DOUBLE PRECISION) DESC, extension DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = POSTGRES)
     @RegisterRowMapper(ExtensionMapper.class)
@@ -1483,7 +1494,7 @@ public interface CollectionDAO {
                 + "WHERE id = :id "
                 + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND JSON_CONTAINS(changedFieldKeys, JSON_ARRAY(:fieldPath)) "
-                + "ORDER BY versionNum DESC "
+                + "ORDER BY COALESCE(versionNum, CAST(SUBSTRING_INDEX(extension, '.version.', -1) AS DOUBLE)) DESC, extension DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = MYSQL)
     @ConnectionAwareSqlQuery(
@@ -1492,7 +1503,7 @@ public interface CollectionDAO {
                 + "WHERE id = :id "
                 + "AND extension LIKE CONCAT(:extensionPrefix, '.%') "
                 + "AND jsonb_exists(changedFieldKeys, :fieldPath) "
-                + "ORDER BY versionNum DESC "
+                + "ORDER BY COALESCE(versionNum, split_part(extension, '.version.', 2)::DOUBLE PRECISION) DESC, extension DESC "
                 + "LIMIT :limit OFFSET :offset",
         connectionType = POSTGRES)
     @RegisterRowMapper(ExtensionMapper.class)
@@ -1519,6 +1530,22 @@ public interface CollectionDAO {
         @BindUUID("id") UUID id,
         @Bind("extensionPrefix") String extensionPrefix,
         @Bind("fieldPath") String fieldPath);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() "
+                + "AND TABLE_NAME = 'entity_extension' "
+                + "AND COLUMN_NAME IN ('versionNum', 'changedFieldKeys')",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COUNT(*) FROM information_schema.columns "
+                + "WHERE table_schema = current_schema() "
+                + "AND table_name = 'entity_extension' "
+                + "AND column_name IN ('versionnum', 'changedfieldkeys')",
+        connectionType = POSTGRES)
+    int getVersionFieldMetadataColumnCount();
 
     @SqlQuery(
         "SELECT COUNT(*) FROM entity_extension WHERE id = :id AND extension "

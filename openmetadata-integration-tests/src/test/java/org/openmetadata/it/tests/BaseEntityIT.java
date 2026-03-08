@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -44,8 +45,8 @@ import org.openmetadata.sdk.fluent.Users;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.TestUtils;
-import org.openmetadata.service.util.VersionFieldChangeUtil;
 
 /**
  * Base class for all entity integration tests.
@@ -1504,13 +1505,12 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
       Entity.getCollectionDAO()
           .entityExtensionDAO()
           .insertVersionExtension(
-              new VersionFieldChangeUtil.VersionExtensionRecord(
-                  created.getId(),
-                  rogueExtension,
-                  getEntityType(),
-                  JsonUtils.pojoToJson(created),
-                  999.0,
-                  JsonUtils.pojoToJson(List.of("description"))));
+              created.getId(),
+              rogueExtension,
+              getEntityType(),
+              JsonUtils.pojoToJson(created),
+              999.0,
+              JsonUtils.pojoToJson(List.of("description")));
 
       org.openmetadata.schema.type.EntityHistory filtered =
           getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "description");
@@ -1527,6 +1527,47 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
           "Filtered history should not include rows from a rogue extension prefix");
     } finally {
       Entity.getCollectionDAO().entityExtensionDAO().delete(created.getId(), rogueExtension);
+    }
+  }
+
+  @Test
+  void get_entityVersionHistory_paginated_ordersNullVersionNumRowsByVersion(TestNamespace ns) {
+    if (!supportsVersionHistory) return;
+
+    K createRequest = createMinimalRequest(ns);
+    T created = createEntity(createRequest);
+
+    List<Double> insertedVersions = List.of(9.0, 10.0, 11.0);
+
+    try {
+      for (Double version : insertedVersions) {
+        ObjectNode historicalVersion = (ObjectNode) JsonUtils.pojoToJsonNode(created);
+        historicalVersion.put("version", version);
+        Entity.getCollectionDAO()
+            .entityExtensionDAO()
+            .insert(
+                created.getId(),
+                EntityUtil.getVersionExtension(getEntityType(), version),
+                getEntityType(),
+                JsonUtils.pojoToJson(historicalVersion));
+      }
+
+      org.openmetadata.schema.type.EntityHistory paginatedHistory =
+          getVersionHistoryPaginated(created.getId(), 3, 1);
+
+      assertNotNull(paginatedHistory);
+      assertNotNull(paginatedHistory.getPaging());
+      assertEquals(4, (int) paginatedHistory.getPaging().getTotal());
+      assertEquals(3, paginatedHistory.getVersions().size());
+      assertEquals(11.0, versionOfHistoryEntry(paginatedHistory.getVersions().get(0)), 0.001);
+      assertEquals(10.0, versionOfHistoryEntry(paginatedHistory.getVersions().get(1)), 0.001);
+      assertEquals(9.0, versionOfHistoryEntry(paginatedHistory.getVersions().get(2)), 0.001);
+    } finally {
+      for (Double version : insertedVersions) {
+        Entity.getCollectionDAO()
+            .entityExtensionDAO()
+            .delete(created.getId(), EntityUtil.getVersionExtension(getEntityType(), version));
+      }
     }
   }
 
