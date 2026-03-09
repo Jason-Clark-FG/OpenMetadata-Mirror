@@ -13,10 +13,13 @@ import static org.openmetadata.csv.EntityCsv.ENTITY_UPDATED;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.csv.CSVPrinter;
@@ -32,8 +35,11 @@ import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.ApiStatus;
+import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityStatus;
+import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.csv.CsvErrorType;
 import org.openmetadata.schema.type.csv.CsvFile;
 import org.openmetadata.schema.type.csv.CsvHeader;
 import org.openmetadata.schema.type.csv.CsvImportResult;
@@ -394,6 +400,148 @@ public class EntityCsvTest {
     assertEquals(1, missingRequiredCsv.rowsFailed());
   }
 
+  @Test
+  void test_formattedDateTimeParsingSupportsExpectedFormats() throws Exception {
+    TestCsv testCsv = new TestCsv();
+    testCsv.enableProcessing();
+    CSVRecord csvRecord = singleRecord(testCsv, "", "", "");
+
+    assertEquals(
+        "2026-03-09",
+        testCsv.parseFormattedDateTime(csvRecord, 0, "startDate", "2026-03-09", "date-cp", "yyyy-MM-dd"));
+    assertEquals(
+        "2026-03-09 10:15",
+        testCsv.parseFormattedDateTime(
+            csvRecord, 0, "startDateTime", "2026-03-09 10:15", "dateTime-cp", "yyyy-MM-dd HH:mm"));
+    assertEquals(
+        "10:15",
+        testCsv.parseFormattedDateTime(csvRecord, 0, "startTime", "10:15", "time-cp", "HH:mm"));
+
+    TestCsv invalidCsv = new TestCsv();
+    invalidCsv.enableProcessing();
+    String invalid =
+        invalidCsv.parseFormattedDateTime(
+            singleRecord(invalidCsv, "", "", ""), 0, "startDate", "03/09/2026", "date-cp", "yyyy-MM-dd");
+
+    assertNull(invalid);
+    assertFalse(invalidCsv.isProcessRecord());
+  }
+
+  @Test
+  void test_privateNumericAndIntervalParsersHandleValidAndInvalidValues() throws Exception {
+    TestCsv validCsv = new TestCsv();
+    validCsv.enableProcessing();
+    CSVRecord csvRecord = singleRecord(validCsv, "", "", "");
+
+    assertEquals(
+        Long.valueOf(42),
+        invokePrivate(validCsv, "parseLongField", csvRecord, 0, "count", "number", "42"));
+    assertEquals(
+        Map.of("start", 100L, "end", 200L),
+        invokePrivate(validCsv, "parseTimeInterval", csvRecord, 0, "window", "100:200"));
+
+    TestCsv invalidLongCsv = new TestCsv();
+    invalidLongCsv.enableProcessing();
+    Object invalidLong =
+        invokePrivate(
+            invalidLongCsv,
+            "parseLongField",
+            singleRecord(invalidLongCsv, "", "", ""),
+            0,
+            "count",
+            "integer",
+            "forty-two");
+    assertNull(invalidLong);
+    assertFalse(invalidLongCsv.isProcessRecord());
+
+    TestCsv invalidIntervalCsv = new TestCsv();
+    invalidIntervalCsv.enableProcessing();
+    Object invalidInterval =
+        invokePrivate(
+            invalidIntervalCsv,
+            "parseTimeInterval",
+            singleRecord(invalidIntervalCsv, "", "", ""),
+            0,
+            "window",
+            "100:bad");
+    assertNull(invalidInterval);
+    assertFalse(invalidIntervalCsv.isProcessRecord());
+  }
+
+  @Test
+  void test_privateEnumAndTableParsersValidateConfigs() throws Exception {
+    TestCsv enumCsv = new TestCsv();
+    enumCsv.enableProcessing();
+    CSVRecord csvRecord = singleRecord(enumCsv, "", "", "");
+    String enumConfig = "{\"multiSelect\":true,\"values\":[\"A\",\"B\",\"C\"]}";
+
+    assertEquals(
+        List.of("A", "B"),
+        invokePrivate(enumCsv, "parseEnumType", csvRecord, 0, "priority", "enum", "A|B", enumConfig));
+
+    TestCsv invalidEnumCsv = new TestCsv();
+    invalidEnumCsv.enableProcessing();
+    Object invalidEnum =
+        invokePrivate(
+            invalidEnumCsv,
+            "parseEnumType",
+            singleRecord(invalidEnumCsv, "", "", ""),
+            0,
+            "priority",
+            "enum",
+            "Z",
+            enumConfig);
+    assertEquals(List.of("Z"), invalidEnum);
+    assertFalse(invalidEnumCsv.isProcessRecord());
+
+    TestCsv tableCsv = new TestCsv();
+    tableCsv.enableProcessing();
+    String tableConfig = "{\"columns\":[\"name\",\"value\"]}";
+    @SuppressWarnings("unchecked")
+    Map<String, Object> tableValue =
+        (Map<String, Object>)
+            invokePrivate(tableCsv, "parseTableType", csvRecord, 0, "matrix", "alpha,beta|gamma,delta", tableConfig);
+    assertEquals(Set.of("name", "value"), tableValue.get("columns"));
+    @SuppressWarnings("unchecked")
+    List<Map<String, String>> rows = (List<Map<String, String>>) tableValue.get("rows");
+    assertEquals(Map.of("name", "alpha", "value", "beta"), rows.get(0));
+    assertEquals(Map.of("name", "gamma", "value", "delta"), rows.get(1));
+
+    TestCsv invalidTableCsv = new TestCsv();
+    invalidTableCsv.enableProcessing();
+    Object invalidTable =
+        invokePrivate(
+            invalidTableCsv,
+            "parseTableType",
+            singleRecord(invalidTableCsv, "", "", ""),
+            0,
+            "matrix",
+            "alpha,beta,gamma",
+            tableConfig);
+    assertNull(invalidTable);
+    assertFalse(invalidTableCsv.isProcessRecord());
+  }
+
+  @Test
+  void test_miscImportHelpersReturnStableContractValues() {
+    AssetCertification certification = new TestCsv().getCertificationLabels("Tier.Tier1");
+    assertNotNull(certification);
+    assertEquals("Tier.Tier1", certification.getTagLabel().getTagFQN());
+    assertEquals(TagLabel.TagSource.CLASSIFICATION, certification.getTagLabel().getSource());
+    assertNull(new TestCsv().getCertificationLabels(null));
+
+    List<CsvHeader> headers =
+        new ArrayList<>(
+            List.of(
+                new CsvHeader().withName("required").withRequired(true),
+                new CsvHeader().withName("optional").withRequired(false)));
+    EntityCsv.resetRequiredColumns(headers, List.of("required"));
+    assertFalse(Boolean.TRUE.equals(headers.get(0).getRequired()));
+
+    assertTrue(EntityCsv.invalidBoolean(1, "maybe").contains("maybe"));
+    assertTrue(new TestCsv().failed("boom", CsvErrorType.PARSER_FAILURE).contains("boom"));
+  }
+
   private static class TestCsv extends EntityCsv<EntityInterface> {
     private final Map<String, EntityInterface> entitiesByTypeAndName = new HashMap<>();
 
@@ -461,6 +609,24 @@ public class EntityCsvTest {
       return getNextRecord(resultsPrinter, csvRecords);
     }
 
+    private String parseFormattedDateTime(
+        CSVRecord csvRecord,
+        int fieldNumber,
+        String fieldName,
+        String fieldValue,
+        String fieldType,
+        String propertyConfig)
+        throws IOException {
+      return parseFormattedDateTimeField(
+          mock(CSVPrinter.class),
+          csvRecord,
+          fieldNumber,
+          fieldName,
+          fieldValue,
+          fieldType,
+          propertyConfig);
+    }
+
     @Override
     protected EntityInterface getEntityByName(String entityType, String fqn) {
       EntityInterface entity = entitiesByTypeAndName.get(entityType + ":" + fqn);
@@ -519,5 +685,40 @@ public class EntityCsvTest {
     glossaryTerm.setFullyQualifiedName(fullyQualifiedName);
     glossaryTerm.setEntityStatus(status);
     return glossaryTerm;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> T invokePrivate(
+      TestCsv testCsv, String methodName, CSVRecord csvRecord, int fieldNumber, Object... extraArgs)
+      throws Exception {
+    Class<?>[] parameterTypes = switch (methodName) {
+      case "parseLongField" ->
+          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, String.class, Object.class};
+      case "parseTimeInterval" ->
+          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class};
+      case "parseEnumType" ->
+          new Class<?>[] {
+            CSVPrinter.class, CSVRecord.class, int.class, String.class, String.class, Object.class, String.class
+          };
+      case "parseTableType" ->
+          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class, String.class};
+      default -> throw new IllegalArgumentException("Unsupported method " + methodName);
+    };
+
+    Method method = EntityCsv.class.getDeclaredMethod(methodName, parameterTypes);
+    method.setAccessible(true);
+    Object[] args = new Object[extraArgs.length + 3];
+    args[0] = mock(CSVPrinter.class);
+    args[1] = csvRecord;
+    args[2] = fieldNumber;
+    System.arraycopy(extraArgs, 0, args, 3, extraArgs.length);
+    try {
+      return (T) method.invoke(testCsv, args);
+    } catch (InvocationTargetException e) {
+      if (e.getCause() instanceof Exception exception) {
+        throw exception;
+      }
+      throw new RuntimeException(e.getCause());
+    }
   }
 }
