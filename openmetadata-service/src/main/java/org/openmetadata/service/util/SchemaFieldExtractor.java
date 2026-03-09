@@ -451,6 +451,7 @@ public class SchemaFieldExtractor {
         case "href" -> "href";
         case "timeInterval" -> "timeInterval";
         case "date" -> "date";
+        case "impersonatedBy" -> "impersonatedBy";
         case "dateTime" -> "dateTime";
         case "time" -> "time";
         case "date-cp" -> "date-cp";
@@ -470,6 +471,7 @@ public class SchemaFieldExtractor {
         case "entityExtension" -> "entityExtension";
         case "providerType" -> "providerType";
         case "componentConfig" -> "componentConfig";
+        case "semanticsRule" -> "semanticsRule";
         case "status" -> "status";
         case "sourceUrl" -> "sourceUrl";
         case "style" -> "style";
@@ -602,12 +604,18 @@ public class SchemaFieldExtractor {
             Map.entry("table", "data"),
             Map.entry("pipeline", "data"),
             Map.entry("votes", "data"),
+            Map.entry("learningResource", "learning"),
             Map.entry("dataProduct", "domains"),
             Map.entry("domain", "domains"),
             Map.entry("notificationTemplate", "events"),
             Map.entry("tag", "classification"),
             Map.entry("classification", "classification"),
+            Map.entry("agentExecution", "ai"),
+            Map.entry("aiApplication", "ai"),
+            Map.entry("aiGovernancePolicy", "ai"),
+            Map.entry("llmModel", "ai"),
             Map.entry("page", "data"),
+            Map.entry("promptTemplate", "ai"),
             Map.entry("tableColumn", "column"),
             Map.entry("dashboardDataModelColumn", "column"));
     return entityTypeToSubdirectory.getOrDefault(entityType, "data");
