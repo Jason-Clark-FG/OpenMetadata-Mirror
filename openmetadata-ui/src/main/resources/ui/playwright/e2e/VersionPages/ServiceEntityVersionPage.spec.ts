@@ -33,6 +33,9 @@ import {
   toastNotification,
 } from '../../utils/common';
 import { addMultiOwner, assignTier } from '../../utils/entity';
+import { openEntityVersion, visitVersionedEntityPage } from '../../utils/version';
+
+base.describe.configure({ mode: 'serial' });
 
 const entities = {
   'Api Service': new ApiServiceClass(),
@@ -144,10 +147,13 @@ test.describe('Service Version pages', () => {
      * in the UI to highlight what changed between versions
      */
     test(key, async ({ page }) => {
-      await entity.visitEntityPage(page);
-      const versionDetailResponse = page.waitForResponse(`**/versions/0.2`);
-      await page.locator('[data-testid="version-button"]').click();
-      await versionDetailResponse;
+      const entityData = entity.get() as { fullyQualifiedName?: string; entity?: { fullyQualifiedName?: string } };
+      await visitVersionedEntityPage(
+        page,
+        entity.endpoint,
+        entityData.entity?.fullyQualifiedName ?? entityData.fullyQualifiedName ?? ''
+      );
+      await openEntityVersion(page, '0.2');
 
       /**
        * Step 1: Validate version 0.2 changes
@@ -205,9 +211,7 @@ test.describe('Service Version pages', () => {
           type: 'Users',
         });
 
-        const versionDetailResponse = page.waitForResponse(`**/versions/0.3`);
-        await page.locator('[data-testid="version-button"]').click();
-        await versionDetailResponse;
+        await openEntityVersion(page, '0.3');
 
         await expect(
           page.locator('[data-testid="owner-link"] [data-testid="diff-added"]')
@@ -225,9 +229,7 @@ test.describe('Service Version pages', () => {
 
         await assignTier(page, 'Tier1', entity.endpoint);
 
-        const versionDetailResponse = page.waitForResponse(`**/versions/0.3`);
-        await page.locator('[data-testid="version-button"]').click();
-        await versionDetailResponse;
+        await openEntityVersion(page, '0.3');
 
         await expect(
           page.locator('[data-testid="Tier"] > [data-testid="diff-added"]')
@@ -280,9 +282,7 @@ test.describe('Service Version pages', () => {
 
           await expect(deletedBadge).toHaveText('Deleted');
 
-          const versionDetailResponse = page.waitForResponse(`**/versions/0.4`);
-          await page.locator('[data-testid="version-button"]').click();
-          await versionDetailResponse;
+          await openEntityVersion(page, '0.4');
 
           // Deleted badge should be visible
           await expect(

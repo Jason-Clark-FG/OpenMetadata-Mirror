@@ -96,6 +96,9 @@ export const addAssetsToTag = async (
   tag: TagClass,
   otherAsset?: EntityClass[]
 ) => {
+  const assetSelectionModal = page.getByTestId('asset-selection-modal');
+  const searchBar = assetSelectionModal.getByTestId('searchbar');
+
   await tag.visitPage(page);
 
   await page.waitForSelector(
@@ -116,18 +119,31 @@ export const addAssetsToTag = async (
   if (!isUndefined(otherAsset)) {
     for (const asset of otherAsset) {
       const name = get(asset, 'entityResponseData.name');
+      const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
       const entityDisplayName = get(asset, 'entityResponseData.displayName');
       const visibleName = entityDisplayName ?? name;
       const searchRes = page.waitForResponse(
-        `/api/v1/search/query?q=${visibleName}&index=all&from=0&size=25&**`
+        `/api/v1/search/query?q=${encodeURIComponent(
+          visibleName
+        )}&index=all&from=0&size=25&**`
       );
-      await page
-        .getByTestId('asset-selection-modal')
-        .getByTestId('searchbar')
-        .fill(visibleName);
+      await searchBar.fill(visibleName);
       await searchRes;
 
-      await expect(page.getByText(visibleName)).not.toBeVisible();
+      await expect
+        .poll(
+          async () => {
+            await page.waitForLoadState('networkidle');
+
+            return assetSelectionModal
+              .locator(`[data-testid="table-data-card_${fqn}"]`)
+              .count();
+          },
+          {
+            timeout: 45000,
+          }
+        )
+        .toBe(0);
     }
   }
 
@@ -142,16 +158,15 @@ export const addAssetsToTag = async (
         visibleName
       )}&index=all&from=0&size=25&**`
     );
-    await page
-      .getByTestId('asset-selection-modal')
-      .getByTestId('searchbar')
-      .fill(visibleName);
+    await searchBar.fill(visibleName);
     await searchRes;
 
-    await page.locator(`[data-testid="table-data-card_${fqn}"] input`).check();
+    await assetSelectionModal
+      .locator(`[data-testid="table-data-card_${fqn}"] input`)
+      .check();
 
     await expect(
-      page.locator(
+      assetSelectionModal.locator(
         `[data-testid="table-data-card_${fqn}"] [data-testid="entity-header-name"]`
       )
     ).toContainText(visibleName);

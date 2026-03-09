@@ -2023,6 +2023,45 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
                   latestStatus.getTestCaseResolutionStatusType());
               assertEquals(fetched.getIncidentId(), latestStatus.getStateId());
             });
+
+    Awaitility.await()
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              RequestOptions options =
+                  RequestOptions.builder()
+                      .queryParam("fields", "*")
+                      .queryParam(
+                          "entityLink", "<#E::table::" + table.getFullyQualifiedName() + ">")
+                      .queryParam("includeAllTests", "true")
+                      .queryParam("limit", "100")
+                      .queryParam("offset", "0")
+                      .build();
+
+              String responseJson =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET, "/v1/dataQuality/testCases/search/list", null, options);
+              TestCaseResource.TestCaseList result =
+                  JsonUtils.readValue(responseJson, TestCaseResource.TestCaseList.class);
+
+              TestCase matching =
+                  result.getData().stream()
+                      .filter(tc -> testCase.getId().equals(tc.getId()))
+                      .findFirst()
+                      .orElse(null);
+
+              assertNotNull(matching, "Expected reopened test case in search/list response");
+              assertNotNull(matching.getIncidentId());
+              assertNotEquals(firstIncidentId, matching.getIncidentId());
+              assertNotNull(matching.getTestCaseResult());
+              assertEquals(matching.getIncidentId(), matching.getTestCaseResult().getIncidentId());
+              assertEquals(
+                  org.openmetadata.schema.tests.type.TestCaseStatus.Failed,
+                  matching.getTestCaseStatus());
+            });
   }
 
   private org.openmetadata.schema.tests.type.TestCaseResolutionStatus latestIncidentStatus(

@@ -66,6 +66,8 @@ import {
   visitUserProfilePage,
 } from '../../utils/user';
 
+base.describe.configure({ mode: 'serial' });
+
 const userName = `pw-user-${uuid()}`;
 const expirationTime = [1, 7, 30, 60, 90];
 
@@ -191,7 +193,7 @@ test.describe('User with Admin Roles', () => {
 
     await addUser(adminPage, {
       ...updatedUserDetails,
-      role: role.responseData.displayName,
+      role: 'Data Consumer',
     });
 
     await visitUserProfilePage(adminPage, updatedUserDetails.name);

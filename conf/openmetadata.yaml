@@ -150,8 +150,10 @@ server:
   #    endpointIdentificationAlgorithm: (none)
 
 qos:
-  enabled: ${QOS_ENABLED:-false}
-  maxRequestCount: ${QOS_MAX_REQUEST_COUNT:-100}
+  # Virtual threads remove Jetty's natural back-pressure. Keep request admission below the DB
+  # pool ceiling so excess load queues instead of failing with connection exhaustion.
+  enabled: ${QOS_ENABLED:-true}
+  maxRequestCount: ${QOS_MAX_REQUEST_COUNT:-64}
   maxSuspendedRequestCount: ${QOS_MAX_SUSPENDED_REQUEST_COUNT:-1000}
   maxSuspendSeconds: ${QOS_MAX_SUSPEND_SECONDS:-30}
 

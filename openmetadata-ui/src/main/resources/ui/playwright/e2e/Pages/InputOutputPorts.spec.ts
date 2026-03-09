@@ -1881,9 +1881,9 @@ test.describe('Input Output Ports', () => {
       page,
     }) => {
       const dataProduct = new DataProduct([domain]);
+      const { apiContext } = await getApiContext(page);
 
       await test.step('Create data product with two assets as output ports via API', async () => {
-        const { apiContext } = await getApiContext(page);
         await dataProduct.create(apiContext);
 
         await dataProduct.addAssets(apiContext, [
@@ -1895,6 +1895,14 @@ test.describe('Input Output Ports', () => {
           createAssetRef(tables[0], 'table'),
           createAssetRef(tables[1], 'table'),
         ]);
+
+        await expect
+          .poll(async () => {
+            const response = await dataProduct.getOutputPorts(apiContext);
+
+            return response?.paging?.total ?? response?.data?.length ?? 0;
+          })
+          .toBe(2);
       });
 
       await test.step('Navigate to data product and verify output ports', async () => {
@@ -1930,6 +1938,14 @@ test.describe('Input Output Ports', () => {
         );
         await page.getByTestId('save-button').click();
         await removeRes;
+
+        await expect
+          .poll(async () => {
+            const response = await dataProduct.getOutputPorts(apiContext);
+
+            return response?.paging?.total ?? response?.data?.length ?? 0;
+          })
+          .toBe(1);
       });
 
       await test.step('Verify output port was also removed', async () => {

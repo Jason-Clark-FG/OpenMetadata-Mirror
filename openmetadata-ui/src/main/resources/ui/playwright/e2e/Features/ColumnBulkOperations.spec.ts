@@ -51,24 +51,26 @@ async function searchColumn(
 ) {
   const expectResults = options.expectResults ?? true;
   const searchInput = page.getByPlaceholder('Search columns');
+  const matchingCheckbox = page.getByTestId(`column-checkbox-${columnName}`);
 
   const runSearch = async () => {
     await searchInput.clear();
+    const encodedColumnName = encodeURIComponent(columnName);
     const responsePromise = page.waitForResponse(
       (response) =>
         response.url().includes(GRID_API_URL) &&
-        response.url().includes('columnNamePattern='),
-      { timeout: 15000 }
+        response.url().includes(`columnNamePattern=${encodedColumnName}`),
+      { timeout: 5000 }
     );
     await searchInput.fill(columnName);
     const response = await responsePromise.catch(() => null);
 
-    if (!response || response.status() !== 200) {
-      return false;
+    if (response && response.status() !== 200) {
+      return 0;
     }
 
     await waitForAllLoadersToDisappear(page);
-    return true;
+    return matchingCheckbox.count();
   };
 
   if (!expectResults) {
@@ -79,11 +81,7 @@ async function searchColumn(
   await expect
     .poll(
       async () => {
-        const searchSucceeded = await runSearch();
-        if (!searchSucceeded) {
-          return 0;
-        }
-        return page.getByTestId(`column-checkbox-${columnName}`).count();
+        return runSearch();
       },
       { timeout: 90000, intervals: [1000, 2000, 3000] }
     )
@@ -1099,8 +1097,11 @@ test.describe(
           const initialRowCount = await page.locator('tbody tr').count();
           await expandButton.click();
 
-          const expandedRowCount = await page.locator('tbody tr').count();
-          expect(expandedRowCount).toBeGreaterThan(initialRowCount);
+          await expect
+            .poll(() => page.locator('tbody tr').count(), {
+              timeout: 10000,
+            })
+            .toBeGreaterThan(initialRowCount);
         }
       });
     });

@@ -1414,27 +1414,40 @@ export const verifyPortCounts = async (
   expectedInputCount: number,
   expectedOutputCount: number
 ) => {
-  const inputPortsSection = page
-    .locator('[data-testid="input-output-ports-tab"]')
-    .locator('text=Input Ports')
-    .first();
-  const outputPortsSection = page
-    .locator('[data-testid="input-output-ports-tab"]')
-    .locator('text=Output Ports')
-    .first();
+  const portsTab = page.getByTestId('input-output-ports-tab');
+  const inputPortCount = portsTab
+    .locator('p', { hasText: 'Input Ports' })
+    .first()
+    .locator('xpath=following-sibling::*[1]');
+  const outputPortCount = portsTab
+    .locator('p', { hasText: 'Output Ports' })
+    .first()
+    .locator('xpath=following-sibling::*[1]');
 
-  await expect(
-    inputPortsSection
-      .locator('..')
-      .locator('span')
-      .filter({ hasText: `(${expectedInputCount})` })
-  ).toBeVisible();
-  await expect(
-    outputPortsSection
-      .locator('..')
-      .locator('span')
-      .filter({ hasText: `(${expectedOutputCount})` })
-  ).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        await waitForAllLoadersToDisappear(page);
+        const [inputCountText, outputCountText] = await Promise.all([
+          inputPortCount.textContent(),
+          outputPortCount.textContent(),
+        ]);
+
+        return {
+          hasInputCount:
+            inputCountText?.includes(`(${expectedInputCount})`) ?? false,
+          hasOutputCount:
+            outputCountText?.includes(`(${expectedOutputCount})`) ?? false,
+        };
+      },
+      {
+        timeout: 30000,
+      }
+    )
+    .toEqual({
+      hasInputCount: true,
+      hasOutputCount: true,
+    });
 };
 
 /**

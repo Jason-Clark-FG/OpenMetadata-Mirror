@@ -130,7 +130,8 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
       data-testid={`column-row-${entity.columnName}`}
       key={entity.id}
       selected={isSelected}
-      sx={rowSx}>
+      sx={rowSx}
+    >
       <TableCell padding="checkbox" sx={cellSx}>
         {isPendingRefetch ? (
           <CircularProgress size={20} sx={{ display: 'block' }} />
@@ -139,6 +140,10 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
             checked={isSelected}
             data-testid={`column-checkbox-${entity.columnName}`}
             indeterminate={isIndeterminate}
+            inputProps={{
+              'aria-label': entity.columnName,
+              'data-testid': `column-checkbox-input-${entity.columnName}`,
+            }}
             onChange={handleCheckboxChange}
           />
         )}

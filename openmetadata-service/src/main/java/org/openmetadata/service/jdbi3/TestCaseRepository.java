@@ -387,13 +387,11 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
 
     for (TestCase testCase : testCases) {
       TestCaseResult result = fqnToResult.get(testCase.getFullyQualifiedName());
-      if (result != null) {
-        if (setResults) {
-          testCase.setTestCaseResult(result);
-        }
-        if (setIncidents && result.getIncidentId() != null) {
-          testCase.setIncidentId(result.getIncidentId());
-        }
+      if (setResults) {
+        testCase.setTestCaseResult(result);
+      }
+      if (setIncidents) {
+        testCase.setIncidentId(result != null ? result.getIncidentId() : null);
       }
     }
   }
