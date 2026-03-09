@@ -1,5 +1,6 @@
 package org.openmetadata.service.security.auth.validator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +17,7 @@ import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.ClientType;
 import org.openmetadata.schema.security.client.OidcClientConfig;
 import org.openmetadata.schema.system.FieldError;
+import org.openmetadata.service.util.ValidationErrorBuilder;
 import org.openmetadata.service.util.ValidationHttpUtil;
 
 class CustomOidcValidatorTest {
@@ -25,6 +27,7 @@ class CustomOidcValidatorTest {
   private static final String AUTHORIZATION_ENDPOINT = AUTHORITY + "/authorize";
   private static final String TOKEN_ENDPOINT = AUTHORITY + "/token";
   private static final String JWKS_URI = AUTHORITY + "/keys";
+  private static final String BACKUP_JWKS_URI = AUTHORITY + "/backup-keys";
   private static final String DISCOVERY_RESPONSE =
       "{"
           + "\"issuer\":\""
@@ -117,6 +120,211 @@ class CustomOidcValidatorTest {
   }
 
   @Test
+  void validateCustomOidcPublicClientUsesServerUrlFallbackWhenAuthorityIsMissing() {
+    AuthenticationConfiguration authConfig = new AuthenticationConfiguration();
+    authConfig.setClientType(ClientType.PUBLIC);
+    authConfig.setClientId("public-client");
+
+    OidcClientConfig oidcConfig = publicOidcConfig();
+    oidcConfig.setServerUrl(AUTHORITY);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(() -> ValidationHttpUtil.getNoRedirect(expectedAuthorizationValidationUrl()))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, ""));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientFailsWhenDiscoveryDocumentLacksRequiredEndpoints() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    OidcClientConfig oidcConfig = publicOidcConfig();
+    String incompleteDiscoveryResponse =
+        "{"
+            + "\"issuer\":\""
+            + AUTHORITY
+            + "\","
+            + "\"response_types_supported\":[\"code\"],"
+            + "\"scopes_supported\":[\"openid\",\"profile\"]"
+            + "}";
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, incompleteDiscoveryResponse));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.OIDC_DISCOVERY_URI, error.getField());
+      assertTrue(error.getError().contains("Failed to extract required endpoints"));
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientRejectsUnavailableJwksEndpoint() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    OidcClientConfig oidcConfig = publicOidcConfig();
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(503, "unavailable"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS, error.getField());
+      assertTrue(error.getError().contains("JWKS endpoint is not accessible"));
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientRejectsEmptyJwksKeys() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    OidcClientConfig oidcConfig = publicOidcConfig();
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, "{\"keys\":[]}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS, error.getField());
+      assertTrue(error.getError().contains("invalid or empty keys"));
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientRejectsUnreachableConfiguredPublicKeyUrl() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    authConfig.setPublicKeyUrls(List.of(JWKS_URI, BACKUP_JWKS_URI));
+    OidcClientConfig oidcConfig = publicOidcConfig();
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(BACKUP_JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(404, "missing"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS, error.getField());
+      assertTrue(error.getError().contains("Public key URL is not accessible"));
+      assertTrue(error.getError().contains(BACKUP_JWKS_URI));
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientRejectsConfiguredPublicKeyUrlWithInvalidJwksFormat() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    authConfig.setPublicKeyUrls(List.of(JWKS_URI));
+    OidcClientConfig oidcConfig = publicOidcConfig();
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE),
+              new ValidationHttpUtil.HttpResponseData(200, "{\"unexpected\":true}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS, error.getField());
+      assertTrue(error.getError().contains("does not return valid JWKS format"));
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientTreatsAuthorizationEndpoint400AsLenientSuccess() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    OidcClientConfig oidcConfig = publicOidcConfig();
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(() -> ValidationHttpUtil.getNoRedirect(expectedAuthorizationValidationUrl()))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(400, "bad request"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcPublicClientRequiresAuthorizationEndpointInDiscoveryDocument() {
+    AuthenticationConfiguration authConfig = publicAuthConfig();
+    OidcClientConfig oidcConfig = publicOidcConfig();
+    String discoveryWithoutAuthorizationEndpoint =
+        "{"
+            + "\"issuer\":\""
+            + AUTHORITY
+            + "\","
+            + "\"token_endpoint\":\""
+            + TOKEN_ENDPOINT
+            + "\","
+            + "\"jwks_uri\":\""
+            + JWKS_URI
+            + "\","
+            + "\"response_types_supported\":[\"code\"],"
+            + "\"scopes_supported\":[\"openid\",\"profile\"]"
+            + "}";
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(200, discoveryWithoutAuthorizationEndpoint));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.OIDC_DISCOVERY_URI, error.getField());
+      assertTrue(error.getError().contains("Authorization endpoint is required"));
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientRequiresClientIdAfterDiscoveryValidationPasses() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = new OidcClientConfig();
+    oidcConfig.setScope("openid profile");
+    oidcConfig.setSecret("client-secret");
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertEquals(ValidationErrorBuilder.FieldPaths.OIDC_CLIENT_ID, error.getField());
+      assertTrue(error.getError().contains("Client ID is required"));
+    }
+  }
+
+  @Test
   void validateCustomOidcConfidentialClientRequiresSecretAfterDiscoveryValidationPasses() {
     AuthenticationConfiguration authConfig = confidentialAuthConfig();
     OidcClientConfig oidcConfig = new OidcClientConfig();
@@ -160,6 +368,103 @@ class CustomOidcValidatorTest {
   }
 
   @Test
+  void validateCustomOidcConfidentialClientTreatsUnauthorizedTokenExchangeAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setDiscoveryUri(DISCOVERY_URI);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(
+                  401,
+                  "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientTreatsUnsupportedGrantTypeAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setDiscoveryUri(DISCOVERY_URI);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(
+                  400, "{\"error\":\"unsupported_grant_type\"}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientTreatsTokenResponseWithoutAccessTokenAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setDiscoveryUri(DISCOVERY_URI);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, "{\"token_type\":\"Bearer\"}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientTreatsNonJsonErrorBodiesAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setDiscoveryUri(DISCOVERY_URI);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(400, "not-json"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
   void validateCustomOidcConfidentialClientRetriesWithoutScopeWhenProviderRejectsConfiguredScope() {
     AuthenticationConfiguration authConfig = confidentialAuthConfig();
     OidcClientConfig oidcConfig = confidentialOidcConfig();
@@ -183,6 +488,63 @@ class CustomOidcValidatorTest {
                   ValidationHttpUtil.postForm(
                       TOKEN_ENDPOINT, tokenRequestBodyWithoutScope(), formHeaders()))
           .thenReturn(new ValidationHttpUtil.HttpResponseData(200, "{\"access_token\":\"token\"}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientTreatsUnauthorizedRetryWithoutScopeAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setServerUrl(AUTHORITY);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(
+                  400,
+                  "{\"error\":\"invalid_scope\",\"error_description\":\"scope unsupported\"}"));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, tokenRequestBodyWithoutScope(), formHeaders()))
+          .thenReturn(
+              new ValidationHttpUtil.HttpResponseData(
+                  403,
+                  "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
+
+      FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
+
+      assertNull(error);
+    }
+  }
+
+  @Test
+  void validateCustomOidcConfidentialClientTreatsTokenExchangeExceptionsAsLenientSuccess() {
+    AuthenticationConfiguration authConfig = confidentialAuthConfig();
+    OidcClientConfig oidcConfig = confidentialOidcConfig();
+    oidcConfig.setDiscoveryUri(DISCOVERY_URI);
+
+    try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
+      http.when(() -> ValidationHttpUtil.safeGet(DISCOVERY_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, DISCOVERY_RESPONSE));
+      http.when(() -> ValidationHttpUtil.safeGet(JWKS_URI))
+          .thenReturn(new ValidationHttpUtil.HttpResponseData(200, JWKS_RESPONSE));
+      http.when(
+              () ->
+                  ValidationHttpUtil.postForm(
+                      TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
+          .thenThrow(new IllegalStateException("boom"));
 
       FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
 
