@@ -178,6 +178,15 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
           @QueryParam("entityLink")
           String entityLink,
       @Parameter(
+              description = "Return list of tests by column names",
+              schema =
+                  @Schema(
+                      type = "string",
+                      example =
+                          "{serviceName}.{databaseName}.{schemaName}.{tableName}.{columnName}"))
+          @QueryParam("columnName")
+          String columnName,
+      @Parameter(
               description = "Return list of tests by entity FQN",
               schema =
                   @Schema(
@@ -232,7 +241,8 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
             .addQueryParam("testCaseStatus", status)
             .addQueryParam("testCaseType", type)
             .addQueryParam("entityFQN", entityFQN)
-            .addQueryParam("createdBy", createdBy);
+            .addQueryParam("createdBy", createdBy)
+            .addQueryParam("columnName", columnName);
     List<AuthRequest> authRequests = new ArrayList<>();
     ResourceContextInterface testCaseRC = TestCaseResourceContext.builder().build();
     OperationContext testCaseOperationContext =
@@ -438,7 +448,16 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
               description = "Filter test cases by entities followed by a user",
               schema = @Schema(type = "string"))
           @QueryParam("followedBy")
-          String followedBy)
+          String followedBy,
+      @Parameter(
+              description = "Return list of tests by column names",
+              schema =
+                  @Schema(
+                      type = "string",
+                      example =
+                          "{serviceName}.{databaseName}.{schemaName}.{tableName}.{columnName}"))
+          @QueryParam("columnName")
+          String columnName)
       throws IOException {
     validateTimestamps(startTimestamp, endTimestamp);
 
@@ -463,7 +482,8 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
             owner,
             followedBy,
             startTimestamp,
-            endTimestamp);
+            endTimestamp,
+            columnName);
 
     // Execute search
     return executeTestCaseSearch(
@@ -1411,7 +1431,8 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
       String owner,
       String followedBy,
       Long startTimestamp,
-      Long endTimestamp) {
+      Long endTimestamp,
+      String columnName) {
 
     SearchListFilter searchListFilter = new SearchListFilter(include);
 
@@ -1430,6 +1451,7 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
     searchListFilter.addQueryParam("tier", tier);
     searchListFilter.addQueryParam("serviceName", serviceName);
     searchListFilter.addQueryParam("createdBy", createdBy);
+    searchListFilter.addQueryParam("columnName", columnName);
 
     // Handle owner and followedBy parameters
     if (!nullOrEmpty(owner)) {
