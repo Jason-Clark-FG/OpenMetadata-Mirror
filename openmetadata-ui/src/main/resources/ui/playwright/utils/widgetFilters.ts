@@ -463,7 +463,7 @@ export const verifyDataAssetsFilters = async (
   const aToZFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('table')
+      response.url().includes('index=table')
   );
   await page.getByRole('menuitem', { name: 'A to Z' }).click();
   await aToZFilter;
@@ -479,7 +479,7 @@ export const verifyDataAssetsFilters = async (
   const zToAFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('table')
+      response.url().includes('index=table')
   );
   await page.getByRole('menuitem', { name: 'Z to A' }).click();
   await zToAFilter;
@@ -495,7 +495,7 @@ export const verifyDataAssetsFilters = async (
   const highToLowFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('table')
+      response.url().includes('index=table')
   );
   await page.getByRole('menuitem', { name: 'High to Low' }).click();
   await highToLowFilter;
@@ -511,7 +511,7 @@ export const verifyDataAssetsFilters = async (
   const lowToHighFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('table')
+      response.url().includes('index=table')
   );
   await page.getByRole('menuitem', { name: 'Low to High' }).click();
   await lowToHighFilter;
