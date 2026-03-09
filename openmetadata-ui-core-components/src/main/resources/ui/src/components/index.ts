@@ -52,6 +52,8 @@ export * from "./base/input/input";
 export * from "./base/input/hint-text";
 export * from "./base/input/input-group";
 export * from "./base/input/label";
+export * from "./base/autocomplete/autocomplete";
+export * from "./base/autocomplete/autocomplete-item";
 export * from "./base/dropdown/dropdown";
 export * from "./base/file-upload-trigger/file-upload-trigger";
 export * from "./base/select/select";
