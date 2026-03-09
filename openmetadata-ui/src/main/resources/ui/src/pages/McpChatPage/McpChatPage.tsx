@@ -593,6 +593,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     );
   }, [message.content]);
 
+  const isThinking = !isHuman && isEmpty(textContent) && isEmpty(toolCalls);
+
   return (
     <Box
       display="flex"
@@ -613,6 +615,14 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           border: isHuman ? 'none' : `1px solid ${theme.palette.divider}`,
         }}
       >
+        {isThinking && (
+          <Box alignItems="center" display="flex" gap={1}>
+            <CircularProgress size={14} />
+            <Typography color="text.secondary" variant="body2">
+              {t('label.thinking')}
+            </Typography>
+          </Box>
+        )}
         {!isEmpty(textContent) &&
           (isMarkdown && !isHuman ? (
             <RichTextEditorPreviewerV1
