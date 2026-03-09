@@ -23,6 +23,7 @@ import {
   useEffect,
   useImperativeHandle,
 } from 'react';
+import { ROUTES } from '../../../constants/constants';
 import {
   msalLoginRequest,
   parseMSALResponse,
@@ -68,13 +69,11 @@ const MsalAuthenticator = forwardRef<AuthenticatorRef, Props>(
 
     const logout = async () => {
       try {
-        for (const key in localStorage) {
-          if (key.includes('-login.windows.net-') || key.startsWith('msal.')) {
-            localStorage.removeItem(key);
-          }
-        }
-      } finally {
-        // Cleanup application state
+        await instance.logoutRedirect({
+          account: account ?? accounts[0],
+          postLogoutRedirectUri: window.location.origin + ROUTES.SIGNIN,
+        });
+      } catch {
         handleSuccessfulLogout();
       }
     };
