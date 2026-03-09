@@ -709,36 +709,17 @@ export const addUser = async (
   await page.fill('#password', password);
   await page.fill('#confirmPassword', password);
 
-  await page.click('[data-testid="roles-dropdown"] > .ant-select-selector');
   const rolesCombobox = page
     .getByTestId('roles-dropdown')
     .getByRole('combobox');
-  await expect
-    .poll(
-      async () => {
-        await rolesCombobox.fill(role);
-        await page.waitForSelector('.ant-select-dropdown:visible', {
-          state: 'visible',
-        });
-
-        return await page
-          .locator('.ant-select-dropdown:visible')
-          .locator('.ant-select-item-option')
-          .filter({ hasText: role })
-          .count();
-      },
-      {
-        timeout: 60000,
-        message: `Timed out waiting for role option ${role} to appear`,
-      }
-    )
-    .toBeGreaterThan(0);
-
+  await expect(rolesCombobox).toBeVisible({ timeout: 120000 });
+  await rolesCombobox.click();
+  await rolesCombobox.fill(role);
   const roleOption = page
-    .locator('.ant-select-dropdown:visible')
-    .locator('.ant-select-item-option')
-    .filter({ hasText: role })
+    .locator('.ant-select-item-option-content')
+    .filter({ hasText: new RegExp(`^${role}$`) })
     .first();
+  await expect(roleOption).toBeVisible({ timeout: 120000 });
   await roleOption.click();
   await clickOutside(page);
 

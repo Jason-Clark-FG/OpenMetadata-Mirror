@@ -354,11 +354,18 @@ export const verifyTeamListingAssetCount = async (
       .getByTestId('team-asset-count')
   ).toHaveText(expectedCount.toString());
 
-  await page
+  const teamHref = await page
     .locator(`[data-row-key="${team.data.name}"]`)
     .getByRole('link')
     .first()
-    .click();
+    .getAttribute('href');
+
+  if (!teamHref) {
+    throw new Error(`Unable to resolve team link for ${team.data.name}`);
+  }
+
+  await page.goto(teamHref);
+  await page.waitForLoadState('networkidle');
 
   const res = page.waitForResponse('/api/v1/search/query?*size=15*');
   await page.getByTestId('assets').click();

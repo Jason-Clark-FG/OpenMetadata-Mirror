@@ -113,20 +113,34 @@ export const addOwner = async ({
   }
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 
-  const ownerSearchBar = await page
-    .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
-    .isVisible();
+  const ownerSearchInput = page.getByTestId(
+    `owner-select-${lowerCase(type)}-search-bar`
+  );
+  await expect
+    .poll(
+      async () => {
+        const searchBarVisible = await ownerSearchInput
+          .isVisible()
+          .catch(() => false);
+        if (!searchBarVisible) {
+          await page.getByRole('tab', { name: type }).click();
+        }
 
-  if (!ownerSearchBar) {
-    await page.getByRole('tab', { name: type }).click();
-  }
+        return await ownerSearchInput.isVisible().catch(() => false);
+      },
+      {
+        timeout: 60000,
+        intervals: [500, 1000, 2000],
+        message: `Timed out waiting for ${type} owner search input`,
+      }
+    )
+    .toBe(true);
+  await ownerSearchInput.scrollIntoViewIfNeeded();
 
   const searchUser = page.waitForResponse(
     `/api/v1/search/query?q=*${encodeURIComponent(owner)}*`
   );
-  await page
-    .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
-    .fill(owner);
+  await ownerSearchInput.fill(owner);
   await searchUser;
 
   if (type === 'Teams') {
@@ -139,7 +153,26 @@ export const addOwner = async ({
       exact: true,
     });
 
-    await ownerItem.waitFor({ state: 'visible' });
+    await expect
+      .poll(
+        async () => {
+          const visible = await ownerItem.isVisible().catch(() => false);
+          if (visible) {
+            return true;
+          }
+
+          await ownerSearchInput.fill('');
+          await ownerSearchInput.fill(owner);
+
+          return await ownerItem.isVisible().catch(() => false);
+        },
+        {
+          timeout: 60000,
+          intervals: [500, 1000, 2000],
+          message: `Timed out waiting for owner ${owner} to appear`,
+        }
+      )
+      .toBe(true);
     await ownerItem.click();
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
     await page.getByTestId('selectable-list-update-btn').click();

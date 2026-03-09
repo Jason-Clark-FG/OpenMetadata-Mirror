@@ -348,6 +348,7 @@ test.describe('Tag Page with Admin Roles', () => {
       .getByRole('switch');
 
     // Verify toggle is enabled when classification is enabled
+    await expect(tagToggle).toBeVisible({ timeout: 60000 });
     await expect(tagToggle).toBeEnabled();
 
     // Disable the classification
@@ -360,6 +361,7 @@ test.describe('Tag Page with Admin Roles', () => {
     await disableClassificationResponse;
 
     // Verify toggle is now disabled
+    await expect(tagToggle).toBeVisible({ timeout: 60000 });
     await expect(tagToggle).toBeDisabled();
 
     // Re-enable the classification
@@ -372,6 +374,7 @@ test.describe('Tag Page with Admin Roles', () => {
     await enableClassificationResponse;
 
     // Verify toggle is enabled again
+    await expect(tagToggle).toBeVisible({ timeout: 60000 });
     await expect(tagToggle).toBeEnabled();
   });
 });

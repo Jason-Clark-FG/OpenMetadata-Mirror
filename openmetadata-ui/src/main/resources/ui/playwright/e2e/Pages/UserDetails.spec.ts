@@ -511,6 +511,10 @@ test.describe('User with different Roles', () => {
       .getByText('Application bot role', { exact: true })
       .click();
 
+    await adminPage.keyboard.press('Escape');
+    await expect(
+      adminPage.locator('.roles-custom-dropdown-class')
+    ).not.toBeVisible();
     await adminPage.getByTestId('user-profile-edit-roles-save-button').click();
 
     await expect(adminPage.getByTestId('user-profile-roles')).toContainText(

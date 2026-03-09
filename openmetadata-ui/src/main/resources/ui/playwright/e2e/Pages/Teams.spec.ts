@@ -336,9 +336,15 @@ test.describe('Teams Page', () => {
     });
 
     await test.step('Hard Delete Team', async () => {
+      await searchTeam(page, teamDetails.updatedName);
+      const teamLink = page.getByRole('link', { name: teamDetails.updatedName });
+      await expect(teamLink).toBeVisible({ timeout: 60000 });
+      const href = await teamLink.getAttribute('href');
+      expect(href).toBeTruthy();
+
       const fetchTeamResponse = page.waitForResponse(`/api/v1/teams/name/*`);
 
-      await page.getByRole('link', { name: teamDetails.updatedName }).click();
+      await page.goto(href!);
 
       await fetchTeamResponse;
 

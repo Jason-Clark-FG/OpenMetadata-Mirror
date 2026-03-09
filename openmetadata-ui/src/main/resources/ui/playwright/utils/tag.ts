@@ -72,10 +72,13 @@ export const visitClassificationPage = async (
     { state: 'detached' }
   );
 
-  await page
-    .getByTestId('data-summary-container')
-    .getByText(classificationDisplayName)
-    .click();
+  const classificationEntry = page
+    .getByTestId('side-panel-classification')
+    .filter({ hasText: classificationDisplayName })
+    .first();
+
+  await expect(classificationEntry).toBeVisible();
+  await classificationEntry.click();
 
   await expect(page.locator('.activeCategory')).toContainText(
     classificationDisplayName

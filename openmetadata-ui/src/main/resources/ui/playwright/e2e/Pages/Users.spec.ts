@@ -473,15 +473,21 @@ test.describe('User with Data Consumer Roles', () => {
   }) => {
     await redirectToHomePage(adminPage);
 
-    await tableEntity.visitEntityPage(adminPage);
-
-    await addOwner({
-      page: adminPage,
-      owner: user.responseData.displayName,
-      type: 'Users',
-      endpoint: EntityTypeEndpoint.Table,
-      dataTestId: 'data-assets-header',
+    const { apiContext, afterAction } = await getApiContext(adminPage);
+    await tableEntity.patch({
+      apiContext,
+      patchData: [
+        {
+          op: 'add',
+          path: '/owners/0',
+          value: {
+            id: user.responseData.id,
+            type: 'user',
+          },
+        },
+      ],
     });
+    await afterAction();
 
     await tableEntity.visitEntityPage(dataConsumerPage);
 
