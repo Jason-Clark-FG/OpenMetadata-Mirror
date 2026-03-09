@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import { expect } from '@playwright/test';
-import { Table } from '../../../src/generated/entity/data/table';
+import { DataType, Table } from '../../../src/generated/entity/data/table';
 import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { SidebarItem } from '../../constant/sidebar';
 import { TableClass } from '../../support/entity/TableClass';
@@ -659,7 +659,7 @@ test.describe(
       for (let i = 0; i < 50; i++) {
         columns.push({
           name: `extra_col_${i}`,
-          dataType: 'VARCHAR',
+          dataType: DataType.Varchar,
           dataLength: 100,
           dataTypeDisplay: 'varchar',
           description: `Extra column ${i}`,
@@ -668,7 +668,7 @@ test.describe(
       // Add the target column
       columns.push({
         name: targetColumnName,
-        dataType: 'VARCHAR',
+        dataType: DataType.Varchar,
         dataLength: 100,
         dataTypeDisplay: 'varchar',
         description: 'Target column for search test',
@@ -735,7 +735,16 @@ test.describe(
       // 5. Visit the copied Link
       await Promise.all([
         page.waitForResponse(
-          `/api/v1/tables/name/${createdTable.fullyQualifiedName}/columns?*`
+          (response) =>
+            response
+              .url()
+              .includes(
+                `/api/v1/tables/name/${encodeURIComponent(
+                  createdTable.fullyQualifiedName!
+                )}/columns`
+              ) &&
+            response.url().includes('fields=') &&
+            response.request().method() === 'GET'
         ),
         page.goto(clipboardText),
       ]);
