@@ -260,3 +260,8 @@ export const TERM_LABEL_BG_PADDING: [number, number, number, number] = [
 export const MIN_ZOOM = 0.1;
 export const MAX_ZOOM = 3;
 export const DEFAULT_ZOOM = 1;
+
+export const DATA_MODE_ASSET_CIRCLE_SIZE = 20;
+export const DATA_MODE_ASSET_LABEL_FONT_SIZE = 10;
+export const COMBO_HEADER_HEIGHT = 34;
+export const COMBO_LABEL_PADDING_LEFT = 13;

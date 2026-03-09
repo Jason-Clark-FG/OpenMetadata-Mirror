@@ -18,6 +18,8 @@ import {
   register,
 } from '@antv/g6';
 import {
+  COMBO_HEADER_HEIGHT,
+  COMBO_LABEL_PADDING_LEFT,
   EDGE_LABEL_BG_FILL,
   EDGE_LABEL_BG_RADIUS,
   EDGE_LABEL_BG_SHADOW_BLUR,
@@ -96,9 +98,6 @@ export function getCanvasColor(cssVar: string, fallbackHex: string): string {
 
   return fallbackHex;
 }
-
-const COMBO_HEADER_HEIGHT = 34;
-const COMBO_LABEL_PADDING_LEFT = 13;
 
 export const LABEL_PLACEMENT_BOTTOM = 'bottom';
 export const LABEL_PLACEMENT_CENTER = 'center';

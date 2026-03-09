@@ -71,59 +71,6 @@ export function getLayoutConfig(
   isHierarchyMode = false
 ): LayoutConfig {
   const baseNodeSize = (d?: LayoutNodeLike) => getNodeSize(d);
-  const forceIterations = 300;
-  const linkDistanceFn = (
-    _edge: unknown,
-    source?: LayoutNodeLike,
-    target?: LayoutNodeLike
-  ) => {
-    const [w1, h1] = getNodeSize(source);
-    const [w2, h2] = getNodeSize(target);
-    const diag = Math.max(w1, h1) + Math.max(w2, h2);
-
-    return Math.max(MIN_LINK_DISTANCE, diag + MIN_NODE_SPACING);
-  };
-
-  if (layoutType === 'force') {
-    if (isDataMode) {
-      return {
-        type: 'force',
-        animation: false,
-        maxIteration: forceIterations,
-        preventOverlap: true,
-        nodeSize: baseNodeSize,
-        nodeSpacing: 220,
-        linkDistance: 220,
-        collideStrength: 1,
-        nodeStrength: -600,
-        edgeStrength: 0.3,
-        gravity: 5,
-        damping: 0.9,
-        maxSpeed: 50,
-      };
-    }
-
-    return {
-      type: 'force',
-      animation: false,
-      maxIteration: forceIterations,
-      preventOverlap: true,
-      nodeSize: baseNodeSize,
-      nodeSpacing: hasHulls ? COMBO_PADDING * 2 + HULL_GAP : MIN_NODE_SPACING,
-      linkDistance: nodeCount <= 2 ? MIN_LINK_DISTANCE : linkDistanceFn,
-      collideStrength: 1,
-      nodeStrength: -400,
-      edgeStrength: 0.1,
-      gravity: 10,
-      damping: 0.9,
-      maxSpeed: 50,
-      ...(hasHulls && {
-        clustering: true,
-        nodeClusterBy: 'glossaryId',
-        clusterNodeStrength: 30,
-      }),
-    };
-  }
 
   if (layoutType === 'dagre') {
     let nodesep = hasHulls
@@ -175,6 +122,6 @@ export function getLayoutConfig(
   }
 
   return {
-    type: (layoutType as 'force' | 'dagre' | 'radial' | 'circular') || 'force',
+    type: layoutType as 'dagre' | 'radial' | 'circular',
   };
 }

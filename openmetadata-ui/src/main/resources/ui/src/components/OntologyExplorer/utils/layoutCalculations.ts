@@ -11,6 +11,11 @@
  *  limitations under the License.
  */
 import {
+  COMBO_HEADER_HEIGHT,
+  DATA_MODE_ASSET_CIRCLE_SIZE,
+  DATA_MODE_ASSET_LABEL_FONT_SIZE,
+} from '../OntologyExplorer.constants';
+import {
   HierarchyGraphResult,
   MergedEdge,
   OntologyNode,
@@ -26,10 +31,7 @@ import {
 const COMBO_PADDING = 56;
 const HULL_GAP = 72;
 const MIN_NODE_SPACING = 40;
-const COMBO_HEADER_HEIGHT = 34;
 
-const DATA_MODE_ASSET_CIRCLE_SIZE = 20;
-const DATA_MODE_ASSET_LABEL_FONT_SIZE = 10;
 const DATA_MODE_ASSET_SPACING_ALONG_ARC = 90;
 const DATA_MODE_RING_SAFETY_PAD = 45;
 

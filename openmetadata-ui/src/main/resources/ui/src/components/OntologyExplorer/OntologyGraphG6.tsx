@@ -41,7 +41,6 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
       onNodeDoubleClick,
       onNodeContextMenu,
       onPaneClick,
-      showMinimap = false,
     },
     ref
   ) => {
@@ -93,7 +92,6 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
       focusNodeId,
       selectedNodeId,
       dataSignature,
-      showMinimap,
       onNodeClick,
       onNodeDoubleClick,
       onNodeContextMenu,

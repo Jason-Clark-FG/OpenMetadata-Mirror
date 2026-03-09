@@ -14,6 +14,9 @@ import { ComboData, EdgeData, NodeData } from '@antv/g6';
 import { useCallback, useMemo } from 'react';
 import {
   COMBO_FILL_DEFAULT,
+  COMBO_LABEL_PADDING_LEFT,
+  DATA_MODE_ASSET_CIRCLE_SIZE,
+  DATA_MODE_ASSET_LABEL_FONT_SIZE,
   EDGE_STROKE_COLOR,
   NODE_BORDER_COLOR,
   NODE_BORDER_RADIUS,
@@ -52,11 +55,8 @@ import {
   computeGlossaryGroupPositions,
 } from '../utils/layoutCalculations';
 
-const DATA_MODE_ASSET_CIRCLE_SIZE = 20;
-const DATA_MODE_ASSET_LABEL_FONT_SIZE = 10;
 const COMBO_PADDING = 48;
 const COMBO_LABEL_PADDING_TOP_BOTTOM = 10;
-const COMBO_LABEL_PADDING_LEFT = 13;
 const CROSS_GLOSSARY_EDGE_COLOR = '#CA8504';
 
 const INVERSE_RELATION_PAIRS: Record<string, string> = {
@@ -164,11 +164,6 @@ export function useGraphDataBuilder({
         ? glossaryColorMap[node.glossaryId]
         : 'var(--color-blue-600)',
     [glossaryColorMap]
-  );
-
-  const computeNodeHeight = useCallback(
-    (_nodeId: string): number => NODE_HEIGHT,
-    []
   );
 
   const mergedEdgesList = useMemo(() => mergeEdges(inputEdges), [inputEdges]);
@@ -348,7 +343,7 @@ export function useGraphDataBuilder({
 
     const g6Nodes: NodeData[] = nodesForGraph.map((node) => {
       const color = computeNodeColor(node);
-      const height = computeNodeHeight(node.id);
+      const height = NODE_HEIGHT;
       const label = node.originalLabel ?? node.label;
       const nodeWidth = estimateNodeWidth(label);
       const pos =
@@ -707,7 +702,6 @@ export function useGraphDataBuilder({
     glossaryColorMap,
     neighborSet,
     computeNodeColor,
-    computeNodeHeight,
     clickedEdgeId,
     layoutType,
     explorationMode,

@@ -21,6 +21,8 @@ import {
 } from '@antv/g6';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
+  DATA_MODE_ASSET_CIRCLE_SIZE,
+  DATA_MODE_ASSET_LABEL_FONT_SIZE,
   DEFAULT_ZOOM,
   EDGE_STROKE_COLOR,
   MAX_ZOOM,
@@ -44,9 +46,6 @@ import {
   LABEL_PLACEMENT_BOTTOM,
   LABEL_PLACEMENT_CENTER,
 } from '../utils/graphStyles';
-
-const DATA_MODE_ASSET_CIRCLE_SIZE = 20;
-const DATA_MODE_ASSET_LABEL_FONT_SIZE = 10;
 
 /** Zoom-out factor applied after fitView so the graph always shows a zoomed-out view in every mode/layout. */
 const FIT_VIEW_ZOOM_OUT = 0.6;
@@ -83,7 +82,6 @@ interface UseOntologyGraphProps {
   focusNodeId?: string | null;
   selectedNodeId?: string | null;
   dataSignature?: string;
-  showMinimap?: boolean;
   onNodeClick: (node: OntologyNode) => void;
   onNodeDoubleClick: (node: OntologyNode) => void;
   onNodeContextMenu: (
@@ -108,7 +106,6 @@ export function useOntologyGraph({
   focusNodeId,
   selectedNodeId,
   dataSignature,
-  showMinimap,
   onNodeClick,
   onNodeDoubleClick,
   onNodeContextMenu,
@@ -413,16 +410,7 @@ export function useOntologyGraph({
         { type: 'zoom-canvas' },
         { type: 'drag-element' },
       ],
-      plugins: showMinimap
-        ? [
-            {
-              key: 'minimap',
-              type: 'minimap',
-              size: [180, 120],
-              position: 'bottom-right',
-            },
-          ]
-        : [],
+      plugins: [],
     });
 
     graphRef.current = graph;

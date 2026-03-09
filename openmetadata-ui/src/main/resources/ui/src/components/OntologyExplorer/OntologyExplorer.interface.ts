@@ -55,13 +55,7 @@ export interface OntologyGraphData {
   edges: OntologyEdge[];
 }
 
-export interface DetailsPanelProps {
-  node: OntologyNode | null;
-  position?: { x: number; y: number };
-  onClose: () => void;
-}
-
-export type LayoutAlgorithm = 'force' | 'hierarchical' | 'radial' | 'circular';
+export type LayoutAlgorithm = 'hierarchical' | 'radial' | 'circular';
 export type GraphViewMode = 'overview' | 'hierarchy' | 'crossGlossary';
 
 export interface GraphSettings {
@@ -116,10 +110,12 @@ export interface OntologyGraphProps {
     position: { x: number; y: number }
   ) => void;
   onPaneClick: () => void;
-  showMinimap?: boolean;
 }
 
-export interface EnhancedDetailsPanelProps extends DetailsPanelProps {
+export interface EnhancedDetailsPanelProps {
+  node: OntologyNode | null;
+  position?: { x: number; y: number };
+  onClose: () => void;
   edges?: OntologyEdge[];
   nodes?: OntologyNode[];
   relationTypes?: GlossaryTermRelationType[];
@@ -166,7 +162,7 @@ export interface MergedEdge {
 }
 
 export interface LayoutConfig {
-  type: 'force' | 'dagre' | 'radial' | 'circular';
+  type: 'dagre' | 'radial' | 'circular';
   [key: string]: unknown;
 }
 
