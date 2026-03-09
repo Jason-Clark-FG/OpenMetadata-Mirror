@@ -25,6 +25,7 @@ import { AddTestCaseListFiltersProps } from './AddTestCaseListFilters.interface'
 const AddTestCaseListFilters = ({
   filterOptions,
   filterSelectedKeys,
+  filterLoading,
   onChange,
   onSearch,
 }: AddTestCaseListFiltersProps) => {
@@ -42,7 +43,8 @@ const AddTestCaseListFilters = ({
       {ADD_TEST_CASE_LIST_FILTERS.map((filter) => (
         <SearchDropdown
           hideCounts
-          hideSearchBar
+          hideSearchBar={!filter.enableSearch}
+          isSuggestionsLoading={filterLoading?.[filter.searchKey]}
           key={filter.searchKey}
           label={t(filter.labelKey)}
           options={filterOptions[filter.searchKey]}

@@ -17,6 +17,7 @@ import { AddTestCaseListFilterKey } from './AddTestCaseListFilters.constants';
 export interface AddTestCaseListFiltersProps {
   filterOptions: Record<AddTestCaseListFilterKey, SearchDropdownOption[]>;
   filterSelectedKeys: Record<AddTestCaseListFilterKey, SearchDropdownOption[]>;
+  filterLoading?: Partial<Record<AddTestCaseListFilterKey, boolean>>;
   onChange: (
     values: SearchDropdownOption[],
     searchKey: AddTestCaseListFilterKey

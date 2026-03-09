@@ -35,11 +35,15 @@ import { ReactComponent as ValidityIcon } from '../../assets/svg/ic-validity.svg
 import { ReactComponent as NoDimensionIcon } from '../../assets/svg/no-dimension-icon.svg';
 import { SelectionOption } from '../../components/common/SelectionCardGroup/SelectionCardGroup.interface';
 import { TestCaseSearchParams } from '../../components/DataQuality/DataQuality.interface';
+import { SearchDropdownOption } from '../../components/SearchDropdown/SearchDropdown.interface';
 import { TEST_CASE_FILTERS } from '../../constants/profiler.constant';
 import { TestCaseType } from '../../enums/TestSuite.enum';
 import { Table } from '../../generated/entity/data/table';
 import { DataQualityReport } from '../../generated/tests/dataQualityReport';
-import { TestCaseParameterValue } from '../../generated/tests/testCase';
+import {
+  TestCase,
+  TestCaseParameterValue,
+} from '../../generated/tests/testCase';
 import {
   DataQualityDimensions,
   TestDataType,
@@ -51,6 +55,8 @@ import { DataQualityDashboardChartFilters } from '../../pages/DataQuality/DataQu
 import { ListTestCaseParamsBySearch } from '../../rest/testAPI';
 import { getEntryFormattedValue } from '../DataInsightUtils';
 import { formatDate } from '../date-time/DateTimeUtils';
+import { getColumnNameFromEntityLink } from '../EntityUtils';
+import { getEntityFQN } from '../FeedUtils';
 import { generateEntityLink } from '../TableUtils';
 
 /**
@@ -405,13 +411,15 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
             return (
               <div
                 className="tw:flex tw:items-center tw:justify-between tw:gap-6 tw:pb-1 tw:text-sm"
-                key={`item-${index}`}>
+                key={`item-${index}`}
+              >
                 <span className="tw:flex tw:items-center">
                   <Surface
                     className="tw:mr-2"
                     height={14}
                     version="1.1"
-                    width={4}>
+                    width={4}
+                  >
                     <rect fill={entry.color} height="14" rx="2" width="4" />
                   </Surface>
                   <span className="tw:text-tertiary tw:text-[11px]">
@@ -539,3 +547,70 @@ export const getServiceTypeForTestDefinition = (
 ): string | undefined => {
   return table?.serviceType;
 };
+
+export function getColumnFilterOptions(
+  items: TestCase[]
+): SearchDropdownOption[] {
+  const withColumn = items.filter((tc) =>
+    tc.entityLink?.includes('::columns::')
+  );
+  const pairs = withColumn.map((tc) => {
+    const tableFqn = getEntityFQN(tc.entityLink);
+    const colName = getColumnNameFromEntityLink(tc.entityLink);
+
+    return {
+      key: `${tableFqn}::${colName ?? ''}`,
+      label: colName ?? '--',
+    };
+  });
+  const seen = new Set<string>();
+
+  return pairs.filter((p) => {
+    if (seen.has(p.key)) {
+      return false;
+    }
+
+    seen.add(p.key);
+
+    return true;
+  });
+}
+
+export function getSelectedOptionsFromKeys(
+  keys: string[],
+  options: SearchDropdownOption[],
+  getDefaultLabel: (key: string) => string
+): SearchDropdownOption[] {
+  return keys.map((key) => {
+    const opt = options.find((o) => o.key === key);
+
+    return opt ?? { key, label: getDefaultLabel(key) };
+  });
+}
+
+export function filterTestCasesByTableAndColumn(
+  items: TestCase[],
+  filterTables: string[],
+  filterColumns: string[]
+): TestCase[] {
+  let result = items;
+  if (filterTables.length > 0) {
+    const tableSet = new Set(filterTables);
+    result = result.filter((tc) => tableSet.has(getEntityFQN(tc.entityLink)));
+  }
+  if (filterColumns.length > 0) {
+    const columnSet = new Set(filterColumns);
+    result = result.filter((tc) => {
+      if (!tc.entityLink?.includes('::columns::')) {
+        return false;
+      }
+
+      const tableFqn = getEntityFQN(tc.entityLink);
+      const colName = getColumnNameFromEntityLink(tc.entityLink);
+
+      return columnSet.has(`${tableFqn}::${colName ?? ''}`);
+    });
+  }
+
+  return result;
+}

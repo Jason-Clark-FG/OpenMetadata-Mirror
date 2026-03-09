@@ -26,6 +26,7 @@ export interface AddTestCaseListFilterConfig {
   labelKey: string;
   singleSelect: boolean;
   showSelectedCounts?: boolean;
+  enableSearch?: boolean;
 }
 
 export const ADD_TEST_CASE_LIST_FILTERS: AddTestCaseListFilterConfig[] = [
@@ -44,6 +45,7 @@ export const ADD_TEST_CASE_LIST_FILTERS: AddTestCaseListFilterConfig[] = [
     labelKey: 'label.table',
     singleSelect: false,
     showSelectedCounts: true,
+    enableSearch: true,
   },
   {
     searchKey: 'column',

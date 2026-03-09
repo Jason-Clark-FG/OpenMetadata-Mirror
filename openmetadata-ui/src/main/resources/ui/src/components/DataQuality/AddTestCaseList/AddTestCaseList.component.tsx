@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { Button, Checkbox, Col, List, Row, Space, Typography } from 'antd';
+import { debounce } from 'lodash';
 import isEmpty from 'lodash/isEmpty';
 import omit from 'lodash/omit';
 import VirtualList from 'rc-virtual-list';
@@ -24,7 +25,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
-import { PAGE_SIZE_MEDIUM } from '../../../constants/constants';
+import { PAGE_SIZE_BASE, PAGE_SIZE_MEDIUM } from '../../../constants/constants';
 import {
   TEST_CASE_STATUS_FILTER_OPTIONS,
   TEST_CASE_STATUS_LABELS,
@@ -32,10 +33,17 @@ import {
 } from '../../../constants/profiler.constant';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
+import { SearchIndex } from '../../../enums/search.enum';
 import { TestCaseType } from '../../../enums/TestSuite.enum';
 import { TestCase, TestCaseStatus } from '../../../generated/tests/testCase';
+import { searchQuery } from '../../../rest/searchAPI';
 import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { getNameFromFQN } from '../../../utils/CommonUtils';
+import {
+  filterTestCasesByTableAndColumn,
+  getColumnFilterOptions,
+  getSelectedOptionsFromKeys,
+} from '../../../utils/DataQuality/DataQualityUtils';
 import {
   getColumnNameFromEntityLink,
   getEntityName,
@@ -48,12 +56,6 @@ import Loader from '../../common/Loader/Loader';
 import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
 import { AddTestCaseModalProps } from './AddTestCaseList.interface';
-import {
-  filterTestCasesByTableAndColumn,
-  getColumnFilterOptions,
-  getSelectedOptionsFromKeys,
-  getTableFilterOptions,
-} from './AddTestCaseList.utils';
 import AddTestCaseListFilters from './AddTestCaseListFilters.component';
 import { AddTestCaseListFilterKey } from './AddTestCaseListFilters.constants';
 
@@ -83,6 +85,10 @@ export const AddTestCaseList = ({
   );
   const [filterTables, setFilterTables] = useState<string[]>([]);
   const [filterColumns, setFilterColumns] = useState<string[]>([]);
+  const [tableOptionsFromApi, setTableOptionsFromApi] = useState<
+    SearchDropdownOption[]
+  >([]);
+  const [isTableOptionsLoading, setIsTableOptionsLoading] = useState(false);
 
   const statusOptions = useMemo<SearchDropdownOption[]>(
     () =>
@@ -101,8 +107,6 @@ export const AddTestCaseList = ({
       })),
     []
   );
-
-  const tableOptions = useMemo(() => getTableFilterOptions(items), [items]);
 
   const columnOptions = useMemo(() => getColumnFilterOptions(items), [items]);
 
@@ -131,8 +135,12 @@ export const AddTestCaseList = ({
 
   const tableSelectedKeys = useMemo(
     () =>
-      getSelectedOptionsFromKeys(filterTables, tableOptions, getNameFromFQN),
-    [filterTables, tableOptions]
+      getSelectedOptionsFromKeys(
+        filterTables,
+        tableOptionsFromApi,
+        getNameFromFQN
+      ),
+    [filterTables, tableOptionsFromApi]
   );
 
   const columnSelectedKeys = useMemo(
@@ -153,6 +161,35 @@ export const AddTestCaseList = ({
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
+
+  const fetchTableData = useCallback(async (search = WILD_CARD_CHAR) => {
+    setIsTableOptionsLoading(true);
+    try {
+      const response = await searchQuery({
+        query: `*${search}*`,
+        pageNumber: 1,
+        pageSize: PAGE_SIZE_BASE,
+        searchIndex: SearchIndex.TABLE,
+        fetchSource: true,
+        includeFields: ['name', 'fullyQualifiedName', 'displayName'],
+      });
+
+      const options: SearchDropdownOption[] = response.hits.hits.map((hit) => ({
+        key: hit._source.fullyQualifiedName,
+        label: getEntityName(hit._source),
+      }));
+      setTableOptionsFromApi(options);
+    } catch {
+      setTableOptionsFromApi([]);
+    } finally {
+      setIsTableOptionsLoading(false);
+    }
+  }, []);
+
+  const debounceFetchTableData = useCallback(
+    debounce((search: string) => fetchTableData(search), 1000),
+    [fetchTableData]
+  );
 
   const fetchTestCases = useCallback(
     async ({
@@ -272,6 +309,19 @@ export const AddTestCaseList = ({
   useEffect(() => {
     fetchTestCases({ searchText: searchTerm });
   }, [searchTerm, filterStatus, filterTestType, fetchTestCases]);
+
+  useEffect(() => {
+    fetchTableData();
+  }, [fetchTableData]);
+
+  const handleFilterSearch = useCallback(
+    (searchText: string, searchKey: string) => {
+      if (searchKey === 'table') {
+        debounceFetchTableData(searchText);
+      }
+    },
+    [debounceFetchTableData]
+  );
 
   const renderList = useMemo(() => {
     const listSource =
@@ -408,16 +458,19 @@ export const AddTestCaseList = ({
     []
   );
 
-  const noopSearch = useCallback(() => {}, []);
-
   const filterOptions = useMemo(
     () => ({
       status: statusOptions,
       testType: testTypeOptions,
-      table: tableOptions,
+      table: tableOptionsFromApi,
       column: columnOptions,
     }),
-    [statusOptions, testTypeOptions, tableOptions, columnOptions]
+    [statusOptions, testTypeOptions, tableOptionsFromApi, columnOptions]
+  );
+
+  const filterLoading = useMemo(
+    () => ({ table: isTableOptionsLoading }),
+    [isTableOptionsLoading]
   );
 
   const filterSelectedKeys = useMemo(
@@ -451,10 +504,11 @@ export const AddTestCaseList = ({
       </Col>
       <Col span={24}>
         <AddTestCaseListFilters
+          filterLoading={filterLoading}
           filterOptions={filterOptions}
           filterSelectedKeys={filterSelectedKeys}
           onChange={handleFilterChange}
-          onSearch={noopSearch}
+          onSearch={handleFilterSearch}
         />
       </Col>
       {renderList}

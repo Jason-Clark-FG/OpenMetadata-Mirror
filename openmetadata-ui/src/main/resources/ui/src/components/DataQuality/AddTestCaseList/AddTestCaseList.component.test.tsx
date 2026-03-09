@@ -20,6 +20,7 @@ import {
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntityReference, TestCase } from '../../../generated/tests/testCase';
+import { searchQuery } from '../../../rest/searchAPI';
 import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { AddTestCaseList } from './AddTestCaseList.component';
 import { AddTestCaseModalProps } from './AddTestCaseList.interface';
@@ -68,14 +69,20 @@ jest.mock('../../../utils/CommonUtils', () => {
     getNameFromFQN: jest.fn().mockImplementation((fqn) => fqn),
   };
 });
-jest.mock('../../../rest/testAPI', () => {
-  return {
-    getListTestCaseBySearch: jest.fn(),
-  };
-});
+jest.mock('../../../rest/testAPI', () => ({
+  getListTestCaseBySearch: jest.fn(),
+}));
+
+jest.mock('../../../rest/searchAPI', () => ({
+  searchQuery: jest.fn().mockResolvedValue({
+    hits: { hits: [] },
+  }),
+}));
 
 jest.mock('../../../constants/constants', () => ({
+  ...jest.requireActual('../../../constants/constants'),
   getEntityDetailsPath: jest.fn(),
+  PAGE_SIZE_BASE: 15,
   PAGE_SIZE_MEDIUM: 25,
 }));
 
@@ -97,11 +104,13 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
   __esModule: true,
   default: function MockAddTestCaseListFilters({
     onChange,
+    onSearch,
   }: {
     onChange: (
       values: { key: string; label: string }[],
       searchKey: string
     ) => void;
+    onSearch?: (searchText: string, searchKey: string) => void;
   }) {
     return (
       <div data-testid="add-test-case-list-filters">
@@ -139,6 +148,13 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           }
         >
           Apply table filter
+        </button>
+        <button
+          data-testid="filter-table-search"
+          type="button"
+          onClick={() => onSearch?.('table_search_term', 'table')}
+        >
+          Trigger table search
         </button>
         <button
           data-testid="filter-column"
@@ -512,6 +528,46 @@ describe('AddTestCaseList', () => {
         expect(screen.queryByTestId('test_case_3')).not.toBeInTheDocument();
       });
     });
+
+    it('table filter search calls search API', async () => {
+      jest.useFakeTimers();
+      mockGetListTestCaseBySearch.mockResolvedValue({
+        data: mockTestCases,
+        paging: { total: 3 },
+      });
+
+      await act(async () => {
+        renderWithRouter(mockProps);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-table-search')).toBeInTheDocument();
+      });
+
+      const mockSearchQuery = searchQuery as jest.MockedFunction<
+        typeof searchQuery
+      >;
+      mockSearchQuery.mockClear();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('filter-table-search'));
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      await waitFor(() => {
+        expect(mockSearchQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            query: '*table_search_term*',
+            searchIndex: 'table_search_index',
+          })
+        );
+      });
+
+      jest.useRealTimers();
+    });
   });
 
   describe('Test case selection', () => {
@@ -692,7 +748,9 @@ describe('AddTestCaseList', () => {
         },
       });
 
-      renderWithRouter(mockProps);
+      await act(async () => {
+        renderWithRouter(mockProps);
+      });
 
       await waitFor(() => {
         expect(mockGetListTestCaseBySearch).toHaveBeenCalledWith({
@@ -741,7 +799,7 @@ describe('AddTestCaseList', () => {
         },
       });
 
-      const { container } = renderWithRouter(mockProps);
+      const { container } = await act(async () => renderWithRouter(mockProps));
 
       await waitFor(() => {
         expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
