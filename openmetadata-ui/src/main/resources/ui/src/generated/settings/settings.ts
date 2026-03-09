@@ -242,6 +242,12 @@ export interface PipelineServiceClientConfiguration {
      */
     samlConfiguration?: SamlSSOClientConfig;
     /**
+     * Validity for the authenticated session across all auth providers. Values below 3600
+     * seconds fall back to the default 604800-second expiry. If unset, OpenMetadata falls back
+     * to the legacy OIDC-specific sessionExpiry when present.
+     */
+    sessionExpiry?: number;
+    /**
      * Token Validation Algorithm to use.
      */
     tokenValidationAlgorithm?: TokenValidationAlgorithm;
@@ -1062,6 +1068,12 @@ export interface AuthenticationConfiguration {
      * Saml Configuration that is applicable only when the provider is Saml
      */
     samlConfiguration?: SamlSSOClientConfig;
+    /**
+     * Validity for the authenticated session across all auth providers. Values below 3600
+     * seconds fall back to the default 604800-second expiry. If unset, OpenMetadata falls back
+     * to the legacy OIDC-specific sessionExpiry when present.
+     */
+    sessionExpiry?: number;
     /**
      * Token Validation Algorithm to use.
      */
