@@ -56,15 +56,19 @@ Focused on a single area (schema, tests, security, performance, lineage, etc.).
 
 Identify the connector being reviewed:
 ```bash
-# For PR reviews
+# For PR reviews — identify changed connector
 gh pr diff {PR_NUMBER} --name-only
 
 # For path-based reviews
 ls ingestion/src/metadata/ingestion/source/{service_type}/{name}/
+```
 
-# For structured analysis (optional)
+Then **always** run the static analyzer to get a structured baseline:
+```bash
 python ${CLAUDE_SKILL_DIR}/scripts/analyze_connector.py {service_type} {name} --json
 ```
+
+This catches mechanical issues automatically: missing pagination, absent SSL config, Pydantic alias problems, empty test stubs, wildcard lineage, duplicate test steps, and scaffolding artifacts. Feed the JSON output to the review agents so they don't duplicate these checks and can focus on semantic issues.
 
 Read the connector's files and determine its service type, connection type, and capabilities.
 

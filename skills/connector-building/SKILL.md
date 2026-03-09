@@ -183,7 +183,14 @@ mvn spotless:apply                           # Format Java
 
 **Never skip formatting** — unformatted code will fail CI.
 
-### Phase 7: VALIDATE — End-to-End Checklist
+### Phase 7: VALIDATE — Run Static Analysis and Checklist
+
+Run the static analyzer as a self-check before submitting:
+```bash
+python skills/connector-review/scripts/analyze_connector.py {service_type} {name}
+```
+
+Fix any issues it reports. Then verify the full checklist:
 
 ```
 [ ] JSON Schema: validates, $ref resolves, supports* flags correct
