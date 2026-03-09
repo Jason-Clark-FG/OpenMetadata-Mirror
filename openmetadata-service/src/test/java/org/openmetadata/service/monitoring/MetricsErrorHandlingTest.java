@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ public class MetricsErrorHandlingTest {
     // Clear any existing registries
     Metrics.globalRegistry.clear();
     // Clear all registries to avoid conflicts
-    Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+    new ArrayList<>(Metrics.globalRegistry.getRegistries()).forEach(Metrics.globalRegistry::remove);
 
     // Add a new simple registry for testing
     SimpleMeterRegistry registry = new SimpleMeterRegistry();

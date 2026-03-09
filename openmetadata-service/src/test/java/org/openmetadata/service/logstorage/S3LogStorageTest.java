@@ -58,7 +58,11 @@ public class S3LogStorageTest {
         new LogStorageConfiguration()
             .withType(LogStorageConfiguration.Type.S_3)
             .withBucketName(testBucket)
-            .withAwsConfig(new AWSCredentials().withAwsRegion("us-east-1"))
+            .withAwsConfig(
+                new AWSCredentials()
+                    .withAwsRegion("us-east-1")
+                    .withAwsAccessKeyId("test-access-key")
+                    .withAwsSecretAccessKey("test-secret-key"))
             .withPrefix(testPrefix)
             .withEnableServerSideEncryption(true)
             .withStorageClass(LogStorageConfiguration.StorageClass.STANDARD_IA)
@@ -258,8 +262,6 @@ public class S3LogStorageTest {
 
   @Test
   void testDeleteLogs() throws IOException {
-    String expectedKey = String.format("%s/%s/%s/logs.txt", testPrefix, testPipelineFQN, testRunId);
-
     // Mock delete object
     when(mockS3Client.deleteObject(any(DeleteObjectRequest.class)))
         .thenReturn(DeleteObjectResponse.builder().build());
@@ -267,8 +269,8 @@ public class S3LogStorageTest {
     // Test deleting logs
     assertDoesNotThrow(() -> s3LogStorage.deleteLogs(testPipelineFQN, testRunId));
 
-    // Verify delete was called
-    verify(mockS3Client, times(1)).deleteObject(any(DeleteObjectRequest.class));
+    // Verify both the log object and active marker are deleted.
+    verify(mockS3Client, times(2)).deleteObject(any(DeleteObjectRequest.class));
   }
 
   @Test
@@ -367,6 +369,14 @@ public class S3LogStorageTest {
         .thenReturn(
             CompletableFuture.completedFuture(
                 CreateMultipartUploadResponse.builder().uploadId("test-upload-id").build()));
+
+    when(mockS3AsyncClient.putObject(any(PutObjectRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(CompletableFuture.completedFuture(PutObjectResponse.builder().build()));
+
+    when(mockS3AsyncClient.uploadPart(any(UploadPartRequest.class), any(AsyncRequestBody.class)))
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                UploadPartResponse.builder().eTag("test-etag").build()));
 
     when(mockS3AsyncClient.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
         .thenReturn(

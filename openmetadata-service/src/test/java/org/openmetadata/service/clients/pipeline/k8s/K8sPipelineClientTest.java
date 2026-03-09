@@ -277,7 +277,7 @@ class K8sPipelineClientTest {
     CronOMJob cronOMJob = clientWithOMJob.buildCronOMJob(pipeline);
 
     assertEquals(3, cronOMJob.getSpec().getSuccessfulJobsHistoryLimit());
-    assertEquals(1, cronOMJob.getSpec().getFailedJobsHistoryLimit());
+    assertEquals(3, cronOMJob.getSpec().getFailedJobsHistoryLimit());
   }
 
   @Test
@@ -288,7 +288,7 @@ class K8sPipelineClientTest {
     CronOMJob cronOMJob = clientWithOMJob.buildCronOMJob(pipeline);
 
     assertNotNull(cronOMJob.getSpec().getStartingDeadlineSeconds());
-    assertEquals(300, cronOMJob.getSpec().getStartingDeadlineSeconds());
+    assertEquals(60, cronOMJob.getSpec().getStartingDeadlineSeconds());
   }
 
   @Test
@@ -840,19 +840,27 @@ class K8sPipelineClientTest {
 
   @Test
   void testSanitizeName_WithPrefixFitsK8sLimit() {
-    // Test that with common prefixes (om-config-, om-cronjob-) total stays under 63
-    String longName = "a".repeat(60);
-    String sanitized = client.sanitizeName(longName);
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    String longName = "a".repeat(80);
+    IngestionPipeline pipeline = createTestPipeline(longName, "0 * * * *");
 
-    String withConfigPrefix = "om-config-" + sanitized; // 10 chars prefix
-    String withCronjobPrefix = "om-cronjob-" + sanitized; // 11 chars prefix
+    CronOMJob cronOMJob = clientWithOMJob.buildCronOMJob(pipeline);
 
     assertTrue(
-        withConfigPrefix.length() <= 63,
-        "With om-config- prefix should be <= 63 chars, was: " + withConfigPrefix.length());
+        cronOMJob.getMetadata().getName().length() <= 63,
+        "CronOMJob name should fit Kubernetes limits");
+
+    List<V1EnvVar> env = cronOMJob.getSpec().getOmJobSpec().getMainPodSpec().getEnv();
+    Map<String, V1EnvVar> envMap =
+        env.stream().collect(Collectors.toMap(V1EnvVar::getName, v -> v));
+    V1EnvVar configEnv = envMap.get("config");
+
+    assertNotNull(configEnv);
+    assertNotNull(configEnv.getValueFrom());
+    assertNotNull(configEnv.getValueFrom().getConfigMapKeyRef());
     assertTrue(
-        withCronjobPrefix.length() <= 63,
-        "With om-cronjob- prefix should be <= 63 chars, was: " + withCronjobPrefix.length());
+        configEnv.getValueFrom().getConfigMapKeyRef().getName().length() <= 63,
+        "ConfigMap name should fit Kubernetes limits");
   }
 
   private static Map<String, String> toEnvMap(List<V1EnvVar> envVars) {

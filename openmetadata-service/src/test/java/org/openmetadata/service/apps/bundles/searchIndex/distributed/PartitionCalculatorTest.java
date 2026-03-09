@@ -16,6 +16,7 @@ package org.openmetadata.service.apps.bundles.searchIndex.distributed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -60,7 +61,7 @@ class PartitionCalculatorTest {
     EntityRepository<?> mockRepo = mock(EntityRepository.class);
     EntityDAO<?> mockDao = mock(EntityDAO.class);
     doReturn(mockDao).when(mockRepo).getDao();
-    when(mockDao.listTotalCount()).thenReturn(5000);
+    when(mockDao.listCount(any())).thenReturn(5000);
     entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(mockRepo);
 
     UUID jobId = UUID.randomUUID();
@@ -86,7 +87,7 @@ class PartitionCalculatorTest {
     EntityRepository<?> mockRepo = mock(EntityRepository.class);
     EntityDAO<?> mockDao = mock(EntityDAO.class);
     doReturn(mockDao).when(mockRepo).getDao();
-    when(mockDao.listTotalCount()).thenReturn(25000);
+    when(mockDao.listCount(any())).thenReturn(25000);
     entityMock.when(() -> Entity.getEntityRepository("user")).thenReturn(mockRepo);
 
     UUID jobId = UUID.randomUUID();
@@ -113,7 +114,7 @@ class PartitionCalculatorTest {
     EntityRepository<?> mockRepo = mock(EntityRepository.class);
     EntityDAO<?> mockDao = mock(EntityDAO.class);
     doReturn(mockDao).when(mockRepo).getDao();
-    when(mockDao.listTotalCount()).thenReturn(0);
+    when(mockDao.listCount(any())).thenReturn(0);
     entityMock.when(() -> Entity.getEntityRepository("empty")).thenReturn(mockRepo);
 
     UUID jobId = UUID.randomUUID();
@@ -130,12 +131,12 @@ class PartitionCalculatorTest {
     EntityRepository<?> tableRepo = mock(EntityRepository.class);
     EntityDAO<?> tableDao = mock(EntityDAO.class);
     doReturn(tableDao).when(tableRepo).getDao();
-    when(tableDao.listTotalCount()).thenReturn(15000);
+    when(tableDao.listCount(any())).thenReturn(15000);
 
     EntityRepository<?> userRepo = mock(EntityRepository.class);
     EntityDAO<?> userDao = mock(EntityDAO.class);
     doReturn(userDao).when(userRepo).getDao();
-    when(userDao.listTotalCount()).thenReturn(5000);
+    when(userDao.listCount(any())).thenReturn(5000);
 
     entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(tableRepo);
     entityMock.when(() -> Entity.getEntityRepository("user")).thenReturn(userRepo);
@@ -160,13 +161,13 @@ class PartitionCalculatorTest {
     EntityRepository<?> tableRepo = mock(EntityRepository.class);
     EntityDAO<?> tableDao = mock(EntityDAO.class);
     doReturn(tableDao).when(tableRepo).getDao();
-    when(tableDao.listTotalCount()).thenReturn(20000);
+    when(tableDao.listCount(any())).thenReturn(20000);
 
     // Users have lower complexity (0.6), should result in larger partitions
     EntityRepository<?> userRepo = mock(EntityRepository.class);
     EntityDAO<?> userDao = mock(EntityDAO.class);
     doReturn(userDao).when(userRepo).getDao();
-    when(userDao.listTotalCount()).thenReturn(20000);
+    when(userDao.listCount(any())).thenReturn(20000);
 
     entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(tableRepo);
     entityMock.when(() -> Entity.getEntityRepository("user")).thenReturn(userRepo);
@@ -210,12 +211,12 @@ class PartitionCalculatorTest {
     EntityRepository<?> tableRepo = mock(EntityRepository.class);
     EntityDAO<?> tableDao = mock(EntityDAO.class);
     doReturn(tableDao).when(tableRepo).getDao();
-    when(tableDao.listTotalCount()).thenReturn(10000);
+    when(tableDao.listCount(any())).thenReturn(10000);
 
     EntityRepository<?> userRepo = mock(EntityRepository.class);
     EntityDAO<?> userDao = mock(EntityDAO.class);
     doReturn(userDao).when(userRepo).getDao();
-    when(userDao.listTotalCount()).thenReturn(500);
+    when(userDao.listCount(any())).thenReturn(500);
 
     entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(tableRepo);
     entityMock.when(() -> Entity.getEntityRepository("user")).thenReturn(userRepo);
@@ -231,7 +232,7 @@ class PartitionCalculatorTest {
     EntityRepository<?> mockRepo = mock(EntityRepository.class);
     EntityDAO<?> mockDao = mock(EntityDAO.class);
     doReturn(mockDao).when(mockRepo).getDao();
-    when(mockDao.listTotalCount()).thenReturn(1000);
+    when(mockDao.listCount(any())).thenReturn(1000);
     entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(mockRepo);
 
     UUID jobId = UUID.randomUUID();
@@ -266,7 +267,7 @@ class PartitionCalculatorTest {
     EntityRepository<?> mockRepo = mock(EntityRepository.class);
     EntityDAO<?> mockDao = mock(EntityDAO.class);
     doReturn(mockDao).when(mockRepo).getDao();
-    when(mockDao.listTotalCount()).thenReturn(100000);
+    when(mockDao.listCount(any())).thenReturn(100000);
     entityMock.when(() -> Entity.getEntityRepository("database")).thenReturn(mockRepo);
 
     UUID jobId = UUID.randomUUID();
