@@ -35,8 +35,8 @@ public record LlmMessage(
     return new LlmMessage(Role.assistant, content, null, null);
   }
 
-  public static LlmMessage assistantWithToolCalls(List<LlmToolCall> toolCalls) {
-    return new LlmMessage(Role.assistant, null, null, toolCalls);
+  public static LlmMessage assistantWithToolCalls(String content, List<LlmToolCall> toolCalls) {
+    return new LlmMessage(Role.assistant, content, null, toolCalls);
   }
 
   public static LlmMessage toolResult(String toolCallId, String content) {
