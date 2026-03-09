@@ -145,7 +145,7 @@ describe('MsalAuthenticator', () => {
         postLogoutRedirectUri: expect.stringContaining('/signin'),
       })
     );
-    expect(mockHandleSuccessfulLogout).not.toHaveBeenCalled();
+    expect(mockHandleSuccessfulLogout).toHaveBeenCalled();
   });
 
   it('should fallback to local cleanup when logoutRedirect fails', async () => {

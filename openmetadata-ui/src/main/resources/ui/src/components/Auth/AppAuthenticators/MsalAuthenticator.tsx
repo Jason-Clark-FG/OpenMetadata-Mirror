@@ -74,6 +74,8 @@ const MsalAuthenticator = forwardRef<AuthenticatorRef, Props>(
           postLogoutRedirectUri: window.location.origin + ROUTES.SIGNIN,
         });
       } catch {
+        // logoutRedirect failed, fall through to cleanup
+      } finally {
         handleSuccessfulLogout();
       }
     };
