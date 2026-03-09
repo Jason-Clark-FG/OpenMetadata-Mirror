@@ -292,7 +292,7 @@ export const MOCK_ASSETS_DATA = {
       max_score: 2.1288848,
       hits: [
         {
-          _index: 'table_search_index',
+          _index: 'table',
           _type: '_doc',
           _id: 'c514ca18-2ea4-44b1-aa06-0c66bc0cd355',
           _score: 2.1288848,

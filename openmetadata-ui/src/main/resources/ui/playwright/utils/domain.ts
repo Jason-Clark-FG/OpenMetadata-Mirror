@@ -107,10 +107,7 @@ export const assignCertificationForWidget = async (
   );
 };
 
-export const removeTierFromWidget = async (
-  page: Page,
-  endpoint: string
-) => {
+export const removeTierFromWidget = async (page: Page, endpoint: string) => {
   await page.getByTestId('edit-tier').click();
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 
@@ -250,7 +247,7 @@ export const selectDomain = async (page: Page, domain: Domain['data']) => {
 
   await Promise.all([
     searchBox.fill(domain.name),
-    page.waitForResponse('/api/v1/search/query?q=*&index=domain_search_index*'),
+    page.waitForResponse('/api/v1/search/query?q=*&index=domain*'),
   ]);
 
   await waitForSearchDebounce(page);
@@ -279,7 +276,7 @@ export const selectSubDomain = async (
 
   if (!isSelected) {
     const subDomainRes = page.waitForResponse(
-      '/api/v1/search/query?q=*&from=0&size=0&index=domain_search_index&deleted=false&track_total_hits=true'
+      '/api/v1/search/query?q=*&from=0&size=0&index=domain&deleted=false&track_total_hits=true'
     );
     await menuItem.click();
     await subDomainRes;
@@ -287,7 +284,7 @@ export const selectSubDomain = async (
   }
 
   const subDomainRes = page.waitForResponse(
-    '/api/v1/search/query?q=*&from=0&size=50&index=domain_search_index&deleted=false&track_total_hits=true'
+    '/api/v1/search/query?q=*&from=0&size=50&index=domain&deleted=false&track_total_hits=true'
   );
   await page.getByTestId('subdomains').getByText('Sub Domains').click();
   await subDomainRes;
@@ -308,8 +305,7 @@ export const selectDataProductFromTab = async (
     const url = response.url();
 
     return (
-      url.includes('/api/v1/search/query') &&
-      url.includes('index=data_product_search_index')
+      url.includes('/api/v1/search/query') && url.includes('index=dataProduct')
     );
   });
   await page
@@ -344,9 +340,7 @@ export const selectDataProduct = async (
 
   await Promise.all([
     searchBox.fill(dataProduct.name),
-    page.waitForResponse(
-      '/api/v1/search/query?q=*&index=data_product_search_index*'
-    ),
+    page.waitForResponse('/api/v1/search/query?q=*&index=dataProduct*'),
   ]);
 
   await waitForSearchDebounce(page);
@@ -818,7 +812,7 @@ export const createDataProductFromListPage = async (
   await domainInput.click();
 
   const searchDomain = page.waitForResponse(
-    `/api/v1/search/query?q=*index=domain_search_index*`
+    `/api/v1/search/query?q=*index=domain*`
   );
   await domainInput.fill(domain.displayName);
   await searchDomain;
@@ -887,41 +881,35 @@ export const verifyDataProductAssetsAfterDelete = async (
     );
   });
 
-  await test.step(
-    'Remove Data Product Sales and Create the same again',
-    async () => {
-      // Remove sales data product
-      await dataProduct1.delete(apiContext);
+  await test.step('Remove Data Product Sales and Create the same again', async () => {
+    // Remove sales data product
+    await dataProduct1.delete(apiContext);
 
-      // Create sales data product again
-      await redirectToHomePage(page);
+    // Create sales data product again
+    await redirectToHomePage(page);
+    await sidebarClick(page, SidebarItem.DOMAIN);
+    if (subDomain) {
+      await selectSubDomain(page, domain.data, subDomain.data);
+    } else {
+      await selectDomain(page, domain.data);
+    }
+
+    await createDataProduct(page, newDataProduct1.data);
+  });
+
+  await test.step('Verify assets are not present in the newly created data product', async () => {
+    await redirectToHomePage(page);
+
+    if (subDomain) {
       await sidebarClick(page, SidebarItem.DOMAIN);
-      if (subDomain) {
-        await selectSubDomain(page, domain.data, subDomain.data);
-      } else {
-        await selectDomain(page, domain.data);
-      }
-
-      await createDataProduct(page, newDataProduct1.data);
+      await selectSubDomain(page, domain.data, subDomain.data);
+      await selectDataProductFromTab(page, newDataProduct1.data);
+    } else {
+      await sidebarClick(page, SidebarItem.DATA_PRODUCT);
+      await selectDataProduct(page, newDataProduct1.data);
     }
-  );
-
-  await test.step(
-    'Verify assets are not present in the newly created data product',
-    async () => {
-      await redirectToHomePage(page);
-
-      if (subDomain) {
-        await sidebarClick(page, SidebarItem.DOMAIN);
-        await selectSubDomain(page, domain.data, subDomain.data);
-        await selectDataProductFromTab(page, newDataProduct1.data);
-      } else {
-        await sidebarClick(page, SidebarItem.DATA_PRODUCT);
-        await selectDataProduct(page, newDataProduct1.data);
-      }
-      await checkAssetsCount(page, 0);
-    }
-  );
+    await checkAssetsCount(page, 0);
+  });
 };
 
 export const addTagsAndGlossaryToDomain = async (
@@ -1385,8 +1373,8 @@ export const navigateToSubDomain = async (
 export const navigateToPortsTab = async (page: Page) => {
   await page.waitForTimeout(2000);
 
-  const portsViewResponse = page.waitForResponse(
-    (response) => response.url().includes('/portsView')
+  const portsViewResponse = page.waitForResponse((response) =>
+    response.url().includes('/portsView')
   );
   await page.getByTestId('input_output_ports').click();
   await portsViewResponse;
@@ -1449,7 +1437,7 @@ export const addInputPortToDataProduct = async (
   const displayName = get(asset, 'entityResponseData.displayName') ?? name;
 
   await expect(page.getByTestId('add-input-port-button')).toBeEnabled({
-    timeout: 10000
+    timeout: 10000,
   });
 
   await page.getByTestId('add-input-port-button').click();
@@ -1492,7 +1480,7 @@ export const addOutputPortToDataProduct = async (
   const displayName = get(asset, 'entityResponseData.displayName') ?? name;
 
   await expect(page.getByTestId('add-output-port-button')).toBeEnabled({
-    timeout: 10000
+    timeout: 10000,
   });
 
   await page.getByTestId('add-output-port-button').click();
@@ -1581,7 +1569,7 @@ export const selectDomainFromNavbar = async (
   const searchDomainRes = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('domain_search_index')
+      response.url().includes('domain')
   );
   await page
     .getByTestId('domain-selectable-tree')
@@ -1662,7 +1650,7 @@ export const searchAndExpectEntityNotVisible = async (
  */
 export const assignDomainToEntity = async (
   apiContext: APIRequestContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   entity: {
     patch: (options: {
       apiContext: APIRequestContext;

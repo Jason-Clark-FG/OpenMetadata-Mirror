@@ -67,7 +67,10 @@ export const addAssigneeFromPopoverWidget = async (data: {
   const { page, user, testCaseName } = data;
 
   if (testCaseName) {
-    await page.getByRole('row', { name: testCaseName }).getByTestId('edit-owner').click();
+    await page
+      .getByRole('row', { name: testCaseName })
+      .getByTestId('edit-owner')
+      .click();
   } else {
     // direct assignment from edit assignee icon
     await page.getByTestId('assignee').getByTestId('edit-owner').click();
@@ -125,7 +128,7 @@ export const assignIncident = async (data: {
     await page.click('[data-testid="assignee-search-input"]');
 
     const searchUserResponse = page.waitForResponse(
-      'api/v1/search/query?q=*&index=user_search_index*'
+      'api/v1/search/query?q=*&index=user*'
     );
     await page.fill(
       '[data-testid="assignee-search-input"] input',
