@@ -848,6 +848,116 @@ class AuthenticationCodeFlowHandlerTest {
   }
 
   @Test
+  void handleRefreshWritesJwtResponseWhenSessionCredentialsCanBeRenewed() throws Exception {
+    String refreshedIdToken =
+        signedJwt(
+            new JWTClaimsSet.Builder()
+                .subject("refresh-user")
+                .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+                .build());
+    try (TokenServer tokenServer =
+        startTokenServer(
+            200,
+            JsonUtils.pojoToJson(
+                Map.of(
+                    "access_token", "fresh-access-token",
+                    "refresh_token", "fresh-refresh-token",
+                    "token_type", "Bearer",
+                    "expires_in", 3600,
+                    "id_token", refreshedIdToken)))) {
+      AuthenticationCodeFlowHandler handler = newHandler();
+      setField(
+          handler,
+          "client",
+          oidcClient(
+              configuredOidcConfiguration(
+                  "client-id",
+                  "client-secret",
+                  List.of(ClientAuthenticationMethod.CLIENT_SECRET_BASIC),
+                  tokenServer.tokenEndpoint()),
+              "RefreshHandlerClient"));
+
+      OidcCredentials credentials = new OidcCredentials();
+      credentials.setRefreshToken(new RefreshToken("old-refresh-token"));
+      when(request.getSession(false)).thenReturn(session);
+      when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE))
+          .thenReturn(credentials);
+      when(session.getId()).thenReturn("refresh-session");
+      when(response.getOutputStream()).thenReturn(outputStream);
+
+      handler.handleRefresh(request, response);
+
+      assertEquals("fresh-access-token", credentials.getAccessToken().getValue());
+      assertEquals("fresh-refresh-token", credentials.getRefreshToken().getValue());
+      assertEquals(refreshedIdToken, credentials.getIdToken().getParsedString());
+      verify(session).setAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE, credentials);
+      verify(outputStream).print(org.mockito.ArgumentMatchers.contains(refreshedIdToken));
+      verify(response).setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
+  @Test
+  void handleRefreshWithoutCredentialsFallsBackToLogout() throws Exception {
+    AuthenticationCodeFlowHandler handler = assertDoesNotThrow(AuthenticationCodeFlowHandlerTest::newHandler);
+    assertDoesNotThrow(() -> setField(handler, "serverUrl", "https://openmetadata.example.com"));
+    when(request.getSession(false)).thenReturn(session);
+    when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE)).thenReturn(null);
+    when(session.getId()).thenReturn("missing-credentials-session");
+
+    handler.handleRefresh(request, response);
+
+    verify(session).invalidate();
+    verify(response).sendRedirect("https://openmetadata.example.com/logout");
+  }
+
+  @Test
+  void refreshAccessTokenAzureAd2TokenUpdatesAzureProfile() throws Exception {
+    String refreshedIdToken =
+        signedJwt(
+            new JWTClaimsSet.Builder()
+                .subject("azure-user")
+                .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+                .build());
+    try (TokenServer tokenServer =
+        startTokenServer(
+            200,
+            JsonUtils.pojoToJson(
+                Map.of(
+                    "access_token", "azure-access-token",
+                    "refresh_token", "azure-refresh-token",
+                    "token_type", "Bearer",
+                    "expires_in", 3600,
+                    "id_token", refreshedIdToken)))) {
+      AuthenticationCodeFlowHandler handler = newHandler();
+      OidcCredentials credentials = new OidcCredentials();
+      credentials.setRefreshToken(new RefreshToken("azure-old-refresh-token"));
+
+      invokePrivate(
+          handler,
+          "refreshAccessTokenAzureAd2Token",
+          new Class<?>[] {AzureAd2OidcConfiguration.class, OidcCredentials.class},
+          azureOidcConfiguration(tokenServer.tokenEndpoint()),
+          credentials);
+
+      assertEquals("azure-access-token", credentials.getAccessToken().getValue());
+      assertEquals("azure-refresh-token", credentials.getRefreshToken().getValue());
+      assertEquals(refreshedIdToken, credentials.getIdToken().getParsedString());
+    }
+  }
+
+  @Test
+  void validateConfigRejectsMissingOidcConfiguration() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                AuthenticationCodeFlowHandler.validateConfig(
+                    new AuthenticationConfiguration(), authorizerConfiguration(Set.of())));
+
+    assertTrue(exception.getMessage().contains("OIDC configuration validation failed"));
+  }
+
+  @Test
   void parseTokenResponseRejectsOauthErrors() throws Exception {
     AuthenticationCodeFlowHandler handler = newHandler();
     HTTPResponse httpResponse = new HTTPResponse(400);
@@ -975,6 +1085,16 @@ class AuthenticationCodeFlowHandlerTest {
     client.setName(name);
     client.setCallbackUrl("https://openmetadata.example.com/callback");
     return client;
+  }
+
+  private static AzureAd2OidcConfiguration azureOidcConfiguration(URI tokenEndpoint) {
+    AzureAd2OidcConfiguration configuration = new AzureAd2OidcConfiguration();
+    configuration.setClientId("azure-client");
+    configuration.setSecret("azure-secret");
+    configuration.setTenant("organizations");
+    configuration.setProviderMetadata(
+        providerMetadata(List.of(ClientAuthenticationMethod.CLIENT_SECRET_POST), tokenEndpoint));
+    return configuration;
   }
 
   private static OIDCProviderMetadata providerMetadata(
