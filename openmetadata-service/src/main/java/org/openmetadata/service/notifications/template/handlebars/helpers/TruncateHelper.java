@@ -59,7 +59,11 @@ public class TruncateHelper implements HandlebarsHelper {
             return text;
           }
 
-          return text.substring(0, maxLength - 3) + "…";
+          if (maxLength == 1) {
+            return "…";
+          }
+
+          return text.substring(0, maxLength - 1) + "…";
         });
   }
 
