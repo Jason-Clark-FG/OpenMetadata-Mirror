@@ -338,7 +338,7 @@ test.describe(
       await page.getByRole('tab', { name: 'Column Profile' }).click();
 
       const data = await colsResponse;
-      await expect(data.status()).toBe(200);
+      expect(data.status()).toBe(200);
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -733,22 +733,12 @@ test.describe(
       expect(clipboardText).toContain(targetColumnName);
 
       // 5. Visit the copied Link
-      const keyProfileMetricsResponse = page.waitForResponse(
-        (response) =>
-          response
-            .url()
-            .includes(
-              `/api/v1/tables/name/${encodeURIComponent(createdTable.fullyQualifiedName!)}/columns`
-            ) &&
-          response.url().includes('fields=profile') &&
-          response.request().method() === 'GET'
-      );
-      const visitLinkResponse = page.waitForResponse((response) =>
-        response.url().includes(`/table/${createdTable.fullyQualifiedName}`)
-      );
-      await page.goto(clipboardText);
-      await visitLinkResponse;
-      await keyProfileMetricsResponse;
+      await Promise.all([
+        page.waitForResponse(
+          `/api/v1/tables/name/${createdTable.fullyQualifiedName}/columns?*`
+        ),
+        page.goto(clipboardText),
+      ]);
       await waitForAllLoadersToDisappear(page);
 
       // 6. Verify Side Panel is open
