@@ -13,17 +13,23 @@
 Validator for column values to match regex test case
 """
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy import Column
 from sqlalchemy.exc import CompileError, SQLAlchemyError
 
+from metadata.data_quality.validations.base_test_handler import (
+    DIMENSION_FAILED_COUNT_KEY,
+    DIMENSION_TOTAL_COUNT_KEY,
+)
 from metadata.data_quality.validations.column.base.columnValuesToMatchRegex import (
     BaseColumnValuesToMatchRegexValidator,
 )
 from metadata.data_quality.validations.mixins.sqa_validator_mixin import (
     SQAValidatorMixin,
 )
+from metadata.generated.schema.tests.dimensionResult import DimensionResult
+from metadata.profiler.metrics.core import add_props
 from metadata.profiler.metrics.registry import Metrics
 from metadata.utils.logger import test_suite_logger
 
@@ -45,29 +51,27 @@ class ColumnValuesToMatchRegexValidator(
             column: column
         """
         try:
-            regex_count = Metrics.REGEX_COUNT(column)
+            regex_count = Metrics.regexCount(column)
             regex_count.expression = kwargs.get("expression")
             regex_count_fn = regex_count.fn()
 
-            res = dict(
-                self.runner.dispatch_query_select_first(
-                    Metrics.COUNT(column).fn(),
-                    regex_count_fn,
-                )
+            row = self.runner.dispatch_query_select_first(
+                Metrics.valuesCount(column).fn(),
+                regex_count_fn,
             )
+            res = dict(row._mapping)
         except (CompileError, SQLAlchemyError) as err:
             logger.warning(
                 f"Could not use `REGEXP` due to - {err}. Falling back to `LIKE`"
             )
-            regex_count = Metrics.LIKE_COUNT(column)
+            regex_count = Metrics.likeCount(column)
             regex_count.expression = kwargs.get("expression")
             regex_count_fn = regex_count.fn()
-            res = dict(
-                self.runner.dispatch_query_select_first(
-                    Metrics.COUNT(column).fn(),
-                    regex_count_fn,
-                )
+            row = self.runner.dispatch_query_select_first(
+                Metrics.valuesCount(column).fn(),
+                regex_count_fn,
             )
+            res = dict(row._mapping)
 
         if not res:
             # pylint: disable=line-too-long
@@ -79,7 +83,69 @@ class ColumnValuesToMatchRegexValidator(
             )
             # pylint: enable=line-too-long
 
-        return res.get(Metrics.COUNT.name), res.get(regex_count.name())
+        return res.get(Metrics.valuesCount.name), res.get(regex_count.name())
+
+    def _execute_dimensional_validation(
+        self,
+        column: Column,
+        dimension_col: Column,
+        metrics_to_compute: dict,
+        test_params: dict,
+        top_n: int,
+    ) -> List[DimensionResult]:
+        """Execute dimensional query with impact scoring and Others aggregation
+
+        Calculates impact scores for all dimension values and aggregates
+        low-impact dimensions into "Others" category using CTEs.
+
+        Args:
+            column: The column being validated
+            dimension_col: Single Column object corresponding to the dimension column
+            metrics_to_compute: Dictionary mapping Metrics enum names to Metrics objects
+            test_params: Dictionary with test-specific parameters (allowed_values, match_enum)
+
+        Returns:
+            List[DimensionResult]: Top N dimensions by impact score plus "Others"
+        """
+        dimension_results = []
+
+        try:
+            regex = test_params[BaseColumnValuesToMatchRegexValidator.REGEX]
+
+            metric_expressions = {
+                Metrics.regexCount.name: add_props(expression=regex)(
+                    Metrics.regexCount.value
+                )(column).fn(),
+                Metrics.valuesCount.name: Metrics.valuesCount(column).fn(),
+                Metrics.rowCount.name: Metrics.rowCount().fn(),
+                DIMENSION_TOTAL_COUNT_KEY: Metrics.rowCount().fn(),
+            }
+
+            metric_expressions[DIMENSION_FAILED_COUNT_KEY] = (
+                metric_expressions[Metrics.valuesCount.name]
+                - metric_expressions[Metrics.regexCount.name]
+            )
+
+            normalized_dimension = self._get_normalized_dimension_expression(
+                dimension_col
+            )
+
+            result_rows = self._run_dimensional_validation_query(
+                source=self.runner.dataset,
+                dimension_expr=normalized_dimension,
+                metric_expressions=metric_expressions,
+                top_n=top_n,
+            )
+
+            return self._process_dimension_rows(
+                result_rows, dimension_col.name, metrics_to_compute, test_params
+            )
+
+        except Exception as exc:
+            logger.warning(f"Error executing dimensional query: {exc}")
+            logger.debug("Full error details: ", exc_info=True)
+
+        return dimension_results
 
     def compute_row_count(self, column: Column):
         """Compute row count for the given column

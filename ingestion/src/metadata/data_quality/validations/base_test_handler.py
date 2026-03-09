@@ -33,6 +33,10 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from metadata.data_quality.validations import utils
+from metadata.data_quality.validations.impact_score import (
+    DEFAULT_TOP_DIMENSIONS,
+    MAX_TOP_DIMENSIONS,
+)
 from metadata.generated.schema.tests.basic import (
     DimensionValue,
     TestCaseDimensionResult,
@@ -43,12 +47,11 @@ from metadata.generated.schema.tests.basic import (
 from metadata.generated.schema.tests.dimensionResult import DimensionResult
 from metadata.generated.schema.tests.testCase import TestCase, TestCaseParameterValue
 from metadata.generated.schema.type.basic import Timestamp
-from metadata.profiler.processor.runner import QueryRunner
+from metadata.profiler.processor.runner import PandasRunner, QueryRunner
 from metadata.utils.logger import test_suite_logger
 from metadata.utils.sqa_like_column import SQALikeColumn
 
 if TYPE_CHECKING:
-    from pandas import DataFrame
     from sqlalchemy import Column
 
 logger = test_suite_logger()
@@ -105,7 +108,7 @@ class BaseTestValidator(ABC):
 
     def __init__(
         self,
-        runner: Union[QueryRunner, List["DataFrame"]],
+        runner: Union[QueryRunner, PandasRunner],
         test_case: TestCase,
         execution_date: Timestamp,
     ) -> None:
@@ -124,6 +127,12 @@ class BaseTestValidator(ABC):
             and self.test_case.dimensionColumns is not None
             and len(self.test_case.dimensionColumns) > 0
         )
+
+    def _get_top_dimensions(self) -> int:
+        value = getattr(self.test_case, "topDimensions", None)
+        if not value or value < 1:
+            return DEFAULT_TOP_DIMENSIONS
+        return min(value, MAX_TOP_DIMENSIONS)
 
     def run_validation(self) -> TestCaseResult:
         """Template method defining the validation flow with optional dimensional analysis
@@ -148,10 +157,7 @@ class BaseTestValidator(ABC):
             )
             logger.debug(f"Dimension columns: {self.test_case.dimensionColumns}")
 
-            # Validate dimension columns exist in the target table
             if not self.are_dimension_columns_valid():
-                # Don't abort the main test, just skip dimensional validation
-                # The main test result is still valid
                 return test_result
 
             try:
@@ -221,6 +227,7 @@ class BaseTestValidator(ABC):
 
             test_params = self._get_test_parameters()
             metrics_to_compute = self._get_metrics_to_compute(test_params)
+            top_n = self._get_top_dimensions()
 
             dimension_results = []
             for dimension_column in dimension_columns:
@@ -228,7 +235,7 @@ class BaseTestValidator(ABC):
                     dimension_col = self.get_column(dimension_column)
 
                     single_dimension_results = self._execute_dimensional_validation(
-                        column, dimension_col, metrics_to_compute, test_params
+                        column, dimension_col, metrics_to_compute, test_params, top_n
                     )
 
                     dimension_results.extend(single_dimension_results)
@@ -247,16 +254,16 @@ class BaseTestValidator(ABC):
             logger.debug(traceback.format_exc())
             return []
 
-    def _get_test_parameters(self) -> Optional[dict]:
+    def _get_test_parameters(self) -> dict:
         """Get test-specific parameters from test case
 
-        Default implementation returns None. Override in child classes
+        Default implementation returns empty dict. Override in child classes
         that need to extract and process test parameters.
 
         Returns:
-            Optional[dict]: Test parameters, or None if validator has no parameters.
+            dict: Test parameters, or empty dict if validator has no parameters.
         """
-        return None
+        return {}
 
     def _get_metrics_to_compute(self, test_params: Optional[dict] = None) -> dict:
         """Get metrics that need to be computed for this test
@@ -269,7 +276,7 @@ class BaseTestValidator(ABC):
 
         Returns:
             dict: Dictionary mapping metric names to Metrics enum values
-                  e.g., {"MIN": Metrics.MIN} or {"COUNT": Metrics.COUNT, "UNIQUE_COUNT": Metrics.UNIQUE_COUNT}
+                  e.g., {"MIN": Metrics.min} or {"COUNT": Metrics.valuesCount, "UNIQUE_COUNT": Metrics.uniqueCount}
         """
         return {}
 
@@ -294,6 +301,7 @@ class BaseTestValidator(ABC):
         dimension_col: Union[SQALikeColumn, Column],
         metrics_to_compute: dict,
         test_params: Optional[dict],
+        top_n: int = DEFAULT_TOP_DIMENSIONS,
     ) -> List[DimensionResult]:
         """Execute dimensional validation query for a single dimension column
 
@@ -304,6 +312,7 @@ class BaseTestValidator(ABC):
             dimension_col: The dimension column to group by (e.g., region)
             metrics_to_compute: Dict mapping metric names to Metrics enum values
             test_params: Test parameters including bounds, allowed values, etc.
+            top_n: Number of top dimension values before grouping as "Others"
 
         Returns:
             List[DimensionResult]: List of dimension results for each dimension value
@@ -410,6 +419,44 @@ class BaseTestValidator(ABC):
             for metric_name in metrics_to_compute.keys()
         }
 
+    def _build_dimension_metric_values(
+        self,
+        row: dict,
+        metrics_to_compute: dict,
+        test_params: Optional[dict] = None,
+    ) -> Optional[dict]:
+        """Hook for custom metric extraction in dimensional validation.
+
+        Override in child classes that need custom metric extraction logic,
+        such as None-skipping or adding extra keys from the row.
+
+        Return None to skip the row.
+        """
+        return self._build_metric_values_from_row(row, metrics_to_compute, test_params)
+
+    def _process_dimension_rows(
+        self,
+        result_rows,
+        dimension_col_name: str,
+        metrics_to_compute: dict,
+        test_params: Optional[dict],
+    ) -> List["DimensionResult"]:
+        """Common loop: build metrics, evaluate, create result for each row."""
+        results: List[DimensionResult] = []
+        for row in result_rows:
+            metric_values = self._build_dimension_metric_values(
+                row, metrics_to_compute, test_params
+            )
+            if metric_values is None:
+                continue
+            evaluation = self._evaluate_test_condition(metric_values, test_params)
+            results.append(
+                self._create_dimension_result(
+                    row, dimension_col_name, metric_values, evaluation, test_params
+                )
+            )
+        return results
+
     def _create_dimension_result(
         self,
         row: dict,
@@ -450,18 +497,12 @@ class BaseTestValidator(ABC):
         test_result_values = self._get_test_result_values(metric_values)
         impact_score = row.get(DIMENSION_IMPACT_SCORE_KEY, 0.0)
 
-        # Get total_rows from evaluation if present, otherwise from metric_values
-        # Import here to avoid circular import (metrics.registry -> utils.importer -> base_test_handler)
-        from metadata.profiler.metrics.registry import Metrics
-
-        total_rows = evaluation.get("total_rows", metric_values.get(Metrics.COUNT.name))
-
         return self.get_dimension_result_object(
             dimension_values={dimension_col_name: dimension_value},
             test_case_status=self.get_test_case_status(evaluation["matched"]),
             result=result_message,
             test_result_value=test_result_values,
-            total_rows=total_rows,
+            total_rows=evaluation["total_rows"],
             passed_rows=evaluation["passed_rows"],
             failed_rows=evaluation["failed_rows"],
             impact_score=impact_score,

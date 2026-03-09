@@ -11,170 +11,149 @@
  *  limitations under the License.
  */
 
-import { Link } from '@mui/material';
 import { Typography } from 'antd';
-import { startCase } from 'lodash';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ReactComponent as AddPlaceHolderIcon } from '../../../../assets/svg/ic-no-records.svg';
 import { CUSTOM_PROPERTIES_DOCS } from '../../../../constants/docs.constants';
+import { ERROR_PLACEHOLDER_TYPE } from '../../../../enums/common.enum';
 import { CustomProperty } from '../../../../generated/entity/type';
 import { Transi18next } from '../../../../utils/CommonUtils';
-import { getEntityLinkFromType } from '../../../../utils/EntityUtils';
+import { PropertyValue } from '../../../common/CustomPropertyTable/PropertyValue';
+import ErrorPlaceHolderNew from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolderNew';
 import Loader from '../../../common/Loader/Loader';
+import SearchBarComponent from '../../../common/SearchBarComponent/SearchBar.component';
+import { ExtensionDataProps } from '../../../Modals/ModalWithCustomProperty/ModalWithMarkdownEditor.interface';
 import { CustomPropertiesSectionProps } from './CustomPropertiesSection.interface';
 import './CustomPropertiesSection.less';
 
 const CustomPropertiesSection = ({
   entityData,
-  entityDetails,
-  entityType,
   entityTypeDetail,
+  emptyStateMessage,
+  onExtensionUpdate,
+  hasEditPermissions,
   isEntityDataLoading,
+  viewCustomPropertiesPermission,
 }: CustomPropertiesSectionProps) => {
   const { t } = useTranslation();
-
-  if (isEntityDataLoading) {
-    return (
-      <div className="entity-summary-panel-tab-content">
-        <div className="p-x-md p-t-md">
-          <Loader size="default" />
-        </div>
-      </div>
-    );
-  }
+  const [searchText, setSearchText] = useState<string>('');
 
   const customProperties = entityTypeDetail?.customProperties || [];
-  const extensionData = entityData?.extension || {};
+  const extensionData = (entityData?.extension || {}) as ExtensionDataProps;
 
-  if (customProperties.length === 0) {
-    return (
-      <div className="entity-summary-panel-tab-content">
-        <div className="p-x-md p-t-md text-justify text-grey-muted">
-          <Transi18next
-            i18nKey="message.no-custom-properties-entity"
-            renderElement={
-              <a
-                href={CUSTOM_PROPERTIES_DOCS}
-                rel="noreferrer"
-                target="_blank"
-                title="Custom properties documentation"
-              />
-            }
-            values={{
-              docs: t('label.doc-plural-lowercase'),
-              entity: startCase(entityType),
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
+  const filteredProperties = useMemo(() => {
+    if (!searchText) {
+      return customProperties;
+    }
 
-  const formatValue = (val: unknown) => {
-    if (!val) {
+    const searchLower = searchText.toLowerCase();
+
+    return customProperties.filter((property: CustomProperty) => {
+      const propertyName = property.name?.toLowerCase() || '';
+      const propertyDisplayName = property.displayName?.toLowerCase() || '';
+      const propertyType = property.propertyType?.name?.toLowerCase() || '';
+
       return (
-        <div className="text-center text-grey-muted p-sm">
-          {t('label.no-data-found')}
-        </div>
+        propertyName.includes(searchLower) ||
+        propertyDisplayName.includes(searchLower) ||
+        propertyType.includes(searchLower)
+      );
+    });
+  }, [customProperties, searchText]);
+
+  const emptyState = useMemo(() => {
+    if (searchText) {
+      return (
+        <Typography.Paragraph className="text-center text-grey-muted p-sm">
+          {t('message.no-entity-found-for-name', {
+            entity: t('label.custom-property-plural'),
+            name: searchText,
+          })}
+        </Typography.Paragraph>
       );
     }
 
-    if (typeof val === 'object') {
-      if (Array.isArray(val)) {
-        return val.join(', ');
-      }
-      const objVal = val as Record<string, unknown>;
-      if (objVal.name || objVal.displayName) {
-        return String(objVal.name || objVal.displayName);
-      }
-      if (objVal.value) {
-        return String(objVal.value);
-      }
-      // Handle table-type custom properties
-      if (objVal.rows && objVal.columns) {
-        const tableVal = objVal as {
-          rows: Record<string, unknown>[];
-          columns: string[];
-        };
-
-        return (
-          <div className="custom-property-table">
-            <table className="ant-table ant-table-small">
-              <colgroup>
-                {tableVal.columns.map((column: string) => (
-                  <col key={column} style={{ minWidth: '80px' }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {tableVal.columns.map((column: string) => (
-                    <th className="ant-table-cell" key={column}>
-                      {column}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {tableVal.rows.map(
-                  (row: Record<string, unknown>, rowIndex: number) => {
-                    const rowKey = `row-${rowIndex}-${tableVal.columns
-                      .map((col: string) => row[col])
-                      .join('-')}`;
-
-                    return (
-                      <tr key={rowKey}>
-                        {tableVal.columns.map((column: string) => (
-                          <td className="ant-table-cell" key={column}>
-                            {String(row[column] || '-')}
-                          </td>
-                        ))}
-                      </tr>
-                    );
-                  }
-                )}
-              </tbody>
-            </table>
+    return (
+      <div className="lineage-items-list">
+        <ErrorPlaceHolderNew
+          className="text-grey-14"
+          icon={<AddPlaceHolderIcon height={100} width={100} />}
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          <div className="p-t-md text-justify no-data-placeholder">
+            <Transi18next
+              i18nKey="message.no-custom-properties-entity"
+              renderElement={
+                <a
+                  href={CUSTOM_PROPERTIES_DOCS}
+                  rel="noreferrer"
+                  target="_blank"
+                  title="Custom properties documentation"
+                />
+              }
+              values={{
+                entity: emptyStateMessage ?? t('label.entity'),
+                docs: t('label.doc-plural-lowercase'),
+              }}
+            />
           </div>
-        );
-      }
+        </ErrorPlaceHolderNew>
+      </div>
+    );
+  }, [searchText, emptyStateMessage]);
 
-      return JSON.stringify(val);
-    }
+  if (isEntityDataLoading) {
+    return <Loader size="default" />;
+  }
 
-    return String(val);
-  };
+  if (!viewCustomPropertiesPermission) {
+    return (
+      <div className="lineage-items-list">
+        <ErrorPlaceHolderNew
+          className="text-grey-14 permission-error-placeholder"
+          type={ERROR_PLACEHOLDER_TYPE.PERMISSION}>
+          <Transi18next
+            i18nKey="message.no-access-placeholder"
+            renderElement={<span />}
+            values={{
+              entity: t('label.view-entity', {
+                entity: t('label.custom-property-plural'),
+              }),
+            }}
+          />
+        </ErrorPlaceHolderNew>
+      </div>
+    );
+  }
+
+  if (!customProperties.length && !searchText) {
+    return emptyState;
+  }
 
   return (
-    <div className="entity-summary-panel-tab-content">
-      {customProperties.length > 5 && (
-        <div className="view-all-container">
-          <Link
-            href={getEntityLinkFromType(
-              entityDetails.details.fullyQualifiedName || '',
-              entityType
-            )}
-            rel="noopener noreferrer"
-            target="_blank">
-            <span className="text-primary">{t('label.view-all')}</span>
-          </Link>
-        </div>
-      )}
-      <div className="p-x-md">
-        <div className="custom-properties-list">
-          {customProperties.slice(0, 5).map((property: CustomProperty) => {
-            const value = extensionData[property.name];
-
-            return (
-              <div className="custom-property-item" key={property.name}>
-                <Typography.Text className="property-name">
-                  {property.displayName || property.name}
-                </Typography.Text>
-                <Typography.Text className="property-value">
-                  {formatValue(value)}
-                </Typography.Text>
-              </div>
-            );
+    <div className="entity-summary-panel-tab-content custom-properties-section-container">
+      <div className="p-x-md p-t-sm">
+        <SearchBarComponent
+          placeholder={t('label.search-for-type', {
+            type: t('label.custom-property'),
           })}
-        </div>
+          searchValue={searchText}
+          onSearch={setSearchText}
+        />
+      </div>
+      <div className="custom-properties-list p-x-md">
+        {filteredProperties.length > 0
+          ? filteredProperties.map((property: CustomProperty) => (
+              <PropertyValue
+                isRenderedInRightPanel
+                extension={extensionData}
+                hasEditPermissions={hasEditPermissions}
+                key={property.name}
+                property={property}
+                onExtensionUpdate={onExtensionUpdate}
+              />
+            ))
+          : emptyState}
       </div>
     </div>
   );

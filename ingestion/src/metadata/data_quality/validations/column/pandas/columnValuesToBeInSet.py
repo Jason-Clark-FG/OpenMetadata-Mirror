@@ -26,10 +26,7 @@ from metadata.data_quality.validations.base_test_handler import (
 from metadata.data_quality.validations.column.base.columnValuesToBeInSet import (
     BaseColumnValuesToBeInSetValidator,
 )
-from metadata.data_quality.validations.impact_score import (
-    DEFAULT_TOP_DIMENSIONS,
-    calculate_impact_score_pandas,
-)
+from metadata.data_quality.validations.impact_score import calculate_impact_score_pandas
 from metadata.data_quality.validations.mixins.pandas_validator_mixin import (
     PandasValidatorMixin,
     aggregate_others_pandas,
@@ -59,23 +56,13 @@ class ColumnValuesToBeInSetValidator(
         """
         return self.run_dataframe_results(self.runner, metric, column, **kwargs)
 
-    def compute_row_count(self, column: SQALikeColumn):
-        """Compute row count for the given column
-
-        Args:
-            column (Union[SQALikeColumn, Column]): column to compute row count for
-
-        Raises:
-            NotImplementedError:
-        """
-        return self._compute_row_count(self.runner, column)
-
     def _execute_dimensional_validation(
         self,
         column: SQALikeColumn,
         dimension_col: SQALikeColumn,
         metrics_to_compute: dict,
         test_params: dict,
+        top_n: int,
     ) -> List[DimensionResult]:
         """Execute dimensional query with impact scoring and Others aggregation for pandas
 
@@ -101,19 +88,21 @@ class ColumnValuesToBeInSetValidator(
         dimension_results = []
 
         try:
-            allowed_values = test_params["allowed_values"]
-            match_enum = test_params["match_enum"]
+            allowed_values = test_params[
+                BaseColumnValuesToBeInSetValidator.ALLOWED_VALUES
+            ]
+            match_enum = test_params[BaseColumnValuesToBeInSetValidator.MATCH_ENUM]
 
-            dfs = self.runner if isinstance(self.runner, list) else [self.runner]
+            dfs = self.runner
             count_in_set_impl = add_props(values=allowed_values)(
-                Metrics.COUNT_IN_SET.value
+                Metrics.countInSet.value
             )(column).get_pandas_computation()
-            row_count_impl = Metrics.ROW_COUNT().get_pandas_computation()
+            row_count_impl = Metrics.rowCount().get_pandas_computation()
 
             dimension_aggregates = defaultdict(
                 lambda: {
-                    Metrics.COUNT_IN_SET.name: count_in_set_impl.create_accumulator(),
-                    Metrics.ROW_COUNT.name: row_count_impl.create_accumulator(),
+                    Metrics.countInSet.name: count_in_set_impl.create_accumulator(),
+                    Metrics.rowCount.name: row_count_impl.create_accumulator(),
                 }
             )
 
@@ -125,24 +114,26 @@ class ColumnValuesToBeInSetValidator(
                     dimension_value = self.format_dimension_value(dimension_value)
 
                     dimension_aggregates[dimension_value][
-                        Metrics.COUNT_IN_SET.name
+                        Metrics.countInSet.name
                     ] = count_in_set_impl.update_accumulator(
-                        dimension_aggregates[dimension_value][
-                            Metrics.COUNT_IN_SET.name
-                        ],
+                        dimension_aggregates[dimension_value][Metrics.countInSet.name],
                         group_df,
                     )
                     dimension_aggregates[dimension_value][
-                        Metrics.ROW_COUNT.name
+                        Metrics.rowCount.name
                     ] = row_count_impl.update_accumulator(
-                        dimension_aggregates[dimension_value][Metrics.ROW_COUNT.name],
+                        dimension_aggregates[dimension_value][Metrics.rowCount.name],
                         group_df,
                     )
 
             results_data = []
             for dimension_value, agg in dimension_aggregates.items():
-                count_in_set = agg[Metrics.COUNT_IN_SET.name]
-                row_count = agg[Metrics.ROW_COUNT.name]
+                count_in_set = count_in_set_impl.aggregate_accumulator(
+                    agg[Metrics.countInSet.name]
+                )
+                row_count = row_count_impl.aggregate_accumulator(
+                    agg[Metrics.rowCount.name]
+                )
 
                 if match_enum:
                     failed_count = row_count - count_in_set
@@ -150,8 +141,8 @@ class ColumnValuesToBeInSetValidator(
                     results_data.append(
                         {
                             DIMENSION_VALUE_KEY: dimension_value,
-                            Metrics.COUNT_IN_SET.name: count_in_set,
-                            Metrics.ROW_COUNT.name: row_count,
+                            Metrics.countInSet.name: count_in_set,
+                            Metrics.rowCount.name: row_count,
                             DIMENSION_TOTAL_COUNT_KEY: row_count,
                             DIMENSION_FAILED_COUNT_KEY: failed_count,
                         }
@@ -160,8 +151,8 @@ class ColumnValuesToBeInSetValidator(
                     results_data.append(
                         {
                             DIMENSION_VALUE_KEY: dimension_value,
-                            Metrics.COUNT_IN_SET.name: count_in_set,
-                            Metrics.ROW_COUNT.name: count_in_set,
+                            Metrics.countInSet.name: count_in_set,
+                            Metrics.rowCount.name: count_in_set,
                             DIMENSION_TOTAL_COUNT_KEY: row_count,
                             DIMENSION_FAILED_COUNT_KEY: 0,
                         }
@@ -179,30 +170,29 @@ class ColumnValuesToBeInSetValidator(
                 results_df = aggregate_others_pandas(
                     results_df,
                     dimension_column=DIMENSION_VALUE_KEY,
-                    top_n=DEFAULT_TOP_DIMENSIONS,
+                    top_n=top_n,
                 )
 
-                for row_dict in results_df.to_dict("records"):
-                    metric_values = self._build_metric_values_from_row(
-                        row_dict, metrics_to_compute, test_params
-                    )
-
-                    evaluation = self._evaluate_test_condition(
-                        metric_values, test_params
-                    )
-
-                    dimension_result = self._create_dimension_result(
-                        row_dict,
-                        dimension_col.name,
-                        metric_values,
-                        evaluation,
-                        test_params,
-                    )
-
-                    dimension_results.append(dimension_result)
+                dimension_results = self._process_dimension_rows(
+                    results_df.to_dict("records"),
+                    dimension_col.name,
+                    metrics_to_compute,
+                    test_params,
+                )
 
         except Exception as exc:
             logger.warning(f"Error executing dimensional query: {exc}")
             logger.debug("Full error details: ", exc_info=True)
 
         return dimension_results
+
+    def compute_row_count(self, column: SQALikeColumn):
+        """Compute row count for the given column
+
+        Args:
+            column (Union[SQALikeColumn, Column]): column to compute row count for
+
+        Raises:
+            NotImplementedError:
+        """
+        return self._compute_row_count(self.runner, column)

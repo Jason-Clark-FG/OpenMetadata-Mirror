@@ -23,9 +23,7 @@ import es.co.elastic.clients.elasticsearch.core.SearchRequest;
 import es.co.elastic.clients.elasticsearch.core.SearchResponse;
 import es.co.elastic.clients.elasticsearch.core.search.Hit;
 import es.co.elastic.clients.json.JsonData;
-import es.org.elasticsearch.common.settings.Settings;
-import es.org.elasticsearch.search.SearchModule;
-import es.org.elasticsearch.xcontent.NamedXContentRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
@@ -40,16 +38,14 @@ import org.openmetadata.schema.api.lineage.LineageDirection;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.sdk.exception.SearchException;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 
 @Slf4j
 public class EsUtils {
 
-  public static final NamedXContentRegistry esXContentRegistry;
   private static final ObjectMapper mapper;
 
   static {
-    SearchModule searchModule = new SearchModule(Settings.EMPTY, false, List.of());
-    esXContentRegistry = new NamedXContentRegistry(searchModule.getNamedXContents());
     mapper = new ObjectMapper();
   }
 
@@ -62,6 +58,16 @@ public class EsUtils {
       LOG.error("Failed to convert JsonData to Map", e);
       return new HashMap<>();
     }
+  }
+
+  public static JsonData toJsonData(String doc) {
+    Map<String, Object> docMap;
+    try {
+      docMap = mapper.readValue(doc, new TypeReference<>() {});
+    } catch (JsonProcessingException e) {
+      throw new IllegalArgumentException("Invalid JSON input", e);
+    }
+    return JsonData.of(docMap);
   }
 
   public static String parseJsonQuery(String jsonQuery) throws JsonProcessingException {
@@ -125,7 +131,14 @@ public class EsUtils {
       }
     }
 
-    return client.search(searchRequestBuilder.build(), JsonData.class);
+    Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+    try {
+      return client.search(searchRequestBuilder.build(), JsonData.class);
+    } finally {
+      if (searchTimerSample != null) {
+        RequestLatencyContext.endSearchOperation(searchTimerSample);
+      }
+    }
   }
 
   public static Map<String, Object> searchEREntityByKey(
@@ -179,7 +192,15 @@ public class EsUtils {
             null,
             null,
             fieldsToRemove);
-    SearchResponse<JsonData> searchResponse = client.search(searchRequest, JsonData.class);
+    Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+    SearchResponse<JsonData> searchResponse;
+    try {
+      searchResponse = client.search(searchRequest, JsonData.class);
+    } finally {
+      if (searchTimerSample != null) {
+        RequestLatencyContext.endSearchOperation(searchTimerSample);
+      }
+    }
 
     for (Hit<JsonData> hit : searchResponse.hits().hits()) {
       if (hit.source() != null) {
@@ -294,7 +315,15 @@ public class EsUtils {
             null,
             null,
             fieldsToRemove);
-    SearchResponse<JsonData> searchResponse = client.search(searchRequest, JsonData.class);
+    Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+    SearchResponse<JsonData> searchResponse;
+    try {
+      searchResponse = client.search(searchRequest, JsonData.class);
+    } finally {
+      if (searchTimerSample != null) {
+        RequestLatencyContext.endSearchOperation(searchTimerSample);
+      }
+    }
 
     for (Hit<JsonData> hit : searchResponse.hits().hits()) {
       if (hit.source() != null) {
@@ -372,7 +401,14 @@ public class EsUtils {
     // Apply query filter
     buildSearchSourceFilter(queryFilter, searchRequestBuilder);
 
-    return client.search(searchRequestBuilder.build(), JsonData.class);
+    Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+    try {
+      return client.search(searchRequestBuilder.build(), JsonData.class);
+    } finally {
+      if (searchTimerSample != null) {
+        RequestLatencyContext.endSearchOperation(searchTimerSample);
+      }
+    }
   }
 
   private static Query buildBoolQueriesWithShould(Map<String, Set<String>> keysAndValues) {

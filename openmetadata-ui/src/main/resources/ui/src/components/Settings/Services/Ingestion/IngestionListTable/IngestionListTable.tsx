@@ -42,10 +42,7 @@ import {
 } from '../../../../../rest/ingestionPipelineAPI';
 import { Transi18next } from '../../../../../utils/CommonUtils';
 import {
-  getCurrentMillis,
-  getEpochMillisForPastDays,
-} from '../../../../../utils/date-time/DateTimeUtils';
-import {
+  getColumnSorter,
   getEntityName,
   highlightSearchText,
 } from '../../../../../utils/EntityUtils';
@@ -192,10 +189,6 @@ function IngestionListTable({
   const fetchIngestionPipelineExtraDetails = useCallback(async () => {
     try {
       setIsIngestionRunsLoading(true);
-      const queryParams = {
-        startTs: getEpochMillisForPastDays(1),
-        endTs: getCurrentMillis(),
-      };
       const permissionPromises = ingestionData.map((item) =>
         getEntityPermissionByFqn(
           ResourceEntity.INGESTION_PIPELINE,
@@ -203,7 +196,7 @@ function IngestionListTable({
         )
       );
       const recentRunStatusPromises = ingestionData.map((item) =>
-        getRunHistoryForPipeline(item.fullyQualifiedName ?? '', queryParams)
+        getRunHistoryForPipeline(item.fullyQualifiedName ?? '', { limit: 5 })
       );
       const permissionResponse = await Promise.allSettled(permissionPromises);
       const recentRunStatusResponse = await Promise.allSettled(
@@ -325,6 +318,7 @@ function IngestionListTable({
         dataIndex: 'name',
         key: 'name',
         fixed: 'left' as FixedType,
+        sorter: getColumnSorter<IngestionPipeline, 'name'>('name'),
         render: customRenderNameField ?? renderNameField(searchText),
       },
       ...(showDescriptionCol
@@ -484,7 +478,7 @@ function IngestionListTable({
           }}
           pagination={false}
           rowKey="fullyQualifiedName"
-          scroll={{ x: 1300 }}
+          scroll={data.length > 0 ? { x: 1300 } : undefined}
           size="small"
           {...extraTableProps}
         />

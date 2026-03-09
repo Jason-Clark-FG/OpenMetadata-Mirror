@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Divider } from '@mui/material';
 import { Typography } from 'antd';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,12 +73,7 @@ const DataQualitySection: React.FC<DataQualitySectionProps> = ({
         type="success"
         onClick={() => onFilterChange?.('success')}
       />
-      <Divider
-        flexItem
-        className="vertical-divider"
-        orientation="vertical"
-        variant="middle"
-      />
+      <div className="stat-card-vertical-divider" />
       <DataQualityStatCard
         count={abortedTests}
         isActive={activeFilter === 'aborted'}
@@ -87,12 +81,7 @@ const DataQualitySection: React.FC<DataQualitySectionProps> = ({
         type="aborted"
         onClick={() => onFilterChange?.('aborted')}
       />
-      <Divider
-        flexItem
-        className="vertical-divider"
-        orientation="vertical"
-        variant="middle"
-      />
+      <div className="stat-card-vertical-divider" />
       <DataQualityStatCard
         count={failedTests}
         isActive={activeFilter === 'failed'}
@@ -117,40 +106,49 @@ const DataQualitySection: React.FC<DataQualitySectionProps> = ({
         </div>
       }
       onEdit={onEdit}>
-      <div className="data-quality-content">
-        <div className="data-quality-header" />
-        <div className="data-quality-progress">
-          <div className="data-quality-progress-segments">
-            <DataQualityProgressSegment
-              percent={successPercent}
+      {totalTests === 0 ? (
+        <div className="data-quality-section">
+          <span className="no-data-placeholder">{t('label.no-tests-run')}</span>
+        </div>
+      ) : (
+        <div className="data-quality-content">
+          <div className="data-quality-header" />
+          <div className="data-quality-progress">
+            <div className="data-quality-progress-segments">
+              <DataQualityProgressSegment
+                percent={successPercent}
+                type="success"
+              />
+              <DataQualityProgressSegment
+                percent={abortedPercent}
+                type="aborted"
+              />
+              <DataQualityProgressSegment
+                percent={failedPercent}
+                type="failed"
+              />
+            </div>
+          </div>
+
+          <div className="data-quality-legend">
+            <DataQualityLegendItem
+              count={successTests}
+              label={t('label.-with-colon', { text: t('label.success') })}
               type="success"
             />
-            <DataQualityProgressSegment
-              percent={abortedPercent}
+            <DataQualityLegendItem
+              count={abortedTests}
+              label={t('label.-with-colon', { text: t('label.aborted') })}
               type="aborted"
             />
-            <DataQualityProgressSegment percent={failedPercent} type="failed" />
+            <DataQualityLegendItem
+              count={failedTests}
+              label={t('label.-with-colon', { text: t('label.failed') })}
+              type="failed"
+            />
           </div>
         </div>
-
-        <div className="data-quality-legend">
-          <DataQualityLegendItem
-            count={successTests}
-            label={t('label.-with-colon', { text: t('label.success') })}
-            type="success"
-          />
-          <DataQualityLegendItem
-            count={abortedTests}
-            label={t('label.-with-colon', { text: t('label.aborted') })}
-            type="aborted"
-          />
-          <DataQualityLegendItem
-            count={failedTests}
-            label={t('label.-with-colon', { text: t('label.failed') })}
-            type="failed"
-          />
-        </div>
-      </div>
+      )}
     </SectionWithEdit>
   );
 };

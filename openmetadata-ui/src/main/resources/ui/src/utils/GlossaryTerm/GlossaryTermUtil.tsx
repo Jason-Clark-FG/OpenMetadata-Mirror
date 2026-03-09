@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import { Space, Typography } from 'antd';
-import { isUndefined } from 'lodash';
 import { ReactComponent as IconTerm } from '../../assets/svg/book.svg';
+import { useGenericContext } from '../../components/Customization/GenericProvider/GenericProvider';
 import { CommonWidgets } from '../../components/DataAssets/CommonWidgets/CommonWidgets';
 import { DomainLabelV2 } from '../../components/DataAssets/DomainLabelV2/DomainLabelV2';
 import { OwnerLabelV2 } from '../../components/DataAssets/OwnerLabelV2/OwnerLabelV2';
@@ -21,70 +21,17 @@ import GlossaryTermReferences from '../../components/Glossary/GlossaryTerms/tabs
 import GlossaryTermSynonyms from '../../components/Glossary/GlossaryTerms/tabs/GlossaryTermSynonyms';
 import RelatedTerms from '../../components/Glossary/GlossaryTerms/tabs/RelatedTerms';
 import WorkflowHistory from '../../components/Glossary/GlossaryTerms/tabs/WorkFlowTab/WorkflowHistory.component';
-import EmptyWidgetPlaceholder from '../../components/MyData/CustomizableComponents/EmptyWidgetPlaceholder/EmptyWidgetPlaceholder';
 import { DE_ACTIVE_COLOR } from '../../constants/constants';
-import { SIZE } from '../../enums/common.enum';
 import { GlossaryTermDetailPageWidgetKeys } from '../../enums/CustomizeDetailPage.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { EntityReference } from '../../generated/entity/data/table';
 import { TagLabel, TagSource } from '../../generated/type/tagLabel';
 import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.interface';
-import customizeGlossaryTermPageClassBase from '../CustomizeGlossaryTerm/CustomizeGlossaryTermBaseClass';
 import {
   convertEntityReferencesToTagLabels,
   convertTagLabelsToEntityReferences,
 } from '../EntityReferenceUtils';
 import { ENTITY_LINK_SEPARATOR, getEntityName } from '../EntityUtils';
-
-export const getWidgetFromKey = ({
-  widgetConfig,
-  handleOpenAddWidgetModal,
-  handlePlaceholderWidgetKey,
-  handleRemoveWidget,
-  isEditView,
-  iconHeight,
-  iconWidth,
-}: {
-  widgetConfig: WidgetConfig;
-  handleOpenAddWidgetModal?: () => void;
-  handlePlaceholderWidgetKey?: (key: string) => void;
-  handleRemoveWidget?: (key: string) => void;
-  iconHeight?: SIZE;
-  iconWidth?: SIZE;
-  isEditView?: boolean;
-}) => {
-  if (
-    widgetConfig.i.endsWith('.EmptyWidgetPlaceholder') &&
-    !isUndefined(handleOpenAddWidgetModal) &&
-    !isUndefined(handlePlaceholderWidgetKey) &&
-    !isUndefined(handleRemoveWidget)
-  ) {
-    return (
-      <EmptyWidgetPlaceholder
-        handleOpenAddWidgetModal={handleOpenAddWidgetModal}
-        handlePlaceholderWidgetKey={handlePlaceholderWidgetKey}
-        handleRemoveWidget={handleRemoveWidget}
-        iconHeight={iconHeight}
-        iconWidth={iconWidth}
-        isEditable={widgetConfig.isDraggable}
-        widgetKey={widgetConfig.i}
-      />
-    );
-  }
-
-  const Widget = customizeGlossaryTermPageClassBase.getWidgetFromKey(
-    widgetConfig.i
-  );
-
-  return (
-    <Widget
-      handleRemoveWidget={handleRemoveWidget}
-      isEditView={isEditView}
-      selectedGridSize={widgetConfig.w}
-      widgetKey={widgetConfig.i}
-    />
-  );
-};
 
 export const getGlossaryTermWidgetFromKey = (widgetConfig: WidgetConfig) => {
   if (
@@ -114,13 +61,24 @@ export const getGlossaryTermWidgetFromKey = (widgetConfig: WidgetConfig) => {
   } else if (
     widgetConfig.i.startsWith(GlossaryTermDetailPageWidgetKeys.DOMAIN)
   ) {
-    return <DomainLabelV2 multiple showDomainHeading />;
+    return <GlossaryTermDomainWidget />;
   }
 
   return (
     <CommonWidgets
       entityType={EntityType.GLOSSARY_TERM}
       widgetConfig={widgetConfig}
+    />
+  );
+};
+
+const GlossaryTermDomainWidget = () => {
+  const { entityRules } = useGenericContext();
+
+  return (
+    <DomainLabelV2
+      showDomainHeading
+      multiple={entityRules?.canAddMultipleDomains ?? true}
     />
   );
 };

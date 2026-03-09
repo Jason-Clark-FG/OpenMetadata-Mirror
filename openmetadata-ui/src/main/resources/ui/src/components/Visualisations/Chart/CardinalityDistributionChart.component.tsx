@@ -11,22 +11,30 @@
  *  limitations under the License.
  */
 
-import { Box, Card, Divider, Typography, useTheme } from '@mui/material';
+import { Badge } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import { isUndefined } from 'lodash';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   TooltipProps,
   XAxis,
   YAxis,
 } from 'recharts';
-import { CHART_BLUE_1 } from '../../../constants/Color.constants';
+import {
+  CHART_BLUE_1,
+  COLOR_GREY_300,
+  COLOR_GREY_400,
+  GRAY_600,
+  GREY_100,
+  GREY_200,
+} from '../../../constants/Color.constants';
 import { GRAPH_BACKGROUND_COLOR } from '../../../constants/constants';
 import { ColumnProfile } from '../../../generated/entity/data/table';
 import {
@@ -35,7 +43,6 @@ import {
   tooltipFormatter,
 } from '../../../utils/ChartUtils';
 import { customFormatDateTime } from '../../../utils/date-time/DateTimeUtils';
-import { DataPill } from '../../common/DataPill/DataPill.styled';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 
 export interface CardinalityDistributionChartProps {
@@ -50,8 +57,8 @@ const CardinalityDistributionChart = ({
   data,
   noDataPlaceholderText,
 }: CardinalityDistributionChartProps) => {
-  const theme = useTheme();
   const { t } = useTranslation();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const firstDayAllUnique =
     data.firstDayData?.cardinalityDistribution?.allValuesUnique ?? false;
@@ -70,17 +77,9 @@ const CardinalityDistributionChart = ({
   const renderPlaceholder = useMemo(
     () => (placeholderText: string | React.ReactNode) =>
       (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            width: '100%',
-            minHeight: 350,
-          }}>
+        <div className="tw:flex tw:items-center tw:justify-center tw:h-full tw:w-full tw:min-h-87.5">
           <ErrorPlaceHolder placeholderText={placeholderText} />
-        </Box>
+        </div>
       ),
     []
   );
@@ -100,61 +99,28 @@ const CardinalityDistributionChart = ({
       const data = payload[0].payload;
 
       return (
-        <Card
-          sx={{
-            p: '10px',
-            bgcolor: theme.palette.allShades.white,
-          }}>
-          <Typography
-            sx={{
-              color: theme.palette.allShades.gray[900],
-              fontWeight: theme.typography.fontWeightMedium,
-              fontSize: theme.typography.pxToRem(12),
-            }}>
+        <div className="tw:bg-primary tw:rounded-md tw:shadow-md tw:p-2.5">
+          <p className="tw:text-primary tw:font-medium tw:text-xs">
             {data.name}
-          </Typography>
-          <Divider
-            sx={{
-              my: 2,
-              borderStyle: 'dashed',
-              borderColor: theme.palette.allShades.gray[300],
-            }}
-          />
-          <Box className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[700],
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+          </p>
+          <hr className="tw:border-primary tw:my-2 tw:border-dashed" />
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-6 tw:pb-1 tw:text-sm">
+            <span className="tw:text-tertiary tw:text-[11px]">
               {t('label.count')}
-            </Typography>
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[900],
-                fontWeight: theme.typography.fontWeightMedium,
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+            <span className="tw:text-primary tw:font-medium tw:text-[11px]">
               {tooltipFormatter(data.count)}
-            </Typography>
-          </Box>
-          <Box className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[700],
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+          </div>
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-6 tw:pb-1 tw:text-sm">
+            <span className="tw:text-tertiary tw:text-[11px]">
               {t('label.percentage')}
-            </Typography>
-            <Typography
-              sx={(theme) => ({
-                color: theme.palette.allShades.gray[900],
-                fontWeight: theme.typography.fontWeightMedium,
-                fontSize: theme.typography.pxToRem(11),
-              })}>
+            </span>
+            <span className="tw:text-primary tw:font-medium tw:text-[11px]">
               {`${data.percentage}%`}
-            </Typography>
-          </Box>
-        </Card>
+            </span>
+          </div>
+        </div>
       );
     }
 
@@ -170,14 +136,54 @@ const CardinalityDistributionChart = ({
     'message.all-values-unique-no-distribution-available'
   );
 
+  const handleCategoryClick = (categoryName: string) => {
+    setSelectedCategory((prev) =>
+      prev === categoryName ? null : categoryName
+    );
+  };
+
+  const CustomYAxisTick = (props: {
+    x?: number;
+    y?: number;
+    payload?: { value: string };
+  }) => {
+    const { x, y, payload } = props;
+    if (!payload) {
+      return null;
+    }
+
+    const categoryName = payload.value;
+    const isSelected = selectedCategory === categoryName;
+    const isHighlighted = selectedCategory && selectedCategory !== categoryName;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          cursor="pointer"
+          dy={4}
+          fill={
+            isSelected
+              ? CHART_BLUE_1
+              : isHighlighted
+              ? COLOR_GREY_400
+              : GRAY_600
+          }
+          fontSize={12}
+          fontWeight={isSelected ? 600 : 400}
+          opacity={isHighlighted ? 0.5 : 1}
+          textAnchor="end"
+          x={-8}
+          onClick={() => handleCategoryClick(categoryName)}>
+          {categoryName.length > 15
+            ? `${categoryName.slice(0, 15)}...`
+            : categoryName}
+        </text>
+      </g>
+    );
+  };
+
   return (
-    <Box
-      data-testid="chart-container"
-      sx={{
-        display: 'flex',
-        width: '100%',
-        gap: 0,
-      }}>
+    <div className="tw:flex tw:w-full" data-testid="chart-container">
       {bothAllUnique
         ? renderPlaceholder(allValuesUniqueMessage)
         : dataEntries.map(([key, columnProfile], index) => {
@@ -203,49 +209,55 @@ const CardinalityDistributionChart = ({
               'MMM dd, yyyy'
             );
 
+            const containerHeight = Math.max(350, graphData.length * 30);
+
+            const colClassName = classNames(
+              'tw:min-w-0 tw:flex tw:flex-col tw:pt-2 tw:pb-2',
+              showSingleGraph
+                ? 'tw:flex-1 tw:basis-full tw:px-4'
+                : 'tw:flex-1 tw:basis-1/2 tw:px-6',
+              {
+                'tw:border-r tw:border-border-secondary':
+                  !showSingleGraph && index === 0,
+              }
+            );
+
             return (
-              <Box
-                key={key}
-                sx={{
-                  flex: showSingleGraph ? '1 1 100%' : '1 1 50%',
-                  minWidth: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  px: showSingleGraph ? 4 : 6,
-                  py: 2,
-                  borderRight:
-                    !showSingleGraph && index === 0
-                      ? `1px solid ${theme.palette.grey[200]}`
-                      : 'none',
-                }}>
+              <div className={colClassName} key={key}>
                 {isAllUnique ? (
                   renderPlaceholder(allValuesUniqueMessage)
                 ) : (
                   <>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        mb: 5,
-                      }}>
-                      <DataPill data-testid="date">{graphDate}</DataPill>
-                      <DataPill data-testid="cardinality-tag">
+                    <div className="tw:flex tw:items-center tw:justify-between tw:mb-5">
+                      <Badge
+                        className="tw:font-semibold"
+                        color="gray"
+                        data-testid="date"
+                        size="lg"
+                        type="color">
+                        {graphDate}
+                      </Badge>
+                      <Badge
+                        className="tw:font-semibold"
+                        color="gray"
+                        data-testid="cardinality-tag"
+                        size="lg"
+                        type="color">
                         {`${t('label.total-entity', {
                           entity: t('label.category-plural'),
                         })}: ${cardinalityData.categories?.length || 0}`}
-                      </DataPill>
-                    </Box>
-                    <Box sx={{ flex: 1, minHeight: 350 }}>
+                      </Badge>
+                    </div>
+                    <div className="tw:flex-1 tw:min-h-87.5 tw:overflow-x-hidden">
                       <ResponsiveContainer
                         debounce={200}
+                        height={containerHeight}
                         id={`${key}-cardinality`}
-                        minHeight={300}>
+                        width="100%">
                         <BarChart
-                          className="w-full"
+                          className="tw:w-full"
                           data={graphData}
-                          layout="vertical"
-                          margin={{ left: 16 }}>
+                          layout="vertical">
                           <CartesianGrid
                             horizontal={renderHorizontalGridLine}
                             stroke={GRAPH_BACKGROUND_COLOR}
@@ -267,38 +279,58 @@ const CardinalityDistributionChart = ({
                             axisLine={false}
                             dataKey="name"
                             padding={{ top: 16, bottom: 16 }}
-                            tick={{ fontSize: 12 }}
-                            tickFormatter={(value: string) =>
-                              value?.length > 15
-                                ? `${value.slice(0, 15)}...`
-                                : value
-                            }
+                            tick={<CustomYAxisTick />}
                             tickLine={false}
                             type="category"
                             width={120}
                           />
-                          <Legend />
                           <Tooltip
                             content={renderTooltip}
                             cursor={{
-                              stroke: theme.palette.grey[200],
+                              fill: GREY_100,
+                              stroke: GREY_200,
                               strokeDasharray: '3 3',
                             }}
                           />
                           <Bar
+                            barSize={22}
                             dataKey="percentage"
-                            fill={CHART_BLUE_1}
-                            radius={[0, 8, 8, 0]}
-                          />
+                            radius={[0, 8, 8, 0]}>
+                            {graphData.map((entry) => {
+                              const isSelected =
+                                selectedCategory === entry.name;
+                              const isHighlighted =
+                                selectedCategory &&
+                                selectedCategory !== entry.name;
+
+                              return (
+                                <Cell
+                                  cursor="pointer"
+                                  fill={
+                                    isSelected
+                                      ? CHART_BLUE_1
+                                      : isHighlighted
+                                      ? COLOR_GREY_300
+                                      : CHART_BLUE_1
+                                  }
+                                  key={`cell-${entry.name}`}
+                                  opacity={isHighlighted ? 0.3 : 1}
+                                  onClick={() =>
+                                    handleCategoryClick(entry.name)
+                                  }
+                                />
+                              );
+                            })}
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
-                    </Box>
+                    </div>
                   </>
                 )}
-              </Box>
+              </div>
             );
           })}
-    </Box>
+    </div>
   );
 };
 

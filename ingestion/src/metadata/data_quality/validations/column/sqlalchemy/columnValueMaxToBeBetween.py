@@ -14,7 +14,7 @@ Validator for column value max to be between test case
 
 from typing import List, Optional
 
-from sqlalchemy import Column, func
+from sqlalchemy import Column
 
 from metadata.data_quality.validations.base_test_handler import (
     DIMENSION_TOTAL_COUNT_KEY,
@@ -22,7 +22,6 @@ from metadata.data_quality.validations.base_test_handler import (
 from metadata.data_quality.validations.column.base.columnValueMaxToBeBetween import (
     BaseColumnValueMaxToBeBetweenValidator,
 )
-from metadata.data_quality.validations.impact_score import DEFAULT_TOP_DIMENSIONS
 from metadata.data_quality.validations.mixins.sqa_validator_mixin import (
     SQAValidatorMixin,
 )
@@ -47,12 +46,19 @@ class ColumnValueMaxToBeBetweenValidator(
         """
         return self.run_query_results(self.runner, metric, column)
 
+    def _build_dimension_metric_values(self, row, metrics_to_compute, test_params=None):
+        max_value = row.get(Metrics.max.name)
+        if max_value is None:
+            return None
+        return {Metrics.max.name: max_value}
+
     def _execute_dimensional_validation(
         self,
         column: Column,
         dimension_col: Column,
         metrics_to_compute: dict,
         test_params: dict,
+        top_n: int,
     ) -> List[DimensionResult]:
         """Execute dimensional validation for max with proper aggregation
 
@@ -73,46 +79,36 @@ class ColumnValueMaxToBeBetweenValidator(
         dimension_results = []
 
         try:
+            row_count_expr = Metrics.rowCount().fn()
+            max_expr = Metrics.max(column).fn()
             metric_expressions = {
-                DIMENSION_TOTAL_COUNT_KEY: func.count(),
-                Metrics.MAX.name: Metrics.MAX(column).fn(),
+                DIMENSION_TOTAL_COUNT_KEY: row_count_expr,
+                Metrics.max.name: max_expr,
             }
 
-            def build_max_final(cte):
-                return func.max(getattr(cte.c, Metrics.MAX.name))
-
-            result_rows = self._execute_with_others_aggregation_statistical(
-                dimension_col,
-                metric_expressions,
-                self._get_validation_checker(test_params).get_sqa_failed_rows_builder(
-                    {Metrics.MAX.name: Metrics.MAX.name},
-                    DIMENSION_TOTAL_COUNT_KEY,
-                ),
-                final_metric_builders={Metrics.MAX.name: build_max_final},
-                top_dimensions_count=DEFAULT_TOP_DIMENSIONS,
+            failed_count_builder = (
+                lambda cte, row_count_expr: self._get_validation_checker(
+                    test_params
+                ).build_agg_level_violation_sqa(
+                    [getattr(cte.c, Metrics.max.name)], row_count_expr
+                )
             )
 
-            for row in result_rows:
-                max_value = row.get(Metrics.MAX.name)
+            normalized_dimension = self._get_normalized_dimension_expression(
+                dimension_col
+            )
 
-                if max_value is None:
-                    continue
+            result_rows = self._run_dimensional_validation_query(
+                source=self.runner.dataset,
+                dimension_expr=normalized_dimension,
+                metric_expressions=metric_expressions,
+                failed_count_builder=failed_count_builder,
+                top_n=top_n,
+            )
 
-                metric_values = {
-                    Metrics.MAX.name: max_value,
-                }
-
-                evaluation = self._evaluate_test_condition(metric_values, test_params)
-
-                dimension_result = self._create_dimension_result(
-                    row,
-                    dimension_col.name,
-                    metric_values,
-                    evaluation,
-                    test_params,
-                )
-
-                dimension_results.append(dimension_result)
+            return self._process_dimension_rows(
+                result_rows, dimension_col.name, metrics_to_compute, test_params
+            )
 
         except Exception as exc:
             logger.warning(f"Error executing dimensional query: {exc}")

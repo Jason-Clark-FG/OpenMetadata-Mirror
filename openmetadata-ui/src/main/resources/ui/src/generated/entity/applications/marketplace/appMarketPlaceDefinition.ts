@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -18,6 +18,11 @@ export interface AppMarketPlaceDefinition {
      * This schema defines the type of the agent.
      */
     agentType?: AgentType;
+    /**
+     * If true, multiple instances of this app can run concurrently. This is useful for apps
+     * like QueryRunner that support parallel executions with different configurations.
+     */
+    allowConcurrentExecution?: boolean;
     /**
      * Allow users to configure the app from the UI. If `false`, the `configure` step will be
      * hidden.
@@ -74,6 +79,10 @@ export interface AppMarketPlaceDefinition {
      */
     domains?: EntityReference[];
     /**
+     * Flag to enable/disable the application. If the app is not enabled, it can't be installed.
+     */
+    enabled?: boolean;
+    /**
      * Event subscriptions that will be created when the application is installed.
      */
     eventSubscriptions?: CreateEventSubscription[];
@@ -113,11 +122,6 @@ export interface AppMarketPlaceDefinition {
      * Permission used by Native Applications.
      */
     permission: Permissions;
-    /**
-     * Flag to enable/disable preview for the application. If the app is in preview mode, it
-     * can't be installed.
-     */
-    preview?: boolean;
     /**
      * Privacy Policy for the developer
      */
@@ -177,6 +181,8 @@ export interface AppMarketPlaceDefinition {
  */
 export enum AgentType {
     CollateAI = "CollateAI",
+    CollateAIQualityAgent = "CollateAIQualityAgent",
+    CollateAITierAgent = "CollateAITierAgent",
     Metadata = "Metadata",
 }
 
@@ -185,7 +191,7 @@ export enum AgentType {
  *
  * Configuration for the Automator External Application.
  *
- * This schema defines the Slack App Token Configuration
+ * This schema defines the Slack App Information
  *
  * Configuration for the Collate AI Quality Agent.
  *
@@ -201,7 +207,7 @@ export enum AgentType {
 export interface CollateAIAppConfig {
     /**
      * Query filter to be passed to ES. E.g.,
-     * `{"query":{"bool":{"must":[{"bool":{"should":[{"term":{"domain.displayName.keyword":"DG
+     * `{"query":{"bool":{"must":[{"bool":{"should":[{"term":{"domains.displayName.keyword":"DG
      * Anim"}}]}}]}}}`. This is the same payload as in the Explore page.
      */
     filter?: string;
@@ -228,6 +234,19 @@ export interface CollateAIAppConfig {
      * Bot Token
      */
     botToken?: string;
+    /**
+     * Client Id of the Application
+     */
+    clientId?: string;
+    /**
+     * Client Secret of the Application.
+     */
+    clientSecret?: string;
+    /**
+     * Signing Secret of the Application. Confirm that each request comes from Slack by
+     * verifying its unique signature.
+     */
+    signingSecret?: string;
     /**
      * User Token
      */
@@ -290,6 +309,11 @@ export interface CollateAIAppConfig {
      */
     maxRetries?: number;
     /**
+     * Number of entities per partition for distributed indexing. Smaller values create more
+     * partitions for better distribution across servers. Range: 1000-50000.
+     */
+    partitionSize?: number;
+    /**
      * Maximum number of events sent in a batch (Default 100).
      */
     payLoadSize?: number;
@@ -312,6 +336,22 @@ export interface CollateAIAppConfig {
      */
     searchIndexMappingLanguage?: SearchIndexMappingLanguage;
     /**
+     * Per-entity-type override for time series max days. Keys are entity type names (e.g.
+     * testCaseResult, queryCostRecord), values are number of days. Entities not listed here use
+     * the default Time Series Max Days value.
+     */
+    timeSeriesEntityDays?: { [key: string]: number };
+    /**
+     * Maximum age in days for time series data during reindexing. Default 0 (index all data).
+     * Set to a positive value like 15 to limit to recent data only.
+     */
+    timeSeriesMaxDays?: number;
+    /**
+     * Enable distributed indexing to scale reindexing across multiple servers with fault
+     * tolerance and parallel processing
+     */
+    useDistributedIndexing?: boolean;
+    /**
      * Force cache warmup even if another instance is detected (use with caution).
      */
     force?: boolean;
@@ -320,6 +360,10 @@ export interface CollateAIAppConfig {
      * (e.g., 30 for one month, 60 for two months).
      */
     activityThreadsRetentionPeriod?: number;
+    /**
+     * Enter the retention period for Audit Log entries in days (e.g., 90 for three months).
+     */
+    auditLogRetentionPeriod?: number;
     /**
      * Enter the retention period for change event records in days (e.g., 7 for one week, 30 for
      * one month).
@@ -548,9 +592,22 @@ export interface Action {
      */
     propagationDepth?: number;
     /**
+     * Mode for calculating propagation depth. 'ROOT' calculates depth from root nodes (sources
+     * with no parents). 'DATA_ASSET' calculates depth relative to each data asset being
+     * processed, ensuring each asset only receives metadata from nodes within the specified
+     * number of hops upstream.
+     */
+    propagationDepthMode?: PropagationDepthMode;
+    /**
      * List of configurations to stop propagation based on conditions
      */
     propagationStopConfigs?: PropagationStopConfig[];
+    /**
+     * Use the optimized propagation algorithm that reduces memory usage and API calls.
+     * Recommended for large lineage graphs. If set to false, uses the original propagation
+     * algorithm. Default is true.
+     */
+    useOptimizedPropagation?: boolean;
 }
 
 /**
@@ -565,6 +622,9 @@ export interface Action {
  * EntityReference is used for capturing relationships from one entity to another. For
  * example, a table has an attribute called database of type EntityReference that captures
  * the relationship of a table `belongs to a` database.
+ *
+ * Optional custom notification template for this subscription. When not set, system default
+ * template will be used. Only USER templates can be assigned.
  */
 export interface EntityReference {
     /**
@@ -621,6 +681,17 @@ export enum LabelElement {
 }
 
 /**
+ * Mode for calculating propagation depth. 'ROOT' calculates depth from root nodes (sources
+ * with no parents). 'DATA_ASSET' calculates depth relative to each data asset being
+ * processed, ensuring each asset only receives metadata from nodes within the specified
+ * number of hops upstream.
+ */
+export enum PropagationDepthMode {
+    DataAsset = "DATA_ASSET",
+    Root = "ROOT",
+}
+
+/**
  * Configuration to stop lineage propagation based on conditions
  */
 export interface PropagationStopConfig {
@@ -662,8 +733,19 @@ export enum MetadataAttribute {
  * EntityReference is used for capturing relationships from one entity to another. For
  * example, a table has an attribute called database of type EntityReference that captures
  * the relationship of a table `belongs to a` database.
+ *
+ * Optional custom notification template for this subscription. When not set, system default
+ * template will be used. Only USER templates can be assigned.
  */
 export interface TagLabel {
+    /**
+     * Timestamp when this tag was applied in ISO 8601 format
+     */
+    appliedAt?: Date;
+    /**
+     * Who it is that applied this tag (e.g: a bot, AI or a human)
+     */
+    appliedBy?: string;
     /**
      * Description for the tag label.
      *
@@ -690,6 +772,11 @@ export interface TagLabel {
      * used to determine the tag label.
      */
     labelType?: LabelTypeEnum;
+    /**
+     * Additional metadata associated with this tag label, such as recognizer information for
+     * automatically applied tags.
+     */
+    metadata?: TagLabelMetadata;
     /**
      * Name of the tag or glossary term.
      *
@@ -753,6 +840,75 @@ export enum LabelTypeEnum {
 }
 
 /**
+ * Additional metadata associated with this tag label, such as recognizer information for
+ * automatically applied tags.
+ *
+ * Additional metadata associated with a tag label, including information about how the tag
+ * was applied.
+ */
+export interface TagLabelMetadata {
+    /**
+     * Metadata about the recognizer that automatically applied this tag
+     */
+    recognizer?: TagLabelRecognizerMetadata;
+}
+
+/**
+ * Metadata about the recognizer that automatically applied this tag
+ *
+ * Metadata about the recognizer that applied a tag, including scoring and pattern
+ * information.
+ */
+export interface TagLabelRecognizerMetadata {
+    /**
+     * Details of patterns that matched during recognition
+     */
+    patterns?: PatternMatch[];
+    /**
+     * Unique identifier of the recognizer that applied this tag
+     */
+    recognizerId: string;
+    /**
+     * Human-readable name of the recognizer
+     */
+    recognizerName: string;
+    /**
+     * Confidence score assigned by the recognizer (0.0 to 1.0)
+     */
+    score: number;
+    /**
+     * What the recognizer analyzed to apply this tag
+     */
+    target?: Target;
+}
+
+/**
+ * Information about a pattern that matched during recognition
+ */
+export interface PatternMatch {
+    /**
+     * Name of the pattern that matched
+     */
+    name: string;
+    /**
+     * Regular expression or pattern definition
+     */
+    regex?: string;
+    /**
+     * Confidence score for this specific pattern match
+     */
+    score: number;
+}
+
+/**
+ * What the recognizer analyzed to apply this tag
+ */
+export enum Target {
+    ColumnName = "column_name",
+    Content = "content",
+}
+
+/**
  * Label is from Tags or Glossary.
  */
 export enum TagSource {
@@ -813,6 +969,14 @@ export interface CoverImage {
  */
 export interface TagElement {
     /**
+     * Timestamp when this tag was applied in ISO 8601 format
+     */
+    appliedAt?: Date;
+    /**
+     * Who it is that applied this tag (e.g: a bot, AI or a human)
+     */
+    appliedBy?: string;
+    /**
      * Description for the tag label.
      */
     description?: string;
@@ -832,6 +996,11 @@ export interface TagElement {
      * used to determine the tag label.
      */
     labelType: LabelTypeEnum;
+    /**
+     * Additional metadata associated with this tag label, such as recognizer information for
+     * automatically applied tags.
+     */
+    metadata?: TagLabelMetadata;
     /**
      * Name of the tag or glossary term.
      */
@@ -1066,7 +1235,7 @@ export interface Resource {
     filterJsonTree?: string;
     /**
      * Query filter to be passed to ES. E.g.,
-     * `{"query":{"bool":{"must":[{"bool":{"should":[{"term":{"domain.displayName.keyword":"DG
+     * `{"query":{"bool":{"must":[{"bool":{"should":[{"term":{"domains.displayName.keyword":"DG
      * Anim"}}]}}]}}}`. This is the same payload as in the Explore page.
      */
     queryFilter?: string;
@@ -1224,6 +1393,11 @@ export interface CreateEventSubscription {
      * Name that uniquely identifies this Alert.
      */
     name: string;
+    /**
+     * Optional custom notification template for this subscription. When not set, system default
+     * template will be used. Only USER templates can be assigned.
+     */
+    notificationTemplate?: EntityReference;
     /**
      * Owners of this Alert.
      */

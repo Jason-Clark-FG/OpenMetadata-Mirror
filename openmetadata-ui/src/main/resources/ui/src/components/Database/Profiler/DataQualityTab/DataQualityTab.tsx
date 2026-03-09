@@ -12,14 +12,12 @@
  */
 
 import {
-  Box,
-  IconButton,
-  Menu,
-  MenuItem,
+  Button,
+  Dropdown,
   Skeleton,
-  Typography as MuiTypography,
-} from '@mui/material';
-import { Typography } from 'antd';
+  Tooltip,
+} from '@openmetadata/ui-core-components';
+import { DotsVertical } from '@untitledui/icons';
 import { ColumnsType, TablePaginationConfig } from 'antd/lib/table';
 import { FilterValue, SorterResult } from 'antd/lib/table/interface';
 import { AxiosError } from 'axios';
@@ -29,7 +27,9 @@ import { PagingResponse } from 'Models';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ReactComponent as DimensionIcon } from '../../../../assets/svg/data-observability/dimension.svg';
 import { DATA_QUALITY_PROFILER_DOCS } from '../../../../constants/docs.constants';
+import { TEST_CASE_STATUS_LABELS } from '../../../../constants/profiler.constant';
 import { usePermissionProvider } from '../../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../../context/PermissionProvider/PermissionProvider.interface';
 import { SORT_ORDER } from '../../../../enums/common.enum';
@@ -40,6 +40,7 @@ import {
   TestCaseStatus,
 } from '../../../../generated/tests/testCase';
 import { TestCaseResolutionStatus } from '../../../../generated/tests/testCaseResolutionStatus';
+import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
 import { getListTestCaseIncidentByStateId } from '../../../../rest/incidentManagerAPI';
 import { removeTestCaseFromTestSuite } from '../../../../rest/testAPI';
 import { getNameFromFQN, Transi18next } from '../../../../utils/CommonUtils';
@@ -57,8 +58,6 @@ import { showErrorToast } from '../../../../utils/ToastUtils';
 import DateTimeDisplay from '../../../common/DateTimeDisplay/DateTimeDisplay';
 import DeleteWidgetModal from '../../../common/DeleteWidget/DeleteWidgetModal';
 import FilterTablePlaceHolder from '../../../common/ErrorWithPlaceholder/FilterTablePlaceHolder';
-
-import { ReactComponent as MenuIcon } from '../../../../assets/svg/menu.svg';
 import StatusBadge from '../../../common/StatusBadge/StatusBadge.component';
 import { StatusType } from '../../../common/StatusBadge/StatusBadge.interface';
 import Table from '../../../common/Table/Table';
@@ -101,7 +100,6 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
   const [testCasePermissions, setTestCasePermissions] = useState<
     TestCasePermission[]
   >([]);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   const isApiSortingEnabled = useRef(false);
 
@@ -129,28 +127,14 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     setSelectedTestCase(undefined);
   };
 
-  const handleMenuClick = (
-    event: React.MouseEvent<HTMLElement>,
-    recordId: string
-  ) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    setActiveRecordId(recordId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setActiveRecordId(null);
-  };
-
   const handleEdit = (record: TestCase) => {
     setSelectedTestCase({ data: record, action: 'UPDATE' });
-    handleMenuClose();
+    setActiveRecordId(null);
   };
 
   const handleDelete = (record: TestCase) => {
     setSelectedTestCase({ data: record, action: 'DELETE' });
-    handleMenuClose();
+    setActiveRecordId(null);
   };
 
   const handleConfirmClick = async () => {
@@ -195,7 +179,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
           return result?.testCaseStatus ? (
             <StatusBadge
               dataTestId={`status-badge-${record.name}`}
-              label={result.testCaseStatus}
+              label={TEST_CASE_STATUS_LABELS[result.testCaseStatus]}
               status={toLower(result.testCaseStatus) as StatusType}
             />
           ) : (
@@ -210,19 +194,14 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         width: 200,
         render: (result: TestCaseResult, record: TestCase) => {
           return result?.result &&
-            record.testCaseStatus !== TestCaseStatus.Success ? (
-            <MuiTypography
-              sx={{
-                wordBreak: 'break-word',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                fontSize: '14px',
-              }}>
-              {result.result}
-            </MuiTypography>
+            result.testCaseStatus !== TestCaseStatus.Success ? (
+            <Tooltip placement="top" title={result.result}>
+              <p
+                className="tw:m-0 tw:line-clamp-2 tw:cursor-pointer tw:wrap-break-word tw:text-sm"
+                data-testid={`reason-text-${record.name}`}>
+                {result.result}
+              </p>
+            </Tooltip>
           ) : (
             '--'
           );
@@ -250,16 +229,14 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             pathname: getTestCaseDetailPagePath(
               record.fullyQualifiedName ?? ''
             ),
-            state: { breadcrumbData },
           };
 
           return (
-            <Typography.Paragraph
-              className="m-0"
-              data-testid={name}
-              style={{ maxWidth: 280 }}>
-              <Link to={urlData}>{getEntityName(record)}</Link>
-            </Typography.Paragraph>
+            <p className="tw:m-0 tw:max-w-70" data-testid={name}>
+              <Link state={{ breadcrumbData }} to={urlData}>
+                {getEntityName(record)}
+              </Link>
+            </p>
           );
         },
       },
@@ -314,12 +291,9 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             );
 
             return (
-              <Typography.Paragraph
-                className="m-0"
-                data-testid={name}
-                style={{ maxWidth: 120 }}>
+              <p className="tw:m-0 tw:max-w-30" data-testid={name}>
                 {name}
-              </Typography.Paragraph>
+              </p>
             );
           }
 
@@ -387,6 +361,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             return <Skeleton height={30} width={30} />;
           }
 
+          const dimensions = record.dimensionColumns ?? [];
+
           const testCasePermission = testCasePermissions.find(
             (permission) =>
               permission.fullyQualifiedName === record.fullyQualifiedName
@@ -401,64 +377,85 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
             ? t('label.remove')
             : t('label.delete');
 
-          const isMenuOpen = Boolean(anchorEl) && activeRecordId === record.id;
           const hasAnyPermission =
             testCaseEditPermission || testCaseDeletePermission;
 
+          const menuItems = [
+            {
+              id: 'edit',
+              isDisabled: !testCaseEditPermission,
+              label: t('label.edit'),
+              onAction: () => handleEdit(record),
+              testId: `edit-${record.name}`,
+            },
+            {
+              id: removeFromTestSuite ? 'remove' : 'delete',
+              isDisabled: !testCaseDeletePermission,
+              label: deleteBtnLabel,
+              onAction: () => handleDelete(record),
+              testId: removeFromTestSuite
+                ? `remove-${record.name}`
+                : `delete-${record.name}`,
+            },
+          ];
+
           return (
-            <Box>
-              <IconButton
-                data-testid={`action-dropdown-${record.name}`}
-                disabled={!hasAnyPermission}
-                size="small"
-                sx={{
-                  width: 24,
-                  height: 24,
-                  py: 2,
-                  px: 0,
-                  border: '1px solid',
-                  borderColor: 'grey.400',
-                  color: 'grey.400',
-                  '&:hover': { backgroundColor: 'transparent' },
-                }}
-                onClick={(e) => handleMenuClick(e, record.id ?? '')}>
-                <MenuIcon />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                open={isMenuOpen}
-                sx={{
-                  '.MuiPaper-root': {
-                    width: 'max-content',
-                  },
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                onClose={handleMenuClose}>
-                <MenuItem
-                  data-testid={`edit-${record.name}`}
-                  disabled={!testCaseEditPermission}
-                  onClick={() => handleEdit(record)}>
-                  {t('label.edit')}
-                </MenuItem>
-                <MenuItem
-                  data-testid={
-                    removeFromTestSuite
-                      ? `remove-${record.name}`
-                      : `delete-${record.name}`
-                  }
-                  disabled={!testCaseDeletePermission}
-                  onClick={() => handleDelete(record)}>
-                  {deleteBtnLabel}
-                </MenuItem>
-              </Menu>
-            </Box>
+            <div className="tw:flex tw:items-center tw:justify-end tw:gap-5">
+              {dimensions.length > 0 && (
+                <Tooltip
+                  placement="top"
+                  title={t(
+                    dimensions.length === 1
+                      ? 'label.number-dimension-associated'
+                      : 'label.number-dimension-plural-associated',
+                    {
+                      number: dimensions.length,
+                    }
+                  )}>
+                  <Link
+                    to={getTestCaseDetailPagePath(
+                      record.fullyQualifiedName ?? '',
+                      TestCasePageTabs.DIMENSIONALITY
+                    )}>
+                    <div
+                      className="tw:flex tw:items-center tw:gap-2 tw:rounded-md tw:bg-blue-50 tw:p-2 tw:text-primary"
+                      data-testid={`dimension-count-${record.name}`}>
+                      <DimensionIcon height={12} width={12} />
+                      <span className="tw:text-xs tw:font-medium">
+                        {dimensions.length}
+                      </span>
+                    </div>
+                  </Link>
+                </Tooltip>
+              )}
+              <Dropdown.Root
+                isOpen={activeRecordId === (record.id ?? null)}
+                onOpenChange={(isOpen) =>
+                  setActiveRecordId(isOpen ? record.id ?? null : null)
+                }>
+                <Button
+                  className="tw:h-6 tw:w-6 tw:p-0!"
+                  color="secondary"
+                  data-testid={`action-dropdown-${record.name}`}
+                  iconLeading={DotsVertical}
+                  isDisabled={!hasAnyPermission}
+                  size="sm"
+                />
+                <Dropdown.Popover className="tw:w-max">
+                  <Dropdown.Menu items={menuItems}>
+                    {(item) => (
+                      <Dropdown.Item
+                        data-testid={item.testId}
+                        id={item.id}
+                        isDisabled={item.isDisabled}
+                        label={item.label}
+                        onAction={item.onAction}
+                      />
+                    )}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown.Root>
+            </div>
           );
         },
       },
@@ -473,7 +470,6 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     testCasePermissions,
     handleStatusSubmit,
     isEditAllowed,
-    anchorEl,
     activeRecordId,
   ]);
 

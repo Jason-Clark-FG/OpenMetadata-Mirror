@@ -14,7 +14,7 @@ Validator for column values to be unique test case
 """
 
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import List, Optional, cast
 
 import pandas as pd
@@ -27,19 +27,18 @@ from metadata.data_quality.validations.base_test_handler import (
 from metadata.data_quality.validations.column.base.columnValuesToBeUnique import (
     BaseColumnValuesToBeUniqueValidator,
 )
-from metadata.data_quality.validations.impact_score import (
-    DEFAULT_TOP_DIMENSIONS,
-    calculate_impact_score_pandas,
-)
+from metadata.data_quality.validations.impact_score import calculate_impact_score_pandas
 from metadata.data_quality.validations.mixins.pandas_validator_mixin import (
     PandasValidatorMixin,
-    aggregate_others_pandas,
+    aggregate_others_statistical_pandas,
 )
 from metadata.generated.schema.tests.dimensionResult import DimensionResult
 from metadata.profiler.metrics.registry import Metrics
 from metadata.utils.sqa_like_column import SQALikeColumn
 
 logger = logging.getLogger(__name__)
+
+COUNTER_ACCUMULATOR_KEY = "counter_accumulator"
 
 
 class ColumnValuesToBeUniqueValidator(
@@ -67,7 +66,8 @@ class ColumnValuesToBeUniqueValidator(
         column: SQALikeColumn,
         dimension_col: SQALikeColumn,
         metrics_to_compute: dict,
-        test_params: Optional[dict] = None,
+        test_params: Optional[dict],
+        top_n: int,
     ) -> List[DimensionResult]:
         """Execute dimensional query with impact scoring and Others aggregation for pandas
 
@@ -93,13 +93,13 @@ class ColumnValuesToBeUniqueValidator(
         dimension_results = []
 
         try:
-            dfs = self.runner if isinstance(self.runner, list) else [self.runner]
-            unique_count_impl = Metrics.UNIQUE_COUNT(column).get_pandas_computation()
+            dfs = self.runner
+            unique_count_impl = Metrics.uniqueCount(column).get_pandas_computation()
 
             dimension_aggregates = defaultdict(
                 lambda: {
-                    Metrics.UNIQUE_COUNT.name: unique_count_impl.create_accumulator(),
-                    Metrics.COUNT.name: 0,
+                    Metrics.uniqueCount.name: unique_count_impl.create_accumulator(),
+                    Metrics.valuesCount.name: 0,
                     DIMENSION_TOTAL_COUNT_KEY: 0,
                 }
             )
@@ -112,34 +112,34 @@ class ColumnValuesToBeUniqueValidator(
                     dimension_value = self.format_dimension_value(dimension_value)
 
                     unique_count_impl.update_accumulator(
-                        dimension_aggregates[dimension_value][
-                            Metrics.UNIQUE_COUNT.name
-                        ],
+                        dimension_aggregates[dimension_value][Metrics.uniqueCount.name],
                         group_df,
                     )
                     dimension_aggregates[dimension_value][
-                        Metrics.COUNT.name
-                    ] += Metrics.COUNT(column).df_fn([group_df])
+                        Metrics.valuesCount.name
+                    ] += Metrics.valuesCount(column).df_fn([group_df])
                     dimension_aggregates[dimension_value][
                         DIMENSION_TOTAL_COUNT_KEY
                     ] += len(group_df)
 
             results_data = []
             for dimension_value, agg in dimension_aggregates.items():
-                total_count = agg[Metrics.COUNT.name]
+                total_count = agg[Metrics.valuesCount.name]
                 total_rows = agg[DIMENSION_TOTAL_COUNT_KEY]
+                counter_accumulator = agg[Metrics.uniqueCount.name]
                 unique_count = unique_count_impl.aggregate_accumulator(
-                    agg[Metrics.UNIQUE_COUNT.name]
+                    counter_accumulator
                 )
-                duplicate_count = total_count - unique_count
+                failed_count = total_count - unique_count
 
                 results_data.append(
                     {
                         DIMENSION_VALUE_KEY: dimension_value,
-                        Metrics.COUNT.name: total_count,
-                        Metrics.UNIQUE_COUNT.name: unique_count,
+                        COUNTER_ACCUMULATOR_KEY: counter_accumulator,
+                        Metrics.valuesCount.name: total_count,
+                        Metrics.uniqueCount.name: unique_count,
                         DIMENSION_TOTAL_COUNT_KEY: total_rows,
-                        DIMENSION_FAILED_COUNT_KEY: duplicate_count,
+                        DIMENSION_FAILED_COUNT_KEY: failed_count,
                     }
                 )
 
@@ -152,30 +152,58 @@ class ColumnValuesToBeUniqueValidator(
                     total_column=DIMENSION_TOTAL_COUNT_KEY,
                 )
 
-                results_df = aggregate_others_pandas(
+                def calculate_unique_count_from_counter(
+                    df_aggregated, others_mask, metric_column
+                ):
+                    result = df_aggregated[metric_column].copy()
+                    if others_mask.any():
+                        merged_counter = df_aggregated.loc[
+                            others_mask, COUNTER_ACCUMULATOR_KEY
+                        ].iloc[0]
+                        unique_count = sum(1 for v in merged_counter.values() if v == 1)
+                        result.loc[others_mask] = unique_count
+                    return result
+
+                def calculate_failed_count_from_metrics(
+                    df_aggregated, others_mask, metric_column
+                ):
+                    result = df_aggregated[metric_column].copy()
+                    if others_mask.any():
+                        count = df_aggregated.loc[
+                            others_mask, Metrics.valuesCount.name
+                        ].iloc[0]
+                        unique_count = df_aggregated.loc[
+                            others_mask, Metrics.uniqueCount.name
+                        ].iloc[0]
+                        failed_count = count - unique_count
+                        result.loc[others_mask] = failed_count
+                    return result
+
+                results_df = aggregate_others_statistical_pandas(
                     results_df,
                     dimension_column=DIMENSION_VALUE_KEY,
-                    top_n=DEFAULT_TOP_DIMENSIONS,
+                    agg_functions={
+                        COUNTER_ACCUMULATOR_KEY: lambda counters: sum(
+                            counters, Counter()
+                        ),
+                        Metrics.valuesCount.name: "sum",
+                        DIMENSION_TOTAL_COUNT_KEY: "sum",
+                        DIMENSION_FAILED_COUNT_KEY: "sum",
+                    },
+                    final_metric_calculators={
+                        Metrics.uniqueCount.name: calculate_unique_count_from_counter,
+                        DIMENSION_FAILED_COUNT_KEY: calculate_failed_count_from_metrics,
+                    },
+                    exclude_from_final=[COUNTER_ACCUMULATOR_KEY],
+                    top_n=top_n,
                 )
 
-                for row_dict in results_df.to_dict("records"):
-                    metric_values = self._build_metric_values_from_row(
-                        row_dict, metrics_to_compute, test_params
-                    )
-
-                    evaluation = self._evaluate_test_condition(
-                        metric_values, test_params
-                    )
-
-                    dimension_result = self._create_dimension_result(
-                        row_dict,
-                        dimension_col.name,
-                        metric_values,
-                        evaluation,
-                        test_params,
-                    )
-
-                    dimension_results.append(dimension_result)
+                dimension_results = self._process_dimension_rows(
+                    results_df.to_dict("records"),
+                    dimension_col.name,
+                    metrics_to_compute,
+                    test_params,
+                )
 
         except Exception as exc:
             logger.warning(f"Error executing dimensional query: {exc}")

@@ -27,10 +27,7 @@ from metadata.data_quality.validations.base_test_handler import (
 from metadata.data_quality.validations.column.base.columnValueLengthsToBeBetween import (
     BaseColumnValueLengthsToBeBetweenValidator,
 )
-from metadata.data_quality.validations.impact_score import (
-    DEFAULT_TOP_DIMENSIONS,
-    calculate_impact_score_pandas,
-)
+from metadata.data_quality.validations.impact_score import calculate_impact_score_pandas
 from metadata.data_quality.validations.mixins.pandas_validator_mixin import (
     PandasValidatorMixin,
     aggregate_others_statistical_pandas,
@@ -57,12 +54,21 @@ class ColumnValueLengthsToBeBetweenValidator(
         """
         return self.run_dataframe_results(self.runner, metric, column)
 
+    def _build_dimension_metric_values(self, row, metrics_to_compute, test_params=None):
+        metric_values = self._build_metric_values_from_row(
+            row, metrics_to_compute, test_params
+        )
+        metric_values[DIMENSION_TOTAL_COUNT_KEY] = row.get(DIMENSION_TOTAL_COUNT_KEY)
+        metric_values[DIMENSION_FAILED_COUNT_KEY] = row.get(DIMENSION_FAILED_COUNT_KEY)
+        return metric_values
+
     def _execute_dimensional_validation(
         self,
         column: SQALikeColumn,
         dimension_col: SQALikeColumn,
         metrics_to_compute: dict,
         test_params: dict,
+        top_n: int,
     ) -> List[DimensionResult]:
         """Execute dimensional validation for lengths to be between with proper aggregation
 
@@ -89,15 +95,17 @@ class ColumnValueLengthsToBeBetweenValidator(
         dimension_results = []
 
         try:
-            dfs = self.runner if isinstance(self.runner, list) else [self.runner]
-            min_impl = Metrics.MIN_LENGTH(column).get_pandas_computation()
-            max_impl = Metrics.MAX_LENGTH(column).get_pandas_computation()
+            dfs = self.runner
+            min_impl = Metrics.minLength(column).get_pandas_computation()
+            max_impl = Metrics.maxLength(column).get_pandas_computation()
+            row_count_impl = Metrics.rowCount().get_pandas_computation()
 
             dimension_aggregates = defaultdict(
                 lambda: {
-                    Metrics.MIN_LENGTH.name: min_impl.create_accumulator(),
-                    Metrics.MAX_LENGTH.name: max_impl.create_accumulator(),
-                    DIMENSION_TOTAL_COUNT_KEY: 0,
+                    Metrics.minLength.name: min_impl.create_accumulator(),
+                    Metrics.maxLength.name: max_impl.create_accumulator(),
+                    DIMENSION_TOTAL_COUNT_KEY: row_count_impl.create_accumulator(),
+                    DIMENSION_FAILED_COUNT_KEY: 0,
                 }
             )
 
@@ -109,47 +117,61 @@ class ColumnValueLengthsToBeBetweenValidator(
                     dimension_value = self.format_dimension_value(dimension_value)
 
                     dimension_aggregates[dimension_value][
-                        Metrics.MIN_LENGTH.name
-                    ] = max_impl.update_accumulator(
-                        dimension_aggregates[dimension_value][Metrics.MIN_LENGTH.name],
+                        Metrics.minLength.name
+                    ] = min_impl.update_accumulator(
+                        dimension_aggregates[dimension_value][Metrics.minLength.name],
                         group_df,
                     )
                     dimension_aggregates[dimension_value][
-                        Metrics.MAX_LENGTH.name
+                        Metrics.maxLength.name
                     ] = max_impl.update_accumulator(
-                        dimension_aggregates[dimension_value][Metrics.MAX_LENGTH.name],
+                        dimension_aggregates[dimension_value][Metrics.maxLength.name],
                         group_df,
                     )
 
                     dimension_aggregates[dimension_value][
                         DIMENSION_TOTAL_COUNT_KEY
-                    ] += len(group_df)
+                    ] = row_count_impl.update_accumulator(
+                        dimension_aggregates[dimension_value][
+                            DIMENSION_TOTAL_COUNT_KEY
+                        ],
+                        group_df,
+                    )
+
+                    # Count row-level violations by checking lengths against bounds
+                    col_values = group_df[column.name]
+                    col_lengths = col_values.str.len()
+                    violations_mask = checker.get_violations_mask(col_lengths)
+                    dimension_aggregates[dimension_value][
+                        DIMENSION_FAILED_COUNT_KEY
+                    ] += violations_mask.sum()
 
             results_data = []
             for dimension_value, agg in dimension_aggregates.items():
-                min_length_value = agg[Metrics.MIN_LENGTH.name]
-                max_length_value = agg[Metrics.MAX_LENGTH.name]
-                total_rows = agg[DIMENSION_TOTAL_COUNT_KEY]
-
-                if not (min_length_value and max_length_value):
-                    continue
-
-                failed_count = (
-                    total_rows
-                    if checker.violates_pandas(
-                        {
-                            Metrics.MIN_LENGTH.name: min_length_value,
-                            Metrics.MAX_LENGTH.name: max_length_value,
-                        }
-                    )
-                    else 0
+                min_length_value = min_impl.aggregate_accumulator(
+                    agg[Metrics.minLength.name]
                 )
+                max_length_value = max_impl.aggregate_accumulator(
+                    agg[Metrics.maxLength.name]
+                )
+                total_rows = row_count_impl.aggregate_accumulator(
+                    agg[DIMENSION_TOTAL_COUNT_KEY]
+                )
+                failed_count = agg[DIMENSION_FAILED_COUNT_KEY]
+
+                if min_length_value is None or max_length_value is None:
+                    logger.warning(
+                        "Skipping '%s=%s' dimension since 'min_length' or 'max_length' are 'None'",
+                        dimension_col.name,
+                        dimension_value,
+                    )
+                    continue
 
                 results_data.append(
                     {
                         DIMENSION_VALUE_KEY: dimension_value,
-                        Metrics.MIN_LENGTH.name: min_length_value,
-                        Metrics.MAX_LENGTH.name: max_length_value,
+                        Metrics.minLength.name: min_length_value,
+                        Metrics.maxLength.name: max_length_value,
                         DIMENSION_TOTAL_COUNT_KEY: total_rows,
                         DIMENSION_FAILED_COUNT_KEY: failed_count,
                     }
@@ -168,35 +190,25 @@ class ColumnValueLengthsToBeBetweenValidator(
                     results_df,
                     dimension_column=DIMENSION_VALUE_KEY,
                     agg_functions={
-                        Metrics.MIN_LENGTH.name: "min",
-                        Metrics.MAX_LENGTH.name: "max",
+                        Metrics.minLength.name: "min",
+                        Metrics.maxLength.name: "max",
+                        DIMENSION_TOTAL_COUNT_KEY: "sum",
+                        DIMENSION_FAILED_COUNT_KEY: "sum",
                     },
-                    top_n=DEFAULT_TOP_DIMENSIONS,
+                    top_n=top_n,
                     violation_metrics=[
-                        Metrics.MIN_LENGTH.name,
-                        Metrics.MAX_LENGTH.name,
+                        Metrics.minLength.name,
+                        Metrics.maxLength.name,
                     ],
                     violation_predicate=checker.violates_pandas,
                 )
 
-                for row_dict in results_df.to_dict("records"):
-                    metric_values = self._build_metric_values_from_row(
-                        row_dict, metrics_to_compute, test_params
-                    )
-
-                    evaluation = self._evaluate_test_condition(
-                        metric_values, test_params
-                    )
-
-                    dimension_result = self._create_dimension_result(
-                        row_dict,
-                        dimension_col.name,
-                        metric_values,
-                        evaluation,
-                        test_params,
-                    )
-
-                    dimension_results.append(dimension_result)
+                dimension_results = self._process_dimension_rows(
+                    results_df.to_dict("records"),
+                    dimension_col.name,
+                    metrics_to_compute,
+                    test_params,
+                )
 
         except Exception as exc:
             logger.warning(f"Error executing dimensional query: {exc}")

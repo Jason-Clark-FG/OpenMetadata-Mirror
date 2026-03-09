@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AxiosError } from 'axios';
 import React from 'react';
 import { EntityType } from '../../../enums/entity.enum';
 import {
@@ -457,7 +456,36 @@ describe('TagsSection', () => {
     it('should render no data found message when no tags', () => {
       render(<TagsSection {...defaultProps} tags={[]} />);
 
-      expect(screen.getByText('label.no-data-found')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.tag-plural"}'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('should keep showing no tags placeholder while the tag popup is open', async () => {
+      render(<TagsSection {...defaultProps} tags={[]} />);
+
+      // initial empty state
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.tag-plural"}'
+        )
+      ).toBeInTheDocument();
+
+      // open edit popover
+      clickEditControl();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('async-select-list')).toBeInTheDocument();
+      });
+
+      // placeholder should remain visible even when popover is open
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.tag-plural"}'
+        )
+      ).toBeInTheDocument();
     });
 
     it('should render with correct CSS classes when no tags', () => {
@@ -511,7 +539,6 @@ describe('TagsSection', () => {
       clickEditControl();
 
       expect(screen.getByTestId('async-select-list')).toBeInTheDocument();
-      expect(screen.queryByTestId('edit-icon-tags')).not.toBeInTheDocument();
     });
 
     it('should show AsyncSelectList with correct props in edit mode', () => {
@@ -551,13 +578,7 @@ describe('TagsSection', () => {
 
   describe('Save Functionality', () => {
     it('should save tags successfully', async () => {
-      const { patchTableDetails } = jest.requireMock('../../../rest/tableAPI');
-      const { showSuccessToast } = jest.requireMock(
-        '../../../utils/ToastUtils'
-      );
-      const mockOnTagsUpdate = jest.fn();
-
-      patchTableDetails.mockResolvedValue({});
+      const mockOnTagsUpdate = jest.fn().mockResolvedValue([]);
 
       render(<TagsSection {...defaultProps} onTagsUpdate={mockOnTagsUpdate} />);
 
@@ -567,23 +588,19 @@ describe('TagsSection', () => {
       const tagInput = screen.getByTestId('tag-selector-input');
       fireEvent.change(tagInput, { target: { value: 'new-tag1, new-tag2' } });
 
-      // Save happens on selection change automatically
+      // Save happens on selection change automatically via onTagsUpdate callback
 
       await waitFor(() => {
-        expect(patchTableDetails).toHaveBeenCalled();
-        expect(showSuccessToast).toHaveBeenCalled();
         expect(mockOnTagsUpdate).toHaveBeenCalled();
       });
     });
 
     it('should handle save error', async () => {
-      const { patchTableDetails } = jest.requireMock('../../../rest/tableAPI');
-      const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
+      const mockOnTagsUpdate = jest
+        .fn()
+        .mockRejectedValue(new Error('Save failed'));
 
-      const mockError = new Error('Save failed') as AxiosError;
-      patchTableDetails.mockRejectedValue(mockError);
-
-      render(<TagsSection {...defaultProps} />);
+      render(<TagsSection {...defaultProps} onTagsUpdate={mockOnTagsUpdate} />);
 
       await enterEditMode();
 
@@ -594,10 +611,8 @@ describe('TagsSection', () => {
       // Save happens on selection change automatically
 
       await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalledWith(
-          mockError,
-          'server.entity-updating-error - {"entity":"label.tag-plural"}'
-        );
+        // onTagsUpdate should have been called and rejected
+        expect(mockOnTagsUpdate).toHaveBeenCalled();
       });
     });
 
@@ -648,7 +663,13 @@ describe('TagsSection', () => {
 
       patchTableDetails.mockResolvedValue({});
 
-      render(<TagsSection {...defaultProps} entityType={EntityType.TABLE} />);
+      render(
+        <TagsSection
+          {...defaultProps}
+          entityType={EntityType.TABLE}
+          onTagsUpdate={undefined}
+        />
+      );
 
       await enterEditMode();
 
@@ -673,7 +694,11 @@ describe('TagsSection', () => {
       patchDashboardDetails.mockResolvedValue({});
 
       render(
-        <TagsSection {...defaultProps} entityType={EntityType.DASHBOARD} />
+        <TagsSection
+          {...defaultProps}
+          entityType={EntityType.DASHBOARD}
+          onTagsUpdate={undefined}
+        />
       );
 
       await enterEditMode();
@@ -691,13 +716,14 @@ describe('TagsSection', () => {
       });
     });
 
-    it('should throw error for unsupported entity type', async () => {
-      const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
+    it('should call onTagsUpdate for unsupported entity type when callback is provided', async () => {
+      const mockOnTagsUpdate = jest.fn().mockResolvedValue([]);
 
       render(
         <TagsSection
           {...defaultProps}
           entityType={'UNSUPPORTED' as EntityType}
+          onTagsUpdate={mockOnTagsUpdate}
         />
       );
 
@@ -709,7 +735,7 @@ describe('TagsSection', () => {
       clickSave();
 
       await waitFor(() => {
-        expect(showErrorToast).toHaveBeenCalled();
+        expect(mockOnTagsUpdate).toHaveBeenCalled();
       });
     });
   });
@@ -718,7 +744,13 @@ describe('TagsSection', () => {
     it('should show error when entityId is missing', async () => {
       const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
 
-      render(<TagsSection {...defaultProps} entityId={undefined} />);
+      render(
+        <TagsSection
+          {...defaultProps}
+          entityId={undefined}
+          onTagsUpdate={undefined}
+        />
+      );
 
       await enterEditMode();
 
@@ -790,13 +822,21 @@ describe('TagsSection', () => {
     it('should handle empty tags array', () => {
       render(<TagsSection {...defaultProps} tags={[]} />);
 
-      expect(screen.getByText('label.no-data-found')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.tag-plural"}'
+        )
+      ).toBeInTheDocument();
     });
 
     it('should handle undefined tags', () => {
       render(<TagsSection {...defaultProps} tags={undefined} />);
 
-      expect(screen.getByText('label.no-data-found')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.tag-plural"}'
+        )
+      ).toBeInTheDocument();
     });
 
     it('should handle tags with missing properties', () => {

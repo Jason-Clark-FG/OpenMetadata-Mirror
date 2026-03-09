@@ -373,6 +373,20 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
     );
   }, [glossaries, searchOptions, expandableKeys.current, isParentSelectable]);
 
+  const defaultSelectedValues = useMemo(() => {
+    if (!initialOptions || initialOptions.length === 0) {
+      return isMultiSelect ? [] : undefined;
+    }
+    if (isMultiSelect) {
+      return initialOptions.map((option) => ({
+        value: option.value,
+        label: option.label,
+      }));
+    }
+
+    return initialOptions[0]?.value;
+  }, [initialOptions, isMultiSelect]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'Escape':
@@ -407,12 +421,13 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
       showSearch
       {...(isMultiSelect
         ? { treeCheckable: true, treeCheckStrictly: true }
-        : {})}
+        : { allowClear: true })}
       autoFocus={open}
       className={classNames('async-select-list', {
         'new-chip-style': newLook,
       })}
       data-testid="tag-selector"
+      defaultValue={defaultSelectedValues}
       dropdownRender={
         hasNoActionButtons ? (menu: ReactElement) => menu : dropdownRender
       }
@@ -454,7 +469,10 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
       treeDefaultExpandAll={false}
       treeExpandedKeys={isEmpty(searchOptions) ? undefined : expandedRowKeys}
       onChange={handleChange}
-      onDropdownVisibleChange={handleDropdownVisibleChange}
+      // In single select dropdown should not close when dropdownButtons/dropdownRender
+      {...(hasNoActionButtons
+        ? { onDropdownVisibleChange: handleDropdownVisibleChange }
+        : {})}
       onSearch={onSearch}
       onTreeExpand={setExpandedRowKeys}
       {...props}

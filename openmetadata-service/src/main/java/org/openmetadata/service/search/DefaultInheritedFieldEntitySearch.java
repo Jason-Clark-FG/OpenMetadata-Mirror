@@ -22,11 +22,18 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonNumber;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonString;
+import jakarta.json.JsonValue;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.search.SearchRequest;
@@ -151,16 +158,6 @@ public class DefaultInheritedFieldEntitySearch implements InheritedFieldEntitySe
     }
   }
 
-  private String getQueryFilter(InheritedFieldQuery query) {
-    return switch (query.getFilterType()) {
-      case DOMAIN_ASSETS -> QueryFilterBuilder.buildDomainAssetsFilter(query);
-      case OWNER_ASSETS -> QueryFilterBuilder.buildOwnerAssetsFilter(query);
-      case TAG_ASSETS -> QueryFilterBuilder.buildTagAssetsFilter(query);
-      case USER_ASSETS -> QueryFilterBuilder.buildUserAssetsFilter(query);
-      case GENERIC -> QueryFilterBuilder.buildGenericFilter(query);
-    };
-  }
-
   private String extractResponseBody(Response response) {
     Object entity = response.getEntity();
     return entity != null ? entity.toString() : EMPTY_JSON;
@@ -251,5 +248,112 @@ public class DefaultInheritedFieldEntitySearch implements InheritedFieldEntitySe
     }
 
     return searchRequest;
+  }
+
+  @Override
+  public Map<String, Integer> getAggregatedCountsByField(String fieldPath, String queryFilter) {
+    return getAggregatedCountsByField(fieldPath, queryFilter, 100);
+  }
+
+  @Override
+  public Map<String, Integer> getAggregatedCountsByField(
+      String fieldPath, String queryFilter, int size) {
+    try {
+      if (isSearchUnavailable()) {
+        LOG.warn("Search unavailable for aggregated counts");
+        return Collections.emptyMap();
+      }
+
+      LOG.info("Aggregation field: {}, query: {}, size: {}", fieldPath, queryFilter, size);
+
+      SearchAggregationNode termsNode =
+          SearchAggregation.terms("field_aggregation", fieldPath, size);
+
+      SearchAggregationNode aggregationNode;
+      String nestedPath = getNestedPath(fieldPath);
+      if (nestedPath != null) {
+        aggregationNode = SearchAggregation.nested("nested_wrapper", nestedPath);
+        aggregationNode.addChild(termsNode);
+      } else {
+        aggregationNode = termsNode;
+      }
+      SearchAggregation searchAggregation = SearchAggregation.fromTree(aggregationNode);
+
+      JsonObject response =
+          searchRepository.aggregate(
+              queryFilter, GLOBAL_SEARCH_ALIAS, searchAggregation, new SearchListFilter());
+
+      LOG.info("Aggregation response: {}", response);
+
+      Map<String, Integer> result = parseAggregationResponse(response);
+      LOG.info("Parsed {} counts", result.size());
+
+      return result;
+
+    } catch (Exception e) {
+      LOG.error("Failed to execute aggregated counts query", e);
+      return Collections.emptyMap();
+    }
+  }
+
+  private String getQueryFilter(InheritedFieldQuery query) {
+    return switch (query.getFilterType()) {
+      case DOMAIN_ASSETS -> QueryFilterBuilder.buildDomainAssetsFilter(query);
+      case OWNER_ASSETS -> QueryFilterBuilder.buildOwnerAssetsFilter(query);
+      case TAG_ASSETS -> QueryFilterBuilder.buildTagAssetsFilter(query);
+      case USER_ASSETS -> QueryFilterBuilder.buildUserAssetsFilter(query);
+      case GENERIC -> QueryFilterBuilder.buildGenericFilter(query);
+    };
+  }
+
+  private Map<String, Integer> parseAggregationResponse(JsonObject response) {
+    Map<String, Integer> countsMap = new HashMap<>();
+
+    if (response == null) {
+      return countsMap;
+    }
+
+    JsonObject container = response;
+
+    // If wrapped in a nested aggregation, traverse into it first
+    for (String key : response.keySet()) {
+      if (key.equals("nested_wrapper") || key.endsWith("#nested_wrapper")) {
+        container = response.getJsonObject(key);
+        break;
+      }
+    }
+
+    JsonObject fieldAgg = null;
+    for (String key : container.keySet()) {
+      if (key.equals("field_aggregation") || key.endsWith("#field_aggregation")) {
+        fieldAgg = container.getJsonObject(key);
+        break;
+      }
+    }
+
+    if (fieldAgg == null || !fieldAgg.containsKey("buckets")) {
+      return countsMap;
+    }
+
+    JsonArray buckets = fieldAgg.getJsonArray("buckets");
+    for (JsonValue bucketValue : buckets) {
+      JsonObject bucket = bucketValue.asJsonObject();
+      String key = ((JsonString) bucket.get("key")).getString();
+      int count = ((JsonNumber) bucket.get("doc_count")).intValue();
+      countsMap.put(key, count);
+    }
+
+    return countsMap;
+  }
+
+  private static final List<String> NESTED_FIELDS = List.of("owners");
+
+  private static String getNestedPath(String fieldPath) {
+    for (String nestedField : NESTED_FIELDS) {
+      if (fieldPath.startsWith(nestedField + ".")) {
+        return nestedField;
+      }
+    }
+    return null;
   }
 }

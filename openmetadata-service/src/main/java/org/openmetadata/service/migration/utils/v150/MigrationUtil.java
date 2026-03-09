@@ -109,7 +109,7 @@ public class MigrationUtil {
                 }
               });
     } catch (Exception ex) {
-      LOG.warn("Error running the automator migration ", ex);
+      LOG.warn("Error running the automator migration: {} ", ex.getMessage());
     }
   }
 
@@ -201,7 +201,7 @@ public class MigrationUtil {
                 }
               });
     } catch (Exception e) {
-      LOG.warn("Error running the policy migration ", e);
+      LOG.warn("Error running the policy migration, Message: {} ", e.getMessage());
     }
   }
 
@@ -265,30 +265,29 @@ public class MigrationUtil {
                 }
               });
     } catch (Exception e) {
-      LOG.warn("Error running the test case resolution migration ", e);
+      LOG.warn("Error running the test case resolution migration: {} ", e.getMessage());
     }
   }
 
   static DataInsightSystemChartRepository dataInsightSystemChartRepository;
 
   private static void createChart(String chartName, Object chartObject) {
-    DataInsightCustomChart chart =
-        new DataInsightCustomChart()
-            .withId(UUID.randomUUID())
-            .withName(chartName)
-            .withChartDetails(chartObject)
-            .withUpdatedAt(System.currentTimeMillis())
-            .withUpdatedBy("ingestion-bot")
-            .withDeleted(false)
-            .withIsSystemChart(true);
-    dataInsightSystemChartRepository.prepareInternal(chart, false);
     try {
+      DataInsightCustomChart chart =
+          new DataInsightCustomChart()
+              .withId(UUID.randomUUID())
+              .withName(chartName)
+              .withChartDetails(chartObject)
+              .withUpdatedAt(System.currentTimeMillis())
+              .withUpdatedBy("ingestion-bot")
+              .withDeleted(false)
+              .withIsSystemChart(true);
+      dataInsightSystemChartRepository.prepareInternal(chart, false);
       dataInsightSystemChartRepository
           .getDao()
           .insert("fqnHash", chart, chart.getFullyQualifiedName());
     } catch (Exception ex) {
-      LOG.warn(ex.toString());
-      LOG.warn(String.format("Chart %s exists", chart));
+      LOG.warn(String.format("Chart %s exists, Exception Message: {}", chartName, ex.getMessage()));
     }
   }
 
@@ -327,7 +326,7 @@ public class MigrationUtil {
                 List.of(
                     new LineChartMetric()
                         .withFormula(
-                            "(count(k='id.keyword',q='owners.name.keyword: *')/count(k='id.keyword'))*100")))
+                            "(count(k='id.keyword',q='ownerName: *')/count(k='id.keyword'))*100")))
             .withGroupBy("entityType.keyword")
             .withExcludeGroups(excludeList));
 
@@ -350,7 +349,7 @@ public class MigrationUtil {
                 List.of(
                     new LineChartMetric()
                         .withFormula(
-                            "(count(k='id.keyword',q='owners.name.keyword: *')/count(k='id.keyword'))*100")))
+                            "(count(k='id.keyword',q='ownerName: *')/count(k='id.keyword'))*100")))
             .withGroupBy("service.name.keyword"));
 
     // total data assets by tier
@@ -389,7 +388,7 @@ public class MigrationUtil {
                 List.of(
                     new SummaryChartMetric()
                         .withFormula(
-                            "(count(k='id.keyword',q='owners.name.keyword: *')/count(k='id.keyword'))*100")
+                            "(count(k='id.keyword',q='ownerName: *')/count(k='id.keyword'))*100")
                         .withFilter(exclude_tags_filter))));
 
     // total data assets with tier summary card
@@ -422,7 +421,7 @@ public class MigrationUtil {
                 List.of(
                     new LineChartMetric()
                         .withFormula(
-                            "(count(k='id.keyword',q='owners.name.keyword: *')/count(k='id.keyword'))*100")
+                            "(count(k='id.keyword',q='ownerName: *')/count(k='id.keyword'))*100")
                         .withFilter(exclude_tags_filter))));
     ;
 
@@ -443,7 +442,7 @@ public class MigrationUtil {
             .withMetrics(
                 List.of(
                     new LineChartMetric()
-                        .withFormula("count(k='id.keyword',q='owners.name.keyword: *')")
+                        .withFormula("count(k='id.keyword',q='ownerName: *')")
                         .withFilter(exclude_tags_filter))));
   }
 }

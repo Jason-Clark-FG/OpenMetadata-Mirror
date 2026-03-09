@@ -53,6 +53,8 @@ export interface FormValues {
   useDynamicAssertion?: boolean;
   params?: Record<string, string | { [key: string]: string }[]>;
   parameterValues?: Array<{ name: string; value: string }>;
+  dimensionColumns?: string[];
+  topDimensions?: number;
   // Scheduler fields
   pipelineName?: string;
   cron?: string;
@@ -68,6 +70,7 @@ export interface FormValues {
 export enum TestLevel {
   TABLE = 'table',
   COLUMN = 'column',
+  COLUMN_DIMENSION = 'column-dimension',
 }
 
 // =============================================

@@ -24,6 +24,7 @@ import {
   TagLabel,
   TagSource,
 } from '../../../generated/type/tagLabel';
+import { useEntityRules } from '../../../hooks/useEntityRules';
 import { updateEntityField } from '../../../utils/EntityUpdateUtils';
 import GlossaryTermsSection from './GlossaryTermsSection';
 
@@ -97,13 +98,11 @@ jest.mock(
           onUpdate,
           selectedTerms,
           children,
-          popoverProps,
         }: {
           onCancel?: () => void;
           onUpdate?: (terms: TagLabel[]) => void;
           selectedTerms: TagLabel[];
           children: React.ReactNode;
-          popoverProps?: Record<string, unknown>;
         }) => {
           const defaultValue = selectedTerms.map((t) => t.tagFQN).join(',');
 
@@ -179,17 +178,15 @@ jest.mock('../../../utils/ToastUtils', () => ({
 
 // Mock EditIconButton
 jest.mock('../IconButtons/EditIconButton', () => ({
-  EditIconButton: jest
-    .fn()
-    .mockImplementation(({ onClick, newLook, ...props }) => (
-      <button
-        className="edit-icon"
-        data-testid="edit-icon-button"
-        onClick={onClick}
-        {...props}>
-        Edit
-      </button>
-    )),
+  EditIconButton: jest.fn().mockImplementation(({ onClick, ...props }) => (
+    <button
+      className="edit-icon"
+      data-testid="edit-icon-button"
+      onClick={onClick}
+      {...props}>
+      Edit
+    </button>
+  )),
 }));
 
 // Mock Loader
@@ -214,7 +211,12 @@ jest.mock('../../../utils/EntityUpdateUtils', () => ({
     }),
 }));
 
-const { showErrorToast } = jest.requireMock('../../../utils/ToastUtils');
+// Mock useEntityRules hook
+jest.mock('../../../hooks/useEntityRules', () => ({
+  useEntityRules: jest.fn(),
+}));
+
+jest.requireMock('../../../utils/ToastUtils');
 const { getEntityName } = jest.requireMock('../../../utils/EntityUtils');
 
 const baseGlossaryTags = [
@@ -258,12 +260,24 @@ const clickHeaderEdit = () => {
 describe('GlossaryTermsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set default entity rules
+    (useEntityRules as jest.Mock).mockReturnValue({
+      entityRules: {
+        canAddMultipleGlossaryTerm: true,
+      },
+      rules: [],
+      isLoading: false,
+    });
   });
 
   describe('Rendering - No Terms', () => {
     it('shows header, no data placeholder, and edit control when permitted', () => {
       const { container } = render(
-        <GlossaryTermsSection hasPermission showEditButton />
+        <GlossaryTermsSection
+          hasPermission
+          showEditButton
+          entityType={EntityType.TABLE}
+        />
       );
 
       expect(
@@ -275,7 +289,11 @@ describe('GlossaryTermsSection', () => {
       expect(
         screen.getByText('label.glossary-term-plural')
       ).toBeInTheDocument();
-      expect(screen.getByText('label.no-data-found')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.glossary-term-plural"}'
+        )
+      ).toBeInTheDocument();
 
       const editClickable = document.querySelector(
         '.glossary-terms-header .edit-icon'
@@ -285,7 +303,13 @@ describe('GlossaryTermsSection', () => {
     });
 
     it('enters edit mode and cancels back', () => {
-      render(<GlossaryTermsSection hasPermission showEditButton />);
+      render(
+        <GlossaryTermsSection
+          hasPermission
+          showEditButton
+          entityType={EntityType.TABLE}
+        />
+      );
 
       clickHeaderEdit();
 
@@ -293,7 +317,27 @@ describe('GlossaryTermsSection', () => {
 
       fireEvent.click(screen.getByTestId('tsf-cancel'));
 
-      expect(screen.getByText('label.no-data-found')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'label.no-entity-assigned - {"entity":"label.glossary-term-plural"}'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('keeps showing no glossary terms placeholder while the popup is open', async () => {
+      render(<GlossaryTermsSection hasPermission showEditButton />);
+
+      clickHeaderEdit();
+
+      expect(screen.getByTestId('tag-select-form')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            'label.no-entity-assigned - {"entity":"label.glossary-term-plural"}'
+          )
+        ).toBeInTheDocument();
+      });
     });
   });
 
@@ -301,6 +345,7 @@ describe('GlossaryTermsSection', () => {
     it('lists glossary terms using getEntityName and shows icon', () => {
       const { container } = render(
         <GlossaryTermsSection
+          entityType={EntityType.TABLE}
           tags={[...nonGlossaryTags, ...baseGlossaryTags]}
         />
       );
@@ -320,7 +365,8 @@ describe('GlossaryTermsSection', () => {
         <GlossaryTermsSection
           hasPermission
           showEditButton
-          tags={baseGlossaryTags as any}
+          entityType={EntityType.TABLE}
+          tags={baseGlossaryTags as TagLabel[]}
         />
       );
 
@@ -345,7 +391,7 @@ describe('GlossaryTermsSection', () => {
           showEditButton
           entityId="123"
           entityType={EntityType.TABLE}
-          tags={[...nonGlossaryTags, ...baseGlossaryTags] as any}
+          tags={[...nonGlossaryTags, ...baseGlossaryTags] as TagLabel[]}
           onGlossaryTermsUpdate={onUpdate}
         />
       );
@@ -365,10 +411,10 @@ describe('GlossaryTermsSection', () => {
 
         // Should contain non-glossary tag and new selections
         expect(
-          arg.find((t: any) => t.tagFQN === 'Classification.PII')
+          arg.find((t: TagLabel) => t.tagFQN === 'Classification.PII')
         ).toBeTruthy();
-        expect(arg.find((t: any) => t.tagFQN === 'g.term.1')).toBeTruthy();
-        expect(arg.find((t: any) => t.tagFQN === 'g.term.2')).toBeTruthy();
+        expect(arg.find((t: TagLabel) => t.tagFQN === 'g.term.1')).toBeTruthy();
+        expect(arg.find((t: TagLabel) => t.tagFQN === 'g.term.2')).toBeTruthy();
       });
     });
 
@@ -376,7 +422,6 @@ describe('GlossaryTermsSection', () => {
       (updateEntityField as jest.Mock).mockImplementationOnce(() =>
         Promise.resolve({ success: false })
       );
-      const onUpdate = jest.fn();
 
       render(
         <GlossaryTermsSection
@@ -384,8 +429,7 @@ describe('GlossaryTermsSection', () => {
           showEditButton
           entityId="123"
           entityType={EntityType.TABLE}
-          tags={baseGlossaryTags as any}
-          onGlossaryTermsUpdate={onUpdate}
+          tags={baseGlossaryTags as TagLabel[]}
         />
       );
 
@@ -395,7 +439,7 @@ describe('GlossaryTermsSection', () => {
       });
 
       await waitFor(() => {
-        expect(onUpdate).not.toHaveBeenCalled();
+        expect(updateEntityField).toHaveBeenCalled();
       });
     });
   });
@@ -410,7 +454,7 @@ describe('GlossaryTermsSection', () => {
           showEditButton
           entityId="123"
           entityType={EntityType.TABLE}
-          tags={nonGlossaryTags as any}
+          tags={nonGlossaryTags as TagLabel[]}
           onGlossaryTermsUpdate={onUpdate}
         />
       );
@@ -425,8 +469,12 @@ describe('GlossaryTermsSection', () => {
 
         const updated = onUpdate.mock.calls[0][0];
 
-        expect(updated.find((t: any) => t.tagFQN === 'g.term.1')).toBeTruthy();
-        expect(updated.find((t: any) => t.tagFQN === 'g.term.2')).toBeTruthy();
+        expect(
+          updated.find((t: TagLabel) => t.tagFQN === 'g.term.1')
+        ).toBeTruthy();
+        expect(
+          updated.find((t: TagLabel) => t.tagFQN === 'g.term.2')
+        ).toBeTruthy();
       });
 
       // form should be gone
@@ -444,7 +492,7 @@ describe('GlossaryTermsSection', () => {
           showEditButton
           entityId="123"
           entityType={EntityType.TABLE}
-          tags={nonGlossaryTags as any}
+          tags={nonGlossaryTags as TagLabel[]}
           onGlossaryTermsUpdate={onUpdate}
         />
       );
@@ -458,7 +506,7 @@ describe('GlossaryTermsSection', () => {
         expect(onUpdate).toHaveBeenCalled();
 
         const updated = onUpdate.mock.calls[0][0];
-        const obj = updated.find((t: any) => t.tagFQN === 'g.term.obj');
+        const obj = updated.find((t: TagLabel) => t.tagFQN === 'g.term.obj');
 
         expect(obj).toBeTruthy();
         expect(obj.source).toBe(TagSource.Glossary);

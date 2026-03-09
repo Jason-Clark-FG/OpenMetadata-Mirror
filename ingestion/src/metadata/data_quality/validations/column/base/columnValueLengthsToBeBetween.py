@@ -20,6 +20,8 @@ from typing import List, Optional, Tuple, Union
 from sqlalchemy import Column
 
 from metadata.data_quality.validations.base_test_handler import (
+    DIMENSION_FAILED_COUNT_KEY,
+    DIMENSION_TOTAL_COUNT_KEY,
     BaseTestValidator,
     DimensionInfo,
     DimensionResult,
@@ -62,12 +64,12 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
 
         try:
             column: Union[SQALikeColumn, Column] = self.get_column()
-            max_res = self._run_results(Metrics.MAX_LENGTH, column)
-            min_res = self._run_results(Metrics.MIN_LENGTH, column)
+            max_res = self._run_results(Metrics.maxLength, column)
+            min_res = self._run_results(Metrics.minLength, column)
 
             metric_values = {
-                Metrics.MAX_LENGTH.name: max_res,
-                Metrics.MIN_LENGTH.name: min_res,
+                Metrics.maxLength.name: max_res,
+                Metrics.minLength.name: min_res,
             }
 
         except (ValueError, RuntimeError) as exc:
@@ -135,8 +137,8 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
             dict: Dictionary mapping metric names to Metrics enum values
         """
         return {
-            Metrics.MAX_LENGTH.name: Metrics.MAX_LENGTH,
-            Metrics.MIN_LENGTH.name: Metrics.MIN_LENGTH,
+            Metrics.maxLength.name: Metrics.maxLength,
+            Metrics.minLength.name: Metrics.minLength,
         }
 
     def _evaluate_test_condition(
@@ -144,33 +146,43 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
     ) -> TestEvaluation:
         """Evaluate the max-to-be-between test condition
 
-        For max test, the condition passes if the max value is within the specified bounds.
-        Since this is a statistical validator (group-level), passed/failed row counts are not applicable.
+        For dimensional validation, computes row-level passed/failed counts.
+        For non-dimensional validation, row counts are not applicable.
 
         Args:
             metric_values: Dictionary with keys from Metrics enum names
-                          e.g., {"MAX": 42.5}
-            test_params: Dictionary with 'minValueForMaxInCol' and 'maxValueForMaxInCol'
+                          e.g., {"MAX_LENGTH": 10, "MIN_LENGTH": 1}
+                          For dimensional validation, also includes:
+                          - DIMENSION_TOTAL_COUNT_KEY: total rows
+                          - DIMENSION_FAILED_COUNT_KEY: failed rows
+            test_params: Dictionary with 'minLength' and 'maxLength'
 
         Returns:
             dict with keys:
-                - matched: bool - whether test passed (max within bounds)
-                - passed_rows: None - not applicable for statistical validators
-                - failed_rows: None - not applicable for statistical validators
-                - total_rows: None - not applicable for statistical validators
+                - matched: bool - whether test passed (lengths within bounds)
+                - passed_rows: Optional[int] - rows with valid lengths (or None for non-dimensional)
+                - failed_rows: Optional[int] - rows with invalid lengths (or None for non-dimensional)
+                - total_rows: Optional[int] - total rows (or None for non-dimensional)
         """
-        min_length_value = metric_values[Metrics.MIN_LENGTH.name]
-        max_length_value = metric_values[Metrics.MAX_LENGTH.name]
+        min_length_value = metric_values[Metrics.minLength.name]
+        max_length_value = metric_values[Metrics.maxLength.name]
         min_bound = test_params[self.MIN_BOUND]
         max_bound = test_params[self.MAX_BOUND]
 
         matched = min_bound <= min_length_value and max_length_value <= max_bound
 
+        # Extract row counts if available (dimensional validation)
+        total_rows = metric_values.get(DIMENSION_TOTAL_COUNT_KEY)
+        failed_rows = metric_values.get(DIMENSION_FAILED_COUNT_KEY)
+        passed_rows = None
+        if total_rows is not None and failed_rows is not None:
+            passed_rows = total_rows - failed_rows
+
         return {
             "matched": matched,
-            "passed_rows": None,
-            "failed_rows": None,
-            "total_rows": None,
+            "passed_rows": passed_rows,
+            "failed_rows": failed_rows,
+            "total_rows": total_rows,
         }
 
     def _format_result_message(
@@ -191,11 +203,11 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
         """
         if test_params is None:
             raise ValueError(
-                "test_params is required for columnValueMaxToBeBetween._format_result_message"
+                "test_params is required for columnValueLengthToBeBetween._format_result_message"
             )
 
-        min_length_value = metric_values[Metrics.MIN_LENGTH.name]
-        max_length_value = metric_values[Metrics.MAX_LENGTH.name]
+        min_length_value = metric_values[Metrics.minLength.name]
+        max_length_value = metric_values[Metrics.maxLength.name]
         min_bound = test_params[self.MIN_BOUND]
         max_bound = test_params[self.MAX_BOUND]
 
@@ -219,11 +231,11 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
         return [
             TestResultValue(
                 name=MIN_LENGTH_METRIC_NAME,
-                value=str(metric_values[Metrics.MIN_LENGTH.name]),
+                value=str(metric_values[Metrics.minLength.name]),
             ),
             TestResultValue(
                 name=MAX_LENGTH_METRIC_NAME,
-                value=str(metric_values[Metrics.MAX_LENGTH.name]),
+                value=str(metric_values[Metrics.maxLength.name]),
             ),
         ]
 
@@ -238,6 +250,7 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
         dimension_col: Union[SQALikeColumn, Column],
         metrics_to_compute: dict,
         test_params: dict,
+        top_n: int,
     ) -> List[DimensionResult]:
         """Execute dimensional validation query for a single dimension column
 
@@ -246,6 +259,7 @@ class BaseColumnValueLengthsToBeBetweenValidator(BaseTestValidator):
             dimension_col: The dimension column to group by (e.g., region)
             metrics_to_compute: Dict mapping metric names to Metrics enum values
             test_params: Test parameters including min and max bounds
+            top_n: Number of top dimension values before grouping as "Others"
 
         Returns:
             List of DimensionResult objects for each dimension value

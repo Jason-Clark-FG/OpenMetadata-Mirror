@@ -12,6 +12,7 @@ import es.co.elastic.clients.elasticsearch.core.SearchResponse;
 import es.co.elastic.clients.json.JsonData;
 import es.co.elastic.clients.json.JsonpMapper;
 import es.co.elastic.clients.util.NamedValue;
+import io.micrometer.core.instrument.Timer;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
@@ -22,24 +23,44 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.api.search.SearchSettings;
 import org.openmetadata.schema.search.AggregationRequest;
+import org.openmetadata.schema.settings.SettingsType;
 import org.openmetadata.schema.tests.DataQualityReport;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.sdk.exception.SearchException;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
+import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.AggregationManagementClient;
 import org.openmetadata.service.search.SearchAggregation;
 import org.openmetadata.service.search.SearchIndexUtils;
+import org.openmetadata.service.search.SearchSourceBuilderFactory;
+import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.search.elasticsearch.aggregations.ElasticAggregationsBuilder;
+import org.openmetadata.service.search.elasticsearch.queries.ElasticQueryBuilder;
+import org.openmetadata.service.search.queries.OMQueryBuilder;
+import org.openmetadata.service.search.security.RBACConditionEvaluator;
+import org.openmetadata.service.security.policyevaluator.SubjectContext;
 
 @Slf4j
 public class ElasticSearchAggregationManager implements AggregationManagementClient {
   private final ElasticsearchClient client;
   private final boolean isClientAvailable;
   private final ObjectMapper mapper;
+  private RBACConditionEvaluator rbacConditionEvaluator;
 
   public ElasticSearchAggregationManager(ElasticsearchClient client) {
     this.client = client;
     this.isClientAvailable = client != null;
+    mapper = new ObjectMapper();
+  }
+
+  public ElasticSearchAggregationManager(
+      ElasticsearchClient client, RBACConditionEvaluator rbacConditionEvaluator) {
+    this.client = client;
+    this.isClientAvailable = client != null;
+    this.rbacConditionEvaluator = rbacConditionEvaluator;
     mapper = new ObjectMapper();
   }
 
@@ -101,7 +122,8 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
         searchRequestBuilder.query(query);
       }
 
-      String aggregationField = request.getFieldName();
+      String aggregationField =
+          SearchSourceBuilderFactory.remapAggregationField(request.getFieldName());
       if (aggregationField == null || aggregationField.isBlank()) {
         throw new IllegalArgumentException("Aggregation field (fieldName) cannot be null or empty");
       }
@@ -159,8 +181,15 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
       searchRequestBuilder.size(0);
       searchRequestBuilder.timeout("30s");
 
-      SearchResponse<JsonData> searchResponse =
-          client.search(searchRequestBuilder.build(), JsonData.class);
+      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+      SearchResponse<JsonData> searchResponse;
+      try {
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
+      } finally {
+        if (searchTimerSample != null) {
+          RequestLatencyContext.endSearchOperation(searchTimerSample);
+        }
+      }
 
       String responseJson = serializeSearchResponse(searchResponse);
       return Response.status(Response.Status.OK).entity(responseJson).build();
@@ -204,18 +233,152 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
       searchRequestBuilder.size(0);
       searchRequestBuilder.timeout("30s");
 
-      SearchResponse<JsonData> searchResponse =
-          client.search(searchRequestBuilder.build(), JsonData.class);
+      SearchRequest searchRequest = searchRequestBuilder.build();
+      LOG.info(
+          "Generic Aggregation - Index: {}, Query: {}, Aggregations count: {}",
+          indexName,
+          query,
+          aggregations.size());
+      LOG.debug("Generic Aggregation - Full aggregations: {}", aggregations);
+
+      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+      SearchResponse<JsonData> searchResponse;
+      try {
+        searchResponse = client.search(searchRequest, JsonData.class);
+      } finally {
+        if (searchTimerSample != null) {
+          RequestLatencyContext.endSearchOperation(searchTimerSample);
+        }
+      }
 
       String response = serializeSearchResponse(searchResponse);
+      LOG.info(
+          "Generic Aggregation - Response hits total: {}",
+          searchResponse.hits().total() != null ? searchResponse.hits().total().value() : 0);
+      LOG.debug("Generic Aggregation - Full response: {}", response);
+
       JsonObject jsonResponse = JsonUtils.readJson(response).asJsonObject();
       Optional<JsonObject> aggregationResults =
           Optional.ofNullable(jsonResponse.getJsonObject("aggregations"));
+      LOG.info(
+          "Generic Aggregation - Aggregation results present: {}", aggregationResults.isPresent());
+      if (aggregationResults.isPresent()) {
+        LOG.info("Generic Aggregation - Aggregation results: {}", aggregationResults.get());
+      }
+
       return SearchIndexUtils.parseAggregationResults(
           aggregationResults, aggregationMetadata.getAggregationMetadata());
     } catch (Exception e) {
       LOG.error("Failed to execute generic aggregation", e);
       throw new IOException("Failed to execute generic aggregation: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public DataQualityReport genericAggregation(
+      String query,
+      String index,
+      SearchAggregation aggregationMetadata,
+      SubjectContext subjectContext)
+      throws IOException {
+    if (!isClientAvailable) {
+      LOG.error("ElasticSearch client is not available. Cannot perform aggregation.");
+      throw new IOException("ElasticSearch client is not available");
+    }
+
+    try {
+      ElasticAggregationsBuilder aggregationsBuilder =
+          new ElasticAggregationsBuilder(client._transport().jsonpMapper());
+      Map<String, Aggregation> aggregations =
+          aggregationsBuilder.buildAggregations(aggregationMetadata.getAggregationTree());
+
+      SearchRequest.Builder searchRequestBuilder = new SearchRequest.Builder();
+      String indexName = Entity.getSearchRepository().getIndexOrAliasName(index);
+      searchRequestBuilder.index(indexName);
+
+      Query parsedQuery = null;
+      if (query != null) {
+        // Check if query string contains outer "query" wrapper and extract inner query
+        if (query.trim().startsWith("{")) {
+          final var queryToProcess = praseJsonQuery(query);
+          parsedQuery = Query.of(q -> q.withJson(new StringReader(queryToProcess)));
+        } else {
+          parsedQuery = Query.of(q -> q.queryString(qs -> qs.query(query)));
+        }
+      }
+
+      // Apply RBAC conditions
+      if (SearchUtils.shouldApplyRbacConditions(subjectContext, rbacConditionEvaluator)) {
+        OMQueryBuilder rbacQueryBuilder = rbacConditionEvaluator.evaluateConditions(subjectContext);
+        if (rbacQueryBuilder != null) {
+          Query rbacQuery = ((ElasticQueryBuilder) rbacQueryBuilder).buildV2();
+          if (parsedQuery != null) {
+            final Query existingQuery = parsedQuery;
+            Query combinedQuery =
+                Query.of(
+                    qb ->
+                        qb.bool(
+                            b -> {
+                              b.must(existingQuery);
+                              b.filter(rbacQuery);
+                              return b;
+                            }));
+            parsedQuery = combinedQuery;
+          } else {
+            parsedQuery = rbacQuery;
+          }
+        }
+      }
+
+      if (parsedQuery != null) {
+        searchRequestBuilder.query(parsedQuery);
+      }
+
+      searchRequestBuilder.aggregations(aggregations);
+      searchRequestBuilder.size(0);
+      searchRequestBuilder.timeout("30s");
+
+      SearchRequest searchRequest = searchRequestBuilder.build();
+      LOG.info(
+          "Generic Aggregation with RBAC - Index: {}, Query: {}, Aggregations count: {}",
+          indexName,
+          query,
+          aggregations.size());
+      LOG.debug("Generic Aggregation with RBAC - Full aggregations: {}", aggregations);
+
+      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+      SearchResponse<JsonData> searchResponse;
+      try {
+        searchResponse = client.search(searchRequest, JsonData.class);
+      } finally {
+        if (searchTimerSample != null) {
+          RequestLatencyContext.endSearchOperation(searchTimerSample);
+        }
+      }
+
+      String response = serializeSearchResponse(searchResponse);
+      LOG.info(
+          "Generic Aggregation with RBAC - Response hits total: {}",
+          searchResponse.hits().total() != null ? searchResponse.hits().total().value() : 0);
+      LOG.debug("Generic Aggregation with RBAC - Full response: {}", response);
+
+      JsonObject jsonResponse = JsonUtils.readJson(response).asJsonObject();
+      Optional<JsonObject> aggregationResults =
+          Optional.ofNullable(jsonResponse.getJsonObject("aggregations"));
+      LOG.info(
+          "Generic Aggregation with RBAC - Aggregation results present: {}",
+          aggregationResults.isPresent());
+      if (aggregationResults.isPresent()) {
+        LOG.info(
+            "Generic Aggregation with RBAC - Aggregation results: {}", aggregationResults.get());
+      }
+
+      return SearchIndexUtils.parseAggregationResults(
+          aggregationResults, aggregationMetadata.getAggregationMetadata());
+    } catch (Exception e) {
+      LOG.error("Failed to execute generic aggregation with RBAC", e);
+      throw new IOException(
+          "Failed to execute generic aggregation with RBAC: " + e.getMessage(), e);
     }
   }
 
@@ -280,8 +443,15 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
       searchRequestBuilder.size(0);
       searchRequestBuilder.timeout("30s");
 
-      SearchResponse<JsonData> searchResponse =
-          client.search(searchRequestBuilder.build(), JsonData.class);
+      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+      SearchResponse<JsonData> searchResponse;
+      try {
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
+      } finally {
+        if (searchTimerSample != null) {
+          RequestLatencyContext.endSearchOperation(searchTimerSample);
+        }
+      }
 
       String response = serializeSearchResponse(searchResponse);
       JsonObject jsonResponse = JsonUtils.readJson(response).asJsonObject();
@@ -292,21 +462,173 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
     }
   }
 
-  /**
-   * Serializes a SearchResponse to JSON string.
-   *
-   * @param searchResponse the SearchResponse to serialize
-   * @return JSON string representation of the response
-   */
   private String serializeSearchResponse(SearchResponse<JsonData> searchResponse) {
     JsonpMapper jsonpMapper = client._transport().jsonpMapper();
     jakarta.json.spi.JsonProvider provider = jsonpMapper.jsonProvider();
     java.io.StringWriter stringWriter = new java.io.StringWriter();
     jakarta.json.stream.JsonGenerator generator = provider.createGenerator(stringWriter);
 
-    searchResponse.serialize(generator, jsonpMapper);
-    generator.close();
+    try {
+      searchResponse.serialize(generator, jsonpMapper);
+      generator.close();
+      return stringWriter.toString();
+    } catch (Exception e) {
+      LOG.warn("Search response serialization failed, using fallback: {}", e.getMessage());
+      try {
+        generator.close();
+      } catch (Exception ignored) {
+        // Generator may be in a bad state
+      }
+    }
 
-    return stringWriter.toString();
+    return serializeSearchResponseFallback(searchResponse, jsonpMapper);
+  }
+
+  private String serializeSearchResponseFallback(
+      SearchResponse<JsonData> searchResponse, JsonpMapper jsonpMapper) {
+    jakarta.json.spi.JsonProvider provider = jsonpMapper.jsonProvider();
+    java.io.StringWriter sw = new java.io.StringWriter();
+    jakarta.json.stream.JsonGenerator gen = provider.createGenerator(sw);
+
+    gen.writeStartObject();
+    gen.write("took", searchResponse.took());
+    gen.write("timed_out", searchResponse.timedOut());
+
+    gen.writeStartObject("_shards");
+    gen.write("total", searchResponse.shards().total().intValue());
+    gen.write("successful", searchResponse.shards().successful().intValue());
+    gen.write(
+        "skipped",
+        searchResponse.shards().skipped() != null
+            ? searchResponse.shards().skipped().intValue()
+            : 0);
+    gen.write("failed", searchResponse.shards().failed().intValue());
+    gen.writeEnd();
+
+    gen.writeStartObject("hits");
+    if (searchResponse.hits().total() != null) {
+      gen.writeStartObject("total");
+      gen.write("value", searchResponse.hits().total().value());
+      gen.write("relation", searchResponse.hits().total().relation().jsonValue());
+      gen.writeEnd();
+    }
+    gen.writeStartArray("hits");
+    gen.writeEnd();
+    gen.writeEnd();
+
+    if (searchResponse.aggregations() != null && !searchResponse.aggregations().isEmpty()) {
+      gen.writeStartObject("aggregations");
+      for (var entry : searchResponse.aggregations().entrySet()) {
+        gen.writeKey(entry.getKey());
+        entry.getValue().serialize(gen, jsonpMapper);
+      }
+      gen.writeEnd();
+    }
+
+    gen.writeEnd();
+    gen.close();
+
+    return sw.toString();
+  }
+
+  @Override
+  public Response getEntityTypeCounts(
+      org.openmetadata.schema.search.SearchRequest request, String index) throws IOException {
+    if (!isClientAvailable) {
+      LOG.error("ElasticSearch client is not available. Cannot perform get entity type counts");
+      throw new IOException("ElasticSearch client is not available");
+    }
+
+    try {
+      // Get search settings for consistency with other search operations
+      SearchSettings searchSettings =
+          SettingsCache.getSetting(SettingsType.SEARCH_SETTINGS, SearchSettings.class);
+
+      // Build request using the source builder factory for consistency
+      ElasticSearchSourceBuilderFactory searchBuilderFactory =
+          new ElasticSearchSourceBuilderFactory(searchSettings);
+      ElasticSearchRequestBuilder requestBuilder =
+          searchBuilderFactory.getSearchSourceBuilderV2(
+              index,
+              request.getQuery() != null ? request.getQuery() : "*",
+              0, // from
+              0, // size - we only need aggregations
+              false); // explain
+
+      // Apply deleted filter if specified
+      if (request.getDeleted() != null && request.getDeleted()) {
+        Query currentQuery = requestBuilder.query();
+        Query deletedQuery =
+            Query.of(q -> q.term(t -> t.field("deleted").value(request.getDeleted())));
+
+        if (currentQuery != null) {
+          final Query finalQuery = currentQuery;
+          Query combined = Query.of(q -> q.bool(b -> b.must(finalQuery).must(deletedQuery)));
+          requestBuilder.query(combined);
+        } else {
+          requestBuilder.query(deletedQuery);
+        }
+      }
+
+      // Apply query filter if specified
+      if (request.getQueryFilter() != null
+          && !request.getQueryFilter().isEmpty()
+          && !request.getQueryFilter().equals("{}")) {
+        try {
+          String queryToProcess = EsUtils.parseJsonQuery(request.getQueryFilter());
+          Query filter = Query.of(q -> q.withJson(new StringReader(queryToProcess)));
+          Query currentQuery = requestBuilder.query();
+
+          if (currentQuery != null) {
+            final Query finalQuery = currentQuery;
+            Query combined = Query.of(q -> q.bool(b -> b.must(finalQuery).must(filter)));
+            requestBuilder.query(combined);
+          } else {
+            requestBuilder.query(filter);
+          }
+        } catch (Exception ex) {
+          LOG.error(
+              "Error parsing query_filter from query parameters, ignoring filter: {}",
+              request.getQueryFilter(),
+              ex);
+        }
+      }
+
+      // Set basic parameters
+      requestBuilder.from(0);
+      requestBuilder.size(0);
+      requestBuilder.trackTotalHits(true);
+
+      // Resolve the index alias properly
+      String resolvedIndex =
+          Entity.getSearchRepository().getIndexOrAliasName(index != null ? index : "all");
+
+      // Build and execute search
+      SearchRequest searchRequest = requestBuilder.build(resolvedIndex);
+      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
+      SearchResponse<JsonData> searchResponse;
+      try {
+        searchResponse = client.search(searchRequest, JsonData.class);
+      } finally {
+        if (searchTimerSample != null) {
+          RequestLatencyContext.endSearchOperation(searchTimerSample);
+        }
+      }
+
+      LOG.info("Entity type counts query for index '{}' (resolved: '{}')", index, resolvedIndex);
+
+      // Serialize response
+      String jsonResponse = serializeSearchResponse(searchResponse);
+      return Response.status(Response.Status.OK).entity(jsonResponse).build();
+
+    } catch (Exception e) {
+      LOG.error(
+          "Error executing entity type counts search for index: {}, query: {}",
+          index,
+          request.getQuery(),
+          e);
+      throw new SearchException(
+          String.format("Failed to get entity type counts: %s", e.getMessage()));
+    }
   }
 }
