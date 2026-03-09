@@ -179,11 +179,7 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
           String entityLink,
       @Parameter(
               description = "Return list of tests by column names",
-              schema =
-                  @Schema(
-                      type = "string",
-                      example =
-                          "{serviceName}.{databaseName}.{schemaName}.{tableName}.{columnName}"))
+              schema = @Schema(type = "string", example = "{columnName}"))
           @QueryParam("columnName")
           String columnName,
       @Parameter(
@@ -451,11 +447,7 @@ public class TestCaseResource extends EntityResource<TestCase, TestCaseRepositor
           String followedBy,
       @Parameter(
               description = "Return list of tests by column names",
-              schema =
-                  @Schema(
-                      type = "string",
-                      example =
-                          "{serviceName}.{databaseName}.{schemaName}.{tableName}.{columnName}"))
+              schema = @Schema(type = "string", example = "{columnName}"))
           @QueryParam("columnName")
           String columnName)
       throws IOException {
