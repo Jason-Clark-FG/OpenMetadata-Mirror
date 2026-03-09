@@ -43,9 +43,31 @@ const user2 = new UserClass();
 const user3 = new UserClass();
 const users = [user1, user2, user3];
 const table1 = new TableClass();
+const tablePagination = new TableClass();
+const PAGINATION_INCIDENT_COUNT = 22;
 
 test.describe.configure({ mode: 'serial' });
 
+/**
+ * Incident Manager — End-to-End Coverage
+ * @description Validates the full lifecycle of Data Quality incidents: acknowledge, assign/reassign, mentions/notifications,
+ * resolve, and interactions with pipeline reruns. Also verifies filters in the Incident Manager page and incident counts in lineage.
+ *
+ * Preconditions
+ * - Admin-authenticated session and bot setup.
+ * - Three users created and three test cases on a table; TestSuite pipeline deployed and executed to create failures.
+ *
+ * Coverage
+ * - Lifecycle: Claim table ownership, acknowledge failure, assign & reassign incident, add mention, resolve.
+ * - Reruns: Trigger pipeline rerun and verify incident states across Data Quality and Incident tabs.
+ * - Filters: Assignee, status, test case, time-range filters.
+ * - Lineage: Incident counts displayed on lineage node flyout.
+ *
+ * API Interactions
+ * - POST `/api/v1/services/ingestionPipelines/deploy/:id` deploys TestSuite pipeline.
+ * - Various `GET/POST` under `/api/v1/dataQuality/testCases/*` for incident state and assignment.
+ * - Search endpoints for user and test case selectors.
+ */
 test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
   test.beforeAll(async ({ browser }) => {
     // since we need to poll for the pipeline status, we need to increase the timeout
@@ -105,6 +127,11 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     await redirectToHomePage(page);
   });
 
+  /**
+   * Complete incident lifecycle with table owner
+   * @description Claims table ownership, acknowledges a failed test case, assigns and reassigns the incident,
+   * validates notifications for mentions, and resolves the incident.
+   */
   test('Complete Incident lifecycle with table owner', async ({
     page: adminPage,
     ownerPage: page,
@@ -116,6 +143,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       displayName: user1.getUserDisplayName(),
     };
 
+    /**
+     * Step: Claim ownership of table
+     * @description Admin assigns logged-in user as table owner to enable incident actions.
+     */
     await test.step('Claim ownership of table', async () => {
       const loggedInUserRequest = page.waitForResponse(
         `/api/v1/users/loggedInUser*`
@@ -141,6 +172,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Acknowledge failure
+     * @description Acknowledge the failed test case to transition incident state.
+     */
     await test.step("Acknowledge table test case's failure", async () => {
       await acknowledgeTask({
         page,
@@ -149,6 +184,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Assign incident
+     * @description Assigns incident to a specific user and confirms state update.
+     */
     await test.step('Assign incident to user', async () => {
       await assignIncident({
         page,
@@ -158,6 +197,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Reassign incident
+     * @description Reassigns the incident to another user via header actions.
+     */
     await test.step('Re-assign incident to user', async () => {
       const assignee1 = {
         name: user2.data.email.split('@')[0],
@@ -213,6 +256,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await updateAssignee;
     });
 
+    /**
+     * Step: Notifications and mentions
+     * @description Adds a mention in entity feed and verifies corresponding notification entry.
+     */
     await test.step(
       'Verify that notifications correctly display mentions for the incident manager',
       async () => {
@@ -234,6 +281,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       }
     );
 
+    /**
+     * Step: Reassign from header
+     * @description Uses popover assign widget to change assignee from the test case header.
+     */
     await test.step(
       "Re-assign incident from test case page's header",
       async () => {
@@ -254,6 +305,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       }
     );
 
+    /**
+     * Step: Resolve incident
+     * @description Marks incident as resolved with reason and comment.
+     */
     await test.step('Resolve incident', async () => {
       await page.click('[data-testid="incident"]');
       await page.getByRole('button', { name: 'Resolve' }).click();
@@ -270,12 +325,21 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     });
   });
 
+  /**
+   * Resolve incident and rerun pipeline
+   * @description Resolves a failed incident from the list page, confirms closed status, and reruns the TestSuite pipeline
+   * to re-evaluate incident state.
+   */
   test('Resolving incident & re-run pipeline', async ({ page }) => {
     const testCase = table1.testCasesResponseData[1];
     const testCaseName = testCase?.['name'];
     const pipeline = table1.testSuitePipelineResponseData[0];
     const { apiContext } = await getApiContext(page);
 
+    /**
+     * Step: Acknowledge failure
+     * @description Acknowledges the failed test case to update incident status.
+     */
     await test.step("Acknowledge table test case's failure", async () => {
       await acknowledgeTask({
         page,
@@ -284,6 +348,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Resolve from list page
+     * @description Resolves incident via Incident Manager page with reason and comment.
+     */
     await test.step('Resolve task from incident list page', async () => {
       await visitProfilerTab(page, table1);
       const testCaseResponse = page.waitForResponse(
@@ -324,6 +392,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await updateTestCaseIncidentStatus;
     });
 
+    /**
+     * Step: Verify closed task
+     * @description Confirms resolved status appears under Closed tab in incident details.
+     */
     await test.step('Task should be closed', async () => {
       await visitProfilerTab(page, table1);
       const testCaseResponse = page.waitForResponse(
@@ -348,6 +420,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       );
     });
 
+    /**
+     * Step: Re-run pipeline
+     * @description Triggers TestSuite pipeline rerun and waits for successful completion.
+     */
     await test.step('Re-run pipeline', async () => {
       await triggerTestSuitePipelineAndWaitForSuccess({
         page,
@@ -356,6 +432,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Verify open vs closed
+     * @description Verifies incident counts for Open and Closed after rerun and re-acknowledgement.
+     */
     await test.step('Verify open and closed task', async () => {
       await acknowledgeTask({
         page,
@@ -375,6 +455,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     });
   });
 
+  /**
+   * Rerun pipeline for open incident
+   * @description Acknowledges and assigns an open incident, reruns pipeline, and validates status reflects Assigned.
+   */
   test('Rerunning pipeline for an open incident', async ({ page }) => {
     const testCase = table1.testCasesResponseData[2];
     const testCaseName = testCase?.['name'];
@@ -385,6 +469,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     };
     const { apiContext } = await getApiContext(page);
 
+    /**
+     * Step: Ack and verify open
+     * @description Acknowledges incident and verifies Open task count.
+     */
     await test.step('Ack incident and verify open task', async () => {
       await acknowledgeTask({
         page,
@@ -401,6 +489,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       );
     });
 
+    /**
+     * Step: Assign incident
+     * @description Assigns the incident and confirms state.
+     */
     await test.step('Assign incident to user', async () => {
       await assignIncident({
         page,
@@ -409,6 +501,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Re-run pipeline
+     * @description Triggers pipeline rerun for the open incident.
+     */
     await test.step('Re-run pipeline', async () => {
       await triggerTestSuitePipelineAndWaitForSuccess({
         page,
@@ -417,6 +513,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       });
     });
 
+    /**
+     * Step: Verify status on DQ page
+     * @description Confirms incident shows Failed + Assigned status in the Data Quality tab post-rerun.
+     */
     await test.step("Verify incident's status on DQ page", async () => {
       await visitProfilerTab(page, table1);
       const testCaseResponse = page.waitForResponse(
@@ -434,6 +534,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     });
   });
 
+  /**
+   * Validate Incident tab in entity page
+   * @description Verifies incidents list within entity details, lineage incident counts, and navigation back to tab.
+   */
   test('Validate Incident Tab in Entity details page', async ({ page }) => {
     const testCases = table1.testCasesResponseData;
     await visitProfilerTab(page, table1);
@@ -482,6 +586,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     }
   });
 
+  /**
+   * Verify filters in Incident Manager page
+   * @description Tests Assignee, Status, Test Case, and Date filters and confirms list updates accordingly.
+   */
   test("Verify filters in Incident Manager's page", async ({ page }) => {
     const assigneeTestCase = {
       username: user1.data.email.split('@')[0].toLocaleLowerCase(),
@@ -549,7 +657,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
 
     await page.click('[data-testid="test-case-select"]');
     const testCaseResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*index=test_case_search_index*`
+      (response) =>
+        response.url().includes(`/api/v1/search/query`) &&
+        response.url().includes('index=test_case_search_index') &&
+        response.url().includes(encodeURIComponent(testCase1))
     );
     await page.getByTestId('test-case-select').locator('input').fill(testCase1);
     await testCaseResponse;
@@ -576,11 +687,11 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       .click();
     await nonTestCaseFilterRes;
 
-    await page.click('[data-testid="date-picker-menu"]');
+    await page.click('[data-testid="mui-date-picker-menu"]');
     const timeSeriesFilterRes = page.waitForResponse(
       '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list?*'
     );
-    await page.getByRole('menuitem', { name: 'Yesterday' }).click();
+    await page.getByTestId('date-range-option-yesterday').click();
     await timeSeriesFilterRes;
 
     for (const testCase of table1.testCasesResponseData) {
@@ -588,5 +699,118 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
         page.locator(`[data-testid="test-case-${testCase?.['name']}"]`)
       ).toBeVisible();
     }
+  });
+
+  /**
+   * Incident Manager pagination
+   * @description Uses a dedicated table with 20+ test cases to ensure multiple pages of incidents.
+   * Verifies Next/Previous and page indicator when pagination is shown.
+   */
+  test.describe('Incident Manager pagination', () => {
+    test.beforeAll(async ({ browser }) => {
+      test.slow();
+      const { afterAction, apiContext, page } = await performAdminLogin(
+        browser
+      );
+
+      if (!process.env.PLAYWRIGHT_IS_OSS) {
+        await resetTokenFromBotPage(page, 'testsuite-bot');
+      }
+
+      for (let i = 0; i < PAGINATION_INCIDENT_COUNT; i++) {
+        await tablePagination.createTestCase(apiContext, {
+          parameterValues: [
+            { name: 'minColValue', value: 12 },
+            { name: 'maxColValue', value: 24 },
+          ],
+          testDefinition: 'tableColumnCountToBeBetween',
+        });
+      }
+
+      const pipeline = await tablePagination.createTestSuitePipeline(
+        apiContext
+      );
+
+      await makeRetryRequest({
+        page,
+        fn: () =>
+          apiContext.post(
+            `/api/v1/services/ingestionPipelines/deploy/${pipeline.id}`
+          ),
+      });
+
+      await triggerTestSuitePipelineAndWaitForSuccess({
+        page,
+        pipeline,
+        apiContext,
+      });
+
+      await afterAction();
+    });
+
+    test('Next, Previous and page indicator', async ({ page }) => {
+      test.slow();
+      const listUrl =
+        '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list';
+
+      const initialListRes = page.waitForResponse((res) =>
+        res.url().includes(listUrl)
+      );
+      await sidebarClick(page, SidebarItem.INCIDENT_MANAGER);
+      await initialListRes;
+
+      await expect(
+        page.getByTestId('test-case-incident-manager-table')
+      ).toBeVisible();
+      await expect(page.getByTestId('pagination')).toBeVisible();
+      await expect(page.getByTestId('page-indicator')).toContainText('1');
+
+      const nextListRes = page.waitForResponse(
+        (res) => res.url().includes(listUrl) && res.url().includes('offset=15')
+      );
+      await page.getByTestId('next').click();
+      await nextListRes;
+
+      await expect(page.getByTestId('page-indicator')).toContainText('2');
+
+      const prevListRes = page.waitForResponse(
+        (res) => res.url().includes(listUrl) && res.url().includes('offset=0')
+      );
+      await page.getByTestId('previous').click();
+      await prevListRes;
+
+      await expect(page.getByTestId('page-indicator')).toContainText('1');
+    });
+
+    test('Page size dropdown updates list limit and resets to page 1', async ({
+      page,
+    }) => {
+      test.slow();
+      const listUrl =
+        '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list';
+
+      const initialListRes = page.waitForResponse((res) =>
+        res.url().includes(listUrl)
+      );
+      await sidebarClick(page, SidebarItem.INCIDENT_MANAGER);
+      await initialListRes;
+
+      await expect(page.getByTestId('pagination')).toBeVisible();
+      await expect(
+        page.getByTestId('page-size-selection-dropdown')
+      ).toBeVisible();
+
+      await page.getByTestId('page-size-selection-dropdown').click();
+      const listWithLimit50 = page.waitForResponse(
+        (res) => res.url().includes(listUrl) && res.url().includes('limit=50')
+      );
+      await page.getByRole('menuitem', { name: /50.*page/i }).click();
+      await listWithLimit50;
+
+      await expect(page.getByTestId('page-indicator')).toContainText('1');
+      await expect(
+        page.getByTestId('page-size-selection-dropdown')
+      ).toContainText('50');
+    });
   });
 });

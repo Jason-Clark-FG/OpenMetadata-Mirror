@@ -10,18 +10,30 @@
 #  limitations under the License.
 """
 Query masking utilities
+
+Masking functions (SqlParse, SqlFluff) reuse the already-parsed AST
+from the LineageRunner to avoid duplicate parsing and improve performance.
 """
 
+import time
 import traceback
 from typing import Optional
 
 from cachetools import LRUCache
-from collate_sqllineage.runner import SQLPARSE_DIALECT, LineageRunner
+from collate_sqllineage.core.parser.sqlfluff.analyzer import SqlFluffLineageAnalyzer
+from collate_sqllineage.core.parser.sqlparse.analyzer import SqlParseLineageAnalyzer
+from collate_sqllineage.runner import LineageRunner
 from sqlparse.sql import Comparison
 from sqlparse.tokens import Literal, Number, String
 
 from metadata.ingestion.lineage.models import Dialect
-from metadata.utils.execution_time_tracker import calculate_execution_time
+from metadata.utils.execution_time_tracker import (
+    calculate_execution_time,
+    pretty_print_time_duration,
+)
+from metadata.utils.logger import utils_logger
+
+logger = utils_logger()
 
 MASK_TOKEN = "?"
 
@@ -29,20 +41,13 @@ MASK_TOKEN = "?"
 masked_query_cache = LRUCache(maxsize=128)
 
 
-# pylint: disable=protected-access
-def get_logger():
-    # pylint: disable=import-outside-toplevel
-    from metadata.utils.logger import utils_logger
-
-    return utils_logger()
-
-
-def mask_literals_with_sqlparse(query: str, parser: LineageRunner):
+@calculate_execution_time(context="MaskLiteralsSqlParse")
+def mask_literals_with_sqlparse(
+    query: str, parser: LineageRunner, query_hash: Optional[str] = None
+):
     """
-    Mask literals in a query using sqlparse.
+    Mask literals in a query using SqlParse.
     """
-    logger = get_logger()
-
     try:
         parsed = parser._parsed_result
 
@@ -54,7 +59,6 @@ def mask_literals_with_sqlparse(query: str, parser: LineageRunner):
                 Literal.String.Single,
                 Literal.Number.Integer,
                 Literal.Number.Float,
-                Literal.String.Single,
             ):
                 token.value = MASK_TOKEN
             elif token.is_group:
@@ -74,22 +78,32 @@ def mask_literals_with_sqlparse(query: str, parser: LineageRunner):
         # Return the formatted masked query
         return str(parsed)
     except Exception as exc:
-        logger.debug(f"Failed to mask query with sqlparse: {exc}")
+        hash_prefix = f"[{query_hash}] " if query_hash else ""
+        logger.debug(f"{hash_prefix}Failed to mask query with SqlParse: {exc}")
         logger.debug(traceback.format_exc())
 
     return query
 
 
-def mask_literals_with_sqlfluff(query: str, parser: LineageRunner) -> str:
+@calculate_execution_time(context="MaskLiteralsSqlFluff")
+def mask_literals_with_sqlfluff(
+    query: str, parser: LineageRunner, query_hash: Optional[str] = None
+) -> str:
     """
-    Mask literals in a query using SQLFluff.
+    Mask literals in a query using SqlFluff.
     """
-    logger = get_logger()
     try:
         if not parser._evaluated:
             parser._eval()
 
         parsed = parser._parsed_result
+
+        if parsed is None:
+            hash_prefix = f"[{query_hash}] " if query_hash else ""
+            logger.debug(
+                f"{hash_prefix}Skipping SqlFluff query masking as parsed result is None"
+            )
+            return query
 
         def replace_literals(segment):
             """Recursively replace literals with placeholders."""
@@ -108,10 +122,27 @@ def mask_literals_with_sqlfluff(query: str, parser: LineageRunner) -> str:
         )
         return masked_query
     except Exception as exc:
-        logger.debug(f"Failed to mask query with sqlfluff: {exc}")
+        hash_prefix = f"[{query_hash}] " if query_hash else ""
+        logger.debug(f"{hash_prefix}Failed to mask query with SqlFluff: {exc}")
         logger.debug(traceback.format_exc())
 
     return query
+
+
+@calculate_execution_time(context="GetSqlParseLineageRunner")
+def get_sqlparse_lineage_runner(query: str) -> LineageRunner:
+    lr_sqlparse = LineageRunner(query, analyzer=SqlParseLineageAnalyzer)
+    len(lr_sqlparse.source_tables)
+    return lr_sqlparse
+
+
+@calculate_execution_time(context="GetSqlFluffLineageRunner")
+def get_sqlfluff_lineage_runner(query: str, dialect: str) -> LineageRunner:
+    lr_sqlfluff = LineageRunner(
+        query, dialect=dialect, analyzer=SqlFluffLineageAnalyzer
+    )
+    len(lr_sqlfluff.source_tables)
+    return lr_sqlfluff
 
 
 @calculate_execution_time(context="MaskQuery")
@@ -120,30 +151,80 @@ def mask_query(
     dialect: str = Dialect.ANSI.value,
     parser: Optional[LineageRunner] = None,
     parser_required: bool = False,
-) -> str:
+    query_hash: Optional[str] = None,
+) -> Optional[str]:
+    """Evaluate and return the best available parser for the query."""
+    hash_prefix = f"[{query_hash}] " if query_hash else ""
+
+    start_time = time.time()
+    masked_query = mask_query_impl(query, dialect, parser, parser_required, query_hash)
+    elapsed = time.time() - start_time
+
+    elapsed_str = pretty_print_time_duration(elapsed)
+    logger.debug(f"{hash_prefix}Query masking completed in {elapsed_str}")
+
+    return masked_query
+
+
+def mask_query_impl(
+    query: str,
+    dialect: str = Dialect.ANSI.value,
+    parser: Optional[LineageRunner] = None,
+    parser_required: bool = False,
+    query_hash: Optional[str] = None,
+) -> Optional[str]:
     """
-    Mask a query using sqlparse or sqlfluff.
+    Mask a query using SqlParse or SqlFluff.
+    Only these two analyzers support literal masking (SqlGlot is excluded).
     """
-    logger = get_logger()
+    hash_prefix = f"[{query_hash}] " if query_hash else ""
+
     try:
         if masked_query_cache.get((query, dialect)):
             return masked_query_cache.get((query, dialect))
         if parser_required and not parser:
+            logger.debug(f"{hash_prefix}Query masking skipped as no parser available.")
             return None
-        if not parser:
+
+        masking_parser = None
+
+        # Only reuse parser if it's already SqlParse or SqlFluff
+        if parser and isinstance(
+            parser._analyzer, (SqlParseLineageAnalyzer, SqlFluffLineageAnalyzer)
+        ):
+            masking_parser = parser
+
+        # If no suitable parser, create one with fallback: SqlParse → SqlFluff
+        if not masking_parser:
             try:
-                parser = LineageRunner(query, dialect=dialect)
-                len(parser.source_tables)
+                masking_parser = get_sqlparse_lineage_runner(query)
             except Exception:
-                parser = LineageRunner(query)
-                len(parser.source_tables)
-        if parser._dialect == SQLPARSE_DIALECT:
-            masked_query = mask_literals_with_sqlparse(query, parser)
+                masking_parser = get_sqlfluff_lineage_runner(query, dialect=dialect)
+
+        logger.debug(
+            f"{hash_prefix}Query masking started using [{masking_parser._analyzer.__class__.__name__}]"
+            f" for parser [{parser and parser._analyzer.__class__.__name__}]"
+        )
+
+        # Dispatch to appropriate masking function
+        if isinstance(masking_parser._analyzer, SqlFluffLineageAnalyzer):
+            masked_query = mask_literals_with_sqlfluff(
+                query, masking_parser, query_hash
+            )
+        elif isinstance(masking_parser._analyzer, SqlParseLineageAnalyzer):
+            masked_query = mask_literals_with_sqlparse(
+                query, masking_parser, query_hash
+            )
         else:
-            masked_query = mask_literals_with_sqlfluff(query, parser)
+            logger.debug(
+                f"{hash_prefix}Query masking skipped as no supported analyzer available."
+                f" Analyzer: {masking_parser._analyzer}"
+            )
+            return None
+
         masked_query_cache[(query, dialect)] = masked_query
         return masked_query
     except Exception as exc:
-        logger.debug(f"Failed to mask query with sqlfluff: {exc}")
+        logger.debug(f"{hash_prefix}Failed to mask query: {exc}")
         logger.debug(traceback.format_exc())
     return None

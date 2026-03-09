@@ -26,6 +26,7 @@ import {
 } from '../../utils/common';
 import { addMultiOwner, removeOwnersFromList } from '../../utils/entity';
 import { test } from '../fixtures/pages';
+import { PLAYWRIGHT_INGESTION_TAG_OBJ } from '../../constant/config';
 
 const table = new TableClass();
 const user1 = new UserClass();
@@ -49,7 +50,7 @@ test.beforeEach(async ({ page }) => {
   await redirectToHomePage(page);
 });
 
-test('Logical TestSuite', async ({ page, ownerPage }) => {
+test('Logical TestSuite', PLAYWRIGHT_INGESTION_TAG_OBJ, async ({ page, ownerPage }) => {
   test.slow();
 
   const NEW_TEST_SUITE = {
@@ -82,6 +83,11 @@ test('Logical TestSuite', async ({ page, ownerPage }) => {
     );
     await getTestCase;
 
+    await page.waitForSelector(
+      "[data-testid='test-case-selection-card'] [data-testid='loader']",
+      { state: 'detached' }
+    );
+
     await page.click(
       `[data-testid="test-case-selection-card"] [data-testid="${testCaseName1}"]`
     );
@@ -101,7 +107,7 @@ test('Logical TestSuite', async ({ page, ownerPage }) => {
   await test.step('Domain Add, Update and Remove', async () => {
     await assignSingleSelectDomain(page, domain1.responseData);
     await assignSingleSelectDomain(page, domain2.responseData);
-    await removeSingleSelectDomain(page, domain2.responseData, false);
+    await removeSingleSelectDomain(page, domain2.responseData, true);
   });
 
   await test.step(

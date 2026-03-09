@@ -51,7 +51,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 import org.openmetadata.schema.api.AddGlossaryToAssetsRequest;
 import org.openmetadata.schema.api.ValidateGlossaryTagsRequest;
 import org.openmetadata.schema.api.VoteRequest;
@@ -67,6 +66,7 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.api.BulkOperationResult;
+import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
@@ -103,7 +103,7 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
 public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryTermRepository> {
   private final GlossaryTermMapper mapper = new GlossaryTermMapper();
   private final GlossaryMapper glossaryMapper = new GlossaryMapper();
-  public static final String COLLECTION_PATH = "v1/glossaryTerms/";
+  public static final String COLLECTION_PATH = "/v1/glossaryTerms/";
   static final String FIELDS =
       "children,relatedTerms,reviewers,owners,tags,usageCount,domains,extension,childrenCount";
 
@@ -232,7 +232,12 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
                       + "`directChildrenOf` parameter.",
               schema = @Schema(type = "string"))
           @QueryParam("directChildrenOf")
-          String parentTermFQNParam) {
+          String parentTermFQNParam,
+      @Parameter(
+              description =
+                  "Filter by entity status (comma-separated: Approved,Draft,In Review,Rejected,Deprecated,Unprocessed)")
+          @QueryParam("entityStatus")
+          String entityStatus) {
     RestUtil.validateCursors(before, after);
     Fields fields = getFields(fieldsParam);
 
@@ -273,7 +278,8 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
     ListFilter filter =
         new ListFilter(include)
             .addQueryParam("parent", fqn)
-            .addQueryParam("directChildrenOf", parentTermFQNParam);
+            .addQueryParam("directChildrenOf", parentTermFQNParam)
+            .addQueryParam("entityStatus", entityStatus);
 
     ResultList<GlossaryTerm> terms;
     if (before != null) { // Reverse paging
@@ -336,7 +342,12 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
-          Include include) {
+          Include include,
+      @Parameter(
+              description =
+                  "Filter by entity status (comma-separated: Approved,Draft,In Review,Rejected,Deprecated,Unprocessed)")
+          @QueryParam("entityStatus")
+          String entityStatus) {
 
     Fields fields = getFields(fieldsParam);
     ResourceContextInterface glossaryResourceContext = new ResourceContext<>(GLOSSARY);
@@ -356,58 +367,25 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
     if (glossaryId != null) {
       result =
           repository.searchGlossaryTermsById(
-              glossaryId, query, limitParam, offsetParam, fieldsParam, include);
+              glossaryId, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     } else if (glossaryFqn != null) {
       result =
           repository.searchGlossaryTermsByFQN(
-              glossaryFqn, query, limitParam, offsetParam, fieldsParam, include);
+              glossaryFqn, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     } else if (parentId != null) {
       result =
           repository.searchGlossaryTermsByParentId(
-              parentId, query, limitParam, offsetParam, fieldsParam, include);
+              parentId, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     } else if (parentFqn != null) {
       result =
           repository.searchGlossaryTermsByParentFQN(
-              parentFqn, query, limitParam, offsetParam, fieldsParam, include);
+              parentFqn, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     } else {
       // Search across all glossary terms without parent filter
-      ListFilter filter = new ListFilter(include);
-      ResultList<GlossaryTerm> allTerms =
-          repository.listAfter(uriInfo, fields, filter, Integer.MAX_VALUE, null);
-      List<GlossaryTerm> matchingTerms;
-      if (query == null || query.trim().isEmpty()) {
-        matchingTerms = allTerms.getData();
-      } else {
-        String searchTerm = query.toLowerCase().trim();
-        matchingTerms =
-            allTerms.getData().stream()
-                .filter(
-                    term -> {
-                      if (term.getName() != null
-                          && term.getName().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      if (term.getDisplayName() != null
-                          && term.getDisplayName().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      if (term.getDescription() != null
-                          && term.getDescription().toLowerCase().contains(searchTerm)) {
-                        return true;
-                      }
-                      return false;
-                    })
-                .collect(Collectors.toList());
-      }
-      int total = matchingTerms.size();
-      int startIndex = Math.min(offsetParam, total);
-      int endIndex = Math.min(offsetParam + limitParam, total);
-      List<GlossaryTerm> paginatedResults =
-          startIndex < total ? matchingTerms.subList(startIndex, endIndex) : List.of();
-      String before =
-          offsetParam > 0 ? String.valueOf(Math.max(0, offsetParam - limitParam)) : null;
-      String after = endIndex < total ? String.valueOf(endIndex) : null;
-      result = new ResultList<>(paginatedResults, before, after, total);
+      // Uses efficient database-level search and pagination
+      result =
+          repository.searchGlossaryTermsByParentFQN(
+              null, query, limitParam, offsetParam, fieldsParam, include, entityStatus);
     }
 
     return addHref(uriInfo, result);
@@ -447,8 +425,17 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
-          Include include) {
-    return getInternal(uriInfo, securityContext, id, fieldsParam, include);
+          Include include,
+      @Parameter(
+              description =
+                  "Per-relation include control. Format: field:value,field2:value2. "
+                      + "Example: owners:non-deleted,followers:all. "
+                      + "Valid values: all, deleted, non-deleted. "
+                      + "If not specified for a field, uses the entity's include value.",
+              schema = @Schema(type = "string", example = "owners:non-deleted,followers:all"))
+          @QueryParam("includeRelations")
+          String includeRelations) {
+    return getInternal(uriInfo, securityContext, id, fieldsParam, include, includeRelations);
   }
 
   @GET
@@ -487,8 +474,17 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
-          Include include) {
-    return getByNameInternal(uriInfo, securityContext, fqn, fieldsParam, include);
+          Include include,
+      @Parameter(
+              description =
+                  "Per-relation include control. Format: field:value,field2:value2. "
+                      + "Example: owners:non-deleted,followers:all. "
+                      + "Valid values: all, deleted, non-deleted. "
+                      + "If not specified for a field, uses the entity's include value.",
+              schema = @Schema(type = "string", example = "owners:non-deleted,followers:all"))
+          @QueryParam("includeRelations")
+          String includeRelations) {
+    return getByNameInternal(uriInfo, securityContext, fqn, fieldsParam, include, includeRelations);
   }
 
   @GET
@@ -1064,5 +1060,139 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
       @Context UriInfo uriInfo, @Context SecurityContext securityContext) {
     java.util.Map<String, Integer> result = repository.getAllGlossaryTermsWithAssetsCount();
     return Response.ok(result).build();
+  }
+
+  @GET
+  @Path("/name/{fqn}/export")
+  @Produces(MediaType.TEXT_PLAIN)
+  @Valid
+  @Operation(
+      operationId = "exportGlossaryTerm",
+      summary = "Export glossary term in CSV format",
+      description = "Export glossary term and its children in CSV format.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Exported csv with glossary terms",
+            content = @Content(mediaType = "text/plain"))
+      })
+  public String exportCsv(
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description = "Fully qualified name of the glossary term",
+              schema = @Schema(type = "string"))
+          @PathParam("fqn")
+          String fqn)
+      throws IOException {
+    return exportCsvInternal(securityContext, fqn, false);
+  }
+
+  @GET
+  @Path("/name/{fqn}/exportAsync")
+  @Produces(MediaType.TEXT_PLAIN)
+  @Valid
+  @Operation(
+      operationId = "exportGlossaryTermAsync",
+      summary = "Export glossary term in CSV format asynchronously",
+      description = "Export glossary term and its children in CSV format asynchronously.",
+      responses = {
+        @ApiResponse(
+            responseCode = "202",
+            description = "Export initiated successfully",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema =
+                        @Schema(
+                            implementation =
+                                org.openmetadata.service.util.CSVExportResponse.class)))
+      })
+  public Response exportCsvAsync(
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description = "Fully qualified name of the glossary term",
+              schema = @Schema(type = "string"))
+          @PathParam("fqn")
+          String fqn) {
+    return exportCsvInternalAsync(securityContext, fqn, false);
+  }
+
+  @PUT
+  @Path("/name/{fqn}/import")
+  @Consumes(MediaType.TEXT_PLAIN)
+  @Valid
+  @Operation(
+      operationId = "importGlossaryTerm",
+      summary = "Import glossary terms from CSV",
+      description =
+          "Import glossary terms from CSV to create, and update glossary terms. This is a synchronous API.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Import result",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CsvImportResult.class)))
+      })
+  public CsvImportResult importCsv(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description = "Fully qualified name of the glossary term",
+              schema = @Schema(type = "string"))
+          @PathParam("fqn")
+          String fqn,
+      @RequestBody(description = "CSV data to import", required = true) String csv,
+      @Parameter(
+              description =
+                  "Dry-run when true is used for validating the CSV without really importing it. (default=true)",
+              schema = @Schema(type = "boolean"))
+          @DefaultValue("true")
+          @QueryParam("dryRun")
+          boolean dryRun)
+      throws IOException {
+    return importCsvInternal(uriInfo, securityContext, fqn, csv, dryRun, false);
+  }
+
+  @PUT
+  @Path("/name/{fqn}/importAsync")
+  @Consumes(MediaType.TEXT_PLAIN)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Valid
+  @Operation(
+      operationId = "importGlossaryTermAsync",
+      summary = "Import glossary term from CSV asynchronously",
+      description =
+          "Import glossary term and its children from CSV format asynchronously to create or update glossary terms.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Import initiated successfully",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema =
+                        @Schema(
+                            implementation =
+                                org.openmetadata.service.util.CSVImportResponse.class)))
+      })
+  public Response importCsvAsync(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description = "Fully qualified name of the glossary term",
+              schema = @Schema(type = "string"))
+          @PathParam("fqn")
+          String fqn,
+      @RequestBody(description = "CSV data to import", required = true) String csv,
+      @Parameter(
+              description =
+                  "Dry-run when true is used for validating the CSV without really importing it. (default=true)",
+              schema = @Schema(type = "boolean"))
+          @QueryParam("dryRun")
+          @DefaultValue("true")
+          boolean dryRun) {
+    return importCsvInternalAsync(uriInfo, securityContext, fqn, csv, dryRun, false);
   }
 }

@@ -213,6 +213,10 @@ class DbtcloudSource(PipelineServiceSource):
             # Cache observability details - store in context for current job
             self.context.get().current_pipeline_entity = pipeline_entity
             self.context.get().current_table_fqns = []
+            # Store pipeline FQN from entity to ensure exact match for status updates
+            self.context.get().pipeline_fqn = str(
+                pipeline_entity.fullyQualifiedName.root
+            )
 
             # Create cache_key once at the start
             cache_key = (
@@ -230,6 +234,12 @@ class DbtcloudSource(PipelineServiceSource):
                 }
 
             for model in dbt_models or []:
+                if not model.runGeneratedAt:
+                    logger.debug(
+                        f"Skipping model with missing runGeneratedAt: name={getattr(model, 'name', None)}"
+                    )
+                    continue
+
                 if not all([model.name, model.database, model.dbtschema]):
                     logger.debug(
                         f"Skipping model with missing attributes: name={getattr(model, 'name', None)}, "
@@ -267,6 +277,15 @@ class DbtcloudSource(PipelineServiceSource):
                         # Use dict lookup instead of list comprehension
                         parent = parent_by_unique_id.get(unique_id)
                         if not parent:
+                            continue
+
+                        # Check runGeneratedAt for models and seeds (not sources)
+                        # Sources are auto-generated and don't have runGeneratedAt
+                        is_source = unique_id.startswith("source.")
+                        if not is_source and not parent.runGeneratedAt:
+                            logger.debug(
+                                f"Skipping parent with missing runGeneratedAt: uniqueId={unique_id}"
+                            )
                             continue
 
                         if not all([parent.name, parent.database, parent.dbtschema]):
@@ -503,15 +522,21 @@ class DbtcloudSource(PipelineServiceSource):
         """
         try:
 
-            pipeline_fqn = fqn.build(
-                metadata=self.metadata,
-                entity_type=Pipeline,
-                service_name=self.context.get().pipeline_service,
-                pipeline_name=self.context.get().pipeline,
+            # Use stored FQN from context instead of reconstructing
+            # This ensures exact match with database format, especially for special characters
+            ctx = self.context.get()
+            pipeline_fqn = (
+                ctx.pipeline_fqn
+                if hasattr(ctx, "pipeline_fqn") and ctx.pipeline_fqn
+                else fqn.build(
+                    metadata=self.metadata,
+                    entity_type=Pipeline,
+                    service_name=ctx.pipeline_service,
+                    pipeline_name=ctx.pipeline,
+                )
             )
 
             # using cached runs from context instead of making another API call
-            ctx = self.context.get()
             runs = (
                 ctx.current_runs
                 if hasattr(ctx, "current_runs") and ctx.current_runs
