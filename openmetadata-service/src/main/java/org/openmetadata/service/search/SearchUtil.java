@@ -67,7 +67,9 @@ public class SearchUtil {
           "test_case_resolution_status_search_index",
           "testCaseResolutionStatus",
           "raw_cost_analysis_report_data_index",
-          "aggregated_cost_analysis_report_data_index" -> true;
+          "rawCostAnalysisReportData",
+          "aggregated_cost_analysis_report_data_index",
+          "aggregatedCostAnalysisReportData" -> true;
       default -> false;
     };
   }
