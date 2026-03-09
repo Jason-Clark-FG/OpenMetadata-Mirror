@@ -12,18 +12,13 @@
 Unit tests for SSRS source
 """
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from metadata.generated.schema.api.data.createChart import CreateChartRequest
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
-from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 from metadata.generated.schema.entity.data.chart import ChartType
-from metadata.generated.schema.entity.data.dashboard import (
-    Dashboard as LineageDashboard,
-)
-from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.services.dashboardService import (
     DashboardConnection,
     DashboardService,
@@ -36,11 +31,7 @@ from metadata.generated.schema.type.basic import FullyQualifiedEntityName
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.dashboard.ssrs.metadata import SsrsSource
-from metadata.ingestion.source.dashboard.ssrs.models import (
-    SsrsDataSource,
-    SsrsFolder,
-    SsrsReport,
-)
+from metadata.ingestion.source.dashboard.ssrs.models import SsrsFolder, SsrsReport
 
 MOCK_DASHBOARD_SERVICE = DashboardService(
     id="c3eb265f-5445-4ad3-ba5e-797d3a3071bb",
@@ -155,9 +146,7 @@ EXPECTED_DASHBOARDS = [
 def ssrs_source():
     with patch(
         "metadata.ingestion.source.dashboard.dashboard_service.DashboardServiceSource.test_connection"
-    ), patch(
-        "metadata.ingestion.source.dashboard.ssrs.connection.get_connection"
-    ):
+    ), patch("metadata.ingestion.source.dashboard.ssrs.connection.get_connection"):
         config = OpenMetadataWorkflowConfig.model_validate(mock_config)
         source = SsrsSource.create(
             mock_config["source"],
@@ -227,115 +216,9 @@ class TestSsrsSource:
         assert len(results) == 1
         assert results[0].right.description is None
 
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
-    def test_yield_dashboard_lineage_no_entity(self, mock_get_by_name, ssrs_source):
-        mock_get_by_name.return_value = None
+    def test_yield_dashboard_lineage_is_noop(self, ssrs_source):
         results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
         assert results == []
-
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
-    def test_yield_dashboard_lineage_no_datasources(
-        self, mock_get_by_name, mock_search, ssrs_source
-    ):
-        mock_get_by_name.return_value = MOCK_DASHBOARD_SERVICE
-        ssrs_source.client.get_report_datasources = lambda _: []
-        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
-        assert results == []
-        mock_search.assert_not_called()
-
-    @patch(
-        "metadata.ingestion.source.dashboard.ssrs.metadata.SsrsSource._get_add_lineage_request"
-    )
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
-    def test_yield_dashboard_lineage_with_datasources(
-        self,
-        mock_get_by_name,
-        mock_search,
-        mock_lineage_request,
-        ssrs_source,
-    ):
-        mock_dashboard = MagicMock(spec=LineageDashboard)
-        mock_get_by_name.return_value = mock_dashboard
-
-        mock_table = MagicMock(spec=Table)
-        mock_search.return_value = [mock_table]
-
-        mock_lineage = MagicMock(spec=Either)
-        mock_lineage_request.return_value = mock_lineage
-
-        datasources = [
-            SsrsDataSource(
-                Id="ds-1",
-                Name="SalesDB",
-                ConnectionString="Data Source=sqlserver01;Initial Catalog=SalesDB",
-                DataSourceType="SQL",
-                IsEnabled=True,
-            ),
-        ]
-        ssrs_source.client.get_report_datasources = lambda _: datasources
-
-        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
-        assert len(results) == 1
-        mock_search.assert_called_once()
-        mock_lineage_request.assert_called_once_with(
-            to_entity=mock_dashboard, from_entity=mock_table
-        )
-
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
-    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
-    def test_yield_dashboard_lineage_skips_no_connection_string(
-        self, mock_get_by_name, mock_search, ssrs_source
-    ):
-        mock_get_by_name.return_value = MagicMock(spec=LineageDashboard)
-        datasources = [
-            SsrsDataSource(
-                Id="ds-1",
-                Name="NoDB",
-                ConnectionString=None,
-                DataSourceType="SQL",
-                IsEnabled=True,
-            ),
-        ]
-        ssrs_source.client.get_report_datasources = lambda _: datasources
-        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
-        assert results == []
-        mock_search.assert_not_called()
-
-
-class TestConnectionStringParsing:
-    def test_parse_standard_connection_string(self):
-        result = SsrsSource._parse_connection_string(
-            "Data Source=myserver;Initial Catalog=SalesDB"
-        )
-        assert result["server"] == "myserver"
-        assert result["database"] == "SalesDB"
-
-    def test_parse_with_database_key(self):
-        result = SsrsSource._parse_connection_string(
-            "Server=myserver;Database=AnalyticsDB"
-        )
-        assert result["server"] == "myserver"
-        assert result["database"] == "AnalyticsDB"
-
-    def test_parse_with_extra_properties(self):
-        result = SsrsSource._parse_connection_string(
-            "Data Source=sql01.corp.local;Initial Catalog=Finance;"
-            "Integrated Security=True;MultipleActiveResultSets=False"
-        )
-        assert result["server"] == "sql01.corp.local"
-        assert result["database"] == "Finance"
-
-    def test_parse_empty_string(self):
-        result = SsrsSource._parse_connection_string("")
-        assert result["server"] is None
-        assert result["database"] is None
-
-    def test_parse_no_database(self):
-        result = SsrsSource._parse_connection_string("Data Source=myserver")
-        assert result["server"] == "myserver"
-        assert result["database"] is None
 
 
 class TestSsrsModels:

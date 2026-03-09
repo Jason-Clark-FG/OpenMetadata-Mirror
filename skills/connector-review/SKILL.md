@@ -103,6 +103,12 @@ Verify:
 - Type enum value is PascalCase
 - Service schema has the new type in enum and oneOf
 - Test connection JSON steps match test_fn dict keys
+- AUTH REQUIRED: If the service requires authentication by default, username/password/token
+  must be in the "required" array. Optional auth that fails with opaque 401 is a WARNING.
+- SSL CONFIG: HTTPS connectors should include verifySSL + sslConfig $ref for enterprise
+  deployments. Missing SSL config is a SUGGESTION.
+- TEST STEPS: Each test step should validate a distinct capability. Duplicate steps
+  (same function mapped to different names) are a SUGGESTION.
 
 For each finding, assign:
 - Severity: BLOCKER / WARNING / SUGGESTION
@@ -123,6 +129,11 @@ Verify:
 - Secrets use SecretStr/format: "password", never logged
 - Test connection steps are meaningful (not just CheckAccess)
 - Rate limiting handled for REST APIs
+- PYDANTIC MODELS: Any model using Field(alias=...) must have
+  model_config = ConfigDict(populate_by_name=True). Missing this is a WARNING
+  (Python attribute names won't work, tests will break).
+- SCAFFOLDING ARTIFACTS: Check if CONNECTOR_CONTEXT.md is included in the PR diff
+  (it should be gitignored). If committed, flag as WARNING — it's a local working doc.
 
 For each finding, assign:
 - Severity: BLOCKER / WARNING / SUGGESTION
@@ -168,6 +179,13 @@ Verify memory management (read memory.md standard):
   returning, or yield immediately? List accumulation in yield methods is a WARNING.
 - RESOURCE CLEANUP: Check that cursors, file handles, and HTTP responses are closed
   explicitly (context managers or finally blocks). Leaked resources are a WARNING.
+
+Verify lineage precision (read lineage.md standard):
+- WILDCARD LINEAGE: Check for table_name="*" in search queries or FQN builders.
+  This links every table in a database to each entity — it is a BLOCKER (incorrect lineage).
+  If the source doesn't provide table-level info, lineage should be skipped entirely.
+- BROAD LINEAGE: Check if lineage connects at too high a level (entire database instead
+  of specific tables). If avoidable, flag as WARNING.
 
 For each finding, assign:
 - Severity: BLOCKER / WARNING / SUGGESTION

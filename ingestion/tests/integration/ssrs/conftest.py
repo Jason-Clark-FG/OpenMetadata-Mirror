@@ -14,7 +14,6 @@ Ssrs integration test fixtures
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 import pytest

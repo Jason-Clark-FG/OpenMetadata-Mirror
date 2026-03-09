@@ -18,10 +18,6 @@ from metadata.generated.schema.api.data.createChart import CreateChartRequest
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 from metadata.generated.schema.entity.data.chart import ChartType
-from metadata.generated.schema.entity.data.dashboard import (
-    Dashboard as LineageDashboard,
-)
-from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnection import (
     SsrsConnection,
 )
@@ -40,9 +36,7 @@ from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.dashboard.dashboard_service import DashboardServiceSource
 from metadata.ingestion.source.dashboard.ssrs.models import SsrsReport
-from metadata.utils import fqn
 from metadata.utils.filters import filter_by_chart
-from metadata.utils.fqn import build_es_fqn_search_string
 from metadata.utils.helpers import clean_uri
 from metadata.utils.logger import ingestion_logger
 
@@ -168,93 +162,9 @@ class SsrsSource(DashboardServiceSource):
                 )
             )
 
-    @staticmethod
-    def _parse_connection_string(connection_string: str) -> Dict[str, Optional[str]]:
-        result: Dict[str, Optional[str]] = {
-            "server": None,
-            "database": None,
-        }
-        if not connection_string:
-            return result
-        for part in connection_string.split(";"):
-            part = part.strip()
-            if "=" not in part:
-                continue
-            key, value = part.split("=", 1)
-            key_lower = key.strip().lower()
-            if key_lower in ("initial catalog", "database"):
-                result["database"] = value.strip()
-            elif key_lower in ("data source", "server"):
-                result["server"] = value.strip()
-        return result
-
     def yield_dashboard_lineage_details(
         self,
         dashboard_details: SsrsReport,
         db_service_prefix: Optional[str] = None,
     ) -> Iterable[Either[AddLineageRequest]]:
-        (
-            prefix_service_name,
-            prefix_database_name,
-            prefix_schema_name,
-            _,
-        ) = self.parse_db_service_prefix(db_service_prefix)
-
-        to_fqn = fqn.build(
-            self.metadata,
-            entity_type=LineageDashboard,
-            service_name=self.config.serviceName,
-            dashboard_name=str(dashboard_details.id),
-        )
-        to_entity = self.metadata.get_by_name(
-            entity=LineageDashboard,
-            fqn=to_fqn,
-        )
-        if not to_entity:
-            return
-
-        for datasource in self.client.get_report_datasources(dashboard_details.id):
-            try:
-                if not datasource.connection_string:
-                    continue
-                conn_info = self._parse_connection_string(
-                    datasource.connection_string
-                )
-                database_name = conn_info.get("database")
-                if not database_name:
-                    continue
-
-                if (
-                    prefix_database_name
-                    and prefix_database_name.lower() != database_name.lower()
-                ):
-                    continue
-
-                fqn_search_string = build_es_fqn_search_string(
-                    database_name=prefix_database_name or database_name,
-                    schema_name=prefix_schema_name,
-                    service_name=prefix_service_name,
-                    table_name="*",
-                )
-                from_entities = self.metadata.search_in_any_service(
-                    entity_type=Table,
-                    fqn_search_string=fqn_search_string,
-                    fetch_multiple_entities=True,
-                )
-                for from_entity in from_entities or []:
-                    lineage_request = self._get_add_lineage_request(
-                        to_entity=to_entity, from_entity=from_entity
-                    )
-                    if lineage_request:
-                        yield lineage_request
-            except Exception as exc:
-                yield Either(
-                    left=StackTraceError(
-                        name="Lineage",
-                        error=(
-                            f"Error yielding lineage for datasource "
-                            f"[{datasource.name}]: {exc}"
-                        ),
-                        stackTrace=traceback.format_exc(),
-                    )
-                )
+        return []

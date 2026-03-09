@@ -356,6 +356,92 @@ def analyze_connector(service_type: str, name: str) -> dict:
             "Storage connector missing gc.collect() — high OOM risk with large files"
         )
 
+    # Schema validation: auth required, SSL config, required fields
+    if schema_files:
+        schema = json.loads(schema_files[0].read_text())
+        props = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        # Check if auth fields should be required
+        has_username = "username" in props
+        has_password = "password" in props
+        has_token = "token" in props or "apiKey" in props
+        if has_username and "username" not in required:
+            report["issues"].append(
+                "Schema: username defined but not in required array — "
+                "if the service requires auth, make it required"
+            )
+        if has_password and "password" not in required:
+            report["issues"].append(
+                "Schema: password defined but not in required array — "
+                "if the service requires auth, make it required"
+            )
+
+        # Check for SSL config on HTTPS connectors
+        has_ssl = "verifySSL" in props or "sslConfig" in props
+        host_prop = props.get("hostPort", {})
+        is_https = host_prop.get("format") == "uri"
+        if is_https and not has_ssl:
+            report["issues"].append(
+                "Schema: HTTPS connector missing verifySSL/sslConfig — "
+                "enterprise deployments with internal CAs need this"
+            )
+
+    # Pydantic model checks
+    models_py = source_dir / "models.py"
+    if models_py.is_file():
+        content = models_py.read_text()
+        has_alias = "alias=" in content or 'alias="' in content
+        has_populate = "populate_by_name" in content
+        if has_alias and not has_populate:
+            report["issues"].append(
+                "models.py: Uses Field(alias=...) without "
+                "model_config = ConfigDict(populate_by_name=True) — "
+                "constructing with Python attribute names will raise ValidationError"
+            )
+
+    # Scaffolding artifact check — verify it's not tracked by git
+    context_md = source_dir / "CONNECTOR_CONTEXT.md"
+    if context_md.is_file():
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", str(context_md)],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                report["issues"].append(
+                    "CONNECTOR_CONTEXT.md is tracked by git — "
+                    "it should be gitignored (local AI working document)"
+                )
+        except Exception:
+            pass
+
+    # Lineage precision check
+    if metadata_py.is_file():
+        content = metadata_py.read_text()
+        if 'table_name="*"' in content or "table_name='*'" in content:
+            report["issues"].append(
+                "metadata.py: Wildcard table_name='*' in lineage search — "
+                "links every table in DB to entity (incorrect lineage)"
+            )
+
+    # Duplicate test connection steps
+    if conn_py.is_file():
+        content = conn_py.read_text()
+        # Find all function references in test_fn dict
+        fn_refs = re.findall(r'"(\w+)":\s*([\w.]+)', content)
+        if fn_refs:
+            fn_values = [v for _, v in fn_refs]
+            seen = {}
+            for name_key, fn_val in fn_refs:
+                if fn_val in seen:
+                    report["issues"].append(
+                        f"connection.py: Test steps '{seen[fn_val]}' and '{name_key}' "
+                        f"both map to {fn_val} — consider distinct test functions"
+                    )
+                seen[fn_val] = name_key
+
     # Empty test stub check
     for test_dir_key in ["unit_tests", "integration_tests"]:
         for test_path_str in report.get(test_dir_key, []):

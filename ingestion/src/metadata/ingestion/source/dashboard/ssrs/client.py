@@ -104,11 +104,9 @@ class SsrsClient:
 
     def get_report_datasources(self, report_id: str) -> List[SsrsDataSource]:
         try:
-            data = self._get(f"/Reports({report_id})/DataSources")
+            data = self._get(f"/Reports('{report_id}')/DataSources")
             return SsrsDataSourceListResponse(**data).value
         except Exception:
             logger.debug(traceback.format_exc())
-            logger.warning(
-                "Failed to fetch data sources for report id: %s", report_id
-            )
+            logger.warning("Failed to fetch data sources for report id: %s", report_id)
         return []
