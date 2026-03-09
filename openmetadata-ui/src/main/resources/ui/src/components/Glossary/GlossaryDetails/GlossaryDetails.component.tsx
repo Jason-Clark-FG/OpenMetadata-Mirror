@@ -113,7 +113,7 @@ const GlossaryDetails = ({
               children: (
                 <OntologyExplorer
                   glossaryId={glossary.id}
-                  height="calc(100vh - 280px)"
+                  height="calc(100vh - 216px)"
                   scope="glossary"
                   showHeader={false}
                 />
@@ -181,7 +181,8 @@ const GlossaryDetails = ({
     <Row
       className="glossary-details"
       data-testid="glossary-details"
-      gutter={[0, 12]}>
+      gutter={[0, 12]}
+    >
       <Col span={24}>
         <GlossaryHeader
           updateVote={updateVote}

@@ -325,7 +325,7 @@ const GlossaryTermsV1 = ({
               key: EntityTabs.RELATIONS_GRAPH,
               children: (
                 <OntologyExplorer
-                  height="calc(100vh - 250px)"
+                  height="calc(100vh - 240px)"
                   scope="term"
                   showHeader={false}
                 />
@@ -433,7 +433,8 @@ const GlossaryTermsV1 = ({
       isVersionView={isVersionView}
       permissions={permissions}
       type={EntityType.GLOSSARY_TERM}
-      onUpdate={onTermUpdate}>
+      onUpdate={onTermUpdate}
+    >
       <Row data-testid="glossary-term" gutter={[0, 12]}>
         <Col span={24}>
           <GlossaryHeader

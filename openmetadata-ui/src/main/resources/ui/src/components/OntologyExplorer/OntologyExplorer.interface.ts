@@ -11,7 +11,9 @@
  *  limitations under the License.
  */
 
+import { Glossary } from '../../generated/entity/data/glossary';
 import { EntityReference } from '../../generated/entity/type';
+import { GlossaryTermRelationType } from '../../rest/settingConfigAPI';
 
 export type OntologyScope = 'global' | 'glossary' | 'term';
 
@@ -34,6 +36,11 @@ export interface OntologyNode {
   group?: string;
   glossaryId?: string;
   entityRef?: EntityReference;
+  owners?: EntityReference[];
+  termId?: string;
+  originalGlossary?: string;
+  glossaryName?: string;
+  originalNode?: OntologyNode;
 }
 
 export interface OntologyEdge {
@@ -48,89 +55,165 @@ export interface OntologyGraphData {
   edges: OntologyEdge[];
 }
 
-export interface ConceptsTreeNode {
-  key: string;
-  title: string;
-  type: 'glossary' | 'term' | 'tag' | 'domain';
-  icon?: React.ReactNode;
-  children?: ConceptsTreeNode[];
-  isLeaf?: boolean;
-  data?: {
-    id: string;
-    fullyQualifiedName: string;
-    description?: string;
-    relationsCount?: number;
-  };
-}
-
-export interface ConceptsTreeProps {
-  scope: OntologyScope;
-  entityId?: string;
-  glossaryId?: string;
-  selectedNodeId?: string;
-  onNodeSelect: (node: ConceptsTreeNode) => void;
-  onNodeFocus: (nodeId: string) => void;
-}
-
 export interface DetailsPanelProps {
   node: OntologyNode | null;
+  position?: { x: number; y: number };
   onClose: () => void;
-  onNavigate?: (node: OntologyNode) => void;
-  onAddRelation?: (fromNode: OntologyNode) => void;
 }
 
 export type LayoutAlgorithm = 'force' | 'hierarchical' | 'radial' | 'circular';
-export type NodeColorMode =
-  | 'glossary'
-  | 'relationType'
-  | 'hierarchyLevel'
-  | 'connectionCount';
-export type NodeSizeMode = 'uniform' | 'connectionCount' | 'childCount';
-export type GraphViewMode =
-  | 'overview'
-  | 'hierarchy'
-  | 'neighborhood'
-  | 'crossGlossary';
+export type GraphViewMode = 'overview' | 'hierarchy' | 'crossGlossary';
 
 export interface GraphSettings {
   layout: LayoutAlgorithm;
-  nodeColorMode: NodeColorMode;
-  nodeSizeMode: NodeSizeMode;
   showEdgeLabels: boolean;
-  showNodeDescriptions: boolean;
-  showGlossaryHulls: boolean;
-  showMetrics: boolean;
-  highlightOnHover: boolean;
-  animateTransitions: boolean;
-  physicsEnabled: boolean;
-  edgeBundling: boolean;
 }
 
 export interface GraphFilters {
   viewMode: GraphViewMode;
   glossaryIds: string[];
   relationTypes: string[];
-  hierarchyLevels: number[];
   showIsolatedNodes: boolean;
   showCrossGlossaryOnly: boolean;
   searchQuery: string;
-  depth: number;
 }
 
-export interface NodeContextMenuAction {
-  key: string;
+export interface OntologyGraphHandle {
+  fitView: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  runLayout: () => void;
+  focusNode: (nodeId: string) => void;
+  getNodePositions: () => Record<string, { x: number; y: number }>;
+}
+
+export interface HierarchyComboInfo {
+  id: string;
   label: string;
-  icon?: React.ReactNode;
-  onClick: (node: OntologyNode) => void;
-  disabled?: boolean;
+  glossaryId: string;
 }
 
-export interface EnhancedOntologyNode extends OntologyNode {
-  depth?: number;
-  connectionCount?: number;
-  childCount?: number;
+export type ExplorationMode = 'model' | 'data' | 'hierarchy';
+
+export interface OntologyGraphProps {
+  nodes: OntologyNode[];
+  edges: OntologyEdge[];
+  settings: GraphSettings;
+  nodePositions?: Record<string, { x: number; y: number }>;
+  selectedNodeId?: string | null;
+  glossaryColorMap: Record<string, string>;
+  dataSignature?: string;
+  explorationMode?: ExplorationMode;
+  hierarchyCombos?: HierarchyComboInfo[];
+  focusNodeId?: string | null;
+  onNodeClick: (
+    node: OntologyNode,
+    position?: { x: number; y: number }
+  ) => void;
+  onNodeDoubleClick: (node: OntologyNode) => void;
+  onNodeContextMenu: (
+    node: OntologyNode,
+    position: { x: number; y: number }
+  ) => void;
+  onPaneClick: () => void;
+  showMinimap?: boolean;
+}
+
+export interface EnhancedDetailsPanelProps extends DetailsPanelProps {
+  edges?: OntologyEdge[];
+  nodes?: OntologyNode[];
+  relationTypes?: GlossaryTermRelationType[];
+  onNodeClick?: (nodeId: string) => void;
+}
+
+export interface FilterToolbarProps {
+  filters: GraphFilters;
+  glossaries: Glossary[];
+  relationTypes: GlossaryTermRelationType[];
+  onFiltersChange: (filters: GraphFilters) => void;
+  onViewModeChange?: (viewMode: GraphViewMode) => void;
+  viewModeDisabled?: boolean;
+}
+
+export interface GraphSettingsPanelProps {
+  settings: GraphSettings;
+  onSettingsChange: (settings: GraphSettings) => void;
+}
+
+export interface NodeContextMenuProps {
+  node: OntologyNode;
+  position: { x: number; y: number };
+  onClose: () => void;
+  onFocus: (node: OntologyNode) => void;
+  onViewDetails: (node: OntologyNode) => void;
+  onOpenInNewTab: (node: OntologyNode) => void;
+}
+
+export interface OntologyControlButtonsProps {
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onFitToScreen: () => void;
+  onRefresh: () => void;
+  isLoading?: boolean;
+}
+
+export interface MergedEdge {
+  from: string;
+  to: string;
+  relationType: string;
+  inverseRelationType?: string;
+  isBidirectional: boolean;
+}
+
+export interface LayoutConfig {
+  type: 'force' | 'dagre' | 'radial' | 'circular';
+  [key: string]: unknown;
+}
+
+export type LayoutNodeLike = {
+  id: string;
+  data?: { size?: number | number[] };
+};
+
+export interface HierarchyNode extends OntologyNode {
+  id: string;
+  termId: string;
+  glossaryId: string;
+  originalGlossary?: string;
   glossaryName?: string;
-  glossaryColor?: string;
-  isHighlighted?: boolean;
-  isFaded?: boolean;
+  originalNode: OntologyNode;
+}
+
+export interface HierarchyEdge {
+  from: string;
+  to: string;
+  relationType: string;
+  color?: string;
+}
+
+export interface HierarchyGraphResult {
+  nodes: HierarchyNode[];
+  edges: HierarchyEdge[];
+  combos: HierarchyComboInfo[];
+}
+
+export interface BuildHierarchyGraphsParams {
+  terms: OntologyNode[];
+  relations: OntologyEdge[];
+  relationSettings: { relationTypes?: GlossaryTermRelationType[] } | null;
+  relationColors: Record<string, string>;
+  glossaryNames: Record<string, string>;
+}
+
+export interface BuildGraphDataProps {
+  inputNodes: OntologyNode[];
+  inputEdges: OntologyEdge[];
+  explorationMode: ExplorationMode;
+  settings: GraphSettings;
+  selectedNodeId: string | null;
+  clickedEdgeId: string | null;
+  nodePositions?: Record<string, { x: number; y: number }>;
+  glossaryColorMap: Record<string, string>;
+  layoutType: string;
+  hierarchyCombos?: HierarchyComboInfo[];
 }

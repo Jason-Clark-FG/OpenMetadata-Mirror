@@ -20,7 +20,7 @@ import {
   getApiContext,
   redirectToHomePage,
 } from '../../utils/common';
-import { addMultiOwner } from '../../utils/entity';
+import { addMultiOwner, waitForAllLoadersToDisappear } from '../../utils/entity';
 import { setupGlossaryAndTerms } from '../../utils/glossary';
 
 // use the admin user to login
@@ -333,14 +333,14 @@ test('Return to current version from history', async ({ page }) => {
 
     // Wait for version dialog
     await page.waitForSelector('[role="dialog"]', { state: 'visible' });
+    await waitForAllLoadersToDisappear(page);
 
     // Close the version dialog
     await page.getByRole('dialog').getByRole('img').click();
 
     // Wait for dialog to close
     await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
-    await page.waitForLoadState('networkidle');
+    await waitForAllLoadersToDisappear(page);
 
     // Verify we're back on the main glossary page
     await expect(page.getByTestId('entity-header-display-name')).toContainText(

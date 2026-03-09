@@ -210,14 +210,14 @@ test.describe(
           // Hide Explore
           await adminPage
             .getByTestId('page-layout-v1')
-            .getByText('Explore')
+            .getByText('Explore', { exact: true })
             .getByRole('switch')
             .click();
 
           await expect(
             adminPage
               .getByTestId('page-layout-v1')
-              .getByText('Explore')
+              .getByText('Explore', { exact: true })
               .getByRole('switch')
           ).not.toBeChecked();
 
@@ -275,14 +275,14 @@ test.describe(
           // Show Explore
           await adminPage
             .getByTestId('page-layout-v1')
-            .getByText('Explore')
+            .getByText('Explore', { exact: true })
             .getByRole('switch')
             .click();
 
           await expect(
             adminPage
               .getByTestId('page-layout-v1')
-              .getByText('Explore')
+              .getByText('Explore', { exact: true })
               .getByRole('switch')
           ).toBeChecked();
 

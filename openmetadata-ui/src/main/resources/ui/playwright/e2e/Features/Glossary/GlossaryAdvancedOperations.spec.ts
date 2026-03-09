@@ -892,8 +892,14 @@ test.describe('Glossary Advanced Operations', () => {
           path: '/relatedTerms',
           value: [
             {
-              id: relatedTerm.responseData.id,
-              type: 'glossaryTerm',
+              relationType: 'relatedTo',
+              term: {
+                id: relatedTerm.responseData.id,
+                type: 'glossaryTerm',
+                name: relatedTerm.responseData.name,
+                displayName: relatedTerm.responseData.displayName,
+                fullyQualifiedName: relatedTerm.responseData.fullyQualifiedName,
+              },
             },
           ],
         },
@@ -1330,8 +1336,14 @@ test.describe('Glossary Advanced Operations', () => {
           path: '/relatedTerms',
           value: [
             {
-              id: term2.responseData.id,
-              type: 'glossaryTerm',
+              relationType: 'relatedTo',
+              term: {
+                id: term2.responseData.id,
+                type: 'glossaryTerm',
+                name: term2.responseData.name,
+                displayName: term2.responseData.displayName,
+                fullyQualifiedName: term2.responseData.fullyQualifiedName,
+              },
             },
           ],
         },

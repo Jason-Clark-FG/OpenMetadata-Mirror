@@ -21,11 +21,7 @@ const OntologyExplorerPage: React.FC = () => {
 
   return (
     <PageLayoutV1 pageTitle={t('label.ontology-explorer')}>
-      <OntologyExplorer
-        showHeader
-        height="calc(100vh - 120px)"
-        scope="global"
-      />
+      <OntologyExplorer showHeader height="calc(100vh - 80px)" scope="global" />
     </PageLayoutV1>
   );
 };

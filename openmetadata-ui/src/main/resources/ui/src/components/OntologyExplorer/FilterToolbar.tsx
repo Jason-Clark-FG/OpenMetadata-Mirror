@@ -13,34 +13,23 @@
 
 import {
   Button,
-  ButtonUtility,
   Dropdown,
   Tabs,
   Toggle,
 } from '@openmetadata/ui-core-components';
-import { ChevronDown, X } from '@untitledui/icons';
+import { ChevronDown } from '@untitledui/icons';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Glossary } from '../../generated/entity/data/glossary';
-import { GlossaryTermRelationType } from '../../rest/settingConfigAPI';
-import { GraphFilters, GraphViewMode } from './OntologyExplorer.interface';
-
-interface FilterToolbarProps {
-  filters: GraphFilters;
-  glossaries: Glossary[];
-  relationTypes: GlossaryTermRelationType[];
-  onFiltersChange: (filters: GraphFilters) => void;
-  onViewModeChange?: (viewMode: GraphViewMode) => void;
-}
+import {
+  FilterToolbarProps,
+  GraphViewMode,
+} from './OntologyExplorer.interface';
 
 const VIEW_MODES: { label: string; value: GraphViewMode }[] = [
   { label: 'label.overview', value: 'overview' },
   { label: 'label.hierarchy', value: 'hierarchy' },
-  { label: 'label.related', value: 'neighborhood' },
   { label: 'label.cross-glossary', value: 'crossGlossary' },
 ];
-
-const DEPTH_OPTION_IDS = ['0', '1', '2', '3'] as const;
 
 const FilterToolbar: React.FC<FilterToolbarProps> = ({
   filters,
@@ -48,23 +37,16 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
   relationTypes,
   onFiltersChange,
   onViewModeChange,
+  viewModeDisabled = false,
 }) => {
   const { t } = useTranslation();
 
-  const handleDepthChange = useCallback(
-    (key: React.Key | null) => {
-      if (key != null) {
-        onFiltersChange({ ...filters, depth: Number(key) });
-      }
-    },
-    [filters, onFiltersChange]
-  );
-
   const handleGlossaryChange = useCallback(
     (key: React.Key | null) => {
+      const isAll = key === null || String(key) === '__all__';
       onFiltersChange({
         ...filters,
-        glossaryIds: key ? [String(key)] : [],
+        glossaryIds: isAll ? [] : [String(key)],
       });
     },
     [filters, onFiltersChange]
@@ -72,19 +54,13 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
 
   const handleRelationTypeChange = useCallback(
     (key: React.Key | null) => {
+      const isAll = key === null || String(key) === '__all__';
       onFiltersChange({
         ...filters,
-        relationTypes: key ? [String(key)] : [],
+        relationTypes: isAll ? [] : [String(key)],
       });
     },
     [filters, onFiltersChange]
-  );
-
-  const handleViewModeChange = useCallback(
-    (value: string | number) => {
-      onViewModeChange?.(value as GraphViewMode);
-    },
-    [onViewModeChange]
   );
 
   const handleClearFilters = useCallback(() => {
@@ -92,11 +68,9 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
       viewMode: 'overview',
       glossaryIds: [],
       relationTypes: [],
-      hierarchyLevels: [],
       showIsolatedNodes: true,
       showCrossGlossaryOnly: false,
       searchQuery: '',
-      depth: 0,
     });
   }, [onFiltersChange]);
 
@@ -107,35 +81,36 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
       filters.relationTypes.length > 0 ||
       filters.searchQuery.length > 0 ||
       !filters.showIsolatedNodes ||
-      filters.showCrossGlossaryOnly ||
-      filters.depth > 0
+      filters.showCrossGlossaryOnly
     );
   }, [filters]);
 
-  const depthItems = useMemo(
-    () => [
-      { id: '0', label: t('label.all') },
-      ...DEPTH_OPTION_IDS.slice(1).map((id) => ({ id, label: id })),
-    ],
-    [t]
-  );
-
   const glossaryItems = useMemo(
-    () =>
-      glossaries.map((g) => ({
+    () => [
+      {
+        id: '__all__',
+        label: t('label.all'),
+      },
+      ...glossaries.map((g) => ({
         id: g.id ?? '',
         label: g.displayName || g.name,
       })),
-    [glossaries]
+    ],
+    [glossaries, t]
   );
 
   const relationTypeItems = useMemo(
-    () =>
-      relationTypes.map((rt) => ({
+    () => [
+      {
+        id: '__all__',
+        label: t('label.all'),
+      },
+      ...relationTypes.map((rt) => ({
         id: rt.name,
         label: rt.displayName || rt.name,
       })),
-    [relationTypes]
+    ],
+    [relationTypes, t]
   );
 
   const viewModeTabItems = useMemo(
@@ -148,67 +123,32 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
   );
 
   return (
-    <div className="tw:flex tw:items-center tw:gap-2">
-      {/* Glossary filter */}
-      {glossaryItems.length > 0 && (
-        <Dropdown.Root>
-          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-            {glossaryItems.find((g) => g.id === filters.glossaryIds[0])
-              ?.label ?? t('label.glossary')}
-          </Button>
-          <Dropdown.Popover className="tw:min-w-45">
-            <Dropdown.Menu
-              items={glossaryItems}
-              onAction={(key) => handleGlossaryChange(key as string)}>
-              {(item) => (
-                <Dropdown.Item id={item.id} label={item.label ?? ''} />
-              )}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown.Root>
-      )}
-
-      {/* Relation type filter */}
-      {relationTypeItems.length > 0 && (
-        <Dropdown.Root>
-          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-            {relationTypeItems.find((r) => r.id === filters.relationTypes[0])
-              ?.label ?? t('label.relation-type')}
-          </Button>
-          <Dropdown.Popover className="tw:min-w-45">
-            <Dropdown.Menu
-              items={relationTypeItems}
-              onAction={(key) => handleRelationTypeChange(key as string)}>
-              {(item) => (
-                <Dropdown.Item id={item.id} label={item.label ?? ''} />
-              )}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown.Root>
-      )}
-
-      {/* Depth */}
-      <Dropdown.Root>
-        <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-          {depthItems.find((d) => d.id === String(filters.depth))?.label ??
-            t('label.depth')}
-        </Button>
-        <Dropdown.Popover className="tw:min-w-45">
-          <Dropdown.Menu
-            items={depthItems}
-            onAction={(key) => handleDepthChange(key as string)}>
-            {(item) => <Dropdown.Item id={item.id} label={item.label ?? ''} />}
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown.Root>
-
-      <div className="tw:w-fit tw:grow-0 tw:shrink-0">
+    <div className="tw:flex tw:w-full tw:items-center tw:gap-3">
+      {/* View Mode tabs — disabled in data mode */}
+      <div
+        className={
+          'tw:flex tw:shrink-0 tw:items-center tw:gap-2' +
+          (viewModeDisabled ? ' tw:pointer-events-none tw:opacity-50' : '')
+        }
+      >
+        <span className="tw:whitespace-nowrap tw:text-sm tw:font-medium tw:text-gray-600">
+          {t('label.view-mode')}:
+        </span>
         <Tabs
           className="tw:w-fit!"
           selectedKey={filters.viewMode}
-          onSelectionChange={(key) =>
-            key != null && handleViewModeChange(key as GraphViewMode)
-          }>
+          onSelectionChange={(key) => {
+            if (viewModeDisabled) {
+              return;
+            }
+            const viewMode = VIEW_MODES.find(
+              (m) => m.value === String(key)
+            )?.value;
+            if (viewMode) {
+              onViewModeChange?.(viewMode);
+            }
+          }}
+        >
           <Tabs.List items={viewModeTabItems} size="sm" type="button-border" />
           {viewModeTabItems.map((item) => (
             <Tabs.Panel className="tw:hidden" id={item.id} key={item.id} />
@@ -216,6 +156,66 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
         </Tabs>
       </div>
 
+      {/* Glossary filter */}
+      {glossaryItems.length > 0 && (
+        <>
+          <div className="tw:h-5 tw:w-px tw:shrink-0 tw:bg-gray-200" />
+          <div className="tw:flex tw:shrink-0 tw:items-center tw:gap-2">
+            <span className="tw:whitespace-nowrap tw:text-sm tw:font-medium tw:text-gray-600">
+              {t('label.glossary')}:
+            </span>
+            <Dropdown.Root>
+              <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+                {glossaryItems.find((g) => g.id === filters.glossaryIds[0])
+                  ?.label ?? t('label.all')}
+              </Button>
+              <Dropdown.Popover className="tw:min-w-45">
+                <Dropdown.Menu
+                  items={glossaryItems}
+                  onAction={(key) => handleGlossaryChange(key)}
+                >
+                  {(item) => (
+                    <Dropdown.Item id={item.id} label={item.label ?? ''} />
+                  )}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
+          </div>
+        </>
+      )}
+
+      {/* Relation type filter */}
+      {relationTypeItems.length > 0 && (
+        <>
+          <div className="tw:h-5 tw:w-px tw:shrink-0 tw:bg-gray-200" />
+          <div className="tw:flex tw:shrink-0 tw:items-center tw:gap-2">
+            <span className="tw:whitespace-nowrap tw:text-sm tw:font-medium tw:text-gray-600">
+              {t('label.relationship-type')}:
+            </span>
+            <Dropdown.Root>
+              <Button color="secondary" iconTrailing={ChevronDown} size="sm">
+                {relationTypeItems.find(
+                  (r) => r.id === filters.relationTypes[0]
+                )?.label ?? t('label.all')}
+              </Button>
+              <Dropdown.Popover className="tw:min-w-45">
+                <Dropdown.Menu
+                  items={relationTypeItems}
+                  onAction={(key) => handleRelationTypeChange(key)}
+                >
+                  {(item) => (
+                    <Dropdown.Item id={item.id} label={item.label ?? ''} />
+                  )}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
+          </div>
+        </>
+      )}
+
+      <div className="tw:h-5 tw:w-px tw:shrink-0 tw:bg-gray-200" />
+
+      {/* Isolated toggle */}
       <Toggle
         data-testid="ontology-isolated-toggle"
         isSelected={filters.showIsolatedNodes}
@@ -226,27 +226,19 @@ const FilterToolbar: React.FC<FilterToolbarProps> = ({
         }
       />
 
-      {/* Cross-glossary toggle */}
-      <Toggle
-        data-testid="ontology-cross-glossary-toggle"
-        isSelected={filters.showCrossGlossaryOnly}
-        label={t('label.cross-glossary')}
-        size="sm"
-        onChange={(checked) =>
-          onFiltersChange({ ...filters, showCrossGlossaryOnly: checked })
-        }
-      />
-
-      {/* Clear filters */}
+      {/* Clear filters — pushed to far right */}
       {hasActiveFilters && (
-        <ButtonUtility
-          color="tertiary"
-          data-testid="ontology-clear-filters"
-          icon={X}
-          size="sm"
-          tooltip={t('label.clear-filter-plural')}
-          onClick={handleClearFilters}
-        />
+        <div className="tw:ml-auto tw:shrink-0">
+          <Button
+            className="tw:!border-none tw:!bg-transparent tw:!px-0 tw:text-[14px] tw:font-medium tw:text-[#535862]"
+            color="tertiary"
+            data-testid="ontology-clear-filters"
+            size="sm"
+            onClick={handleClearFilters}
+          >
+            {`${t('label.clear')} ${t('label.all')}`}
+          </Button>
+        </div>
       )}
     </div>
   );

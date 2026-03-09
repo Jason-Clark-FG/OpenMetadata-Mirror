@@ -11,22 +11,26 @@
  *  limitations under the License.
  */
 
-import { Button, Dropdown, Toggle } from '@openmetadata/ui-core-components';
-import { ChevronDown, Settings01 } from '@untitledui/icons';
-import { Popover } from 'antd';
-import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Button,
+  ButtonUtility,
+  Dropdown,
+  Toggle,
+} from '@openmetadata/ui-core-components';
+import { ChevronDown, Settings01, X } from '@untitledui/icons';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   GraphSettings,
+  GraphSettingsPanelProps,
   LayoutAlgorithm,
-  NodeColorMode,
-  NodeSizeMode,
 } from './OntologyExplorer.interface';
-
-interface GraphSettingsPanelProps {
-  settings: GraphSettings;
-  onSettingsChange: (settings: GraphSettings) => void;
-}
 
 const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
   settings,
@@ -34,24 +38,26 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current?.contains(e.target as Node)) {
+        return;
+      }
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
 
   const handleLayoutChange = useCallback(
     (value: LayoutAlgorithm) => {
       onSettingsChange({ ...settings, layout: value });
-    },
-    [settings, onSettingsChange]
-  );
-
-  const handleNodeColorModeChange = useCallback(
-    (value: NodeColorMode) => {
-      onSettingsChange({ ...settings, nodeColorMode: value });
-    },
-    [settings, onSettingsChange]
-  );
-
-  const handleNodeSizeModeChange = useCallback(
-    (value: NodeSizeMode) => {
-      onSettingsChange({ ...settings, nodeSizeMode: value });
     },
     [settings, onSettingsChange]
   );
@@ -65,7 +71,6 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
 
   const layoutItems = useMemo(
     () => [
-      { id: 'force' as const, label: t('label.force-directed') },
       { id: 'hierarchical' as const, label: t('label.hierarchical') },
       { id: 'radial' as const, label: t('label.radial') },
       { id: 'circular' as const, label: t('label.circular') },
@@ -73,167 +78,86 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
     [t]
   );
 
-  const nodeColorItems = useMemo(
-    () => [
-      { id: 'glossary' as const, label: t('label.by-glossary') },
-      { id: 'relationType' as const, label: t('label.by-relation-type') },
-      { id: 'hierarchyLevel' as const, label: t('label.by-hierarchy-level') },
-      {
-        id: 'connectionCount' as const,
-        label: t('label.by-connection-count'),
-      },
-    ],
-    [t]
-  );
-
-  const nodeSizeItems = useMemo(
-    () => [
-      { id: 'uniform' as const, label: t('label.uniform') },
-      {
-        id: 'connectionCount' as const,
-        label: t('label.by-connection-count'),
-      },
-      { id: 'childCount' as const, label: t('label.by-child-count') },
-    ],
-    [t]
-  );
-
   const popoverContent = (
-    <div className="tw:min-w-55 tw:space-y-3 tw:py-0.5">
-      <div className="tw:space-y-1">
-        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
-          {t('label.layout')}
-        </div>
-        <Dropdown.Root>
-          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-            {layoutItems.find((i) => i.id === settings.layout)?.label ??
-              t('label.layout')}
-          </Button>
-          <Dropdown.Popover className="tw:min-w-45">
-            <Dropdown.Menu
-              items={layoutItems}
-              onAction={(key) => handleLayoutChange(key as LayoutAlgorithm)}>
-              {(item) => (
-                <Dropdown.Item id={item.id} label={item.label ?? ''} />
-              )}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown.Root>
+    <div className="tw:w-72 tw:min-w-0 tw:rounded-lg">
+      <div className="tw:flex tw:items-center tw:justify-between tw:shrink-0  tw:border-b tw:border-gray-200">
+        <span className="tw:text-sm tw:font-semibold tw:text-gray-900 tw:py-4">
+          {t('label.graph-settings')}
+        </span>
+        <ButtonUtility
+          color="tertiary"
+          data-testid="graph-settings-close"
+          icon={X}
+          size="xs"
+          tooltip={t('label.close')}
+          onClick={() => setOpen(false)}
+        />
       </div>
-
-      <div className="tw:border-t tw:border-gray-200" />
-
-      <div className="tw:space-y-1">
-        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
-          {t('label.node-color')}
+      <div className="tw:space-y-3">
+        <div className="tw:space-y-1.5 tw:w-full tw:pt-4">
+          <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
+            {t('label.layout')}
+          </div>
+          <div className="tw:w-full">
+            <Dropdown.Root>
+              <Button
+                className="tw:w-full tw:justify-between"
+                color="secondary"
+                iconTrailing={ChevronDown}
+                size="sm"
+              >
+                {layoutItems.find((i) => i.id === settings.layout)?.label ??
+                  t('label.layout')}
+              </Button>
+              <Dropdown.Popover className="tw:w-72 tw:min-w-0">
+                <Dropdown.Menu
+                  className="tw:w-full"
+                  items={layoutItems}
+                  onAction={(key) => {
+                    const layout = layoutItems.find((i) => i.id === key)?.id;
+                    if (layout) {
+                      handleLayoutChange(layout);
+                    }
+                  }}
+                >
+                  {(item) => (
+                    <Dropdown.Item id={item.id} label={item.label ?? ''} />
+                  )}
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown.Root>
+          </div>
         </div>
-        <Dropdown.Root>
-          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-            {nodeColorItems.find((i) => i.id === settings.nodeColorMode)
-              ?.label ?? t('label.node-color')}
-          </Button>
-          <Dropdown.Popover className="tw:min-w-45">
-            <Dropdown.Menu
-              items={nodeColorItems}
-              onAction={(key) =>
-                handleNodeColorModeChange(key as NodeColorMode)
-              }>
-              {(item) => (
-                <Dropdown.Item id={item.id} label={item.label ?? ''} />
-              )}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown.Root>
-      </div>
-
-      <div className="tw:space-y-1">
-        <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
-          {t('label.node-size')}
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:py-4">
+          <Toggle
+            isSelected={settings.showEdgeLabels}
+            label={t('label.edge-labels')}
+            size="sm"
+            onChange={(checked) => handleToggle('showEdgeLabels', checked)}
+          />
         </div>
-        <Dropdown.Root>
-          <Button color="secondary" iconTrailing={ChevronDown} size="sm">
-            {nodeSizeItems.find((i) => i.id === settings.nodeSizeMode)?.label ??
-              t('label.node-size')}
-          </Button>
-          <Dropdown.Popover className="tw:min-w-45">
-            <Dropdown.Menu
-              items={nodeSizeItems}
-              onAction={(key) => handleNodeSizeModeChange(key as NodeSizeMode)}>
-              {(item) => (
-                <Dropdown.Item id={item.id} label={item.label ?? ''} />
-              )}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown.Root>
-      </div>
-
-      <div className="tw:border-t tw:border-gray-200" />
-
-      <div className="tw:flex tw:flex-col tw:gap-1.5">
-        <Toggle
-          isSelected={settings.showEdgeLabels}
-          label={t('label.edge-labels')}
-          size="sm"
-          onChange={(checked) => handleToggle('showEdgeLabels', checked)}
-        />
-        <Toggle
-          isSelected={settings.showMetrics}
-          label={t('label.include-entity', {
-            entity: t('label.metric-plural'),
-          })}
-          size="sm"
-          onChange={(checked) => handleToggle('showMetrics', checked)}
-        />
-        <Toggle
-          isSelected={settings.showGlossaryHulls}
-          label={`${t('label.glossary')} ${t('label.group')}`}
-          size="sm"
-          onChange={(checked) => handleToggle('showGlossaryHulls', checked)}
-        />
-        <Toggle
-          isSelected={settings.edgeBundling}
-          label={t('label.edge-bundling')}
-          size="sm"
-          onChange={(checked) => handleToggle('edgeBundling', checked)}
-        />
-        <Toggle
-          isSelected={settings.highlightOnHover}
-          label={t('label.highlight-on-hover')}
-          size="sm"
-          onChange={(checked) => handleToggle('highlightOnHover', checked)}
-        />
-        <Toggle
-          isSelected={settings.animateTransitions}
-          label={t('label.animate-transitions')}
-          size="sm"
-          onChange={(checked) => handleToggle('animateTransitions', checked)}
-        />
-        <Toggle
-          isSelected={settings.physicsEnabled}
-          label={t('label.physics-simulation')}
-          size="sm"
-          onChange={(checked) => handleToggle('physicsEnabled', checked)}
-        />
       </div>
     </div>
   );
 
   return (
-    <div>
-      <Popover
-        content={popoverContent}
-        open={open}
-        placement="bottomRight"
-        trigger="click"
-        onOpenChange={setOpen}>
-        <Button
-          color="secondary"
-          data-testid="ontology-graph-settings"
-          iconLeading={<Settings01 height={20} width={20} />}
-          size="sm">
-          {t('label.setting-plural')}
-        </Button>
-      </Popover>
+    <div className="tw:relative" ref={panelRef}>
+      <Button
+        color="secondary"
+        data-testid="ontology-graph-settings"
+        iconLeading={<Settings01 height={20} width={20} />}
+        size="sm"
+        onClick={() => setOpen((prev) => !prev)}
+      />
+      {open && (
+        <dialog
+          open
+          aria-label={t('label.graph-settings')}
+          className="tw:absolute tw:right-0 tw:bottom-full tw:z-50 tw:mb-1 tw:rounded-lg tw:border-0 tw:bg-white tw:py-0 tw:shadow-lg tw:ring-1 tw:ring-gray-200 tw:px-4"
+        >
+          {popoverContent}
+        </dialog>
+      )}
     </div>
   );
 };

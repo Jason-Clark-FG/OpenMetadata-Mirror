@@ -2162,6 +2162,7 @@
     "view-in-new-tab": "新しいタブで表示",
     "view-in-service-type": "{{serviceType}} で表示",
     "view-less": "表示を減らす",
+    "view-mode": "表示 モード",
     "view-more": "もっと見る",
     "view-more-capital": "もっと見る",
     "view-more-count": "さらに {{countValue}} 件表示",

@@ -14,29 +14,15 @@
 import { Button } from '@openmetadata/ui-core-components';
 import {
   Copy01,
-  Expand01,
   InfoCircle,
   LinkExternal01,
-  Plus,
-  Share01,
   Target01,
 } from '@untitledui/icons';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useClipboard } from '../../hooks/useClipBoard';
 import { showSuccessToast } from '../../utils/ToastUtils';
-import { OntologyNode } from './OntologyExplorer.interface';
-
-export interface NodeContextMenuProps {
-  node: OntologyNode;
-  position: { x: number; y: number };
-  onClose: () => void;
-  onFocus: (node: OntologyNode) => void;
-  onViewDetails: (node: OntologyNode) => void;
-  onOpenInNewTab: (node: OntologyNode) => void;
-  onAddRelation?: (node: OntologyNode) => void;
-  onExpandNeighbors?: (node: OntologyNode, depth: number) => void;
-}
+import { NodeContextMenuProps } from './OntologyExplorer.interface';
 
 interface MenuItemConfig {
   key: string;
@@ -53,8 +39,6 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
   onFocus,
   onViewDetails,
   onOpenInNewTab,
-  onAddRelation,
-  onExpandNeighbors,
 }) => {
   const { t } = useTranslation();
   const { onCopyToClipBoard } = useClipboard(node.fullyQualifiedName ?? '');
@@ -62,7 +46,12 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(
+          event.target instanceof Node ? event.target : null
+        )
+      ) {
         onClose();
       }
     };
@@ -104,39 +93,15 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
           handleCopyFQN();
 
           break;
-        case 'add-relation':
-          onAddRelation?.(node);
-          onClose();
-
-          break;
-        case 'reveal-relations':
-          onExpandNeighbors?.(node, 1);
-          onClose();
-
-          break;
-        case 'expand-2':
-          onExpandNeighbors?.(node, 2);
-          onClose();
-
-          break;
         default:
           break;
       }
     },
-    [
-      node,
-      onFocus,
-      onViewDetails,
-      onOpenInNewTab,
-      onAddRelation,
-      onExpandNeighbors,
-      handleCopyFQN,
-      onClose,
-    ]
+    [node, onFocus, onViewDetails, onOpenInNewTab, handleCopyFQN, onClose]
   );
 
-  const menuItems = useMemo<MenuItemConfig[]>(() => {
-    const items: MenuItemConfig[] = [
+  const menuItems = useMemo<MenuItemConfig[]>(
+    () => [
       {
         key: 'focus',
         icon: <Target01 size={14} />,
@@ -159,51 +124,25 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
         disabled: !node.fullyQualifiedName,
         isDividerBefore: true,
       },
-    ];
-
-    if (onAddRelation && node.type !== 'dataAsset') {
-      items.push({
-        key: 'add-relation',
-        icon: <Plus size={14} />,
-        label: t('label.add-entity', { entity: t('label.relation') }),
-        isDividerBefore: true,
-      });
-    }
-
-    if (onExpandNeighbors) {
-      items.push(
-        {
-          key: 'reveal-relations',
-          icon: <Share01 size={14} />,
-          label: t('label.expand-1-hops'),
-          isDividerBefore: true,
-        },
-        {
-          key: 'expand-2',
-          icon: <Expand01 size={14} />,
-          label: t('label.expand-2-hops'),
-        }
-      );
-    }
-
-    return items;
-  }, [node.fullyQualifiedName, node.type, onAddRelation, onExpandNeighbors, t]);
+    ],
+    [node.fullyQualifiedName, t]
+  );
 
   return (
     <div
-      className="node-context-menu"
       ref={menuRef}
       style={{
         position: 'fixed',
         top: position.y,
         left: position.x,
         zIndex: 1050,
-        background: '#ffffff',
+        background: 'var(--color-white)', // previously #ffffff
         borderRadius: 8,
         boxShadow: '0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.08)',
         minWidth: 180,
         padding: '4px 0',
-      }}>
+      }}
+    >
       {menuItems.map((item) => (
         <React.Fragment key={item.key}>
           {item.isDividerBefore && (
@@ -211,7 +150,7 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
               style={{
                 margin: '4px 0',
                 border: 'none',
-                borderTop: '1px solid #f0f0f0',
+                borderTop: '1px solid var(--color-gray-100)', // previously #f0f0f0
               }}
             />
           )}
@@ -224,7 +163,8 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
               justifyContent: 'flex-start',
               borderRadius: 0,
             }}
-            onClick={() => !item.disabled && handleMenuClick(item.key)}>
+            onClick={() => !item.disabled && handleMenuClick(item.key)}
+          >
             <span style={{ color: 'rgba(0,0,0,0.45)', lineHeight: 0 }}>
               {item.icon}
             </span>

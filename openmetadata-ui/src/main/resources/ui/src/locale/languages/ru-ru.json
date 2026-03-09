@@ -2162,6 +2162,7 @@
     "view-in-new-tab": "Просмотр в новой вкладке",
     "view-in-service-type": "Открыть в источнике «{{serviceType}}»",
     "view-less": "Показать меньше",
+    "view-mode": "Представление Режим",
     "view-more": "Посмотреть больше",
     "view-more-capital": "Посмотреть больше",
     "view-more-count": "Показать ещё {{countValue}}",

@@ -11,78 +11,41 @@
  *  limitations under the License.
  */
 
-import { Button, ButtonUtility, Tabs } from '@openmetadata/ui-core-components';
 import {
-  ChevronRight,
-  Copy01,
-  LinkExternal01,
-  Plus,
-  Target01,
-  X,
-} from '@untitledui/icons';
-import { startCase } from 'lodash';
+  Badge,
+  ButtonUtility,
+  Tabs,
+  Typography,
+} from '@openmetadata/ui-core-components';
+import { Copy01, Tag01, X } from '@untitledui/icons';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EntityType } from '../../enums/entity.enum';
 import { GlossaryTermRelationType } from '../../rest/settingConfigAPI';
-import {
-  getEntityDetailsPath,
-  getGlossaryTermDetailsPath,
-} from '../../utils/RouterUtils';
+import { getEntityName } from '../../utils/EntityUtils';
+import { OwnerAvatar } from '../common/OwnerAvtar/OwnerAvatar';
 import RichTextEditorPreviewerNew from '../common/RichTextEditor/RichTextEditorPreviewNew';
-import {
-  DetailsPanelProps,
-  OntologyEdge,
-  OntologyNode,
-} from './OntologyExplorer.interface';
-
-interface EnhancedDetailsPanelProps extends DetailsPanelProps {
-  edges?: OntologyEdge[];
-  nodes?: OntologyNode[];
-  relationTypes?: GlossaryTermRelationType[];
-  onNodeClick?: (nodeId: string) => void;
-  onFocusNode?: () => void;
-}
+import { RELATION_META } from './OntologyExplorer.constants';
+import { EnhancedDetailsPanelProps } from './OntologyExplorer.interface';
 
 type DetailsTabId = 'summary' | 'relations';
+
+const PANEL_WIDTH = 320;
+const PANEL_MAX_HEIGHT = 560;
+const PANEL_OFFSET = 16;
+const RELATION_BADGE_WIDTH = 90;
+const RELATION_BADGE_TO_TERM_GAP = 24;
 
 const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
   node,
   edges = [],
   nodes = [],
   relationTypes = [],
+  position,
   onClose,
-  onAddRelation,
-  onNodeClick,
-  onFocusNode,
+  onNodeClick: _onNodeClick,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<DetailsTabId>('summary');
-
-  const entityPath = useMemo(() => {
-    if (!node?.fullyQualifiedName) {
-      return '';
-    }
-
-    if (node.entityRef?.type && node.entityRef?.fullyQualifiedName) {
-      return getEntityDetailsPath(
-        node.entityRef.type as EntityType,
-        node.entityRef.fullyQualifiedName
-      );
-    }
-
-    if (node.type === 'metric') {
-      return getEntityDetailsPath(EntityType.METRIC, node.fullyQualifiedName);
-    }
-
-    return getGlossaryTermDetailsPath(node.fullyQualifiedName);
-  }, [node]);
-
-  const handleNavigateToEntity = useCallback(() => {
-    if (entityPath) {
-      window.open(entityPath, '_blank');
-    }
-  }, [entityPath]);
 
   const nodeRelations = useMemo(() => {
     if (!node) {
@@ -121,145 +84,128 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
     [t]
   );
 
-  const cardinalityLabels = useMemo(
-    () => ({
-      ONE_TO_ONE: t('label.one-to-one'),
-      ONE_TO_MANY: t('label.one-to-many'),
-      MANY_TO_ONE: t('label.many-to-one'),
-      MANY_TO_MANY: t('label.many-to-many'),
-      CUSTOM: t('label.custom'),
-    }),
-    [t]
-  );
+  const getRelationBadgeStyle = useCallback(
+    (relationType: string): React.CSSProperties => {
+      const meta = RELATION_META[relationType] ?? RELATION_META.default;
 
-  const deriveCardinality = useCallback(
-    (relationType?: GlossaryTermRelationType) => {
-      if (!relationType) {
-        return undefined;
-      }
-      const sourceMax = relationType.sourceMax;
-      const targetMax = relationType.targetMax;
-      if (sourceMax == null && targetMax == null) {
-        return 'MANY_TO_MANY';
-      }
-      if (sourceMax === 1 && targetMax === 1) {
-        return 'ONE_TO_ONE';
-      }
-      if (sourceMax === 1 && targetMax == null) {
-        return 'ONE_TO_MANY';
-      }
-      if (sourceMax == null && targetMax === 1) {
-        return 'MANY_TO_ONE';
-      }
-
-      return 'CUSTOM';
+      return {
+        borderRadius: 6,
+        background: meta.background,
+        color: meta.color,
+        fontSize: 12,
+        fontWeight: 700,
+        padding: '4px 8px',
+        border: 'none',
+        width: RELATION_BADGE_WIDTH,
+        minWidth: RELATION_BADGE_WIDTH,
+        textAlign: 'center' as const,
+      };
     },
     []
   );
 
-  const formatCardinality = useCallback(
-    (relationType?: GlossaryTermRelationType) => {
-      if (!relationType) {
-        return null;
-      }
-      const cardinality =
-        relationType.cardinality ?? deriveCardinality(relationType);
-      if (cardinality && cardinality !== 'CUSTOM') {
-        return (
-          cardinalityLabels[cardinality as keyof typeof cardinalityLabels] ??
-          cardinality
-        );
-      }
+  const getDisplayName = useCallback(
+    (relationType: string) => {
+      const relationMeta = relationTypeMap.get(relationType);
 
-      const source =
-        relationType.sourceMax == null ? '*' : relationType.sourceMax;
-      const target =
-        relationType.targetMax == null ? '*' : relationType.targetMax;
-      const customLabel = cardinalityLabels.CUSTOM;
-
-      return `${customLabel} - ${t('label.source')}: ${source}, ${t(
-        'label.target'
-      )}: ${target}`;
+      return (
+        relationMeta?.displayName ??
+        relationLabelOverrides[relationType] ??
+        relationType
+      );
     },
-    [cardinalityLabels, deriveCardinality, t]
+    [relationTypeMap, relationLabelOverrides]
   );
-
-  const handleRelatedNodeClick = useCallback(
-    (nodeId: string) => {
-      onNodeClick?.(nodeId);
-    },
-    [onNodeClick]
-  );
-
-  const getReadableType = useCallback(
-    (type: string) => {
-      if (node?.entityRef?.type) {
-        return startCase(node.entityRef.type);
-      }
-      const typeMap: Record<string, string> = {
-        glossary: t('label.glossary'),
-        glossaryTerm: t('label.glossary-term'),
-        glossaryTermIsolated: t('label.glossary-term'),
-        metric: t('label.metric'),
-        dataAsset: t('label.data-asset'),
-      };
-
-      return typeMap[type] ?? type;
-    },
-    [node?.entityRef?.type, t]
-  );
-
-  const breadcrumbParts = useMemo(() => {
-    if (!node?.fullyQualifiedName) {
-      return [];
-    }
-
-    return node.fullyQualifiedName.split('.');
-  }, [node?.fullyQualifiedName]);
-
-  const typeColor = useMemo(() => {
-    if (node?.type === 'glossary') {
-      return '#7c3aed';
-    }
-    if (node?.type === 'dataAsset') {
-      return '#d97706';
-    }
-
-    return '#0891b2';
-  }, [node?.type]);
-
-  const totalRelations =
-    nodeRelations.incoming.length + nodeRelations.outgoing.length;
 
   if (!node) {
     return null;
   }
 
+  const panelLeft = position
+    ? position.x + PANEL_OFFSET + PANEL_WIDTH > window.innerWidth
+      ? position.x - PANEL_OFFSET - PANEL_WIDTH
+      : position.x + PANEL_OFFSET
+    : undefined;
+
+  const panelTop = position
+    ? Math.min(
+        Math.max(position.y - PANEL_MAX_HEIGHT / 2, 8),
+        window.innerHeight - PANEL_MAX_HEIGHT - 8
+      )
+    : undefined;
+
+  const panelStyle: React.CSSProperties =
+    position !== undefined
+      ? {
+          position: 'fixed',
+          left: panelLeft,
+          top: panelTop,
+          backgroundColor: 'var(--color-white, #ffffff)',
+        }
+      : { backgroundColor: 'var(--color-white, #ffffff)' };
+
+  const headingStyle: React.CSSProperties = {
+    color: 'var(--color-blue-dark-700)',
+    fontSize: 14,
+    fontWeight: 600,
+  };
+
+  const sectionLabelStyle: React.CSSProperties = {
+    color: '#414651',
+    fontSize: 12,
+    fontWeight: 400,
+  };
+
+  const countBadgeStyle: React.CSSProperties = {
+    borderRadius: 4,
+    border: '1px solid var(--color-gray-blue-100)',
+    background: 'var(--color-gray-blue-50)',
+    padding: '2px 8px',
+    fontSize: 12,
+    fontWeight: 500,
+  };
+
+  const relationBoxStyle: React.CSSProperties = {
+    borderRadius: 8,
+    border: '1px solid var(--color-gray-100)',
+    background: 'var(--color-white, #ffffff)',
+    padding: '14px 16px',
+  };
+
+  const totalRelations =
+    nodeRelations.incoming.length + nodeRelations.outgoing.length;
+
   return (
     <div
-      className="ontology-explorer-details enhanced"
-      data-testid="ontology-details-panel">
-      {/* Header */}
-      <div className="details-header">
-        <div className="details-title">
-          <span
-            className="title-text"
-            data-testid="details-panel-title"
-            title={node.originalLabel ?? node.label}>
-            {node.originalLabel ?? node.label}
-          </span>
-        </div>
-        <div className="details-header__actions">
-          {onFocusNode && (
-            <ButtonUtility
-              color="tertiary"
-              icon={Target01}
-              size="xs"
-              tooltip={t('label.focus-selected')}
-              onClick={onFocusNode}
+      className={
+        (position
+          ? 'tw:w-80 tw:min-w-72 '
+          : 'tw:absolute tw:top-3 tw:left-3.5 tw:w-80 tw:min-w-72 tw:max-w-[calc(100%-28px)] ') +
+        'tw:max-h-[calc(100vh-16px)] tw:bg-white tw:rounded-xl tw:shadow-lg tw:box-border ' +
+        'tw:z-1050 tw:flex tw:flex-col tw:min-h-0 tw:overflow-hidden'
+      }
+      data-testid="ontology-details-panel"
+      style={panelStyle}
+    >
+      <div className="tw:shrink-0 tw:flex tw:flex-col tw:min-h-0 tw:w-full tw:min-w-0 tw:box-border">
+        <div className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:w-full tw:min-w-0 tw:box-border tw:p-3">
+          <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0 tw:flex-1 tw:overflow-hidden">
+            <Tag01
+              className="tw:shrink-0 tw:w-5 tw:h-5"
+              style={{ color: 'var(--color-gray-600)' }}
             />
-          )}
+            <Typography
+              as="span"
+              className="tw:truncate tw:min-w-0"
+              data-testid="details-panel-title"
+              style={headingStyle}
+              title={node.originalLabel ?? node.label}
+            >
+              {node.originalLabel ?? node.label}
+            </Typography>
+          </div>
           <ButtonUtility
+            className="tw:shrink-0"
             color="tertiary"
             data-testid="details-panel-close-button"
             icon={X}
@@ -268,268 +214,275 @@ const DetailsPanel: React.FC<EnhancedDetailsPanelProps> = ({
             onClick={onClose}
           />
         </div>
-      </div>
 
-      {/* Breadcrumb */}
-      {breadcrumbParts.length > 1 && (
-        <div className="details-breadcrumb">
-          {breadcrumbParts.map((part, index) => (
-            <span key={`${part}-${index}`}>
-              {index > 0 && (
-                <ChevronRight
-                  size={10}
-                  style={{ margin: '0 2px', opacity: 0.5 }}
-                />
-              )}
-              <span
-                style={{
-                  color:
-                    index === breadcrumbParts.length - 1
-                      ? 'inherit'
-                      : '#94a3b8',
-                  fontWeight:
-                    index === breadcrumbParts.length - 1 ? 600 : undefined,
-                }}>
-                {part}
-              </span>
-            </span>
-          ))}
+        <hr
+          className="tw:border-0 tw:h-px tw:w-full"
+          style={{ background: 'var(--color-gray-200)' }}
+        />
+
+        <div
+          className="tw:w-full tw:min-w-0 tw:overflow-hidden tw:box-border"
+          style={{
+            padding: '16px 14px 16px 14px',
+          }}
+        >
+          <Tabs
+            className="tw:w-full tw:min-w-0 tw:flex-1 tw:flex tw:flex-col tw:overflow-hidden"
+            selectedKey={activeTab}
+            onSelectionChange={(key) => {
+              if (key === 'summary' || key === 'relations') {
+                setActiveTab(key);
+              }
+            }}
+          >
+            <Tabs.List
+              fullWidth
+              className="tw:w-full tw:min-w-0 tw:overflow-hidden [&_[role=tab]]:tw:min-w-0 [&_[role=tab]]:tw:truncate"
+              items={[
+                { id: 'summary', label: t('label.summary') },
+                { id: 'relations', label: t('label.relation-plural') },
+              ]}
+              size="sm"
+              type="button-minimal"
+            />
+            <Tabs.Panel
+              className="tw:flex-1 tw:min-h-0 tw:pt-4 tw:min-w-0 tw:overflow-hidden"
+              id="summary"
+            >
+              <div className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:min-w-0">
+                {node.fullyQualifiedName && (
+                  <div className="tw:mb-4 last:tw:mb-0">
+                    <Typography
+                      as="div"
+                      className="tw:mb-1"
+                      style={sectionLabelStyle}
+                    >
+                      {t('label.fully-qualified-name')}
+                    </Typography>
+                    <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0">
+                      <Typography
+                        as="span"
+                        className="tw:flex-1 tw:min-w-0 tw:truncate tw:text-sm tw:font-semibold"
+                        style={{ color: 'var(--color-gray-900)' }}
+                        title={node.fullyQualifiedName}
+                      >
+                        {node.fullyQualifiedName}
+                      </Typography>
+                      <ButtonUtility
+                        className="tw:shrink-0"
+                        color="tertiary"
+                        icon={Copy01}
+                        size="xs"
+                        tooltip={t('label.copy')}
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            node.fullyQualifiedName ?? ''
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {node.description && (
+                  <div className="tw:mb-4 last:tw:mb-0">
+                    <Typography
+                      as="div"
+                      className="tw:mb-1"
+                      style={sectionLabelStyle}
+                    >
+                      {t('label.description')}
+                    </Typography>
+                    <div
+                      className="tw:text-sm tw:leading-5 tw:max-h-35 tw:overflow-y-auto"
+                      style={{ color: 'var(--color-gray-700)' }}
+                    >
+                      <RichTextEditorPreviewerNew markdown={node.description} />
+                    </div>
+                  </div>
+                )}
+
+                {node.group && (
+                  <div className="tw:mb-4 last:tw:mb-0">
+                    <Typography
+                      as="div"
+                      className="tw:mb-1"
+                      style={sectionLabelStyle}
+                    >
+                      {t('label.glossary')}
+                    </Typography>
+                    <Badge
+                      className="tw:border tw:border-(--color-gray-300)"
+                      color="gray"
+                      type="color"
+                    >
+                      {node.group}
+                    </Badge>
+                  </div>
+                )}
+
+                <div className="tw:mb-4 last:tw:mb-0">
+                  <Typography
+                    as="div"
+                    className="tw:mb-1"
+                    style={sectionLabelStyle}
+                  >
+                    {t('label.owner-plural')}
+                  </Typography>
+                  <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                    {((node.originalNode ?? node).owners ?? []).map((owner) => (
+                      <span key={owner.id} title={getEntityName(owner)}>
+                        <OwnerAvatar
+                          isCompactView
+                          avatarSize={24}
+                          owner={owner}
+                        />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Tabs.Panel>
+            <Tabs.Panel
+              className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:py-0 tw:min-w-0 tw:overflow-x-hidden"
+              id="relations"
+            >
+              <div className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:min-w-0">
+                {totalRelations === 0 ? (
+                  <Typography
+                    as="div"
+                    className="tw:text-center tw:py-8 tw:text-sm"
+                    style={{ color: 'var(--color-gray-500)' }}
+                  >
+                    {t('message.no-relations-found')}
+                  </Typography>
+                ) : (
+                  <>
+                    {nodeRelations.outgoing.length > 0 && (
+                      <div className="tw:mb-5" style={{ marginTop: 14 }}>
+                        <div className="tw:flex tw:items-center tw:gap-2 tw:mb-2">
+                          <Typography
+                            as="span"
+                            data-testid="outgoing-relation-label"
+                            style={sectionLabelStyle}
+                          >
+                            {t('label.outgoing-relation-plural')}
+                          </Typography>
+                          <span
+                            data-testid="outgoing-relation-count"
+                            style={countBadgeStyle}
+                          >
+                            {String(nodeRelations.outgoing.length).padStart(
+                              2,
+                              '0'
+                            )}
+                          </span>
+                        </div>
+                        <div
+                          className="tw:min-w-0 tw:overflow-hidden"
+                          style={relationBoxStyle}
+                        >
+                          <ul className="tw:space-y-2 tw:list-none tw:m-0 tw:p-0 tw:min-w-0">
+                            {nodeRelations.outgoing.map((rel) => (
+                              <li
+                                className="tw:flex tw:items-start tw:py-1 tw:min-w-0"
+                                key={`${rel.from}-${rel.to}-${rel.relationType}`}
+                                style={{ gap: RELATION_BADGE_TO_TERM_GAP }}
+                              >
+                                <span
+                                  className="tw:shrink-0 tw:uppercase"
+                                  style={getRelationBadgeStyle(
+                                    rel.relationType
+                                  )}
+                                >
+                                  {getDisplayName(rel.relationType)}
+                                </span>
+                                <Typography
+                                  as="span"
+                                  className="tw:flex-1 tw:min-w-0 tw:truncate tw:text-sm"
+                                  style={{ color: 'var(--color-gray-900)' }}
+                                  title={`${
+                                    rel.relatedNode?.originalLabel ??
+                                    rel.relatedNode?.label ??
+                                    rel.to
+                                  }`}
+                                >
+                                  {rel.relatedNode?.originalLabel ??
+                                    rel.relatedNode?.label ??
+                                    rel.to}
+                                </Typography>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {nodeRelations.incoming.length > 0 && (
+                      <div style={{ marginTop: 14 }}>
+                        <div className="tw:flex tw:items-center tw:gap-2 tw:mb-2">
+                          <Typography
+                            as="span"
+                            data-testid="incoming-relation-label"
+                            style={sectionLabelStyle}
+                          >
+                            {t('label.incoming-relation-plural')}
+                          </Typography>
+                          <span
+                            data-testid="incoming-relation-count"
+                            style={countBadgeStyle}
+                          >
+                            {String(nodeRelations.incoming.length).padStart(
+                              2,
+                              '0'
+                            )}
+                          </span>
+                        </div>
+                        <div
+                          className="tw:min-w-0 tw:overflow-hidden"
+                          style={relationBoxStyle}
+                        >
+                          <ul className="tw:space-y-2 tw:list-none tw:m-0 tw:p-0 tw:min-w-0">
+                            {nodeRelations.incoming.map((rel) => (
+                              <li
+                                className="tw:flex tw:items-start tw:py-1 tw:min-w-0"
+                                key={`${rel.from}-${rel.to}-${rel.relationType}`}
+                                style={{ gap: RELATION_BADGE_TO_TERM_GAP }}
+                              >
+                                <span
+                                  className="tw:shrink-0 tw:uppercase"
+                                  style={getRelationBadgeStyle(
+                                    rel.relationType
+                                  )}
+                                >
+                                  {getDisplayName(rel.relationType)}
+                                </span>
+                                <Typography
+                                  as="span"
+                                  className="tw:flex-1 tw:min-w-0 tw:truncate tw:text-sm"
+                                  style={{ color: 'var(--color-gray-900)' }}
+                                  title={`${
+                                    rel.relatedNode?.originalLabel ??
+                                    rel.relatedNode?.label ??
+                                    rel.from
+                                  }`}
+                                >
+                                  {rel.relatedNode?.originalLabel ??
+                                    rel.relatedNode?.label ??
+                                    rel.from}
+                                </Typography>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </Tabs.Panel>
+          </Tabs>
         </div>
-      )}
-
-      <div className="details-tabs">
-        <Tabs
-          selectedKey={activeTab}
-          onSelectionChange={(key) =>
-            key != null && setActiveTab(key as DetailsTabId)
-          }>
-          <Tabs.List
-            items={[
-              { id: 'summary', label: t('label.summary') },
-              {
-                id: 'relations',
-                label: `${t('label.relation-plural')} (${totalRelations})`,
-              },
-            ]}
-            size="sm"
-            type="button-border"
-          />
-          <Tabs.Panel
-            className="details-tab-content tw:flex-1 tw:min-h-0 tw:overflow-y-auto"
-            id="summary">
-            {node.fullyQualifiedName && (
-              <div className="detail-section">
-                <div className="section-label">
-                  {t('label.fully-qualified-name')}
-                </div>
-                <div className="section-value">
-                  <span
-                    style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                    }}
-                    title={node.fullyQualifiedName}>
-                    {node.fullyQualifiedName}
-                  </span>
-                  <ButtonUtility
-                    color="tertiary"
-                    icon={Copy01}
-                    size="xs"
-                    tooltip={t('label.copy')}
-                    onClick={() =>
-                      navigator.clipboard.writeText(
-                        node.fullyQualifiedName ?? ''
-                      )
-                    }
-                  />
-                </div>
-              </div>
-            )}
-
-            {node.description && (
-              <div className="detail-section">
-                <div className="section-label">{t('label.description')}</div>
-                <div className="section-value description-preview">
-                  <RichTextEditorPreviewerNew markdown={node.description} />
-                </div>
-              </div>
-            )}
-
-            {node.group && (
-              <div className="detail-section">
-                <div className="section-label">{t('label.glossary')}</div>
-                <div className="section-value">
-                  <span className="details-tag details-tag--blue">
-                    {node.group}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="detail-section">
-              <div className="section-label">{t('label.type')}</div>
-              <div className="section-value">
-                <span
-                  className="details-tag"
-                  style={{
-                    backgroundColor: `${typeColor}15`,
-                    color: typeColor,
-                  }}>
-                  {getReadableType(node.type)}
-                </span>
-              </div>
-            </div>
-          </Tabs.Panel>
-          <Tabs.Panel
-            className="details-tab-content tw:flex-1 tw:min-h-0 tw:overflow-y-auto"
-            id="relations">
-            {nodeRelations.outgoing.length > 0 && (
-              <div className="relations-section">
-                <div className="relations-section__title">
-                  {t('label.outgoing-relation-plural')} (
-                  {nodeRelations.outgoing.length})
-                </div>
-                {nodeRelations.outgoing.map((rel) => {
-                  const relationMeta = relationTypeMap.get(rel.relationType);
-                  const displayName =
-                    relationMeta?.displayName ??
-                    relationLabelOverrides[rel.relationType] ??
-                    rel.relationType;
-                  const predicate = relationMeta?.rdfPredicate;
-                  const cardinality = formatCardinality(relationMeta);
-
-                  return (
-                    <button
-                      className="relation-item"
-                      key={`${rel.from}-${rel.to}-${rel.relationType}`}
-                      type="button"
-                      onClick={() =>
-                        rel.relatedNode &&
-                        handleRelatedNodeClick(rel.relatedNode.id)
-                      }>
-                      <div className="relation-item__row">
-                        <span
-                          className="relation-item__tag"
-                          style={
-                            relationMeta?.color
-                              ? {
-                                  backgroundColor: relationMeta.color,
-                                  borderColor: relationMeta.color,
-                                  color: '#fff',
-                                }
-                              : undefined
-                          }>
-                          {displayName}
-                        </span>
-                        <span className="relation-item__name">
-                          {rel.relatedNode?.originalLabel ??
-                            rel.relatedNode?.label ??
-                            rel.to}
-                        </span>
-                      </div>
-                      {(predicate || cardinality) && (
-                        <div className="relation-item__meta">
-                          {predicate}
-                          {predicate && cardinality ? ' • ' : ''}
-                          {cardinality}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {nodeRelations.incoming.length > 0 && (
-              <div className="relations-section">
-                <div className="relations-section__title">
-                  {t('label.incoming-relation-plural')} (
-                  {nodeRelations.incoming.length})
-                </div>
-                {nodeRelations.incoming.map((rel) => {
-                  const relationMeta = relationTypeMap.get(rel.relationType);
-                  const displayName =
-                    relationMeta?.displayName ??
-                    relationLabelOverrides[rel.relationType] ??
-                    rel.relationType;
-                  const predicate = relationMeta?.rdfPredicate;
-                  const cardinality = formatCardinality(relationMeta);
-
-                  return (
-                    <button
-                      className="relation-item"
-                      key={`${rel.from}-${rel.to}-${rel.relationType}`}
-                      type="button"
-                      onClick={() =>
-                        rel.relatedNode &&
-                        handleRelatedNodeClick(rel.relatedNode.id)
-                      }>
-                      <div className="relation-item__row">
-                        <span
-                          className="relation-item__tag"
-                          style={
-                            relationMeta?.color
-                              ? {
-                                  backgroundColor: relationMeta.color,
-                                  borderColor: relationMeta.color,
-                                  color: '#fff',
-                                }
-                              : undefined
-                          }>
-                          {displayName}
-                        </span>
-                        <span className="relation-item__name">
-                          {rel.relatedNode?.originalLabel ??
-                            rel.relatedNode?.label ??
-                            rel.from}
-                        </span>
-                      </div>
-                      {(predicate || cardinality) && (
-                        <div className="relation-item__meta">
-                          {predicate}
-                          {predicate && cardinality ? ' • ' : ''}
-                          {cardinality}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {totalRelations === 0 && (
-              <div className="details-empty">
-                {t('message.no-relations-found')}
-              </div>
-            )}
-          </Tabs.Panel>
-        </Tabs>
-      </div>
-
-      {/* Footer actions */}
-      <div className="details-actions">
-        {entityPath && (
-          <Button
-            color="secondary"
-            data-testid="details-panel-view-button"
-            iconLeading={LinkExternal01}
-            size="sm"
-            onClick={handleNavigateToEntity}>
-            {t('label.view')}
-          </Button>
-        )}
-        {onAddRelation && (
-          <Button
-            color="primary"
-            data-testid="details-panel-add-relation-button"
-            iconLeading={Plus}
-            size="sm"
-            onClick={() => onAddRelation(node)}>
-            {t('label.add-entity', { entity: t('label.relation') })}
-          </Button>
-        )}
       </div>
     </div>
   );
