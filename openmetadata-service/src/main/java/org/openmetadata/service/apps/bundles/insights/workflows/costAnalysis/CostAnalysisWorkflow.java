@@ -1,6 +1,5 @@
 package org.openmetadata.service.apps.bundles.insights.workflows.costAnalysis;
 
-import static org.openmetadata.service.apps.bundles.insights.DataInsightsApp.REPORT_DATA_TYPE_KEY;
 import static org.openmetadata.service.apps.bundles.insights.utils.TimestampUtils.TIMESTAMP_KEY;
 
 import java.util.ArrayList;
@@ -221,7 +220,6 @@ public class CostAnalysisWorkflow {
       Map<String, Object> contextData) {
     Optional<String> error = Optional.empty();
 
-    contextData.put(REPORT_DATA_TYPE_KEY, ReportData.ReportDataType.RAW_COST_ANALYSIS_REPORT_DATA);
     CreateReportDataProcessor createReportdataProcessor =
         new CreateReportDataProcessor(
             rawCostAnalysisReportDataList.size(),
@@ -248,9 +246,10 @@ public class CostAnalysisWorkflow {
       ReportDataSink reportDataSink =
           new ReportDataSink(
               rawCostAnalysisReportData.get().size(),
-              "[CostAnalysisWorkflow] Raw Cost Analysis Report Data " + "Sink");
+              "[CostAnalysisWorkflow] Raw Cost Analysis Report Data Sink",
+              ReportData.ReportDataType.RAW_COST_ANALYSIS_REPORT_DATA);
       try {
-        reportDataSink.write(rawCostAnalysisReportData.get(), contextData);
+        reportDataSink.write(rawCostAnalysisReportData.get());
       } catch (SearchIndexException ex) {
         error =
             Optional.of(
@@ -270,8 +269,6 @@ public class CostAnalysisWorkflow {
       Map<String, Object> contextData) {
     Optional<String> error = Optional.empty();
 
-    contextData.put(
-        REPORT_DATA_TYPE_KEY, ReportData.ReportDataType.AGGREGATED_COST_ANALYSIS_REPORT_DATA);
     AggregatedCostAnalysisReportDataAggregator aggregatedCostAnalysisReportDataAggregator =
         new AggregatedCostAnalysisReportDataAggregator(aggregatedCostAnalysisDataMap.size());
 
@@ -321,9 +318,10 @@ public class CostAnalysisWorkflow {
         ReportDataSink reportDataSink =
             new ReportDataSink(
                 aggregatedCostAnalysisReportData.get().size(),
-                "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Sink");
+                "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Sink",
+                ReportData.ReportDataType.AGGREGATED_COST_ANALYSIS_REPORT_DATA);
         try {
-          reportDataSink.write(aggregatedCostAnalysisReportData.get(), contextData);
+          reportDataSink.write(aggregatedCostAnalysisReportData.get());
         } catch (SearchIndexException ex) {
           error =
               Optional.of(
