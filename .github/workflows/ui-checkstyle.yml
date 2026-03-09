@@ -12,11 +12,13 @@
 name: UI Checkstyle
 
 on:
+  workflow_dispatch:
   # Trigger analysis when creating or updating a pull request.
   pull_request_target:
     types: [opened, synchronize, reopened, labeled]
     paths:
       - "openmetadata-ui/src/main/resources/ui/**"
+      - ".github/workflows/ui-checkstyle.yml"
 
 permissions:
   contents: read
