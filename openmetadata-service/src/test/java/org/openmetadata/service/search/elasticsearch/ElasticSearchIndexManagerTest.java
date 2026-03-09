@@ -456,10 +456,7 @@ class ElasticSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_SuccessfulAfterRetry() throws IOException {
     es.co.elastic.clients.elasticsearch._types.ElasticsearchException snapshotException =
         new es.co.elastic.clients.elasticsearch._types.ElasticsearchException(
-            "Snapshot in progress",
-            new es.co.elastic.clients.elasticsearch._types.ErrorResponse.Builder()
-                .status(503)
-                .build());
+            "Snapshot in progress", buildErrorResponse(503, "snapshot_in_progress_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class)))
         .thenThrow(snapshotException)
@@ -474,10 +471,7 @@ class ElasticSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_FailsAfterMaxRetries() throws IOException {
     es.co.elastic.clients.elasticsearch._types.ElasticsearchException snapshotException =
         new es.co.elastic.clients.elasticsearch._types.ElasticsearchException(
-            "Snapshot in progress",
-            new es.co.elastic.clients.elasticsearch._types.ErrorResponse.Builder()
-                .status(400)
-                .build());
+            "Snapshot in progress", buildErrorResponse(400, "snapshot_in_progress_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class))).thenThrow(snapshotException);
 
@@ -489,10 +483,7 @@ class ElasticSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_NonRetryableError() throws IOException {
     es.co.elastic.clients.elasticsearch._types.ElasticsearchException nonRetryableException =
         new es.co.elastic.clients.elasticsearch._types.ElasticsearchException(
-            "Index not found",
-            new es.co.elastic.clients.elasticsearch._types.ErrorResponse.Builder()
-                .status(404)
-                .build());
+            "Index not found", buildErrorResponse(404, "index_not_found_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class))).thenThrow(nonRetryableException);
 
@@ -507,5 +498,13 @@ class ElasticSearchIndexManagerTest {
 
     assertDoesNotThrow(() -> managerWithNullClient.deleteIndexWithBackoff(TEST_INDEX));
     verifyNoInteractions(indicesClient);
+  }
+
+  private es.co.elastic.clients.elasticsearch._types.ErrorResponse buildErrorResponse(
+      int status, String type) {
+    return new es.co.elastic.clients.elasticsearch._types.ErrorResponse.Builder()
+        .status(status)
+        .error(error -> error.type(type).reason(type))
+        .build();
   }
 }

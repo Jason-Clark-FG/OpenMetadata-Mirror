@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.util.UUID;
@@ -127,8 +127,6 @@ class PartitionWorkerTest {
             .cursor(0)
             .build();
 
-    doNothing().when(coordinator).updatePartitionProgress(any());
-
     worker.stop();
 
     PartitionWorker.PartitionResult result = worker.processPartition(partition);
@@ -137,7 +135,7 @@ class PartitionWorkerTest {
     assertEquals(0, result.successCount());
     assertEquals(0, result.failedCount());
 
-    verify(coordinator).updatePartitionProgress(any());
+    verify(coordinator, never()).updatePartitionProgress(any());
   }
 
   @Test

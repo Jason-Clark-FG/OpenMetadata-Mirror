@@ -125,6 +125,8 @@ class JobRecoveryManagerTest {
 
     when(lockDAO.cleanupExpiredLocks(anyLong())).thenReturn(0);
     when(lockDAO.getLockInfo(anyString())).thenReturn(null);
+    when(lockDAO.tryAcquireLock(anyString(), anyString(), anyString(), anyLong(), anyLong()))
+        .thenReturn(true);
 
     SearchIndexPartitionRecord pendingPartition =
         createPartitionRecord(jobId, partitionId, PartitionStatus.PENDING);
@@ -208,6 +210,8 @@ class JobRecoveryManagerTest {
 
     when(lockDAO.cleanupExpiredLocks(anyLong())).thenReturn(0);
     when(lockDAO.getLockInfo(anyString())).thenReturn(null);
+    when(lockDAO.tryAcquireLock(anyString(), anyString(), anyString(), anyLong(), anyLong()))
+        .thenReturn(true);
 
     SearchIndexPartitionRecord processingPartition =
         createPartitionRecord(jobId, processingPartitionId, PartitionStatus.PROCESSING);
@@ -280,6 +284,8 @@ class JobRecoveryManagerTest {
     when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
 
     when(lockDAO.getLockInfo(anyString())).thenReturn(null);
+    when(lockDAO.tryAcquireLock(anyString(), anyString(), anyString(), anyLong(), anyLong()))
+        .thenReturn(true);
 
     SearchIndexPartitionRecord pendingPartition =
         createPartitionRecord(jobId, partitionId, PartitionStatus.PENDING);
@@ -405,6 +411,8 @@ class JobRecoveryManagerTest {
 
     when(lockDAO.cleanupExpiredLocks(anyLong())).thenReturn(0);
     when(lockDAO.getLockInfo(anyString())).thenReturn(null);
+    when(lockDAO.tryAcquireLock(anyString(), anyString(), anyString(), anyLong(), anyLong()))
+        .thenReturn(true);
 
     when(partitionDAO.findByJobIdAndStatus(jobId.toString(), PartitionStatus.PROCESSING.name()))
         .thenReturn(List.of());

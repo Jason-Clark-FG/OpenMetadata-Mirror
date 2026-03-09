@@ -466,9 +466,7 @@ class OpenSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_SuccessfulAfterRetry() throws IOException {
     os.org.opensearch.client.opensearch._types.OpenSearchException snapshotException =
         new os.org.opensearch.client.opensearch._types.OpenSearchException(
-            new os.org.opensearch.client.opensearch._types.ErrorResponse.Builder()
-                .status(503)
-                .build());
+            buildErrorResponse(503, "snapshot_in_progress_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class)))
         .thenThrow(snapshotException)
@@ -483,9 +481,7 @@ class OpenSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_FailsAfterMaxRetries() throws IOException {
     os.org.opensearch.client.opensearch._types.OpenSearchException snapshotException =
         new os.org.opensearch.client.opensearch._types.OpenSearchException(
-            new os.org.opensearch.client.opensearch._types.ErrorResponse.Builder()
-                .status(400)
-                .build());
+            buildErrorResponse(400, "snapshot_in_progress_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class))).thenThrow(snapshotException);
 
@@ -497,9 +493,7 @@ class OpenSearchIndexManagerTest {
   void testDeleteIndexWithBackoff_NonRetryableError() throws IOException {
     os.org.opensearch.client.opensearch._types.OpenSearchException nonRetryableException =
         new os.org.opensearch.client.opensearch._types.OpenSearchException(
-            new os.org.opensearch.client.opensearch._types.ErrorResponse.Builder()
-                .status(404)
-                .build());
+            buildErrorResponse(404, "index_not_found_exception"));
 
     when(indicesClient.delete(any(DeleteIndexRequest.class))).thenThrow(nonRetryableException);
 
@@ -513,5 +507,13 @@ class OpenSearchIndexManagerTest {
 
     assertDoesNotThrow(() -> managerWithNullClient.deleteIndexWithBackoff(TEST_INDEX));
     verifyNoInteractions(indicesClient);
+  }
+
+  private os.org.opensearch.client.opensearch._types.ErrorResponse buildErrorResponse(
+      int status, String type) {
+    return new os.org.opensearch.client.opensearch._types.ErrorResponse.Builder()
+        .status(status)
+        .error(error -> error.type(type).reason(type))
+        .build();
   }
 }
