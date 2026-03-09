@@ -188,13 +188,13 @@ export interface PipelineServiceClientConfiguration {
      */
     clientType?: ClientType;
     /**
-     * JWT claim name containing the user's display name. Defaults based on provider: 'name' for
-     * OIDC/SAML, 'displayName' for LDAP.
+     * JWT claim name containing the user's display name. Used only when emailClaim is
+     * configured.
      */
     displayNameClaim?: string;
     /**
-     * JWT claim name containing the user's email address. Defaults based on provider: 'email'
-     * for OIDC/SAML, 'mail' for LDAP.
+     * JWT claim name containing the user's email address. When omitted, OpenMetadata continues
+     * using the legacy jwtPrincipalClaims flow for backward compatibility.
      */
     emailClaim?: string;
     /**
@@ -1036,13 +1036,13 @@ export interface AuthenticationConfiguration {
      */
     clientType?: ClientType;
     /**
-     * JWT claim name containing the user's display name. Defaults based on provider: 'name' for
-     * OIDC/SAML, 'displayName' for LDAP.
+     * JWT claim name containing the user's display name. Used only when emailClaim is
+     * configured.
      */
     displayNameClaim?: string;
     /**
-     * JWT claim name containing the user's email address. Defaults based on provider: 'email'
-     * for OIDC/SAML, 'mail' for LDAP.
+     * JWT claim name containing the user's email address. When omitted, OpenMetadata continues
+     * using the legacy jwtPrincipalClaims flow for backward compatibility.
      */
     emailClaim?: string;
     /**
