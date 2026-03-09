@@ -11,6 +11,13 @@
 
 clusterName: ${OPENMETADATA_CLUSTER_NAME:-openmetadata}
 
+mcpClientConfiguration:
+  enabled: ${MCP_CLIENT_ENABLED:-false}
+  provider: ${MCP_CLIENT_PROVIDER:-openai}
+  apiKey: ${MCP_CLIENT_API_KEY:-}
+  model: ${MCP_CLIENT_MODEL:-gpt-4o}
+  apiEndpoint: ${MCP_CLIENT_API_ENDPOINT:-}
+  systemPrompt: "You are a helpful metadata assistant for OpenMetadata. Use the available tools to search, explore, and manage metadata. Be concise and actionable."
 
 swagger:
   resourcePackage: org.openmetadata.service.resources

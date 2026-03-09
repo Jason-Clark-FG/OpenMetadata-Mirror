@@ -1,0 +1,266 @@
+/*
+ *  Copyright 2025 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package org.openmetadata.service.resources.mcpclient;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
+import org.openmetadata.schema.api.chat.CreateMcpConversation;
+import org.openmetadata.schema.entity.chat.McpConversation;
+import org.openmetadata.schema.entity.chat.McpMessage;
+import org.openmetadata.schema.utils.ResultList;
+import org.openmetadata.service.Entity;
+import org.openmetadata.service.OpenMetadataApplicationConfig;
+import org.openmetadata.service.config.McpClientConfiguration;
+import org.openmetadata.service.limits.Limits;
+import org.openmetadata.service.mcpclient.McpClientService;
+import org.openmetadata.service.mcpclient.McpClientService.ChatResponse;
+import org.openmetadata.service.mcpclient.ToolExecutor;
+import org.openmetadata.service.resources.Collection;
+import org.openmetadata.service.security.Authorizer;
+
+@Path("/v1/mcp-client")
+@Tag(name = "McpClient")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Collection(name = "McpClient")
+public class McpClientResource {
+
+  private static volatile McpClientResource instance;
+
+  private McpClientService mcpClientService;
+  private Authorizer authorizer;
+  private Limits limits;
+
+  public static McpClientResource getInstance() {
+    return instance;
+  }
+
+  @Getter
+  @Setter
+  public static class ChatRequest {
+    private UUID conversationId;
+
+    @NotNull private String message;
+  }
+
+  public static class McpConversationList extends ResultList<McpConversation> {}
+
+  public static class McpMessageList extends ResultList<McpMessage> {}
+
+  public McpClientResource(Authorizer authorizer, Limits limits) {
+    this.authorizer = authorizer;
+    this.limits = limits;
+    instance = this;
+  }
+
+  public void initialize(OpenMetadataApplicationConfig config) {
+    McpClientConfiguration mcpConfig = config.getMcpClientConfiguration();
+    if (mcpConfig == null) {
+      mcpConfig = new McpClientConfiguration();
+    }
+    this.mcpClientService =
+        new McpClientService(Entity.getCollectionDAO(), mcpConfig, authorizer, limits);
+  }
+
+  public void registerToolExecutor(
+      ToolExecutor toolExecutor, List<Map<String, Object>> toolDefinitions) {
+    if (this.mcpClientService != null) {
+      this.mcpClientService.setToolExecutor(toolExecutor);
+      this.mcpClientService.setToolDefinitions(toolDefinitions);
+    }
+  }
+
+  @POST
+  @Path("/chat")
+  @Operation(
+      operationId = "mcpClientChat",
+      summary = "Chat with the MCP assistant",
+      description = "Send a message and get a response from the MCP-powered AI assistant.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Chat response",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ChatResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request")
+      })
+  public Response chat(@Context SecurityContext securityContext, @Valid ChatRequest request) {
+    ChatResponse response =
+        mcpClientService.chat(securityContext, request.getConversationId(), request.getMessage());
+    return Response.ok(response).build();
+  }
+
+  @POST
+  @Path("/conversations")
+  @Operation(
+      operationId = "createMcpConversation",
+      summary = "Create a new conversation",
+      description = "Create a new empty MCP conversation.",
+      responses = {
+        @ApiResponse(
+            responseCode = "201",
+            description = "Conversation created",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = McpConversation.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request")
+      })
+  public Response createConversation(
+      @Context SecurityContext securityContext, @Valid CreateMcpConversation request) {
+    McpConversation conversation = mcpClientService.createConversation(securityContext, request);
+    return Response.status(Response.Status.CREATED).entity(conversation).build();
+  }
+
+  @GET
+  @Path("/conversations")
+  @Operation(
+      operationId = "listMcpConversations",
+      summary = "List conversations",
+      description = "List MCP conversations for the authenticated user.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of conversations",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = McpConversationList.class)))
+      })
+  public ResultList<McpConversation> listConversations(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Limit the number of conversations returned")
+          @DefaultValue("20")
+          @Min(1)
+          @Max(100)
+          @QueryParam("limit")
+          int limit,
+      @Parameter(description = "Offset for pagination")
+          @DefaultValue("0")
+          @Min(0)
+          @QueryParam("offset")
+          int offset) {
+    List<McpConversation> conversations =
+        mcpClientService.listConversations(securityContext, limit, offset);
+    int total = mcpClientService.getConversationCount(securityContext);
+    return new ResultList<>(conversations, offset, total);
+  }
+
+  @GET
+  @Path("/conversations/{id}")
+  @Operation(
+      operationId = "getMcpConversation",
+      summary = "Get a conversation",
+      description = "Get a conversation with its messages populated.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The conversation",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = McpConversation.class))),
+        @ApiResponse(responseCode = "404", description = "Conversation not found")
+      })
+  public McpConversation getConversation(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the conversation", schema = @Schema(type = "UUID"))
+          @PathParam("id")
+          UUID id) {
+    return mcpClientService.getConversationWithMessages(securityContext, id);
+  }
+
+  @GET
+  @Path("/conversations/{id}/messages")
+  @Operation(
+      operationId = "listMcpMessages",
+      summary = "List messages in a conversation",
+      description = "List messages for a given conversation.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of messages",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = McpMessageList.class))),
+        @ApiResponse(responseCode = "404", description = "Conversation not found")
+      })
+  public ResultList<McpMessage> listMessages(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the conversation", schema = @Schema(type = "UUID"))
+          @PathParam("id")
+          UUID id,
+      @Parameter(description = "Limit the number of messages returned")
+          @DefaultValue("50")
+          @Min(1)
+          @Max(1000)
+          @QueryParam("limit")
+          int limit,
+      @Parameter(description = "Offset for pagination")
+          @DefaultValue("0")
+          @Min(0)
+          @QueryParam("offset")
+          int offset) {
+    List<McpMessage> messages = mcpClientService.listMessages(securityContext, id, limit, offset);
+    int total = mcpClientService.getMessageCount(securityContext, id);
+    return new ResultList<>(messages, offset, total);
+  }
+
+  @DELETE
+  @Path("/conversations/{id}")
+  @Operation(
+      operationId = "deleteMcpConversation",
+      summary = "Delete a conversation",
+      description = "Delete a conversation and all its messages.",
+      responses = {
+        @ApiResponse(responseCode = "204", description = "Conversation deleted"),
+        @ApiResponse(responseCode = "404", description = "Conversation not found")
+      })
+  public Response deleteConversation(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the conversation", schema = @Schema(type = "UUID"))
+          @PathParam("id")
+          UUID id) {
+    mcpClientService.deleteConversation(securityContext, id);
+    return Response.noContent().build();
+  }
+}

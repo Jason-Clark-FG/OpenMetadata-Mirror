@@ -296,6 +296,15 @@ const ColumnBulkOperationsPage = withSuspenseFallback(
   )
 );
 
+const McpChatPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "McpChatPage" */ '../../pages/McpChatPage/McpChatPage'
+      )
+  )
+);
+
 const AuthenticatedAppRouter: FunctionComponent = () => {
   const { permissions } = usePermissionProvider();
   const { t } = useTranslation();
@@ -770,6 +779,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
         element={<ColumnBulkOperationsPage />}
         path={ROUTES.COLUMN_BULK_OPERATIONS}
       />
+      <Route element={<McpChatPage />} path={ROUTES.MCP_CHAT} />
 
       <Route
         element={<EntityRouter />}

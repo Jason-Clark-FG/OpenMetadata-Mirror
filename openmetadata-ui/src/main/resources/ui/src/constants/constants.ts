@@ -165,6 +165,7 @@ export const ROUTES = {
   COLUMN_BULK_OPERATIONS: `/column-bulk-operations`,
   STORE: '/store',
   FEEDS: '/feeds',
+  MCP_CHAT: '/mcp-chat',
   DUMMY: '/dummy',
   SERVICE: `/service/${PLACEHOLDER_ROUTE_SERVICE_CAT}/${PLACEHOLDER_ROUTE_FQN}`,
   SERVICE_VERSION: `/service/${PLACEHOLDER_ROUTE_SERVICE_CAT}/${PLACEHOLDER_ROUTE_FQN}/versions/${PLACEHOLDER_ROUTE_VERSION}`,
