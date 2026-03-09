@@ -53,6 +53,7 @@ class SessionServiceTest {
   void setUp() {
     Fernet.getInstance().setFernetKey(FERNET_KEY);
     lenient().when(authConfig.getForceSecureSessionCookie()).thenReturn(false);
+    lenient().when(authConfig.getSessionExpiry()).thenReturn(null);
     lenient().when(request.isSecure()).thenReturn(false);
     sessionService =
         new SessionService(authConfig, repository, Caffeine.newBuilder().build(), scheduler);

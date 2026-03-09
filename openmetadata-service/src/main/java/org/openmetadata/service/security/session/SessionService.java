@@ -21,10 +21,8 @@ import org.openmetadata.service.jdbi3.SessionRepository;
 
 @Slf4j
 public class SessionService implements Managed {
-  private static final int DEFAULT_IDLE_TIMEOUT_SECONDS = 7 * 24 * 60 * 60;
   private static final int DEFAULT_ABSOLUTE_TIMEOUT_SECONDS = 30 * 24 * 60 * 60;
   private static final int PENDING_SESSION_TIMEOUT_SECONDS = 10 * 60;
-  private static final int MIN_IDLE_TIMEOUT_SECONDS = 60 * 60;
   private static final long REFRESH_LEASE_MILLIS = 15_000L;
   private static final long CLEANUP_INTERVAL_MINUTES = 15L;
   private static final long CLEANUP_RETENTION_MILLIS = TimeUnit.DAYS.toMillis(7);
@@ -510,21 +508,21 @@ public class SessionService implements Managed {
   }
 
   private int getIdleTimeoutSeconds() {
-    if (authConfig.getOidcConfiguration() != null
-        && authConfig.getOidcConfiguration().getSessionExpiry() != null) {
-      int configuredSessionExpiry = authConfig.getOidcConfiguration().getSessionExpiry();
-      if (configuredSessionExpiry >= MIN_IDLE_TIMEOUT_SECONDS) {
+    Integer configuredSessionExpiry =
+        SessionTimeoutResolver.getConfiguredSessionExpirySeconds(authConfig);
+    if (configuredSessionExpiry != null) {
+      if (configuredSessionExpiry >= SessionTimeoutResolver.MIN_SESSION_EXPIRY_SECONDS) {
         return configuredSessionExpiry;
       }
       if (lowIdleTimeoutLogged.compareAndSet(false, true)) {
         LOG.warn(
             "Configured sessionExpiry {} is below the supported minimum {}. Falling back to {} seconds.",
             configuredSessionExpiry,
-            MIN_IDLE_TIMEOUT_SECONDS,
-            DEFAULT_IDLE_TIMEOUT_SECONDS);
+            SessionTimeoutResolver.MIN_SESSION_EXPIRY_SECONDS,
+            SessionTimeoutResolver.DEFAULT_SESSION_EXPIRY_SECONDS);
       }
     }
-    return DEFAULT_IDLE_TIMEOUT_SECONDS;
+    return SessionTimeoutResolver.DEFAULT_SESSION_EXPIRY_SECONDS;
   }
 
   private long safeVersion(UserSession session) {

@@ -163,6 +163,7 @@ import org.openmetadata.service.security.saml.SamlMetadataServlet;
 import org.openmetadata.service.security.saml.SamlSettingsHolder;
 import org.openmetadata.service.security.saml.SamlTokenRefreshServlet;
 import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.SessionTimeoutResolver;
 import org.openmetadata.service.socket.FeedServlet;
 import org.openmetadata.service.socket.Jetty12WebSocketHandler;
 import org.openmetadata.service.socket.OpenMetadataAssetServlet;
@@ -458,18 +459,9 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       sessionHandler.setSameSite(HttpCookie.SameSite.NONE);
     }
 
-    // Get session expiry - use OIDC config if available, otherwise default
-    int sessionExpiry = 604800; // Default 7 days in seconds
-    if (SecurityConfigurationManager.getCurrentAuthConfig().getOidcConfiguration() != null
-        && SecurityConfigurationManager.getCurrentAuthConfig()
-                .getOidcConfiguration()
-                .getSessionExpiry()
-            >= 3600) {
-      sessionExpiry =
-          SecurityConfigurationManager.getCurrentAuthConfig()
-              .getOidcConfiguration()
-              .getSessionExpiry();
-    }
+    int sessionExpiry =
+        SessionTimeoutResolver.resolveSessionExpirySeconds(
+            SecurityConfigurationManager.getCurrentAuthConfig());
 
     cookieConfig.setMaxAge(sessionExpiry);
     cookieConfig.setPath("/");
