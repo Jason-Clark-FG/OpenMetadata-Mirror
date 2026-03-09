@@ -2,12 +2,13 @@
 
 # Observability
 
-> **5 Components** | **19 Files** | **114 Tests** | **202 Scenarios** 🚀
+> **6 Components** | **23 Files** | **169 Tests** | **328 Scenarios** 🚀
 
 ## Table of Contents
 - [Data Quality](#data-quality)
 - [Incident Manager](#incident-manager)
 - [Profiler](#profiler)
+- [Test Library](#test-library)
 - [Rules Library](#rules-library)
 - [Alerts & Notifications](#alerts-notifications)
 
@@ -16,6 +17,43 @@
 <div id="data-quality"></div>
 
 ## Data Quality
+
+<details open>
+<summary>📄 <b>DataQualityPermissions.spec.ts</b> (25 tests, 25 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/DataQualityPermissions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/DataQualityPermissions.spec.ts)
+
+### Observability Permission Coverage
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Observability Permission Coverage** - Data Consumer cannot create or delete test cases | Data Consumer cannot create or delete test cases |
+| 2 | **Observability Permission Coverage** - Data Consumer can VIEW test cases but sees no edit controls in UI | Data Consumer can VIEW test cases but sees no edit controls in UI |
+| 3 | **Observability Permission Coverage** - Data Steward cannot create or delete test cases (default) | Data Steward cannot create or delete test cases (default) |
+| 4 | **Observability Permission Coverage** - Data Consumer cannot create or delete test suites | Data Consumer cannot create or delete test suites |
+| 5 | **Observability Permission Coverage** - Data Consumer cannot edit test case | Data Consumer cannot edit test case |
+| 6 | **Observability Permission Coverage** - User with TEST_CASE.CREATE cannot delete test cases | User with TEST_CASE.CREATE cannot delete test cases |
+| 7 | **Observability Permission Coverage** - User with TEST_CASE.DELETE cannot create test cases | User with TEST_CASE.DELETE cannot create test cases |
+| 8 | **Observability Permission Coverage** - User with TEST_CASE.VIEW_BASIC cannot edit test cases | User with TEST_CASE.VIEW_BASIC cannot edit test cases |
+| 9 | **Observability Permission Coverage** - User without TEST_SUITE.CREATE cannot create test suites | User without TEST_SUITE.CREATE cannot create test suites |
+| 10 | **Observability Permission Coverage** - User without TEST_SUITE.DELETE cannot delete test suites | User without TEST_SUITE.DELETE cannot delete test suites |
+| 11 | **Observability Permission Coverage** - User without TEST_SUITE.EDIT cannot add test case to logical suite | User without TEST_SUITE.EDIT cannot add test case to logical suite |
+| 12 | **Observability Permission Coverage** - User with TEST_CASE.CREATE can see Add button for test case | User with TEST_CASE.CREATE can see Add button for test case |
+| 13 | **Observability Permission Coverage** - User with TEST_CASE.DELETE can see delete option for test case | User with TEST_CASE.DELETE can see delete option for test case |
+| 14 | **Observability Permission Coverage** - User with TABLE.CREATE_TESTS can see Add button (Table Permission) | User with TABLE.CREATE_TESTS can see Add button (Table Permission) |
+| 15 | **Observability Permission Coverage** - User with TEST_CASE.EDIT_ALL can see edit action on test case | User with TEST_CASE.EDIT_ALL can see edit action on test case |
+| 16 | **Observability Permission Coverage** - User with TABLE.EDIT_TESTS can see edit action on test case | User with TABLE.EDIT_TESTS can see edit action on test case |
+| 17 | **Observability Permission Coverage** - User with VIEW_BASIC cannot see edit action in UI | User with VIEW_BASIC cannot see edit action in UI |
+| 18 | **Observability Permission Coverage** - User with TEST_CASE.VIEW_BASIC can view test case in UI | User with TEST_CASE.VIEW_BASIC can view test case in UI |
+| 19 | **Observability Permission Coverage** - User with TEST_CASE.VIEW_BASIC can view test case CONTENT details in UI | User with TEST_CASE.VIEW_BASIC can view test case CONTENT details in UI |
+| 20 | **Observability Permission Coverage** - User with TEST_SUITE.CREATE can see Add test suite button | User with TEST_SUITE.CREATE can see Add test suite button |
+| 21 | **Observability Permission Coverage** - User with TEST_SUITE.VIEW_ALL can view test suites page and list suites | User with TEST_SUITE.VIEW_ALL can view test suites page and list suites |
+| 22 | **Observability Permission Coverage** - User with TEST_SUITE.VIEW_ALL can view test suite CONTENT but cannot add test case | User with TEST_SUITE.VIEW_ALL can view test suite CONTENT but cannot add test case |
+| 23 | **Observability Permission Coverage** - User with TEST_SUITE.EDIT_ALL can see add test case button on suite details | User with TEST_SUITE.EDIT_ALL can see add test case button on suite details |
+| 24 | **Observability Permission Coverage** - User with TABLE.VIEW_TESTS can view test suites page (alternative permission) | User with TABLE.VIEW_TESTS can view test suites page (alternative permission) |
+| 25 | **Observability Permission Coverage** - Admin can see Data Quality UI controls (add test case, add test suite) | Admin can see Data Quality UI controls (add test case, add test suite) |
+
+</details>
 
 <details open>
 <summary>📄 <b>TestCaseImportExportBasic.spec.ts</b> (24 tests, 30 scenarios)</summary>
@@ -156,7 +194,30 @@
 </details>
 
 <details open>
-<summary>📄 <b>TableLevelTests.spec.ts</b> (9 tests, 11 scenarios)</summary>
+<summary>📄 <b>TestCaseResultPermissions.spec.ts</b> (11 tests, 11 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/TestCaseResultPermissions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/TestCaseResultPermissions.spec.ts)
+
+### TestCaseResult Permission Coverage
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **TestCaseResult Permission Coverage** - User with TEST_CASE.VIEW_ALL can view test case and results in UI | User with TEST_CASE.VIEW_ALL can view test case and results in UI |
+| 2 | **TestCaseResult Permission Coverage** - User with TEST_CASE.VIEW_ALL can view test RESULT CONTENT in UI | User with TEST_CASE.VIEW_ALL can view test RESULT CONTENT in UI |
+| 3 | **TestCaseResult Permission Coverage** - User with TABLE.VIEW_TESTS can view test case and results in UI (alternative) | User with TABLE.VIEW_TESTS can view test case and results in UI (alternative) |
+| 4 | **TestCaseResult Permission Coverage** - User with only TABLE.EDIT_TESTS (no TEST_CASE.VIEW_ALL) can still view results in UI via TABLE.VIEW_TESTS | User with only TABLE.EDIT_TESTS (no TEST_CASE.VIEW_ALL) can still view results in UI via TABLE.VIEW_TESTS |
+| 5 | **TestCaseResult Permission Coverage** - User with TEST_CASE.EDIT_ALL can see edit action on test case | User with TEST_CASE.EDIT_ALL can see edit action on test case |
+| 6 | **TestCaseResult Permission Coverage** - User with TABLE.EDIT_TESTS can see edit action on test case (alternative) | User with TABLE.EDIT_TESTS can see edit action on test case (alternative) |
+| 7 | **TestCaseResult Permission Coverage** - User with TABLE.DELETE + TEST_CASE.DELETE can see delete option for test case | User with TABLE.DELETE + TEST_CASE.DELETE can see delete option for test case |
+| 8 | **TestCaseResult Permission Coverage** - User with only VIEW cannot see edit action and cannot POST results | User with only VIEW cannot see edit action and cannot POST results |
+| 9 | **TestCaseResult Permission Coverage** - User with only VIEW cannot PATCH results | User with only VIEW cannot PATCH results |
+| 10 | **TestCaseResult Permission Coverage** - User with only TEST_CASE.DELETE (no TABLE.DELETE) cannot DELETE results | User with only TEST_CASE.DELETE (no TABLE.DELETE) cannot DELETE results |
+| 11 | **TestCaseResult Permission Coverage** - User with only TABLE.DELETE (no TEST_CASE.DELETE) cannot DELETE results | User with only TABLE.DELETE (no TEST_CASE.DELETE) cannot DELETE results |
+
+</details>
+
+<details open>
+<summary>📄 <b>TableLevelTests.spec.ts</b> (9 tests, 27 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/TableLevelTests.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/TableLevelTests.spec.ts)
 
@@ -168,19 +229,63 @@
 | | ↳ *Create* | |
 | | ↳ *Edit* | |
 | | ↳ *Delete* | |
-| 2 | **Table Level Data Quality Test Cases** - Table Row Count To Equal | Table Row Count To Equal |
-| 3 | **Table Level Data Quality Test Cases** - Table Column Count To Be Between | Table Column Count To Be Between |
-| 4 | **Table Level Data Quality Test Cases** - Table Column Count To Equal | Table Column Count To Equal |
-| 5 | **Table Level Data Quality Test Cases** - Table Column Name To Exist | Table Column Name To Exist |
-| 6 | **Table Level Data Quality Test Cases** - Table Column To Match Set | Table Column To Match Set |
-| 7 | **Table Level Data Quality Test Cases** - Table Difference | Table Difference |
-| 8 | **Table Level Data Quality Test Cases** - Custom SQL Query | Custom SQL Query |
-| 9 | **Table Level Data Quality Test Cases** - Table Row Inserted Count To Be Between | Table Row Inserted Count To Be Between |
+| 2 | **Table Level Data Quality Test Cases** - Table Row Count To Equal | Table Row Count To Equal test case  Creates a `tableRowCountToEqual` test with an exact row count value; verifies visibility in the Data Quality tab, edits the value, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableRowCountToEqual`, set exact row count value. 3. Submit and verify in Data Quality tab; then edit the value; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 3 | **Table Level Data Quality Test Cases** - Table Column Count To Be Between | Table Column Count To Be Between test case  Creates a `tableColumnCountToBeBetween` test with min and max column count values; verifies visibility in the Data Quality tab, edits the threshold values, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableColumnCountToBeBetween`, set min and max values. 3. Submit and verify in Data Quality tab; then edit threshold values; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 4 | **Table Level Data Quality Test Cases** - Table Column Count To Equal | Table Column Count To Equal test case  Creates a `tableColumnCountToEqual` test with an exact column count value; verifies visibility in the Data Quality tab, edits the value, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableColumnCountToEqual`, set exact column count value. 3. Submit and verify in Data Quality tab; then edit the value; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 5 | **Table Level Data Quality Test Cases** - Table Column Name To Exist | Table Column Name To Exist test case  Creates a `tableColumnNameToExist` test to verify a column exists; verifies visibility in the Data Quality tab, edits the column name, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableColumnNameToExist`, set column name. 3. Submit and verify in Data Quality tab; then edit the column name; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 6 | **Table Level Data Quality Test Cases** - Table Column To Match Set | Table Column To Match Set test case  Creates a `tableColumnToMatchSet` test to verify columns match expected set; verifies visibility in the Data Quality tab, edits the column names, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableColumnToMatchSet`, set column names array. 3. Submit and verify in Data Quality tab; then edit the column names; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 7 | **Table Level Data Quality Test Cases** - Table Difference | Table Difference test case  Creates a `tableDiff` test by selecting a second table, setting key columns, use columns, and threshold; verifies visibility in the Data Quality tab, edits to add more columns, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableDiff`, pick Table 2 and its key columns; define Table 1 key/use columns and threshold. 3. Submit and verify in Data Quality tab; then edit to add additional key/use columns; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 8 | **Table Level Data Quality Test Cases** - Custom SQL Query | Custom SQL Query test case  Creates a `tableCustomSQLQuery` test with SQL in CodeMirror, selects strategy and threshold; verifies, edits display name, SQL and strategy, updates threshold, and deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select `tableCustomSQLQuery`, input SQL, choose strategy (ROWS/COUNT), set threshold. 3. Submit and verify in Data Quality tab; then edit display name, SQL and strategy; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
+| 9 | **Table Level Data Quality Test Cases** - Table Row Inserted Count To Be Between | Table Row Inserted Count To Be Between test case  Creates a `tableRowInsertedCountToBeBetween` test with min and max inserted row count values; verifies visibility in the Data Quality tab, edits the threshold values, and finally deletes the test case. Steps 1. Navigate to entity → Data Observability → Table Profile. 2. Open Test Case form, select type `tableRowInsertedCountToBeBetween`, set min and max values. 3. Submit and verify in Data Quality tab; then edit threshold values; delete at the end. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Delete* | |
 
 </details>
 
 <details open>
-<summary>📄 <b>DataQuality.spec.ts</b> (5 tests, 5 scenarios)</summary>
+<summary>📄 <b>TestCaseIncidentPermissions.spec.ts</b> (8 tests, 8 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/TestCaseIncidentPermissions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/TestCaseIncidentPermissions.spec.ts)
+
+### TestCaseIncidentStatus Permission Coverage
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **TestCaseIncidentStatus Permission Coverage** - User with TEST_CASE.VIEW_ALL can view incidents in UI | User with TEST_CASE.VIEW_ALL can view incidents in UI |
+| 2 | **TestCaseIncidentStatus Permission Coverage** - User with TEST_CASE.VIEW_ALL can view incident CONTENT in UI | User with TEST_CASE.VIEW_ALL can view incident CONTENT in UI |
+| 3 | **TestCaseIncidentStatus Permission Coverage** - User with TABLE.VIEW_TESTS can view incidents in UI (alternative) | User with TABLE.VIEW_TESTS can view incidents in UI (alternative) |
+| 4 | **TestCaseIncidentStatus Permission Coverage** - User with TEST_CASE.EDIT_ALL can see edit icon on incidents | User with TEST_CASE.EDIT_ALL can see edit icon on incidents |
+| 5 | **TestCaseIncidentStatus Permission Coverage** - User with TABLE.EDIT_TESTS can see edit icon on incidents (alternative) | User with TABLE.EDIT_TESTS can see edit icon on incidents (alternative) |
+| 6 | **TestCaseIncidentStatus Permission Coverage** - User with only VIEW cannot see edit icon and cannot POST incidents | User with only VIEW cannot see edit icon and cannot POST incidents |
+| 7 | **TestCaseIncidentStatus Permission Coverage** - User with only VIEW cannot PATCH incidents | User with only VIEW cannot PATCH incidents |
+| 8 | **TestCaseIncidentStatus Permission Coverage** - Consumer-like user cannot see edit icon and cannot create/edit incidents | Consumer-like user cannot see edit icon and cannot create/edit incidents |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataQuality.spec.ts</b> (5 tests, 17 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/DataQuality.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/DataQuality.spec.ts)
 
@@ -188,11 +293,27 @@
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Data Quality** - Table test case | Table test case |
-| 2 | **Data Quality** - Column test case | Column test case |
+| 1 | **Data Quality** - Table test case | Table test case  Creates, edits, and deletes a table-level test case with tags and glossary terms. Verifies incident breadcrumb navigation and test case property changes. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Redirect to IncidentPage and verify breadcrumb* | |
+| | ↳ *Delete* | |
+| 2 | **Data Quality** - Column test case | Column test case  Creates, edits, and deletes a column-level test case with tags and glossary terms. Validates parameter changes and property persistence. |
+| | ↳ *Create* | |
+| | ↳ *Edit* | |
+| | ↳ *Redirect to IncidentPage and verify breadcrumb* | |
+| | ↳ *Delete* | |
 | 3 | **Data Quality** - TestCase with Array params value | TestCase with Array params value |
+| | ↳ *Array params value should be visible while editing the test case* | |
+| | ↳ *Validate patch request for edit test case* | |
+| | ↳ *Update test case display name from Data Quality page* | |
 | 4 | **Data Quality** - TestCase filters | TestCase filters |
 | 5 | **Data Quality** - Pagination functionality in test cases list | Pagination functionality in test cases list |
+| | ↳ *Verify pagination controls are visible* | |
+| | ↳ *Verify first page state* | |
+| | ↳ *Navigate to next page* | |
+| | ↳ *Navigate back to previous page* | |
+| | ↳ *Test page size dropdown* | |
 
 </details>
 
@@ -327,6 +448,41 @@
 ## Incident Manager
 
 <details open>
+<summary>📄 <b>IncidentManager.spec.ts</b> (7 tests, 20 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/IncidentManager.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/IncidentManager.spec.ts)
+
+### Incident Manager
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Incident Manager** - Complete Incident lifecycle with table owner | Complete incident lifecycle with table owner  Claims table ownership, acknowledges a failed test case, assigns and reassigns the incident, validates notifications for mentions, and resolves the incident. |
+| | ↳ *Claim ownership of table* | |
+| | ↳ *Acknowledge table test case's failure* | |
+| | ↳ *Assign incident to user* | |
+| | ↳ *Re-assign incident to user* | |
+| | ↳ *Verify that notifications correctly display mentions for the incident manager* | |
+| | ↳ *Re-assign incident from test case page's header* | |
+| | ↳ *Resolve incident* | |
+| 2 | **Incident Manager** - Resolving incident & re-run pipeline | Resolve incident and rerun pipeline  Resolves a failed incident from the list page, confirms closed status, and reruns the TestSuite pipeline to re-evaluate incident state. |
+| | ↳ *Acknowledge table test case's failure* | |
+| | ↳ *Resolve task from incident list page* | |
+| | ↳ *Task should be closed* | |
+| | ↳ *Re-run pipeline* | |
+| | ↳ *Verify open and closed task* | |
+| 3 | **Incident Manager** - Rerunning pipeline for an open incident | Rerun pipeline for open incident  Acknowledges and assigns an open incident, reruns pipeline, and validates status reflects Assigned. |
+| | ↳ *Ack incident and verify open task* | |
+| | ↳ *Assign incident to user* | |
+| | ↳ *Re-run pipeline* | |
+| | ↳ *Verify incident's status on DQ page* | |
+| 4 | **Incident Manager** - Validate Incident Tab in Entity details page | Validate Incident tab in entity page  Verifies incidents list within entity details, lineage incident counts, and navigation back to tab. |
+| 5 | **Incident Manager** - Verify filters in Incident Manager's page | Verify filters in Incident Manager page  Tests Assignee, Status, Test Case, and Date filters and confirms list updates accordingly. |
+| 6 | **Incident Manager** - Next, Previous and page indicator | Next, Previous and page indicator |
+| 7 | **Incident Manager** - Page size dropdown updates list limit and resets to page 1 | Page size dropdown updates list limit and resets to page 1 |
+
+</details>
+
+<details open>
 <summary>📄 <b>IncidentManagerDateFilter.spec.ts</b> (6 tests, 6 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/IncidentManagerDateFilter.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/IncidentManagerDateFilter.spec.ts)
@@ -346,23 +502,6 @@
 |---|-----------|-------------|
 | 1 | **Incident Manager Date Filter - Sidebar** - Date picker shows placeholder by default on Incident Manager page | Date picker shows placeholder by default on Incident Manager page |
 | 2 | **Incident Manager Date Filter - Sidebar** - Select and clear date range on Incident Manager page | Select and clear date range on Incident Manager page |
-
-</details>
-
-<details open>
-<summary>📄 <b>IncidentManager.spec.ts</b> (5 tests, 5 scenarios)</summary>
-
-> Source: [`src/main/resources/ui/playwright/e2e/Features/IncidentManager.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/IncidentManager.spec.ts)
-
-### Incident Manager
-
-| # | Test Case | Description |
-|---|-----------|-------------|
-| 1 | **Incident Manager** - Complete Incident lifecycle with table owner | Complete Incident lifecycle with table owner |
-| 2 | **Incident Manager** - Resolving incident & re-run pipeline | Resolving incident & re-run pipeline |
-| 3 | **Incident Manager** - Rerunning pipeline for an open incident | Rerunning pipeline for an open incident |
-| 4 | **Incident Manager** - Validate Incident Tab in Entity details page | Validate Incident Tab in Entity details page |
-| 5 | **Incident Manager** - Verify filters in Incident Manager's page | Filters in Incident Manager's page |
 
 </details>
 
@@ -411,37 +550,105 @@
 
 ---
 
-<div id="rules-library"></div>
+<div id="test-library"></div>
 
-## Rules Library
+## Test Library
 
 <details open>
-<summary>📄 <b>RulesLibrary.spec.ts</b> (12 tests, 15 scenarios)</summary>
+<summary>📄 <b>TestLibrary.spec.ts</b> (14 tests, 30 scenarios)</summary>
 
-> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/RulesLibrary.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/RulesLibrary.spec.ts)
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/TestLibrary.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/TestLibrary.spec.ts)
 
-### Rules Library
+### Test Library
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Rules Library** - should navigate to Rules Library page | Navigate to Rules Library page |
-| 2 | **Rules Library** - should display test definitions table with columns | Display test definitions table with columns |
-| 3 | **Rules Library** - should display system test definitions | Display system test definitions |
-| 4 | **Rules Library** - should create, edit, and delete a test definition | Create, edit, and delete a test definition |
+| 1 | **Test Library** - should navigate to Test Library page | Navigate to Test Library page |
+| 2 | **Test Library** - should display test definitions table with columns | Display test definitions table with columns |
+| 3 | **Test Library** - should display system test definitions | Display system test definitions |
+| 4 | **Test Library** - should create, edit, and delete a test definition | Create, edit, and delete a test definition |
 | | ↳ *Create a new test definition* | |
 | | ↳ *Edit Test Definition* | |
 | | ↳ *should enable/disable test definition* | |
 | | ↳ *should delete a test definition* | |
-| 5 | **Rules Library** - should validate required fields in create form | Validate required fields in create form |
-| 6 | **Rules Library** - should cancel form and close drawer | Cancel form and close drawer |
-| 7 | **Rules Library** - should display pagination when test definitions exceed page size | Display pagination when test definitions exceed page size |
-| 8 | **Rules Library** - should search and filter test definitions | Search and filter test definitions |
-| 9 | **Rules Library** - should display test platform badges correctly | Display test platform badges correctly |
-| 10 | **Rules Library** - should not show edit and delete buttons for system test definitions | Not show edit and delete buttons for system test definitions |
-| 11 | **Rules Library** - should allow enabling/disabling system test definitions | Allow enabling/disabling system test definitions |
-| 12 | **Rules Library** - should display correct provider type for test definitions | Display correct provider type for test definitions |
+| 5 | **Test Library** - should validate required fields in create form | Validate required fields in create form |
+| 6 | **Test Library** - should cancel form and close drawer | Cancel form and close drawer |
+| 7 | **Test Library** - should display pagination when test definitions exceed page size | Display pagination when test definitions exceed page size |
+| 8 | **Test Library** - should display test platform badges correctly | Display test platform badges correctly |
+| 9 | **Test Library** - should not show edit and delete buttons for system test definitions | Not show edit and delete buttons for system test definitions |
+| 10 | **Test Library** - should allow enabling/disabling system test definitions | Allow enabling/disabling system test definitions |
+| 11 | **Test Library** - should disable toggle for external test definitions | Disable toggle for external test definitions |
+| 12 | **Test Library** - should handle external test definitions with read-only fields | Handle external test definitions with read-only fields |
+| | ↳ *Create external test definition* | |
+| | ↳ *Verify fields are read-only in edit mode* | |
+| | ↳ *Verify allowed fields can be edited* | |
+| | ↳ *Delete external test definition* | |
+| 13 | **Test Library** - should handle supported services field correctly | Handle supported services field correctly |
+| | ↳ *Create test definition with specific supported services* | |
+| | ↳ *Verify supported services are saved correctly* | |
+| | ↳ *Verify test definition appears when filtering by supported services* | |
+| | ↳ *Edit and change supported services* | |
+| | ↳ *Verify updated supported services are persisted* | |
+| | ↳ *Clear all supported services (should apply to all services)* | |
+| | ↳ *Delete test definition* | |
+| 14 | **Test Library** - should maintain page on edit and reset to first page on delete | Maintain page on edit and reset to first page on delete |
+| | ↳ *Create a test definition starting with "z"* | |
+| | ↳ *Change page size to 25* | |
+| | ↳ *Navigate until we find our test definition or reach last page* | |
+| | ↳ *Edit the test definition and verify we stay on the same page* | |
+| | ↳ *Delete the test definition and verify redirect to first page* | |
 
 </details>
+
+<details open>
+<summary>📄 <b>TestDefinitionFilters.spec.ts</b> (7 tests, 24 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataQuality/TestDefinitionFilters.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataQuality/TestDefinitionFilters.spec.ts)
+
+### Test Definition Filters
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Test Definition Filters** - should filter test definitions with single-select filters | Filter test definitions with single-select filters |
+| | ↳ *Select entity type filter* | |
+| | ↳ *Verify radio button is checked* | |
+| | ↳ *Change filter selection* | |
+| | ↳ *Verify previous selection is cleared* | |
+| 2 | **Test Definition Filters** - should restore and persist filters from URL | Restore and persist filters from URL |
+| | ↳ *Load page with URL parameters* | |
+| | ↳ *Verify filters are pre-selected* | |
+| | ↳ *Verify persistence through browser navigation* | |
+| 3 | **Test Definition Filters** - should handle filter UI interactions correctly | Handle filter UI interactions correctly |
+| | ↳ *Verify radio button rendering* | |
+| | ↳ *Test toggle selection behavior* | |
+| | ↳ *Verify update button and dropdown closing* | |
+| | ↳ *Verify no clear all button in single-select mode* | |
+| 4 | **Test Definition Filters** - should handle multiple filter operations | Handle multiple filter operations |
+| | ↳ *Apply first filter* | |
+| | ↳ *Apply second filter* | |
+| | ↳ *Remove first filter* | |
+| | ↳ *Remove second filter* | |
+| 5 | **Test Definition Filters** - should make correct API calls and show filtered results | Make correct API calls and show filtered results |
+| | ↳ *Apply filter and validate API* | |
+| | ↳ *Verify filtered results in UI* | |
+| 6 | **Test Definition Filters** - should reset pagination when filters change | Reset pagination when filters change |
+| | ↳ *Apply initial filter* | |
+| | ↳ *Navigate to page 2 and verify pagination resets on filter change* | |
+| 7 | **Test Definition Filters** - should not revert to previous value when changing filter selection | Not revert to previous value when changing filter selection |
+| | ↳ *Select initial testPlatform filter (dbt)* | |
+| | ↳ *Change to a different testPlatform filter (OpenMetadata)* | |
+| | ↳ *Verify the new filter persists after page reload* | |
+| | ↳ *Change back to previous testPlatform filter (dbt)* | |
+| | ↳ *Verify final selection persists* | |
+
+</details>
+
+
+---
+
+<div id="rules-library"></div>
+
+## Rules Library
 
 <details open>
 <summary>📄 <b>TestDefinitionPermissions.spec.ts</b> (7 tests, 7 scenarios)</summary>

@@ -436,13 +436,12 @@ public class OpenSearchSearchManager implements SearchManagementClient {
 
     // Handle searchAfter for deep pagination
     if (searchAfter != null && searchAfter.length > 0) {
-      List<String> searchAfterList = new ArrayList<>();
+      List<FieldValue> searchAfterList = new ArrayList<>();
       for (Object value : searchAfter) {
         if (value instanceof FieldValue) {
-          FieldValue fieldValue = (FieldValue) value;
-          searchAfterList.add(String.valueOf(fieldValue._get()));
+          searchAfterList.add((FieldValue) value);
         } else {
-          searchAfterList.add(String.valueOf(value));
+          searchAfterList.add(FieldValue.of(String.valueOf(value)));
         }
       }
       requestBuilder.searchAfter(searchAfterList);
@@ -510,9 +509,10 @@ public class OpenSearchSearchManager implements SearchManagementClient {
 
         if (hits.size() <= size) {
           Hit<JsonData> lastHit = hits.getLast();
-          List<String> sortValues = lastHit.sort();
+          List<FieldValue> sortValues = lastHit.sort();
           if (sortValues != null && !sortValues.isEmpty()) {
-            lastDocumentsInBatch = sortValues.stream().map(String::valueOf).toArray(String[]::new);
+            lastDocumentsInBatch =
+                sortValues.stream().map(fv -> String.valueOf(fv._get())).toArray(String[]::new);
           }
         }
       }
@@ -1040,16 +1040,6 @@ public class OpenSearchSearchManager implements SearchManagementClient {
     // Apply RBAC query with caching
     applyRbacQueryWithCaching(subjectContext, requestBuilder);
 
-    // Check if semantic search is enabled and override the query
-    if (Boolean.TRUE.equals(request.getSemanticSearch())) {
-      SemanticSearchQueryBuilder semanticBuilder = new SemanticSearchQueryBuilder();
-      Query semanticQuery = semanticBuilder.buildSemanticQuery(request);
-      if (semanticQuery != null) {
-        requestBuilder.query(semanticQuery);
-        LOG.debug("Semantic search is enabled for this query");
-      }
-    }
-
     // Apply query filter
     if (!nullOrEmpty(request.getQueryFilter()) && !request.getQueryFilter().equals("{}")) {
       try {
@@ -1088,8 +1078,10 @@ public class OpenSearchSearchManager implements SearchManagementClient {
 
     // Handle search_after for pagination
     if (!nullOrEmpty(request.getSearchAfter())) {
-      List<String> searchAfterValues =
-          request.getSearchAfter().stream().map(String::valueOf).collect(Collectors.toList());
+      List<FieldValue> searchAfterValues =
+          request.getSearchAfter().stream()
+              .map(v -> FieldValue.of(String.valueOf(v)))
+              .collect(Collectors.toList());
       requestBuilder.searchAfter(searchAfterValues);
     }
 
