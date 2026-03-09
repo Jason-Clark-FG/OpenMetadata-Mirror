@@ -579,6 +579,10 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
         throw new TokenException("invalid_client", "Client authentication failed");
       }
 
+      if (grantType == null || grantType.isEmpty()) {
+        throw new TokenException("invalid_request", "grant_type parameter is required");
+      }
+
       if ("authorization_code".equals(grantType)) {
         // Handle authorization code exchange
         String code = params.get("code");
@@ -626,8 +630,12 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
         token = authProvider.exchangeAuthorizationCode(client, authCode).join();
 
       } else if ("refresh_token".equals(grantType)) {
+        String refreshTokenValue = params.get("refresh_token");
+        if (refreshTokenValue == null || refreshTokenValue.isEmpty()) {
+          throw new TokenException("invalid_request", "refresh_token parameter is required");
+        }
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(params.get("refresh_token"));
+        refreshToken.setToken(refreshTokenValue);
         refreshToken.setClientId(clientId);
 
         String scopeParam = params.get("scope");
@@ -637,7 +645,8 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
 
       } else {
         throw new TokenException(
-            "unsupported_grant_type", "Grant type not supported: " + grantType);
+            "unsupported_grant_type",
+            "Only authorization_code and refresh_token grant types are supported");
       }
 
       response.setContentType("application/json");

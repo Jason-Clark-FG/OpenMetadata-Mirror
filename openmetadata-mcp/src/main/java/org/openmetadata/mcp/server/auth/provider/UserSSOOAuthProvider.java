@@ -1041,6 +1041,10 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
   }
 
   private boolean verifyPKCE(String codeVerifier, String codeChallenge) {
+    if (codeVerifier == null || codeChallenge == null) {
+      LOG.warn("PKCE verification failed: code_verifier or code_challenge is null");
+      return false;
+    }
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       byte[] hash = digest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII));
