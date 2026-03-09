@@ -1,0 +1,25 @@
+{
+  "cli_version": "0.5.0",
+  "checkpoint_id": "bab0e6b95f79",
+  "strategy": "manual-commit",
+  "branch": "columns",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "openmetadata-ui/src/main/resources/ui/src/pages/TeamsPage/TeamsPage.test.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ba/b0e6b95f79/0/metadata.json",
+      "transcript": "/ba/b0e6b95f79/0/full.jsonl",
+      "content_hash": "/ba/b0e6b95f79/0/content_hash.txt",
+      "prompt": "/ba/b0e6b95f79/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 116,
+    "cache_creation_tokens": 325288,
+    "cache_read_tokens": 8559890,
+    "output_tokens": 57145,
+    "api_call_count": 104
+  }
+}
