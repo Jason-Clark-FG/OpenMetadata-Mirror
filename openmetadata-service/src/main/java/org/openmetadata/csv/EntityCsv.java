@@ -317,6 +317,13 @@ public abstract class EntityCsv<T extends EntityInterface> {
             ".*json/data/%s/%sCsvDocumentation.json$", effectiveEntityType, effectiveEntityType);
     try {
       List<String> jsonDataFiles = EntityUtil.getJsonDataResources(path);
+      if (jsonDataFiles.isEmpty()) {
+        LOG.error(
+            "FATAL - Failed to load CSV documentation for entity {} from the path {}",
+            effectiveEntityType,
+            path);
+        return null;
+      }
       String json =
           CommonUtil.getResourceAsStream(
               EntityRepository.class.getClassLoader(), jsonDataFiles.get(0));
@@ -2095,11 +2102,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
         }
         if (parent == null) {
           if (Boolean.TRUE.equals(importResult.getDryRun())) {
-            parent =
-                new Column()
-                    .withName(getLocalColumnName(table.getFullyQualifiedName(), parentFqn))
-                    .withFullyQualifiedName(
-                        table.getFullyQualifiedName() + Entity.SEPARATOR + parentFqn);
+            parent = createMissingParentHierarchyForDryRun(table, parentFqn);
           } else {
             deferredFailure(csvRecord, "Parent column not found: " + parentFqn);
             return;
@@ -2110,6 +2113,38 @@ public abstract class EntityCsv<T extends EntityInterface> {
         parent.getChildren().add(column);
       }
     }
+  }
+
+  private Column createMissingParentHierarchyForDryRun(Table table, String parentFqn) {
+    String parentFullyQualifiedName = table.getFullyQualifiedName() + Entity.SEPARATOR + parentFqn;
+    String[] parentParts = FullyQualifiedName.split(parentFqn);
+    try {
+      return findColumnWithChildren(table.getColumns(), parentFullyQualifiedName);
+    } catch (Exception ignored) {
+      // Build any missing parent hierarchy so dry-run imports reflect the final structure.
+    }
+
+    Column parent =
+        new Column()
+            .withName(parentParts[parentParts.length - 1])
+            .withFullyQualifiedName(parentFullyQualifiedName);
+
+    if (parentParts.length == 1) {
+      if (table.getColumns() == null) {
+        table.setColumns(new ArrayList<>());
+      }
+      table.getColumns().add(parent);
+      return parent;
+    }
+
+    String grandParentFqn =
+        String.join(Entity.SEPARATOR, Arrays.copyOf(parentParts, parentParts.length - 1));
+    Column grandParent = createMissingParentHierarchyForDryRun(table, grandParentFqn);
+    if (grandParent.getChildren() == null) {
+      grandParent.setChildren(new ArrayList<>());
+    }
+    grandParent.getChildren().add(parent);
+    return parent;
   }
 
   private Integer parseDataLength(

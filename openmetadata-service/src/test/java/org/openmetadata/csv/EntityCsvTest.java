@@ -2,8 +2,10 @@ package org.openmetadata.csv;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.csv.CsvUtil.LINE_SEPARATOR;
@@ -27,8 +29,10 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
@@ -39,12 +43,15 @@ import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.csv.CsvDocumentation;
 import org.openmetadata.schema.type.csv.CsvErrorType;
 import org.openmetadata.schema.type.csv.CsvFile;
 import org.openmetadata.schema.type.csv.CsvHeader;
 import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.TypeRegistry;
 import org.openmetadata.service.jdbi3.TableRepository;
+import com.networknt.schema.Schema;
 
 public class EntityCsvTest {
   private static final List<CsvHeader> CSV_HEADERS;
@@ -542,6 +549,285 @@ public class EntityCsvTest {
     assertTrue(new TestCsv().failed("boom", CsvErrorType.PARSER_FAILURE).contains("boom"));
   }
 
+  @Test
+  void test_exportCsvWritesRecordsAndReportsBatchProgress() throws IOException {
+    TestCsv testCsv = new TestCsv();
+    Table singleEntity = tableEntity("orders", "service.db.schema.orders", "Orders table");
+
+    assertEquals(
+        HEADER_STRING + "orders,service.db.schema.orders,Orders table" + LINE_SEPARATOR,
+        testCsv.exportCsv(singleEntity));
+
+    List<EntityInterface> entities = new ArrayList<>();
+    for (int i = 0; i < EntityCsv.DEFAULT_BATCH_SIZE + 1; i++) {
+      entities.add(tableEntity("table" + i, "service.db.schema.table" + i, "description-" + i));
+    }
+
+    List<Integer> exportedCounts = new ArrayList<>();
+    List<Integer> totalCounts = new ArrayList<>();
+    List<String> messages = new ArrayList<>();
+
+    String csv =
+        testCsv.exportCsv(
+            entities,
+            (exported, total, message) -> {
+              exportedCounts.add(exported);
+              totalCounts.add(total);
+              messages.add(message);
+            });
+
+    assertEquals(List.of(EntityCsv.DEFAULT_BATCH_SIZE, EntityCsv.DEFAULT_BATCH_SIZE + 1), exportedCounts);
+    assertEquals(List.of(EntityCsv.DEFAULT_BATCH_SIZE + 1, EntityCsv.DEFAULT_BATCH_SIZE + 1), totalCounts);
+    assertTrue(messages.get(0).contains("batch 1"));
+    assertTrue(messages.get(1).contains("batch 2"));
+    assertTrue(csv.contains("table0,service.db.schema.table0,description-0"));
+    assertTrue(csv.contains("table100,service.db.schema.table100,description-100"));
+
+    String csvWithoutCallback = testCsv.exportCsv(entities.subList(0, 1));
+    assertEquals(
+        HEADER_STRING + "table0,service.db.schema.table0,description-0" + LINE_SEPARATOR,
+        csvWithoutCallback);
+  }
+
+  @Test
+  void test_getCsvDocumentationLoadsKnownResourcesAndHandlesMissingEntityType() {
+    CsvDocumentation tableDocumentation = EntityCsv.getCsvDocumentation(Entity.TABLE, false);
+    assertNotNull(tableDocumentation);
+    assertTrue(tableDocumentation.getSummary().contains("Table CSV file"));
+    assertEquals("column.name", tableDocumentation.getHeaders().get(0).getName());
+
+    CsvDocumentation recursiveDocumentation = EntityCsv.getCsvDocumentation(Entity.TABLE, true);
+    assertNotNull(recursiveDocumentation);
+    assertTrue(recursiveDocumentation.getSummary().contains("Entity CSV file"));
+
+    assertNull(EntityCsv.getCsvDocumentation("missing-entity-type", false));
+  }
+
+  @Test
+  void test_extensionValidationParsesEntityReferenceCustomProperties() throws IOException {
+    TestCsv testCsv = new TestCsv();
+    testCsv.enableProcessing();
+    testCsv.addEntity(Entity.USER, "alice", user("alice"));
+    testCsv.addEntity(Entity.USER, "bob", user("bob"));
+    testCsv.addEntity(Entity.TEAM, "engineering", team("engineering"));
+
+    Schema schema = mock(Schema.class);
+    Mockito.when(schema.validate(Mockito.any())).thenReturn(List.of());
+
+    TypeRegistry registry = mock(TypeRegistry.class);
+    Mockito.when(registry.getSchema(Entity.TABLE, "owner")).thenReturn(schema);
+    Mockito.when(registry.getSchema(Entity.TABLE, "reviewers")).thenReturn(schema);
+
+    try (MockedStatic<TypeRegistry> typeRegistry = Mockito.mockStatic(TypeRegistry.class)) {
+      typeRegistry.when(TypeRegistry::instance).thenReturn(registry);
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType(Entity.TABLE, "owner"))
+          .thenReturn("entityReference");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType(Entity.TABLE, "reviewers"))
+          .thenReturn("entityReferenceList");
+
+      Map<String, Object> extension =
+          testCsv.parseExtension(
+              singleRecord(
+                  testCsv,
+                  "",
+                  "owner:user:alice;reviewers:user:bob|team:engineering",
+                  ""),
+              1);
+
+      EntityReference owner = assertInstanceOf(EntityReference.class, extension.get("owner"));
+      assertEquals("alice", owner.getName());
+      @SuppressWarnings("unchecked")
+      List<EntityReference> reviewers = (List<EntityReference>) extension.get("reviewers");
+      assertEquals(List.of("bob", "engineering"), reviewers.stream().map(EntityReference::getName).toList());
+      assertTrue(testCsv.isProcessRecord());
+    }
+  }
+
+  @Test
+  void test_updateColumnsFromCsvRecursiveCreatesMissingParentHierarchyInDryRun()
+      throws Exception {
+    TestCsv testCsv = new TestCsv();
+    testCsv.enableProcessing();
+    testCsv.setDryRun(true);
+    Table table = new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+
+    testCsv.updateColumns(
+        table,
+        columnRecord(
+            testCsv,
+            "address.location.street",
+            "Street",
+            "Street column",
+            "service.db.schema.orders.address.location.street",
+            "VARCHAR(64)",
+            "VARCHAR",
+            "",
+            "64"));
+
+    assertEquals(1, table.getColumns().size());
+    Column address = table.getColumns().get(0);
+    assertEquals("address", address.getName());
+    assertNotNull(address.getChildren());
+    assertEquals(1, address.getChildren().size());
+    Column location = address.getChildren().get(0);
+    assertEquals("location", location.getName());
+    assertNotNull(location.getChildren());
+    assertEquals(1, location.getChildren().size());
+    Column street = location.getChildren().get(0);
+    assertEquals("street", street.getName());
+    assertEquals("Street", street.getDisplayName());
+    assertEquals("Street column", street.getDescription());
+    assertEquals("VARCHAR(64)", street.getDataTypeDisplay());
+    assertEquals("service.db.schema.orders.address.location.street", street.getFullyQualifiedName());
+    assertEquals(64, street.getDataLength());
+    assertEquals(0, street.getOrdinalPosition());
+  }
+
+  @Test
+  void test_updateColumnsFromCsvRecursiveRejectsMissingParentOutsideDryRun() throws Exception {
+    TestCsv testCsv = new TestCsv();
+    testCsv.enableProcessing();
+    testCsv.setDryRun(false);
+    Table table = new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+
+    testCsv.updateColumns(
+        table,
+        columnRecord(
+            testCsv,
+            "address.street",
+            "Street",
+            "",
+            "service.db.schema.orders.address.street",
+            "VARCHAR(32)",
+            "VARCHAR",
+            "",
+            "32"));
+
+    assertTrue(table.getColumns().isEmpty());
+    assertFalse(testCsv.isProcessRecord());
+    assertEquals(ApiStatus.FAILURE, testCsv.status());
+    assertEquals(1, testCsv.rowsFailed());
+  }
+
+  @Test
+  void test_updateColumnsFromCsvRecursiveValidatesDataTypeRequirements() throws Exception {
+    Table invalidTypeTable =
+        new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+    TestCsv missingTypeCsv = new TestCsv();
+    missingTypeCsv.enableProcessing();
+    missingTypeCsv.setDryRun(true);
+    IllegalArgumentException missingType =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                missingTypeCsv.updateColumns(
+                    invalidTypeTable,
+                    columnRecord(
+                        missingTypeCsv,
+                        "customer_id",
+                        "",
+                        "",
+                        "service.db.schema.orders.customer_id",
+                        "",
+                        "",
+                        "",
+                        "")));
+    assertTrue(missingType.getMessage().contains("Column dataType is mandatory"));
+
+    TestCsv invalidDataTypeCsv = new TestCsv();
+    invalidDataTypeCsv.enableProcessing();
+    invalidDataTypeCsv.setDryRun(true);
+    IllegalArgumentException invalidDataType =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                invalidDataTypeCsv.updateColumns(
+                    new Table()
+                        .withFullyQualifiedName("service.db.schema.orders")
+                        .withColumns(new ArrayList<>()),
+                    columnRecord(
+                        invalidDataTypeCsv,
+                        "customer_id",
+                        "",
+                        "",
+                        "service.db.schema.orders.customer_id",
+                        "",
+                        "NOT_A_TYPE",
+                        "",
+                        "")));
+    assertTrue(invalidDataType.getMessage().contains("Invalid dataType"));
+
+    TestCsv missingArrayTypeCsv = new TestCsv();
+    missingArrayTypeCsv.enableProcessing();
+    missingArrayTypeCsv.setDryRun(true);
+    IllegalArgumentException missingArrayType =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                missingArrayTypeCsv.updateColumns(
+                    new Table()
+                        .withFullyQualifiedName("service.db.schema.orders")
+                        .withColumns(new ArrayList<>()),
+                    columnRecord(
+                        missingArrayTypeCsv,
+                        "customer_ids",
+                        "",
+                        "",
+                        "service.db.schema.orders.customer_ids",
+                        "",
+                        "ARRAY",
+                        "",
+                        "")));
+    assertTrue(missingArrayType.getMessage().contains("Array data type is mandatory"));
+
+    TestCsv invalidLengthCsv = new TestCsv();
+    invalidLengthCsv.enableProcessing();
+    invalidLengthCsv.setDryRun(true);
+    IllegalArgumentException invalidLength =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                invalidLengthCsv.updateColumns(
+                    new Table()
+                        .withFullyQualifiedName("service.db.schema.orders")
+                        .withColumns(new ArrayList<>()),
+                    columnRecord(
+                        invalidLengthCsv,
+                        "customer_name",
+                        "",
+                        "",
+                        "service.db.schema.orders.customer_name",
+                        "",
+                        "VARCHAR",
+                        "",
+                        "bad")));
+    assertTrue(invalidLength.getMessage().contains("Invalid data length"));
+
+    TestCsv tolerantLengthCsv = new TestCsv();
+    tolerantLengthCsv.enableProcessing();
+    tolerantLengthCsv.setDryRun(true);
+    Table table =
+        new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+
+    tolerantLengthCsv.updateColumns(
+        table,
+        columnRecord(
+            tolerantLengthCsv,
+            "total",
+            "",
+            "",
+            "service.db.schema.orders.total",
+            "",
+            "INT",
+            "",
+            "not-a-number"));
+
+    assertEquals(1, table.getColumns().size());
+    assertNull(table.getColumns().get(0).getDataLength());
+  }
+
   private static class TestCsv extends EntityCsv<EntityInterface> {
     private final Map<String, EntityInterface> entitiesByTypeAndName = new HashMap<>();
 
@@ -568,6 +854,10 @@ public class EntityCsvTest {
 
     private Integer rowsFailed() {
       return importResult.getNumberOfRowsFailed();
+    }
+
+    private void setDryRun(boolean dryRun) {
+      importResult.withDryRun(dryRun);
     }
 
     private Boolean parseBoolean(CSVRecord csvRecord, int fieldNumber) throws IOException {
@@ -644,13 +934,60 @@ public class EntityCsvTest {
     }
 
     @Override
-    protected void addRecord(CsvFile csvFile, EntityInterface entity) {}
+    protected void addRecord(CsvFile csvFile, EntityInterface entity) {
+      addRecord(
+          csvFile,
+          List.of(
+              entity.getName(),
+              entity.getFullyQualifiedName(),
+              nullOrEmpty(entity.getDescription()) ? "" : entity.getDescription()));
+    }
+
+    private void updateColumns(Table table, CSVRecord csvRecord) throws Exception {
+      Method method =
+          EntityCsv.class.getDeclaredMethod(
+              "updateColumnsFromCsvRecursive", Table.class, CSVRecord.class, CSVPrinter.class);
+      method.setAccessible(true);
+      try {
+        method.invoke(this, table, csvRecord, mock(CSVPrinter.class));
+      } catch (InvocationTargetException e) {
+        if (e.getCause() instanceof Exception exception) {
+          throw exception;
+        }
+        throw new RuntimeException(e.getCause());
+      }
+    }
   }
 
   private static CSVRecord singleRecord(TestCsv testCsv, String first, String second, String third) {
     List<String> records = new ArrayList<>();
     records.add(recordToString(List.of(first, second, third)));
     return testCsv.parse(createCsv(CSV_HEADERS, records), true).get(1);
+  }
+
+  private static CSVRecord columnRecord(
+      TestCsv testCsv,
+      String columnFqn,
+      String displayName,
+      String description,
+      String columnFullyQualifiedName,
+      String dataTypeDisplay,
+      String dataType,
+      String arrayDataType,
+      String dataLength) {
+    List<String> fields = new ArrayList<>();
+    for (int i = 0; i < 18; i++) {
+      fields.add("");
+    }
+    fields.set(0, columnFqn);
+    fields.set(1, displayName);
+    fields.set(2, description);
+    fields.set(13, columnFullyQualifiedName);
+    fields.set(14, dataTypeDisplay);
+    fields.set(15, dataType);
+    fields.set(16, arrayDataType);
+    fields.set(17, dataLength);
+    return testCsv.parse(recordToString(fields)).get(0);
   }
 
   private static User user(String name) {
@@ -685,6 +1022,14 @@ public class EntityCsvTest {
     glossaryTerm.setFullyQualifiedName(fullyQualifiedName);
     glossaryTerm.setEntityStatus(status);
     return glossaryTerm;
+  }
+
+  private static Table tableEntity(String name, String fullyQualifiedName, String description) {
+    Table table = new Table();
+    table.setName(name);
+    table.setFullyQualifiedName(fullyQualifiedName);
+    table.setDescription(description);
+    return table;
   }
 
   @SuppressWarnings("unchecked")
