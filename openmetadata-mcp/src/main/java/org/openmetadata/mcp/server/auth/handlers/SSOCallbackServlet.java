@@ -85,16 +85,19 @@ public class SSOCallbackServlet extends HttpServlet {
   private final AuthenticationCodeFlowHandler ssoHandler;
   private final McpPendingAuthRequestRepository pendingAuthRepository;
   private final SSOAuthMechanism.SsoServiceType ssoServiceType;
+  private final String baseUrl;
   private volatile IdTokenValidator idTokenValidator;
 
   public SSOCallbackServlet(
       UserSSOOAuthProvider userSSOProvider,
       AuthenticationCodeFlowHandler ssoHandler,
-      SSOAuthMechanism.SsoServiceType ssoServiceType) {
+      SSOAuthMechanism.SsoServiceType ssoServiceType,
+      String baseUrl) {
     this.userSSOProvider = userSSOProvider;
     this.ssoHandler = ssoHandler;
     this.pendingAuthRepository = new McpPendingAuthRequestRepository();
     this.ssoServiceType = ssoServiceType;
+    this.baseUrl = baseUrl;
 
     LOG.info("Initialized SSOCallbackServlet for MCP OAuth with SSO provider: {}", ssoServiceType);
   }
@@ -243,10 +246,10 @@ public class SSOCallbackServlet extends HttpServlet {
         LOG.debug("Restored pac4j code verifier for client {}", clientName);
       }
 
-      // Store MCP callback URL in session so handleCallback() uses it for token exchange
-      // instead of the shared client's default callback URL. This avoids mutating the shared
-      // pac4j client which would race with concurrent UI auth flows.
-      String mcpCallbackUrl = request.getRequestURL().toString();
+      // Use the configured base URL (not request.getRequestURL()) for the token exchange.
+      // Behind a TLS-terminating proxy like ngrok, getRequestURL() returns http:// but the
+      // authorize request used https:// from the config. Azure requires these to match exactly.
+      String mcpCallbackUrl = baseUrl + "/mcp/callback";
       session.setAttribute(AuthenticationCodeFlowHandler.SESSION_SSO_CALLBACK_URL, mcpCallbackUrl);
       LOG.debug("Set session SSO callback URL to: {}", mcpCallbackUrl);
 

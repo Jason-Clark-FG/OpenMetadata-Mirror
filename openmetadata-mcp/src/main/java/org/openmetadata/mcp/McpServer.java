@@ -137,38 +137,31 @@ public class McpServer implements McpServerProvider {
       ServletHolder servletHolderSSE = new ServletHolder(statelessOauthTransport);
       contextHandler.addServlet(servletHolderSSE, "/mcp/*");
 
-      // Register SSO callback endpoint only for SSO providers (not basic auth)
+      // Always register SSO callback endpoint — the auth provider can be changed at runtime
+      // via the DB, so the servlet must be available regardless of the provider at startup.
       org.openmetadata.schema.api.security.AuthenticationConfiguration authConfig =
           SecurityConfigurationManager.getCurrentAuthConfig();
-      boolean isBasicAuth =
-          authConfig != null
-              && authConfig.getProvider() != null
-              && authConfig.getProvider().toString().equalsIgnoreCase("basic");
-
-      if (!isBasicAuth) {
-        org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType ssoServiceType =
-            org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.GOOGLE;
-        try {
-          if (authConfig != null && authConfig.getProvider() != null) {
-            String providerStr = authConfig.getProvider().toString().toUpperCase();
-            ssoServiceType =
-                org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.valueOf(providerStr);
-          }
-        } catch (Exception e) {
-          LOG.warn("Could not determine SSO provider type, using default GOOGLE", e);
+      org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType ssoServiceType =
+          org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.GOOGLE;
+      try {
+        if (authConfig != null && authConfig.getProvider() != null) {
+          String providerStr = authConfig.getProvider().toString().toUpperCase();
+          ssoServiceType =
+              org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.valueOf(providerStr);
         }
-
-        org.openmetadata.service.security.AuthenticationCodeFlowHandler ssoHandler =
-            org.openmetadata.service.security.AuthenticationCodeFlowHandler.getInstance();
-        org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet ssoCallbackServlet =
-            new org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet(
-                authProvider, ssoHandler, ssoServiceType);
-        ServletHolder ssoCallbackHolder = new ServletHolder(ssoCallbackServlet);
-        contextHandler.addServlet(ssoCallbackHolder, "/mcp/callback");
-        LOG.info("Registered SSO callback endpoint at /mcp/callback");
-      } else {
-        LOG.info("Basic auth provider detected, skipping SSO callback registration");
+      } catch (Exception e) {
+        LOG.warn("Could not determine SSO provider type, using default GOOGLE", e);
       }
+
+      org.openmetadata.service.security.AuthenticationCodeFlowHandler ssoHandler =
+          org.openmetadata.service.security.AuthenticationCodeFlowHandler.getInstance();
+      org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet ssoCallbackServlet =
+          new org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet(
+              authProvider, ssoHandler, ssoServiceType, baseUrl);
+      ServletHolder ssoCallbackHolder = new ServletHolder(ssoCallbackServlet);
+      contextHandler.addServlet(ssoCallbackHolder, "/mcp/callback");
+      LOG.info(
+          "Registered SSO callback endpoint at /mcp/callback for provider: {}", ssoServiceType);
 
       // Register Basic Auth login handler with the transport provider.
       // The /mcp/* wildcard servlet intercepts all /mcp/ paths, so dedicated servlets at

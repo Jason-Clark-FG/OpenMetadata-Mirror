@@ -537,10 +537,41 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
     }
     String redirectUrl = UriUtils.constructRedirectUri(pendingRequest.redirectUri(), queryParams);
 
-    // Redirect FIRST — this is the critical path. If delete throws after redirect,
-    // the user still gets their auth code. Pending request cleaned up by cleanup job.
-    LOG.info("Redirecting to client callback with authorization code");
-    response.sendRedirect(redirectUrl);
+    // Serve an HTML success page that auto-redirects to the client callback.
+    // A raw 302 redirect leaves the SSO provider's login page visible in the browser
+    // (e.g., Azure's "Enter password" form stuck with loading dots). By serving our own
+    // HTML page first, the browser replaces the SSO page with a clear success message.
+    LOG.info("Serving success page with redirect to client callback");
+    response.setStatus(HttpServletResponse.SC_OK);
+    response.setContentType("text/html; charset=UTF-8");
+    String safeRedirectUrl = redirectUrl.replace("\"", "&quot;").replace("'", "&#39;");
+    response
+        .getWriter()
+        .write(
+            "<!DOCTYPE html><html><head>"
+                + "<meta charset=\"UTF-8\">"
+                + "<meta http-equiv=\"refresh\" content=\"1;url="
+                + safeRedirectUrl
+                + "\">"
+                + "<style>"
+                + "body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+                + "display:flex;justify-content:center;align-items:center;min-height:100vh;"
+                + "margin:0;background:#f5f5f5;color:#333}"
+                + ".card{text-align:center;background:#fff;border-radius:12px;"
+                + "padding:48px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}"
+                + "h1{color:#2e7d32;margin:0 0 12px}"
+                + "p{margin:4px 0;color:#666}"
+                + "</style></head><body>"
+                + "<div class=\"card\">"
+                + "<h1>Authentication Successful</h1>"
+                + "<p>Redirecting back to your application...</p>"
+                + "<p style=\"font-size:13px;margin-top:16px\">"
+                + "If you are not redirected automatically, you can close this window.</p>"
+                + "</div>"
+                + "<script>setTimeout(function(){window.location.href=\""
+                + safeRedirectUrl
+                + "\"},500);</script>"
+                + "</body></html>");
 
     // Best-effort cleanup — failure here doesn't affect the user
     try {
