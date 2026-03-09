@@ -62,6 +62,7 @@ from metadata.ingestion.source.dashboard.microstrategy.models import (
     MstrDataset,
     MstrPage,
 )
+from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.utils import fqn
 from metadata.utils.filters import filter_by_chart, filter_by_datamodel
 from metadata.utils.helpers import clean_uri, get_standard_chart_type
@@ -224,7 +225,11 @@ class MicrostrategySource(DashboardServiceSource):
             )
 
             try:
-                lineage_parser = LineageParser(cube_sql, dialect=dialect)
+                lineage_parser = LineageParser(
+                    cube_sql,
+                    dialect=dialect,
+                    parser_type=self.get_query_parser_type(),
+                )
                 query_hash = lineage_parser.query_hash
                 for table in lineage_parser.source_tables:
                     table_entities = get_table_entities_from_query(
@@ -345,7 +350,7 @@ class MicrostrategySource(DashboardServiceSource):
                 parsed_column = {
                     "dataTypeDisplay": available_object.type.title(),
                     "dataType": DataType.UNKNOWN,
-                    "name": available_object.name,
+                    "name": truncate_column_name(available_object.name),
                     "displayName": available_object.name,
                 }
                 parsed_column_children = []

@@ -560,10 +560,11 @@ test.describe('Bulk Edit Entity', () => {
         .press('ArrowDown', { delay: 100 });
 
       await page.click('[type="button"] >> text="Next"', { force: true });
-
+      // total column count +1 for header row
+      const count = `${tableEntity.entityLinkColumnsName.length + 1}`;
       await validateImportStatus(page, {
-        passed: '9',
-        processed: '9',
+        passed: count,
+        processed: count,
         failed: '0',
       });
 
@@ -787,8 +788,8 @@ test.describe('Bulk Edit Entity', () => {
           page.getByRole('button', { name: 'Previous' })
         ).not.toBeVisible();
 
-        // Click on first cell and edit
-        await page.click('.rdg-cell[role="gridcell"]');
+      // Click on first cell and edit
+      await page.locator('.rdg-cell[role="gridcell"]').first().click();
 
         // Click on first cell and edit the nested glossary term
         await fillGlossaryRowDetails(

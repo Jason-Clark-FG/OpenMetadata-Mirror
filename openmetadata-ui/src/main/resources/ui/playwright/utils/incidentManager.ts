@@ -62,10 +62,17 @@ export const acknowledgeTask = async (data: {
 export const addAssigneeFromPopoverWidget = async (data: {
   page: Page;
   user: { name: string; displayName: string };
+  testCaseName?: string;
 }) => {
-  const { page, user } = data;
-  // direct assignment from edit assignee icon
-  await page.click('[data-testid="assignee"] [data-testid="edit-owner"]');
+  const { page, user, testCaseName } = data;
+
+  if (testCaseName) {
+    await page.getByRole('row', { name: testCaseName }).getByTestId('edit-owner').click();
+  } else {
+    // direct assignment from edit assignee icon
+    await page.getByTestId('assignee').getByTestId('edit-owner').click();
+  }
+
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -108,7 +115,7 @@ export const assignIncident = async (data: {
   await page.waitForSelector(`[data-testid="test-case-${testCaseName}"]`);
   if (direct) {
     // direct assignment from edit assignee icon
-    await addAssigneeFromPopoverWidget({ page, user });
+    await addAssigneeFromPopoverWidget({ page, user, testCaseName });
   } else {
     await page.click(`[data-testid="${testCaseName}-status"]`);
     await page.getByRole('menuitem', { name: 'Assigned' }).click();
@@ -177,7 +184,6 @@ export const triggerTestSuitePipelineAndWaitForSuccess = async (data: {
 
   // Wait for the run to complete
   await page.waitForTimeout(2000);
-  const oneHourBefore = Date.now() - 86400000;
 
   await expect
     .poll(
@@ -186,11 +192,12 @@ export const triggerTestSuitePipelineAndWaitForSuccess = async (data: {
           .get(
             `/api/v1/services/ingestionPipelines/${encodeURIComponent(
               pipeline?.['fullyQualifiedName']
-            )}/pipelineStatus?startTs=${oneHourBefore}&endTs=${Date.now()}`
+            )}/pipelineStatus?limit=1`
           )
           .then((res) => res.json());
+        const statuses = Array.isArray(response?.data) ? response.data : [];
 
-        return response.data[0]?.pipelineState;
+        return statuses[0]?.pipelineState ?? 'running';
       },
       {
         // Custom expect message for reporting, optional.

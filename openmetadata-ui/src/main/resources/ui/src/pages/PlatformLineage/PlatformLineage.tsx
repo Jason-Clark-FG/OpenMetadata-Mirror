@@ -42,6 +42,7 @@ import {
   ExportTypes,
   LINEAGE_EXPORT_SELECTOR,
 } from '../../constants/Export.constants';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import LineageProvider from '../../context/LineageProvider/LineageProvider';
 import { LineagePlatformView } from '../../context/LineageProvider/LineageProvider.interface';
@@ -68,7 +69,10 @@ import {
   getViewportForLineageExport,
 } from '../../utils/EntityLineageUtils';
 import { getOperationPermissions } from '../../utils/PermissionsUtils';
-import { getEncodedFqn } from '../../utils/StringsUtils';
+import {
+  escapeESReservedCharacters,
+  getEncodedFqn,
+} from '../../utils/StringsUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import './platform-lineage.less';
@@ -137,7 +141,7 @@ const PlatformLineage = () => {
         ];
 
         const response = await searchQuery({
-          query: value,
+          query: escapeESReservedCharacters(value),
           searchIndex: searchIndices,
           pageSize: PAGE_SIZE_BASE,
           queryFilter: getLineageEntityExclusionFilter(),
@@ -245,7 +249,9 @@ const PlatformLineage = () => {
           <Tooltip
             arrow
             placement="top"
-            title={t('label.export-as-type', { type: t('label.png') })}>
+            title={t('label.export-as-type', {
+              type: t('label.png-uppercase'),
+            })}>
             <StyledIconButton size="large" onClick={handleExport}>
               <DownloadIcon />
             </StyledIconButton>
@@ -343,6 +349,8 @@ const PlatformLineage = () => {
                     }),
                     subHeader: t(PAGE_HEADERS.PLATFORM_LINEAGE.subHeader),
                   }}
+                  learningPageId={LEARNING_PAGE_IDS.LINEAGE}
+                  title={t('label.lineage')}
                 />
               </Card>
             </Grid>

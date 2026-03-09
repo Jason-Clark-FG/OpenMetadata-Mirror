@@ -10,14 +10,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Box, Card, Divider, Stack, Typography } from '@mui/material';
 import { t } from 'i18next';
 import {
   isArray,
   isNil,
   isUndefined,
+  lowerCase,
   omit,
   omitBy,
+  parseInt,
   startCase,
   uniqBy,
 } from 'lodash';
@@ -383,7 +384,7 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
     displayDateInHeader = true,
   } = props;
 
-  if (active && payload && payload.length) {
+  if (active && payload?.length) {
     // we need to check if the xAxis is a date or not.
     const timestamp = displayDateInHeader
       ? dateTimeFormatter(payload[0].payload[timeStampKey] || 0)
@@ -392,63 +393,43 @@ export const CustomDQTooltip = (props: DataInsightChartTooltipProps) => {
     const payloadValue = uniqBy(payload, 'dataKey');
 
     return (
-      <Card
-        sx={(theme) => ({
-          p: '10px',
-          bgcolor: theme.palette.allShades.white,
-        })}>
-        <Typography
-          sx={(theme) => ({
-            color: theme.palette.allShades.gray[900],
-            fontWeight: theme.typography.fontWeightMedium,
-            fontSize: theme.typography.pxToRem(12),
-          })}>
+      <div className="tw:bg-primary tw:rounded-xl tw:border tw:border-border-secondary tw:shadow-md tw:p-2.5">
+        <p className="tw:m-0 tw:text-primary tw:font-medium tw:text-xs">
           {timestamp}
-        </Typography>
-        <Divider
-          sx={(theme) => ({
-            my: 2,
-            borderStyle: 'dashed',
-            borderColor: theme.palette.allShades.gray[300],
-          })}
-        />
-        <Stack spacing={1}>
+        </p>
+        <hr className="tw:border-primary tw:my-2 tw:border-dashed" />
+        <div className="tw:flex tw:flex-col tw:gap-1">
           {payloadValue.map((entry, index) => {
             const value = entry.value;
 
             return (
-              <Box
-                className="d-flex items-center justify-between gap-6 p-b-xss text-sm"
+              <div
+                className="tw:flex tw:items-center tw:justify-between tw:gap-6 tw:pb-1 tw:text-sm"
                 key={`item-${index}`}>
-                <span className="flex items-center">
-                  <Surface className="mr-2" height={14} version="1.1" width={4}>
+                <span className="tw:flex tw:items-center">
+                  <Surface
+                    className="tw:mr-2"
+                    height={14}
+                    version="1.1"
+                    width={4}>
                     <rect fill={entry.color} height="14" rx="2" width="4" />
                   </Surface>
-                  <Typography
-                    sx={(theme) => ({
-                      color: theme.palette.allShades.gray[700],
-                      fontSize: theme.typography.pxToRem(11),
-                    })}>
+                  <span className="tw:text-tertiary tw:text-[11px]">
                     {transformLabel
                       ? startCase(entry.name ?? (entry.dataKey as string))
                       : entry.name ?? (entry.dataKey as string)}
-                  </Typography>
+                  </span>
                 </span>
-                <Typography
-                  sx={(theme) => ({
-                    color: theme.palette.allShades.gray[900],
-                    fontWeight: theme.typography.fontWeightMedium,
-                    fontSize: theme.typography.pxToRem(11),
-                  })}>
+                <span className="tw:font-medium tw:text-primary tw:text-[11px]">
                   {valueFormatter
                     ? valueFormatter(value, entry.name ?? entry.dataKey)
                     : getEntryFormattedValue(value, isPercentage)}
-                </Typography>
-              </Box>
+                </span>
+              </div>
             );
           })}
-        </Stack>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -460,6 +441,43 @@ export type TestCaseCountByStatus = {
   failed: number;
   aborted: number;
   total: number;
+};
+
+/**
+ * Calculate test case status counts from test cases array
+ * @param testCases Array of test cases with testCaseResult
+ * @returns Object with counts for success, failed, aborted, and total
+ */
+export const calculateTestCaseStatusCounts = (
+  testCases: Array<{
+    testCaseResult?: { testCaseStatus?: string };
+  }>
+): TestCaseCountByStatus => {
+  return (testCases || []).reduce(
+    (acc, testCase) => {
+      const status = lowerCase(testCase.testCaseResult?.testCaseStatus);
+      if (status) {
+        switch (status) {
+          case 'success':
+            acc.success++;
+
+            break;
+          case 'failed':
+            acc.failed++;
+
+            break;
+          case 'aborted':
+            acc.aborted++;
+
+            break;
+        }
+        acc.total++;
+      }
+
+      return acc;
+    },
+    { success: 0, failed: 0, aborted: 0, total: 0 }
+  );
 };
 
 export const aggregateTestResultsByEntity = (
@@ -509,4 +527,15 @@ export const aggregateTestResultsByEntity = (
     ...entities,
     total: overallTotal,
   };
+};
+
+/**
+ * Extracts the service type from a table entity for test definition filtering
+ * @param table - The table entity
+ * @returns The service type string or undefined if not available
+ */
+export const getServiceTypeForTestDefinition = (
+  table?: Table
+): string | undefined => {
+  return table?.serviceType;
 };

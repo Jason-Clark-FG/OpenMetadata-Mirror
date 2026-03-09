@@ -126,24 +126,47 @@ const DOMAIN_MAPPING = {
   ApiCollection: { domain: 'Integration', name: 'Connectors' },
 };
 
-function getComponentInfo(fileName, domainMapping, tags = []) {
-  // 1. Check Tags first (highest priority)
-  // Tags should be like "@Domain:Component" or just "@Domain"
-  for (const tag of tags) {
-    // Remove @ if present
-    const cleanTag = tag.startsWith('@') ? tag.substring(1) : tag;
+const VALID_DOMAIN_TAGS = ['Governance', 'Discovery', 'Platform', 'Observability', 'Integration'];
 
-    // Check if tag matches a known domain mapping key directly
-    if (domainMapping[cleanTag]) {
-      return domainMapping[cleanTag];
+function getComponentInfo(fileName, domainMapping, tags = []) {
+  // Helper to resolve via filename
+  const getFromFilename = () => {
+    for (const [key, def] of Object.entries(domainMapping)) {
+      if (fileName.includes(key)) return def; // Case-sensitive check from original logic
+    }
+    return null;
+  };
+
+  // 1. Check Tags (Priority, with Strict Validation)
+  for (const tag of tags) {
+    const cleanTag = tag.startsWith('@') ? tag.substring(1) : tag;
+    const cleanTagLower = cleanTag.toLowerCase();
+
+    // A. Domain:Component Format
+    // We assume explicit 'Domain:Component' intent is always valid if provided
+    if (cleanTag.includes(':')) {
+      const [d, c] = cleanTag.split(':');
+      return { domain: d, name: c.replace(/_/g, ' ') };
+    }
+
+    // B. Domain Name Match (Strict Validation against VALID_DOMAIN_TAGS)
+    const matchingDomain = VALID_DOMAIN_TAGS.find(d => d.toLowerCase() === cleanTagLower);
+    if (matchingDomain) {
+      // User specified a valid Domain (e.g. @Observability).
+      // This overrides filename logic unless the filename provides a MORE SPECIFIC component *within that same domain*.
+      const fileMatch = getFromFilename();
+      if (fileMatch && fileMatch.domain === matchingDomain) {
+        return fileMatch;
+      }
+      // Otherwise, force move to this domain with 'General' name
+      return { domain: matchingDomain, name: 'General' };
     }
   }
 
-  // 2. Fallback to Filename matching
-  for (const [key, def] of Object.entries(domainMapping)) {
-    if (fileName.includes(key)) return def;
-  }
-  return { domain: 'Platform', name: 'Other' };
+  // 2. Fallback to Filename matching if no valid tags found, OR if tags were present but ignored (e.g. @ingestion)
+  // This was previously returning before checking filename if tags loop finished without match? No, it returns below.
+  // BUT the issue might be that we need to ensure we DO check filename even if tags exist but are unused.
+  return getFromFilename() || { domain: 'Platform', name: 'Other' };
 }
 
 /**
@@ -178,12 +201,8 @@ function generateDocs({
   // 2. Group by Domain + Component
   const groupings = new Map();
 
-  parsedFiles.forEach((file) => {
-    const { domain, name } = getComponentInfo(
-      file.fileName,
-      domainMapping,
-      file.tags
-    );
+  parsedFiles.forEach(file => {
+    const { domain, name } = getComponentInfo(file.fileName, domainMapping, file.tags);
     const key = `${domain}:${name}`;
 
     if (!groupings.has(key)) {
@@ -217,7 +236,7 @@ function generateDocs({
     components: components.length,
     files: parsedFiles.length,
     tests: components.reduce((s, c) => s + c.totalTests, 0),
-    steps: components.reduce((s, c) => s + c.totalSteps, 0),
+    steps: components.reduce((s, c) => s + c.totalSteps, 0)
   };
 
   // Group Components by Domain for Generation

@@ -11,12 +11,19 @@
  *  limitations under the License.
  */
 import { expect, Page, Response } from '@playwright/test';
-import { DOMAIN_TAGS } from '../../../constant/config';
+import {
+  DOMAIN_TAGS,
+  PLAYWRIGHT_INGESTION_TAG_OBJ,
+} from '../../../constant/config';
 import { TableClass } from '../../../support/entity/TableClass';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { visitDataQualityTab } from '../../../utils/testCases';
 import { test } from '../../fixtures/pages';
+import {
+  ObservabilityFeature,
+  selectAddObservabilityFeature,
+} from '../../../utils/dataQuality';
 
 /**
  * Data Quality: Add Test Case (New Flow)
@@ -24,7 +31,12 @@ import { test } from '../../fixtures/pages';
  */
 test.describe(
   'Add TestCase New Flow',
-  { tag: DOMAIN_TAGS.OBSERVABILITY },
+  {
+    tag: [
+      `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality`,
+      PLAYWRIGHT_INGESTION_TAG_OBJ.tag,
+    ],
+  },
   () => {
     // Helper function to select table
     const selectTable = async (page: Page, table: TableClass) => {
@@ -355,7 +367,7 @@ test.describe(
       });
 
       await page.click('[data-testid="profiler-add-table-test-btn"]');
-      await page.getByRole('menuitem', { name: 'Test case' }).click();
+      await selectAddObservabilityFeature(page, ObservabilityFeature.TEST_CASE);
       await page.waitForLoadState('networkidle');
 
       await createTestCase({
@@ -364,7 +376,7 @@ test.describe(
       });
 
       await page.click('[data-testid="profiler-add-table-test-btn"]');
-      await page.getByRole('menuitem', { name: 'Test case' }).click();
+      await selectAddObservabilityFeature(page, ObservabilityFeature.TEST_CASE);
       await page
         .getByTestId('select-table-card')
         .getByText('Column Level')
