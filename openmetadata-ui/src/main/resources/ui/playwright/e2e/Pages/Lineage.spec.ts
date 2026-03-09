@@ -38,6 +38,8 @@ import {
   uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+
+test.describe.configure({ mode: 'serial' });
 import {
   activateColumnLayer,
   addColumnLineage,

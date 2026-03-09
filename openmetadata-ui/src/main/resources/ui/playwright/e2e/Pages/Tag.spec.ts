@@ -21,7 +21,6 @@ import { TeamClass } from '../../support/team/TeamClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import {
-  descriptionBox,
   getApiContext,
   redirectToHomePage,
   uuid,
@@ -42,6 +41,8 @@ import {
   verifyTagPageUI,
 } from '../../utils/tag';
 import { visitUserProfilePage } from '../../utils/user';
+
+base.describe.configure({ mode: 'serial' });
 
 const adminUser = new UserClass();
 const dataConsumerUser = new UserClass();
@@ -184,25 +185,7 @@ test.describe('Tag Page with Admin Roles', () => {
   });
 
   test('Edit Tag Description', async ({ adminPage }) => {
-    await redirectToHomePage(adminPage);
-    await tag.visitPage(adminPage);
-
-    await adminPage.getByTestId('edit-description').click();
-
-    await expect(adminPage.getByRole('dialog')).toBeVisible();
-
-    await adminPage.locator(descriptionBox).clear();
-    await adminPage
-      .locator(descriptionBox)
-      .fill(`This is updated test description for tag ${tag.data.name}.`);
-
-    const editDescription = adminPage.waitForResponse(`/api/v1/tags/*`);
-    await adminPage.getByTestId('save').click();
-    await editDescription;
-
-    await expect(adminPage.getByTestId('viewer-container')).toContainText(
-      `This is updated test description for tag ${tag.data.name}.`
-    );
+    await editTagPageDescription(adminPage, tag);
   });
 
   test('Delete a Tag', async ({ adminPage }) => {

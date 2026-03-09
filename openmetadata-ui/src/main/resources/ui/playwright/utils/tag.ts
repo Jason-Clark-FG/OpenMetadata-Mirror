@@ -393,30 +393,39 @@ export const verifyTagPageUI = async (
 
 export const editTagPageDescription = async (page: Page, tag: TagClass) => {
   await redirectToHomePage(page);
-  const res = page.waitForResponse(`/api/v1/tags/name/*`);
   await tag.visitPage(page);
-  await res;
 
   await page.waitForSelector(
     '[data-testid="tags-container"] [data-testid="loader"]',
     { state: 'detached' }
   );
 
+  const updatedDescription = `This is updated test description for tag ${tag.data.name}.`;
+
+  await expect(page.getByTestId('edit-description')).toBeVisible();
   await page.getByTestId('edit-description').click();
 
   await expect(page.getByRole('dialog')).toBeVisible();
 
   await page.locator(descriptionBox).clear();
-  await page
-    .locator(descriptionBox)
-    .fill(`This is updated test description for tag ${tag.data.name}.`);
+  await page.locator(descriptionBox).fill(updatedDescription);
 
-  const editDescription = page.waitForResponse(`/api/v1/tags/*`);
+  const editDescription = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PATCH' &&
+      response.url().includes('/api/v1/tags/') &&
+      response.status() === 200
+  );
   await page.getByTestId('save').click();
   await editDescription;
+  await page.waitForSelector(
+    '[data-testid="tags-container"] [data-testid="loader"]',
+    { state: 'detached' }
+  );
+  await expect(page.getByRole('dialog')).not.toBeVisible();
 
   await expect(page.getByTestId('viewer-container')).toContainText(
-    `This is updated test description for tag ${tag.data.name}.`
+    updatedDescription
   );
 };
 

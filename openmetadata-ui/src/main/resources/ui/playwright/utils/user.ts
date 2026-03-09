@@ -106,9 +106,28 @@ export const visitUserProfilePage = async (page: Page, userName: string) => {
       state: 'detached',
     }
   );
-  await page.getByTestId('searchbar').fill(userName);
-  await userResponse;
-  await loader;
+  const searchBar = page.getByTestId('searchbar');
+
+  await expect
+    .poll(
+      async () => {
+        const searchRequest = page.waitForResponse('/api/v1/search/query*');
+        await searchBar.fill('');
+        await searchBar.fill(userName);
+        await searchRequest;
+        await loader.catch(() => undefined);
+
+        return await page.getByTestId(userName).count();
+      },
+      {
+        timeout: 60000,
+        intervals: [1000, 2000, 5000],
+        message: `Timed out waiting for user ${userName} to become visible in the user list`,
+      }
+    )
+    .toBeGreaterThan(0);
+
+  await userResponse.catch(() => undefined);
   await page.getByTestId(userName).click();
 };
 

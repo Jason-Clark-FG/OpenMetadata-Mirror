@@ -25,6 +25,7 @@ import { setupGlossaryAndTerms } from '../../utils/glossary';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe.configure({ mode: 'serial' });
 
 const user = new UserClass();
 const reviewer = new UserClass();

@@ -10,23 +10,33 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { GlobalSettingOptions } from '../../constant/settings';
 import { redirectToHomePage, toastNotification } from '../../utils/common';
 import { settingClick } from '../../utils/sidebar';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe.configure({ mode: 'serial' });
+
+const settingsSaveResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' &&
+      response.url().includes('/api/v1/system/settings') &&
+      response.status() === 200
+  );
 
 test.describe('Login configuration', () => {
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
     await settingClick(page, GlobalSettingOptions.LOGIN_CONFIGURATION);
+    await expect(page.getByTestId('edit-button')).toBeVisible();
   });
 
   test('update login configuration should work', async ({ page }) => {
     // Click the edit button
-    await page.click('[data-testid="edit-button"]');
+    await page.getByTestId('edit-button').click();
 
     // Clear and update JWT Token Expiry Time
     await page.locator('[data-testid="jwtTokenExpiryTime"]').clear();
@@ -44,17 +54,16 @@ test.describe('Login configuration', () => {
     await page.locator('[data-testid="maxLoginFailAttempts"]').press('Tab');
 
     // Wait for the settings API call to complete
-    const settingsResponsePromise = page.waitForResponse(
-      '/api/v1/system/settings'
-    );
+    const settingsResponsePromise = settingsSaveResponse(page);
 
     // Click the save button
-    await page.click('[data-testid="save-button"]');
+    await page.getByTestId('save-button').click();
 
     // Wait for the API response to complete
     await settingsResponsePromise;
 
     await page.waitForLoadState('networkidle');
+    await toastNotification(page, 'Login Configuration updated successfully.');
 
     // Assert the updated values
     await expect(
@@ -70,7 +79,7 @@ test.describe('Login configuration', () => {
 
   test('reset login configuration should work', async ({ page }) => {
     // Click the edit button
-    await page.click('[data-testid="edit-button"]');
+    await page.getByTestId('edit-button').click();
 
     // Reset JWT Token Expiry Time
     await page.fill('[data-testid="jwtTokenExpiryTime"]', '3600');
@@ -81,9 +90,12 @@ test.describe('Login configuration', () => {
     // Reset Max Login Fail Attempts
     await page.fill('[data-testid="maxLoginFailAttempts"]', '3');
 
-    // Click the save button
-    await page.click('[data-testid="save-button"]');
+    const settingsResponsePromise = settingsSaveResponse(page);
 
+    // Click the save button
+    await page.getByTestId('save-button').click();
+
+    await settingsResponsePromise;
     await toastNotification(page, 'Login Configuration updated successfully.');
 
     // Assert the updated values

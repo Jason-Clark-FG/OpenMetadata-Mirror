@@ -59,6 +59,8 @@ import {
   verifyTeamListingAssetCount,
 } from '../../utils/team';
 
+base.describe.configure({ mode: 'serial' });
+
 const id = uuid();
 const dataConsumerUser = new UserClass();
 const editOnlyUser = new UserClass(); // this user will have only editUser permission in team

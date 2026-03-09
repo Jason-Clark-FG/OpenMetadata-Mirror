@@ -36,6 +36,8 @@ const testGlossaryTerm = new GlossaryTerm(testGlossary);
 const domainEntity = new Domain();
 const ownerUser = new UserClass();
 
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Tag Page Assets - Right Panel', () => {
   test.beforeAll(async ({ browser }) => {
     test.slow();
