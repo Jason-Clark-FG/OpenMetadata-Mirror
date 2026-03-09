@@ -14,7 +14,9 @@ logging:
   level: INFO
   appenders:
     - type: console
-      logFormat: "%level %logger{5} - %msg%n"
+      layout:
+        type: json
+        appendLineSeparator: true
 database:
   driverClass: org.postgresql.Driver
   user: test

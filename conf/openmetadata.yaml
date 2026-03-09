@@ -86,6 +86,9 @@ server:
     appenders:
       - type: console
         threshold: ${REQUEST_LOG_LEVEL:-ERROR}  # Only log errors by default
+        layout:
+          type: access-json
+          appendLineSeparator: true
 
 # Above configuration for running http is fine for dev and testing.
 # For production setup, where UI app will hit apis through DPS it
@@ -160,6 +163,9 @@ logging:
         - type: console
           logFormat: "%msg%n"
           timeZone: UTC
+          layout:
+            type: json
+            appendLineSeparator: true
         - type: file
           logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
           layout:
@@ -174,6 +180,9 @@ logging:
       threshold: TRACE
       logFormat: "%level [%d{ISO8601,UTC}] [%t] %logger{5} - %msg%n"
       timeZone: UTC
+      layout:
+        type: json
+        appendLineSeparator: true
     - type: file
       layout:
         type: json
