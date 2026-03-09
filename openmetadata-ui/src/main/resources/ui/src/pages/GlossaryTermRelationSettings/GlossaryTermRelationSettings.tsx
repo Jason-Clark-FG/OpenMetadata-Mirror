@@ -11,38 +11,35 @@
  *  limitations under the License.
  */
 
-import { CheckOutlined, CloseOutlined, LockOutlined } from '@ant-design/icons';
 import {
-  AutoComplete,
+  Badge,
   Button,
-  Col,
-  Drawer,
-  Form,
+  Card,
   Input,
-  InputNumber,
-  Row,
   Select,
-  Space,
-  Switch,
-  Tag,
+  SelectItemType,
+  SlideoutMenu,
+  Table,
+  TableCard,
+  TextArea,
+  Toggle,
   Tooltip,
+  TooltipTrigger,
   Typography,
-} from 'antd';
-import { ColumnsType } from 'antd/lib/table';
+} from '@openmetadata/ui-core-components';
+import { Check, XClose } from '@untitledui/icons';
 import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Key, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as CloseIcon } from '../../assets/svg/close.svg';
-import Table from '../../components/common/Table/Table';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
-import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { GlobalSettingsMenuCategory } from '../../constants/GlobalSettings.constants';
 import {
   GlossaryTermRelationSettings,
   GlossaryTermRelationType,
   RelationCardinality,
+  RelationCategory,
 } from '../../generated/configuration/glossaryTermRelationSettings';
 import { useAuth } from '../../hooks/authHooks';
 import {
@@ -53,31 +50,13 @@ import {
 import { getSettingPageEntityBreadCrumb } from '../../utils/GlobalSettingsUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 
-const CATEGORY_OPTIONS = [
-  { label: 'Hierarchical', value: 'hierarchical' },
-  { label: 'Associative', value: 'associative' },
-  { label: 'Equivalence', value: 'equivalence' },
-];
-
-const CATEGORY_STYLES: Record<
+const CATEGORY_BADGE_COLORS: Record<
   string,
-  { background: string; border: string; text: string }
+  'success' | 'blue' | 'purple' | 'gray'
 > = {
-  hierarchical: {
-    background: '#e8f4ee',
-    border: '#7bc47f',
-    text: '#1e5d2a',
-  },
-  associative: {
-    background: '#e8f0fe',
-    border: '#7da6ff',
-    text: '#1d4ed8',
-  },
-  equivalence: {
-    background: '#f3e8ff',
-    border: '#c084fc',
-    text: '#6d28d9',
-  },
+  hierarchical: 'success',
+  associative: 'blue',
+  equivalence: 'purple',
 };
 
 const CARDINALITY_LIMITS: Record<
@@ -154,6 +133,16 @@ const applyCardinalityDefaults = (
   }
 };
 
+const DEFAULT_FORM_VALUES: Partial<GlossaryTermRelationType> = {
+  isSymmetric: false,
+  isTransitive: false,
+  isCrossGlossaryAllowed: true,
+  category: RelationCategory.Associative,
+  cardinality: RelationCardinality.ManyToMany,
+  sourceMax: undefined,
+  targetMax: undefined,
+};
+
 function GlossaryTermRelationSettingsPage() {
   const { t } = useTranslation();
   const { isAdminUser } = useAuth();
@@ -166,8 +155,9 @@ function GlossaryTermRelationSettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingRelation, setEditingRelation] =
     useState<GlossaryTermRelationType | null>(null);
-  const [form] = Form.useForm();
-  const rdfPredicateValue = Form.useWatch('rdfPredicate', form);
+  const [formValues, setFormValues] =
+    useState<Partial<GlossaryTermRelationType>>(DEFAULT_FORM_VALUES);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const breadcrumbs: TitleBreadcrumbProps['titleLinks'] = useMemo(
     () =>
@@ -178,13 +168,22 @@ function GlossaryTermRelationSettingsPage() {
     [t]
   );
 
-  const cardinalityOptions = useMemo(
+  const categoryOptions: SelectItemType[] = useMemo(
     () => [
-      { label: t('label.one-to-one'), value: RelationCardinality.OneToOne },
-      { label: t('label.one-to-many'), value: RelationCardinality.OneToMany },
-      { label: t('label.many-to-one'), value: RelationCardinality.ManyToOne },
-      { label: t('label.many-to-many'), value: RelationCardinality.ManyToMany },
-      { label: t('label.custom'), value: RelationCardinality.Custom },
+      { id: RelationCategory.Hierarchical, label: t('label.hierarchical') },
+      { id: RelationCategory.Associative, label: t('label.associative') },
+      { id: RelationCategory.Equivalence, label: t('label.equivalence') },
+    ],
+    [t]
+  );
+
+  const cardinalityOptions: SelectItemType[] = useMemo(
+    () => [
+      { id: RelationCardinality.OneToOne, label: t('label.one-to-one') },
+      { id: RelationCardinality.OneToMany, label: t('label.one-to-many') },
+      { id: RelationCardinality.ManyToOne, label: t('label.many-to-one') },
+      { id: RelationCardinality.ManyToMany, label: t('label.many-to-many') },
+      { id: RelationCardinality.Custom, label: t('label.custom') },
     ],
     [t]
   );
@@ -207,45 +206,30 @@ function GlossaryTermRelationSettingsPage() {
         deriveCardinality(relation.sourceMax, relation.targetMax);
       const label = cardinalityLabels[derived];
       if (derived !== RelationCardinality.Custom) {
-        return <Tag>{label}</Tag>;
+        return (
+          <Badge color="gray" type="color">
+            {label}
+          </Badge>
+        );
       }
 
-      const sourceLabel =
-        relation.sourceMax === null || relation.sourceMax === undefined
-          ? t('label.unlimited')
-          : relation.sourceMax;
-      const targetLabel =
-        relation.targetMax === null || relation.targetMax === undefined
-          ? t('label.unlimited')
-          : relation.targetMax;
+      const sourceLabel = relation.sourceMax ?? t('label.unlimited');
+      const targetLabel = relation.targetMax ?? t('label.unlimited');
 
       return (
-        <div className="d-flex flex-column gap-1">
-          <Tag>{label}</Tag>
-          <Typography.Text style={{ fontSize: 12 }} type="secondary">
+        <div className="tw:flex tw:flex-col tw:gap-1">
+          <Badge color="gray" type="color">
+            {label}
+          </Badge>
+          <Typography as="span" className="tw:text-xs tw:text-tertiary">
             {t('label.source')}: {sourceLabel}, {t('label.target')}:{' '}
             {targetLabel}
-          </Typography.Text>
+          </Typography>
         </div>
       );
     },
     [cardinalityLabels, t]
   );
-
-  const rdfPredicateOptions = useMemo(() => {
-    const uniquePredicates = new Set<string>();
-    (settings?.relationTypes ?? []).forEach((relationType) => {
-      const predicate = relationType.rdfPredicate;
-      if (predicate) {
-        uniquePredicates.add(predicate);
-      }
-    });
-
-    return Array.from(uniquePredicates).map((predicate) => ({
-      label: predicate,
-      value: predicate,
-    }));
-  }, [settings]);
 
   const rdfPredicateUsage = useMemo(() => {
     const usageMap = new Map<string, string[]>();
@@ -262,7 +246,7 @@ function GlossaryTermRelationSettingsPage() {
   }, [settings]);
 
   const rdfPredicateDuplicates = useMemo(() => {
-    const predicate = rdfPredicateValue?.trim();
+    const predicate = formValues.rdfPredicate?.trim();
     if (!predicate) {
       return null;
     }
@@ -273,7 +257,33 @@ function GlossaryTermRelationSettingsPage() {
     const filtered = usedBy.filter((name) => name !== editingRelation?.name);
 
     return filtered.length > 0 ? filtered : null;
-  }, [rdfPredicateValue, rdfPredicateUsage, editingRelation]);
+  }, [formValues.rdfPredicate, rdfPredicateUsage, editingRelation]);
+
+  const validateForm = useCallback((): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formValues.name) {
+      errors.name = t('label.field-required', { field: t('label.name') });
+    } else if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(formValues.name)) {
+      errors.name = t('message.must-start-with-letter-alphanumeric');
+    }
+
+    if (!formValues.displayName) {
+      errors.displayName = t('label.field-required', {
+        field: t('label.display-name'),
+      });
+    }
+
+    if (!formValues.cardinality) {
+      errors.cardinality = t('label.field-required', {
+        field: t('label.cardinality'),
+      });
+    }
+
+    setFormErrors(errors);
+
+    return Object.keys(errors).length === 0;
+  }, [formValues, t]);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -298,30 +308,20 @@ function GlossaryTermRelationSettingsPage() {
 
   const handleAddNew = useCallback(() => {
     setEditingRelation(null);
-    form.resetFields();
-    form.setFieldsValue({
-      isSymmetric: false,
-      isTransitive: false,
-      isCrossGlossaryAllowed: true,
-      category: 'associative',
-      cardinality: RelationCardinality.ManyToMany,
-      sourceMax: null,
-      targetMax: null,
-    });
+    setFormValues({ ...DEFAULT_FORM_VALUES });
+    setFormErrors({});
     setIsModalOpen(true);
-  }, [form]);
+  }, []);
 
-  const handleEdit = useCallback(
-    (relation: GlossaryTermRelationType) => {
-      if (relation.isSystemDefined) {
-        return;
-      }
-      setEditingRelation(relation);
-      form.setFieldsValue(applyCardinalityDefaults(relation));
-      setIsModalOpen(true);
-    },
-    [form]
-  );
+  const handleEdit = useCallback((relation: GlossaryTermRelationType) => {
+    if (relation.isSystemDefined) {
+      return;
+    }
+    setEditingRelation(relation);
+    setFormValues(applyCardinalityDefaults(relation));
+    setFormErrors({});
+    setIsModalOpen(true);
+  }, []);
 
   const handleDelete = useCallback(
     async (relationName: string) => {
@@ -331,7 +331,7 @@ function GlossaryTermRelationSettingsPage() {
 
       try {
         setSaving(true);
-        const updatedRelationTypes = settings.relationTypes.filter(
+        const updatedRelationTypes = (settings.relationTypes ?? []).filter(
           (r) => r.name !== relationName
         );
         await updateGlossaryTermRelationSettings({
@@ -358,12 +358,15 @@ function GlossaryTermRelationSettingsPage() {
   );
 
   const handleModalOk = useCallback(async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      const values = await form.validateFields();
       setSaving(true);
 
       const newRelation = applyCardinalityDefaults({
-        ...(values as GlossaryTermRelationType),
+        ...(formValues as GlossaryTermRelationType),
         isSystemDefined: false,
       });
 
@@ -391,9 +394,6 @@ function GlossaryTermRelationSettingsPage() {
         })
       );
     } catch (error) {
-      if ((error as { errorFields?: unknown[] }).errorFields) {
-        return;
-      }
       showErrorToast(
         error as AxiosError,
         t('server.update-entity-error', {
@@ -403,232 +403,32 @@ function GlossaryTermRelationSettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, editingRelation, settings, t]);
+  }, [validateForm, formValues, editingRelation, settings, t]);
 
   const handleModalCancel = useCallback(() => {
     setIsModalOpen(false);
     setEditingRelation(null);
-    form.resetFields();
-  }, [form]);
+    setFormValues({ ...DEFAULT_FORM_VALUES });
+    setFormErrors({});
+  }, []);
 
-  const drawerFooter = (
-    <Space className="w-full justify-end">
-      <Button data-testid="cancel-btn" onClick={handleModalCancel}>
-        {t('label.cancel')}
-      </Button>
-      <Button
-        data-testid="save-btn"
-        loading={saving}
-        type="primary"
-        onClick={handleModalOk}>
-        {editingRelation ? t('label.update') : t('label.add')}
-      </Button>
-    </Space>
-  );
+  const updateFormField = useCallback(
+    <K extends keyof GlossaryTermRelationType>(
+      field: K,
+      value: GlossaryTermRelationType[K] | undefined
+    ) => {
+      setFormValues((prev) => ({ ...prev, [field]: value }));
+      setFormErrors((prev) => {
+        if (!prev[field]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[field];
 
-  const columns: ColumnsType<GlossaryTermRelationType> = useMemo(
-    () => [
-      {
-        title: t('label.name'),
-        dataIndex: 'name',
-        key: 'name',
-        width: 160,
-        ellipsis: true,
-        render: (name: string, record) => (
-          <div className="d-flex items-center gap-2">
-            <Typography.Text strong data-testid={`relation-name-${name}`}>
-              {name}
-            </Typography.Text>
-            {record.isSystemDefined && (
-              <Tooltip title={t('label.system-defined')}>
-                <LockOutlined
-                  className="text-grey-muted"
-                  data-testid={`system-defined-${name}`}
-                />
-              </Tooltip>
-            )}
-          </div>
-        ),
-      },
-      {
-        title: t('label.display-name'),
-        dataIndex: 'displayName',
-        key: 'displayName',
-        width: 180,
-        ellipsis: true,
-      },
-      {
-        title: t('label.category'),
-        dataIndex: 'category',
-        key: 'category',
-        width: 140,
-        render: (category: string) => {
-          const style = CATEGORY_STYLES[category] ?? {
-            background: '#f5f5f5',
-            border: '#d9d9d9',
-            text: '#595959',
-          };
-
-          return (
-            <Tag
-              style={{
-                backgroundColor: style.background,
-                borderColor: style.border,
-                color: style.text,
-                fontWeight: 500,
-                textTransform: 'capitalize',
-              }}>
-              {category}
-            </Tag>
-          );
-        },
-      },
-      {
-        title: t('label.inverse'),
-        dataIndex: 'inverseRelation',
-        key: 'inverseRelation',
-        width: 140,
-        ellipsis: true,
-        render: (inverse?: string) => inverse || '-',
-      },
-      {
-        title: t('label.symmetric'),
-        dataIndex: 'isSymmetric',
-        key: 'isSymmetric',
-        width: 90,
-        align: 'center',
-        render: (isSymmetric?: boolean) =>
-          isSymmetric ? (
-            <CheckOutlined className="text-success" />
-          ) : (
-            <CloseOutlined className="text-grey-muted" />
-          ),
-      },
-      {
-        title: t('label.transitive'),
-        dataIndex: 'isTransitive',
-        key: 'isTransitive',
-        width: 90,
-        align: 'center',
-        render: (isTransitive?: boolean) =>
-          isTransitive ? (
-            <CheckOutlined className="text-success" />
-          ) : (
-            <CloseOutlined className="text-grey-muted" />
-          ),
-      },
-      {
-        title: t('label.cross-glossary'),
-        dataIndex: 'isCrossGlossaryAllowed',
-        key: 'isCrossGlossaryAllowed',
-        width: 120,
-        align: 'center',
-        render: (allowed?: boolean) =>
-          allowed ? (
-            <CheckOutlined className="text-success" />
-          ) : (
-            <CloseOutlined className="text-grey-muted" />
-          ),
-      },
-      {
-        title: t('label.cardinality'),
-        dataIndex: 'cardinality',
-        key: 'cardinality',
-        width: 140,
-        render: (_, record) => renderCardinality(record),
-      },
-      {
-        title: t('label.color'),
-        dataIndex: 'color',
-        key: 'color',
-        width: 140,
-        render: (color?: string) =>
-          color ? (
-            <div className="d-flex items-center gap-2">
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  backgroundColor: color,
-                  borderRadius: 4,
-                  border: '1px solid #d9d9d9',
-                }}
-              />
-              <Typography.Text code>{color}</Typography.Text>
-            </div>
-          ) : (
-            '-'
-          ),
-      },
-      {
-        title: t('label.usage'),
-        key: 'usage',
-        width: 90,
-        align: 'center',
-        render: (_, record) => {
-          const count = usageCounts[record.name] || 0;
-
-          return (
-            <Tooltip
-              title={
-                count > 0
-                  ? t('message.relation-type-in-use-count', { count })
-                  : t('message.relation-type-not-in-use')
-              }>
-              <Tag
-                color={count > 0 ? 'blue' : 'default'}
-                data-testid={`usage-count-${record.name}`}>
-                {count}
-              </Tag>
-            </Tooltip>
-          );
-        },
-      },
-      {
-        title: t('label.action-plural'),
-        key: 'actions',
-        width: 140,
-        align: 'right',
-        render: (_, record) => {
-          const count = usageCounts[record.name] || 0;
-          const isInUse = count > 0;
-
-          return (
-            <div className="d-flex justify-end gap-2">
-              <Button
-                data-testid={`edit-${record.name}-btn`}
-                disabled={record.isSystemDefined}
-                size="small"
-                type="link"
-                onClick={() => handleEdit(record)}>
-                {t('label.edit')}
-              </Button>
-              {!record.isSystemDefined && (
-                <Tooltip
-                  title={
-                    isInUse
-                      ? t('message.cannot-delete-relation-type-in-use', {
-                          count,
-                        })
-                      : undefined
-                  }>
-                  <Button
-                    danger
-                    data-testid={`delete-${record.name}-btn`}
-                    disabled={saving || isInUse}
-                    size="small"
-                    type="link"
-                    onClick={() => handleDelete(record.name)}>
-                    {t('label.delete')}
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-          );
-        },
-      },
-    ],
-    [t, handleEdit, handleDelete, renderCardinality, saving, usageCounts]
+        return next;
+      });
+    },
+    []
   );
 
   useEffect(() => {
@@ -637,274 +437,547 @@ function GlossaryTermRelationSettingsPage() {
 
   return (
     <PageLayoutV1 pageTitle={t('label.glossary-term-relation-plural')}>
-      <Row
-        align="middle"
-        className="p-lg bg-white border-radius-sm"
-        gutter={[0, 16]}>
-        <Col span={24}>
-          <TitleBreadcrumb titleLinks={breadcrumbs} />
-        </Col>
-        <Col span={24}>
-          <Row align="top" justify="space-between">
-            <Col>
-              <PageHeader
-                data={{
-                  header: t('label.glossary-term-relation-plural'),
-                  subHeader: t(
-                    'message.glossary-term-relation-settings-description'
-                  ),
-                }}
-              />
-            </Col>
-            <Col>
-              {isAdminUser && (
-                <Button
-                  data-testid="add-relation-type-btn"
-                  type="primary"
-                  onClick={handleAddNew}>
-                  {t('label.add-entity', {
-                    entity: t('label.relation-type'),
-                  })}
-                </Button>
-              )}
-            </Col>
-          </Row>
-        </Col>
-        <Col span={24}>
-          <Table
-            columns={columns}
-            data-testid="relation-types-table"
-            dataSource={settings?.relationTypes || []}
-            loading={loading}
-            pagination={false}
-            rowKey="name"
-            size="middle"
-          />
-        </Col>
-      </Row>
+      <div className="tw:flex tw:flex-col tw:gap-4">
+        <TitleBreadcrumb titleLinks={breadcrumbs} />
 
-      <Drawer
-        destroyOnClose
-        className="custom-drawer-style"
-        closable={false}
-        data-testid="relation-type-drawer"
-        extra={
-          <Button
-            className="drawer-close-icon flex-center"
-            data-testid="drawer-close-btn"
-            icon={<CloseIcon />}
-            type="link"
-            onClick={handleModalCancel}
-          />
-        }
-        footer={drawerFooter}
-        open={isModalOpen}
-        placement="right"
-        title={
-          editingRelation
-            ? t('label.edit-entity', { entity: t('label.relation-type') })
-            : t('label.add-entity', { entity: t('label.relation-type') })
-        }
-        width={600}
-        onClose={handleModalCancel}>
-        <Form data-testid="relation-type-form" form={form} layout="vertical">
-          <Form.Item
-            label={t('label.name')}
-            name="name"
-            rules={[
-              {
-                required: true,
-                message: t('label.field-required', { field: t('label.name') }),
-              },
-              {
-                pattern: /^[a-zA-Z][a-zA-Z0-9]*$/,
-                message: t('message.must-start-with-letter-alphanumeric'),
-              },
-            ]}>
-            <Input
-              data-testid="name-input"
-              disabled={Boolean(editingRelation)}
-              placeholder={t('label.enter-entity', { entity: t('label.name') })}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label={t('label.display-name')}
-            name="displayName"
-            rules={[
-              {
-                required: true,
-                message: t('label.field-required', {
-                  field: t('label.display-name'),
-                }),
-              },
-            ]}>
-            <Input
-              data-testid="display-name-input"
-              placeholder={t('label.enter-entity', {
-                entity: t('label.display-name'),
+        <Card className="tw:flex tw:items-center tw:justify-between tw:p-6">
+          <div className="tw:flex tw:flex-col tw:gap-1">
+            <Typography as="h4" className="tw:font-semibold">
+              {t('label.glossary-term-relation-plural')}
+            </Typography>
+            <Typography
+              as="p"
+              className="tw:text-xs tw:font-normal tw:text-secondary"
+            >
+              {t('message.glossary-term-relation-settings-description')}
+            </Typography>
+          </div>
+          {isAdminUser && (
+            <Button
+              color="primary"
+              data-testid="add-relation-type-btn"
+              size="sm"
+              onClick={handleAddNew}
+            >
+              {t('label.add-entity', {
+                entity: t('label.relation-type'),
               })}
-            />
-          </Form.Item>
+            </Button>
+          )}
+        </Card>
 
-          <Form.Item label={t('label.description')} name="description">
-            <Input.TextArea
-              data-testid="description-input"
-              placeholder={t('label.enter-entity', {
-                entity: t('label.description'),
-              })}
-              rows={3}
-            />
-          </Form.Item>
+        <div>
+          {loading ? (
+            <div className="tw:py-8 tw:text-center tw:text-sm tw:text-tertiary">
+              {t('label.loading')}
+            </div>
+          ) : (
+            <TableCard.Root size="sm">
+              <Table
+                className="tw:table-fixed tw:w-full"
+                data-testid="relation-types-table"
+              >
+                <Table.Header>
+                  <Table.Head
+                    className="tw:w-[9%]"
+                    id="col-name"
+                    label={t('label.name')}
+                  />
+                  <Table.Head
+                    className="tw:w-[11%]"
+                    id="col-display-name"
+                    label={t('label.display-name')}
+                  />
+                  <Table.Head
+                    className="tw:w-[9%]"
+                    id="col-category"
+                    label={t('label.category')}
+                  />
+                  <Table.Head
+                    className="tw:w-[9%]"
+                    id="col-inverse"
+                    label={t('label.inverse')}
+                  />
+                  <Table.Head
+                    className="tw:w-[7%]"
+                    id="col-symmetric"
+                    label={t('label.symmetric')}
+                  />
+                  <Table.Head
+                    className="tw:w-[7%]"
+                    id="col-transitive"
+                    label={t('label.transitive')}
+                  />
+                  <Table.Head
+                    className="tw:w-[8%]"
+                    id="col-cross-glossary"
+                    label={t('label.cross-glossary')}
+                  />
+                  <Table.Head
+                    className="tw:w-[11%]"
+                    id="col-cardinality"
+                    label={t('label.cardinality')}
+                  />
+                  <Table.Head
+                    className="tw:w-[9%]"
+                    id="col-color"
+                    label={t('label.color')}
+                  />
+                  <Table.Head
+                    className="tw:w-[6%]"
+                    id="col-usage"
+                    label={t('label.usage')}
+                  />
+                  <Table.Head
+                    className="tw:w-[14%]"
+                    id="col-actions"
+                    label={t('label.action-plural')}
+                  />
+                </Table.Header>
+                <Table.Body items={settings?.relationTypes || []}>
+                  {(record: GlossaryTermRelationType) => {
+                    const count = usageCounts[record.name] || 0;
+                    const isInUse = count > 0;
 
-          <Form.Item
-            label={t('label.category')}
-            name="category"
-            rules={[{ required: true }]}>
-            <Select data-testid="category-select" options={CATEGORY_OPTIONS} />
-          </Form.Item>
-
-          <Form.Item
-            label={t('label.inverse-relation')}
-            name="inverseRelation"
-            tooltip={t('message.inverse-relation-tooltip')}>
-            <Input
-              data-testid="inverse-relation-input"
-              placeholder={t('label.enter-entity', {
-                entity: t('label.inverse-relation'),
-              })}
-            />
-          </Form.Item>
-
-          <Form.Item
-            help={
-              rdfPredicateDuplicates
-                ? `${t('label.used-by')}: ${rdfPredicateDuplicates.join(', ')}`
-                : undefined
+                    return (
+                      <Table.Row id={record.name} key={record.name}>
+                        <Table.Cell className="tw:max-w-0 tw:overflow-hidden">
+                          <Tooltip placement="top" title={record.name}>
+                            <TooltipTrigger className="tw:block tw:w-full tw:min-w-0">
+                              <Typography
+                                as="span"
+                                className="tw:font-semibold tw:text-primary tw:truncate tw:block"
+                                data-testid={`relation-name-${record.name}`}
+                              >
+                                {record.name}
+                              </Typography>
+                            </TooltipTrigger>
+                          </Tooltip>
+                        </Table.Cell>
+                        <Table.Cell className="tw:max-w-0 tw:overflow-hidden">
+                          <Tooltip placement="top" title={record.displayName}>
+                            <TooltipTrigger className="tw:block tw:w-full tw:min-w-0">
+                              <Typography
+                                as="span"
+                                className="tw:truncate tw:block"
+                              >
+                                {record.displayName}
+                              </Typography>
+                            </TooltipTrigger>
+                          </Tooltip>
+                        </Table.Cell>
+                        <Table.Cell className="tw:whitespace-nowrap">
+                          <Badge
+                            className="tw:capitalize"
+                            color={
+                              CATEGORY_BADGE_COLORS[record.category ?? ''] ??
+                              'gray'
+                            }
+                            type="color"
+                          >
+                            {record.category}
+                          </Badge>
+                        </Table.Cell>
+                        <Table.Cell className="tw:max-w-0 tw:overflow-hidden">
+                          <Tooltip
+                            placement="top"
+                            title={record.inverseRelation || ''}
+                          >
+                            <TooltipTrigger className="tw:block tw:w-full tw:min-w-0">
+                              <Typography
+                                as="span"
+                                className="tw:truncate tw:block"
+                              >
+                                {record.inverseRelation || '-'}
+                              </Typography>
+                            </TooltipTrigger>
+                          </Tooltip>
+                        </Table.Cell>
+                        <Table.Cell className="tw:text-center">
+                          <div className="tw:flex tw:justify-center">
+                            {record.isSymmetric ? (
+                              <Check className="tw:size-4 tw:text-success-500" />
+                            ) : (
+                              <XClose className="tw:size-4 tw:text-tertiary" />
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell className="tw:text-center">
+                          <div className="tw:flex tw:justify-center">
+                            {record.isTransitive ? (
+                              <Check className="tw:size-4 tw:text-success-500" />
+                            ) : (
+                              <XClose className="tw:size-4 tw:text-tertiary" />
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell className="tw:text-center">
+                          <div className="tw:flex tw:justify-center">
+                            {record.isCrossGlossaryAllowed ? (
+                              <Check className="tw:size-4 tw:text-success-500" />
+                            ) : (
+                              <XClose className="tw:size-4 tw:text-tertiary" />
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell className="tw:whitespace-nowrap">
+                          {renderCardinality(record)}
+                        </Table.Cell>
+                        <Table.Cell className="tw:overflow-hidden">
+                          {record.color ? (
+                            <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0 tw:overflow-hidden">
+                              <div
+                                className="tw:size-4 tw:rounded tw:border tw:border-secondary tw:shrink-0"
+                                style={{ backgroundColor: record.color }}
+                              />
+                              <Tooltip placement="top" title={record.color}>
+                                <TooltipTrigger className="tw:block tw:min-w-0 tw:overflow-hidden">
+                                  <Typography
+                                    as="span"
+                                    className="tw:text-xs tw:font-mono tw:text-tertiary tw:truncate tw:block"
+                                  >
+                                    {record.color}
+                                  </Typography>
+                                </TooltipTrigger>
+                              </Tooltip>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </Table.Cell>
+                        <Table.Cell className="tw:text-center">
+                          <div className="tw:flex tw:justify-center">
+                            <Tooltip
+                              placement="top"
+                              title={
+                                isInUse
+                                  ? t('message.relation-type-in-use-count', {
+                                      count,
+                                    })
+                                  : t('message.relation-type-not-in-use')
+                              }
+                            >
+                              <TooltipTrigger>
+                                <Badge
+                                  color={isInUse ? 'brand' : 'gray'}
+                                  data-testid={`usage-count-${record.name}`}
+                                  type="pill-color"
+                                >
+                                  {count}
+                                </Badge>
+                              </TooltipTrigger>
+                            </Tooltip>
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="tw:flex tw:justify-end tw:gap-2 tw:whitespace-nowrap">
+                            <span
+                              className={
+                                record.isSystemDefined
+                                  ? 'tw:invisible'
+                                  : undefined
+                              }
+                            >
+                              <Button
+                                color="tertiary"
+                                data-testid={`edit-${record.name}-btn`}
+                                size="sm"
+                                onClick={() => handleEdit(record)}
+                              >
+                                {t('label.edit')}
+                              </Button>
+                            </span>
+                            <span
+                              className={
+                                record.isSystemDefined
+                                  ? 'tw:invisible'
+                                  : undefined
+                              }
+                              title={
+                                isInUse
+                                  ? t(
+                                      'message.cannot-delete-relation-type-in-use',
+                                      { count }
+                                    )
+                                  : undefined
+                              }
+                            >
+                              <Button
+                                color="tertiary-destructive"
+                                data-testid={`delete-${record.name}-btn`}
+                                isDisabled={saving || isInUse}
+                                size="sm"
+                                onClick={() => handleDelete(record.name)}
+                              >
+                                {t('label.delete')}
+                              </Button>
+                            </span>
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    );
+                  }}
+                </Table.Body>
+              </Table>
+            </TableCard.Root>
+          )}
+        </div>
+        <SlideoutMenu
+          data-testid="relation-type-drawer"
+          isOpen={isModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleModalCancel();
             }
-            label={t('label.rdf-predicate')}
-            name="rdfPredicate"
-            tooltip={t('message.rdf-predicate-tooltip')}
-            validateStatus={rdfPredicateDuplicates ? 'warning' : undefined}>
-            <AutoComplete
-              className="w-full"
-              data-testid="rdf-predicate-input"
-              filterOption={(inputValue, option) =>
-                (option?.value ?? '')
-                  .toString()
-                  .toLowerCase()
-                  .includes(inputValue.toLowerCase())
-              }
-              options={rdfPredicateOptions}
-              placeholder="http://www.w3.org/2004/02/skos/core#broader"
-            />
-          </Form.Item>
+          }}
+        >
+          {() => (
+            <>
+              <SlideoutMenu.Header onClose={handleModalCancel}>
+                <Typography as="h4">
+                  {editingRelation
+                    ? t('label.edit-entity', {
+                        entity: t('label.relation-type'),
+                      })
+                    : t('label.add-entity', {
+                        entity: t('label.relation-type'),
+                      })}
+                </Typography>
+              </SlideoutMenu.Header>
 
-          <Form.Item
-            label={t('label.cardinality')}
-            name="cardinality"
-            rules={[
-              {
-                required: true,
-                message: t('label.field-required', {
-                  field: t('label.cardinality'),
-                }),
-              },
-            ]}>
-            <Select
-              data-testid="cardinality-select"
-              options={cardinalityOptions}
-            />
-          </Form.Item>
+              <SlideoutMenu.Content>
+                <div
+                  className="tw:flex tw:flex-col tw:gap-4"
+                  data-testid="relation-type-form"
+                >
+                  <Input
+                    data-testid="name-input"
+                    hint={formErrors.name}
+                    isDisabled={Boolean(editingRelation)}
+                    isInvalid={Boolean(formErrors.name)}
+                    label={t('label.name')}
+                    placeholder={t('label.enter-entity', {
+                      entity: t('label.name'),
+                    })}
+                    value={formValues.name ?? ''}
+                    onChange={(value) => updateFormField('name', value)}
+                  />
 
-          <Form.Item
-            label={t('label.color')}
-            name="color"
-            tooltip={t('message.relation-color-tooltip')}>
-            <Input
-              data-testid="color-input"
-              placeholder="#1890ff"
-              style={{ width: 150 }}
-              suffix={
-                <Form.Item noStyle shouldUpdate>
-                  {({ getFieldValue }) => (
-                    <div
-                      data-testid="color-preview"
-                      style={{
-                        width: 16,
-                        height: 16,
-                        backgroundColor: getFieldValue('color') || '#d9d9d9',
-                        borderRadius: 2,
-                        border: '1px solid #d9d9d9',
-                      }}
-                    />
-                  )}
-                </Form.Item>
-              }
-            />
-          </Form.Item>
+                  <Input
+                    data-testid="display-name-input"
+                    hint={formErrors.displayName}
+                    isInvalid={Boolean(formErrors.displayName)}
+                    label={t('label.display-name')}
+                    placeholder={t('label.enter-entity', {
+                      entity: t('label.display-name'),
+                    })}
+                    value={formValues.displayName ?? ''}
+                    onChange={(value) => updateFormField('displayName', value)}
+                  />
 
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                label={t('label.symmetric')}
-                name="isSymmetric"
-                valuePropName="checked">
-                <Switch data-testid="symmetric-switch" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label={t('label.transitive')}
-                name="isTransitive"
-                valuePropName="checked">
-                <Switch data-testid="transitive-switch" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label={t('label.cross-glossary')}
-                name="isCrossGlossaryAllowed"
-                valuePropName="checked">
-                <Switch data-testid="cross-glossary-switch" />
-              </Form.Item>
-            </Col>
-          </Row>
+                  <TextArea
+                    data-testid="description-input"
+                    label={t('label.description')}
+                    placeholder={t('label.enter-entity', {
+                      entity: t('label.description'),
+                    })}
+                    rows={3}
+                    value={formValues.description ?? ''}
+                    onChange={(value) => updateFormField('description', value)}
+                  />
 
-          <Form.Item noStyle shouldUpdate>
-            {({ getFieldValue }) =>
-              getFieldValue('cardinality') === RelationCardinality.Custom ? (
-                <Row gutter={[0, 12]}>
-                  <Col span={24}>
-                    <Form.Item
-                      label={`${t('label.source')} ${t('label.max')}`}
-                      name="sourceMax">
-                      <InputNumber
-                        className="w-full"
+                  <Select
+                    data-testid="category-select"
+                    items={categoryOptions}
+                    label={t('label.category')}
+                    value={formValues.category ?? null}
+                    onChange={(key: Key | null) =>
+                      key &&
+                      updateFormField(
+                        'category',
+                        String(key) as RelationCategory
+                      )
+                    }
+                  >
+                    {(item) => <Select.Item {...item} />}
+                  </Select>
+
+                  <Input
+                    data-testid="inverse-relation-input"
+                    label={t('label.inverse-relation')}
+                    placeholder={t('label.enter-entity', {
+                      entity: t('label.inverse-relation'),
+                    })}
+                    tooltip={t('message.inverse-relation-tooltip')}
+                    value={formValues.inverseRelation ?? ''}
+                    onChange={(value) =>
+                      updateFormField('inverseRelation', value || undefined)
+                    }
+                  />
+
+                  <Input
+                    data-testid="rdf-predicate-input"
+                    hint={
+                      rdfPredicateDuplicates
+                        ? `${t('label.used-by')}: ${rdfPredicateDuplicates.join(
+                            ', '
+                          )}`
+                        : undefined
+                    }
+                    isInvalid={Boolean(rdfPredicateDuplicates)}
+                    label={t('label.rdf-predicate')}
+                    placeholder="http://www.w3.org/2004/02/skos/core#broader"
+                    tooltip={t('message.rdf-predicate-tooltip')}
+                    value={formValues.rdfPredicate ?? ''}
+                    onChange={(value) =>
+                      updateFormField('rdfPredicate', value || undefined)
+                    }
+                  />
+
+                  <Select
+                    data-testid="cardinality-select"
+                    hint={formErrors.cardinality}
+                    isInvalid={Boolean(formErrors.cardinality)}
+                    items={cardinalityOptions}
+                    label={t('label.cardinality')}
+                    value={formValues.cardinality ?? null}
+                    onChange={(key: Key | null) =>
+                      key &&
+                      updateFormField(
+                        'cardinality',
+                        String(key) as RelationCardinality
+                      )
+                    }
+                  >
+                    {(item) => <Select.Item {...item} />}
+                  </Select>
+
+                  {formValues.cardinality === RelationCardinality.Custom && (
+                    <div className="tw:flex tw:flex-col tw:gap-4">
+                      <Input
                         data-testid="source-max-input"
-                        min={1}
+                        label={`${t('label.source')} ${t('label.max')}`}
                         placeholder={t('label.unlimited')}
+                        type="number"
+                        value={
+                          formValues.sourceMax == null
+                            ? ''
+                            : String(formValues.sourceMax)
+                        }
+                        onChange={(value) =>
+                          updateFormField(
+                            'sourceMax',
+                            value === '' ? undefined : parseInt(value, 10)
+                          )
+                        }
                       />
-                    </Form.Item>
-                  </Col>
-                  <Col span={24}>
-                    <Form.Item
-                      label={`${t('label.target')} ${t('label.max')}`}
-                      name="targetMax">
-                      <InputNumber
-                        className="w-full"
+                      <Input
                         data-testid="target-max-input"
-                        min={1}
+                        label={`${t('label.target')} ${t('label.max')}`}
                         placeholder={t('label.unlimited')}
+                        type="number"
+                        value={
+                          formValues.targetMax == null
+                            ? ''
+                            : String(formValues.targetMax)
+                        }
+                        onChange={(value) =>
+                          updateFormField(
+                            'targetMax',
+                            value === '' ? undefined : parseInt(value, 10)
+                          )
+                        }
                       />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              ) : null
-            }
-          </Form.Item>
-        </Form>
-      </Drawer>
+                    </div>
+                  )}
+
+                  <div>
+                    <Input
+                      data-testid="color-input"
+                      label={t('label.color')}
+                      placeholder="#1890ff"
+                      tooltip={t('message.relation-color-tooltip')}
+                      value={formValues.color ?? ''}
+                      onChange={(value) =>
+                        updateFormField('color', value || undefined)
+                      }
+                    />
+                    <div className="tw:mt-2 tw:flex tw:items-center tw:gap-2">
+                      <div
+                        className="tw:size-4 tw:rounded tw:border tw:border-secondary tw:shrink-0"
+                        data-testid="color-preview"
+                        style={{
+                          backgroundColor:
+                            formValues.color || 'var(--color-border-secondary)',
+                        }}
+                      />
+                      <Typography
+                        as="span"
+                        className="tw:text-xs tw:text-tertiary"
+                      >
+                        {formValues.color ||
+                          t('label.no-entity', { entity: t('label.color') })}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <div className="tw:grid tw:grid-cols-3 tw:gap-4">
+                    <Toggle
+                      data-testid="symmetric-switch"
+                      isSelected={formValues.isSymmetric ?? false}
+                      label={t('label.symmetric')}
+                      size="sm"
+                      onChange={(checked) =>
+                        updateFormField('isSymmetric', checked)
+                      }
+                    />
+                    <Toggle
+                      data-testid="transitive-switch"
+                      isSelected={formValues.isTransitive ?? false}
+                      label={t('label.transitive')}
+                      size="sm"
+                      onChange={(checked) =>
+                        updateFormField('isTransitive', checked)
+                      }
+                    />
+                    <Toggle
+                      data-testid="cross-glossary-switch"
+                      isSelected={formValues.isCrossGlossaryAllowed ?? true}
+                      label={t('label.cross-glossary')}
+                      size="sm"
+                      onChange={(checked) =>
+                        updateFormField('isCrossGlossaryAllowed', checked)
+                      }
+                    />
+                  </div>
+                </div>
+              </SlideoutMenu.Content>
+
+              <SlideoutMenu.Footer>
+                <div className="tw:flex tw:w-full tw:justify-end tw:gap-2">
+                  <Button
+                    color="secondary"
+                    data-testid="cancel-btn"
+                    size="sm"
+                    onClick={handleModalCancel}
+                  >
+                    {t('label.cancel')}
+                  </Button>
+                  <Button
+                    color="primary"
+                    data-testid="save-btn"
+                    isLoading={saving}
+                    size="sm"
+                    onClick={handleModalOk}
+                  >
+                    {editingRelation ? t('label.update') : t('label.add')}
+                  </Button>
+                </div>
+              </SlideoutMenu.Footer>
+            </>
+          )}
+        </SlideoutMenu>
+      </div>
     </PageLayoutV1>
   );
 }
