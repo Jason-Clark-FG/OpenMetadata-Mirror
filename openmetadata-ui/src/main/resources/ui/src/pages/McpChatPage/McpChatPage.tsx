@@ -16,10 +16,10 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
-  Button,
   CircularProgress,
   Divider,
   IconButton,
+  InputAdornment,
   List,
   ListItemButton,
   ListItemText,
@@ -29,6 +29,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { Send01 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { isEmpty } from 'lodash';
 import {
@@ -387,20 +388,20 @@ const McpChatPage = () => {
             display="flex"
             flex={1}
             flexDirection="column"
-            gap={2}
             justifyContent="center"
           >
-            <AddChatIcon height={48} width={48} />
-            <Typography color="text.secondary" variant="body1">
+            <Typography color="text.secondary" mb={3} variant="h6">
               {t('message.mcp-chat-empty')}
             </Typography>
-            <ChatInput
-              inputValue={inputValue}
-              isSending={isSending}
-              onKeyDown={handleKeyDown}
-              onSend={handleSendMessage}
-              onValueChange={setInputValue}
-            />
+            <Box sx={{ width: '100%', maxWidth: 560, px: 2 }}>
+              <ChatInput
+                inputValue={inputValue}
+                isSending={isSending}
+                onKeyDown={handleKeyDown}
+                onSend={handleSendMessage}
+                onValueChange={setInputValue}
+              />
+            </Box>
           </Box>
         )}
       </Box>
@@ -758,15 +759,10 @@ const ChatInput = ({
   onKeyDown,
 }: ChatInputProps) => {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   return (
-    <Box
-      alignItems="flex-end"
-      display="flex"
-      gap={1}
-      p={2}
-      sx={{ borderTop: '1px solid', borderColor: 'divider' }}
-    >
+    <Box p={2}>
       <TextField
         fullWidth
         multiline
@@ -775,23 +771,39 @@ const ChatInput = ({
         maxRows={4}
         placeholder={t('message.mcp-chat-placeholder')}
         size="small"
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end" sx={{ alignSelf: 'flex-end' }}>
+                <IconButton
+                  data-testid="mcp-send-button"
+                  disabled={isEmpty(inputValue.trim()) || isSending}
+                  size="small"
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    '&.Mui-disabled': {
+                      color: theme.palette.grey[300],
+                    },
+                  }}
+                  onClick={onSend}
+                >
+                  {isSending ? (
+                    <CircularProgress color="inherit" size={18} />
+                  ) : (
+                    <Send01 size={18} />
+                  )}
+                </IconButton>
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: 3,
+            },
+          },
+        }}
         value={inputValue}
         onChange={(e) => onValueChange(e.target.value)}
         onKeyDown={onKeyDown}
       />
-      <Button
-        data-testid="mcp-send-button"
-        disabled={isEmpty(inputValue.trim()) || isSending}
-        size="small"
-        variant="contained"
-        onClick={onSend}
-      >
-        {isSending ? (
-          <CircularProgress color="inherit" size={20} />
-        ) : (
-          t('label.send')
-        )}
-      </Button>
     </Box>
   );
 };
