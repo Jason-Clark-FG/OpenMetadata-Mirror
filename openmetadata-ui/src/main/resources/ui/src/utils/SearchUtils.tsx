@@ -287,6 +287,10 @@ export const filterOptionsByIndex = (
   const entityType =
     searchClassBase.getSearchIndexEntityTypeMapping()[searchIndex];
 
+  if (!entityType) {
+    return [];
+  }
+
   return options
     .filter((option) => option._source?.entityType === entityType)
     .map((option) => option._source)
