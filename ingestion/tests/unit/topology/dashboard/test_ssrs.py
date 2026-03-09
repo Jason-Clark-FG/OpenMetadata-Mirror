@@ -219,6 +219,24 @@ class TestSsrsSource:
         assert len(results) == 1
         assert results[0].right.description is None
 
+    def test_prepare_builds_folder_path_map(self, ssrs_source):
+        ssrs_source.client.get_folders = lambda: MOCK_FOLDERS
+        ssrs_source.folder_path_map = {}
+        ssrs_source.prepare()
+        assert ssrs_source.folder_path_map == {
+            "/Finance": "Finance",
+            "/Operations": "Operations",
+        }
+
+    def test_yield_dashboard_chart_filtered(self, ssrs_source):
+        ssrs_source.source_config.chartFilterPattern = MagicMock()
+        with patch(
+            "metadata.ingestion.source.dashboard.ssrs.metadata.filter_by_chart",
+            return_value=True,
+        ):
+            results = list(ssrs_source.yield_dashboard_chart(MOCK_REPORTS[0]))
+        assert len(results) == 0
+
     def test_yield_dashboard_lineage_is_noop(self, ssrs_source):
         result = ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0])
         assert result is None

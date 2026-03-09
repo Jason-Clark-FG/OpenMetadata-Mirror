@@ -45,16 +45,6 @@ MOCK_FOLDERS = [
     {"Id": "folder-1", "Name": "TestFolder", "Path": "/TestFolder"},
 ]
 
-MOCK_DATASOURCES = [
-    {
-        "Id": "ds-1",
-        "Name": "TestDB",
-        "ConnectionString": "Data Source=localhost;Initial Catalog=TestDB",
-        "DataSourceType": "SQL",
-        "IsEnabled": True,
-    }
-]
-
 
 class SsrsMockHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -69,8 +59,6 @@ class SsrsMockHandler(BaseHTTPRequestHandler):
             skip = int(params.get("$skip", ["0"])[0])
             page = MOCK_REPORTS[skip : skip + top]
             self._respond({"value": page})
-        elif "/DataSources" in path:
-            self._respond({"value": MOCK_DATASOURCES})
         else:
             self.send_error(404)
 

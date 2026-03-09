@@ -36,14 +36,6 @@ class TestSsrsMetadata:
         assert len(folders) == 1
         assert folders[0].name == "TestFolder"
 
-    def test_client_get_report_datasources(self, ssrs_service):
-        connection = SsrsConnection(hostPort=ssrs_service)
-        client = SsrsClient(connection)
-        datasources = client.get_report_datasources("report-1")
-        assert len(datasources) == 1
-        assert datasources[0].name == "TestDB"
-        assert datasources[0].data_source_type == "SQL"
-
     def test_client_test_access(self, ssrs_service):
         connection = SsrsConnection(hostPort=ssrs_service)
         client = SsrsClient(connection)

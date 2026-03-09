@@ -40,7 +40,7 @@ PAGE_SIZE = 100
 class SsrsClient:
     def __init__(self, config: SsrsConnection):
         self.config = config
-        self.base_url = f"{clean_uri(str(config.hostPort))}/{API_VERSION}"
+        self.base_url = f"{clean_uri(config.hostPort)}/{API_VERSION}"
         self.session = requests.Session()
         if config.username and config.password:
             self.session.auth = HttpNtlmAuth(

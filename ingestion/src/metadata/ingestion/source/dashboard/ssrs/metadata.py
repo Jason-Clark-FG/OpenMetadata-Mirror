@@ -99,7 +99,7 @@ class SsrsSource(DashboardServiceSource):
                     return self.folder_path_map.get(parts[0])
         except Exception as exc:
             logger.debug(traceback.format_exc())
-            logger.warning(f"Error fetching project name: {exc}")
+            logger.warning("Error fetching project name: %s", exc)
         return None
 
     def yield_dashboard(
