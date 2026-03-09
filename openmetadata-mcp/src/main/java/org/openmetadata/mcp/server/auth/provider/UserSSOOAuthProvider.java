@@ -619,27 +619,56 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
             "invalid_request", "code_verifier must be between 43 and 128 characters per RFC 7636");
       }
 
-      OAuthAuthorizationCodeRecord codeRecord = codeRepository.markAsUsedAtomic(code);
+      // Look up the code record first (read-only) to validate expiry before consuming it.
+      // This prevents burning valid codes on expired requests.
+      OAuthAuthorizationCodeRecord codeRecord = codeRepository.findByCode(code);
       if (codeRecord == null) {
         String clientIP =
             currentRequest.get() != null ? currentRequest.get().getRemoteAddr() : "unknown";
         LOG.error(
-            "SECURITY ALERT: Authorization code replay attack or invalid code detected! "
-                + "Client: {}, IP: {}. This could indicate: 1) Code reuse (replay attack), "
-                + "2) Non-existent code, or 3) Previously deleted code.",
+            "SECURITY ALERT: Authorization code not found! "
+                + "Client: {}, IP: {}. Code may be non-existent or previously deleted.",
+            client.getClientId(),
+            clientIP);
+        throw new TokenException("invalid_grant", "Authorization code invalid or already used");
+      }
+
+      // Check expiry BEFORE atomic consumption so expired codes aren't burned
+      if (System.currentTimeMillis() > codeRecord.expiresAt()) {
+        long expiredSecondsAgo = (System.currentTimeMillis() - codeRecord.expiresAt()) / 1000;
+        LOG.warn(
+            "Authorization code expired {} seconds ago. Expiration time: {}, Client: {}",
+            expiredSecondsAgo,
+            new java.util.Date(codeRecord.expiresAt()),
+            client.getClientId());
+        throw new TokenException(
+            "invalid_grant",
+            "Authorization code expired "
+                + expiredSecondsAgo
+                + " seconds ago. Please restart the authorization flow.");
+      }
+
+      // Atomically mark as used — prevents replay attacks
+      OAuthAuthorizationCodeRecord usedRecord = codeRepository.markAsUsedAtomic(code);
+      if (usedRecord == null) {
+        String clientIP =
+            currentRequest.get() != null ? currentRequest.get().getRemoteAddr() : "unknown";
+        LOG.error(
+            "SECURITY ALERT: Authorization code replay attack detected! "
+                + "Client: {}, IP: {}. Code was already used by a concurrent request.",
             client.getClientId(),
             clientIP);
         throw new TokenException("invalid_grant", "Authorization code invalid or already used");
       }
 
       // CRITICAL: Validate client ID matches (prevents authorization code theft attack)
-      if (!client.getClientId().equals(codeRecord.clientId())) {
+      if (!client.getClientId().equals(usedRecord.clientId())) {
         String clientIP =
             currentRequest.get() != null ? currentRequest.get().getRemoteAddr() : "unknown";
         LOG.error(
             "SECURITY ALERT: Authorization code theft attack detected! "
                 + "Code issued to client '{}' but presented by client '{}'. IP: {}",
-            codeRecord.clientId(),
+            usedRecord.clientId(),
             client.getClientId(),
             clientIP);
         throw new TokenException(
@@ -647,9 +676,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       }
 
       // CRITICAL: Validate redirect URI matches (RFC 6749 Section 4.1.3)
-      // If redirect_uri was included in the authorization request, it MUST be present and
-      // identical in the token exchange request. Omitting it is not allowed.
-      String storedRedirectUri = codeRecord.redirectUri();
+      String storedRedirectUri = usedRecord.redirectUri();
       URI requestRedirectUri = authCode.getRedirectUri();
       if (storedRedirectUri != null && !storedRedirectUri.isEmpty()) {
         if (requestRedirectUri == null) {
@@ -669,26 +696,12 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
         }
       }
 
-      if (System.currentTimeMillis() > codeRecord.expiresAt()) {
-        long expiredSecondsAgo = (System.currentTimeMillis() - codeRecord.expiresAt()) / 1000;
-        LOG.warn(
-            "Authorization code expired {} seconds ago. Expiration time: {}, Client: {}",
-            expiredSecondsAgo,
-            new java.util.Date(codeRecord.expiresAt()),
-            client.getClientId());
-        throw new TokenException(
-            "invalid_grant",
-            "Authorization code expired "
-                + expiredSecondsAgo
-                + " seconds ago. Please restart the authorization flow.");
-      }
-
-      if (!verifyPKCE(codeVerifier, codeRecord.codeChallenge())) {
+      if (!verifyPKCE(codeVerifier, usedRecord.codeChallenge())) {
         LOG.warn("PKCE verification failed");
         throw new TokenException("invalid_grant", "Code verifier does not match code challenge");
       }
 
-      String userName = codeRecord.userName();
+      String userName = usedRecord.userName();
       LOG.debug("Generating JWT token");
 
       User user;
@@ -707,7 +720,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
               JWT_EXPIRY_SECONDS,
               false,
               ServiceTokenType.OM_USER,
-              codeRecord.scopes());
+              usedRecord.scopes());
 
       // Generate cryptographically secure refresh token (32 bytes = 256 bits) for long-lived
       // sessions (OAuth 2.0 RFC 6749)
@@ -716,11 +729,11 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
       RefreshToken refreshToken =
           new RefreshToken(
-              refreshTokenValue, client.getClientId(), codeRecord.scopes(), refreshExpiresAt);
+              refreshTokenValue, client.getClientId(), usedRecord.scopes(), refreshExpiresAt);
 
       // Store refresh token in database (hashed and encrypted)
       tokenRepository.storeRefreshToken(
-          refreshToken, client.getClientId(), userName, codeRecord.scopes());
+          refreshToken, client.getClientId(), userName, usedRecord.scopes());
 
       LOG.info(
           "Generated refresh token for user: {} (expires in {} days)",
@@ -732,8 +745,8 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       token.setAccessToken(jwtAuth.getJWTToken());
       token.setTokenType("Bearer");
       token.setExpiresIn((int) JWT_EXPIRY_SECONDS);
-      token.setRefreshToken(refreshTokenValue); // Add refresh token to response
-      token.setScope(String.join(" ", codeRecord.scopes())); // Include granted scopes
+      token.setRefreshToken(refreshTokenValue);
+      token.setScope(String.join(" ", usedRecord.scopes()));
 
       LOG.debug("Successfully issued JWT and refresh token");
       return CompletableFuture.completedFuture(token);

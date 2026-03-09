@@ -295,7 +295,10 @@ public class McpServer implements McpServerProvider {
     } catch (Exception e) {
       LOG.warn("Could not get instance URL from SystemSettings, using fallback", e);
     }
-    LOG.info("Using fallback base URL: http://localhost:8585");
+    LOG.warn(
+        "No base URL configured in MCP settings or system settings. "
+            + "Falling back to http://localhost:8585 — this is only suitable for local development. "
+            + "Configure a proper base URL for production deployments.");
     return "http://localhost:8585";
   }
 }

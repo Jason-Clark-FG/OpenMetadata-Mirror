@@ -350,7 +350,8 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       String ssoCallbackUrl;
       String finalRedirectUri;
 
-      if (requestedRedirectUri != null && requestedRedirectUri.contains("/mcp/callback")) {
+      String expectedMcpCallback = serverUrl + "/mcp/callback";
+      if (requestedRedirectUri != null && requestedRedirectUri.equals(expectedMcpCallback)) {
         ssoCallbackUrl = requestedRedirectUri;
         finalRedirectUri = requestedRedirectUri;
         LOG.debug("MCP OAuth flow detected - using provided callback URL");
