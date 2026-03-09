@@ -1569,7 +1569,7 @@ export const selectDomainFromNavbar = async (
   const searchDomainRes = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('domain')
+      response.url().includes('index=domain')
   );
   await page
     .getByTestId('domain-selectable-tree')

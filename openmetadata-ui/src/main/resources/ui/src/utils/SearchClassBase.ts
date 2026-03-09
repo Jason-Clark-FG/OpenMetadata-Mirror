@@ -113,14 +113,14 @@ class SearchClassBase {
       [EntityType.TEST_SUITE]: SearchIndex.TEST_SUITE,
       [EntityType.GLOSSARY]: SearchIndex.GLOSSARY,
       [EntityType.INGESTION_PIPELINE]: SearchIndex.INGESTION_PIPELINE,
-      [EntityType.API_SERVICE]: SearchIndex.API_SERVICE_INDEX,
-      [EntityType.API_COLLECTION]: SearchIndex.API_COLLECTION_INDEX,
-      [EntityType.API_ENDPOINT]: SearchIndex.API_ENDPOINT_INDEX,
-      [EntityType.METRIC]: SearchIndex.METRIC_SEARCH_INDEX,
-      [EntityType.DIRECTORY]: SearchIndex.DIRECTORY_SEARCH_INDEX,
-      [EntityType.FILE]: SearchIndex.FILE_SEARCH_INDEX,
-      [EntityType.SPREADSHEET]: SearchIndex.SPREADSHEET_SEARCH_INDEX,
-      [EntityType.WORKSHEET]: SearchIndex.WORKSHEET_SEARCH_INDEX,
+      [EntityType.API_SERVICE]: SearchIndex.API_SERVICE,
+      [EntityType.API_COLLECTION]: SearchIndex.API_COLLECTION,
+      [EntityType.API_ENDPOINT]: SearchIndex.API_ENDPOINT,
+      [EntityType.METRIC]: SearchIndex.METRIC,
+      [EntityType.DIRECTORY]: SearchIndex.DIRECTORY,
+      [EntityType.FILE]: SearchIndex.FILE,
+      [EntityType.SPREADSHEET]: SearchIndex.SPREADSHEET,
+      [EntityType.WORKSHEET]: SearchIndex.WORKSHEET,
     };
   }
 
@@ -158,14 +158,14 @@ class SearchClassBase {
       [SearchIndex.TEST_SUITE]: EntityType.TEST_SUITE,
       [SearchIndex.GLOSSARY]: EntityType.GLOSSARY,
       [SearchIndex.INGESTION_PIPELINE]: EntityType.INGESTION_PIPELINE,
-      [SearchIndex.API_SERVICE_INDEX]: EntityType.API_SERVICE,
-      [SearchIndex.API_COLLECTION_INDEX]: EntityType.API_COLLECTION,
-      [SearchIndex.API_ENDPOINT_INDEX]: EntityType.API_ENDPOINT,
-      [SearchIndex.METRIC_SEARCH_INDEX]: EntityType.METRIC,
-      [SearchIndex.DIRECTORY_SEARCH_INDEX]: EntityType.DIRECTORY,
-      [SearchIndex.FILE_SEARCH_INDEX]: EntityType.FILE,
-      [SearchIndex.SPREADSHEET_SEARCH_INDEX]: EntityType.SPREADSHEET,
-      [SearchIndex.WORKSHEET_SEARCH_INDEX]: EntityType.WORKSHEET,
+      [SearchIndex.API_SERVICE]: EntityType.API_SERVICE,
+      [SearchIndex.API_COLLECTION]: EntityType.API_COLLECTION,
+      [SearchIndex.API_ENDPOINT]: EntityType.API_ENDPOINT,
+      [SearchIndex.METRIC]: EntityType.METRIC,
+      [SearchIndex.DIRECTORY]: EntityType.DIRECTORY,
+      [SearchIndex.FILE]: EntityType.FILE,
+      [SearchIndex.SPREADSHEET]: EntityType.SPREADSHEET,
+      [SearchIndex.WORKSHEET]: EntityType.WORKSHEET,
     };
   }
 
@@ -196,31 +196,31 @@ class SearchClassBase {
       { value: SearchIndex.SEARCH_INDEX, label: t('label.search-index') },
       { value: SearchIndex.DATA_PRODUCT, label: t('label.data-product') },
       {
-        value: SearchIndex.API_ENDPOINT_INDEX,
+        value: SearchIndex.API_ENDPOINT,
         label: t('label.api-endpoint'),
       },
       {
-        value: SearchIndex.API_COLLECTION_INDEX,
+        value: SearchIndex.API_COLLECTION,
         label: t('label.api-collection'),
       },
       {
-        value: SearchIndex.METRIC_SEARCH_INDEX,
+        value: SearchIndex.METRIC,
         label: t('label.metric'),
       },
       {
-        value: SearchIndex.DIRECTORY_SEARCH_INDEX,
+        value: SearchIndex.DIRECTORY,
         label: t('label.directory'),
       },
       {
-        value: SearchIndex.FILE_SEARCH_INDEX,
+        value: SearchIndex.FILE,
         label: t('label.file'),
       },
       {
-        value: SearchIndex.SPREADSHEET_SEARCH_INDEX,
+        value: SearchIndex.SPREADSHEET,
         label: t('label.spreadsheet'),
       },
       {
-        value: SearchIndex.WORKSHEET_SEARCH_INDEX,
+        value: SearchIndex.WORKSHEET,
         label: t('label.worksheet'),
       },
     ];
@@ -287,7 +287,7 @@ class SearchClassBase {
       },
       {
         title: t('label.api-uppercase-plural'),
-        key: SearchIndex.API_COLLECTION_INDEX,
+        key: SearchIndex.API_COLLECTION,
         data: {
           isRoot: true,
           childEntities: [EntityType.API_ENDPOINT, EntityType.API_COLLECTION],
@@ -296,7 +296,7 @@ class SearchClassBase {
       },
       {
         title: t('label.drive-plural'),
-        key: SearchIndex.DIRECTORY_SEARCH_INDEX,
+        key: SearchIndex.DIRECTORY,
         data: {
           isRoot: true,
           childEntities: [
@@ -386,12 +386,12 @@ class SearchClassBase {
       [ExplorePageTabs.PIPELINES]: [SearchIndex.PIPELINE],
       [ExplorePageTabs.MLMODELS]: [SearchIndex.MLMODEL],
       [ExplorePageTabs.SEARCH_INDEX]: [SearchIndex.SEARCH_INDEX],
-      [ExplorePageTabs.API_ENDPOINT]: [SearchIndex.API_ENDPOINT_INDEX],
-      [ExplorePageTabs.METRIC]: [SearchIndex.METRIC_SEARCH_INDEX],
-      [ExplorePageTabs.DIRECTORIES]: [SearchIndex.DIRECTORY_SEARCH_INDEX],
-      [ExplorePageTabs.FILES]: [SearchIndex.FILE_SEARCH_INDEX],
-      [ExplorePageTabs.SPREADSHEETS]: [SearchIndex.SPREADSHEET_SEARCH_INDEX],
-      [ExplorePageTabs.WORKSHEETS]: [SearchIndex.WORKSHEET_SEARCH_INDEX],
+      [ExplorePageTabs.API_ENDPOINT]: [SearchIndex.API_ENDPOINT],
+      [ExplorePageTabs.METRIC]: [SearchIndex.METRIC],
+      [ExplorePageTabs.DIRECTORIES]: [SearchIndex.DIRECTORY],
+      [ExplorePageTabs.FILES]: [SearchIndex.FILE],
+      [ExplorePageTabs.SPREADSHEETS]: [SearchIndex.SPREADSHEET],
+      [ExplorePageTabs.WORKSHEETS]: [SearchIndex.WORKSHEET],
     };
 
     return tabMapping[tab] || [SearchIndex.DATABASE];
@@ -504,49 +504,49 @@ class SearchClassBase {
         path: ExplorePageTabs.DATA_PRODUCT,
         icon: DataProductIcon,
       },
-      [SearchIndex.API_COLLECTION_INDEX]: {
+      [SearchIndex.API_COLLECTION]: {
         label: t('label.api-collection-plural'),
         sortingFields: tagSortingFields,
         sortField: INITIAL_SORT_FIELD,
         path: ExplorePageTabs.API_COLLECTION,
         icon: IconAPICollection,
       },
-      [SearchIndex.API_ENDPOINT_INDEX]: {
+      [SearchIndex.API_ENDPOINT]: {
         label: t('label.api-endpoint-plural'),
         sortingFields: tagSortingFields,
         sortField: INITIAL_SORT_FIELD,
         path: ExplorePageTabs.API_ENDPOINT,
         icon: IconAPIEndpoint,
       },
-      [SearchIndex.METRIC_SEARCH_INDEX]: {
+      [SearchIndex.METRIC]: {
         label: t('label.metric-plural'),
         sortingFields: tagSortingFields,
         sortField: TAGS_INITIAL_SORT_FIELD,
         path: ExplorePageTabs.METRIC,
         icon: MetricIcon,
       },
-      [SearchIndex.DIRECTORY_SEARCH_INDEX]: {
+      [SearchIndex.DIRECTORY]: {
         label: t('label.directory-plural'),
         sortingFields: tagSortingFields,
         sortField: TAGS_INITIAL_SORT_FIELD,
         path: ExplorePageTabs.DIRECTORIES,
         icon: MetricIcon,
       },
-      [SearchIndex.FILE_SEARCH_INDEX]: {
+      [SearchIndex.FILE]: {
         label: t('label.file-plural'),
         sortingFields: tagSortingFields,
         sortField: TAGS_INITIAL_SORT_FIELD,
         path: ExplorePageTabs.FILES,
         icon: MetricIcon,
       },
-      [SearchIndex.SPREADSHEET_SEARCH_INDEX]: {
+      [SearchIndex.SPREADSHEET]: {
         label: t('label.spreadsheet-plural'),
         sortingFields: tagSortingFields,
         sortField: TAGS_INITIAL_SORT_FIELD,
         path: ExplorePageTabs.SPREADSHEETS,
         icon: MetricIcon,
       },
-      [SearchIndex.WORKSHEET_SEARCH_INDEX]: {
+      [SearchIndex.WORKSHEET]: {
         label: t('label.worksheet-plural'),
         sortingFields: tagSortingFields,
         sortField: TAGS_INITIAL_SORT_FIELD,
@@ -563,7 +563,7 @@ class SearchClassBase {
       case SearchIndex.TOPIC:
         return [...COMMON_DROPDOWN_ITEMS, ...TOPIC_DROPDOWN_ITEMS];
 
-      case SearchIndex.API_ENDPOINT_INDEX:
+      case SearchIndex.API_ENDPOINT:
         return [...COMMON_DROPDOWN_ITEMS, ...API_ENDPOINT_DROPDOWN_ITEMS];
 
       case SearchIndex.DASHBOARD:
@@ -590,8 +590,8 @@ class SearchClassBase {
       case SearchIndex.STORED_PROCEDURE:
       case SearchIndex.DATABASE:
       case SearchIndex.DATABASE_SCHEMA:
-      case SearchIndex.API_COLLECTION_INDEX:
-      case SearchIndex.METRIC_SEARCH_INDEX:
+      case SearchIndex.API_COLLECTION:
+      case SearchIndex.METRIC:
         return COMMON_DROPDOWN_ITEMS;
       case SearchIndex.DATA_ASSET:
         return DATA_ASSET_DROPDOWN_ITEMS;
