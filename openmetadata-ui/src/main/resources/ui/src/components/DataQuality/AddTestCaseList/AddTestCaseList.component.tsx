@@ -11,7 +11,8 @@
  *  limitations under the License.
  */
 import { Button, Checkbox, Col, List, Row, Space, Typography } from 'antd';
-import { isEmpty } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
+import omit from 'lodash/omit';
 import VirtualList from 'rc-virtual-list';
 import {
   UIEventHandler,
@@ -177,7 +178,9 @@ export const AddTestCaseList = ({
             }),
         };
         if (testCaseParams) {
-          Object.assign(requestParams, testCaseParams);
+          Object.assign(requestParams, {
+            ...omit(testCaseParams, Object.keys(requestParams)),
+          });
         }
         const testCaseResponse = await getListTestCaseBySearch(requestParams);
 
