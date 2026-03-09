@@ -33,6 +33,7 @@ import {
 } from '../../../generated/entity/feed/thread';
 import { formatDateTime } from '../../../utils/date-time/DateTimeUtils';
 import EntityLink from '../../../utils/EntityLink';
+import { getEntityName } from '../../../utils/EntityUtils';
 import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 
 interface FeedbackApprovalTaskProps {
@@ -84,11 +85,18 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
     return <div />;
   }
 
-  const labelStyle = {
-    px: 2,
-    gap: 2,
-    flex: '0 0 34%',
+  const rowStyle = {
+    gap: 3,
     display: 'flex',
+    alignItems: 'flex-start',
+  };
+
+  const labelStyle = {
+    gap: 2,
+    minWidth: 0,
+    display: 'flex',
+    flex: '0 0 32%',
+    maxWidth: '32%',
     alignItems: 'center',
     color: theme.palette.grey[700],
   };
@@ -97,9 +105,15 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
     <Box
       className="feedback-approval-task"
       data-testid="feedback-approval-task"
-      sx={{ display: 'flex', rowGap: 4, flexDirection: 'column', mt: -1.5 }}>
+      sx={{
+        display: 'flex',
+        rowGap: 4,
+        flexDirection: 'column',
+        mt: -1.5,
+      }}
+    >
       {recognizerName && (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
             <CpuChip02 className="text-grey-muted" size={16} />
             {t('label.recognizer')}
@@ -109,7 +123,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
           </Typography>
         </Box>
       )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <Box sx={rowStyle}>
         <Typography sx={labelStyle} variant="body2">
           <Flag04 className="text-grey-muted" size={16} />
           {t('label.feedback-type')}
@@ -146,7 +160,7 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
       </Box>
 
       {feedback.userComments && (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
             <MessageTextSquare01 className="text-grey-muted" size={16} />
             {t('label.comment-plural')}
@@ -156,7 +170,8 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
               '& .ProseMirror p, button': {
                 fontSize: theme.typography.caption.fontSize,
               },
-            }}>
+            }}
+          >
             <RichTextEditorPreviewerNew
               className="text-grey-700"
               markdown={feedback.userComments}
@@ -167,23 +182,22 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
       )}
 
       {feedback.createdBy && (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
             <UsersRight className="text-grey-muted" size={16} />
             {t('label.submitted-by')}
           </Typography>
           <UserPopOverCard
             showUserName
+            displayName={getEntityName(feedback.createdBy)}
             profileWidth={22}
-            userName={
-              feedback.createdBy.displayName || feedback.createdBy.name || '-'
-            }
+            userName={feedback.createdBy.name || '-'}
           />
         </Box>
       )}
 
       {feedback.createdAt && (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
             <Clock className="text-grey-muted" size={16} />
             {t('label.submitted-on')}
@@ -191,14 +205,15 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
           <Typography
             color={theme.palette.grey[700]}
             fontSize={theme.typography.caption.fontSize}
-            variant="body2">
+            variant="body2"
+          >
             {formatDateTime(feedback.createdAt)}
           </Typography>
         </Box>
       )}
 
       {entityLinkData && (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3 }}>
+        <Box sx={rowStyle}>
           <Typography sx={labelStyle} variant="body2">
             <Database01 className="text-grey-muted" size={16} />
             {t('label.entity-link')}
@@ -209,7 +224,8 @@ const FeedbackApprovalTask: FC<FeedbackApprovalTaskProps> = ({ task }) => {
               fontSize={theme.typography.caption.fontSize}
               fontWeight={theme.typography.body1.fontWeight}
               sx={{ lineBreak: 'anywhere' }}
-              variant="body2">
+              variant="body2"
+            >
               {entityLinkData.entityName}
             </Typography>
           </Link>

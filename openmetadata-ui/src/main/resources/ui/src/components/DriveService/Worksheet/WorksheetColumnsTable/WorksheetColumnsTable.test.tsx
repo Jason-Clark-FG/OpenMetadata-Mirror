@@ -76,6 +76,7 @@ const mockUseGenericContextResult = {
   data: null as Worksheet | null,
   permissions: {} as OperationPermission,
   onUpdate: jest.fn(),
+  setDisplayedColumns: jest.fn(),
 };
 
 jest.mock('../../../Customization/GenericProvider/GenericProvider', () => ({
@@ -110,7 +111,8 @@ jest.mock(
             <textarea data-testid="description-input" defaultValue={value} />
             <button
               data-testid="save-button"
-              onClick={() => onSave('Updated description')}>
+              onClick={() => onSave('Updated description')}
+            >
               Save
             </button>
             <button data-testid="cancel-button" onClick={onCancel}>

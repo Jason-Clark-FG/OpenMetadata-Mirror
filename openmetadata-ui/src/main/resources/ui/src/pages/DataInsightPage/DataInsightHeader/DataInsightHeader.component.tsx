@@ -19,10 +19,8 @@ import DatePickerMenu from '../../../components/common/DatePickerMenu/DatePicker
 import ManageButton from '../../../components/common/EntityPageInfos/ManageButton/ManageButton';
 import DataInsightSummary from '../../../components/DataInsight/DataInsightSummary';
 import KPIChart from '../../../components/DataInsight/KPIChart';
-import { LearningIcon } from '../../../components/Learning/LearningIcon/LearningIcon.component';
 import SearchDropdown from '../../../components/SearchDropdown/SearchDropdown';
 import { ROUTES } from '../../../constants/constants';
-import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { EntityType } from '../../../enums/entity.enum';
@@ -81,11 +79,6 @@ const DataInsightHeader = ({ onScrollToChart }: DataInsightHeaderProps) => {
               <Typography.Title level={5}>
                 {t('label.data-insight-plural')}
               </Typography.Title>
-              <LearningIcon
-                className="m-b-xs"
-                pageId={LEARNING_PAGE_IDS.DATA_INSIGHTS}
-                title={t('label.data-insight-plural')}
-              />
             </div>
             <Typography.Text className="data-insight-label-text">
               {t('message.data-insight-subtitle')}
@@ -97,7 +90,8 @@ const DataInsightHeader = ({ onScrollToChart }: DataInsightHeaderProps) => {
               <Button
                 data-testid="add-kpi-btn"
                 type="primary"
-                onClick={handleAddKPI}>
+                onClick={handleAddKPI}
+              >
                 {t('label.add-entity', {
                   entity: t('label.kpi-uppercase'),
                 })}

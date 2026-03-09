@@ -97,6 +97,7 @@ export interface AssetSelectionContentProps {
   onCancel?: () => void;
   queryFilter?: QueryFilterInterface;
   emptyPlaceHolderText?: string;
+  infoBannerText?: string;
 }
 
 export const useAssetSelectionContent = ({
@@ -108,6 +109,7 @@ export const useAssetSelectionContent = ({
   variant = 'modal',
   queryFilter,
   emptyPlaceHolderText,
+  infoBannerText,
 }: AssetSelectionContentProps) => {
   const { theme } = useApplicationStore();
   const { t } = useTranslation();
@@ -535,15 +537,16 @@ export const useAssetSelectionContent = ({
             {selectedItems.size} {t('label.selected-lowercase')}
           </Typography.Text>
         )}
-        {failedStatus?.failedRequest && failedStatus.failedRequest.length > 0 && (
-          <>
-            <Divider className="m-x-xss" type="vertical" />
-            <Typography.Text type="danger">
-              <CloseOutlined className="m-r-xs" />
-              {failedStatus.failedRequest.length} {t('label.error')}
-            </Typography.Text>
-          </>
-        )}
+        {failedStatus?.failedRequest &&
+          failedStatus.failedRequest.length > 0 && (
+            <>
+              <Divider className="m-x-xss" type="vertical" />
+              <Typography.Text type="danger">
+                <CloseOutlined className="m-r-xs" />
+                {failedStatus.failedRequest.length} {t('label.error')}
+              </Typography.Text>
+            </>
+          )}
       </div>
 
       <div>
@@ -555,7 +558,8 @@ export const useAssetSelectionContent = ({
           disabled={!selectedItems?.size || isLoading}
           loading={isSaveLoading || !isUndefined(assetJobResponse)}
           variant="contained"
-          onClick={onSaveAction}>
+          onClick={onSaveAction}
+        >
           {t('label.save')}
         </Button>
       </div>
@@ -568,7 +572,8 @@ export const useAssetSelectionContent = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-      }}>
+      }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {selectedItems && selectedItems.size >= 1 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -578,17 +583,18 @@ export const useAssetSelectionContent = ({
             </MuiTypography>
           </Box>
         )}
-        {failedStatus?.failedRequest && failedStatus.failedRequest.length > 0 && (
-          <>
-            <MuiDivider flexItem orientation="vertical" sx={{ mx: 1 }} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <ErrorOutline color="error" fontSize="small" />
-              <MuiTypography color="error" variant="body2">
-                {failedStatus.failedRequest.length} {t('label.error')}
-              </MuiTypography>
-            </Box>
-          </>
-        )}
+        {failedStatus?.failedRequest &&
+          failedStatus.failedRequest.length > 0 && (
+            <>
+              <MuiDivider flexItem orientation="vertical" sx={{ mx: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <ErrorOutline color="error" fontSize="small" />
+                <MuiTypography color="error" variant="body2">
+                  {failedStatus.failedRequest.length} {t('label.error')}
+                </MuiTypography>
+              </Box>
+            </>
+          )}
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
@@ -609,7 +615,8 @@ export const useAssetSelectionContent = ({
             )
           }
           variant="contained"
-          onClick={onSaveAction}>
+          onClick={onSaveAction}
+        >
           {t('label.save')}
         </Button>
       </Box>
@@ -622,7 +629,8 @@ export const useAssetSelectionContent = ({
     <Space
       className="w-full h-full overflow-hidden asset-selection-space"
       direction="vertical"
-      size={16}>
+      size={16}
+    >
       {(assetJobResponse || exportJob?.error) && (
         <Banner
           className="border-radius"
@@ -630,6 +638,10 @@ export const useAssetSelectionContent = ({
           message={exportJob?.error ?? assetJobResponse?.message ?? ''}
           type={exportJob?.error ? 'error' : 'success'}
         />
+      )}
+
+      {infoBannerText && (
+        <Alert showIcon message={infoBannerText} type="info" />
       )}
 
       <div className="d-flex items-center gap-3">
@@ -657,7 +669,8 @@ export const useAssetSelectionContent = ({
         {quickFilterQuery && (
           <Typography.Text
             className="text-primary cursor-pointer"
-            onClick={clearFilters}>
+            onClick={clearFilters}
+          >
             {t('label.clear-entity', {
               entity: '',
             })}
@@ -695,7 +708,8 @@ export const useAssetSelectionContent = ({
         <div className="border p-xs asset-list-wrapper">
           <Checkbox
             className="assets-checkbox p-x-sm"
-            onChange={(e) => onSelectAll(e.target.checked)}>
+            onChange={(e) => onSelectAll(e.target.checked)}
+          >
             {t('label.select-field', {
               field: t('label.all'),
             })}
@@ -705,7 +719,8 @@ export const useAssetSelectionContent = ({
               data={items}
               height={variant === 'modal' ? 500 : undefined}
               itemKey="id"
-              onScroll={onScroll}>
+              onScroll={onScroll}
+            >
               {({ _source: item }) => {
                 const { isError, errorMessage } = getErrorStatusAndMessage(
                   item.id ?? ''
@@ -716,7 +731,8 @@ export const useAssetSelectionContent = ({
                     className={classNames({
                       'm-y-sm border-danger rounded-4': isError,
                     })}
-                    key={item.id}>
+                    key={item.id}
+                  >
                     <TableDataCardV2
                       openEntityInNewPage
                       showCheckboxes

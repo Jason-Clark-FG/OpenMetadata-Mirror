@@ -53,6 +53,7 @@ import {
   getWorkflowInstancesForApplication,
   getWorkflowInstanceStateById,
 } from '../../rest/workflowAPI';
+import { getPrioritizedViewPermission } from '../../utils/PermissionsUtils';
 import serviceUtilClassBase from '../../utils/ServiceUtilClassBase';
 import { getCountLabel, shouldTestConnection } from '../../utils/ServiceUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
@@ -308,6 +309,11 @@ jest.mock('../../context/PermissionProvider/PermissionProvider', () => ({
       .mockImplementation(() =>
         Promise.resolve({ ViewAll: true, EditAll: true, Create: true })
       ),
+    permissions: {
+      database: { ViewAll: true, EditAll: true },
+      dashboard: { ViewAll: true, EditAll: true },
+      pipeline: { ViewAll: true, EditAll: true },
+    },
   })),
 }));
 
@@ -342,7 +348,8 @@ jest.mock(
           data-testid="update-name-button"
           onClick={() =>
             onDisplayNameUpdate({ name: 'name', displayName: 'Updated Name' })
-          }>
+          }
+        >
           Update Name
         </button>
         <button data-testid="restore-button" onClick={onRestoreDataAsset}>
@@ -351,7 +358,8 @@ jest.mock(
         <button
           data-testid="run-agents"
           disabled={disableRunAgentsButton}
-          title={disableRunAgentsButtonMessage}>
+          title={disableRunAgentsButtonMessage}
+        >
           Run Agents
         </button>
       </div>
@@ -459,13 +467,15 @@ jest.mock('../../components/common/NextPrevious/NextPrevious', () =>
       <button
         onClick={() =>
           pagingHandler({ cursorType: CursorType.BEFORE, currentPage: 1 })
-        }>
+        }
+      >
         Previous
       </button>
       <button
         onClick={() =>
           pagingHandler({ cursorType: CursorType.AFTER, currentPage: 2 })
-        }>
+        }
+      >
         Next
       </button>
     </div>
@@ -546,6 +556,7 @@ jest.mock('../../utils/date-time/DateTimeUtils', () => ({
 
 jest.mock('../../utils/PermissionsUtils', () => ({
   DEFAULT_ENTITY_PERMISSION: { ViewAll: false, EditAll: false },
+  getPrioritizedViewPermission: jest.fn().mockReturnValue(true),
 }));
 
 // Additional utility mocks
@@ -667,6 +678,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: { ViewAll: true, EditAll: true },
+          dashboard: { ViewAll: true, EditAll: true },
+          pipeline: { ViewAll: true, EditAll: true },
+        },
       }));
 
       await renderComponent();
@@ -849,6 +865,42 @@ describe('ServiceDetailsPage', () => {
       await waitFor(() => {
         expect(getDatabases).toHaveBeenCalled();
       });
+    });
+
+    it('should include usageSummary in database fields when ViewUsage is allowed', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(true);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).toContain('usageSummary');
+    });
+
+    it('should exclude usageSummary from database fields when ViewUsage is denied', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(false);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).not.toContain('usageSummary');
     });
 
     it('should fetch topics for messaging service', async () => {
@@ -1366,6 +1418,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: {},
+          dashboard: {},
+          pipeline: {},
+        },
       }));
 
       await renderComponent();

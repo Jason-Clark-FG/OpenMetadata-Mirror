@@ -171,7 +171,8 @@ const PortsListView = forwardRef<PortsListViewRef, PortsListViewProps>(
             flexDirection: 'column',
             flex: 1,
             minHeight: 0,
-          }}>
+          }}
+        >
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <Row gutter={[16, 16]}>
               {[1, 2, 3].map((key) => (
@@ -194,8 +195,16 @@ const PortsListView = forwardRef<PortsListViewRef, PortsListViewProps>(
           flexDirection: 'column',
           flex: 1,
           minHeight: 0,
-        }}>
-        <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            minHeight: 0,
+          }}
+        >
           <Row gutter={[16, 16]}>
             {ports.map((port) => (
               <Col key={port.id} span={24}>
@@ -225,7 +234,8 @@ const PortsListView = forwardRef<PortsListViewRef, PortsListViewProps>(
                         overlayClassName="manage-dropdown-list-container"
                         overlayStyle={{ width: '350px' }}
                         placement="bottomRight"
-                        trigger={['click']}>
+                        trigger={['click']}
+                      >
                         <Button
                           className="flex-center"
                           data-testid={`port-actions-${port.id}`}
@@ -238,6 +248,7 @@ const PortsListView = forwardRef<PortsListViewRef, PortsListViewProps>(
                   }
                   className="m-b-sm"
                   id={port.id ?? ''}
+                  showTags={false}
                   source={port}
                 />
               </Col>

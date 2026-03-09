@@ -94,6 +94,7 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
     onUpdate: onApiEndpointUpdate,
     openColumnDetailPanel,
     selectedColumn,
+    setDisplayedColumns,
   } = useGenericContext<APIEndpoint>();
 
   const { columnFqn: columnPart, fqn } = useFqn({
@@ -225,6 +226,11 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
     selectedColumn: selectedColumn as Field | null,
   });
 
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(activeSchemaFields);
+  }, [activeSchemaFields, setDisplayedColumns]);
+
   useScrollToElement(
     HIGHLIGHTED_ROW_SELECTOR,
     Boolean(fqn && activeSchemaFields?.length)
@@ -262,7 +268,10 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
 
   const renderSchemaName = useCallback(
     (_: string, record: Field) => (
-      <div className="d-inline-flex items-center gap-2 hover-icon-group w-max-90 vertical-align-inherit">
+      <div
+        className="d-inline-flex gap-1 hover-icon-group vertical-align-inherit flex-column items-start"
+        style={{ maxWidth: '80%' }}
+      >
         <Tooltip destroyTooltipOnHide title={getEntityName(record)}>
           <span className="break-word">
             {isVersionView ? (
@@ -500,7 +509,8 @@ const APIEndpointSchema: FC<APIEndpointSchemaProps> = ({
       {editFieldDescription && (
         <EntityAttachmentProvider
           entityFqn={editFieldDescription.fullyQualifiedName}
-          entityType={EntityType.API_ENDPOINT}>
+          entityType={EntityType.API_ENDPOINT}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.schema-field'),

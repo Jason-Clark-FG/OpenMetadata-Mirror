@@ -39,7 +39,7 @@ import {
   CustomPrevArrow,
 } from '../../../../utils/CustomizableLandingPageUtils';
 import entityUtilClassBase from '../../../../utils/EntityUtilClassBase';
-import { getEntityName } from '../../../../utils/EntityUtils';
+import { getDomainDisplayName } from '../../../../utils/EntityUtils';
 import serviceUtilClassBase from '../../../../utils/ServiceUtilClassBase';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import DomainSelectableList from '../../../common/DomainSelectableList/DomainSelectableList.component';
@@ -138,6 +138,11 @@ const CustomiseLandingPageHeader = ({
     [updateActiveDomain, navigate]
   );
 
+  const domainDisplayName = useMemo(
+    () => getDomainDisplayName(activeDomainEntityRef, activeDomain),
+    [activeDomainEntityRef, activeDomain, t]
+  );
+
   const navigateToEntity = (data: {
     entityType: string;
     fullyQualifiedName: string;
@@ -157,13 +162,15 @@ const CustomiseLandingPageHeader = ({
     <div
       className="customise-landing-page-header"
       data-testid={dataTestId}
-      style={landingPageStyle}>
+      style={landingPageStyle}
+    >
       <div className="header-container">
         <div className="dashboard-header">
           <div
             className={classNames('d-flex items-center gap-4 mb-5', {
               'justify-center': !showAnnouncements,
-            })}>
+            })}
+          >
             <Typography.Text className="welcome-user">
               {t('label.welcome', {
                 name: currentUser?.displayName || currentUser?.name,
@@ -199,7 +206,8 @@ const CustomiseLandingPageHeader = ({
                 selectedDomain={activeDomainEntityRef}
                 wrapInButton={false}
                 onCancel={() => setIsDomainDropdownOpen(false)}
-                onUpdate={handleDomainChange}>
+                onUpdate={handleDomainChange}
+              >
                 <div
                   className={classNames(
                     'd-flex items-center gap-2 border-radius-sm p-x-md bg-white domain-selector',
@@ -213,7 +221,8 @@ const CustomiseLandingPageHeader = ({
                   tabIndex={0}
                   onClick={() => {
                     setIsDomainDropdownOpen(!isDomainDropdownOpen);
-                  }}>
+                  }}
+                >
                   <DomainIcon
                     className="domain-icon"
                     data-testid="domain-icon"
@@ -221,9 +230,7 @@ const CustomiseLandingPageHeader = ({
                     width={22}
                   />
                   <Typography.Text className="text-sm font-medium domain-title">
-                    {activeDomainEntityRef
-                      ? getEntityName(activeDomainEntityRef)
-                      : activeDomain}
+                    {domainDisplayName}
                   </Typography.Text>
                   <DropdownIcon
                     className="dropdown-icon"
@@ -267,7 +274,8 @@ const CustomiseLandingPageHeader = ({
                   },
                 ]}
                 slidesToScroll={10}
-                slidesToShow={10}>
+                slidesToShow={10}
+              >
                 {recentlyViewData.map((data, index) => (
                   <div
                     className={classNames('customise-recently-viewed-data', {
@@ -277,16 +285,19 @@ const CustomiseLandingPageHeader = ({
                     key={index}
                     role="button"
                     tabIndex={0}
-                    onClick={() => navigateToEntity(data)}>
+                    onClick={() => navigateToEntity(data)}
+                  >
                     <div
                       className="recent-item d-flex flex-col items-center gap-3"
-                      key={data.name}>
+                      key={data.name}
+                    >
                       <div className="d-flex items-center justify-center entity-icon-container">
                         {data.icon}
                       </div>
                       <Typography.Text
                         className="text-sm font-medium text-white"
-                        ellipsis={{ tooltip: true }}>
+                        ellipsis={{ tooltip: true }}
+                      >
                         {data.name}
                       </Typography.Text>
                     </div>

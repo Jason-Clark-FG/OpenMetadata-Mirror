@@ -83,6 +83,25 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
         );
         const updatedTags = [...nonGlossaryTags, ...selectedTerms];
 
+        // When onGlossaryTermsUpdate is provided, use it directly as the update mechanism
+        // This avoids updateEntityField's fallback behavior for non-standard entity types
+        if (onGlossaryTermsUpdate) {
+          try {
+            const resultTags = await onGlossaryTermsUpdate(updatedTags);
+            if (resultTags) {
+              setDisplayTags(resultTags);
+            }
+            completeEditing();
+          } catch {
+            // Revert editing state so the UI doesn't show the failed selection
+            setEditingGlossaryTerms(glossaryTerms);
+            cancelEditing();
+            setIsLoading(false);
+          }
+
+          return;
+        }
+
         const result = await updateEntityField({
           entityId,
           entityType: entityType,
@@ -92,15 +111,13 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
           entityLabel: t('label.glossary-term-plural'),
           onSuccess: (newTags: TagLabel[]) => {
             setDisplayTags(newTags);
-            onGlossaryTermsUpdate?.(newTags);
-            completeEditing();
           },
           t,
         });
 
-        if (result.success && result.data === displayTags) {
+        if (result.success) {
           completeEditing();
-        } else if (!result.success) {
+        } else {
           setIsLoading(false);
         }
       } catch (error) {
@@ -146,7 +163,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
         }}
         selectedTerms={editingGlossaryTerms}
         onCancel={handleCancel}
-        onUpdate={handleGlossaryTermSelection}>
+        onUpdate={handleGlossaryTermSelection}
+      >
         <div className="d-none glossary-term-selector-display">
           {editingGlossaryTerms.length > 0 ? (
             <div className="selected-glossary-terms-list">
@@ -213,7 +231,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
                 glossaryTerm.displayName ||
                 index
               }`}
-              key={glossaryTerm.tagFQN}>
+              key={glossaryTerm.tagFQN}
+            >
               <GlossaryIcon className="glossary-term-icon" />
               <span className="glossary-term-name">
                 {getEntityName(glossaryTerm)}
@@ -224,7 +243,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
             <button
               className="show-more-terms-button"
               type="button"
-              onClick={() => setShowAllTerms(!showAllTerms)}>
+              onClick={() => setShowAllTerms(!showAllTerms)}
+            >
               {showAllTerms
                 ? t('label.less')
                 : `+${glossaryTerms.length - maxVisibleGlossaryTerms} ${t(
@@ -255,7 +275,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
     return (
       <div
         className="glossary-terms-section"
-        data-testid="KnowledgePanel.GlossaryTerms">
+        data-testid="KnowledgePanel.GlossaryTerms"
+      >
         <div className="glossary-terms-header">
           <Typography.Text className="glossary-terms-title">
             {t('label.glossary-term-plural')}
@@ -276,7 +297,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
         </div>
         <div
           className="glossary-terms-content"
-          data-testid="glossary-container">
+          data-testid="glossary-container"
+        >
           {emptyContent}
         </div>
       </div>
@@ -286,7 +308,8 @@ const GlossaryTermsSection: React.FC<GlossaryTermsSectionProps> = ({
   return (
     <div
       className="glossary-terms-section"
-      data-testid="KnowledgePanel.GlossaryTerms">
+      data-testid="KnowledgePanel.GlossaryTerms"
+    >
       <div className="glossary-terms-header">
         <Typography.Text className="glossary-terms-title">
           {t('label.glossary-term-plural')}

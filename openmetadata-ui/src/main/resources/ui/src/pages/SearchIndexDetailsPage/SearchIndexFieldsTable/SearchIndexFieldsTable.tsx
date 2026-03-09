@@ -102,8 +102,12 @@ const SearchIndexFieldsTable = ({
   );
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
 
-  const { openColumnDetailPanel, permissions, selectedColumn } =
-    useGenericContext<SearchIndex>();
+  const {
+    openColumnDetailPanel,
+    permissions,
+    selectedColumn,
+    setDisplayedColumns,
+  } = useGenericContext<SearchIndex>();
 
   // Extract base FQN and column part from URL
   const { columnFqn: columnPart, fqn } = useFqn({
@@ -287,7 +291,10 @@ const SearchIndexFieldsTable = ({
           'data-testid': 'column-name-cell',
         }),
         render: (_, record: SearchIndexField) => (
-          <div className="d-inline-flex items-center gap-2 hover-icon-group w-max-90">
+          <div
+            className="d-inline-flex items-start gap-1 hover-icon-group flex-column"
+            style={{ maxWidth: '80%' }}
+          >
             <span className="break-word text-link-color">
               {stringToHTML(
                 highlightSearchText(getEntityName(record), searchText)
@@ -407,7 +414,18 @@ const SearchIndexFieldsTable = ({
       setSearchedFields(sortByOrdinalPosition);
       setExpandedRowKeys([]);
     }
-  }, [searchText, searchIndexFields]);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (!searchText) {
+      setSearchedFields(sortByOrdinalPosition);
+    }
+  }, [searchIndexFields, sortByOrdinalPosition]);
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(searchedFields);
+  }, [searchedFields, setDisplayedColumns]);
 
   return (
     <>
@@ -444,7 +462,8 @@ const SearchIndexFieldsTable = ({
       {editField && (
         <EntityAttachmentProvider
           entityFqn={editField.field.fullyQualifiedName}
-          entityType={EntityType.SEARCH_INDEX}>
+          entityType={EntityType.SEARCH_INDEX}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.field'),

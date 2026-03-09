@@ -22,7 +22,7 @@ import {
   Utils as QbUtils,
   ValueSource,
 } from '@react-awesome-query-builder/antd';
-import { Button, Checkbox, MenuProps, Space, Typography } from 'antd';
+import { Button, Checkbox, MenuProps, Radio, Space, Typography } from 'antd';
 import { isArray, isEmpty, toLower } from 'lodash';
 import { Bucket } from 'Models';
 import React from 'react';
@@ -73,6 +73,8 @@ export const getAssetsPageQuickFilters = (type?: AssetsOfEntity) => {
   switch (type) {
     case AssetsOfEntity.DOMAIN:
     case AssetsOfEntity.DATA_PRODUCT:
+    case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+    case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
       return [...DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS];
 
     case AssetsOfEntity.GLOSSARY:
@@ -113,7 +115,8 @@ export const renderAdvanceSearchButtons: RenderSettings['renderButton'] = (
         data-testid="advanced-search-add-rule"
         icon={<PlusOutlined />}
         type="primary"
-        onClick={props?.onClick}>
+        onClick={props?.onClick}
+      >
         {t('label.add')}
       </Button>
     );
@@ -124,7 +127,8 @@ export const renderAdvanceSearchButtons: RenderSettings['renderButton'] = (
         data-testid="advanced-search-add-group"
         icon={<PlusOutlined />}
         type="primary"
-        onClick={props?.onClick}>
+        onClick={props?.onClick}
+      >
         {t('label.add')}
       </Button>
     );
@@ -162,16 +166,19 @@ export const generateSearchDropdownLabel = (
   checked: boolean,
   searchKey: string,
   showProfilePicture: boolean,
-  hideCounts = false
+  hideCounts = false,
+  singleSelect = false
 ) => {
+  const InputComponent = singleSelect ? Radio : Checkbox;
+
   return (
     <div className="d-flex justify-between">
-      <Space
-        align="center"
-        className="m-x-sm"
-        data-testid={option.key}
-        size={8}>
-        <Checkbox checked={checked} data-testid={`${option.key}-checkbox`} />
+      <Space align="start" className="m-x-sm" data-testid={option.key} size={8}>
+        <InputComponent
+          checked={checked}
+          data-testid={`${option.key}-${singleSelect ? 'radio' : 'checkbox'}`}
+          style={option.description ? { marginTop: 4 } : undefined}
+        />
         {showProfilePicture && (
           <ProfilePicture
             displayName={option.label}
@@ -179,16 +186,28 @@ export const generateSearchDropdownLabel = (
             width="18"
           />
         )}
-        <Typography.Text
-          ellipsis
-          className="dropdown-option-label"
-          title={option.label}>
-          <span
-            dangerouslySetInnerHTML={{
-              __html: getSearchLabel(option.label, searchKey),
-            }}
-          />
-        </Typography.Text>
+        <div>
+          <Typography.Text
+            ellipsis
+            className="dropdown-option-label"
+            title={option.label}
+          >
+            <span
+              dangerouslySetInnerHTML={{
+                __html: getSearchLabel(option.label, searchKey),
+              }}
+            />
+          </Typography.Text>
+          {option.description && (
+            <Typography.Text
+              className="text-xs d-block"
+              data-testid={`${option.key}-description`}
+              type="secondary"
+            >
+              {option.description}
+            </Typography.Text>
+          )}
+        </div>
       </Space>
       {!hideCounts && getCountBadge(option.count, 'm-r-sm', false)}
     </div>
@@ -200,7 +219,8 @@ export const getSearchDropdownLabels = (
   checked: boolean,
   searchKey = '',
   showProfilePicture = false,
-  hideCounts = false
+  hideCounts = false,
+  singleSelect = false
 ): MenuProps['items'] => {
   if (isArray(optionsArray)) {
     const sortedOptions = optionsArray.sort(
@@ -214,7 +234,8 @@ export const getSearchDropdownLabels = (
         checked,
         searchKey,
         showProfilePicture,
-        hideCounts
+        hideCounts,
+        singleSelect
       ),
     }));
   } else {

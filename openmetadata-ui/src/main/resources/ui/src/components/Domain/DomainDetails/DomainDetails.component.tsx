@@ -30,6 +30,8 @@ import { ReactComponent as IconDropdown } from '../../../assets/svg/menu.svg';
 import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
 import { ManageButtonItemLabel } from '../../../components/common/ManageButtonContentItem/ManageButtonContentItem.component';
 import { EntityHeader } from '../../../components/Entity/EntityHeader/EntityHeader.component';
+import Voting from '../../../components/Entity/Voting/Voting.component';
+import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import { AssetsTabRef } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import EntityNameModal from '../../../components/Modals/EntityNameModal/EntityNameModal.component';
@@ -75,7 +77,11 @@ import {
   getQueryFilterForDomain,
   getQueryFilterToExcludeDomainTerms,
 } from '../../../utils/DomainUtils';
-import { getEntityFeedLink, getEntityName } from '../../../utils/EntityUtils';
+import {
+  getEntityFeedLink,
+  getEntityName,
+  getEntityVoteStatus,
+} from '../../../utils/EntityUtils';
 import { getEntityVersionByField } from '../../../utils/EntityVersionUtils';
 import Fqn from '../../../utils/Fqn';
 import { showNotistackError } from '../../../utils/NotistackUtils';
@@ -124,6 +130,7 @@ const DomainDetails = ({
   domain,
   onUpdate,
   onDelete,
+  onUpdateVote,
   isVersionsView = false,
   isFollowing,
   isFollowingLoading,
@@ -139,8 +146,11 @@ const DomainDetails = ({
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { getEntityPermission, permissions } = usePermissionProvider();
-  const routeParams =
-    useParams<{ fqn?: string; tab?: string; version?: string }>();
+  const routeParams = useParams<{
+    fqn?: string;
+    tab?: string;
+    version?: string;
+  }>();
   const reactNavigate = useNavigate();
   const navigate = useCallback(
     (path: string) => {
@@ -541,6 +551,18 @@ const DomainDetails = ({
     );
   }, [domainPermission]);
 
+  const voteStatus = useMemo(
+    () => getEntityVoteStatus(currentUser?.id ?? '', domain.votes),
+    [domain.votes, currentUser?.id]
+  );
+
+  const handleVoteChange = useCallback(
+    async (data: VotingDataProps) => {
+      await onUpdateVote?.(data, domain.id);
+    },
+    [onUpdateVote, domain.id]
+  );
+
   const addButtonContent = [
     ...(domainPermission.Create
       ? [
@@ -884,7 +906,8 @@ const DomainDetails = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}>
+        }}
+      >
         {!isTreeView && (
           <CoverImage
             imageUrl={domain.style?.coverImage?.url}
@@ -897,7 +920,8 @@ const DomainDetails = ({
             display: 'flex',
             mx: 5,
             alignItems: 'flex-end',
-          }}>
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <EntityHeader
               breadcrumb={[]}
@@ -909,7 +933,11 @@ const DomainDetails = ({
               isFollowing={isFollowing}
               isFollowingLoading={isFollowingLoading}
               serviceName=""
-              suffix={<LearningIcon pageId={LEARNING_PAGE_IDS.DOMAIN} />}
+              suffix={
+                !isTreeView && (
+                  <LearningIcon pageId={LEARNING_PAGE_IDS.DOMAIN} />
+                )
+              }
               titleColor={domain.style?.color}
             />
           </Box>
@@ -922,7 +950,8 @@ const DomainDetails = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}>
+              }}
+            >
               {!isVersionsView && addButtonContent.length > 0 && (
                 <Dropdown
                   data-testid="domain-details-add-button-menu"
@@ -930,10 +959,12 @@ const DomainDetails = ({
                     items: addButtonContent,
                   }}
                   placement="bottomRight"
-                  trigger={['click']}>
+                  trigger={['click']}
+                >
                   <Button
                     data-testid="domain-details-add-button"
-                    type="primary">
+                    type="primary"
+                  >
                     <Space>
                       {t('label.add')}
                       <DownOutlined />
@@ -943,6 +974,14 @@ const DomainDetails = ({
               )}
 
               <ButtonGroup className="spaced" size="small">
+                {onUpdateVote && (
+                  <Voting
+                    voteStatus={voteStatus}
+                    votes={domain.votes}
+                    onUpdateVote={handleVoteChange}
+                  />
+                )}
+
                 {domain?.version && (
                   <Tooltip
                     title={t(
@@ -951,18 +990,21 @@ const DomainDetails = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}>
+                    )}
+                  >
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}>
+                      onClick={handleVersionClick}
+                    >
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}>
+                        })}
+                      >
                         {toString(domain.version)}
                       </Typography.Text>
                     </Button>
@@ -981,12 +1023,14 @@ const DomainDetails = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}>
+                    onOpenChange={setShowActions}
+                  >
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.domain'),
-                      })}>
+                      })}
+                    >
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -1017,7 +1061,8 @@ const DomainDetails = ({
           isVersionView={isVersionsView}
           permissions={domainPermission}
           type={EntityType.DOMAIN}
-          onUpdate={onUpdate}>
+          onUpdate={onUpdate}
+        >
           <Box className="domain-details-page-tabs" sx={{ width: '100%' }}>
             <Box sx={{ px: isTreeView ? 0 : 5, py: 5 }}>
               <Tabs
@@ -1108,7 +1153,8 @@ const DomainDetails = ({
         sx={{
           ...getDomainContainerStyles(theme),
           ...(isTreeView && { border: 'none' }),
-        }}>
+        }}
+      >
         {content}
       </Box>
     </>

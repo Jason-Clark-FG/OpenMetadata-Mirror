@@ -54,6 +54,7 @@ const PortsLineageView = ({
   dataProduct,
   inputPortsData,
   outputPortsData,
+  assetCount,
   isFullScreen = false,
   height = 350,
   onToggleFullScreen,
@@ -63,6 +64,16 @@ const PortsLineageView = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const reactFlowInstance = useReactFlow();
+
+  const handleToggleFullScreen = useCallback(() => {
+    if (onToggleFullScreen) {
+      onToggleFullScreen();
+      setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.2 });
+        reactFlowInstance.zoomTo(0.4);
+      }, 100);
+    }
+  }, [onToggleFullScreen, reactFlowInstance]);
 
   const hasAnyPorts =
     dataProduct && (inputPortsData.length > 0 || outputPortsData.length > 0);
@@ -183,6 +194,7 @@ const PortsLineageView = ({
     if (nodes.length > 0 && !isInitialized && reactFlowInstance) {
       setTimeout(() => {
         reactFlowInstance.fitView({ padding: 0.2 });
+        reactFlowInstance.zoomTo(0.4);
         setIsInitialized(true);
       }, 100);
     }
@@ -209,7 +221,8 @@ const PortsLineageView = ({
           borderRadius: '8px',
           border: '1px solid',
           borderColor: 'grey.200',
-        }}>
+        }}
+      >
         <ErrorPlaceHolder
           className="m-t-0"
           icon={
@@ -219,9 +232,12 @@ const PortsLineageView = ({
             />
           }
           size={SIZE.SMALL}
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+        >
           <Typography className="text-center" variant="body2">
-            {t('message.no-ports-to-display-lineage')}
+            {assetCount === 0
+              ? t('message.no-assets-for-ports-lineage')
+              : t('message.no-ports-to-display-lineage')}
           </Typography>
         </ErrorPlaceHolder>
       </Box>
@@ -245,7 +261,8 @@ const PortsLineageView = ({
         right: isFullScreen ? 0 : 'auto',
         bottom: isFullScreen ? 0 : 'auto',
         zIndex: isFullScreen ? 1300 : 'auto',
-      }}>
+      }}
+    >
       {onToggleFullScreen && (
         <Box
           sx={{
@@ -253,29 +270,32 @@ const PortsLineageView = ({
             top: 8,
             right: 8,
             zIndex: 10,
-          }}>
+          }}
+        >
           <Tooltip
             title={
               isFullScreen
                 ? t('label.exit-full-screen')
                 : t('label.full-screen')
-            }>
+            }
+          >
             <IconButton
               data-testid="toggle-fullscreen-btn"
               size="small"
               sx={{
                 backgroundColor: 'white',
                 border: '1px solid',
-                borderColor: 'grey.300',
+                borderColor: '#414651',
                 '&:hover': {
                   backgroundColor: 'grey.100',
                 },
               }}
-              onClick={onToggleFullScreen}>
+              onClick={handleToggleFullScreen}
+            >
               {isFullScreen ? (
-                <Minimize01 height={18} width={18} />
+                <Minimize01 fill="#414651" height={18} width={18} />
               ) : (
-                <Maximize01 height={18} width={18} />
+                <Maximize01 fill="#414651" height={18} width={18} />
               )}
             </IconButton>
           </Tooltip>
@@ -283,19 +303,17 @@ const PortsLineageView = ({
       )}
 
       <ReactFlow
-        fitView
         panOnDrag
         zoomOnScroll
         edges={edges}
         fitViewOptions={{ padding: 0.2 }}
-        maxZoom={1.5}
-        minZoom={0.3}
         nodeTypes={nodeTypes}
         nodes={nodes}
         nodesConnectable={false}
         nodesDraggable={false}
         onEdgesChange={onEdgesChange}
-        onNodesChange={onNodesChange}>
+        onNodesChange={onNodesChange}
+      >
         <Background color="#e5e7eb" gap={16} size={1} />
         <Controls
           showFitView

@@ -75,7 +75,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
                 ghost
                 data-testid="jump-to-end-button"
                 type="primary"
-                onClick={handleJumpToEnd}>
+                onClick={handleJumpToEnd}
+              >
                 {t('label.jump-to-end')}
               </Button>
 
@@ -86,7 +87,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           <Col
             className="p-t-md h-min-400 lazy-log-container"
             data-testid="lazy-log"
-            span={24}>
+            span={24}
+          >
             <LazyLog
               caseInsensitive
               enableSearch
@@ -105,7 +107,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
       <Card
         data-testid={`stats-component${title ? `-${title.toLowerCase()}` : ''}`}
         size="small"
-        title={title}>
+        title={title}
+      >
         <Row gutter={[16, 8]}>
           <Col span={24}>
             <Space wrap direction="horizontal" size={0}>
@@ -432,7 +435,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
               />
             )}
           </Space>
-        }>
+        }
+      >
         <Table
           columns={serverStatsColumns}
           data-testid="server-stats-table"
@@ -458,43 +462,83 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           t('label.overall-stat-plural')
         )}
 
-      {successContext?.stats?.readerStats && (
-        <div className="m-t-md">
-          {statsRender(
-            successContext.stats.readerStats,
-            t('label.reader-stat-plural'),
-            false
-          )}
-        </div>
-      )}
-      {failureContext?.stats?.readerStats && (
-        <div className="m-t-md">
-          {statsRender(
-            failureContext.stats.readerStats,
-            t('label.reader-stat-plural'),
-            false
-          )}
-        </div>
-      )}
+      <Row className="m-t-md" gutter={[16, 16]}>
+        {successContext?.stats?.readerStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.readerStats,
+              t('label.reader-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.readerStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.readerStats,
+              t('label.reader-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
 
-      {successContext?.stats?.sinkStats && (
-        <div className="m-t-md">
-          {statsRender(
-            successContext.stats.sinkStats,
-            t('label.sink-stat-plural'),
-            false
-          )}
-        </div>
-      )}
-      {failureContext?.stats?.sinkStats && (
-        <div className="m-t-md">
-          {statsRender(
-            failureContext.stats.sinkStats,
-            t('label.sink-stat-plural'),
-            false
-          )}
-        </div>
-      )}
+        {successContext?.stats?.processStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.processStats,
+              t('label.process-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.processStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.processStats,
+              t('label.process-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+
+        {successContext?.stats?.sinkStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.sinkStats,
+              t('label.sink-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.sinkStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.sinkStats,
+              t('label.sink-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+
+        {successContext?.stats?.vectorStats && (
+          <Col span={6}>
+            {statsRender(
+              successContext.stats.vectorStats,
+              t('label.vector-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+        {failureContext?.stats?.vectorStats && (
+          <Col span={6}>
+            {statsRender(
+              failureContext.stats.vectorStats,
+              t('label.vector-stat-plural'),
+              false
+            )}
+          </Col>
+        )}
+      </Row>
 
       {serverStatsRenderer()}
 
@@ -516,7 +560,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
           <Button
             data-testid="view-reindex-failures-button"
             type="link"
-            onClick={() => setShowFailuresDrawer(true)}>
+            onClick={() => setShowFailuresDrawer(true)}
+          >
             {t('label.view-reindex-failure-plural')}
           </Button>
         </div>

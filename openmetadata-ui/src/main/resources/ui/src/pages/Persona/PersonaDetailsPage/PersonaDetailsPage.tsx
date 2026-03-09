@@ -47,7 +47,11 @@ import { getPersonaByName, updatePersona } from '../../../rest/PersonaAPI';
 import { getUserById } from '../../../rest/userAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { DEFAULT_ENTITY_PERMISSION } from '../../../utils/PermissionsUtils';
-import { getSettingPath } from '../../../utils/RouterUtils';
+import { getCustomizePageCategories } from '../../../utils/Persona/PersonaUtils';
+import {
+  getPersonaDetailsPath,
+  getSettingPath,
+} from '../../../utils/RouterUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import './persona-details-page.less';
 
@@ -64,32 +68,50 @@ export const PersonaDetailsPage = () => {
     DEFAULT_ENTITY_PERMISSION
   );
   const location = useCustomLocation();
-  const { activeKey, fullHash } = useMemo(() => {
+  const { activeKey, activeCategory, fullHash } = useMemo(() => {
     const activeKey = (location.hash?.replace('#', '') || 'customize-ui').split(
       '.'
     )[0];
+    const activeCategory = (location.hash?.replace('#', '') || '').split(
+      '.'
+    )[1];
 
     return {
       activeKey,
+      activeCategory,
       fullHash: location.hash?.replace('#', ''),
     };
   }, [location.hash]);
 
   const { getEntityPermissionByFqn } = usePermissionProvider();
 
-  const breadcrumb = useMemo(
-    () => [
+  const breadcrumb = useMemo(() => {
+    const breadcrumbList = [
       {
         name: t('label.persona-plural'),
         url: getSettingPath(GlobalSettingsMenuCategory.PERSONA),
       },
       {
         name: getEntityName(personaDetails),
-        url: '',
+        url: `${getPersonaDetailsPath(fqn)}#customize-ui`,
       },
-    ],
-    [personaDetails]
-  );
+    ];
+
+    if (activeCategory) {
+      const category = getCustomizePageCategories().find(
+        (category) => category.key === activeCategory
+      );
+
+      if (category) {
+        breadcrumbList.push({
+          name: category.label,
+          url: '',
+        });
+      }
+    }
+
+    return breadcrumbList;
+  }, [personaDetails, activeCategory, fqn]);
 
   useEffect(() => {
     getEntityPermissionByFqn(ResourceEntity.PERSONA, fqn).then(
@@ -358,11 +380,13 @@ export const PersonaDetailsPage = () => {
                   hasPermission
                   multiSelect
                   selectedUsers={personaDetails.users ?? []}
-                  onUpdate={(users) => handlePersonaUpdate({ users }, true)}>
+                  onUpdate={(users) => handlePersonaUpdate({ users }, true)}
+                >
                   <Button
                     data-testid="add-persona-button"
                     size="small"
-                    type="primary">
+                    type="primary"
+                  >
                     {t('label.add-entity', { entity: t('label.user') })}
                   </Button>
                 </UserSelectableList>
@@ -388,7 +412,8 @@ export const PersonaDetailsPage = () => {
             : t('label.set-as-default')
         }
         onCancel={handleCancelSetAsDefault}
-        onOk={handleConfirmDefaultAction}>
+        onOk={handleConfirmDefaultAction}
+      >
         <Typography.Text>
           {personaDetails?.default
             ? t('message.remove-default-persona-confirmation', {

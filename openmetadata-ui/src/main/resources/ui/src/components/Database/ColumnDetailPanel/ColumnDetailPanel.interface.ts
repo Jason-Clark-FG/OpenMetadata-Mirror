@@ -32,13 +32,14 @@ export type ColumnOrTask =
   | MlFeature;
 
 export interface ColumnDetailPanelProps<T extends ColumnOrTask = Column> {
-  column: T | null;
+  column: Column;
   tableFqn?: string;
   isOpen: boolean;
   onClose: () => void;
   onColumnFieldUpdate?: (
     fqn: string,
-    update: ColumnFieldUpdate
+    update: ColumnFieldUpdate,
+    skipGlobalError?: boolean
   ) => Promise<T | undefined>;
   deleted?: boolean;
   allColumns?: T[];

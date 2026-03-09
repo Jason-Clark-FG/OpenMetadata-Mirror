@@ -163,6 +163,7 @@ const SchemaTable = () => {
     data: table,
     onThreadLinkSelect,
     openColumnDetailPanel,
+    setDisplayedColumns,
   } = useGenericContext<TableType>();
 
   useFqnDeepLink({
@@ -367,7 +368,7 @@ const SchemaTable = () => {
         newColumns = updateColumnInNestedStructure(
           newColumns,
           updatedCol.fullyQualifiedName ?? '',
-          cleanUpdate as Column
+          cleanUpdate
         );
       });
 
@@ -430,7 +431,7 @@ const SchemaTable = () => {
   const updateColumnDetails = async (
     columnFqn: string,
     column: Partial<Column>,
-    field?: keyof Column
+    field: keyof Column
   ) => {
     const response = await updateTableColumn(columnFqn, column);
     const cleanResponse = isEmpty(response.children)
@@ -438,11 +439,8 @@ const SchemaTable = () => {
       : response;
 
     setTableColumns((prev) =>
-      prev.map((col) =>
-        col.fullyQualifiedName === columnFqn
-          ? // Have to omit the field which is being updated to avoid persisted old value
-            { ...omit(col, field ?? ''), ...cleanResponse }
-          : col
+      pruneEmptyChildren(
+        updateColumnInNestedStructure(prev, columnFqn, cleanResponse, field)
       )
     );
 
@@ -507,7 +505,8 @@ const SchemaTable = () => {
     return (
       <Typography.Paragraph
         className="cursor-pointer"
-        ellipsis={{ tooltip: displayValue, rows: 3 }}>
+        ellipsis={{ tooltip: displayValue, rows: 3 }}
+      >
         {highlightSearchArrayElement(dataTypeDisplay, searchText)}
       </Typography.Paragraph>
     );
@@ -661,12 +660,15 @@ const SchemaTable = () => {
     () => [
       {
         title: (
-          <div
-            className="d-flex items-center cursor-pointer"
+          <Button
+            className="d-flex items-center cursor-pointer bg-transparent border-none p-0 h-auto hover:bg-transparent"
             data-testid="name-column-header"
-            onClick={handleColumnHeaderSortToggle}>
+            type="text"
+            onClick={handleColumnHeaderSortToggle}
+          >
             <span
-              className={sortBy === 'name' ? 'text-primary font-medium' : ''}>
+              className={sortBy === 'name' ? 'text-primary font-medium' : ''}
+            >
               {t('label.name')}
             </span>
             <IconSortIndicator
@@ -680,7 +682,7 @@ const SchemaTable = () => {
               }}
               width={8}
             />
-          </div>
+          </Button>
         ),
         dataIndex: TABLE_COLUMNS_KEYS.NAME,
         key: TABLE_COLUMNS_KEYS.NAME,
@@ -694,8 +696,11 @@ const SchemaTable = () => {
           const { displayName } = record;
 
           return (
-            <div className="d-inline-flex flex-column hover-icon-group w-max-90">
-              <div className="d-inline-flex items-center gap-2">
+            <div
+              className="d-inline-flex flex-column hover-icon-group"
+              style={{ maxWidth: '80%' }}
+            >
+              <div className="d-inline-flex items-start gap-1 flex-column">
                 <div className="d-inline-flex items-baseline">
                   {prepareConstraintIcon({
                     columnName: name,
@@ -704,12 +709,10 @@ const SchemaTable = () => {
                   })}
                   <Typography.Text
                     className={classNames(
-                      'm-b-0 d-block break-word cursor-pointer text-link-color',
-                      {
-                        'text-grey-600': !isEmpty(displayName),
-                      }
+                      'm-b-0 d-block break-word cursor-pointer text-link-color'
                     )}
-                    data-testid="column-name">
+                    data-testid="column-name"
+                  >
                     {stringToHTML(highlightSearchText(name, searchText))}
                   </Typography.Text>
                 </div>
@@ -727,7 +730,8 @@ const SchemaTable = () => {
                           width: '24px',
                           height: '24px',
                         }}
-                        onClick={() => handleEditDisplayNameClick(record)}>
+                        onClick={() => handleEditDisplayNameClick(record)}
+                      >
                         <IconEdit
                           style={{ color: DE_ACTIVE_COLOR, ...ICON_DIMENSION }}
                         />
@@ -746,7 +750,8 @@ const SchemaTable = () => {
               {isEmpty(displayName) ? null : (
                 <Typography.Text
                   className="m-b-0 d-block break-word"
-                  data-testid="column-display-name">
+                  data-testid="column-display-name"
+                >
                   {stringToHTML(
                     highlightSearchText(getEntityName(record), searchText)
                   )}
@@ -871,7 +876,8 @@ const SchemaTable = () => {
       label={t('label.entity-type-plural', {
         entity: t('label.constraint'),
       })}
-      name="constraint">
+      name="constraint"
+    >
       <Select
         allowClear
         data-testid="constraint-type-select"
@@ -894,6 +900,11 @@ const SchemaTable = () => {
       getAllRowKeysByKeyName<Column>(tableColumns ?? [], 'fullyQualifiedName')
     );
   }, [tableColumns]);
+
+  // Sync displayed columns with GenericProvider for ColumnDetailPanel navigation
+  useEffect(() => {
+    setDisplayedColumns(tableColumns);
+  }, [tableColumns, setDisplayedColumns]);
 
   const searchProps = useMemo(
     () => ({
@@ -948,13 +959,15 @@ const SchemaTable = () => {
             <div className="d-flex items-center gap-4">
               <Dropdown
                 menu={{ items: sortMenuItems, onClick: handleSortMenuClick }}
-                trigger={['click']}>
+                trigger={['click']}
+              >
                 <Button
                   className="flex-center gap-2"
                   data-testid="sort-dropdown"
                   icon={<IconSort height={14} width={14} />}
                   size="small"
-                  type="text">
+                  type="text"
+                >
                   {t('label.sort')}
                 </Button>
               </Dropdown>
@@ -980,7 +993,8 @@ const SchemaTable = () => {
       {editColumn && (
         <EntityAttachmentProvider
           entityFqn={editColumn.fullyQualifiedName}
-          entityType={EntityType.TABLE}>
+          entityType={EntityType.TABLE}
+        >
           <ModalWithMarkdownEditor
             header={`${t('label.edit-entity', {
               entity: t('label.column'),

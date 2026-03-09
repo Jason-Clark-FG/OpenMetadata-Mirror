@@ -67,10 +67,14 @@ export const LearningDrawer: React.FC<LearningDrawerProps> = ({
     }
   }, [open, fetchResources]);
 
-  const handleResourceClick = useCallback((resource: LearningResource) => {
-    setSelectedResource(resource);
-    setPlayerOpen(true);
-  }, []);
+  const handleResourceClick = useCallback(
+    (resource: LearningResource) => {
+      setSelectedResource(resource);
+      setPlayerOpen(true);
+      onClose();
+    },
+    [onClose]
+  );
 
   const handlePlayerClose = useCallback(() => {
     setPlayerOpen(false);
@@ -99,6 +103,7 @@ export const LearningDrawer: React.FC<LearningDrawerProps> = ({
         destroyOnClose
         className="learning-drawer"
         closable={false}
+        data-testid="learning-drawer"
         open={open}
         placement="right"
         title={
@@ -114,7 +119,8 @@ export const LearningDrawer: React.FC<LearningDrawerProps> = ({
           </div>
         }
         width={576}
-        onClose={onClose}>
+        onClose={onClose}
+      >
         <div className="learning-drawer-content">
           {isLoading ? (
             <div className="learning-drawer-loading">

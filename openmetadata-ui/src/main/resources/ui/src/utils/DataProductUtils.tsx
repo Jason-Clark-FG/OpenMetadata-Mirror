@@ -44,6 +44,7 @@ import { Operation } from '../generated/entity/policies/policy';
 import { PageType } from '../generated/system/ui/page';
 import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
+import { QueryFilterInterface } from '../pages/ExplorePage/ExplorePage.interface';
 import {
   convertDataProductsToEntityReferences as convertDataProductsToEntityReferencesUtil,
   convertEntityReferencesToDataProducts as convertEntityReferencesToDataProductsUtil,
@@ -194,6 +195,7 @@ export const getDataProductDetailTabs = ({
                   wrapInCard: false,
                   children: (
                     <InputOutputPortsTab
+                      assetCount={assetCount}
                       dataProduct={dataProduct}
                       dataProductFqn={dataProduct.fullyQualifiedName ?? ''}
                       permissions={dataProductPermission}
@@ -335,7 +337,8 @@ export const DataProductListItemRenderer = (props: EntityReference) => {
           ellipsis={{
             tooltip: props.description,
             rows: 2,
-          }}>
+          }}
+        >
           <RichTextEditorPreviewerV1 markdown={props.description} />
         </Typography.Paragraph>
       )}
@@ -352,4 +355,16 @@ export const convertEntityReferencesToDataProducts = (
   refs: EntityReference[]
 ): DataProduct[] => {
   return convertEntityReferencesToDataProductsUtil(refs);
+};
+
+export const getQueryFilterForDataProductPorts = (
+  dataProductFqn: string
+): QueryFilterInterface => {
+  return {
+    query: {
+      bool: {
+        must: [{ term: { 'dataProducts.fullyQualifiedName': dataProductFqn } }],
+      },
+    },
+  };
 };

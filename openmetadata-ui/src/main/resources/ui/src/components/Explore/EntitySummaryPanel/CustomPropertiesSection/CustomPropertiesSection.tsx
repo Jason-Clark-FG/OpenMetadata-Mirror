@@ -19,17 +19,18 @@ import { CUSTOM_PROPERTIES_DOCS } from '../../../../constants/docs.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../../enums/common.enum';
 import { CustomProperty } from '../../../../generated/entity/type';
 import { Transi18next } from '../../../../utils/CommonUtils';
+import { PropertyValue } from '../../../common/CustomPropertyTable/PropertyValue';
 import ErrorPlaceHolderNew from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolderNew';
 import Loader from '../../../common/Loader/Loader';
 import SearchBarComponent from '../../../common/SearchBarComponent/SearchBar.component';
 import { ExtensionDataProps } from '../../../Modals/ModalWithCustomProperty/ModalWithMarkdownEditor.interface';
 import { CustomPropertiesSectionProps } from './CustomPropertiesSection.interface';
 import './CustomPropertiesSection.less';
-import CustomPropertyItem from './CustomPropertyItem';
 
 const CustomPropertiesSection = ({
   entityData,
   entityTypeDetail,
+  emptyStateMessage,
   onExtensionUpdate,
   hasEditPermissions,
   isEntityDataLoading,
@@ -74,11 +75,12 @@ const CustomPropertiesSection = ({
     }
 
     return (
-      <div className="lineage-items-list empty-state">
+      <div className="lineage-items-list">
         <ErrorPlaceHolderNew
           className="text-grey-14"
           icon={<AddPlaceHolderIcon height={100} width={100} />}
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+        >
           <div className="p-t-md text-justify no-data-placeholder">
             <Transi18next
               i18nKey="message.no-custom-properties-entity"
@@ -91,7 +93,7 @@ const CustomPropertiesSection = ({
                 />
               }
               values={{
-                entity: t('label.custom-property-plural'),
+                entity: emptyStateMessage ?? t('label.entity'),
                 docs: t('label.doc-plural-lowercase'),
               }}
             />
@@ -99,7 +101,7 @@ const CustomPropertiesSection = ({
         </ErrorPlaceHolderNew>
       </div>
     );
-  }, [searchText]);
+  }, [searchText, emptyStateMessage]);
 
   if (isEntityDataLoading) {
     return <Loader size="default" />;
@@ -107,10 +109,11 @@ const CustomPropertiesSection = ({
 
   if (!viewCustomPropertiesPermission) {
     return (
-      <div className="lineage-items-list empty-state">
+      <div className="lineage-items-list">
         <ErrorPlaceHolderNew
           className="text-grey-14 permission-error-placeholder"
-          type={ERROR_PLACEHOLDER_TYPE.PERMISSION}>
+          type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
+        >
           <Transi18next
             i18nKey="message.no-access-placeholder"
             renderElement={<span />}
@@ -143,12 +146,12 @@ const CustomPropertiesSection = ({
       <div className="custom-properties-list p-x-md">
         {filteredProperties.length > 0
           ? filteredProperties.map((property: CustomProperty) => (
-              <CustomPropertyItem
-                extensionData={extensionData}
+              <PropertyValue
+                isRenderedInRightPanel
+                extension={extensionData}
                 hasEditPermissions={hasEditPermissions}
                 key={property.name}
                 property={property}
-                value={extensionData[property.name]}
                 onExtensionUpdate={onExtensionUpdate}
               />
             ))

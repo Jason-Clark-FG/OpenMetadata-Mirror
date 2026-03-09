@@ -188,7 +188,8 @@ const renderEntityLinks = (
         <Link
           className="change-entity-link"
           key={`${keyPrefix}-${idx}`}
-          to={link}>
+          to={link}
+        >
           {label}
         </Link>
       );
@@ -278,7 +279,8 @@ const AuditLogListItem: FC<AuditLogListItemProps> = ({ log }) => {
                 return (
                   <span
                     className="change-value-item"
-                    key={`${keyPrefix}-wrap-${idx}`}>
+                    key={`${keyPrefix}-wrap-${idx}`}
+                  >
                     {showProfilePic && entity && (
                       <ProfilePicture
                         displayName={entity.displayName ?? entity.name}
@@ -457,6 +459,23 @@ const AuditLogListItem: FC<AuditLogListItemProps> = ({ log }) => {
             <Typography.Text className="event-type" data-testid="event-type">
               {eventType}
             </Typography.Text>
+            {log.impersonatedBy && (
+              <>
+                <Typography.Text className="event-separator">–</Typography.Text>
+                <Typography.Text
+                  className="impersonated-by"
+                  data-testid="impersonated-by"
+                >
+                  {t('label.impersonated-by-with-colon')}
+                </Typography.Text>{' '}
+                <Link
+                  className="user-link"
+                  to={getUserPath(log.impersonatedBy)}
+                >
+                  {log.impersonatedBy}
+                </Link>
+              </>
+            )}
           </Space>
         </div>
         <div className="item-description">
@@ -485,14 +504,16 @@ const AuditLogListItem: FC<AuditLogListItemProps> = ({ log }) => {
             {entityType && (
               <Typography.Text
                 className="meta-item entity-type-badge"
-                data-testid="entity-type-badge">
+                data-testid="entity-type-badge"
+              >
                 {startCase(entityType)}
               </Typography.Text>
             )}
             {timestamp && (
               <Typography.Text
                 className="meta-item timestamp"
-                data-testid="timestamp">
+                data-testid="timestamp"
+              >
                 {getRelativeTime(timestamp)}
               </Typography.Text>
             )}
@@ -540,13 +561,6 @@ const AuditLogList: FC<AuditLogListProps> = ({ logs, isLoading }) => {
 
   return (
     <div className="audit-log-list-container" data-testid="audit-log-list">
-      <div
-        className="audit-log-list-header"
-        data-testid="audit-log-list-header">
-        <Typography.Text className="header-text">
-          {t('message.events-matching-search-query')}
-        </Typography.Text>
-      </div>
       <div className="audit-log-list">
         {logs.map((log, index) => (
           <AuditLogListItem

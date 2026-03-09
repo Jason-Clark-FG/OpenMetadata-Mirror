@@ -14,7 +14,7 @@
 import { Chip, Typography, useTheme } from '@mui/material';
 import { Button, Col, Form, FormInstance, Row } from 'antd';
 import { AxiosError } from 'axios';
-import { ReactComponent as TableIcon } from '../../../../assets/svg/table-icon.svg';
+import { ReactComponent as ColumnIcon } from '../../../../assets/svg/ic-column.svg';
 import MuiDrawer from '../../../common/MuiDrawer/MuiDrawer';
 
 import { isArray, isUndefined, map, omit, omitBy, startCase } from 'lodash';
@@ -80,8 +80,9 @@ const AddCustomProperty = ({
 }: AddCustomPropertyProps) => {
   const [localForm] = Form.useForm();
   const form = formRef ?? localForm;
-  const { entityType: entityTypeParam } =
-    useRequiredParams<{ entityType: EntityType }>();
+  const { entityType: entityTypeParam } = useRequiredParams<{
+    entityType: EntityType;
+  }>();
   const entityType = entityTypeProp ?? entityTypeParam;
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -236,12 +237,13 @@ const AddCustomProperty = ({
   const getAppliesToField = useCallback(() => {
     return (
       <Chip
-        icon={<TableIcon />}
+        icon={<ColumnIcon height={14} width={14} />}
         label={
           <Typography
             color={theme.palette.allShades.gray['700']}
-            variant="body2">
-            {t('label.table')}
+            variant="body2"
+          >
+            {t('label.table-column')}
           </Typography>
         }
         sx={{
@@ -573,7 +575,8 @@ const AddCustomProperty = ({
       layout="vertical"
       onFieldsChange={handleFieldsChange}
       onFinish={handleFormSubmit}
-      onFocus={handleFieldFocus}>
+      onFocus={handleFieldFocus}
+    >
       {generateFormFields(formFields)}
       {
         // Only show enum value field if the property type has enum config
@@ -599,7 +602,8 @@ const AddCustomProperty = ({
             <Button
               data-testid="back-button"
               type="link"
-              onClick={handleCancel}>
+              onClick={handleCancel}
+            >
               {t('label.back')}
             </Button>
           </Col>
@@ -608,7 +612,8 @@ const AddCustomProperty = ({
               data-testid="create-button"
               htmlType="submit"
               loading={isCreating || loading}
-              type="primary">
+              type="primary"
+            >
               {t('label.create')}
             </Button>
           </Col>
@@ -635,7 +640,8 @@ const AddCustomProperty = ({
           </div>
         }
         title={t('label.add-entity', { entity: t('label.custom-property') })}
-        onClose={onClose ?? handleCancel}>
+        onClose={onClose ?? handleCancel}
+      >
         {formContent}
       </MuiDrawer>
     );
