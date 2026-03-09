@@ -63,11 +63,17 @@ const validateTourSteps = async (page: Page) => {
   await expect(page.locator(`[data-tour-elem="badge"]`)).toHaveText('3');
 
   await page.getByTestId('searchBox').fill('dim_a');
-  await page.getByTestId('searchBox').press('Enter', { delay: 500 });
 
-  await expect(page.locator(`[data-tour-elem="badge"]`)).toHaveText('4', {
-    timeout: 1000,
-  });
+  const [searchResponse] = await Promise.all([
+    page.waitForResponse((res) => res.url().includes('/search/query')),
+    page.getByTestId('searchBox').press('Enter'),
+  ]);
+
+  expect(searchResponse.status()).toBe(200);
+
+  await waitForAllLoadersToDisappear(page);
+
+  await expect(page.locator(`[data-tour-elem="badge"]`)).toHaveText('4');
 
   // step 3
   await page.locator('[data-tour-elem="right-arrow"]').click();
