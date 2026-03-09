@@ -42,10 +42,12 @@ import org.openmetadata.schema.tests.TestCaseParameterValue;
 import org.openmetadata.schema.tests.type.TestCaseResult;
 import org.openmetadata.schema.tests.type.TestCaseStatus;
 import org.openmetadata.schema.type.ChangeEvent;
+import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Post;
+import org.openmetadata.schema.type.AnnouncementDetails;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskDetails;
 import org.openmetadata.schema.type.TaskStatus;
@@ -292,6 +294,78 @@ class MessageDecoratorTest {
               "Assignees : '@dataStewards'",
               "Current Status : Open"),
           taskMessage.getMessages());
+    }
+  }
+
+  @Test
+  void createThreadMessageCoversAnnouncementAndTaskResolutionEvents() {
+    Table table = new Table().withFullyQualifiedName("service.sales.orders");
+    RecordingDecorator decorator = new RecordingDecorator();
+
+    Thread announcement =
+        new Thread()
+            .withType(ThreadType.Announcement)
+            .withAbout("<#E::table::service.sales.orders>")
+            .withCreatedBy("alice")
+            .withUpdatedBy("bob")
+            .withAnnouncement(
+                new AnnouncementDetails()
+                    .withDescription("Pipeline maintenance")
+                    .withStartTime(1_735_689_600L)
+                    .withEndTime(1_735_776_000L));
+    ChangeEvent announcementCreated =
+        new ChangeEvent().withEntityType(Entity.THREAD).withEventType(EventType.THREAD_CREATED);
+    ChangeEvent announcementDeleted =
+        new ChangeEvent().withEntityType(Entity.THREAD).withEventType(EventType.ENTITY_DELETED);
+
+    TaskDetails taskDetails =
+        new TaskDetails()
+            .withId(84)
+            .withType(TaskType.RequestDescription)
+            .withAssignees(List.of(new EntityReference().withType(Entity.USER).withName("alice")))
+            .withStatus(TaskStatus.Closed);
+    Thread closedTask =
+        new Thread()
+            .withType(ThreadType.Task)
+            .withAbout("<#E::table::service.sales.orders>")
+            .withCreatedBy("alice")
+            .withTask(taskDetails)
+            .withPosts(List.of(new Post().withFrom("bob").withMessage("Resolved")));
+    ChangeEvent taskClosed =
+        new ChangeEvent().withEntityType(Entity.THREAD).withEventType(EventType.TASK_CLOSED);
+
+    try (MockedStatic<AlertsRuleEvaluator> alerts = mockStatic(AlertsRuleEvaluator.class);
+        MockedStatic<Entity> entity = mockStatic(Entity.class)) {
+      alerts.when(() -> AlertsRuleEvaluator.getThread(announcementCreated)).thenReturn(announcement);
+      alerts.when(() -> AlertsRuleEvaluator.getThread(announcementDeleted)).thenReturn(announcement);
+      alerts.when(() -> AlertsRuleEvaluator.getThread(taskClosed)).thenReturn(closedTask);
+      entity
+          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq(""), eq(Include.ALL)))
+          .thenReturn(table);
+      entity
+          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq("id"), eq(Include.ALL)))
+          .thenReturn(table);
+
+      OutgoingMessage announcementMessage =
+          decorator.createThreadMessage("publisher", announcementCreated);
+      assertEquals(
+          "[publisher] **@alice** posted an **Announcement**", announcementMessage.getHeader());
+      assertTrue(announcementMessage.getMessages().getFirst().contains("Pipeline maintenance"));
+
+      OutgoingMessage deletedAnnouncementMessage =
+          decorator.createThreadMessage("publisher", announcementDeleted);
+      assertEquals(
+          "[publisher] **@bob** posted an update on  **Announcement**",
+          deletedAnnouncementMessage.getHeader());
+      assertEquals(
+          List.of("Announcement Deleted: Pipeline maintenance"),
+          deletedAnnouncementMessage.getMessages());
+
+      OutgoingMessage closedTaskMessage = decorator.createThreadMessage("publisher", taskClosed);
+      assertEquals(
+          "[publisher] @alice closed Task with Id : 84 for Asset table|service.sales.orders|activity_feed/tasks",
+          closedTaskMessage.getHeader());
+      assertEquals(List.of("Current Status : Closed"), closedTaskMessage.getMessages());
     }
   }
 
