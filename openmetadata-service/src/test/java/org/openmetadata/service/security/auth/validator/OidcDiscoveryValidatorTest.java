@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
+import org.openmetadata.schema.api.security.ClientType;
 import org.openmetadata.schema.security.client.OidcClientConfig;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.system.FieldError;
@@ -335,6 +336,115 @@ public class OidcDiscoveryValidatorTest {
       FieldError error = validator.validateAgainstDiscovery(discoveryUri, authConfig, oidcConfig);
 
       assertNull(error);
+    }
+  }
+
+  @Test
+  void testValidateAgainstDiscovery_InvalidPromptCombinationForConfidentialClient_ReturnsError() {
+    String discoveryUri = "https://accounts.google.com/.well-known/openid-configuration";
+    String mockDiscoveryResponse =
+        "{"
+            + "\"issuer\": \"https://accounts.google.com\","
+            + "\"authorization_endpoint\": \"https://accounts.google.com/o/oauth2/v2/auth\","
+            + "\"token_endpoint\": \"https://oauth2.googleapis.com/token\","
+            + "\"jwks_uri\": \"https://www.googleapis.com/oauth2/v3/certs\","
+            + "\"response_types_supported\": [\"code\"],"
+            + "\"scopes_supported\": [\"openid\", \"email\", \"profile\"],"
+            + "\"id_token_signing_alg_values_supported\": [\"RS256\"]"
+            + "}";
+
+    authConfig.setClientType(ClientType.CONFIDENTIAL);
+    authConfig.setOidcConfiguration(new OidcClientConfig().withPrompt("none login"));
+
+    OidcClientConfig oidcConfig = new OidcClientConfig();
+    oidcConfig.setScope("openid");
+
+    try (MockedStatic<ValidationHttpUtil> mockedHttp = mockStatic(ValidationHttpUtil.class)) {
+      ValidationHttpUtil.HttpResponseData mockResponse =
+          new ValidationHttpUtil.HttpResponseData(200, mockDiscoveryResponse);
+      mockedHttp.when(() -> ValidationHttpUtil.safeGet(anyString())).thenReturn(mockResponse);
+
+      FieldError error = validator.validateAgainstDiscovery(discoveryUri, authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertTrue(error.getError().contains("Prompt value 'none' cannot be combined"));
+    }
+  }
+
+  @Test
+  void testValidateAgainstDiscovery_UnsupportedResponseType_ReturnsError() {
+    String discoveryUri = "https://accounts.google.com/.well-known/openid-configuration";
+    String mockDiscoveryResponse =
+        "{"
+            + "\"issuer\": \"https://accounts.google.com\","
+            + "\"authorization_endpoint\": \"https://accounts.google.com/o/oauth2/v2/auth\","
+            + "\"token_endpoint\": \"https://oauth2.googleapis.com/token\","
+            + "\"jwks_uri\": \"https://www.googleapis.com/oauth2/v3/certs\","
+            + "\"response_types_supported\": [\"code\"],"
+            + "\"scopes_supported\": [\"openid\", \"email\", \"profile\"]"
+            + "}";
+
+    OidcClientConfig oidcConfig = new OidcClientConfig();
+    oidcConfig.setScope("openid");
+    oidcConfig.setResponseType("token");
+
+    try (MockedStatic<ValidationHttpUtil> mockedHttp = mockStatic(ValidationHttpUtil.class)) {
+      ValidationHttpUtil.HttpResponseData mockResponse =
+          new ValidationHttpUtil.HttpResponseData(200, mockDiscoveryResponse);
+      mockedHttp.when(() -> ValidationHttpUtil.safeGet(anyString())).thenReturn(mockResponse);
+
+      FieldError error = validator.validateAgainstDiscovery(discoveryUri, authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertTrue(error.getError().contains("Response type 'token' is not supported"));
+    }
+  }
+
+  @Test
+  void testValidateAgainstDiscovery_UnsupportedPreferredJwsAlgorithm_ReturnsError() {
+    String discoveryUri = "https://accounts.google.com/.well-known/openid-configuration";
+    String mockDiscoveryResponse =
+        "{"
+            + "\"issuer\": \"https://accounts.google.com\","
+            + "\"authorization_endpoint\": \"https://accounts.google.com/o/oauth2/v2/auth\","
+            + "\"token_endpoint\": \"https://oauth2.googleapis.com/token\","
+            + "\"jwks_uri\": \"https://www.googleapis.com/oauth2/v3/certs\","
+            + "\"response_types_supported\": [\"code\"],"
+            + "\"scopes_supported\": [\"openid\", \"email\", \"profile\"],"
+            + "\"id_token_signing_alg_values_supported\": [\"RS256\"]"
+            + "}";
+
+    OidcClientConfig oidcConfig = new OidcClientConfig();
+    oidcConfig.setScope("openid");
+    oidcConfig.setPreferredJwsAlgorithm("ES256");
+
+    try (MockedStatic<ValidationHttpUtil> mockedHttp = mockStatic(ValidationHttpUtil.class)) {
+      ValidationHttpUtil.HttpResponseData mockResponse =
+          new ValidationHttpUtil.HttpResponseData(200, mockDiscoveryResponse);
+      mockedHttp.when(() -> ValidationHttpUtil.safeGet(anyString())).thenReturn(mockResponse);
+
+      FieldError error = validator.validateAgainstDiscovery(discoveryUri, authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertTrue(error.getError().contains("JWS algorithm 'ES256' is not supported"));
+    }
+  }
+
+  @Test
+  void testValidateAgainstDiscovery_HttpFailure_ReturnsFetchError() {
+    String discoveryUri = "https://accounts.google.com/.well-known/openid-configuration";
+    OidcClientConfig oidcConfig = new OidcClientConfig();
+    oidcConfig.setScope("openid");
+
+    try (MockedStatic<ValidationHttpUtil> mockedHttp = mockStatic(ValidationHttpUtil.class)) {
+      ValidationHttpUtil.HttpResponseData mockResponse =
+          new ValidationHttpUtil.HttpResponseData(503, "Service unavailable");
+      mockedHttp.when(() -> ValidationHttpUtil.safeGet(anyString())).thenReturn(mockResponse);
+
+      FieldError error = validator.validateAgainstDiscovery(discoveryUri, authConfig, oidcConfig);
+
+      assertNotNull(error);
+      assertTrue(error.getError().contains("Failed to fetch OIDC discovery document. Status: 503"));
     }
   }
 }
