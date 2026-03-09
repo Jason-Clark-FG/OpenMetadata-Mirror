@@ -16,6 +16,7 @@ package org.openmetadata.it.tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -1554,56 +1555,116 @@ public class SystemResourceIT {
   void test_updateSecurityConfig() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    SecurityConfiguration securityConfig =
-        new SecurityConfiguration()
-            .withAuthenticationConfiguration(
-                new AuthenticationConfiguration()
-                    .withClientType(ClientType.PUBLIC)
-                    .withProvider(AuthProvider.BASIC)
-                    .withResponseType(ResponseType.ID_TOKEN)
-                    .withProviderName("OpenMetadata")
-                    .withPublicKeyUrls(
-                        Arrays.asList("http://localhost:8585/api/v1/system/config/jwks"))
-                    .withTokenValidationAlgorithm(
-                        AuthenticationConfiguration.TokenValidationAlgorithm.RS_256)
-                    .withAuthority("http://localhost:8585")
-                    .withClientId("open-metadata")
-                    .withCallbackUrl("http://localhost:8585/callback")
-                    .withJwtPrincipalClaims(Arrays.asList("email", "preferred_username", "sub"))
-                    .withJwtPrincipalClaimsMapping(new ArrayList<>())
-                    .withEnableSelfSignup(true))
-            .withAuthorizerConfiguration(
-                new AuthorizerConfiguration()
-                    .withClassName("org.openmetadata.service.security.DefaultAuthorizer")
-                    .withContainerRequestFilter("org.openmetadata.service.security.JwtFilter")
-                    .withAdminPrincipals(Set.of("admin"))
-                    .withAllowedEmailRegistrationDomains(Set.of("all"))
-                    .withPrincipalDomain("open-metadata.org")
-                    .withAllowedDomains(new HashSet<>())
-                    .withEnforcePrincipalDomain(false)
-                    .withEnableSecureSocketConnection(false)
-                    .withUseRolesFromProvider(false));
+    SecurityConfiguration legacyConfig = buildSecurityConfig(null, null, null, null);
+    SecurityConfiguration updated = updateSecurityConfig(client, legacyConfig);
 
-    String securityConfigJson = MAPPER.writeValueAsString(securityConfig);
+    assertNotNull(updated);
+    assertEquals(
+        legacyConfig.getAuthenticationConfiguration().getProvider(),
+        updated.getAuthenticationConfiguration().getProvider());
+    assertEquals(
+        legacyConfig.getAuthorizerConfiguration().getClassName(),
+        updated.getAuthorizerConfiguration().getClassName());
+    assertNull(updated.getAuthenticationConfiguration().getEmailClaim());
+    assertNull(updated.getAuthenticationConfiguration().getDisplayNameClaim());
+    assertTrue(
+        updated.getAuthorizerConfiguration().getAllowedEmailDomains() == null
+            || updated.getAuthorizerConfiguration().getAllowedEmailDomains().isEmpty());
+    assertNull(updated.getAuthorizerConfiguration().getBotDomain());
+
+    SecurityConfiguration emailFirstConfig =
+        buildSecurityConfig("email", "name", Set.of("open-metadata.org"), "bots.open-metadata.org");
+    SecurityConfiguration emailFirstUpdated = updateSecurityConfig(client, emailFirstConfig);
+
+    assertEquals(
+        emailFirstConfig.getAuthenticationConfiguration().getEmailClaim(),
+        emailFirstUpdated.getAuthenticationConfiguration().getEmailClaim());
+    assertEquals(
+        emailFirstConfig.getAuthenticationConfiguration().getDisplayNameClaim(),
+        emailFirstUpdated.getAuthenticationConfiguration().getDisplayNameClaim());
+    assertEquals(
+        emailFirstConfig.getAuthorizerConfiguration().getAllowedEmailDomains(),
+        emailFirstUpdated.getAuthorizerConfiguration().getAllowedEmailDomains());
+    assertEquals(
+        emailFirstConfig.getAuthorizerConfiguration().getBotDomain(),
+        emailFirstUpdated.getAuthorizerConfiguration().getBotDomain());
+    assertEquals(
+        legacyConfig.getAuthorizerConfiguration().getPrincipalDomain(),
+        emailFirstUpdated.getAuthorizerConfiguration().getPrincipalDomain());
+
+    SecurityConfiguration reverted = updateSecurityConfig(client, legacyConfig);
+    assertNull(reverted.getAuthenticationConfiguration().getEmailClaim());
+    assertNull(reverted.getAuthenticationConfiguration().getDisplayNameClaim());
+    assertTrue(
+        reverted.getAuthorizerConfiguration().getAllowedEmailDomains() == null
+            || reverted.getAuthorizerConfiguration().getAllowedEmailDomains().isEmpty());
+    assertNull(reverted.getAuthorizerConfiguration().getBotDomain());
+  }
+
+  private SecurityConfiguration buildSecurityConfig(
+      String emailClaim,
+      String displayNameClaim,
+      Set<String> allowedEmailDomains,
+      String botDomain) {
+    AuthenticationConfiguration authenticationConfiguration =
+        new AuthenticationConfiguration()
+            .withClientType(ClientType.PUBLIC)
+            .withProvider(AuthProvider.BASIC)
+            .withResponseType(ResponseType.ID_TOKEN)
+            .withProviderName("OpenMetadata")
+            .withPublicKeyUrls(Arrays.asList("http://localhost:8585/api/v1/system/config/jwks"))
+            .withTokenValidationAlgorithm(
+                AuthenticationConfiguration.TokenValidationAlgorithm.RS_256)
+            .withAuthority("http://localhost:8585")
+            .withClientId("open-metadata")
+            .withCallbackUrl("http://localhost:8585/callback")
+            .withJwtPrincipalClaims(Arrays.asList("email", "preferred_username", "sub"))
+            .withJwtPrincipalClaimsMapping(new ArrayList<>())
+            .withEnableSelfSignup(true);
+
+    if (emailClaim != null) {
+      authenticationConfiguration.withEmailClaim(emailClaim);
+    }
+    if (displayNameClaim != null) {
+      authenticationConfiguration.withDisplayNameClaim(displayNameClaim);
+    }
+
+    AuthorizerConfiguration authorizerConfiguration =
+        new AuthorizerConfiguration()
+            .withClassName("org.openmetadata.service.security.DefaultAuthorizer")
+            .withContainerRequestFilter("org.openmetadata.service.security.JwtFilter")
+            .withAdminPrincipals(Set.of("admin"))
+            .withAllowedEmailRegistrationDomains(Set.of("all"))
+            .withPrincipalDomain("open-metadata.org")
+            .withAllowedDomains(new HashSet<>())
+            .withEnforcePrincipalDomain(false)
+            .withEnableSecureSocketConnection(false)
+            .withUseRolesFromProvider(false);
+
+    if (allowedEmailDomains != null) {
+      authorizerConfiguration.withAllowedEmailDomains(allowedEmailDomains);
+    }
+    if (botDomain != null) {
+      authorizerConfiguration.withBotDomain(botDomain);
+    }
+
+    return new SecurityConfiguration()
+        .withAuthenticationConfiguration(authenticationConfiguration)
+        .withAuthorizerConfiguration(authorizerConfiguration);
+  }
+
+  private SecurityConfiguration updateSecurityConfig(
+      OpenMetadataClient client, SecurityConfiguration securityConfig) throws Exception {
     String updatedJson =
         client
             .getHttpClient()
             .executeForString(
                 HttpMethod.PUT,
                 "/v1/system/security/config",
-                securityConfigJson,
+                MAPPER.writeValueAsString(securityConfig),
                 RequestOptions.builder().build());
-
     assertNotNull(updatedJson);
-    SecurityConfiguration updated = MAPPER.readValue(updatedJson, SecurityConfiguration.class);
-
-    assertNotNull(updated);
-    assertEquals(
-        securityConfig.getAuthenticationConfiguration().getProvider(),
-        updated.getAuthenticationConfiguration().getProvider());
-    assertEquals(
-        securityConfig.getAuthorizerConfiguration().getClassName(),
-        updated.getAuthorizerConfiguration().getClassName());
+    return MAPPER.readValue(updatedJson, SecurityConfiguration.class);
   }
 
   @Test

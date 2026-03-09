@@ -45,35 +45,40 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.UserRepository;
 
+@Execution(ExecutionMode.CONCURRENT)
 class JwtFilterTest {
 
-  private static JwtFilter jwtFilter;
-  private static JwkProvider jwkProvider;
+  private JwtFilter jwtFilter;
+  private JwkProvider jwkProvider;
 
-  private static Algorithm algorithm;
-  private static UriInfo mockRequestURIInfo;
+  private Algorithm algorithm;
+  private RSAPublicKey publicKey;
+  private RSAPrivateKey privateKey;
+  private UriInfo mockRequestURIInfo;
 
-  @BeforeAll
-  static void before() throws Exception {
-    // Create a RSA256 algorithm wth random public/private key pair
+  @BeforeEach
+  void before() throws Exception {
     KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
     keyPairGenerator.initialize(512);
     KeyPair keyPair = keyPairGenerator.generateKeyPair();
-    algorithm =
-        Algorithm.RSA256((RSAPublicKey) keyPair.getPublic(), (RSAPrivateKey) keyPair.getPrivate());
+    publicKey = (RSAPublicKey) keyPair.getPublic();
+    privateKey = (RSAPrivateKey) keyPair.getPrivate();
+    algorithm = Algorithm.RSA256(publicKey, privateKey);
 
     // Mock a JwkProvider that has a single JWK containing the public key from the algorithm above
     // This is used to verify the JWT
     Jwk mockJwk = mock(Jwk.class);
-    when(mockJwk.getPublicKey()).thenReturn(keyPair.getPublic());
+    when(mockJwk.getPublicKey()).thenReturn(publicKey);
     jwkProvider = mock(JwkProvider.class);
     when(jwkProvider.get(algorithm.getSigningKeyId())).thenReturn(mockJwk);
 
@@ -355,7 +360,8 @@ class JwtFilterTest {
     UserRepository userRepository = mock(UserRepository.class);
     User existingUser = new User().withName("john.doe_x7k2");
 
-    when(userRepository.getByEmail(any(), eq("john.doe@company.com"), any())).thenReturn(existingUser);
+    when(userRepository.getByEmail(any(), eq("john.doe@company.com"), any()))
+        .thenReturn(existingUser);
 
     String jwt =
         JWT.create()
@@ -373,7 +379,50 @@ class JwtFilterTest {
           ArgumentCaptor.forClass(SecurityContext.class);
       verify(context, times(1)).setSecurityContext(securityContextArgument.capture());
 
-      assertEquals("john.doe_x7k2", securityContextArgument.getValue().getUserPrincipal().getName());
+      assertEquals(
+          "john.doe_x7k2", securityContextArgument.getValue().getUserPrincipal().getName());
+    }
+  }
+
+  @Test
+  void testEmailFirstFlowUsesExactEmailLookupForSameLocalPartUsers() {
+    JwtFilter emailFirstFilter = new JwtFilter(jwkProvider, "email", "name", List.of());
+    UserRepository userRepository = mock(UserRepository.class);
+    User johnAtX = new User().withName("john");
+    User johnAtY = new User().withName("john_a1b2");
+
+    when(userRepository.getByEmail(any(), eq("john@x.com"), any())).thenReturn(johnAtX);
+    when(userRepository.getByEmail(any(), eq("john@y.com"), any())).thenReturn(johnAtY);
+
+    String xJwt =
+        JWT.create()
+            .withExpiresAt(Date.from(Instant.now().plus(1, ChronoUnit.DAYS)))
+            .withClaim("email", "john@x.com")
+            .sign(algorithm);
+    String yJwt =
+        JWT.create()
+            .withExpiresAt(Date.from(Instant.now().plus(1, ChronoUnit.DAYS)))
+            .withClaim("email", "john@y.com")
+            .sign(algorithm);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(Entity::getUserRepository).thenReturn(userRepository);
+
+      ContainerRequestContext xContext = createRequestContextWithJwt(xJwt);
+      emailFirstFilter.filter(xContext);
+
+      ArgumentCaptor<SecurityContext> xSecurityContextArgument =
+          ArgumentCaptor.forClass(SecurityContext.class);
+      verify(xContext, times(1)).setSecurityContext(xSecurityContextArgument.capture());
+      assertEquals("john", xSecurityContextArgument.getValue().getUserPrincipal().getName());
+
+      ContainerRequestContext yContext = createRequestContextWithJwt(yJwt);
+      emailFirstFilter.filter(yContext);
+
+      ArgumentCaptor<SecurityContext> ySecurityContextArgument =
+          ArgumentCaptor.forClass(SecurityContext.class);
+      verify(yContext, times(1)).setSecurityContext(ySecurityContextArgument.capture());
+      assertEquals("john_a1b2", ySecurityContextArgument.getValue().getUserPrincipal().getName());
     }
   }
 
@@ -402,7 +451,7 @@ class JwtFilterTest {
    * Creates the ContainerRequestsContext that is passed to the filter. This object can be quite complex, but the
    * JwtFilter cares only about the Authorization header and request URI.
    */
-  private static ContainerRequestContext createRequestContextWithJwt(String jwt) {
+  private ContainerRequestContext createRequestContextWithJwt(String jwt) {
     MultivaluedHashMap<String, String> headers =
         new MultivaluedHashMap<>(
             Map.of(JwtFilter.AUTHORIZATION_HEADER, format("%s %s", JwtFilter.TOKEN_PREFIX, jwt)));

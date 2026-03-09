@@ -13,7 +13,10 @@
 package org.openmetadata.service.security.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.onelogin.saml2.Auth;
 import com.onelogin.saml2.exception.SAMLException;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,11 +38,15 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +64,8 @@ import org.openmetadata.schema.auth.RefreshToken;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.AuthenticationException;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.TokenRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
@@ -83,12 +93,32 @@ class SamlAuthServletHandlerTest {
   private StringWriter responseWriter;
   private final Set<String> adminPrincipals = new HashSet<>();
 
+  @AfterEach
+  void resetSingleton() throws Exception {
+    Class<?> holderClass = findInnerClass("Holder");
+    java.lang.reflect.Field instanceField = holderClass.getDeclaredField("instance");
+    instanceField.setAccessible(true);
+    instanceField.set(null, null);
+
+    java.lang.reflect.Field lastAuthConfigField = holderClass.getDeclaredField("lastAuthConfig");
+    lastAuthConfigField.setAccessible(true);
+    lastAuthConfigField.set(null, null);
+
+    java.lang.reflect.Field lastAuthzConfigField = holderClass.getDeclaredField("lastAuthzConfig");
+    lastAuthzConfigField.setAccessible(true);
+    lastAuthzConfigField.set(null, null);
+  }
+
   @BeforeEach
   void setUp() throws Exception {
     // Setup authentication config
     when(authConfig.getEnableSelfSignup()).thenReturn(true);
     when(authConfig.getSamlConfiguration()).thenReturn(samlConfig);
     when(samlConfig.getSamlDisplayNameAttributes()).thenReturn(null);
+    when(authorizerConfig.getAllowedDomains()).thenReturn(new HashSet<>());
+    when(authorizerConfig.getAllowedEmailDomains()).thenReturn(new HashSet<>());
+    when(authorizerConfig.getPrincipalDomain()).thenReturn("openmetadata.org");
+    when(authorizerConfig.getEnforcePrincipalDomain()).thenReturn(false);
 
     // Setup authorizer config with admin principals
     adminPrincipals.add("admin");
@@ -434,5 +464,113 @@ class SamlAuthServletHandlerTest {
 
     String unknownResult = (String) method.invoke(handler, "unknownClaim");
     assertEquals("unknownclaim", unknownResult);
+  }
+
+  @Test
+  void testResolveSamlIdentityFallsBackToLegacyNameIdWhenEmailAttributeMissing() throws Exception {
+    when(authConfig.getEmailClaim()).thenReturn("email");
+    when(authConfig.getDisplayNameClaim()).thenReturn("name");
+    Auth auth = Mockito.mock(Auth.class);
+
+    when(auth.getAttribute("email")).thenReturn(null);
+    when(auth.getNameId()).thenReturn("legacy.user@company.com");
+
+    Object identity = invokePrivate(handler, "resolveSamlIdentity", auth);
+
+    assertFalse((Boolean) invokeAccessor(identity, "emailFirstFlow"));
+    assertEquals("legacy.user", invokeAccessor(identity, "userName"));
+    assertEquals("legacy.user@company.com", invokeAccessor(identity, "email"));
+  }
+
+  @Test
+  void testGetOrCreateEmailFirstSamlUserReturnsExistingUserByExactEmail() throws Exception {
+    User existingUser =
+        new User()
+            .withId(UUID.randomUUID())
+            .withName("john_a1b2")
+            .withEmail("john@y.com")
+            .withDisplayName("John Y")
+            .withIsAdmin(false);
+
+    when(userRepository.getByEmail(any(), eq("john@y.com"), any())).thenReturn(existingUser);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(Entity::getUserRepository).thenReturn(userRepository);
+
+      User resolvedUser =
+          (User)
+              invokePrivate(
+                  handler, "getOrCreateEmailFirstSamlUser", "john@y.com", "John Y", List.of());
+
+      assertSame(existingUser, resolvedUser);
+      verify(userRepository).getByEmail(any(), eq("john@y.com"), any());
+    }
+  }
+
+  @Test
+  void testGetOrCreateEmailFirstSamlUserRejectsUnregisteredUserWhenSelfSignupDisabled()
+      throws Exception {
+    when(authConfig.getEnableSelfSignup()).thenReturn(false);
+    when(userRepository.getByEmail(any(), eq("newuser@company.com"), any()))
+        .thenThrow(EntityNotFoundException.byName("newuser@company.com"));
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(Entity::getUserRepository).thenReturn(userRepository);
+
+      AuthenticationException exception =
+          assertThrows(
+              AuthenticationException.class,
+              () ->
+                  invokePrivate(
+                      handler,
+                      "getOrCreateEmailFirstSamlUser",
+                      "newuser@company.com",
+                      "New User",
+                      List.of()));
+
+      assertTrue(exception.getMessage().contains("User not registered"));
+    }
+  }
+
+  private static Object invokePrivate(Object target, String methodName, Object... args)
+      throws Exception {
+    Method method = findMethod(target.getClass(), methodName, args.length);
+    method.setAccessible(true);
+    try {
+      return method.invoke(target, args);
+    } catch (InvocationTargetException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof Exception exception) {
+        throw exception;
+      }
+      if (cause instanceof Error error) {
+        throw error;
+      }
+      throw e;
+    }
+  }
+
+  private static Method findMethod(Class<?> type, String methodName, int arity) {
+    for (Method method : type.getDeclaredMethods()) {
+      if (method.getName().equals(methodName) && method.getParameterCount() == arity) {
+        return method;
+      }
+    }
+    throw new IllegalArgumentException("Method not found: " + methodName);
+  }
+
+  private static Object invokeAccessor(Object target, String methodName) throws Exception {
+    Method accessor = target.getClass().getDeclaredMethod(methodName);
+    accessor.setAccessible(true);
+    return accessor.invoke(target);
+  }
+
+  private static Class<?> findInnerClass(String simpleName) {
+    for (Class<?> innerClass : SamlAuthServletHandler.class.getDeclaredClasses()) {
+      if (innerClass.getSimpleName().equals(simpleName)) {
+        return innerClass;
+      }
+    }
+    throw new IllegalArgumentException("Inner class not found: " + simpleName);
   }
 }

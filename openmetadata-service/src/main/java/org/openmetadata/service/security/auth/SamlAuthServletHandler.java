@@ -2,7 +2,6 @@ package org.openmetadata.service.security.auth;
 
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.security.SecurityUtil.extractDisplayNameFromClaims;
-import static org.openmetadata.service.security.SecurityUtil.validateConfiguredEmailDomain;
 import static org.openmetadata.service.security.SecurityUtil.writeJsonResponse;
 import static org.openmetadata.service.util.UserUtil.getRoleListFromUser;
 import static org.openmetadata.service.util.UserUtil.isAdminEmail;
@@ -41,6 +40,8 @@ import org.openmetadata.service.auth.JwtResponse;
 import org.openmetadata.service.exception.AuthenticationException;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.security.AuthServeletHandler;
+import org.openmetadata.service.security.EmailFirstUserProvisioner;
+import org.openmetadata.service.security.SamlIdentityResolver;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.saml.SamlSettingsHolder;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -155,7 +156,7 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
         return;
       }
 
-      ResolvedSamlIdentity identity = resolveSamlIdentity(auth);
+      SamlIdentityResolver.ResolvedSamlIdentity identity = resolveSamlIdentity(auth);
 
       // Extract team/group attributes from SAML response (supports multi-valued attributes)
       List<String> teamsFromClaim = new ArrayList<>();
@@ -331,79 +332,24 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
     }
   }
 
-  private record ResolvedSamlIdentity(
-      String userName, String email, String displayName, boolean emailFirstFlow) {}
+  private SamlIdentityResolver.ResolvedSamlIdentity resolveSamlIdentity(Auth auth) {
+    return new SamlIdentityResolver(
+            authConfig,
+            authorizerConfig,
+            assertionAccessor -> extractDisplayNameFromSamlAttributes(auth),
+            () -> SamlSettingsHolder.getInstance().getDomain())
+        .resolve(
+            new SamlIdentityResolver.SamlAssertionAccessor() {
+              @Override
+              public Collection<String> getAttribute(String attributeName) {
+                return auth.getAttribute(attributeName);
+              }
 
-  private boolean shouldUseLegacyFlow() {
-    List<String> claimsMapping = authConfig.getJwtPrincipalClaimsMapping();
-    return claimsMapping != null && !claimsMapping.isEmpty();
-  }
-
-  private boolean shouldUseEmailFirstFlow() {
-    return !nullOrEmpty(authConfig.getEmailClaim()) && !shouldUseLegacyFlow();
-  }
-
-  private ResolvedSamlIdentity resolveSamlIdentity(Auth auth) {
-    if (shouldUseEmailFirstFlow()) {
-      try {
-        String email = extractAttributeFromAssertion(auth, authConfig.getEmailClaim());
-        if (nullOrEmpty(email)) {
-          throw new AuthenticationException(
-              String.format(
-                  "Authentication failed: email attribute '%s' not found in SAML assertion",
-                  authConfig.getEmailClaim()));
-        }
-
-        email = email.toLowerCase();
-        validateConfiguredEmailDomain(
-            email,
-            getAllowedEmailDomains(),
-            authorizerConfig.getPrincipalDomain(),
-            authorizerConfig.getAllowedDomains(),
-            authorizerConfig.getEnforcePrincipalDomain());
-
-        String displayName = extractAttributeFromAssertion(auth, authConfig.getDisplayNameClaim());
-        if (nullOrEmpty(displayName)) {
-          displayName = email.split("@")[0];
-        }
-
-        LOG.debug("SAML email-first flow: email={}, displayName={}", email, displayName);
-        return new ResolvedSamlIdentity(null, email, displayName, true);
-      } catch (AuthenticationException ex) {
-        LOG.warn(
-            "SAML email-first attribute resolution failed for attribute '{}': {}. Falling back to legacy NameID flow.",
-            authConfig.getEmailClaim(),
-            ex.getMessage());
-      }
-    }
-
-    String nameId = auth.getNameId();
-    if (nullOrEmpty(nameId)) {
-      throw new AuthenticationException("SAML authentication failed: NameID not found in assertion");
-    }
-
-    String email =
-        nameId.contains("@")
-            ? nameId.toLowerCase()
-            : String.format("%s@%s", nameId, SamlSettingsHolder.getInstance().getDomain())
-                .toLowerCase();
-    validateConfiguredEmailDomain(
-        email,
-        getAllowedEmailDomains(),
-        authorizerConfig.getPrincipalDomain(),
-        authorizerConfig.getAllowedDomains(),
-        authorizerConfig.getEnforcePrincipalDomain());
-    return new ResolvedSamlIdentity(
-        nameId.contains("@") ? nameId.split("@")[0] : nameId,
-        email,
-        extractDisplayNameFromSamlAttributes(auth),
-        false);
-  }
-
-  private List<String> getAllowedEmailDomains() {
-    return authorizerConfig.getAllowedEmailDomains() != null
-        ? new ArrayList<>(authorizerConfig.getAllowedEmailDomains())
-        : new ArrayList<>();
+              @Override
+              public String getNameId() {
+                return auth.getNameId();
+              }
+            });
   }
 
   private String extractDisplayNameFromSamlAttributes(Auth auth) {
@@ -459,87 +405,21 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
 
   private User getOrCreateEmailFirstSamlUser(
       String email, String displayName, List<String> teamsFromClaim) {
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        User user =
-            Entity.getUserRepository()
-                .getByEmail(
-                    null, email, new Fields(Set.of("id", "roles", "teams", "displayName")));
-
-        boolean needsUpdate = false;
-        boolean shouldBeAdmin = isUserAdmin(email, user.getName());
-        LOG.info(
-            "SAML login - Email: {}, Username: {}, Should be admin: {}, Current admin status: {}",
-            email,
-            user.getName(),
-            shouldBeAdmin,
-            user.getIsAdmin());
-
-        if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-          LOG.info(
-              "Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
-          user.setIsAdmin(true);
-          needsUpdate = true;
-        }
-
-        if (displayName != null && !displayName.equals(user.getDisplayName())) {
-          LOG.info(
-              "Updating displayName for user {} from '{}' to '{}'",
-              user.getName(),
-              user.getDisplayName(),
-              displayName);
-          user.setDisplayName(displayName);
-          needsUpdate = true;
-        }
-
-        boolean teamsAssigned = UserUtil.assignTeamsFromClaim(user, teamsFromClaim);
-        needsUpdate = needsUpdate || teamsAssigned;
-
-        if (needsUpdate) {
-          return UserUtil.addOrUpdateUser(user);
-        }
-
-        return user;
-      } catch (EntityNotFoundException e) {
-        LOG.debug("User not found by email {}, will create new user", email);
-      }
-
-      if (!Boolean.TRUE.equals(authConfig.getEnableSelfSignup())) {
-        throw new AuthenticationException(
-            "User not registered. Contact administrator to create an account.");
-      }
-
-      String userName = UserUtil.generateUsernameFromEmail(email, this::usernameExists);
-      boolean isAdmin = isUserAdmin(email, userName);
-      LOG.info(
-          "Creating new SAML user - Email: {}, Generated username: {}, Is admin: {}",
-          email,
-          userName,
-          isAdmin);
-
-      String domain = email.split("@")[1];
-      User newUser =
-          UserUtil.user(userName, domain, userName)
-              .withEmail(email)
-              .withDisplayName(displayName != null ? displayName : userName)
-              .withIsAdmin(isAdmin)
-              .withIsEmailVerified(true);
-
-      UserUtil.assignTeamsFromClaim(newUser, teamsFromClaim);
-
-      try {
-        return UserUtil.addOrUpdateUser(newUser);
-      } catch (org.openmetadata.sdk.exception.UserCreationException ex) {
-        if (!UserUtil.isRetryableUserCreationConflict(ex) || attempt == 3) {
-          throw ex;
-        }
-        LOG.warn(
-            "Retrying SAML email-first user creation for '{}' after a concurrent create conflict",
-            email);
-      }
-    }
-
-    throw new AuthenticationException("Unable to create SAML user after concurrent retries.");
+    return new EmailFirstUserProvisioner(
+            "SAML",
+            emailAddress ->
+                Entity.getUserRepository()
+                    .getByEmail(
+                        null,
+                        emailAddress,
+                        new Fields(Set.of("id", "roles", "teams", "displayName"))),
+            this::usernameExists,
+            this::isUserAdmin,
+            user -> UserUtil.assignTeamsFromClaim(user, teamsFromClaim),
+            user -> UserUtil.assignTeamsFromClaim(user, teamsFromClaim),
+            UserUtil::addOrUpdateUser,
+            AuthenticationException::new)
+        .getOrCreate(email, displayName, Boolean.TRUE.equals(authConfig.getEnableSelfSignup()));
   }
 
   private User getOrCreateLegacySamlUser(

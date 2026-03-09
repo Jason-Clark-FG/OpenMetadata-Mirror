@@ -15,10 +15,6 @@ package org.openmetadata.service.security;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
-import static org.openmetadata.service.security.SecurityUtil.extractDisplayNameFromClaim;
-import static org.openmetadata.service.security.SecurityUtil.extractEmailFromClaim;
-import static org.openmetadata.service.security.SecurityUtil.findEmailFromClaims;
-import static org.openmetadata.service.security.SecurityUtil.findUserNameFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.isBot;
 import static org.openmetadata.service.security.SecurityUtil.validateConfiguredEmailDomain;
 import static org.openmetadata.service.security.SecurityUtil.validateDomainEnforcement;
@@ -302,11 +298,7 @@ public class JwtFilter implements ContainerRequestFilter {
     boolean isBotUser = isBot(claims);
     if (usedEmailFirstFlow) {
       validateConfiguredEmailDomain(
-          email,
-          allowedEmailDomains,
-          principalDomain,
-          allowedDomains,
-          enforcePrincipalDomain);
+          email, allowedEmailDomains, principalDomain, allowedDomains, enforcePrincipalDomain);
     } else {
       validateDomainEnforcement(
           jwtPrincipalClaimsMapping,
@@ -358,34 +350,23 @@ public class JwtFilter implements ContainerRequestFilter {
   }
 
   private ResolvedIdentity resolveIdentity(Map<String, Claim> claims, boolean isBotUser) {
-    if (shouldUseEmailFirstFlow(isBotUser)) {
-      try {
-        String email = extractEmailFromClaim(claims, emailClaim);
-        String displayName = extractDisplayNameFromClaim(claims, displayNameClaim, email);
-        String userName = resolveUserNameForEmail(email);
-        LOG.debug(
-            "Email-first flow: email={}, userName={}, displayName={}", email, userName, displayName);
-        return new ResolvedIdentity(userName, email, true);
-      } catch (AuthenticationException ex) {
-        if (!canFallbackToLegacyFlow()) {
-          throw ex;
-        }
-        LOG.warn(
-            "Email-first claim resolution failed for claim '{}': {}. Falling back to legacy JWT principal claims.",
-            emailClaim,
-            ex.getMessage());
-      }
-    }
-
-    String userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
-    String email =
-        findEmailFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
-    return new ResolvedIdentity(userName, email, false);
+    JwtIdentityResolver.ResolvedIdentity resolvedIdentity =
+        new JwtIdentityResolver(
+                emailClaim,
+                jwtPrincipalClaimsMapping,
+                jwtPrincipalClaims,
+                principalDomain,
+                this::resolveUserNameForEmail)
+            .resolve(claims, isBotUser);
+    return new ResolvedIdentity(
+        resolvedIdentity.userName(), resolvedIdentity.email(), resolvedIdentity.emailFirstFlow());
   }
 
   private String resolveUserNameForEmail(String email) {
     try {
-      return Entity.getUserRepository().getByEmail(null, email, new Fields(Set.of("name"))).getName();
+      return Entity.getUserRepository()
+          .getByEmail(null, email, new Fields(Set.of("name")))
+          .getName();
     } catch (EntityNotFoundException e) {
       return email.split("@")[0];
     } catch (Exception e) {

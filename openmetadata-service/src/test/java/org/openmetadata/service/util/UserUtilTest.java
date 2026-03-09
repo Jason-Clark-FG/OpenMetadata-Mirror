@@ -21,7 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
+@Execution(ExecutionMode.CONCURRENT)
 class UserUtilTest {
 
   @Test
@@ -43,6 +46,17 @@ class UserUtilTest {
 
     assertTrue(username.startsWith("john.doe_"));
     assertTrue(username.length() > "john.doe_".length());
+  }
+
+  @Test
+  void testGenerateUsernameFromEmail_sameLocalPartDifferentDomainsStayUnique() {
+    String firstUsername = UserUtil.generateUsernameFromEmail("john@x.com", name -> false);
+    String secondUsername =
+        UserUtil.generateUsernameFromEmail("john@y.com", name -> "john".equals(name));
+
+    assertEquals("john", firstUsername);
+    assertTrue(secondUsername.startsWith("john_"));
+    assertTrue(secondUsername.length() > "john_".length());
   }
 
   @Test

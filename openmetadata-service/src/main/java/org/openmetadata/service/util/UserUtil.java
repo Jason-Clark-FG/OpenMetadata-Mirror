@@ -61,8 +61,8 @@ import org.openmetadata.service.exception.BadRequestException;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
-import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.SecurityUtil;
+import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.RestUtil.PutResponse;
@@ -296,8 +296,7 @@ public final class UserUtil {
         LOG.info("[BootstrapUser] Created new admin user '{}' with email '{}'", username, email);
         return;
       } catch (UserCreationException ex) {
-        if (!isRetryableUserCreationConflict(ex)
-            || attempt == MAX_USERNAME_GENERATION_ATTEMPTS) {
+        if (!isRetryableUserCreationConflict(ex) || attempt == MAX_USERNAME_GENERATION_ATTEMPTS) {
           throw ex;
         }
         LOG.warn(
@@ -768,7 +767,8 @@ public final class UserUtil {
     }
 
     String normalizedEmail = email.toLowerCase();
-    return adminEmails.stream().anyMatch(adminEmail -> adminEmail.equalsIgnoreCase(normalizedEmail));
+    return adminEmails.stream()
+        .anyMatch(adminEmail -> adminEmail.equalsIgnoreCase(normalizedEmail));
   }
 
   /**

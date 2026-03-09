@@ -73,6 +73,7 @@ import org.openmetadata.service.jdbi3.RoleRepository;
 import org.openmetadata.service.jdbi3.TokenRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.AuthenticationException;
+import org.openmetadata.service.security.EmailFirstUserProvisioner;
 import org.openmetadata.service.security.SecurityUtil;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -173,92 +174,44 @@ public class LdapAuthenticator implements AuthenticatorHandler {
         authzConfig.getAllowedDomains(),
         authzConfig.getEnforcePrincipalDomain());
 
-    for (int attempt = 1; attempt <= 3; attempt++) {
-      try {
-        User user =
-            userRepository.getByEmail(
-                null,
-                email,
-                new Fields(Set.of("id", "roles", "teams", "displayName", "isAdmin")));
+    return new EmailFirstUserProvisioner(
+            "LDAP",
+            emailAddress ->
+                userRepository.getByEmail(
+                    null,
+                    emailAddress,
+                    new Fields(Set.of("id", "roles", "teams", "displayName", "isAdmin"))),
+            this::usernameExists,
+            this::isUserAdmin,
+            user -> syncLdapRoles(userDn, user),
+            user -> {
+              try {
+                getRoleForLdap(userDn, user, false);
+              } catch (JsonProcessingException ex) {
+                LOG.error(
+                    "Failed to assign roles from LDAP for user {} due to {}",
+                    user.getName(),
+                    ex.getMessage());
+              }
+            },
+            UserUtil::addOrUpdateUser,
+            AuthenticationException::new)
+        .getOrCreate(email, displayName, isSelfSignUpEnabled);
+  }
 
-        boolean needsUpdate = false;
-
-        boolean shouldBeAdmin = isUserAdmin(email, user.getName());
-        LOG.info(
-            "LDAP login - Email: {}, Username: {}, Should be admin: {}, Current admin status: {}",
-            email,
-            user.getName(),
-            shouldBeAdmin,
-            user.getIsAdmin());
-
-        if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-          LOG.info(
-              "Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
-          user.setIsAdmin(true);
-          needsUpdate = true;
-        }
-
-        if (displayName != null && !displayName.equals(user.getDisplayName())) {
-          LOG.info(
-              "Updating displayName for user {} from '{}' to '{}'",
-              user.getName(),
-              user.getDisplayName(),
-              displayName);
-          user.setDisplayName(displayName);
-          needsUpdate = true;
-        }
-
-        getRoleForLdap(userDn, user, Boolean.TRUE);
-
-        if (needsUpdate) {
-          return UserUtil.addOrUpdateUser(user);
-        }
-
-        return user;
-      } catch (EntityNotFoundException e) {
-        LOG.debug("User not found by email {}, will create new user", email);
-      }
-
-      if (!isSelfSignUpEnabled) {
-        throw new AuthenticationException(
-            "User not registered. Contact administrator to create an account.");
-      }
-
-      String userName = UserUtil.generateUsernameFromEmail(email, this::usernameExists);
-      boolean isAdmin = isUserAdmin(email, userName);
-      LOG.info(
-          "Creating new LDAP user - Email: {}, Generated username: {}, Is admin: {}",
-          email,
-          userName,
-          isAdmin);
-
-      String domain = email.split("@")[1];
-      User newUser =
-          UserUtil.user(userName, domain, userName)
-              .withEmail(email)
-              .withDisplayName(displayName != null ? displayName : userName)
-              .withIsAdmin(isAdmin)
-              .withIsEmailVerified(true);
-
-      try {
-        getRoleForLdap(userDn, newUser, false);
-      } catch (JsonProcessingException ex) {
-        LOG.error(
-            "Failed to assign roles from LDAP for user {} due to {}", userName, ex.getMessage());
-      }
-
-      try {
-        return UserUtil.addOrUpdateUser(newUser);
-      } catch (org.openmetadata.sdk.exception.UserCreationException ex) {
-        if (!UserUtil.isRetryableUserCreationConflict(ex) || attempt == 3) {
-          throw ex;
-        }
-        LOG.warn(
-            "Retrying LDAP user creation for '{}' after a concurrent create conflict", email);
-      }
+  private boolean syncLdapRoles(String userDn, User user) {
+    List<EntityReference> previousRoles = normalizeRoles(user.getRoles());
+    try {
+      getRoleForLdap(userDn, user, false);
+    } catch (JsonProcessingException ex) {
+      LOG.error(
+          "Failed to sync roles from LDAP for user {} due to {}", user.getName(), ex.getMessage());
     }
+    return !Objects.equals(previousRoles, normalizeRoles(user.getRoles()));
+  }
 
-    throw new AuthenticationException("Unable to create LDAP user after concurrent retries.");
+  private List<EntityReference> normalizeRoles(List<EntityReference> roles) {
+    return roles != null ? new ArrayList<>(roles) : new ArrayList<>();
   }
 
   @Override
