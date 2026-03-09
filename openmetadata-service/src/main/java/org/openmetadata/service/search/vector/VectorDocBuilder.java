@@ -241,31 +241,37 @@ public class VectorDocBuilder {
 
   private static void addTagsAndTier(Map<String, Object> doc, EntityInterface entity) {
     List<TagLabel> allTags = collectAllTags(entity);
-    if (allTags.isEmpty()) {
-      doc.put("tags", Collections.emptyList());
-      return;
-    }
-
     List<Map<String, Object>> tagsList = new ArrayList<>();
-    Map<String, Object> tierMap = null;
 
     for (TagLabel tag : allTags) {
-      Map<String, Object> tagDoc = new HashMap<>();
-      tagDoc.put("tagFQN", tag.getTagFQN());
-      tagDoc.put("name", tag.getName());
-      tagDoc.put("labelType", tag.getLabelType() != null ? tag.getLabelType().value() : null);
-      tagDoc.put("description", tag.getDescription());
-      tagDoc.put("source", tag.getSource() != null ? tag.getSource().value() : null);
-      tagDoc.put("state", tag.getState() != null ? tag.getState().value() : null);
-
-      if (tag.getTagFQN() != null && tag.getTagFQN().startsWith("Tier.")) {
-        tierMap = tagDoc;
-      } else {
+      if (tag.getTagFQN() == null || !tag.getTagFQN().startsWith("Tier.")) {
+        Map<String, Object> tagDoc = new HashMap<>();
+        tagDoc.put("tagFQN", tag.getTagFQN());
+        tagDoc.put("name", tag.getName());
+        tagDoc.put("labelType", tag.getLabelType() != null ? tag.getLabelType().value() : null);
+        tagDoc.put("description", tag.getDescription());
+        tagDoc.put("source", tag.getSource() != null ? tag.getSource().value() : null);
+        tagDoc.put("state", tag.getState() != null ? tag.getState().value() : null);
         tagsList.add(tagDoc);
       }
     }
-
     doc.put("tags", tagsList);
+
+    Map<String, Object> tierMap = null;
+    if (entity.getTags() != null) {
+      for (TagLabel tag : entity.getTags()) {
+        if (tag.getTagFQN() != null && tag.getTagFQN().startsWith("Tier.")) {
+          tierMap = new HashMap<>();
+          tierMap.put("tagFQN", tag.getTagFQN());
+          tierMap.put("name", tag.getName());
+          tierMap.put("labelType", tag.getLabelType() != null ? tag.getLabelType().value() : null);
+          tierMap.put("description", tag.getDescription());
+          tierMap.put("source", tag.getSource() != null ? tag.getSource().value() : null);
+          tierMap.put("state", tag.getState() != null ? tag.getState().value() : null);
+          break;
+        }
+      }
+    }
     doc.put("tier", tierMap);
   }
 
