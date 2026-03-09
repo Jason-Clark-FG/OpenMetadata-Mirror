@@ -477,6 +477,8 @@ const ConversationSidebar = ({
                   '&.Mui-selected': {
                     backgroundColor: theme.palette.action.selected,
                   },
+                  '& .delete-btn': { opacity: 0 },
+                  '&:hover .delete-btn': { opacity: 1 },
                 }}
                 onClick={() => onSelect(conversation.id)}
               >
@@ -489,25 +491,18 @@ const ConversationSidebar = ({
                     noWrap: true,
                     variant: 'body2',
                   }}
-                  secondary={`${conversation.messageCount} ${t(
-                    'label.message-lowercase-plural'
-                  )}`}
-                  secondaryTypographyProps={{
-                    variant: 'caption',
-                  }}
                 />
-                <Tooltip title={t('label.delete')}>
-                  <IconButton
-                    data-testid={`delete-conversation-${conversation.id}`}
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(conversation.id);
-                    }}
-                  >
-                    <TrashIcon height={14} width={14} />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  className="delete-btn"
+                  data-testid={`delete-conversation-${conversation.id}`}
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(conversation.id);
+                  }}
+                >
+                  <TrashIcon height={14} width={14} />
+                </IconButton>
               </ListItemButton>
             ))}
           </List>
@@ -612,11 +607,10 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           py: 1.5,
           borderRadius: 2,
           backgroundColor: isHuman
-            ? theme.palette.primary.main
-            : theme.palette.grey[100],
-          color: isHuman
-            ? theme.palette.primary.contrastText
-            : theme.palette.text.primary,
+            ? theme.palette.grey[200]
+            : theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          border: isHuman ? 'none' : `1px solid ${theme.palette.divider}`,
         }}
       >
         {!isEmpty(textContent) &&
@@ -641,12 +635,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           </Box>
         )}
         {message.tokens && (
-          <Typography
-            color={isHuman ? 'inherit' : 'text.secondary'}
-            mt={0.5}
-            sx={{ opacity: 0.7 }}
-            variant="caption"
-          >
+          <Typography color="text.secondary" mt={0.5} variant="caption">
             {message.tokens.totalTokens
               ? `${message.tokens.totalTokens} ${t('label.token-plural')}`
               : ''}
