@@ -280,11 +280,11 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
     String origin = request.getHeader("Origin");
 
     if (origin != null && allowedOrigins.contains(origin)) {
-      // Set specific origin (not wildcard) for security
       response.setHeader("Access-Control-Allow-Origin", origin);
       response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
       response.setHeader("Access-Control-Max-Age", "3600");
+      response.setHeader("Vary", "Origin");
       LOG.debug("CORS headers set for allowed origin: {}", origin);
     } else {
       // Log rejected origin attempts
