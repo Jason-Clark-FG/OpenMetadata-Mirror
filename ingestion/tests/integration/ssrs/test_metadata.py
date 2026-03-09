@@ -9,18 +9,50 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Ssrs integration tests
+Ssrs integration tests using a mock HTTP server
 """
 import pytest
 
+from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnection import (
+    SsrsConnection,
+)
+from metadata.ingestion.source.dashboard.ssrs.client import SsrsClient
 
+
+@pytest.mark.integration
 class TestSsrsMetadata:
-    @pytest.mark.integration
-    def test_connection(self, ssrs_service):
-        """Test that a connection can be established."""
-        pass
+    def test_client_get_reports(self, ssrs_service):
+        connection = SsrsConnection(hostPort=ssrs_service)
+        client = SsrsClient(connection)
+        reports = client.get_reports()
+        assert len(reports) == 4
+        assert reports[0].name == "Report 1"
+        assert reports[0].path == "/TestFolder/Report 1"
 
-    @pytest.mark.integration
-    def test_metadata_extraction(self, ssrs_service):
-        """Test that metadata can be extracted."""
-        pass
+    def test_client_get_folders(self, ssrs_service):
+        connection = SsrsConnection(hostPort=ssrs_service)
+        client = SsrsClient(connection)
+        folders = client.get_folders()
+        assert len(folders) == 1
+        assert folders[0].name == "TestFolder"
+
+    def test_client_get_report_datasources(self, ssrs_service):
+        connection = SsrsConnection(hostPort=ssrs_service)
+        client = SsrsClient(connection)
+        datasources = client.get_report_datasources("report-1")
+        assert len(datasources) == 1
+        assert datasources[0].name == "TestDB"
+        assert datasources[0].data_source_type == "SQL"
+
+    def test_client_test_access(self, ssrs_service):
+        connection = SsrsConnection(hostPort=ssrs_service)
+        client = SsrsClient(connection)
+        client.test_access()
+
+    def test_hidden_reports_present_in_raw(self, ssrs_service):
+        connection = SsrsConnection(hostPort=ssrs_service)
+        client = SsrsClient(connection)
+        reports = client.get_reports()
+        assert any(r.hidden for r in reports)
+        visible = [r for r in reports if not r.hidden]
+        assert len(visible) == 3

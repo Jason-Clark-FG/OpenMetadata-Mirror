@@ -42,7 +42,7 @@ def test_connection(
     test_fn = {
         "CheckAccess": client.test_access,
         "GetDashboards": client.get_reports,
-        "GetCharts": lambda: None,
+        "GetCharts": client.get_reports,
     }
 
     return test_connection_steps(

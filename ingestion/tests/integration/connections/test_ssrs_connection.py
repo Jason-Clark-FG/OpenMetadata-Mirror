@@ -11,16 +11,57 @@
 """
 Ssrs connection integration tests
 """
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 import pytest
 
+from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnection import (
+    SsrsConnection,
+)
+from metadata.ingestion.connections.test_connections import SourceConnectionException
+from metadata.ingestion.source.dashboard.ssrs.client import SsrsClient
+from metadata.ingestion.source.dashboard.ssrs.connection import get_connection
 
+
+class _MockHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = json.dumps({"value": []}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        pass
+
+
+@pytest.fixture(scope="module")
+def ssrs_mock_url():
+    server = HTTPServer(("127.0.0.1", 0), _MockHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{port}/reports"
+    server.shutdown()
+
+
+@pytest.mark.integration
 class TestSsrsConnection:
-    @pytest.mark.integration
-    def test_get_connection(self):
-        """Test that get_connection returns a valid client."""
-        pass
+    def test_get_connection(self, ssrs_mock_url):
+        connection = SsrsConnection(hostPort=ssrs_mock_url)
+        client = get_connection(connection)
+        assert isinstance(client, SsrsClient)
 
-    @pytest.mark.integration
-    def test_test_connection(self):
-        """Test that test_connection succeeds against a live service."""
-        pass
+    def test_get_connection_test_access(self, ssrs_mock_url):
+        connection = SsrsConnection(hostPort=ssrs_mock_url)
+        client = get_connection(connection)
+        client.test_access()
+
+    def test_connection_bad_host(self):
+        connection = SsrsConnection(hostPort="http://localhost:1")
+        client = get_connection(connection)
+        with pytest.raises(SourceConnectionException):
+            client.test_access()

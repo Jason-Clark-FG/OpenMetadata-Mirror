@@ -22,6 +22,8 @@ from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnect
 )
 from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.source.dashboard.ssrs.models import (
+    SsrsDataSource,
+    SsrsDataSourceListResponse,
     SsrsFolder,
     SsrsFolderListResponse,
     SsrsReport,
@@ -34,6 +36,7 @@ logger = ingestion_logger()
 
 API_VERSION = "api/v2.0"
 DEFAULT_TIMEOUT = 30
+PAGE_SIZE = 100
 
 
 class SsrsClient:
@@ -47,15 +50,15 @@ class SsrsClient:
             )
         self.session.headers.update({"Accept": "application/json"})
 
-    def _get(self, path: str) -> dict:
+    def _get(self, path: str, params: Optional[dict] = None) -> dict:
         url = f"{self.base_url}{path}"
-        resp = self.session.get(url, timeout=DEFAULT_TIMEOUT)
+        resp = self.session.get(url, timeout=DEFAULT_TIMEOUT, params=params)
         resp.raise_for_status()
         return resp.json()
 
-    def test_access(self):
+    def test_access(self) -> None:
         try:
-            self._get("/Folders")
+            self._get("/Folders", params={"$top": "1"})
         except Exception as exc:
             raise SourceConnectionException(
                 f"Failed to connect to SSRS: {exc}"
@@ -63,8 +66,18 @@ class SsrsClient:
 
     def get_folders(self) -> List[SsrsFolder]:
         try:
-            data = self._get("/Folders")
-            return SsrsFolderListResponse(**data).value
+            results: List[SsrsFolder] = []
+            skip = 0
+            while True:
+                data = self._get(
+                    "/Folders", params={"$top": str(PAGE_SIZE), "$skip": str(skip)}
+                )
+                response = SsrsFolderListResponse(**data)
+                results.extend(response.value)
+                if len(response.value) < PAGE_SIZE:
+                    break
+                skip += PAGE_SIZE
+            return results
         except Exception:
             logger.debug(traceback.format_exc())
             logger.warning("Failed to fetch SSRS folders")
@@ -72,18 +85,30 @@ class SsrsClient:
 
     def get_reports(self) -> List[SsrsReport]:
         try:
-            data = self._get("/Reports")
-            return SsrsReportListResponse(**data).value
+            results: List[SsrsReport] = []
+            skip = 0
+            while True:
+                data = self._get(
+                    "/Reports", params={"$top": str(PAGE_SIZE), "$skip": str(skip)}
+                )
+                response = SsrsReportListResponse(**data)
+                results.extend(response.value)
+                if len(response.value) < PAGE_SIZE:
+                    break
+                skip += PAGE_SIZE
+            return results
         except Exception:
             logger.debug(traceback.format_exc())
             logger.warning("Failed to fetch SSRS reports")
         return []
 
-    def get_report_details(self, report_id: str) -> Optional[SsrsReport]:
+    def get_report_datasources(self, report_id: str) -> List[SsrsDataSource]:
         try:
-            data = self._get(f"/Reports({report_id})")
-            return SsrsReport(**data)
+            data = self._get(f"/Reports({report_id})/DataSources")
+            return SsrsDataSourceListResponse(**data).value
         except Exception:
             logger.debug(traceback.format_exc())
-            logger.warning(f"Failed to fetch report details for id: {report_id}")
-        return None
+            logger.warning(
+                "Failed to fetch data sources for report id: %s", report_id
+            )
+        return []

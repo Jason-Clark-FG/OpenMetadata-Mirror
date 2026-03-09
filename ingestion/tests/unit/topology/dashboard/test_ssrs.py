@@ -12,10 +12,18 @@
 Unit tests for SSRS source
 """
 from types import SimpleNamespace
-from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from metadata.generated.schema.api.data.createChart import CreateChartRequest
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
+from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
+from metadata.generated.schema.entity.data.chart import ChartType
+from metadata.generated.schema.entity.data.dashboard import (
+    Dashboard as LineageDashboard,
+)
+from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.services.dashboardService import (
     DashboardConnection,
     DashboardService,
@@ -28,7 +36,11 @@ from metadata.generated.schema.type.basic import FullyQualifiedEntityName
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.dashboard.ssrs.metadata import SsrsSource
-from metadata.ingestion.source.dashboard.ssrs.models import SsrsFolder, SsrsReport
+from metadata.ingestion.source.dashboard.ssrs.models import (
+    SsrsDataSource,
+    SsrsFolder,
+    SsrsReport,
+)
 
 MOCK_DASHBOARD_SERVICE = DashboardService(
     id="c3eb265f-5445-4ad3-ba5e-797d3a3071bb",
@@ -52,6 +64,7 @@ mock_config = {
         },
         "sourceConfig": {
             "config": {
+                "type": "DashboardMetadata",
                 "dashboardFilterPattern": {},
                 "chartFilterPattern": {},
             }
@@ -102,6 +115,17 @@ MOCK_REPORTS = [
     ),
 ]
 
+MOCK_REPORTS_WITH_HIDDEN = MOCK_REPORTS + [
+    SsrsReport(
+        Id="report-hidden",
+        Name="Hidden Report",
+        Description="Should not appear",
+        Path="/Finance/Hidden Report",
+        Type="Report",
+        Hidden=True,
+    ),
+]
+
 MOCK_FOLDERS = [
     SsrsFolder(Id="folder-1", Name="Finance", Path="/Finance"),
     SsrsFolder(Id="folder-2", Name="Operations", Path="/Operations"),
@@ -127,70 +151,194 @@ EXPECTED_DASHBOARDS = [
 ]
 
 
-class SsrsUnitTest(TestCase):
-    @patch(
+@pytest.fixture(scope="module")
+def ssrs_source():
+    with patch(
         "metadata.ingestion.source.dashboard.dashboard_service.DashboardServiceSource.test_connection"
-    )
-    @patch("metadata.ingestion.source.dashboard.ssrs.connection.get_connection")
-    def __init__(self, methodName, get_connection, test_connection) -> None:
-        super().__init__(methodName)
-        get_connection.return_value = False
-        test_connection.return_value = False
-        self.config = OpenMetadataWorkflowConfig.model_validate(mock_config)
-        self.ssrs: SsrsSource = SsrsSource.create(
+    ), patch(
+        "metadata.ingestion.source.dashboard.ssrs.connection.get_connection"
+    ):
+        config = OpenMetadataWorkflowConfig.model_validate(mock_config)
+        source = SsrsSource.create(
             mock_config["source"],
-            OpenMetadata(self.config.workflowConfig.openMetadataServerConfig),
+            OpenMetadata(config.workflowConfig.openMetadataServerConfig),
         )
-        self.ssrs.client = SimpleNamespace()
-        self.ssrs.context.get().__dict__[
+        source.client = SimpleNamespace()
+        source.context.get().__dict__[
             "dashboard_service"
         ] = MOCK_DASHBOARD_SERVICE.fullyQualifiedName.root
-        self.ssrs.folders = MOCK_FOLDERS
+        source.folder_path_map = {f.path: f.name for f in MOCK_FOLDERS}
+        yield source
 
-    def test_dashboard_name(self):
+
+class TestSsrsSource:
+    def test_dashboard_name(self, ssrs_source):
         for report in MOCK_REPORTS:
-            assert self.ssrs.get_dashboard_name(report) == report.name
+            assert ssrs_source.get_dashboard_name(report) == report.name
 
-    def test_dashboard_details(self):
+    def test_dashboard_details(self, ssrs_source):
         for report in MOCK_REPORTS:
-            assert self.ssrs.get_dashboard_details(report) == report
+            assert ssrs_source.get_dashboard_details(report) == report
 
-    def test_dashboards_list(self):
-        self.ssrs.client.get_reports = lambda: MOCK_REPORTS
-        result = self.ssrs.get_dashboards_list()
+    def test_dashboards_list(self, ssrs_source):
+        ssrs_source.client.get_reports = lambda: MOCK_REPORTS
+        result = ssrs_source.get_dashboards_list()
         assert result == MOCK_REPORTS
         assert len(result) == 3
 
-    def test_project_name(self):
-        assert self.ssrs.get_project_name(MOCK_REPORTS[0]) == "Finance"
-        assert self.ssrs.get_project_name(MOCK_REPORTS[1]) == "Operations"
-        assert self.ssrs.get_project_name(MOCK_REPORTS[2]) is None
+    def test_dashboards_list_filters_hidden(self, ssrs_source):
+        ssrs_source.client.get_reports = lambda: MOCK_REPORTS_WITH_HIDDEN
+        result = ssrs_source.get_dashboards_list()
+        assert len(result) == 3
+        assert all(not r.hidden for r in result)
 
-    def test_yield_dashboard(self):
+    def test_project_name(self, ssrs_source):
+        assert ssrs_source.get_project_name(MOCK_REPORTS[0]) == "Finance"
+        assert ssrs_source.get_project_name(MOCK_REPORTS[1]) == "Operations"
+        assert ssrs_source.get_project_name(MOCK_REPORTS[2]) is None
+
+    def test_yield_dashboard(self, ssrs_source):
         for report, expected in zip(MOCK_REPORTS[:2], EXPECTED_DASHBOARDS):
-            self.ssrs.context.get().__dict__[
+            ssrs_source.context.get().__dict__[
                 "project_name"
-            ] = self.ssrs.get_project_name(report)
-            results = list(self.ssrs.yield_dashboard(report))
+            ] = ssrs_source.get_project_name(report)
+            results = list(ssrs_source.yield_dashboard(report))
             assert len(results) == 1
             assert isinstance(results[0], Either)
             assert results[0].right == expected
 
-    def test_yield_dashboard_no_description(self):
-        self.ssrs.context.get().__dict__["project_name"] = "Operations"
-        results = list(self.ssrs.yield_dashboard(MOCK_REPORTS[1]))
+    def test_yield_dashboard_no_description(self, ssrs_source):
+        ssrs_source.context.get().__dict__["project_name"] = "Operations"
+        results = list(ssrs_source.yield_dashboard(MOCK_REPORTS[1]))
         assert results[0].right.description is None
 
-    def test_yield_dashboard_chart_empty(self):
-        results = list(self.ssrs.yield_dashboard_chart(MOCK_REPORTS[0]))
+    def test_yield_dashboard_chart(self, ssrs_source):
+        results = list(ssrs_source.yield_dashboard_chart(MOCK_REPORTS[0]))
+        assert len(results) == 1
+        chart = results[0].right
+        assert isinstance(chart, CreateChartRequest)
+        assert chart.displayName == "Sales Report"
+        assert chart.chartType == ChartType.Other
+        assert str(chart.name.root) == "report-1_chart"
+        assert "report/Finance/Sales Report" in str(chart.sourceUrl.root)
+
+    def test_yield_dashboard_chart_no_description(self, ssrs_source):
+        results = list(ssrs_source.yield_dashboard_chart(MOCK_REPORTS[1]))
+        assert len(results) == 1
+        assert results[0].right.description is None
+
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
+    def test_yield_dashboard_lineage_no_entity(self, mock_get_by_name, ssrs_source):
+        mock_get_by_name.return_value = None
+        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
         assert results == []
 
-    def test_yield_dashboard_lineage_empty(self):
-        results = list(self.ssrs.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
+    def test_yield_dashboard_lineage_no_datasources(
+        self, mock_get_by_name, mock_search, ssrs_source
+    ):
+        mock_get_by_name.return_value = MOCK_DASHBOARD_SERVICE
+        ssrs_source.client.get_report_datasources = lambda _: []
+        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
         assert results == []
+        mock_search.assert_not_called()
+
+    @patch(
+        "metadata.ingestion.source.dashboard.ssrs.metadata.SsrsSource._get_add_lineage_request"
+    )
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
+    def test_yield_dashboard_lineage_with_datasources(
+        self,
+        mock_get_by_name,
+        mock_search,
+        mock_lineage_request,
+        ssrs_source,
+    ):
+        mock_dashboard = MagicMock(spec=LineageDashboard)
+        mock_get_by_name.return_value = mock_dashboard
+
+        mock_table = MagicMock(spec=Table)
+        mock_search.return_value = [mock_table]
+
+        mock_lineage = MagicMock(spec=Either)
+        mock_lineage_request.return_value = mock_lineage
+
+        datasources = [
+            SsrsDataSource(
+                Id="ds-1",
+                Name="SalesDB",
+                ConnectionString="Data Source=sqlserver01;Initial Catalog=SalesDB",
+                DataSourceType="SQL",
+                IsEnabled=True,
+            ),
+        ]
+        ssrs_source.client.get_report_datasources = lambda _: datasources
+
+        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
+        assert len(results) == 1
+        mock_search.assert_called_once()
+        mock_lineage_request.assert_called_once_with(
+            to_entity=mock_dashboard, from_entity=mock_table
+        )
+
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.search_in_any_service")
+    @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_by_name")
+    def test_yield_dashboard_lineage_skips_no_connection_string(
+        self, mock_get_by_name, mock_search, ssrs_source
+    ):
+        mock_get_by_name.return_value = MagicMock(spec=LineageDashboard)
+        datasources = [
+            SsrsDataSource(
+                Id="ds-1",
+                Name="NoDB",
+                ConnectionString=None,
+                DataSourceType="SQL",
+                IsEnabled=True,
+            ),
+        ]
+        ssrs_source.client.get_report_datasources = lambda _: datasources
+        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
+        assert results == []
+        mock_search.assert_not_called()
 
 
-class TestSsrsModels(TestCase):
+class TestConnectionStringParsing:
+    def test_parse_standard_connection_string(self):
+        result = SsrsSource._parse_connection_string(
+            "Data Source=myserver;Initial Catalog=SalesDB"
+        )
+        assert result["server"] == "myserver"
+        assert result["database"] == "SalesDB"
+
+    def test_parse_with_database_key(self):
+        result = SsrsSource._parse_connection_string(
+            "Server=myserver;Database=AnalyticsDB"
+        )
+        assert result["server"] == "myserver"
+        assert result["database"] == "AnalyticsDB"
+
+    def test_parse_with_extra_properties(self):
+        result = SsrsSource._parse_connection_string(
+            "Data Source=sql01.corp.local;Initial Catalog=Finance;"
+            "Integrated Security=True;MultipleActiveResultSets=False"
+        )
+        assert result["server"] == "sql01.corp.local"
+        assert result["database"] == "Finance"
+
+    def test_parse_empty_string(self):
+        result = SsrsSource._parse_connection_string("")
+        assert result["server"] is None
+        assert result["database"] is None
+
+    def test_parse_no_database(self):
+        result = SsrsSource._parse_connection_string("Data Source=myserver")
+        assert result["server"] == "myserver"
+        assert result["database"] is None
+
+
+class TestSsrsModels:
     def test_ssrs_report_parsing(self):
         data = {
             "Id": "abc-123",
