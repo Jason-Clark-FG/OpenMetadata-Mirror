@@ -22,7 +22,9 @@ from metadata.ingestion.source.dashboard.ssrs.client import SsrsClient
 @pytest.mark.integration
 class TestSsrsMetadata:
     def test_client_get_reports(self, ssrs_service):
-        connection = SsrsConnection(hostPort=ssrs_service)
+        connection = SsrsConnection(
+            hostPort=ssrs_service, username="test_user", password="test_pass"
+        )
         client = SsrsClient(connection)
         reports = client.get_reports()
         assert len(reports) == 4
@@ -30,19 +32,25 @@ class TestSsrsMetadata:
         assert reports[0].path == "/TestFolder/Report 1"
 
     def test_client_get_folders(self, ssrs_service):
-        connection = SsrsConnection(hostPort=ssrs_service)
+        connection = SsrsConnection(
+            hostPort=ssrs_service, username="test_user", password="test_pass"
+        )
         client = SsrsClient(connection)
         folders = client.get_folders()
         assert len(folders) == 1
         assert folders[0].name == "TestFolder"
 
     def test_client_test_access(self, ssrs_service):
-        connection = SsrsConnection(hostPort=ssrs_service)
+        connection = SsrsConnection(
+            hostPort=ssrs_service, username="test_user", password="test_pass"
+        )
         client = SsrsClient(connection)
         client.test_access()
 
     def test_hidden_reports_present_in_raw(self, ssrs_service):
-        connection = SsrsConnection(hostPort=ssrs_service)
+        connection = SsrsConnection(
+            hostPort=ssrs_service, username="test_user", password="test_pass"
+        )
         client = SsrsClient(connection)
         reports = client.get_reports()
         assert any(r.hidden for r in reports)

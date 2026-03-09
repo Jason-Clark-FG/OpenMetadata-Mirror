@@ -51,17 +51,23 @@ def ssrs_mock_url():
 @pytest.mark.integration
 class TestSsrsConnection:
     def test_get_connection(self, ssrs_mock_url):
-        connection = SsrsConnection(hostPort=ssrs_mock_url)
+        connection = SsrsConnection(
+            hostPort=ssrs_mock_url, username="test_user", password="test_pass"
+        )
         client = get_connection(connection)
         assert isinstance(client, SsrsClient)
 
     def test_get_connection_test_access(self, ssrs_mock_url):
-        connection = SsrsConnection(hostPort=ssrs_mock_url)
+        connection = SsrsConnection(
+            hostPort=ssrs_mock_url, username="test_user", password="test_pass"
+        )
         client = get_connection(connection)
         client.test_access()
 
     def test_connection_bad_host(self):
-        connection = SsrsConnection(hostPort="http://localhost:1")
+        connection = SsrsConnection(
+            hostPort="http://localhost:1", username="test_user", password="test_pass"
+        )
         client = get_connection(connection)
         with pytest.raises(SourceConnectionException):
             client.test_access()
