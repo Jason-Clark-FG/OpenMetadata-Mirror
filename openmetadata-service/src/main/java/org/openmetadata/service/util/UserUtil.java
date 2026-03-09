@@ -62,6 +62,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
+import org.openmetadata.service.security.SecurityUtil;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.RestUtil.PutResponse;
@@ -125,6 +126,23 @@ public final class UserUtil {
       sb.append(SUFFIX_CHARS.charAt(RANDOM.nextInt(SUFFIX_CHARS.length())));
     }
     return sb.toString();
+  }
+
+  public static boolean isRetryableUserCreationConflict(Throwable throwable) {
+    Throwable current = throwable;
+    while (current != null) {
+      String message = current.getMessage();
+      if (message != null) {
+        String normalizedMessage = message.toLowerCase();
+        if (normalizedMessage.contains("entity already exists")
+            || normalizedMessage.contains("duplicate")
+            || normalizedMessage.contains("already exists")) {
+          return true;
+        }
+      }
+      current = current.getCause();
+    }
+    return false;
   }
 
   public static void addUsers(
@@ -216,35 +234,39 @@ public final class UserUtil {
   private static void createOrUpdateAdminByEmail(AuthProvider authProvider, String email) {
     UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
 
-    User existingUser = null;
-    try {
-      Set<String> fieldList = new HashSet<>(userRepository.getPatchFields().getFieldList());
-      fieldList.add(AUTH_MECHANISM_FIELD);
-      existingUser = userRepository.getByEmail(null, email, new Fields(fieldList));
-    } catch (EntityNotFoundException e) {
-      LOG.debug("[BootstrapUser] No existing user found for email: {}", email);
-    }
+    Set<String> fieldList = new HashSet<>(userRepository.getPatchFields().getFieldList());
+    fieldList.add(AUTH_MECHANISM_FIELD);
 
-    if (existingUser != null) {
-      if (Boolean.TRUE.equals(existingUser.getIsBot())) {
-        LOG.error(
-            "[BootstrapUser] Cannot promote bot user '{}' to admin. "
-                + "Bot users cannot be configured as admins.",
-            existingUser.getName());
+    for (int attempt = 1; attempt <= MAX_USERNAME_GENERATION_ATTEMPTS; attempt++) {
+      User existingUser = null;
+      try {
+        existingUser = userRepository.getByEmail(null, email, new Fields(fieldList));
+      } catch (EntityNotFoundException e) {
+        LOG.debug("[BootstrapUser] No existing user found for email: {}", email);
+      }
+
+      if (existingUser != null) {
+        if (Boolean.TRUE.equals(existingUser.getIsBot())) {
+          LOG.error(
+              "[BootstrapUser] Cannot promote bot user '{}' to admin. "
+                  + "Bot users cannot be configured as admins.",
+              existingUser.getName());
+          return;
+        }
+
+        if (!Boolean.TRUE.equals(existingUser.getIsAdmin())) {
+          existingUser.setIsAdmin(true);
+          addOrUpdateUser(existingUser);
+          LOG.info("[BootstrapUser] Updated existing user '{}' to admin", existingUser.getName());
+        } else {
+          LOG.debug(
+              "[BootstrapUser] User '{}' is already an admin, no update needed",
+              existingUser.getName());
+        }
         return;
       }
 
-      if (!Boolean.TRUE.equals(existingUser.getIsAdmin())) {
-        existingUser.setIsAdmin(true);
-        addOrUpdateUser(existingUser);
-        LOG.info("[BootstrapUser] Updated existing user '{}' to admin", existingUser.getName());
-      } else {
-        LOG.debug(
-            "[BootstrapUser] User '{}' is already an admin, no update needed",
-            existingUser.getName());
-      }
-    } else {
-      Predicate<String> existsChecker = name -> userRepository.checkUserNameExists(name);
+      Predicate<String> existsChecker = userRepository::checkUserNameExists;
       String username = generateUsernameFromEmail(email, existsChecker);
       String displayName = email.split("@")[0];
       String password = getPassword(username);
@@ -264,11 +286,24 @@ public final class UserUtil {
 
       if (authProvider.equals(AuthProvider.BASIC)) {
         updateUserWithHashedPwd(newUser, password);
-        EmailUtil.sendInviteMailToAdmin(newUser, password);
       }
 
-      addOrUpdateUser(newUser);
-      LOG.info("[BootstrapUser] Created new admin user '{}' with email '{}'", username, email);
+      try {
+        addOrUpdateUser(newUser);
+        if (authProvider.equals(AuthProvider.BASIC)) {
+          EmailUtil.sendInviteMailToAdmin(newUser, password);
+        }
+        LOG.info("[BootstrapUser] Created new admin user '{}' with email '{}'", username, email);
+        return;
+      } catch (UserCreationException ex) {
+        if (!isRetryableUserCreationConflict(ex)
+            || attempt == MAX_USERNAME_GENERATION_ATTEMPTS) {
+          throw ex;
+        }
+        LOG.warn(
+            "[BootstrapUser] Retrying admin user creation for '{}' after a concurrent create conflict",
+            email);
+      }
     }
   }
 
@@ -513,7 +548,10 @@ public final class UserUtil {
     }
     String botDomain = authConfig.getBotDomain();
     if (nullOrEmpty(botDomain)) {
-      botDomain = "openmetadata.org";
+      botDomain = authConfig.getPrincipalDomain();
+    }
+    if (nullOrEmpty(botDomain)) {
+      botDomain = SecurityUtil.DEFAULT_PRINCIPAL_DOMAIN;
     }
 
     String botEmail = createBotEmail(botName, botDomain);
@@ -730,8 +768,7 @@ public final class UserUtil {
     }
 
     String normalizedEmail = email.toLowerCase();
-    return adminEmails.stream()
-        .anyMatch(adminEmail -> adminEmail.toLowerCase().equals(normalizedEmail));
+    return adminEmails.stream().anyMatch(adminEmail -> adminEmail.equalsIgnoreCase(normalizedEmail));
   }
 
   /**

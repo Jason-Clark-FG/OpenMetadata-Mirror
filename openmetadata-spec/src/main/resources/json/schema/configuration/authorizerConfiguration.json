@@ -50,8 +50,7 @@
     "botDomain": {
       "title": "Bot Domain",
       "description": "Email domain used for system-created bots (e.g., ingestion-bot@{botDomain}).",
-      "type": "string",
-      "default": "openmetadata.org"
+      "type": "string"
     },
     "botPrincipals": {
       "title": "Bot Principals",

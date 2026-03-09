@@ -164,84 +164,101 @@ public class LdapAuthenticator implements AuthenticatorHandler {
   private User getOrCreateLdapUser(String userDn, String email, String displayName)
       throws IOException {
     AuthorizerConfiguration authzConfig = SecurityConfigurationManager.getCurrentAuthzConfig();
-
-    List<String> allowedDomains =
+    SecurityUtil.validateConfiguredEmailDomain(
+        email,
         authzConfig.getAllowedEmailDomains() != null
             ? new ArrayList<>(authzConfig.getAllowedEmailDomains())
-            : new ArrayList<>();
-    SecurityUtil.validateEmailDomain(email, allowedDomains);
+            : new ArrayList<>(),
+        authzConfig.getPrincipalDomain(),
+        authzConfig.getAllowedDomains(),
+        authzConfig.getEnforcePrincipalDomain());
 
-    try {
-      User user =
-          userRepository.getByEmail(
-              null, email, new Fields(Set.of("id", "roles", "teams", "displayName", "isAdmin")));
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        User user =
+            userRepository.getByEmail(
+                null,
+                email,
+                new Fields(Set.of("id", "roles", "teams", "displayName", "isAdmin")));
 
-      boolean needsUpdate = false;
+        boolean needsUpdate = false;
 
-      boolean shouldBeAdmin = isUserAdmin(email, user.getName());
-      LOG.info(
-          "LDAP login - Email: {}, Username: {}, Should be admin: {}, Current admin status: {}",
-          email,
-          user.getName(),
-          shouldBeAdmin,
-          user.getIsAdmin());
-
-      if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-        LOG.info("Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
-        user.setIsAdmin(true);
-        needsUpdate = true;
-      }
-
-      if (displayName != null && !displayName.equals(user.getDisplayName())) {
+        boolean shouldBeAdmin = isUserAdmin(email, user.getName());
         LOG.info(
-            "Updating displayName for user {} from '{}' to '{}'",
+            "LDAP login - Email: {}, Username: {}, Should be admin: {}, Current admin status: {}",
+            email,
             user.getName(),
-            user.getDisplayName(),
-            displayName);
-        user.setDisplayName(displayName);
-        needsUpdate = true;
+            shouldBeAdmin,
+            user.getIsAdmin());
+
+        if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
+          LOG.info(
+              "Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
+          user.setIsAdmin(true);
+          needsUpdate = true;
+        }
+
+        if (displayName != null && !displayName.equals(user.getDisplayName())) {
+          LOG.info(
+              "Updating displayName for user {} from '{}' to '{}'",
+              user.getName(),
+              user.getDisplayName(),
+              displayName);
+          user.setDisplayName(displayName);
+          needsUpdate = true;
+        }
+
+        getRoleForLdap(userDn, user, Boolean.TRUE);
+
+        if (needsUpdate) {
+          return UserUtil.addOrUpdateUser(user);
+        }
+
+        return user;
+      } catch (EntityNotFoundException e) {
+        LOG.debug("User not found by email {}, will create new user", email);
       }
 
-      getRoleForLdap(userDn, user, Boolean.TRUE);
-
-      if (needsUpdate) {
-        return UserUtil.addOrUpdateUser(user);
+      if (!isSelfSignUpEnabled) {
+        throw new AuthenticationException(
+            "User not registered. Contact administrator to create an account.");
       }
 
-      return user;
-    } catch (EntityNotFoundException e) {
-      LOG.debug("User not found by email {}, will create new user", email);
+      String userName = UserUtil.generateUsernameFromEmail(email, this::usernameExists);
+      boolean isAdmin = isUserAdmin(email, userName);
+      LOG.info(
+          "Creating new LDAP user - Email: {}, Generated username: {}, Is admin: {}",
+          email,
+          userName,
+          isAdmin);
+
+      String domain = email.split("@")[1];
+      User newUser =
+          UserUtil.user(userName, domain, userName)
+              .withEmail(email)
+              .withDisplayName(displayName != null ? displayName : userName)
+              .withIsAdmin(isAdmin)
+              .withIsEmailVerified(true);
+
+      try {
+        getRoleForLdap(userDn, newUser, false);
+      } catch (JsonProcessingException ex) {
+        LOG.error(
+            "Failed to assign roles from LDAP for user {} due to {}", userName, ex.getMessage());
+      }
+
+      try {
+        return UserUtil.addOrUpdateUser(newUser);
+      } catch (org.openmetadata.sdk.exception.UserCreationException ex) {
+        if (!UserUtil.isRetryableUserCreationConflict(ex) || attempt == 3) {
+          throw ex;
+        }
+        LOG.warn(
+            "Retrying LDAP user creation for '{}' after a concurrent create conflict", email);
+      }
     }
 
-    if (!isSelfSignUpEnabled) {
-      throw new AuthenticationException(
-          "User not registered. Contact administrator to create an account.");
-    }
-
-    String userName = UserUtil.generateUsernameFromEmail(email, this::usernameExists);
-    boolean isAdmin = isUserAdmin(email, userName);
-    LOG.info(
-        "Creating new LDAP user - Email: {}, Generated username: {}, Is admin: {}",
-        email,
-        userName,
-        isAdmin);
-
-    String domain = email.split("@")[1];
-    User newUser =
-        UserUtil.user(userName, domain, userName)
-            .withEmail(email)
-            .withDisplayName(displayName != null ? displayName : userName)
-            .withIsAdmin(isAdmin)
-            .withIsEmailVerified(true);
-
-    try {
-      getRoleForLdap(userDn, newUser, false);
-    } catch (JsonProcessingException ex) {
-      LOG.error(
-          "Failed to assign roles from LDAP for user {} due to {}", userName, ex.getMessage());
-    }
-
-    return UserUtil.addOrUpdateUser(newUser);
+    throw new AuthenticationException("Unable to create LDAP user after concurrent retries.");
   }
 
   @Override

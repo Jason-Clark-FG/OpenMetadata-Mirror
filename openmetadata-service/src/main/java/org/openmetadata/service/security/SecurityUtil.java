@@ -198,6 +198,63 @@ public final class SecurityUtil {
     return email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
   }
 
+  /**
+   * Extract a display name from standard SSO claims.
+   *
+   * <p>Claim resolution order:
+   *
+   * <ol>
+   *   <li>Direct 'name' claim
+   *   <li>Direct 'displayname' claim
+   *   <li>Combination of 'given_name' + 'family_name'
+   *   <li>Fallback to first available given/family name variant
+   * </ol>
+   *
+   * @param claims claims from the SSO token/assertion
+   * @return extracted display name, or null if no suitable claims are present
+   */
+  public static String extractDisplayNameFromClaims(Map<String, ?> claims) {
+    if (claims == null || claims.isEmpty()) {
+      return null;
+    }
+
+    String nameClaim = getClaimOrObject(claims.get("name"));
+    if (!nullOrEmpty(nameClaim)) {
+      return nameClaim.trim();
+    }
+
+    String displayNameClaim = getClaimOrObject(claims.get("displayname"));
+    if (!nullOrEmpty(displayNameClaim)) {
+      return displayNameClaim.trim();
+    }
+
+    String givenName = getClaimOrObject(claims.get("given_name"));
+    if (nullOrEmpty(givenName)) {
+      givenName = getClaimOrObject(claims.get("givenname"));
+    }
+    if (nullOrEmpty(givenName)) {
+      givenName = getClaimOrObject(claims.get("firstname"));
+    }
+
+    String familyName = getClaimOrObject(claims.get("family_name"));
+    if (nullOrEmpty(familyName)) {
+      familyName = getClaimOrObject(claims.get("familyname"));
+    }
+    if (nullOrEmpty(familyName)) {
+      familyName = getClaimOrObject(claims.get("lastname"));
+    }
+
+    if (!nullOrEmpty(givenName) && !nullOrEmpty(familyName)) {
+      return (givenName.trim() + " " + familyName.trim()).trim();
+    } else if (!nullOrEmpty(givenName)) {
+      return givenName.trim();
+    } else if (!nullOrEmpty(familyName)) {
+      return familyName.trim();
+    }
+
+    return null;
+  }
+
   public static String getClaimOrObject(Object obj) {
     if (obj == null) {
       return "";
@@ -273,66 +330,6 @@ public final class SecurityUtil {
                 new AuthenticationException(
                     "Invalid JWT token, none of the following claims are present "
                         + jwtPrincipalClaimsOrder));
-  }
-
-  /**
-   * Extracts display name from SSO claims with profile scope.
-   *
-   * <p>This method attempts to extract a user's display name from SSO token claims in the
-   * following priority order:
-   *
-   * <ol>
-   *   <li>Direct 'name' claim (if present)
-   *   <li>Combination of 'given_name' + 'family_name' (if both present)
-   *   <li>Returns null if neither pattern is found
-   * </ol>
-   *
-   * @param claims Map of claims from the SSO token (typically from profile scope)
-   * @return The extracted display name, or null if no suitable claims found
-   */
-  public static String extractDisplayNameFromClaims(Map<String, ?> claims) {
-    if (claims == null || claims.isEmpty()) {
-      return null;
-    }
-
-    // Try direct name claims (name, displayName, displayname)
-    String nameClaim = getClaimOrObject(claims.get("name"));
-    if (!nullOrEmpty(nameClaim)) {
-      return nameClaim.trim();
-    }
-
-    String displayNameClaim = getClaimOrObject(claims.get("displayname"));
-    if (!nullOrEmpty(displayNameClaim)) {
-      return displayNameClaim.trim();
-    }
-
-    // Fall back to combining first + last name variations
-    String givenName = getClaimOrObject(claims.get("given_name"));
-    if (nullOrEmpty(givenName)) {
-      givenName = getClaimOrObject(claims.get("givenname"));
-    }
-    if (nullOrEmpty(givenName)) {
-      givenName = getClaimOrObject(claims.get("firstname"));
-    }
-
-    String familyName = getClaimOrObject(claims.get("family_name"));
-    if (nullOrEmpty(familyName)) {
-      familyName = getClaimOrObject(claims.get("familyname"));
-    }
-    if (nullOrEmpty(familyName)) {
-      familyName = getClaimOrObject(claims.get("lastname"));
-    }
-
-    if (!nullOrEmpty(givenName) && !nullOrEmpty(familyName)) {
-      return (givenName.trim() + " " + familyName.trim()).trim();
-    } else if (!nullOrEmpty(givenName)) {
-      return givenName.trim();
-    } else if (!nullOrEmpty(familyName)) {
-      return familyName.trim();
-    }
-
-    // No suitable display name found
-    return null;
   }
 
   public static void validatePrincipalClaimsMapping(Map<String, String> mapping) {
@@ -435,11 +432,36 @@ public final class SecurityUtil {
 
     String domain = email.substring(email.indexOf("@") + 1).toLowerCase();
 
-    boolean allowed = allowedEmailDomains.stream().anyMatch(d -> d.toLowerCase().equals(domain));
+    boolean allowed = allowedEmailDomains.stream().anyMatch(d -> d.equalsIgnoreCase(domain));
 
     if (!allowed) {
       throw new AuthenticationException(
           String.format("Authentication failed: domain '%s' not in allowed list", domain));
     }
+  }
+
+  public static void validateConfiguredEmailDomain(
+      String email,
+      List<String> allowedEmailDomains,
+      String principalDomain,
+      Set<String> allowedDomains,
+      boolean enforcePrincipalDomain) {
+    if (allowedEmailDomains != null && !allowedEmailDomains.isEmpty()) {
+      validateEmailDomain(email, allowedEmailDomains);
+      return;
+    }
+
+    if (!enforcePrincipalDomain) {
+      return;
+    }
+
+    if (allowedDomains != null && !allowedDomains.isEmpty()) {
+      validateEmailDomain(email, new ArrayList<>(allowedDomains));
+      return;
+    }
+
+    String effectivePrincipalDomain =
+        nullOrEmpty(principalDomain) ? DEFAULT_PRINCIPAL_DOMAIN : principalDomain;
+    validateEmailDomain(email, List.of(effectivePrincipalDomain));
   }
 }

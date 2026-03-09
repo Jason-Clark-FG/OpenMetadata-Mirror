@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SecurityUtilTest {
@@ -254,6 +256,23 @@ class SecurityUtilTest {
   }
 
   @Test
+  void testExtractDisplayNameFromClaims_withNameClaim() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("name", "John Doe");
+
+    assertEquals("John Doe", SecurityUtil.extractDisplayNameFromClaims(claims));
+  }
+
+  @Test
+  void testExtractDisplayNameFromClaims_withGivenAndFamilyName() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("given_name", "John");
+    claims.put("family_name", "Doe");
+
+    assertEquals("John Doe", SecurityUtil.extractDisplayNameFromClaims(claims));
+  }
+
+  @Test
   void testValidateEmailDomain_allowedDomain() {
     List<String> allowedDomains = List.of("company.com", "subsidiary.com");
 
@@ -318,5 +337,41 @@ class SecurityUtilTest {
             () -> SecurityUtil.validateEmailDomain("invalid-email", allowedDomains));
 
     assertEquals("Invalid email: email must be non-null and contain '@' symbol", ex.getMessage());
+  }
+
+  @Test
+  void testValidateConfiguredEmailDomain_usesPrincipalDomainFallback() {
+    assertDoesNotThrow(
+        () ->
+            SecurityUtil.validateConfiguredEmailDomain(
+                "john@company.com", List.of(), "company.com", Collections.emptySet(), true));
+  }
+
+  @Test
+  void testValidateConfiguredEmailDomain_usesAllowedDomainsFallback() {
+    assertDoesNotThrow(
+        () ->
+            SecurityUtil.validateConfiguredEmailDomain(
+                "john@company.com",
+                List.of(),
+                "other.com",
+                Set.of("company.com", "subsidiary.com"),
+                true));
+  }
+
+  @Test
+  void testValidateConfiguredEmailDomain_prioritizesAllowedEmailDomains() {
+    AuthenticationException ex =
+        assertThrows(
+            AuthenticationException.class,
+            () ->
+                SecurityUtil.validateConfiguredEmailDomain(
+                    "john@company.com",
+                    List.of("approved.com"),
+                    "company.com",
+                    Set.of("company.com"),
+                    true));
+
+    assertTrue(ex.getMessage().contains("domain 'company.com' not in allowed list"));
   }
 }

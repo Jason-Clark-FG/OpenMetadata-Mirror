@@ -20,8 +20,8 @@ import static org.openmetadata.service.security.SecurityUtil.extractEmailFromCla
 import static org.openmetadata.service.security.SecurityUtil.findEmailFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.findUserNameFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.isBot;
+import static org.openmetadata.service.security.SecurityUtil.validateConfiguredEmailDomain;
 import static org.openmetadata.service.security.SecurityUtil.validateDomainEnforcement;
-import static org.openmetadata.service.security.SecurityUtil.validateEmailDomain;
 import static org.openmetadata.service.security.SecurityUtil.validatePrincipalClaimsMapping;
 import static org.openmetadata.service.security.jwt.JWTTokenGenerator.ROLES_CLAIM;
 import static org.openmetadata.service.security.jwt.JWTTokenGenerator.TOKEN_TYPE;
@@ -64,10 +64,13 @@ import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.LogoutRequest;
 import org.openmetadata.schema.auth.ServiceTokenType;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
+import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.UserTokenCache;
 import org.openmetadata.service.security.saml.JwtTokenCacheManager;
+import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
 @Provider
@@ -114,6 +117,8 @@ public class JwtFilter implements ContainerRequestFilter {
 
   @SuppressWarnings("unused")
   private JwtFilter() {}
+
+  private record ResolvedIdentity(String userName, String email, boolean usedEmailFirstFlow) {}
 
   @SneakyThrows
   public JwtFilter(
@@ -193,6 +198,21 @@ public class JwtFilter implements ContainerRequestFilter {
     this.tokenValidationAlgorithm = AuthenticationConfiguration.TokenValidationAlgorithm.RS_256;
   }
 
+  @VisibleForTesting
+  JwtFilter(
+      JwkProvider jwkProvider,
+      List<String> jwtPrincipalClaims,
+      String principalDomain,
+      boolean enforcePrincipalDomain,
+      String emailClaim,
+      String displayNameClaim,
+      List<String> allowedEmailDomains) {
+    this(jwkProvider, jwtPrincipalClaims, principalDomain, enforcePrincipalDomain);
+    this.emailClaim = emailClaim;
+    this.displayNameClaim = displayNameClaim;
+    this.allowedEmailDomains = allowedEmailDomains;
+  }
+
   @SneakyThrows
   @Override
   public void filter(ContainerRequestContext requestContext) {
@@ -208,23 +228,9 @@ public class JwtFilter implements ContainerRequestFilter {
 
     Map<String, Claim> claims = validateJwtAndGetClaims(tokenFromHeader);
     boolean isBotUser = isBot(claims);
-
-    String userName;
-    String email;
-
-    if (shouldUseEmailFirstFlow(isBotUser)) {
-      email = extractEmailFromClaim(claims, emailClaim);
-      validateEmailDomain(email, allowedEmailDomains);
-      String displayName = extractDisplayNameFromClaim(claims, displayNameClaim, email);
-      userName = email.split("@")[0];
-      LOG.debug(
-          "Email-first flow: email={}, userName={}, displayName={}", email, userName, displayName);
-    } else {
-      userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
-      email =
-          findEmailFromClaims(
-              jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
-    }
+    ResolvedIdentity resolvedIdentity = resolveIdentity(claims, isBotUser);
+    String userName = resolvedIdentity.userName();
+    String email = resolvedIdentity.email();
 
     // Check for impersonation header - authorization will be checked later
     String impersonateUser = requestContext.getHeaderString("X-Impersonate-User");
@@ -242,7 +248,13 @@ public class JwtFilter implements ContainerRequestFilter {
       userName = impersonateUser;
     }
 
-    checkValidationsForToken(claims, tokenFromHeader, userName, impersonatedBy);
+    checkValidationsForToken(
+        claims,
+        tokenFromHeader,
+        userName,
+        email,
+        impersonatedBy,
+        resolvedIdentity.usedEmailFirstFlow());
 
     CatalogPrincipal catalogPrincipal = new CatalogPrincipal(userName, email);
     String scheme = requestContext.getUriInfo().getRequestUri().getScheme();
@@ -267,11 +279,35 @@ public class JwtFilter implements ContainerRequestFilter {
 
   public void checkValidationsForToken(
       Map<String, Claim> claims, String tokenFromHeader, String userName, String impersonatedBy) {
+    ResolvedIdentity resolvedIdentity = resolveIdentity(claims, isBot(claims));
+    checkValidationsForToken(
+        claims,
+        tokenFromHeader,
+        userName,
+        resolvedIdentity.email(),
+        impersonatedBy,
+        resolvedIdentity.usedEmailFirstFlow());
+  }
+
+  public void checkValidationsForToken(
+      Map<String, Claim> claims,
+      String tokenFromHeader,
+      String userName,
+      String email,
+      String impersonatedBy,
+      boolean usedEmailFirstFlow) {
     // the case where OMD generated the Token for the Client in case OM generated Token
     validateTokenIsNotUsedAfterLogout(tokenFromHeader);
 
     boolean isBotUser = isBot(claims);
-    if (!shouldUseEmailFirstFlow(isBotUser)) {
+    if (usedEmailFirstFlow) {
+      validateConfiguredEmailDomain(
+          email,
+          allowedEmailDomains,
+          principalDomain,
+          allowedDomains,
+          enforcePrincipalDomain);
+    } else {
       validateDomainEnforcement(
           jwtPrincipalClaimsMapping,
           jwtPrincipalClaims,
@@ -315,6 +351,47 @@ public class JwtFilter implements ContainerRequestFilter {
       return false;
     }
     return true;
+  }
+
+  private boolean canFallbackToLegacyFlow() {
+    return jwtPrincipalClaims != null && !jwtPrincipalClaims.isEmpty();
+  }
+
+  private ResolvedIdentity resolveIdentity(Map<String, Claim> claims, boolean isBotUser) {
+    if (shouldUseEmailFirstFlow(isBotUser)) {
+      try {
+        String email = extractEmailFromClaim(claims, emailClaim);
+        String displayName = extractDisplayNameFromClaim(claims, displayNameClaim, email);
+        String userName = resolveUserNameForEmail(email);
+        LOG.debug(
+            "Email-first flow: email={}, userName={}, displayName={}", email, userName, displayName);
+        return new ResolvedIdentity(userName, email, true);
+      } catch (AuthenticationException ex) {
+        if (!canFallbackToLegacyFlow()) {
+          throw ex;
+        }
+        LOG.warn(
+            "Email-first claim resolution failed for claim '{}': {}. Falling back to legacy JWT principal claims.",
+            emailClaim,
+            ex.getMessage());
+      }
+    }
+
+    String userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
+    String email =
+        findEmailFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
+    return new ResolvedIdentity(userName, email, false);
+  }
+
+  private String resolveUserNameForEmail(String email) {
+    try {
+      return Entity.getUserRepository().getByEmail(null, email, new Fields(Set.of("name"))).getName();
+    } catch (EntityNotFoundException e) {
+      return email.split("@")[0];
+    } catch (Exception e) {
+      LOG.debug("Failed to resolve existing username for email {}", email, e);
+      return email.split("@")[0];
+    }
   }
 
   @SneakyThrows
@@ -413,22 +490,18 @@ public class JwtFilter implements ContainerRequestFilter {
   public CatalogSecurityContext getCatalogSecurityContext(String token) {
     Map<String, Claim> claims = validateJwtAndGetClaims(token);
     boolean isBotUser = isBot(claims);
-
-    String userName;
-    String email;
-
-    if (shouldUseEmailFirstFlow(isBotUser)) {
-      email = extractEmailFromClaim(claims, emailClaim);
-      validateEmailDomain(email, allowedEmailDomains);
-      userName = email.split("@")[0];
-    } else {
-      userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
-      email =
-          findEmailFromClaims(
-              jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
+    ResolvedIdentity resolvedIdentity = resolveIdentity(claims, isBotUser);
+    if (resolvedIdentity.usedEmailFirstFlow()) {
+      validateConfiguredEmailDomain(
+          resolvedIdentity.email(),
+          allowedEmailDomains,
+          principalDomain,
+          allowedDomains,
+          enforcePrincipalDomain);
     }
 
-    CatalogPrincipal catalogPrincipal = new CatalogPrincipal(userName, email);
+    CatalogPrincipal catalogPrincipal =
+        new CatalogPrincipal(resolvedIdentity.userName(), resolvedIdentity.email());
     return new CatalogSecurityContext(
         catalogPrincipal,
         "https",
