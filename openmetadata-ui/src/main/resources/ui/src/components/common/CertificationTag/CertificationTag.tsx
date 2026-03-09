@@ -17,8 +17,9 @@ import { Link } from 'react-router-dom';
 import { ReactComponent as CertificationIcon } from '../../../assets/svg/ic-certification.svg';
 import { AssetCertification } from '../../../generated/entity/data/table';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { getTagImageSrc } from '../../../utils/IconUtils';
 import { getClassificationTagPath } from '../../../utils/RouterUtils';
-import { getTagImageSrc, getTagTooltip } from '../../../utils/TagsUtils';
+import { getTagTooltip } from '../../../utils/TagsUtils';
 import './certification-tag.less';
 
 const CertificationTag = ({
@@ -64,21 +65,24 @@ const CertificationTag = ({
     return (
       <Tooltip
         title={getTagTooltip(name, certification.tagLabel.description)}
-        trigger="hover">
+        trigger="hover"
+      >
         <Link
           className={classNames('d-flex items-center', {
             'certification-tag-with-name  gap-1': showName,
           })}
           data-testid={`certification-${certification.tagLabel.tagFQN}`}
           style={tagStyle}
-          to={tagLink}>
+          to={tagLink}
+        >
           {imageItem}
           {showName && (
             <Typography.Text
               className={classNames('text-sm font-medium certification-text', {
                 [`${actualName.toLowerCase()}`]: Boolean(actualName),
               })}
-              ellipsis={{ tooltip: true }}>
+              ellipsis={{ tooltip: true }}
+            >
               {name}
             </Typography.Text>
           )}

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  *  Copyright 2024 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -117,7 +116,8 @@ export const LeftPanelContainer = ({
         margin={[type === PageType.GlossaryTerm ? 16 : 0, 16]}
         preventCollision={false}
         rowHeight={100}
-        onLayoutChange={onUpdate}>
+        onLayoutChange={onUpdate}
+      >
         {widgets}
       </ReactGridLayout>
     );

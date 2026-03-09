@@ -124,7 +124,7 @@ const ManageButton: FC<ManageButtonProps> = ({
       ? ([
           {
             label: (
-              <Tooltip title={canDelete ? '' : NO_PERMISSION_FOR_ACTION}>
+              <Tooltip title={canDelete ? '' : t(NO_PERMISSION_FOR_ACTION)}>
                 <ManageButtonItemLabel
                   description={t('message.restore-action-description', {
                     entityType,
@@ -250,7 +250,8 @@ const ManageButton: FC<ManageButtonProps> = ({
         // TeamDetailsV1 and User.component collapsible panel.
         <Button
           className="remove-button-default-styling p-0"
-          onClick={(e) => e.stopPropagation()}>
+          onClick={(e) => e.stopPropagation()}
+        >
           <Dropdown
             align={{ targetOffset: [-12, 0] }}
             dropdownRender={renderDropdownContainer}
@@ -258,16 +259,19 @@ const ManageButton: FC<ManageButtonProps> = ({
             overlayClassName="manage-dropdown-list-container"
             overlayStyle={{ width: '350px' }}
             placement="bottomRight"
-            trigger={['click']}>
+            trigger={['click']}
+          >
             <Tooltip
               placement="topRight"
               title={t('label.manage-entity', {
                 entity: formattedEntityType,
-              })}>
+              })}
+            >
               <Button
                 className={classNames('flex-center px-1.5', buttonClassName)}
                 data-testid="manage-button"
-                type="default">
+                type="default"
+              >
                 <IconDropdown className="anticon self-center manage-dropdown-icon" />
               </Button>
             </Tooltip>
@@ -317,7 +321,8 @@ const ManageButton: FC<ManageButtonProps> = ({
         // TeamDetailsV1 and User.component collapsible panel.
         <Button
           className="remove-button-default-styling"
-          onClick={(e) => e.stopPropagation()}>
+          onClick={(e) => e.stopPropagation()}
+        >
           <Modal
             centered
             cancelButtonProps={{
@@ -336,7 +341,8 @@ const ManageButton: FC<ManageButtonProps> = ({
             onCancel={() => {
               setShowReactiveModal(false);
             }}
-            onOk={handleRestore}>
+            onOk={handleRestore}
+          >
             <Typography.Text data-testid="restore-modal-body">
               {t('message.are-you-want-to-restore', {
                 entity: entityName,

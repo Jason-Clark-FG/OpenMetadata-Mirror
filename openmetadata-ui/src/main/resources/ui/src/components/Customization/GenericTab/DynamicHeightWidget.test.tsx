@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  *  Copyright 2024 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +47,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div data-testid="test-child">Test Content</div>
         </DynamicHeightWidget>
       );
@@ -61,7 +61,8 @@ describe('DynamicHeightWidget', () => {
       const { container } = render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -75,7 +76,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div data-testid="parent">
             <div data-testid="child-1">Child 1</div>
             <div data-testid="child-2">
@@ -97,7 +99,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -113,7 +116,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -129,7 +133,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -145,7 +150,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -177,7 +183,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -193,7 +200,8 @@ describe('DynamicHeightWidget', () => {
       render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -228,7 +236,8 @@ describe('DynamicHeightWidget', () => {
       const { unmount } = render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -242,7 +251,8 @@ describe('DynamicHeightWidget', () => {
       const { rerender } = render(
         <DynamicHeightWidget
           widget={mockWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );
@@ -252,7 +262,8 @@ describe('DynamicHeightWidget', () => {
       rerender(
         <DynamicHeightWidget
           widget={newWidget}
-          onHeightChange={mockOnHeightChange}>
+          onHeightChange={mockOnHeightChange}
+        >
           <div>Test Content</div>
         </DynamicHeightWidget>
       );

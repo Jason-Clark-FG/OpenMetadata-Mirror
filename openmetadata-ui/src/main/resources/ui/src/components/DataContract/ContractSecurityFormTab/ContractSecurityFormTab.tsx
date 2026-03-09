@@ -33,6 +33,8 @@ import { ReactComponent as LeftOutlined } from '../../../assets/svg/left-arrow.s
 import { ReactComponent as RightIcon } from '../../../assets/svg/right-arrow.svg';
 import { ReactComponent as PlusIcon } from '../../../assets/svg/x-colored.svg';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
+import { SUPPORTED_ROW_FILTER_ENTITIES } from '../../../constants/DataContract.constants';
+import { EntityType } from '../../../enums/entity.enum';
 import {
   ContractSecurity,
   DataContract,
@@ -42,6 +44,7 @@ import { Table } from '../../../generated/entity/data/table';
 import { filterSelectOptions } from '../../../utils/CommonUtils';
 import { getPopupContainer } from '../../../utils/formUtils';
 import { getColumnOptionsFromTableColumn } from '../../../utils/TableUtils';
+import { useRequiredParams } from '../../../utils/useRequiredParams';
 import ExpandableCard from '../../common/ExpandableCard/ExpandableCard';
 import { EditIconButton } from '../../common/IconButtons/EditIconButton';
 import { useGenericContext } from '../../Customization/GenericProvider/GenericProvider';
@@ -61,6 +64,7 @@ export const ContractSecurityFormTab: React.FC<{
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const { data: tableData } = useGenericContext();
+  const { entityType } = useRequiredParams<{ entityType: EntityType }>();
   const addFunctionRef = useRef<
     | ((
         defaultValue?: ContractSecurity,
@@ -171,12 +175,14 @@ export const ContractSecurityFormTab: React.FC<{
           layout="vertical"
           name="security"
           validateMessages={VALIDATION_MESSAGES}
-          onValuesChange={handleFormChange}>
+          onValuesChange={handleFormChange}
+        >
           <div className="contract-form-content-container">
             <Form.Item
               id="dataClassification"
               label={t('label.data-classification')}
-              name="dataClassification">
+              name="dataClassification"
+            >
               <Input
                 data-testid="data-classification-input"
                 placeholder={t('label.please-enter-entity-name', {
@@ -203,7 +209,8 @@ export const ContractSecurityFormTab: React.FC<{
                 disabled={!isNull(editingKey) || !addFunctionRef.current}
                 icon={<Icon className="anticon" component={PlusIcon} />}
                 type="link"
-                onClick={handleAddPolicy}>
+                onClick={handleAddPolicy}
+              >
                 {t('label.add-entity', { entity: t('label.policy') })}
               </Button>
             </div>
@@ -267,19 +274,23 @@ export const ContractSecurityFormTab: React.FC<{
                       }}
                       dataTestId={`contract-policy-card-${policyField.key}`}
                       defaultExpanded={editingKey === policyField.name}
-                      key={policyField.name}>
+                      key={policyField.name}
+                    >
                       {editingKey === policyField.name ? (
                         <Row
                           className="security-form-item-content"
-                          key={policyField.key}>
+                          key={policyField.key}
+                        >
                           <Col span={24}>
                             <Row
                               className="contract-consumer-security-card-row"
-                              gutter={[0, 16]}>
+                              gutter={[0, 16]}
+                            >
                               <Col span={24}>
                                 <Form.Item
                                   label={t('label.access-policy')}
-                                  name={[policyField.name, 'accessPolicy']}>
+                                  name={[policyField.name, 'accessPolicy']}
+                                >
                                   <Input
                                     data-testid={`access-policy-input-${policyIndex}`}
                                     placeholder={t(
@@ -295,7 +306,8 @@ export const ContractSecurityFormTab: React.FC<{
                               <Col span={24}>
                                 <Form.Item
                                   label={t('label.identities')}
-                                  name={[policyField.name, 'identities']}>
+                                  name={[policyField.name, 'identities']}
+                                >
                                   <Select
                                     data-testid={`identities-input-${policyIndex}`}
                                     id={`identities-input-${policyIndex}`}
@@ -309,140 +321,179 @@ export const ContractSecurityFormTab: React.FC<{
                               </Col>
                             </Row>
 
-                            <Divider />
+                            {SUPPORTED_ROW_FILTER_ENTITIES.includes(
+                              entityType
+                            ) ? (
+                              <>
+                                <Divider />
 
-                            <Form.List name={[policyField.name, 'rowFilters']}>
-                              {(
-                                rowFilterFields,
-                                { add: addRowFilter, remove: removeRowFilter }
-                              ) => {
-                                return (
-                                  <>
-                                    <div className="d-flex items-center justify-between">
-                                      <Typography.Text className="row-filter-title">
-                                        {t('label.row-filter-plural')}
-                                      </Typography.Text>
+                                <Form.List
+                                  name={[policyField.name, 'rowFilters']}
+                                >
+                                  {(
+                                    rowFilterFields,
+                                    {
+                                      add: addRowFilter,
+                                      remove: removeRowFilter,
+                                    }
+                                  ) => {
+                                    return (
+                                      <>
+                                        <div className="d-flex items-center justify-between">
+                                          <Typography.Text className="row-filter-title">
+                                            {t('label.row-filter-plural')}
+                                          </Typography.Text>
 
-                                      <Button
-                                        className="add-row-filter-button"
-                                        data-testid={`add-row-filter-button-${policyIndex}`}
-                                        icon={<Icon component={PlusIcon} />}
-                                        type="link"
-                                        onClick={() => addRowFilter()}>
-                                        {t('label.add-entity', {
-                                          entity: t('label.row-filter'),
-                                        })}
-                                      </Button>
-                                    </div>
+                                          <Button
+                                            className="add-row-filter-button"
+                                            data-testid={`add-row-filter-button-${policyIndex}`}
+                                            icon={<Icon component={PlusIcon} />}
+                                            type="link"
+                                            onClick={() => addRowFilter()}
+                                          >
+                                            {t('label.add-entity', {
+                                              entity: t('label.row-filter'),
+                                            })}
+                                          </Button>
+                                        </div>
 
-                                    <div className="contract-consumer-security-card-rule-container">
-                                      {rowFilterFields.map(
-                                        (rowFilterField, rowFilterIndex) => {
-                                          return (
-                                            <Row
-                                              align="middle"
-                                              gutter={[16, 16]}
-                                              key={rowFilterField.key}>
-                                              <Col span={11}>
-                                                <Form.Item
-                                                  label={t('label.column-name')}
-                                                  name={[
-                                                    rowFilterField.name,
-                                                    'columnName',
-                                                  ]}>
-                                                  <Select
-                                                    allowClear
-                                                    showSearch
-                                                    data-testid={`columnName-input-${policyIndex}-${rowFilterIndex}`}
-                                                    filterOption={
-                                                      filterSelectOptions
-                                                    }
-                                                    getPopupContainer={
-                                                      getPopupContainer
-                                                    }
-                                                    id={`columnName-input-${policyIndex}-${rowFilterIndex}`}
-                                                    options={columnOptions}
-                                                    placeholder={t(
-                                                      'label.please-enter-entity-name',
-                                                      {
-                                                        entity:
-                                                          t('label.column'),
+                                        <div className="contract-consumer-security-card-rule-container">
+                                          {rowFilterFields.map(
+                                            (
+                                              rowFilterField,
+                                              rowFilterIndex
+                                            ) => {
+                                              return (
+                                                <Row
+                                                  align="middle"
+                                                  gutter={[16, 16]}
+                                                  key={rowFilterField.key}
+                                                >
+                                                  <Col span={11}>
+                                                    <Form.Item
+                                                      label={t(
+                                                        'label.column-name'
+                                                      )}
+                                                      name={[
+                                                        rowFilterField.name,
+                                                        'columnName',
+                                                      ]}
+                                                    >
+                                                      <Select
+                                                        allowClear
+                                                        showSearch
+                                                        data-testid={`columnName-input-${policyIndex}-${rowFilterIndex}`}
+                                                        filterOption={
+                                                          filterSelectOptions
+                                                        }
+                                                        getPopupContainer={
+                                                          getPopupContainer
+                                                        }
+                                                        id={`columnName-input-${policyIndex}-${rowFilterIndex}`}
+                                                        options={columnOptions}
+                                                        placeholder={t(
+                                                          'label.please-enter-entity-name',
+                                                          {
+                                                            entity:
+                                                              t('label.column'),
+                                                          }
+                                                        )}
+                                                      />
+                                                    </Form.Item>
+                                                  </Col>
+
+                                                  <Col span={11}>
+                                                    <Form.Item
+                                                      label={t(
+                                                        'label.value-plural'
+                                                      )}
+                                                      name={[
+                                                        rowFilterField.name,
+                                                        'values',
+                                                      ]}
+                                                    >
+                                                      <Select
+                                                        data-testid={`values-${policyIndex}-${rowFilterIndex}`}
+                                                        id={`values-${policyIndex}-${rowFilterIndex}`}
+                                                        mode="tags"
+                                                        open={false}
+                                                        placeholder={t(
+                                                          'label.please-enter-value',
+                                                          {
+                                                            name: t(
+                                                              'label.column-plural'
+                                                            ),
+                                                          }
+                                                        )}
+                                                      />
+                                                    </Form.Item>
+                                                  </Col>
+
+                                                  <Col span={2}>
+                                                    <Button
+                                                      className="contract-consumer-security-card-rule-delete-button"
+                                                      icon={
+                                                        <Icon
+                                                          component={CloseIcon}
+                                                        />
                                                       }
-                                                    )}
-                                                  />
-                                                </Form.Item>
-                                              </Col>
-
-                                              <Col span={11}>
-                                                <Form.Item
-                                                  label={t(
-                                                    'label.value-plural'
-                                                  )}
-                                                  name={[
-                                                    rowFilterField.name,
-                                                    'values',
-                                                  ]}>
-                                                  <Select
-                                                    data-testid={`values-${policyIndex}-${rowFilterIndex}`}
-                                                    id={`values-${policyIndex}-${rowFilterIndex}`}
-                                                    mode="tags"
-                                                    open={false}
-                                                    placeholder={t(
-                                                      'label.please-enter-value',
-                                                      {
-                                                        name: t(
-                                                          'label.column-plural'
-                                                        ),
-                                                      }
-                                                    )}
-                                                  />
-                                                </Form.Item>
-                                              </Col>
-
-                                              <Col span={2}>
-                                                <Button
-                                                  className="contract-consumer-security-card-rule-delete-button"
-                                                  icon={
-                                                    <Icon
-                                                      component={CloseIcon}
+                                                      size="small"
+                                                      type="text"
+                                                      onClick={() => {
+                                                        removeRowFilter(
+                                                          rowFilterField.name
+                                                        );
+                                                      }}
                                                     />
-                                                  }
-                                                  size="small"
-                                                  type="text"
-                                                  onClick={() => {
-                                                    removeRowFilter(
-                                                      rowFilterField.name
-                                                    );
-                                                  }}
-                                                />
-                                              </Col>
-                                            </Row>
-                                          );
-                                        }
-                                      )}
-                                    </div>
+                                                  </Col>
+                                                </Row>
+                                              );
+                                            }
+                                          )}
+                                        </div>
 
-                                    <div className="contract-consumer-security-card-form-actions-items">
-                                      <Button
-                                        data-testid="cancel-policy-button"
-                                        onClick={() => setEditingKey(null)}>
-                                        {t('label.cancel')}
-                                      </Button>
-                                      <Button
-                                        className="m-l-md"
-                                        data-testid="save-policy-button"
-                                        type="primary"
-                                        onClick={() => setEditingKey(null)}>
-                                        {t('label.save')}
-                                      </Button>
-                                    </div>
-                                  </>
-                                );
-                              }}
-                            </Form.List>
+                                        <div className="contract-consumer-security-card-form-actions-items">
+                                          <Button
+                                            data-testid="cancel-policy-button"
+                                            onClick={() => setEditingKey(null)}
+                                          >
+                                            {t('label.cancel')}
+                                          </Button>
+                                          <Button
+                                            className="m-l-md"
+                                            data-testid="save-policy-button"
+                                            type="primary"
+                                            onClick={() => setEditingKey(null)}
+                                          >
+                                            {t('label.save')}
+                                          </Button>
+                                        </div>
+                                      </>
+                                    );
+                                  }}
+                                </Form.List>
+                              </>
+                            ) : (
+                              <div className="contract-consumer-security-card-form-actions-items">
+                                <Button
+                                  data-testid="cancel-policy-button"
+                                  onClick={() => setEditingKey(null)}
+                                >
+                                  {t('label.cancel')}
+                                </Button>
+                                <Button
+                                  className="m-l-md"
+                                  data-testid="save-policy-button"
+                                  type="primary"
+                                  onClick={() => setEditingKey(null)}
+                                >
+                                  {t('label.save')}
+                                </Button>
+                              </div>
+                            )}
                           </Col>
                         </Row>
-                      ) : (
+                      ) : SUPPORTED_ROW_FILTER_ENTITIES.includes(entityType) ? (
                         <Form.List name={[policyField.name, 'rowFilters']}>
                           {(rowFilterFields) => {
                             return (
@@ -453,14 +504,16 @@ export const ContractSecurityFormTab: React.FC<{
                                       <Row
                                         align="middle"
                                         gutter={[16, 16]}
-                                        key={rowFilterField.key}>
+                                        key={rowFilterField.key}
+                                      >
                                         <Col span={11}>
                                           <Form.Item
                                             label={t('label.column-name')}
                                             name={[
                                               rowFilterField.name,
                                               'columnName',
-                                            ]}>
+                                            ]}
+                                          >
                                             <Input
                                               disabled
                                               data-testid={`columnName-input-${policyIndex}-${rowFilterIndex}`}
@@ -480,7 +533,8 @@ export const ContractSecurityFormTab: React.FC<{
                                             name={[
                                               rowFilterField.name,
                                               'values',
-                                            ]}>
+                                            ]}
+                                          >
                                             <Select
                                               disabled
                                               data-testid={`values-${policyIndex}-${rowFilterIndex}`}
@@ -506,7 +560,7 @@ export const ContractSecurityFormTab: React.FC<{
                             );
                           }}
                         </Form.List>
-                      )}
+                      ) : null}
                     </ExpandableCard>
                   );
                 });
@@ -519,13 +573,15 @@ export const ContractSecurityFormTab: React.FC<{
         <Button
           className="contract-prev-button"
           icon={<LeftOutlined height={22} width={20} />}
-          onClick={onPrev}>
+          onClick={onPrev}
+        >
           {buttonProps.prevLabel ?? t('label.previous')}
         </Button>
         <Button
           className="contract-next-button"
           type="primary"
-          onClick={onNext}>
+          onClick={onNext}
+        >
           {buttonProps.nextLabel ?? t('label.next')}
           <Icon component={RightIcon} />
         </Button>

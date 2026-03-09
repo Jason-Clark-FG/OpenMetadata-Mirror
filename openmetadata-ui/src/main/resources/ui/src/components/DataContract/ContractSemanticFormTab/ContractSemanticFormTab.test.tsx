@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Actions, JsonTree } from '@react-awesome-query-builder/antd';
 import '@testing-library/jest-dom';
 import {
@@ -51,7 +50,8 @@ jest.mock('../../common/QueryBuilderWidgetV1/QueryBuilderWidgetV1', () => {
               type: 'group',
             } as JsonTree);
             getQueryActions?.({ addRule: jest.fn() } as unknown as Actions);
-          }}>
+          }}
+        >
           Change Query
         </button>
       </div>

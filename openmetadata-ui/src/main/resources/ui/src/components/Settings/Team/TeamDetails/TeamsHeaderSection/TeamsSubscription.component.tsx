@@ -82,7 +82,8 @@ const TeamsSubscription = ({
           <div className="d-flex gap-2">
             <Typography.Text
               className="font-medium text-sm text-secondary-new "
-              data-testid="subscription-no-data">
+              data-testid="subscription-no-data"
+            >
               {t('label.none')}
             </Typography.Text>
           </div>
@@ -92,7 +93,8 @@ const TeamsSubscription = ({
       return (
         <Typography.Text
           className="font-medium text-sm text-secondary-new"
-          data-testid="subscription-no-data">
+          data-testid="subscription-no-data"
+        >
           {NO_DATA_PLACEHOLDER}
         </Typography.Text>
       );
@@ -130,11 +132,21 @@ const TeamsSubscription = ({
     }
   }, [subscription, editSubscription]);
 
+  const subscriptionWebhookTranslated = useMemo(
+    () =>
+      SUBSCRIPTION_WEBHOOK_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+      })),
+    [t]
+  );
+
   return (
     <Space
       align="start"
       className="teams-subscription-container d-flex flex-col gap-2"
-      data-testid="teams-subscription">
+      data-testid="teams-subscription"
+    >
       <div className="d-flex gap-1 items-center teams-subscription-label-container">
         <Typography.Text className="right-panel-label text-sm font-medium subscription-label">
           {`${t('label.subscription')}`}
@@ -143,7 +155,8 @@ const TeamsSubscription = ({
           <Tooltip
             title={t('label.edit-entity', {
               entity: t('label.subscription'),
-            })}>
+            })}
+          >
             <Button
               className="flex-center teams-info-email-edit-button p-0"
               data-testid="edit-team-subscription"
@@ -161,7 +174,8 @@ const TeamsSubscription = ({
           <Tooltip
             title={t('label.edit-entity', {
               entity: t('label.subscription'),
-            })}>
+            })}
+          >
             <Button
               className="flex-center teams-info-email-edit-button p-0"
               data-testid="edit-team-subscription"
@@ -188,7 +202,8 @@ const TeamsSubscription = ({
         // Used Button to stop click propagation event anywhere in the form to parent TeamDetailV1 collapsible panel
         <Button
           className="remove-button-default-styling"
-          onClick={(e) => e.stopPropagation()}>
+          onClick={(e) => e.stopPropagation()}
+        >
           <Modal
             centered
             open
@@ -204,16 +219,18 @@ const TeamsSubscription = ({
             title={t('label.add-entity', {
               entity: t('label.subscription'),
             })}
-            onCancel={() => setEditSubscription(false)}>
+            onCancel={() => setEditSubscription(false)}
+          >
             <Form
               data-testid="subscription-modal"
               form={form}
               id="subscription-form"
               layout="vertical"
-              onFinish={handleSave}>
+              onFinish={handleSave}
+            >
               <Form.Item label={t('label.webhook')} name="webhook">
                 <Select
-                  options={SUBSCRIPTION_WEBHOOK_OPTIONS}
+                  options={subscriptionWebhookTranslated}
                   placeholder={t('label.select-field', {
                     field: t('label.condition'),
                   })}
@@ -233,7 +250,8 @@ const TeamsSubscription = ({
                     type: 'url',
                     message: t('message.endpoint-should-be-valid'),
                   },
-                ]}>
+                ]}
+              >
                 <Input
                   disabled={isWebhookEmpty}
                   placeholder={t('label.enter-entity-value', {

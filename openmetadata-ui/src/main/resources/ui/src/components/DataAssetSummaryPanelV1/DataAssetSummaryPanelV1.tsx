@@ -23,24 +23,22 @@ import {
   getCurrentMillis,
   getEpochMillisForPastDays,
 } from '../../utils/date-time/DateTimeUtils';
-import { getEntityChildDetails } from '../../utils/EntitySummaryPanelUtils';
 import {
   DRAWER_NAVIGATION_OPTIONS,
   getEntityOverview,
+  hasLineageTab,
 } from '../../utils/EntityUtils';
 
 import { AxiosError } from 'axios';
 import { Operation } from 'fast-json-patch';
+import { ENTITY_PATH } from '../../constants/constants';
 import { PROFILER_FILTER_RANGE } from '../../constants/profiler.constant';
 import { EntityType } from '../../enums/entity.enum';
-import { Chart } from '../../generated/entity/data/chart';
-import { Dashboard } from '../../generated/entity/data/dashboard';
 import { EntityReference } from '../../generated/entity/type';
 import { TagLabel, TestCaseStatus } from '../../generated/tests/testCase';
 import { TagSource } from '../../generated/type/tagLabel';
 import { getListTestCaseIncidentStatus } from '../../rest/incidentManagerAPI';
 import { listTestCases } from '../../rest/testAPI';
-import { fetchCharts } from '../../utils/DashboardDetailsUtils';
 import entityUtilClassBase from '../../utils/EntityUtilClassBase';
 import { generateEntityLink, getTierTags } from '../../utils/TableUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
@@ -49,6 +47,7 @@ import DataQualitySection from '../common/DataQualitySection/DataQualitySection'
 import DescriptionSection from '../common/DescriptionSection/DescriptionSection';
 import DomainsSection from '../common/DomainsSection/DomainsSection';
 import GlossaryTermsSection from '../common/GlossaryTermsSection/GlossaryTermsSection';
+import LineageSection from '../common/LineageSection/LineageSection';
 import Loader from '../common/Loader/Loader';
 import OverviewSection from '../common/OverviewSection/OverviewSection';
 import OwnersSection from '../common/OwnersSection/OwnersSection';
@@ -65,8 +64,8 @@ export const DataAssetSummaryPanelV1 = ({
   entityType,
   isLoading = false,
   componentType = DRAWER_NAVIGATION_OPTIONS.explore,
-  highlights,
   onOwnerUpdate,
+  panelPath,
   onDomainUpdate,
   onTierUpdate,
   isDomainVisible,
@@ -74,6 +73,8 @@ export const DataAssetSummaryPanelV1 = ({
   onDataProductsUpdate,
   onGlossaryTermsUpdate,
   onDescriptionUpdate,
+  onLinkClick,
+  onLineageClick,
 }: DataAssetSummaryPanelProps) => {
   const { t } = useTranslation();
   const { getEntityPermission } = usePermissionProvider();
@@ -131,9 +132,6 @@ export const DataAssetSummaryPanelV1 = ({
   const [additionalInfo, setAdditionalInfo] = useState<
     Record<string, number | string>
   >({});
-  const [charts, setCharts] = useState<Chart[]>([]);
-  const [chartsDetailsLoading, setChartsDetailsLoading] =
-    useState<boolean>(false);
   const [entityPermissions, setEntityPermissions] =
     useState<OperationPermission | null>(null);
   const { isTourPage } = useTourProvider();
@@ -150,16 +148,10 @@ export const DataAssetSummaryPanelV1 = ({
     [dataAsset, additionalInfo, entityType]
   );
 
-  useMemo(() => {
-    return getEntityChildDetails(
-      entityType,
-      entityType === EntityType.DASHBOARD
-        ? ({ ...dataAsset, charts } as unknown as Dashboard)
-        : dataAsset,
-      highlights,
-      entityType === EntityType.DASHBOARD ? chartsDetailsLoading : false
-    );
-  }, [dataAsset, entityType, highlights, charts, chartsDetailsLoading]);
+  const shouldShowLineageSection = useMemo(
+    () => hasLineageTab(entityType),
+    [entityType]
+  );
 
   const fetchIncidentCount = useCallback(async () => {
     if (
@@ -187,18 +179,6 @@ export const DataAssetSummaryPanelV1 = ({
       }
     }
   }, [dataAsset?.fullyQualifiedName, entityPermissions]);
-
-  const fetchChartsDetails = useCallback(async () => {
-    setChartsDetailsLoading(true);
-    try {
-      const chartDetails = await fetchCharts((dataAsset as Dashboard).charts);
-      setCharts(chartDetails);
-    } catch {
-      // Error
-    } finally {
-      setChartsDetailsLoading(false);
-    }
-  }, [dataAsset]);
 
   const fetchTestCases = useCallback(async () => {
     if (!dataAsset?.fullyQualifiedName || entityType !== EntityType.TABLE) {
@@ -255,17 +235,8 @@ export const DataAssetSummaryPanelV1 = ({
   }, [dataAsset?.fullyQualifiedName, entityPermissions]);
 
   const fetchEntityBasedDetails = () => {
-    switch (entityType) {
-      case EntityType.TABLE:
-        fetchIncidentCount();
-
-        break;
-      case EntityType.DASHBOARD:
-        fetchChartsDetails();
-
-        break;
-      default:
-        break;
+    if (entityType === EntityType.TABLE) {
+      fetchIncidentCount();
     }
   };
   const {
@@ -278,7 +249,10 @@ export const DataAssetSummaryPanelV1 = ({
     editGlossaryTermsPermission,
   } = useMemo(
     () => ({
-      editDomainPermission: entityPermissions?.EditAll && !dataAsset.deleted,
+      editDomainPermission:
+        entityPermissions?.EditAll &&
+        !dataAsset.deleted &&
+        panelPath !== ENTITY_PATH.dataProductsTab,
       editDescriptionPermission:
         (entityPermissions?.EditAll || entityPermissions?.EditDescription) &&
         !dataAsset.deleted,
@@ -353,6 +327,20 @@ export const DataAssetSummaryPanelV1 = ({
       case EntityType.GLOSSARY:
       case EntityType.GLOSSARY_TERM:
       case EntityType.TAG:
+      case EntityType.TEST_SUITE:
+      case EntityType.TEST_CASE:
+      case EntityType.DOMAIN:
+      case EntityType.CLASSIFICATION:
+      case EntityType.METADATA_SERVICE:
+      case EntityType.SECURITY_SERVICE:
+      case EntityType.DRIVE_SERVICE:
+      case EntityType.INGESTION_PIPELINE:
+      case EntityType.WORKFLOW_DEFINITION:
+      case EntityType.DATA_CONTRACT:
+      case EntityType.QUERY:
+      case EntityType.APPLICATION:
+      case EntityType.ALERT:
+      case EntityType.EVENT_SUBSCRIPTION:
         return (
           <>
             {entityType === EntityType.TABLE && (
@@ -399,6 +387,8 @@ export const DataAssetSummaryPanelV1 = ({
             )}
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -406,6 +396,7 @@ export const DataAssetSummaryPanelV1 = ({
               componentType={componentType}
               entityInfoV1={entityInfo}
               isDomainVisible={isDomainVisible}
+              onLinkClick={onLinkClick}
             />
             {isTestCaseLoading ? (
               <Loader size="small" />
@@ -423,6 +414,14 @@ export const DataAssetSummaryPanelV1 = ({
                   }}
                 />
               )
+            )}
+            {shouldShowLineageSection && (
+              <LineageSection
+                entityFqn={dataAsset.fullyQualifiedName}
+                entityType={entityType}
+                key={`lineage-${dataAsset.id}`}
+                onLineageClick={onLineageClick}
+              />
             )}
             <div>
               <OwnersSection
@@ -466,7 +465,7 @@ export const DataAssetSummaryPanelV1 = ({
                 entityType={entityType}
                 hasPermission={editGlossaryTermsPermission}
                 key={`glossary-terms-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
+                  dataAsset.tags?.length ?? 0
                 }`}
                 maxVisibleGlossaryTerms={3}
                 tags={dataAsset.tags}
@@ -478,12 +477,8 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
-                tags={dataAsset.tags?.filter(
-                  (tag: TagLabel) => tag.source !== TagSource.Glossary
-                )}
+                key={`tags-${dataAsset.id}-${dataAsset.tags?.length ?? 0}`}
+                tags={dataAsset.tags}
                 onTagsUpdate={onTagsUpdate}
               />
             </div>
@@ -495,7 +490,7 @@ export const DataAssetSummaryPanelV1 = ({
                 entityType={entityType}
                 hasPermission={editDataProductPermission}
                 key={`data-products-${dataAsset.id}-${
-                  (dataAsset.dataProducts as unknown[])?.length || 0
+                  dataAsset.dataProducts?.length ?? 0
                 }`}
                 onDataProductsUpdate={onDataProductsUpdate}
               />
@@ -508,6 +503,8 @@ export const DataAssetSummaryPanelV1 = ({
             <span className="d-none" data-testid="KnowledgePageSummary" />
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -528,9 +525,7 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`tags-${dataAsset.id}-${dataAsset.tags?.length ?? 0}`}
                 tags={dataAsset.tags}
                 onTagsUpdate={onTagsUpdate}
               />
@@ -541,7 +536,7 @@ export const DataAssetSummaryPanelV1 = ({
                 entityType={entityType}
                 hasPermission={editGlossaryTermsPermission}
                 key={`glossary-terms-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
+                  dataAsset.tags?.length ?? 0
                 }`}
                 maxVisibleGlossaryTerms={3}
                 tags={dataAsset.tags}
@@ -555,6 +550,8 @@ export const DataAssetSummaryPanelV1 = ({
           <>
             <DescriptionSection
               description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
               hasPermission={editDescriptionPermission}
               onDescriptionUpdate={handleDescriptionUpdate}
             />
@@ -599,15 +596,85 @@ export const DataAssetSummaryPanelV1 = ({
                 entityId={dataAsset.id}
                 entityType={entityType}
                 hasPermission={editTagsPermission}
-                key={`tags-${dataAsset.id}-${
-                  (dataAsset.tags as unknown[])?.length || 0
-                }`}
+                key={`tags-${dataAsset.id}-${dataAsset.tags?.length ?? 0}`}
                 tags={dataAsset.tags?.filter(
                   (tag: TagLabel) => tag.source !== TagSource.Glossary
                 )}
                 onTagsUpdate={onTagsUpdate}
               />
             </div>
+          </>
+        );
+      case EntityType.USER:
+      case EntityType.TEAM:
+      case EntityType.ROLE:
+      case EntityType.POLICY:
+      case EntityType.BOT:
+      case EntityType.WEBHOOK:
+      case EntityType.PERSONA:
+      case EntityType.KPI:
+      case EntityType.DATA_INSIGHT_CHART:
+      case EntityType.DOC_STORE:
+      case EntityType.TYPE:
+      case EntityType.SAMPLE_DATA:
+      case EntityType.CUSTOM_METRIC:
+      case EntityType.NOTIFICATION_TEMPLATE:
+      case EntityType.INGESTION_RUNNER:
+      case EntityType.APP_MARKET_PLACE_DEFINITION:
+      case EntityType.SERVICE:
+      case EntityType.SUBSCRIPTION:
+      case EntityType.LINEAGE_EDGE:
+      case EntityType.ENTITY_REPORT_DATA:
+      case EntityType.WEB_ANALYTIC_ENTITY_VIEW_REPORT_DATA:
+      case EntityType.WEB_ANALYTIC_USER_ACTIVITY_REPORT_DATA:
+      case EntityType.TEST_CASE_RESOLUTION_STATUS:
+      case EntityType.TEST_CASE_RESULT:
+      case EntityType.ALL:
+      case EntityType.PAGE:
+      case EntityType.knowledgePanels:
+        return (
+          <>
+            <DescriptionSection
+              description={dataAsset.description}
+              entityFqn={dataAsset.fullyQualifiedName}
+              entityType={entityType}
+              hasPermission={editDescriptionPermission}
+              onDescriptionUpdate={handleDescriptionUpdate}
+            />
+            <OverviewSection
+              componentType={componentType}
+              entityInfoV1={entityInfo}
+              isDomainVisible={isDomainVisible}
+              onLinkClick={onLinkClick}
+            />
+            {dataAsset.owners && (
+              <div>
+                <OwnersSection
+                  entityId={dataAsset.id}
+                  entityType={entityType}
+                  hasPermission={editOwnerPermission}
+                  key={`owners-${dataAsset.id}-${
+                    (dataAsset.owners as EntityReference[])?.length || 0
+                  }`}
+                  owners={dataAsset.owners as EntityReference[]}
+                  onOwnerUpdate={onOwnerUpdate}
+                />
+              </div>
+            )}
+            {dataAsset.tags && (
+              <div>
+                <TagsSection
+                  entityId={dataAsset.id}
+                  entityType={entityType}
+                  hasPermission={editTagsPermission}
+                  key={`tags-${dataAsset.id}-${dataAsset.tags?.length ?? 0}`}
+                  tags={dataAsset.tags?.filter(
+                    (tag: TagLabel) => tag.source !== TagSource.Glossary
+                  )}
+                  onTagsUpdate={onTagsUpdate}
+                />
+              </div>
+            )}
           </>
         );
       default:

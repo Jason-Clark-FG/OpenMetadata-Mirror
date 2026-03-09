@@ -26,11 +26,9 @@ import {
 import { SidebarItem } from '../../../enums/sidebar.enum';
 import { useCurrentUserPreferences } from '../../../hooks/currentUserStore/useCurrentUserStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
-import { useCustomPages } from '../../../hooks/useCustomPages';
-import { filterHiddenNavigationItems } from '../../../utils/CustomizaNavigation/CustomizeNavigation';
+import { useSidebarItems } from '../../../hooks/useSidebarItems';
 import { useAuthProvider } from '../../Auth/AuthProviders/AuthProvider';
 import BrandImage from '../../common/BrandImage/BrandImage';
-import { useApplicationsProvider } from '../../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import './left-sidebar.less';
 import LeftSidebarItem from './LeftSidebarItem.component';
 const { Sider } = Layout;
@@ -49,12 +47,7 @@ const LeftSidebar = () => {
   const isDirectionRTL = useMemo(() => i18n.dir() === 'rtl', [i18n]);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  const { navigation } = useCustomPages('Navigation');
-
-  const sideBarItems = useMemo(
-    () => filterHiddenNavigationItems(navigation),
-    [navigation]
-  );
+  const sideBarItems = useSidebarItems();
 
   const selectedKeys = useMemo(() => {
     const pathArray = location.pathname.split('/');
@@ -84,47 +77,20 @@ const LeftSidebar = () => {
     [handleLogoutClick]
   );
 
-  const { plugins = [] } = useApplicationsProvider();
-
-  const pluginSidebarActions = useMemo(() => {
-    return (
-      plugins
-        ?.flatMap((plugin) => plugin.getSidebarActions?.() ?? [])
-        .sort((a, b) => (a.index ?? 999) - (b.index ?? 999)) ?? []
-    );
-  }, [plugins]);
-
   const menuItems = useMemo(() => {
-    const mergedItems = (() => {
-      const baseItems = [...sideBarItems];
-
-      pluginSidebarActions.forEach((pluginItem) => {
-        if (typeof pluginItem.index === 'number' && pluginItem.index >= 0) {
-          baseItems.splice(
-            Math.min(pluginItem.index, baseItems.length),
-            0,
-            pluginItem
-          );
-        } else {
-          baseItems.push(pluginItem);
-        }
-      });
-
-      return baseItems;
-    })();
-
-    // Map to menu structure
-    return mergedItems.map((item) => ({
+    return sideBarItems.map((item) => ({
       key: item.key,
       icon: <Icon component={item.icon} />,
       label: <LeftSidebarItem data={item} />,
+      'data-testid': `side-bar-${item.dataTestId}`,
       children: item.children?.map((child) => ({
         key: child.key,
         icon: <Icon component={child.icon} />,
         label: <LeftSidebarItem data={child} />,
+        'data-testid': `side-bar-${item.dataTestId}`,
       })),
     }));
-  }, [sideBarItems, pluginSidebarActions]);
+  }, [sideBarItems]);
 
   const handleMenuClick: MenuProps['onClick'] = useCallback(() => {
     setOpenKeys([]);
@@ -141,12 +107,13 @@ const LeftSidebar = () => {
       collapsedWidth={72}
       data-testid="left-sidebar"
       trigger={null}
-      width={228}>
+      width={228}
+    >
       <div className="logo-container">
         <Link className="flex-shrink-0" id="openmetadata_logo" to="/">
           <BrandImage
             alt="OpenMetadata Logo"
-            className="vertical-middle"
+            className="vertical-middle h-full"
             dataTestId="image"
             height={40}
             isMonoGram={isSidebarCollapsed}
@@ -199,7 +166,8 @@ const LeftSidebar = () => {
           footer={null}
           open={isConfirmLogoutModalOpen}
           width={360}
-          onCancel={hideConfirmLogoutModal}>
+          onCancel={hideConfirmLogoutModal}
+        >
           <Typography.Title level={5}>{t('label.logout')}</Typography.Title>
           <Typography.Text className="text-grey-muted">
             {t('message.logout-confirmation')}
@@ -213,7 +181,8 @@ const LeftSidebar = () => {
               className="confirm-btn"
               data-testid="confirm-logout"
               type="primary"
-              onClick={onLogoutHandler}>
+              onClick={onLogoutHandler}
+            >
               {t('label.logout')}
             </Button>
           </div>

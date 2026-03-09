@@ -70,10 +70,11 @@ export const DescriptionTabs = ({
       data-testid="tabs"
       size="small"
       type="card"
-      onChange={onTabChange}>
+      onChange={onTabChange}
+    >
       <TabPane data-testid="current-tab" key="1" tab="Current">
         <div className="border border-main rounded-4 p-sm m-t-sm">
-          {description.trim() ? (
+          {description?.trim() ? (
             <RichTextEditorPreviewerV1
               enableSeeMoreVariant={false}
               markdown={description}

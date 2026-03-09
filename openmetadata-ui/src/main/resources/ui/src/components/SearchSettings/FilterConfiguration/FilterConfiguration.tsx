@@ -50,7 +50,8 @@ const FilterConfiguration = () => {
         label: (
           <Checkbox
             checked={checkedItems.includes(field.fieldName)}
-            onChange={() => handleCheckboxChange(field.fieldName)}>
+            onChange={() => handleCheckboxChange(field.fieldName)}
+          >
             {field.label}
           </Checkbox>
         ),
@@ -83,10 +84,12 @@ const FilterConfiguration = () => {
           open={visible}
           placement="bottomLeft"
           trigger={['click']}
-          onOpenChange={(flag) => setVisible(flag)}>
+          onOpenChange={(flag) => setVisible(flag)}
+        >
           <Button
             className="flex items-center gap-2 p-md text-sm font-medium add-filters-btn"
-            icon={<FilterIcon />}>
+            icon={<FilterIcon />}
+          >
             {t('label.add-filter-plural')}
           </Button>
         </Dropdown>
@@ -94,8 +97,9 @@ const FilterConfiguration = () => {
         {DATA_ASSET_DROPDOWN_ITEMS.map((value) => (
           <div
             className="bg-white flex items-center justify-center gap-3 p-y-xss p-x-sm filter-value"
-            key={value.key}>
-            {value.label}
+            key={value.key}
+          >
+            {t(value.label)}
             <Icon
               className="text-grey-muted text-xss cursor-pointer"
               component={CloseIcon}

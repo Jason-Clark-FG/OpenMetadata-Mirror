@@ -18,6 +18,7 @@ from functools import partial
 from typing import Callable, Optional, Union
 
 from airflow import DAG
+from airflow.utils import timezone
 from openmetadata_managed_apis.api.utils import clean_dag_id
 from pydantic import ValidationError
 from requests.utils import quote
@@ -25,6 +26,7 @@ from requests.utils import quote
 from metadata.generated.schema.entity.services.apiService import ApiService
 from metadata.generated.schema.entity.services.dashboardService import DashboardService
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
+from metadata.generated.schema.entity.services.driveService import DriveService
 from metadata.generated.schema.entity.services.messagingService import MessagingService
 from metadata.generated.schema.entity.services.metadataService import MetadataService
 from metadata.generated.schema.entity.services.mlmodelService import MlModelService
@@ -77,6 +79,7 @@ logger = workflow_logger()
 ENTITY_CLASS_MAP = {
     "apiService": ApiService,
     "databaseService": DatabaseService,
+    "driveService": DriveService,
     "pipelineService": PipelineService,
     "dashboardService": DashboardService,
     "messagingService": MessagingService,
@@ -168,11 +171,7 @@ def build_source(ingestion_pipeline: IngestionPipeline) -> WorkflowSource:
         except (ValidationError, InvalidWorkflowException) as scoped_error:
             if isinstance(scoped_error, ValidationError):
                 # Let's catch validations of internal Workflow models, not the Workflow itself
-                object_error = (
-                    scoped_error.model.__name__
-                    if scoped_error.model is not None
-                    else "workflow"
-                )
+                object_error = getattr(scoped_error, "title", None) or "workflow"
                 raise ParsingConfigurationError(
                     f"We encountered an error parsing the configuration of your {object_error}.\n"
                     f"{parse_validation_err(scoped_error)}"
@@ -263,17 +262,23 @@ def build_dag_configs(ingestion_pipeline: IngestionPipeline) -> dict:
     """
     # Determine start_date based on schedule_interval using croniter
     schedule_interval = ingestion_pipeline.airflowConfig.scheduleInterval
-    now = datetime.now()
-
-    if schedule_interval is None:
-        # On-demand DAG, set start_date to now
-        start_date = now
-    elif croniter.is_valid(schedule_interval):
-        cron = croniter(schedule_interval, now)
-        start_date = cron.get_prev(datetime)
+    if is_airflow_3_or_higher():
+        # Use timezone-aware `now` to avoid Airflow auto-scheduling an immediate first run.
+        # Setting the start_date in the past (previous cron) causes Airflow 3 to fire a run
+        # right after deployment even with catchup disabled.
+        start_date = timezone.utcnow()
     else:
-        # Handle invalid cron expressions if necessary
-        start_date = now
+        now = datetime.now()
+
+        if schedule_interval is None:
+            # On-demand DAG, set start_date to now
+            start_date = now
+        elif croniter.is_valid(schedule_interval):
+            cron = croniter(schedule_interval, now)
+            start_date = cron.get_prev(datetime)
+        else:
+            # Handle invalid cron expressions if necessary
+            start_date = now
 
     dag_kwargs = {
         "dag_id": clean_dag_id(ingestion_pipeline.name.root),

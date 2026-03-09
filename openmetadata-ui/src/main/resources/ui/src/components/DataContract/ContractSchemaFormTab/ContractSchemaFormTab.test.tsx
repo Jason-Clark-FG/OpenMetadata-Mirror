@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  *  Copyright 2025 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +81,8 @@ jest.mock('../../common/Table/Table', () => {
               data-testid={`select-row-${item.name}`}
               onClick={() =>
                 rowSelection?.onChange?.([item.fullyQualifiedName])
-              }>
+              }
+            >
               Select {item.name}
             </button>
           </div>

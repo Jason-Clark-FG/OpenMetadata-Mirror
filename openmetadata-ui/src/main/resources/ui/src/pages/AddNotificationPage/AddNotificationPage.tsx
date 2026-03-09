@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 /*
  *  Copyright 2022 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Grid } from '@mui/material';
 import {
+  Button,
   Card,
   Col,
   Divider,
@@ -47,13 +46,21 @@ import {
   GlobalSettingsMenuCategory,
 } from '../../constants/GlobalSettings.constants';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
+import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
+import {
+  OperationPermission,
+  ResourceEntity,
+} from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
-import { NotificationTemplate } from '../../generated/entity/events/notificationTemplate';
+import {
+  NotificationTemplate,
+  ProviderType,
+} from '../../generated/entity/events/notificationTemplate';
+import { Operation } from '../../generated/entity/policies/policy';
 import { CreateEventSubscription } from '../../generated/events/api/createEventSubscription';
 import {
   AlertType,
   EventSubscription,
-  ProviderType,
 } from '../../generated/events/eventSubscription';
 import { FilterResourceDescriptor } from '../../generated/events/filterResourceDescriptor';
 import { withPageLayout } from '../../hoc/withPageLayout';
@@ -68,6 +75,10 @@ import {
 import { getAllNotificationTemplates } from '../../rest/notificationtemplateAPI';
 import alertsClassBase from '../../utils/AlertsClassBase';
 import { getEntityName } from '../../utils/EntityUtils';
+import {
+  DEFAULT_ENTITY_PERMISSION,
+  getPrioritizedViewPermission,
+} from '../../utils/PermissionsUtils';
 import {
   getNotificationAlertDetailsPath,
   getSettingPath,
@@ -96,10 +107,13 @@ const AddNotificationPage = () => {
   const [entityFunctions, setEntityFunctions] = useState<
     FilterResourceDescriptor[]
   >([]);
+  const { getResourcePermission } = usePermissionProvider();
   const [isButtonLoading, setIsButtonLoading] = useState<boolean>(false);
   const [alert, setAlert] = useState<ModifiedEventSubscription>();
   const [initialData, setInitialData] = useState<EventSubscription>();
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [templateResourcePermission, setTemplateResourcePermission] =
+    useState<OperationPermission>(DEFAULT_ENTITY_PERMISSION);
 
   const isSystemProvider = useMemo(
     () => alert?.provider === ProviderType.System,
@@ -235,11 +249,20 @@ const AddNotificationPage = () => {
   const fetchTemplates = useCallback(async () => {
     setLoadingState((state) => ({ ...state, templates: true }));
     try {
-      const { data } = await getAllNotificationTemplates({
-        limit: PAGE_SIZE_LARGE,
-      });
+      const permission = await getResourcePermission(
+        ResourceEntity.NOTIFICATION_TEMPLATE
+      );
 
-      setTemplates(data);
+      setTemplateResourcePermission(permission);
+
+      if (getPrioritizedViewPermission(permission, Operation.ViewAll)) {
+        const { data } = await getAllNotificationTemplates({
+          limit: PAGE_SIZE_LARGE,
+          provider: ProviderType.User,
+        });
+
+        setTemplates(data);
+      }
     } catch {
       showErrorToast(
         t('server.entity-fetch-error', { entity: t('label.template-plural') })
@@ -269,7 +292,8 @@ const AddNotificationPage = () => {
       <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
         <Typography.Paragraph
           className="tw-max-w-md"
-          style={{ marginBottom: '0' }}>
+          style={{ marginBottom: '0' }}
+        >
           {t('message.system-alert-edit-message')}
         </Typography.Paragraph>
       </ErrorPlaceHolder>
@@ -310,7 +334,8 @@ const AddNotificationPage = () => {
                     resources: alert?.filteringRules?.resources,
                   }}
                   validateMessages={VALIDATION_MESSAGES}
-                  onFinish={handleSave}>
+                  onFinish={handleSave}
+                >
                   {isLoading ? (
                     <Skeleton title paragraph={{ rows: 8 }} />
                   ) : (
@@ -320,7 +345,8 @@ const AddNotificationPage = () => {
                           label={t('label.name')}
                           labelCol={{ span: 24 }}
                           name="displayName"
-                          rules={NAME_FIELD_RULES}>
+                          rules={NAME_FIELD_RULES}
+                        >
                           <Input placeholder={t('label.name')} />
                         </Form.Item>
                       </Col>
@@ -329,7 +355,8 @@ const AddNotificationPage = () => {
                           label={t('label.description')}
                           labelCol={{ span: 24 }}
                           name="description"
-                          trigger="onTextChange">
+                          trigger="onTextChange"
+                        >
                           <RichTextEditor
                             data-testid="description"
                             initialValue={alert?.description}
@@ -375,6 +402,9 @@ const AddNotificationPage = () => {
                                         alertDetails={alert}
                                         formRef={form}
                                         loading={isLoading}
+                                        templateResourcePermission={
+                                          templateResourcePermission
+                                        }
                                         templates={templates}
                                       />
                                     </Col>
@@ -404,12 +434,12 @@ const AddNotificationPage = () => {
                       )}
 
                       <Col span={24}>
-                        <Grid container justifyContent="end" spacing={2}>
+                        <div className="flex justify-end gap-2">
                           <Button
-                            className="float-right"
                             data-testid="cancel-button"
-                            variant="text"
-                            onClick={() => navigate(-1)}>
+                            type="text"
+                            onClick={() => navigate(-1)}
+                          >
                             {t('label.cancel')}
                           </Button>
 
@@ -419,19 +449,22 @@ const AddNotificationPage = () => {
                                 alertDetails={alert}
                                 formRef={form}
                                 key={name}
+                                templateResourcePermission={
+                                  templateResourcePermission
+                                }
                                 templates={templates}
                               />
                             )
                           )}
                           <Button
-                            className="float-right"
                             data-testid="save-button"
+                            htmlType="submit"
                             loading={isButtonLoading}
-                            type="submit"
-                            variant="contained">
+                            type="primary"
+                          >
                             {t('label.save')}
                           </Button>
-                        </Grid>
+                        </div>
                       </Col>
                     </Row>
                   )}

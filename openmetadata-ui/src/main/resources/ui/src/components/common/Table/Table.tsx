@@ -158,14 +158,16 @@ const Table = <T extends Record<string, unknown>>(
             <div className="d-flex justify-between items-center w-52 p-x-md p-b-xss border-bottom">
               <Typography.Text
                 className="text-sm text-grey-muted font-medium"
-                data-testid="column-dropdown-title">
+                data-testid="column-dropdown-title"
+              >
                 {t('label.column')}
               </Typography.Text>
               <Button
                 className="text-primary text-sm p-0"
                 data-testid="column-dropdown-action-button"
                 type="text"
-                onClick={handleBulkColumnAction}>
+                onClick={handleBulkColumnAction}
+              >
                 {dropdownColumnList.length === columnDropdownSelections.length
                   ? t('label.hide-all')
                   : t('label.view-all')}
@@ -265,7 +267,8 @@ const Table = <T extends Record<string, unknown>>(
           'p-y-md':
             searchProps ?? rest.extraTableFilters ?? isCustomizeColumnEnable,
         })}
-        span={24}>
+        span={24}
+      >
         <Row className="p-x-md">
           {searchProps ? (
             <Col span={12}>
@@ -285,7 +288,8 @@ const Table = <T extends Record<string, unknown>>(
                 'd-flex justify-end items-center gap-5',
                 rest.extraTableFiltersClassName
               )}
-              span={searchProps ? 12 : 24}>
+              span={searchProps ? 12 : 24}
+            >
               {rest.extraTableFilters}
               {isCustomizeColumnEnable && (
                 <Dropdown
@@ -294,14 +298,16 @@ const Table = <T extends Record<string, unknown>>(
                   open={isDropdownVisible}
                   placement="bottomRight"
                   trigger={['click']}
-                  onOpenChange={setIsDropdownVisible}>
+                  onOpenChange={setIsDropdownVisible}
+                >
                   <Button
                     className="remove-button-background-hover"
                     data-testid="column-dropdown"
                     icon={<ColumnIcon />}
                     size="small"
                     title={t('label.show-or-hide-column-plural')}
-                    type="text">
+                    type="text"
+                  >
                     {t('label.customize')}
                   </Button>
                 </Dropdown>
@@ -341,5 +347,4 @@ const Table = <T extends Record<string, unknown>>(
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default forwardRef<HTMLDivElement, TableProps<any>>(Table);

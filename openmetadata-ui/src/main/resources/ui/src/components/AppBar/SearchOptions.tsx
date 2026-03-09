@@ -15,6 +15,7 @@ import { Typography } from 'antd';
 import { FunctionComponent, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import brandClassBase from '../../utils/BrandData/BrandClassBase';
 import { getExplorePath } from '../../utils/RouterUtils';
 
 type SearchOptionsProp = {
@@ -51,9 +52,14 @@ const SearchOptions: FunctionComponent<SearchOptionsProp> = ({
           className="link-text d-flex justify-between text-sm"
           data-testid="InOpenMetadata"
           to={getExplorePath({ search: searchText })}
-          onClick={() => setIsOpen(false)}>
+          onClick={() => setIsOpen(false)}
+        >
           {searchText}
-          <Typography.Text>{t('label.in-open-metadata')}</Typography.Text>
+          <Typography.Text>
+            {t('label.in-open-metadata', {
+              brandName: brandClassBase.getPageTitle(),
+            })}
+          </Typography.Text>
         </Link>
         {options.map((option, index) => (
           <span
@@ -63,7 +69,8 @@ const SearchOptions: FunctionComponent<SearchOptionsProp> = ({
             onClick={() => {
               selectOption(searchText);
               setIsOpen(false);
-            }}>
+            }}
+          >
             {searchText}
             <Typography.Text>{option}</Typography.Text>
           </span>

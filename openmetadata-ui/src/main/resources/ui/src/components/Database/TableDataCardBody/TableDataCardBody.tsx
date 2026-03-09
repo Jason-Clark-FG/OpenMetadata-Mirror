@@ -37,7 +37,7 @@ const TableDataCardBody: FunctionComponent<Props> = ({
   return (
     <div data-testid="table-body">
       <div className="m-b-sm description-text" data-testid="description-text">
-        {description.trim() ? (
+        {description?.trim() ? (
           <RichTextEditorPreviewerV1
             className="max-two-lines"
             markdown={description}
@@ -53,7 +53,8 @@ const TableDataCardBody: FunctionComponent<Props> = ({
             <span
               className="d-flex items-center"
               data-testid={info.key}
-              key={info.key}>
+              key={info.key}
+            >
               <EntitySummaryDetails data={info} />
               {i !== extraInfo.length - 1 && (
                 <span className="px-1.5 d-inline-block text-lg font-semibold">

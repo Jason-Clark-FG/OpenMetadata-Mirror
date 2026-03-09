@@ -25,6 +25,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 import { ReactComponent as IconCloseCircleOutlined } from '../../assets/svg/close-circle-outlined.svg';
 import { ReactComponent as DropDownIcon } from '../../assets/svg/drop-down.svg';
 import { ReactComponent as IconSuggestionsActive } from '../../assets/svg/ic-suggestions-active.svg';
@@ -50,7 +51,14 @@ import './global-search-bar.less';
 
 export const GlobalSearchBar = () => {
   const tabsInfo = searchClassBase.getTabsInfo();
-  const { searchCriteria, updateSearchCriteria } = useApplicationStore();
+  const { searchCriteria, updateSearchCriteria, currentUser } =
+    useApplicationStore(
+      useShallow((state) => ({
+        searchCriteria: state.searchCriteria,
+        updateSearchCriteria: state.updateSearchCriteria,
+        currentUser: state.currentUser,
+      }))
+    );
   const { isNLPEnabled, isNLPActive, setNLPActive, setNLPEnabled } =
     useSearchStore();
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +70,6 @@ export const GlobalSearchBar = () => {
   const [isSearchBoxOpen, setIsSearchBoxOpen] = useState<boolean>(false);
   const navigate = useNavigate();
   const { isTourOpen, updateTourPage, updateTourSearch } = useTourProvider();
-  const { currentUser } = useApplicationStore();
   const parsedQueryString = Qs.parse(
     location.search.startsWith('?')
       ? location.search.substring(1)
@@ -93,12 +100,14 @@ export const GlobalSearchBar = () => {
         size="small"
         suffixIcon={<DropDownIcon width={12} />}
         value={searchCriteria}
-        onChange={updateSearchCriteria}>
+        onChange={updateSearchCriteria}
+      >
         {searchClassBase.getGlobalSearchOptions().map(({ value, label }) => (
           <Select.Option
             data-testid={`global-search-select-option-${label}`}
             key={value}
-            value={value}>
+            value={value}
+          >
             {label}
           </Select.Option>
         ))}
@@ -195,7 +204,8 @@ export const GlobalSearchBar = () => {
     <div
       className="flex-center search-container relative"
       data-testid="navbar-search-container"
-      ref={searchContainerRef}>
+      ref={searchContainerRef}
+    >
       {isNLPEnabled && (
         <>
           <Tooltip
@@ -203,7 +213,8 @@ export const GlobalSearchBar = () => {
               isNLPActive
                 ? t('message.natural-language-search-active')
                 : t('label.use-natural-language-search')
-            }>
+            }
+          >
             <Button
               className={classNames('nav-search-button', 'w-6', 'h-6', {
                 active: isNLPActive,
@@ -256,7 +267,8 @@ export const GlobalSearchBar = () => {
         placement="bottom"
         showArrow={false}
         trigger={['click']}
-        onOpenChange={setIsSearchBoxOpen}>
+        onOpenChange={setIsSearchBoxOpen}
+      >
         <Input
           autoComplete="off"
           bordered={false}

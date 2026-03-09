@@ -103,7 +103,13 @@ const SearchRBACSettingsPage = () => {
         <Col span={24}>
           <Row align="middle" justify="space-between">
             <Col>
-              <PageHeader isBeta data={PAGE_HEADERS.SEARCH_RBAC} />
+              <PageHeader
+                isBeta
+                data={{
+                  header: t(PAGE_HEADERS.SEARCH_RBAC.header),
+                  subHeader: t(PAGE_HEADERS.SEARCH_RBAC.subHeader),
+                }}
+              />
             </Col>
           </Row>
         </Col>
@@ -113,7 +119,8 @@ const SearchRBACSettingsPage = () => {
             <Tooltip
               placement="top"
               title={t('message.enable-access-control-description')}
-              trigger="hover">
+              trigger="hover"
+            >
               <InfoCircleOutlined
                 className="m-x-xss"
                 data-testid="enable-access-control-info"

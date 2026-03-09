@@ -199,7 +199,7 @@ const TotalDataAssetsWidget = ({
     return (
       <WidgetEmptyState
         actionButtonLink={ROUTES.EXPLORE}
-        actionButtonText={t('label.browse-assets')}
+        actionButtonText={t('label.explore-assets')}
         description={t('message.no-data-for-total-assets')}
         icon={
           <TotalDataAssetsEmptyIcon height={SIZE.MEDIUM} width={SIZE.MEDIUM} />
@@ -215,7 +215,8 @@ const TotalDataAssetsWidget = ({
         className={classNames(
           'total-data-assets-widget-content d-flex flex-column',
           isFullSizeWidget ? 'gap-1' : 'gap-8'
-        )}>
+        )}
+      >
         <div className={isFullSizeWidget ? 'd-flex gap-6' : ''}>
           {/* Donut Chart */}
           <div className="flex-1 donut-chart-wrapper">
@@ -234,7 +235,8 @@ const TotalDataAssetsWidget = ({
                   innerRadius={80}
                   nameKey="name"
                   outerRadius={117}
-                  paddingAngle={1}>
+                  paddingAngle={1}
+                >
                   {sortedEntityList.map((label, index) => (
                     <Cell
                       fill={pieChartColors[index % pieChartColors.length]}
@@ -256,7 +258,8 @@ const TotalDataAssetsWidget = ({
                   fontWeight={600}
                   textAnchor="middle"
                   x="50%"
-                  y="50%">
+                  y="50%"
+                >
                   {totalDatAssets.toLocaleString()}
                 </text>
               </PieChart>
@@ -267,12 +270,14 @@ const TotalDataAssetsWidget = ({
           {isFullSizeWidget && (
             <div
               className="flex-1 legend-list p-md"
-              data-testid="assets-legend">
+              data-testid="assets-legend"
+            >
               {sortedEntityList.map((label, index) => (
                 <div
                   className="d-flex items-center gap-3 text-sm"
                   data-testid={`legend-item-${label}`}
-                  key={label}>
+                  key={label}
+                >
                   <span
                     className="h-3 w-3"
                     data-testid={`legend-color-${label}`}
@@ -287,7 +292,8 @@ const TotalDataAssetsWidget = ({
                   </Typography.Text>
                   <span
                     className="text-xs font-medium p-y-xss p-x-xs data-value"
-                    data-testid={`legend-count-${label}`}>
+                    data-testid={`legend-count-${label}`}
+                  >
                     {selectedDateData[label] ?? 0}
                   </span>
                 </div>
@@ -303,7 +309,8 @@ const TotalDataAssetsWidget = ({
               <div
                 className={`date-box ${selectedDate === day ? 'selected' : ''}`}
                 key={day}
-                onClick={() => setSelectedDate(day)}>
+                onClick={() => setSelectedDate(day)}
+              >
                 <div className="day font-semibold text-sm">
                   {dayString.split(' ')[0]}
                 </div>
@@ -334,6 +341,15 @@ const TotalDataAssetsWidget = ({
     }
   }, [graphData]);
 
+  const translatedSortOptions = useMemo(
+    () =>
+      DATA_ASSETS_SORT_BY_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+      })),
+    [t]
+  );
+
   const widgetHeader = useMemo(
     () => (
       <WidgetHeader
@@ -344,7 +360,7 @@ const TotalDataAssetsWidget = ({
         icon={<TotalAssetsWidgetIcon height={24} width={24} />}
         isEditView={isEditView}
         selectedSortBy={selectedSortBy}
-        sortOptions={DATA_ASSETS_SORT_BY_OPTIONS}
+        sortOptions={translatedSortOptions}
         title={t('label.data-insight-total-entity-summary')}
         widgetKey={widgetKey}
         onSortChange={(key) => setSelectedSortBy(key)}
@@ -361,6 +377,7 @@ const TotalDataAssetsWidget = ({
       widgetKey,
       widgetData?.w,
       setSelectedSortBy,
+      translatedSortOptions,
     ]
   );
 
@@ -369,7 +386,8 @@ const TotalDataAssetsWidget = ({
       dataLength={graphData.length > 0 ? graphData.length : 10}
       dataTestId="KnowledgePanel.TotalAssets"
       header={widgetHeader}
-      loading={isLoading}>
+      loading={isLoading}
+    >
       <div className="total-data-assets-widget-container">
         <div className="widget-content flex-1 h-full">
           {isEmpty(graphData) ? emptyState : totalDataAssetsContent}

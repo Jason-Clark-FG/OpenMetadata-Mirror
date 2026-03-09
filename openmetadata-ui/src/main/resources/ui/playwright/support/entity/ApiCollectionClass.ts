@@ -34,7 +34,9 @@ export class ApiCollectionClass extends EntityClass {
     connection: {
       config: {
         type: string;
-        openAPISchemaURL: string;
+        openAPISchemaConnection: {
+          openAPISchemaURL: string;
+        };
       };
     };
   };
@@ -73,8 +75,10 @@ export class ApiCollectionClass extends EntityClass {
       connection: {
         config: {
           type: 'Rest',
-          openAPISchemaURL:
-            'https://sandbox-beta.open-metadata.org/swagger.json',
+          openAPISchemaConnection: {
+            openAPISchemaURL:
+              'https://sandbox-beta.open-metadata.org/swagger.json',
+          },
         },
       },
     };
@@ -258,7 +262,7 @@ export class ApiCollectionClass extends EntityClass {
     );
 
     const apiCollectionsResponse = page.waitForResponse(
-      `/api/v1/apiCollections/name/*${this.entity}?*`
+      `/api/v1/apiCollections/name/*${this.entity.name}?*`
     );
     await page.getByTestId(this.entity.name).click();
     await apiCollectionsResponse;

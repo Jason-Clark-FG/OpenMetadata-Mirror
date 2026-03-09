@@ -11,8 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button, Grid } from '@mui/material';
-import { Card, Col, Divider, Form, Input, Row, Typography } from 'antd';
+import { Button, Card, Col, Divider, Form, Input, Row, Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty, isUndefined } from 'lodash';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,12 +33,20 @@ import {
 } from '../../constants/constants';
 import { NAME_FIELD_RULES } from '../../constants/Form.constants';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
-import { NotificationTemplate } from '../../generated/entity/events/notificationTemplate';
+import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
+import {
+  OperationPermission,
+  ResourceEntity,
+} from '../../context/PermissionProvider/PermissionProvider.interface';
+import {
+  NotificationTemplate,
+  ProviderType,
+} from '../../generated/entity/events/notificationTemplate';
+import { Operation } from '../../generated/entity/policies/policy';
 import { CreateEventSubscription } from '../../generated/events/api/createEventSubscription';
 import {
   AlertType,
   EventSubscription,
-  ProviderType,
 } from '../../generated/events/eventSubscription';
 import { FilterResourceDescriptor } from '../../generated/events/filterResourceDescriptor';
 import { withPageLayout } from '../../hoc/withPageLayout';
@@ -54,6 +61,10 @@ import {
 } from '../../rest/observabilityAPI';
 import alertsClassBase from '../../utils/AlertsClassBase';
 import { getEntityName } from '../../utils/EntityUtils';
+import {
+  DEFAULT_ENTITY_PERMISSION,
+  getPrioritizedViewPermission,
+} from '../../utils/PermissionsUtils';
 import { getObservabilityAlertDetailsPath } from '../../utils/RouterUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { AddAlertPageLoadingState } from '../AddNotificationPage/AddNotificationPage.interface';
@@ -66,6 +77,7 @@ function AddObservabilityPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [form] = useForm<ModifiedCreateEventSubscription>();
+  const { getResourcePermission } = usePermissionProvider();
   const { fqn } = useFqn();
   const { setInlineAlertDetails, inlineAlertDetails, currentUser } =
     useApplicationStore();
@@ -76,7 +88,6 @@ function AddObservabilityPage() {
 
   const [alert, setAlert] = useState<ModifiedEventSubscription>();
   const [initialData, setInitialData] = useState<EventSubscription>();
-
   const [loadingState, setLoadingState] = useState<AddAlertPageLoadingState>({
     alerts: false,
     functions: false,
@@ -84,6 +95,8 @@ function AddObservabilityPage() {
   });
   const [saving, setSaving] = useState<boolean>(false);
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
+  const [templateResourcePermission, setTemplateResourcePermission] =
+    useState<OperationPermission>(DEFAULT_ENTITY_PERMISSION);
 
   const isEditMode = useMemo(() => !isEmpty(fqn), [fqn]);
   const { getResourceLimit } = useLimitStore();
@@ -216,11 +229,20 @@ function AddObservabilityPage() {
   const fetchTemplates = useCallback(async () => {
     setLoadingState((state) => ({ ...state, templates: true }));
     try {
-      const { data } = await getAllNotificationTemplates({
-        limit: PAGE_SIZE_LARGE,
-      });
+      const permission = await getResourcePermission(
+        ResourceEntity.NOTIFICATION_TEMPLATE
+      );
 
-      setTemplates(data);
+      setTemplateResourcePermission(permission);
+
+      if (getPrioritizedViewPermission(permission, Operation.ViewAll)) {
+        const { data } = await getAllNotificationTemplates({
+          limit: PAGE_SIZE_LARGE,
+          provider: ProviderType.User,
+        });
+
+        setTemplates(data);
+      }
     } catch {
       showErrorToast(
         t('server.entity-fetch-error', { entity: t('label.template-plural') })
@@ -279,14 +301,16 @@ function AddObservabilityPage() {
                     resources: alert?.filteringRules?.resources,
                   }}
                   validateMessages={VALIDATION_MESSAGES}
-                  onFinish={handleSave}>
+                  onFinish={handleSave}
+                >
                   <Row gutter={[20, 20]}>
                     <Col span={24}>
                       <Form.Item
                         label={t('label.name')}
                         labelCol={{ span: 24 }}
                         name="displayName"
-                        rules={NAME_FIELD_RULES}>
+                        rules={NAME_FIELD_RULES}
+                      >
                         <Input placeholder={t('label.name')} />
                       </Form.Item>
                     </Col>
@@ -295,7 +319,8 @@ function AddObservabilityPage() {
                         label={t('label.description')}
                         labelCol={{ span: 24 }}
                         name="description"
-                        trigger="onTextChange">
+                        trigger="onTextChange"
+                      >
                         <RichTextEditor
                           data-testid="description"
                           initialValue={alert?.description}
@@ -353,6 +378,9 @@ function AddObservabilityPage() {
                                       alertDetails={alert}
                                       formRef={form}
                                       loading={isLoading}
+                                      templateResourcePermission={
+                                        templateResourcePermission
+                                      }
                                       templates={templates}
                                     />
                                   </Col>
@@ -381,12 +409,12 @@ function AddObservabilityPage() {
                     )}
 
                     <Col span={24}>
-                      <Grid container justifyContent="end" spacing={2}>
+                      <div className="flex justify-end gap-2">
                         <Button
-                          className="float-right"
                           data-testid="cancel-button"
-                          variant="text"
-                          onClick={() => navigate(-1)}>
+                          type="text"
+                          onClick={() => navigate(-1)}
+                        >
                           {t('label.cancel')}
                         </Button>
 
@@ -396,19 +424,22 @@ function AddObservabilityPage() {
                               alertDetails={alert}
                               formRef={form}
                               key={name}
+                              templateResourcePermission={
+                                templateResourcePermission
+                              }
                               templates={templates}
                             />
                           )
                         )}
                         <Button
-                          className="float-right"
                           data-testid="save-button"
+                          htmlType="submit"
                           loading={saving}
-                          type="submit"
-                          variant="contained">
+                          type="primary"
+                        >
                           {t('label.save')}
                         </Button>
-                      </Grid>
+                      </div>
                     </Col>
                   </Row>
                 </Form>

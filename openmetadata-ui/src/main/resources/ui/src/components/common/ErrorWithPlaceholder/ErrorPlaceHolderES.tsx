@@ -33,6 +33,7 @@ import {
 } from '../../../enums/common.enum';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useDomainStore } from '../../../hooks/useDomainStore';
+import brandClassBase from '../../../utils/BrandData/BrandClassBase';
 import { Transi18next } from '../../../utils/CommonUtils';
 import i18n from '../../../utils/i18next/LocalUtil';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
@@ -124,7 +125,8 @@ const ErrorPlaceHolderES = ({ type, errorMessage, query, size }: Props) => {
         <ErrorPlaceHolder
           className="border-none"
           size={size}
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+        >
           <Typography.Paragraph style={{ marginBottom: '0' }}>
             <Transi18next
               i18nKey="message.no-data-available-entity"
@@ -172,7 +174,11 @@ const ErrorPlaceHolderES = ({ type, errorMessage, query, size }: Props) => {
       <div data-testid="es-error">
         <div className="m-b-lg text-center">
           <p>
-            <span>{t('message.welcome-to-open-metadata')} </span>
+            <span>
+              {t('message.welcome-to-open-metadata', {
+                brandName: brandClassBase.getPageTitle(),
+              })}{' '}
+            </span>
             <span data-testid="error-text">
               {t('message.unable-to-error-elasticsearch', { error: errorText })}
             </span>
@@ -185,7 +191,8 @@ const ErrorPlaceHolderES = ({ type, errorMessage, query, size }: Props) => {
             <Col key={data.step} span={6}>
               <Space
                 className="justify-between h-full border rounded-4 p-sm"
-                direction="vertical">
+                direction="vertical"
+              >
                 <div>
                   <div className="d-flex m-b-xs">
                     <div className="flex-center rounded-full h-10 w-10 border-2-primary text-primary text-lg font-bold">
@@ -195,7 +202,8 @@ const ErrorPlaceHolderES = ({ type, errorMessage, query, size }: Props) => {
 
                   <h6
                     className="text-base text-grey-body font-medium"
-                    data-testid="service-name">
+                    data-testid="service-name"
+                  >
                     {data.title}
                   </h6>
 

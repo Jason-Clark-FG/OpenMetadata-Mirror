@@ -167,7 +167,8 @@ export const PersonaPage = ({ pageTitle }: { pageTitle: string }) => {
   return (
     <PageLayoutV1
       mainContainerClassName="persona-main-container"
-      pageTitle={pageTitle}>
+      pageTitle={pageTitle}
+    >
       <div className="h-full d-flex flex-col">
         <div className="d-flex flex-col m-b-md">
           <div className="m-b-md">
@@ -175,13 +176,19 @@ export const PersonaPage = ({ pageTitle }: { pageTitle: string }) => {
           </div>
           <div className="d-flex justify-between align-center">
             <div className="flex-1">
-              <PageHeader data={PAGE_HEADERS.PERSONAS} />
+              <PageHeader
+                data={{
+                  header: t(PAGE_HEADERS.PERSONAS.header),
+                  subHeader: t(PAGE_HEADERS.PERSONAS.subHeader),
+                }}
+              />
             </div>
             <div>
               <Button
                 data-testid="add-persona-button"
                 type="primary"
-                onClick={handleAddNewPersona}>
+                onClick={handleAddNewPersona}
+              >
                 {t('label.add-entity', { entity: t('label.persona') })}
               </Button>
             </div>
@@ -197,7 +204,8 @@ export const PersonaPage = ({ pageTitle }: { pageTitle: string }) => {
                   <div
                     className="skeleton-card-item"
                     data-testid="skeleton-card-loader"
-                    key={key}>
+                    key={key}
+                  >
                     <Card>
                       <Skeleton active paragraph title />
                     </Card>

@@ -123,11 +123,12 @@ const TaskFeedCard = ({
             className="p-0 task-feed-message"
             data-testid="redirect-task-button-link"
             type="link"
-            onClick={handleTaskLinkClick}>
+            onClick={handleTaskLinkClick}
+          >
             <Typography.Text className="p-0 text-primary">{`#${taskDetails.id} `}</Typography.Text>
 
             <Typography.Text className="p-xss">
-              {TASK_TYPES[taskDetails.type]}
+              {t(TASK_TYPES[taskDetails.type])}
             </Typography.Text>
 
             {taskColumnName}
@@ -157,18 +158,21 @@ const TaskFeedCard = ({
       className="remove-button-default-styling"
       type="text"
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}>
+      onMouseLeave={handleMouseLeave}
+    >
       <div
         className={classNames(
           className,
           'task-feed-card-v1 activity-feed-card activity-feed-card-v1',
           { active: isActive }
         )}
-        data-testid="task-feed-card">
+        data-testid="task-feed-card"
+      >
         <Row gutter={[0, 8]}>
           <Col
             className="d-flex items-center task-feed-message-container"
-            span={24}>
+            span={24}
+          >
             <Icon
               className="m-r-xs"
               component={
@@ -186,7 +190,8 @@ const TaskFeedCard = ({
             <Typography.Text className="task-feed-body text-xs text-grey-muted">
               <UserPopOverCard
                 key={feed.createdBy}
-                userName={feed.createdBy ?? ''}>
+                userName={feed.createdBy ?? ''}
+              >
                 <span className="p-r-xss" data-testid="task-created-by">
                   {feed.createdBy}
                 </span>
@@ -211,7 +216,8 @@ const TaskFeedCard = ({
                         <UserPopOverCard key={user} userName={user}>
                           <span
                             className="profile-image-span cursor-pointer"
-                            data-testid="authorAvatar">
+                            data-testid="authorAvatar"
+                          >
                             <ProfilePicture
                               name={user}
                               type="circle"
@@ -223,7 +229,8 @@ const TaskFeedCard = ({
                     </div>
                     <div
                       className="d-flex items-center thread-count cursor-pointer m-l-xs"
-                      onClick={!hidePopover ? showReplies : noop}>
+                      onClick={!hidePopover ? showReplies : noop}
+                    >
                       <ThreadIcon width={20} />{' '}
                       <span className="text-xs p-t-xss p-l-xss">
                         {postLength}
@@ -236,7 +243,8 @@ const TaskFeedCard = ({
                     postLength > 0
                       ? 'm-l-sm text-sm text-grey-muted'
                       : 'text-sm text-grey-muted'
-                  )}>
+                  )}
+                >
                   {`${t('label.assignee-plural')}: `}
                 </Typography.Text>
                 <OwnerLabel owners={feed?.task?.assignees} />

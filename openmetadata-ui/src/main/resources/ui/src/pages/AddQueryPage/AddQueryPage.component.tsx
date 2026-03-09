@@ -232,7 +232,8 @@ const AddQueryPage = () => {
             <div className="m-t-md">
               <Typography.Paragraph
                 className="text-base"
-                data-testid="form-title">
+                data-testid="form-title"
+              >
                 {t('label.add-new-entity', {
                   entity: t('label.query'),
                 })}
@@ -245,7 +246,8 @@ const AddQueryPage = () => {
                   queryUsedIn: table ? [table.id] : undefined,
                 }}
                 layout="vertical"
-                onFinish={handleSubmit}>
+                onFinish={handleSubmit}
+              >
                 <Form.Item
                   data-testid="sql-editor-container"
                   label={t('label.sql-uppercase-query')}
@@ -258,7 +260,8 @@ const AddQueryPage = () => {
                       }),
                     },
                   ]}
-                  trigger="onChange">
+                  trigger="onChange"
+                >
                   <SchemaEditor
                     className="custom-query-editor query-editor-h-200 custom-code-mirror-theme"
                     mode={{ name: CSMode.SQL }}
@@ -268,7 +271,8 @@ const AddQueryPage = () => {
                 {getField(descriptionField)}
                 <Form.Item
                   label={`${t('label.query-used-in')}:`}
-                  name="queryUsedIn">
+                  name="queryUsedIn"
+                >
                   <AsyncSelect
                     api={fetchTableEntity}
                     data-testid="query-used-in"
@@ -285,20 +289,24 @@ const AddQueryPage = () => {
                     <Button
                       data-testid="cancel-btn"
                       type="default"
-                      onClick={handleCancelClick}>
+                      onClick={handleCancelClick}
+                    >
                       {t('label.cancel')}
                     </Button>
                     <Tooltip
                       placement="top"
                       title={
-                        !permissions.query?.Create && NO_PERMISSION_FOR_ACTION
-                      }>
+                        !permissions.query?.Create &&
+                        t(NO_PERMISSION_FOR_ACTION)
+                      }
+                    >
                       <Button
                         data-testid="save-btn"
                         disabled={!permissions.query?.Create}
                         htmlType="submit"
                         loading={isSaving}
-                        type="primary">
+                        type="primary"
+                      >
                         {t('label.save')}
                       </Button>
                     </Tooltip>

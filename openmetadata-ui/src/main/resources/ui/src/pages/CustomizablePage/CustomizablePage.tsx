@@ -47,6 +47,7 @@ import { Transi18next } from '../../utils/CommonUtils';
 import { getSettingPath } from '../../utils/RouterUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
+import CustomizableDataProductPage from '../CustomizableDataProductPage/CustomizableDataProductPage';
 import CustomizableDomainPage from '../CustomizableDomainPage/CustomizableDomainPage';
 import { CustomizeDetailsPage } from '../CustomizeDetailsPage/CustomizeDetailsPage';
 import { SettingsNavigationPage } from '../SettingsNavigationPage/SettingsNavigationPage';
@@ -261,7 +262,7 @@ export const CustomizablePage = () => {
               entityType: EntityType.PAGE,
               data: {
                 pages: [],
-                navigation: [],
+                navigation: null,
               },
             });
             setCurrentPageType(pageFqn as PageType);
@@ -291,7 +292,8 @@ export const CustomizablePage = () => {
         <Col span={24}>
           <ErrorPlaceHolder
             className="m-t-lg"
-            type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+            type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+          >
             <Typography.Paragraph className="w-max-500">
               <Transi18next
                 i18nKey="message.no-persona-message"
@@ -333,6 +335,15 @@ export const CustomizablePage = () => {
     case PageType.Domain:
       return (
         <CustomizableDomainPage
+          initialPageData={currentPage}
+          personaDetails={personaDetails}
+          onSaveLayout={handlePageCustomizeSave}
+        />
+      );
+
+    case PageType.DataProduct:
+      return (
+        <CustomizableDataProductPage
           initialPageData={currentPage}
           personaDetails={personaDetails}
           onSaveLayout={handlePageCustomizeSave}

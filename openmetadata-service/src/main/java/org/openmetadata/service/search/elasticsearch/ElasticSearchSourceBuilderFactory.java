@@ -5,6 +5,8 @@ import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.search.EntityBuilderConstant.MAX_ANALYZED_OFFSET;
 import static org.openmetadata.service.search.EntityBuilderConstant.POST_TAG;
 import static org.openmetadata.service.search.EntityBuilderConstant.PRE_TAG;
+import static org.openmetadata.service.search.SearchUtil.getFuzziness;
+import static org.openmetadata.service.search.SearchUtil.getMaxExpansions;
 import static org.openmetadata.service.search.SearchUtil.isDataAssetIndex;
 import static org.openmetadata.service.search.SearchUtil.isDataQualityIndex;
 import static org.openmetadata.service.search.SearchUtil.isServiceIndex;
@@ -273,7 +275,8 @@ public class ElasticSearchSourceBuilderFactory
               int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
               if (!nullOrEmpty(agg.getField())) {
-                termsAgg = ElasticAggregationBuilder.termsAggregation(agg.getField(), maxSize);
+                String field = SearchSourceBuilderFactory.remapAggregationField(agg.getField());
+                termsAgg = ElasticAggregationBuilder.termsAggregation(field, maxSize);
               } else if (!nullOrEmpty(agg.getScript())) {
                 termsAgg =
                     ElasticAggregationBuilder.termsAggregationWithScript(agg.getScript(), maxSize);
@@ -304,6 +307,16 @@ public class ElasticSearchSourceBuilderFactory
 
   public ElasticSearchRequestBuilder getSearchSourceBuilderV2(
       String indexName, String searchQuery, int fromOffset, int size, boolean includeExplain) {
+    return getSearchSourceBuilderV2(indexName, searchQuery, fromOffset, size, includeExplain, true);
+  }
+
+  public ElasticSearchRequestBuilder getSearchSourceBuilderV2(
+      String indexName,
+      String searchQuery,
+      int fromOffset,
+      int size,
+      boolean includeExplain,
+      boolean includeAggregations) {
     indexName = Entity.getSearchRepository().getIndexNameWithoutAlias(indexName);
 
     if (isTimeSeriesIndex(indexName)) {
@@ -320,12 +333,12 @@ public class ElasticSearchSourceBuilderFactory
 
     if (isDataAssetIndex(indexName)) {
       return buildDataAssetSearchBuilderV2(
-          indexName, searchQuery, fromOffset, size, includeExplain);
+          indexName, searchQuery, fromOffset, size, includeExplain, includeAggregations);
     }
 
     if (indexName.equals("all") || indexName.equals("dataAsset")) {
       return buildDataAssetSearchBuilderV2(
-          indexName, searchQuery, fromOffset, size, includeExplain);
+          indexName, searchQuery, fromOffset, size, includeExplain, includeAggregations);
     }
 
     return switch (indexName) {
@@ -333,7 +346,7 @@ public class ElasticSearchSourceBuilderFactory
           "user",
           "team_search_index",
           "team" -> buildUserOrTeamSearchBuilderV2(searchQuery, fromOffset, size);
-      default -> buildAggregateSearchBuilderV2(searchQuery, fromOffset, size);
+      default -> buildAggregateSearchBuilderV2(searchQuery, fromOffset, size, includeAggregations);
     };
   }
 
@@ -365,6 +378,17 @@ public class ElasticSearchSourceBuilderFactory
 
   public ElasticSearchRequestBuilder buildDataAssetSearchBuilderV2(
       String indexName, String query, int from, int size, boolean explain) {
+    return buildDataAssetSearchBuilderV2(indexName, query, from, size, explain, true);
+  }
+
+  @Override
+  public ElasticSearchRequestBuilder buildDataAssetSearchBuilderV2(
+      String indexName,
+      String query,
+      int from,
+      int size,
+      boolean explain,
+      boolean includeAggregations) {
     AssetTypeConfiguration assetConfig = getAssetConfiguration(indexName);
     es.co.elastic.clients.elasticsearch._types.query_dsl.Query baseQuery =
         buildBaseQueryV2(query, assetConfig);
@@ -379,7 +403,9 @@ public class ElasticSearchSourceBuilderFactory
       searchRequestBuilder.highlighter(highlightBuilder);
     }
 
-    addConfiguredAggregationsV2(searchRequestBuilder, assetConfig);
+    if (includeAggregations) {
+      addConfiguredAggregationsV2(searchRequestBuilder, assetConfig);
+    }
     searchRequestBuilder.explain(explain);
 
     return searchRequestBuilder;
@@ -387,6 +413,12 @@ public class ElasticSearchSourceBuilderFactory
 
   public ElasticSearchRequestBuilder buildAggregateSearchBuilderV2(
       String query, int from, int size) {
+    return buildAggregateSearchBuilderV2(query, from, size, true);
+  }
+
+  @Override
+  public ElasticSearchRequestBuilder buildAggregateSearchBuilderV2(
+      String query, int from, int size, boolean includeAggregations) {
     AssetTypeConfiguration compositeConfig = buildCompositeAssetConfig(searchSettings);
     es.co.elastic.clients.elasticsearch._types.query_dsl.Query baseQuery =
         buildQueryWithMatchTypesV2(query, compositeConfig);
@@ -395,7 +427,10 @@ public class ElasticSearchSourceBuilderFactory
 
     ElasticSearchRequestBuilder searchRequestBuilder =
         searchBuilderV2(finalQuery, null, from, size);
-    return addAggregationV2(searchRequestBuilder);
+    if (includeAggregations) {
+      addAggregationV2(searchRequestBuilder);
+    }
+    return searchRequestBuilder;
   }
 
   public ElasticSearchRequestBuilder buildDataQualitySearchBuilderV2(
@@ -600,6 +635,9 @@ public class ElasticSearchSourceBuilderFactory
             }
           });
 
+      String fuzziness = getFuzziness(query);
+      int maxExpansions = getMaxExpansions(query);
+
       es.co.elastic.clients.elasticsearch._types.query_dsl.Query fuzzyQuery =
           es.co.elastic.clients.elasticsearch._types.query_dsl.Query.of(
               q ->
@@ -610,8 +648,8 @@ public class ElasticSearchSourceBuilderFactory
                               .type(
                                   es.co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType
                                       .MostFields)
-                              .fuzziness("1")
-                              .maxExpansions(10)
+                              .fuzziness(fuzziness)
+                              .maxExpansions(maxExpansions)
                               .prefixLength(1)
                               .operator(
                                   es.co.elastic.clients.elasticsearch._types.query_dsl.Operator.Or)
@@ -659,7 +697,7 @@ public class ElasticSearchSourceBuilderFactory
         es.co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.MostFields,
         es.co.elastic.clients.elasticsearch._types.query_dsl.Operator.Or,
         String.valueOf(DEFAULT_TIE_BREAKER),
-        "1");
+        getFuzziness(query));
   }
 
   private es.co.elastic.clients.elasticsearch._types.query_dsl.Query createStandardNonFuzzyQueryV2(
@@ -864,7 +902,8 @@ public class ElasticSearchSourceBuilderFactory
       int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
       if (!nullOrEmpty(agg.getField())) {
-        termsAgg = ElasticAggregationBuilder.termsAggregation(agg.getField(), maxSize);
+        String field = SearchSourceBuilderFactory.remapAggregationField(agg.getField());
+        termsAgg = ElasticAggregationBuilder.termsAggregation(field, maxSize);
       } else if (!nullOrEmpty(agg.getScript())) {
         termsAgg = ElasticAggregationBuilder.termsAggregationWithScript(agg.getScript(), maxSize);
       } else {

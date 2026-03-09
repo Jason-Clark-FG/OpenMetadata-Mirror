@@ -40,12 +40,12 @@ import {
 } from '../../../../utils/EntityVersionUtils';
 import { getPrioritizedViewPermission } from '../../../../utils/PermissionsUtils';
 import { getVersionPath } from '../../../../utils/RouterUtils';
+import { descriptionTableObject } from '../../../../utils/TableColumn.util';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../../utils/useRequiredParams';
 import { CustomPropertyTable } from '../../../common/CustomPropertyTable/CustomPropertyTable';
 import DescriptionV1 from '../../../common/EntityDescription/DescriptionV1';
 import Loader from '../../../common/Loader/Loader';
-import RichTextEditorPreviewerNew from '../../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../../common/Table/Table';
 import TabsLabel from '../../../common/TabsLabel/TabsLabel.component';
 import { GenericProvider } from '../../../Customization/GenericProvider/GenericProvider';
@@ -152,17 +152,7 @@ const DirectoryVersion = ({
         dataIndex: 'type',
         key: 'type',
       },
-      {
-        title: t('label.description'),
-        dataIndex: 'description',
-        key: 'description',
-        render: (text) =>
-          text ? (
-            <RichTextEditorPreviewerNew markdown={text} />
-          ) : (
-            <span className="text-grey-muted">{t('label.no-description')}</span>
-          ),
-      },
+      ...descriptionTableObject(),
     ],
     []
   );
@@ -205,7 +195,8 @@ const DirectoryVersion = ({
             <Col
               className="entity-tag-right-panel-container"
               data-testid="entity-right-panel"
-              flex="220px">
+              flex="220px"
+            >
               <Space className="w-full" direction="vertical" size="large">
                 <DataProductsContainer
                   newLook
@@ -321,7 +312,8 @@ const DirectoryVersion = ({
               data={currentVersionData}
               permissions={entityPermissions}
               type={EntityType.DIRECTORY as CustomizeEntityType}
-              onUpdate={() => Promise.resolve()}>
+              onUpdate={() => Promise.resolve()}
+            >
               <Col className="entity-version-page-tabs" span={24}>
                 <Tabs
                   className="tabs-new"

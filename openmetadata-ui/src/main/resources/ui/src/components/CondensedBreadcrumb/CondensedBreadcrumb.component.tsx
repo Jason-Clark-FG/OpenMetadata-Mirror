@@ -12,6 +12,7 @@
  */
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import { useTheme } from '@mui/material';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
@@ -28,6 +29,7 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
   itemsAfterCollapse = 1,
   className,
 }) => {
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const open = Boolean(anchorEl);
 
@@ -54,14 +56,17 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
       <Breadcrumbs
         aria-label="breadcrumb"
         className={className}
-        separator={separator}>
+        separator={separator}
+      >
         {items.map((item) => (
           <Link
             color="inherit"
             href="#"
             key={item}
+            sx={{ fontSize: theme.spacing(2.5) }}
             underline="hover"
-            onClick={handleLinkClick}>
+            onClick={handleLinkClick}
+          >
             {item}
           </Link>
         ))}
@@ -77,12 +82,14 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
         anchorEl={anchorEl}
         aria-labelledby="condensed-breadcrumb-menu"
         open={open}
-        onClose={handleClose}>
+        onClose={handleClose}
+      >
         {hiddenItems.map((item) => (
           <MenuItem
             className="breadcrumb-menu-item"
             key={item}
-            onClick={handleClose}>
+            onClick={handleClose}
+          >
             {item}
           </MenuItem>
         ))}
@@ -90,15 +97,17 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
       <Breadcrumbs
         aria-label="breadcrumb"
         className={className}
-        separator={separator}>
+        separator={separator}
+      >
         {items.slice(0, itemsBeforeCollapse).map((item) => (
           <Link
             color="inherit"
             href="#"
             key={item}
-            sx={{ fontSize: '10px' }}
+            sx={{ fontSize: theme.spacing(2.5) }}
             underline="hover"
-            onClick={handleLinkClick}>
+            onClick={handleLinkClick}
+          >
             {item}
           </Link>
         ))}
@@ -106,7 +115,8 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
           <IconButton
             className="breadcrumb-menu-button"
             size="small"
-            onClick={handleClick}>
+            onClick={handleClick}
+          >
             <MoreHorizIcon fontSize="small" />
           </IconButton>
         )}
@@ -115,9 +125,10 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
             color="inherit"
             href="#"
             key={`end-${item}`}
-            sx={{ fontSize: '10px' }}
+            sx={{ fontSize: theme.spacing(2.5) }}
             underline="hover"
-            onClick={handleLinkClick}>
+            onClick={handleLinkClick}
+          >
             {item}
           </Link>
         ))}

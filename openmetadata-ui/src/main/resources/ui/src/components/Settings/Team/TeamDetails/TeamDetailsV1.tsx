@@ -50,6 +50,7 @@ import {
   GlobalSettingOptions,
   GlobalSettingsMenuCategory,
 } from '../../../../constants/GlobalSettings.constants';
+import { LEARNING_PAGE_IDS } from '../../../../constants/Learning.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../../enums/common.enum';
 import { EntityAction, EntityType } from '../../../../enums/entity.enum';
 import { SearchIndex } from '../../../../enums/search.enum';
@@ -75,10 +76,7 @@ import {
   getTeamsWithFqnPath,
 } from '../../../../utils/RouterUtils';
 import { getTermQuery } from '../../../../utils/SearchUtils';
-import {
-  filterChildTeams,
-  getDeleteMessagePostFix,
-} from '../../../../utils/TeamUtils';
+import { getDeleteMessagePostFix } from '../../../../utils/TeamUtils';
 import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
 import DescriptionV1 from '../../../common/EntityDescription/DescriptionV1';
 import ManageButton from '../../../common/EntityPageInfos/ManageButton/ManageButton';
@@ -93,6 +91,7 @@ import EntitySummaryPanel from '../../../Explore/EntitySummaryPanel/EntitySummar
 import { EntityDetailsObjectInterface } from '../../../Explore/ExplorePage.interface';
 import AssetsTabs from '../../../Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
+import { LearningIcon } from '../../../Learning/LearningIcon/LearningIcon.component';
 import ListEntities from './RolesAndPoliciesList';
 import { TeamsPageTab } from './team.interface';
 import {
@@ -127,6 +126,8 @@ const TeamDetailsV1 = ({
   entityPermissions,
   isFetchingAdvancedDetails,
   isFetchingAllTeamAdvancedDetails,
+  isTeamBasicDataLoading,
+  teamAssetCounts,
 }: TeamDetailsProp) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -164,6 +165,7 @@ const TeamDetailsV1 = ({
   }>(DELETE_USER_INITIAL_STATE);
   const [searchTerm, setSearchTerm] = useState('');
   const [childTeamList, setChildTeamList] = useState<Team[]>([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [slashedTeamName, setSlashedTeamName] = useState<
     TitleBreadcrumbProps['titleLinks']
   >([]);
@@ -200,8 +202,8 @@ const TeamDetailsV1 = ({
   );
 
   const teamCount = useMemo(
-    () => currentTeam.childrenCount ?? childTeamList.length,
-    [childTeamList, currentTeam.childrenCount]
+    () => (isTeamBasicDataLoading ? 0 : childTeamList.length),
+    [childTeamList, isTeamBasicDataLoading]
   );
   const updateActiveTab = (key: string) => {
     navigate({ search: Qs.stringify({ activeTab: key }) });
@@ -248,7 +250,8 @@ const TeamDetailsV1 = ({
               })
         }
         type={type}
-        onClick={onClick}>
+        onClick={onClick}
+      >
         {children}
       </ErrorPlaceHolder>
     ),
@@ -256,6 +259,7 @@ const TeamDetailsV1 = ({
   );
 
   const searchTeams = async (text: string) => {
+    setIsSearchLoading(true);
     try {
       const res = await searchQuery({
         query: `*${text}*`,
@@ -275,6 +279,7 @@ const TeamDetailsV1 = ({
           },
         },
         searchIndex: SearchIndex.TEAM,
+        includeDeleted: showDeletedTeam,
       });
 
       const data = res.hits.hits.map((value) => value._source as Team);
@@ -291,6 +296,8 @@ const TeamDetailsV1 = ({
       );
     } catch {
       setChildTeamList([]);
+    } finally {
+      setIsSearchLoading(false);
     }
   };
 
@@ -361,7 +368,7 @@ const TeamDetailsV1 = ({
     if (value) {
       searchTeams(value);
     } else {
-      setChildTeamList(filterChildTeams(childTeams ?? [], showDeletedTeam));
+      setChildTeamList(childTeams);
     }
   };
 
@@ -464,7 +471,7 @@ const TeamDetailsV1 = ({
   }, [currentTeam, parentTeams, showDeletedTeam]);
 
   useEffect(() => {
-    setChildTeamList(filterChildTeams(childTeams ?? [], showDeletedTeam));
+    setChildTeamList(childTeams);
     setSearchTerm('');
   }, [childTeams, showDeletedTeam]);
 
@@ -575,7 +582,8 @@ const TeamDetailsV1 = ({
                       <Col span={21}>
                         <Typography.Text
                           className="font-medium"
-                          data-testid="open-group-label">
+                          data-testid="open-group-label"
+                        >
                           {t('label.public-team')}
                         </Typography.Text>
                       </Col>
@@ -628,7 +636,8 @@ const TeamDetailsV1 = ({
       <ErrorPlaceHolder
         className="border-none"
         icon={<AddPlaceHolderIcon className="h-32 w-32" />}
-        type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+        type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+      >
         <Typography.Paragraph style={{ marginBottom: '0' }}>
           {t('message.adding-new-entity-is-easy-just-give-it-a-spin', {
             entity: t('label.team'),
@@ -652,7 +661,8 @@ const TeamDetailsV1 = ({
             disabled={!entityPermissions.Create || isTeamDeleted}
             icon={<PlusOutlined />}
             type="primary"
-            onClick={handleAddTeamButtonClick}>
+            onClick={handleAddTeamButtonClick}
+          >
             {t('label.add')}
           </Button>
         </Tooltip>
@@ -665,9 +675,12 @@ const TeamDetailsV1 = ({
         handleAddTeamButtonClick={handleAddTeamButtonClick}
         handleTeamSearch={handleTeamSearch}
         isFetchingAllTeamAdvancedDetails={isFetchingAllTeamAdvancedDetails}
+        isSearchLoading={isSearchLoading}
+        isTeamBasicDataLoading={isTeamBasicDataLoading}
         isTeamDeleted={isTeamDeleted}
         searchTerm={searchTerm}
         showDeletedTeam={showDeletedTeam}
+        teamAssetCounts={teamAssetCounts}
         onShowDeletedTeamChange={onShowDeletedTeamChange}
         onTeamExpand={onTeamExpand}
       />
@@ -680,6 +693,7 @@ const TeamDetailsV1 = ({
     showDeletedTeam,
     entityPermissions.Create,
     isFetchingAllTeamAdvancedDetails,
+    isSearchLoading,
     onTeamExpand,
     handleAddTeamButtonClick,
     handleTeamSearch,
@@ -740,7 +754,8 @@ const TeamDetailsV1 = ({
                 isTeamDeleted
                   ? t('message.this-action-is-not-allowed-for-deleted-entities')
                   : t('label.add-entity', { entity: t('label.role') })
-              }>
+              }
+            >
               <Button
                 ghost
                 className={classNames({
@@ -755,7 +770,8 @@ const TeamDetailsV1 = ({
                     type: EntityType.ROLE,
                     selectedData: currentTeam.defaultRoles ?? [],
                   })
-                }>
+                }
+              >
                 {t('label.add')}
               </Button>
             </Tooltip>
@@ -773,7 +789,8 @@ const TeamDetailsV1 = ({
                     type: EntityType.ROLE,
                     selectedData: currentTeam.defaultRoles ?? [],
                   })
-                }>
+                }
+              >
                 {addRole}
               </Button>
             </Col>
@@ -812,7 +829,8 @@ const TeamDetailsV1 = ({
                 isTeamDeleted
                   ? t('message.this-action-is-not-allowed-for-deleted-entities')
                   : t('label.add-entity', { entity: t('label.policy') })
-              }>
+              }
+            >
               <Button
                 ghost
                 className={classNames({
@@ -827,7 +845,8 @@ const TeamDetailsV1 = ({
                     type: EntityType.POLICY,
                     selectedData: currentTeam.policies ?? [],
                   })
-                }>
+                }
+              >
                 {t('label.add')}
               </Button>
             </Tooltip>
@@ -850,7 +869,8 @@ const TeamDetailsV1 = ({
                     type: EntityType.POLICY,
                     selectedData: currentTeam.policies ?? [],
                   })
-                }>
+                }
+              >
                 {addPolicy}
               </Button>
             </Col>
@@ -885,7 +905,8 @@ const TeamDetailsV1 = ({
             // Used to stop click propagation event to the header collapsible panel
             e.stopPropagation();
             deleteUserHandler(currentUser.id, true);
-          }}>
+          }}
+        >
           {t('label.leave-team')}
         </Button>
       ) : (
@@ -919,11 +940,12 @@ const TeamDetailsV1 = ({
           <Space
             align="start"
             className="w-full flex-col justify-center p-t-xs"
-            size="middle">
+            size="middle"
+          >
             {!isOrganization && (
               <TitleBreadcrumb titleLinks={slashedTeamName} />
             )}
-            <div className="d-flex  gap-2">
+            <div className="d-flex items-center gap-2">
               <Avatar className="teams-profile" size={40}>
                 <IconTeams className="text-primary" width={20} />
               </Avatar>
@@ -932,6 +954,11 @@ const TeamDetailsV1 = ({
                 currentTeam={currentTeam}
                 entityPermissions={entityPermissions}
                 updateTeamHandler={updateTeamHandler}
+              />
+
+              <LearningIcon
+                pageId={LEARNING_PAGE_IDS.TEAMS}
+                title={t('label.team-plural')}
               />
             </div>
           </Space>
@@ -1066,7 +1093,8 @@ const TeamDetailsV1 = ({
         isGroupType,
         isOrganization,
         teamCount,
-        assetsCount
+        assetsCount,
+        isTeamBasicDataLoading
       ).map((tab) => ({
         ...tab,
         label: (
@@ -1074,6 +1102,7 @@ const TeamDetailsV1 = ({
             count={tab.count}
             id={tab.key}
             isActive={currentTab === tab.key}
+            isLoading={tab?.isLoading}
             name={tab.name}
           />
         ),
@@ -1088,6 +1117,7 @@ const TeamDetailsV1 = ({
       assetsCount,
       getTabChildren,
       tabsChildrenRender,
+      isTeamBasicDataLoading,
     ]
   );
 
@@ -1116,7 +1146,8 @@ const TeamDetailsV1 = ({
         <Col
           className="teams-profile-container"
           data-testid="team-details-collapse"
-          span={24}>
+          span={24}
+        >
           {teamsCollapseHeader}
         </Col>
 
@@ -1140,7 +1171,8 @@ const TeamDetailsV1 = ({
               : t('label.removing-user')
           }
           onCancel={() => setDeletingUser(DELETE_USER_INITIAL_STATE)}
-          onOk={handleRemoveUser}>
+          onOk={handleRemoveUser}
+        >
           {removeUserBodyText(deletingUser.leave)}
         </Modal>
         {addAttribute && (
@@ -1172,7 +1204,8 @@ const TeamDetailsV1 = ({
                 selectedEntity.attribute
               );
               setSelectedEntity(undefined);
-            }}>
+            }}
+          >
             <Typography.Text>
               {t('message.are-you-sure-you-want-to-remove-child-from-parent', {
                 child: getEntityName(selectedEntity.record),

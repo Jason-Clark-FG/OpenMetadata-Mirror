@@ -31,8 +31,10 @@ import {
 import { withPageLayout } from '../../../hoc/withPageLayout';
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
 import { addPolicy } from '../../../rest/rolesAPIV1';
+import brandClassBase from '../../../utils/BrandData/BrandClassBase';
 import { getIsErrorMatch } from '../../../utils/CommonUtils';
 import { getField } from '../../../utils/formUtils';
+import { translateWithNestedKeys } from '../../../utils/i18next/LocalUtil';
 import { getPath, getPolicyWithFqnPath } from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import RuleForm from '../RuleForm/RuleForm';
@@ -109,6 +111,15 @@ const AddPolicyPage = () => {
     []
   );
 
+  const translatedAddPolicyBreadcrumb = useMemo(
+    () =>
+      ADD_POLICY_PAGE_BREADCRUMB.map((option) => ({
+        ...option,
+        name: translateWithNestedKeys(option.name, option.nameData),
+      })),
+    [t]
+  );
+
   return (
     <ResizablePanels
       className="content-height-with-resizable-panel"
@@ -118,11 +129,12 @@ const AddPolicyPage = () => {
         allowScroll: true,
         children: (
           <div data-testid="add-policy-container">
-            <TitleBreadcrumb titleLinks={ADD_POLICY_PAGE_BREADCRUMB} />
+            <TitleBreadcrumb titleLinks={translatedAddPolicyBreadcrumb} />
             <div className="m-t-md">
               <Typography.Paragraph
                 className="text-base"
-                data-testid="form-title">
+                data-testid="form-title"
+              >
                 {t('label.add-new-entity', {
                   entity: t('label.policy'),
                 })}
@@ -134,11 +146,13 @@ const AddPolicyPage = () => {
                   ruleEffect: ruleData.effect,
                 }}
                 layout="vertical"
-                onFinish={handleSubmit}>
+                onFinish={handleSubmit}
+              >
                 <Form.Item
                   label={`${t('label.name')}:`}
                   name="name"
-                  rules={NAME_FIELD_RULES}>
+                  rules={NAME_FIELD_RULES}
+                >
                   <Input
                     data-testid="policy-name"
                     placeholder={t('label.policy-name')}
@@ -161,7 +175,8 @@ const AddPolicyPage = () => {
                   <Button
                     data-testid="cancel-btn"
                     type="link"
-                    onClick={handleCancel}>
+                    onClick={handleCancel}
+                  >
                     {t('label.cancel')}
                   </Button>
                   <Button
@@ -169,7 +184,8 @@ const AddPolicyPage = () => {
                     form="policy-form"
                     htmlType="submit"
                     loading={isSaveLoading}
-                    type="primary">
+                    type="primary"
+                  >
                     {t('label.create')}
                   </Button>
                 </Space>
@@ -189,7 +205,11 @@ const AddPolicyPage = () => {
                 entity: t('label.policy'),
               })}
             </Typography.Paragraph>
-            <Typography.Text>{t('message.add-policy-message')}</Typography.Text>
+            <Typography.Text>
+              {t('message.add-policy-message', {
+                brandName: brandClassBase.getPageTitle(),
+              })}
+            </Typography.Text>
           </>
         ),
         className: 'content-resizable-panel-container',

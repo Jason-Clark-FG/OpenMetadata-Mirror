@@ -24,7 +24,7 @@ import { DefaultOptionType } from 'antd/lib/select';
 import { AxiosError } from 'axios';
 import cryptoRandomString from 'crypto-random-string-with-promisify-polyfill';
 
-import { isEmpty, isEqual, snakeCase } from 'lodash';
+import { isArray, isEmpty, isEqual, snakeCase } from 'lodash';
 import Qs from 'qs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -57,8 +57,10 @@ import {
   getNameFromFQN,
   replaceAllSpacialCharWith_,
 } from '../../../../utils/CommonUtils';
+import { getServiceTypeForTestDefinition } from '../../../../utils/DataQuality/DataQualityUtils';
 import { getEntityName } from '../../../../utils/EntityUtils';
 import { generateFormFields } from '../../../../utils/formUtils';
+import { isValidJSONString } from '../../../../utils/StringsUtils';
 import { generateEntityLink } from '../../../../utils/TableUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../../utils/useRequiredParams';
@@ -117,11 +119,15 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
 
   const fetchAllTestDefinitions = async (columnType?: string) => {
     try {
+      // Derive service type from table for filtering
+      const serviceType = getServiceTypeForTestDefinition(table);
+
       const { data } = await getListTestDefinitions({
         limit: PAGE_SIZE_LARGE,
         entityType: isColumnFqn ? EntityType.Column : EntityType.Table,
         testPlatform: TestPlatform.OpenMetadata,
         supportedDataType: columnType,
+        supportedService: serviceType,
       });
 
       setTestDefinitions(data);
@@ -208,19 +214,39 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
   };
 
   const getParamsValue = () => {
-    return initialValue?.parameterValues?.reduce(
-      (acc, curr) => ({
-        ...acc,
-        [curr.name || '']:
-          getSelectedTestDefinition()?.parameterDefinition?.[0].dataType ===
-          TestDataType.Array
-            ? (JSON.parse(curr?.value || '[]') as string[]).map((val) => ({
+    return initialValue?.parameterValues?.reduce((acc, curr) => {
+      const param = getSelectedTestDefinition()?.parameterDefinition?.find(
+        (definition) => definition.name === curr.name
+      );
+
+      if (
+        param?.dataType === TestDataType.Array &&
+        isValidJSONString(curr?.value)
+      ) {
+        const value = JSON.parse(curr?.value || '[]');
+
+        return {
+          ...acc,
+          [curr.name || '']: isArray(value)
+            ? value.map((val: string) => ({
                 value: val,
               }))
-            : curr?.value,
-      }),
-      {}
-    );
+            : value,
+        };
+      }
+
+      if (param?.dataType === TestDataType.Boolean) {
+        return {
+          ...acc,
+          [curr.name || '']: curr?.value === 'true',
+        };
+      }
+
+      return {
+        ...acc,
+        [curr.name || '']: curr?.value,
+      };
+    }, {});
   };
 
   const handleValueChange: FormProps['onValuesChange'] = (value) => {
@@ -360,7 +386,8 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
       name="tableTestForm"
       preserve={false}
       onFinish={handleFormSubmit}
-      onValuesChange={handleValueChange}>
+      onValuesChange={handleValueChange}
+    >
       {isColumnFqn && (
         <Form.Item
           label={t('label.column')}
@@ -372,14 +399,16 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
                 field: t('label.column'),
               })}`,
             },
-          ]}>
+          ]}
+        >
           <Select
             allowClear
             showSearch
             data-testid="column"
             placeholder={t('label.please-select-entity', {
               entity: t('label.column-lowercase'),
-            })}>
+            })}
+          >
             {table.columns.map((column) => (
               <Select.Option key={column.name}>{column.name}</Select.Option>
             ))}
@@ -414,7 +443,8 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
               return Promise.resolve();
             },
           },
-        ]}>
+        ]}
+      >
         <Input
           data-testid="test-case-name"
           placeholder={t('message.enter-test-case-name')}
@@ -431,7 +461,8 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
             })}`,
           },
         ]}
-        tooltip={testDefinition?.description}>
+        tooltip={testDefinition?.description}
+      >
         <Select
           showSearch
           data-testid="test-type"
@@ -454,7 +485,8 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
             prevValues['useDynamicAssertion'],
             currentValues['useDynamicAssertion']
           );
-        }}>
+        }}
+      >
         {({ getFieldValue }) =>
           getFieldValue('useDynamicAssertion') ? null : generateParamsField
         }
@@ -473,7 +505,8 @@ const TestCaseForm: React.FC<TestCaseFormProps> = ({
             data-testid="submit-test"
             htmlType="submit"
             loading={loading}
-            type="primary">
+            type="primary"
+          >
             {t('label.create')}
           </Button>
         </Space>

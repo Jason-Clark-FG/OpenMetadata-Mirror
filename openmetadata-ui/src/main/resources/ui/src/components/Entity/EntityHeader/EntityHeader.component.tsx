@@ -35,6 +35,7 @@ interface Props {
   serviceName: string;
   titleColor?: string;
   badge?: React.ReactNode;
+  suffix?: React.ReactNode;
   showName?: boolean;
   nameClassName?: string;
   displayNameClassName?: string;
@@ -42,6 +43,7 @@ interface Props {
   isFollowingLoading?: boolean;
   isFollowing?: boolean;
   showOnlyDisplayName?: boolean;
+  entityUrl?: string;
 }
 
 export const EntityHeader = ({
@@ -54,6 +56,7 @@ export const EntityHeader = ({
   gutter = 'default',
   serviceName,
   badge,
+  suffix,
   titleColor,
   showName = true,
   isFollowingLoading,
@@ -62,6 +65,7 @@ export const EntityHeader = ({
   handleFollowingClick,
   isFollowing,
   showOnlyDisplayName = false,
+  entityUrl,
 }: Props) => {
   return (
     <div className="w-full">
@@ -70,7 +74,8 @@ export const EntityHeader = ({
           'entity-breadcrumb',
           gutter === 'large' ? 'm-b-sm' : 'm-b-xss'
         )}
-        data-testid="category-name">
+        data-testid="category-name"
+      >
         <TitleBreadcrumb titleLinks={breadcrumb} />
       </div>
 
@@ -80,6 +85,7 @@ export const EntityHeader = ({
         deleted={entityData.deleted}
         displayName={entityData.displayName}
         displayNameClassName={displayNameClassName}
+        entityUrl={entityUrl}
         handleFollowingClick={handleFollowingClick}
         icon={icon}
         isFollowing={isFollowing}
@@ -95,6 +101,7 @@ export const EntityHeader = ({
         serviceName={serviceName}
         showName={showName}
         showOnlyDisplayName={showOnlyDisplayName}
+        suffix={suffix}
       />
     </div>
   );

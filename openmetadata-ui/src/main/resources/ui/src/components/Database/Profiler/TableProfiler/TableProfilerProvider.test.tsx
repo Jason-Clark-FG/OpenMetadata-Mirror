@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-/* eslint-disable i18next/no-literal-string */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { useContext } from 'react';
 import { OperationPermission } from '../../../../context/PermissionProvider/PermissionProvider.interface';
@@ -185,7 +184,8 @@ describe('TableProfilerProvider', () => {
       render(
         <TableProfilerProvider
           permissions={mockPermissions}
-          table={{ ...MOCK_TABLE, deleted: true }}>
+          table={{ ...MOCK_TABLE, deleted: true }}
+        >
           <div>Test Children</div>
         </TableProfilerProvider>
       );
@@ -213,7 +213,8 @@ describe('TableProfilerProvider', () => {
         render(
           <TableProfilerProvider
             permissions={mockPermissions}
-            table={mockTable}>
+            table={mockTable}
+          >
             <TestComponent />
           </TableProfilerProvider>
         );
@@ -237,7 +238,8 @@ describe('TableProfilerProvider', () => {
         render(
           <TableProfilerProvider
             permissions={mockPermissions}
-            table={MOCK_TABLE}>
+            table={MOCK_TABLE}
+          >
             <TestComponent />
           </TableProfilerProvider>
         );

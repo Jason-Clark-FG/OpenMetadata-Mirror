@@ -66,7 +66,7 @@ import {
 } from '../../utils/BrowserNotificationUtils';
 import { getCustomPropertyEntityPathname } from '../../utils/CustomProperty.utils';
 import entityUtilClassBase from '../../utils/EntityUtilClassBase';
-import { getEntityName } from '../../utils/EntityUtils';
+import { getDomainDisplayName } from '../../utils/EntityUtils';
 import {
   getEntityFQN,
   getEntityType,
@@ -429,6 +429,11 @@ const NavBar = () => {
     []
   );
 
+  const domainDisplayName = useMemo(
+    () => getDomainDisplayName(activeDomainEntityRef, activeDomain),
+    [activeDomainEntityRef, activeDomain, t]
+  );
+
   const handleLanguageChange = useCallback(({ key }: MenuInfo) => {
     i18next.changeLanguage(key);
     setPreference({ language: key as SupportedLocales });
@@ -439,14 +444,15 @@ const NavBar = () => {
     <>
       <Header>
         <div className="navbar-container">
-          <div className="flex-center">
+          <div className="flex-center gap-2">
             <Tooltip
               placement="right"
               title={
                 isSidebarCollapsed ? t('label.expand') : t('label.collapse')
-              }>
+              }
+            >
               <Button
-                className="mr-2 w-6 h-6 p-0 flex-center"
+                className="w-6 h-6 p-0 flex-center"
                 data-testid="sidebar-toggle"
                 icon={
                   isSidebarCollapsed ? (
@@ -477,10 +483,11 @@ const NavBar = () => {
                   selectedDomain={activeDomainEntityRef}
                   wrapInButton={false}
                   onCancel={() => setIsDomainDropdownOpen(false)}
-                  onUpdate={handleDomainChange}>
+                  onUpdate={handleDomainChange}
+                >
                   <Button
                     className={classNames(
-                      'domain-nav-btn flex-center gap-2 p-x-sm p-y-xs font-medium m-l-md',
+                      'domain-nav-btn flex-center gap-2 p-x-sm p-y-xs font-medium',
                       {
                         'domain-active': activeDomain !== DEFAULT_DOMAIN_VALUE,
                       }
@@ -488,7 +495,8 @@ const NavBar = () => {
                     data-testid="domain-dropdown"
                     onClick={() =>
                       setIsDomainDropdownOpen(!isDomainDropdownOpen)
-                    }>
+                    }
+                  >
                     <DomainIcon
                       className="d-flex"
                       height={20}
@@ -496,9 +504,7 @@ const NavBar = () => {
                       width={20}
                     />
                     <Typography.Text ellipsis className="domain-text">
-                      {activeDomainEntityRef
-                        ? getEntityName(activeDomainEntityRef)
-                        : activeDomain}
+                      {domainDisplayName}
                     </Typography.Text>
                     <DropDownIcon width={12} />
                   </Button>
@@ -515,10 +521,13 @@ const NavBar = () => {
                 onClick: handleLanguageChange,
               }}
               placement="bottomRight"
-              trigger={['click']}>
+              trigger={['click']}
+            >
               <Button
                 className="flex-center gap-2 p-x-xs font-medium"
-                type="text">
+                data-testid="language-selector-button"
+                type="text"
+              >
                 {language ? upperCase(language.split('-')[0]) : ''}{' '}
                 <DropDownIcon width={12} />
               </Button>
@@ -544,13 +553,15 @@ const NavBar = () => {
               }}
               placement="bottomRight"
               trigger={['click']}
-              onOpenChange={handleBellClick}>
+              onOpenChange={handleBellClick}
+            >
               <Button
                 className="flex-center"
                 icon={
                   <Badge
                     dot={hasTaskNotification || hasMentionNotification}
-                    offset={[-3, 3]}>
+                    offset={[-3, 3]}
+                  >
                     <IconBell data-testid="task-notifications" width={20} />
                   </Badge>
                 }
@@ -564,7 +575,8 @@ const NavBar = () => {
               }}
               overlayStyle={{ width: 175 }}
               placement="bottomRight"
-              trigger={['click']}>
+              trigger={['click']}
+            >
               <Button
                 className="flex-center"
                 data-testid="help-icon"
@@ -586,7 +598,8 @@ const NavBar = () => {
               type="link"
               onClick={() => {
                 navigate(0);
-              }}>
+              }}
+            >
               {t('label.refresh')}
             </Button>
           }

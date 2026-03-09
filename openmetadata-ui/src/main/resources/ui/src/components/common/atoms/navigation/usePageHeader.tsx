@@ -16,6 +16,7 @@ import { useTheme } from '@mui/material/styles';
 import { Plus } from '@untitledui/icons';
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LearningIcon } from '../../../Learning/LearningIcon/LearningIcon.component';
 
 interface PageHeaderConfig {
   titleKey: string;
@@ -25,6 +26,7 @@ interface PageHeaderConfig {
   addButtonLabelKey?: string;
   addButtonTestId?: string;
   onAddClick?: () => void;
+  learningPageId?: string;
 }
 
 export const usePageHeader = (config: PageHeaderConfig) => {
@@ -47,28 +49,37 @@ export const usePageHeader = (config: PageHeaderConfig) => {
           boxShadow: 'none',
           border: `1px solid ${theme.palette.allShades?.blueGray?.[100]}`,
           borderRadius: 1.5,
-        }}>
+        }}
+      >
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-          }}>
+          }}
+        >
           <Box>
-            <Typography
-              sx={{
-                fontWeight: 600,
-                fontSize: '1.5rem',
-                color: 'text.primary',
-                mb: 0.5,
-              }}
-              variant="h4">
-              {displayTitle}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1.5rem',
+                  color: 'text.primary',
+                  mb: 0.5,
+                }}
+                variant="h4"
+              >
+                {displayTitle}
+              </Typography>
+              {config.learningPageId && (
+                <LearningIcon pageId={config.learningPageId} />
+              )}
+            </Box>
             {displayDescription && (
               <Typography
                 sx={{ color: 'text.secondary', fontSize: '0.875rem' }}
-                variant="body2">
+                variant="body2"
+              >
                 {displayDescription}
               </Typography>
             )}
@@ -82,7 +93,8 @@ export const usePageHeader = (config: PageHeaderConfig) => {
                   data-testid={config.addButtonTestId || 'add-entity-button'}
                   startIcon={<Plus size={16} />}
                   variant="contained"
-                  onClick={config.onAddClick}>
+                  onClick={config.onAddClick}
+                >
                   {displayButtonLabel}
                 </Button>
               ))}

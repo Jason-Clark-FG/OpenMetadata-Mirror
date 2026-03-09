@@ -95,7 +95,8 @@ const UserPage = () => {
     () => (
       <div
         className="d-flex items-center justify-center h-full"
-        data-testid="error">
+        data-testid="error"
+      >
         <Typography.Paragraph className="text-base" data-testid="error-message">
           <Transi18next
             i18nKey="message.no-username-available"
@@ -196,10 +197,6 @@ const UserPage = () => {
 
   if (isError && isEmpty(userData)) {
     return errorPlaceholder;
-  }
-
-  if (userData?.name !== username) {
-    return <Loader />;
   }
 
   return (

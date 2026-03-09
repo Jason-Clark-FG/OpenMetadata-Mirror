@@ -114,7 +114,7 @@ export const customHTMLRenderer: CustomHTMLRenderer = {
     const { fenceLength, info } = node as CodeBlockMdNode;
     const infoWords = info ? info.split(/\s+/) : [];
     const preClasses = ['relative', 'code-block'];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const codeAttrs: Record<string, any> = {};
 
     const codeText = node.literal ?? '';
@@ -163,7 +163,8 @@ export const customHTMLRenderer: CustomHTMLRenderer = {
             <span
               className="code-copy-message"
               data-copied="false"
-              data-testid="copied-message">
+              data-testid="copied-message"
+            >
               {i18n.t('label.copied').toString()}
             </span>
             <img

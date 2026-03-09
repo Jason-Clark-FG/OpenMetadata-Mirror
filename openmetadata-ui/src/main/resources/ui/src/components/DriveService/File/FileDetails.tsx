@@ -93,12 +93,15 @@ function FileDetails({
 }: Readonly<FileDetailsProps>) {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
-  const { tab: activeTab = EntityTabs.OVERVIEW } =
-    useRequiredParams<{ tab: EntityTabs }>();
-  const { fqn: decodedFileFQN } = useFqn();
+  const { tab: activeTab = EntityTabs.OVERVIEW } = useRequiredParams<{
+    tab: EntityTabs;
+  }>();
+
   const navigate = useNavigate();
   const { customizedPage, isLoading } = useCustomPages(PageType.File);
   const [isTabExpanded, setIsTabExpanded] = useState(false);
+
+  const { entityFqn: decodedFileFQN } = useFqn({ type: EntityType.FILE });
 
   const [feedCount, setFeedCount] = useState<FeedCounts>(
     FEED_COUNT_INITIAL_DATA
@@ -329,6 +332,7 @@ function FileDetails({
       activeTab,
       feedCount,
       labelMap: tabLabelMap,
+      fileDetails,
     });
 
     return getDetailsTabWithNewLabel(
@@ -388,10 +392,7 @@ function FileDetails({
   }
 
   return (
-    <PageLayoutV1
-      pageTitle={t('label.entity-detail-plural', {
-        entity: t('label.file'),
-      })}>
+    <PageLayoutV1 pageTitle={entityName}>
       <Row gutter={[0, 12]}>
         <Col span={24}>
           <DataAssetsHeader
@@ -419,7 +420,8 @@ function FileDetails({
           isTabExpanded={isTabExpanded}
           permissions={filePermissions}
           type={EntityType.FILE}
-          onUpdate={onFileUpdate}>
+          onUpdate={onFileUpdate}
+        >
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

@@ -78,6 +78,10 @@ const UserProfileTeams = ({
     setUserTeams();
   }, [setUserTeams]);
 
+  useEffect(() => {
+    setIsDropdownOpen(isTeamsEdit);
+  }, [isTeamsEdit]);
+
   const handleDropdownChange = (visible: boolean) => {
     setIsDropdownOpen(visible);
   };
@@ -108,7 +112,8 @@ const UserProfileTeams = ({
   return (
     <div
       className="d-flex flex-col w-full  p-[20px] user-profile-card"
-      data-testid="user-profile-teams">
+      data-testid="user-profile-teams"
+    >
       <div className="user-profile-card-header d-flex items-center justify-start gap-2 w-full">
         <div>
           <IconTeamsGrey height={16} />
@@ -126,7 +131,8 @@ const UserProfileTeams = ({
                 data-testid="profile-teams-edit-popover"
                 style={{
                   height: `${popoverHeight}px`,
-                }}>
+                }}
+              >
                 <div className="d-flex justify-start items-center gap-2 m-b-sm">
                   <div className="d-flex flex-start items-center">
                     <IconTeamsGrey height={16} />
@@ -141,10 +147,12 @@ const UserProfileTeams = ({
                   className="border p-2 bg-gray-100 rounded-md"
                   style={{
                     borderRadius: '5px',
-                  }}>
+                  }}
+                >
                   <TeamsSelectableNew
                     handleDropdownChange={handleDropdownChange}
                     maxValueCount={3}
+                    open={isDropdownOpen}
                     ref={teamsSelectableRef}
                     selectedTeams={selectedTeams}
                     onSelectionChange={setSelectedTeams}
@@ -191,12 +199,14 @@ const UserProfileTeams = ({
             overlayClassName="profile-edit-popover-card"
             placement="topRight"
             trigger="click"
-            onOpenChange={setIsTeamsEdit}>
+            onOpenChange={setIsTeamsEdit}
+          >
             {isAdminUser && !isDeletedUser && (
               <Tooltip
                 title={t('label.edit-entity', {
                   entity: t('label.team-plural'),
-                })}>
+                })}
+              >
                 <EditIcon
                   className="cursor-pointer"
                   data-testid="edit-teams-button"

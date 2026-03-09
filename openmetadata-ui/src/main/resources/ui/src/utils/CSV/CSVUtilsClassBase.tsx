@@ -34,12 +34,14 @@ import { Tag } from '../../generated/entity/classification/tag';
 import { EntityReference } from '../../generated/entity/type';
 import { TagLabel, TagSource } from '../../generated/type/tagLabel';
 import TagSuggestion from '../../pages/TasksPage/shared/TagSuggestion';
+import { removeOuterEscapes } from '../CommonUtils';
 import Fqn from '../Fqn';
 import { t } from '../i18next/LocalUtil';
+import { getCustomPropertyEntityType } from './CSV.utils';
 
 class CSVUtilsClassBase {
   public hideImportsColumnList() {
-    return ['glossaryStatus'];
+    return ['glossaryStatus', 'inspectionQuery'];
   }
 
   public columnsWithMultipleValuesEscapeNeeded() {
@@ -57,12 +59,17 @@ class CSVUtilsClassBase {
       'storedProcedure.code',
       'column.name*',
       'name*',
+      'parameterValues',
     ];
   }
 
   public getEditor(
     column: string,
-    entityType: EntityType
+    entityType: EntityType,
+    multipleOwner: {
+      user: boolean;
+      team: boolean;
+    }
   ): ((props: RenderEditCellProps<any, any>) => ReactNode) | undefined {
     switch (column) {
       case 'owner':
@@ -99,13 +106,14 @@ class CSVUtilsClassBase {
           return (
             <UserTeamSelectableList
               hasPermission
-              multiple={{ user: true, team: false }}
+              multiple={multipleOwner}
               owner={ownerEntityRef}
               popoverProps={{
                 open: true,
               }}
               onClose={onClose}
-              onUpdate={handleChange}>
+              onUpdate={handleChange}
+            >
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </UserTeamSelectableList>
           );
@@ -173,7 +181,8 @@ class CSVUtilsClassBase {
               <div ref={containerRef}>
                 <InlineEdit
                   onCancel={() => onClose(false)}
-                  onSave={() => onClose(true)}>
+                  onSave={() => onClose(true)}
+                >
                   <TagSuggestion
                     autoFocus
                     dropdownContainerRef={dropdownContainerRef}
@@ -264,7 +273,8 @@ class CSVUtilsClassBase {
               currentTier={value}
               popoverProps={{ open: true }}
               updateTier={handleChange}
-              onClose={() => onClose(false)}>
+              onClose={() => onClose(false)}
+            >
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </TierCard>
           );
@@ -294,7 +304,8 @@ class CSVUtilsClassBase {
               currentCertificate={value}
               popoverProps={{ open: true }}
               onCertificationUpdate={handleChange}
-              onClose={() => onClose(false)}>
+              onClose={() => onClose(false)}
+            >
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </Certification>
           );
@@ -307,12 +318,16 @@ class CSVUtilsClassBase {
         }: RenderEditCellProps<any, any>) => {
           const value = row[column.key];
           const domains = value
-            ? (value?.split(';') ?? []).map((domain: string) => ({
-                type: EntityType.DOMAIN,
-                name: domain,
-                id: '',
-                fullyQualifiedName: domain,
-              }))
+            ? (value?.split(';') ?? []).map((domain: string) => {
+                const fqn = removeOuterEscapes(domain.trim());
+
+                return {
+                  type: EntityType.DOMAIN,
+                  name: fqn,
+                  id: '',
+                  fullyQualifiedName: fqn,
+                };
+              })
             : [];
 
           const handleChange = async (domain?: EntityReference[]) => {
@@ -332,9 +347,14 @@ class CSVUtilsClassBase {
                 ...row,
                 [column.key]:
                   domain
-                    .map((d) =>
-                      d.fullyQualifiedName?.replace(new RegExp('"', 'g'), '""')
-                    )
+                    .map((d) => {
+                      const fqn = removeOuterEscapes(
+                        d.fullyQualifiedName ?? ''
+                      );
+
+                      // Wrap in quotes to match CSV import format; escape any internal " for CSV safety
+                      return `"${fqn.replace(/"/g, '""')}"`;
+                    })
                     .join(';') ?? '',
               },
               true
@@ -345,10 +365,12 @@ class CSVUtilsClassBase {
             <DomainSelectableList
               hasPermission
               multiple
+              getPopupContainer={() => document.body}
               popoverProps={{ open: true }}
               selectedDomain={domains}
               wrapInButton={false}
-              onUpdate={(domain) => handleChange(domain as EntityReference[])}>
+              onUpdate={(domain) => handleChange(domain as EntityReference[])}
+            >
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </DomainSelectableList>
           );
@@ -408,7 +430,8 @@ class CSVUtilsClassBase {
                 open: true,
               }}
               onClose={onClose}
-              onUpdate={handleChange}>
+              onUpdate={handleChange}
+            >
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
             </UserTeamSelectableList>
           );
@@ -430,7 +453,7 @@ class CSVUtilsClassBase {
               <ValueRendererOnEditCell>{value}</ValueRendererOnEditCell>
               <ModalWithCustomPropertyEditor
                 visible
-                entityType={entityType}
+                entityType={getCustomPropertyEntityType(entityType)}
                 header="Edit CustomProperty"
                 value={value}
                 onCancel={() => onClose(false)}
@@ -450,17 +473,23 @@ class CSVUtilsClassBase {
           const handleChange = (typeValue: string) => {
             onRowChange({ ...row, [column.key]: typeValue });
           };
+          const translatedEntityTypeOptions = () =>
+            ENTITY_TYPE_OPTIONS.map((opt) => ({
+              ...opt,
+              label: t(opt.label),
+            }));
 
           return (
             <KeyDownStopPropagationWrapper>
               <InlineEdit
                 onCancel={() => onClose(false)}
-                onSave={() => onClose(true)}>
+                onSave={() => onClose(true)}
+              >
                 <Select
                   autoFocus
                   open
                   data-testid="entity-type-select"
-                  options={ENTITY_TYPE_OPTIONS}
+                  options={translatedEntityTypeOptions()}
                   size="small"
                   style={{ width: '155px' }}
                   value={value}

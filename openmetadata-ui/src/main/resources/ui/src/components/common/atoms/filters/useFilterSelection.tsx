@@ -117,12 +117,13 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
             <Box className="filter-selection-chip" key={filter.key}>
               <Box className="filter-selection-chip-content" component="span">
                 <span className="filter-selection-label">
-                  {filter.label}
+                  {t(filter.label)}
                   {': '}
                 </span>
                 <span
                   className="filter-selection-value"
-                  title={filter.values.join(', ')}>
+                  title={filter.values.join(', ')}
+                >
                   {filter.values.join(', ')}
                 </span>
               </Box>
@@ -130,7 +131,8 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
                 aria-label="Remove filter"
                 className="filter-selection-remove-btn"
                 component="button"
-                onClick={() => handleRemoveFilter(filter.key)}>
+                onClick={() => handleRemoveFilter(filter.key)}
+              >
                 <XClose size={14} />
               </Box>
             </Box>
@@ -139,7 +141,8 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
         <Button
           className="filter-selection-clear-all"
           variant="text"
-          onClick={handleClearAll}>
+          onClick={handleClearAll}
+        >
           {t('label.clear-entity', { entity: t('label.all-lowercase') })}
         </Button>
       </Box>

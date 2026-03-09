@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityType } from '../../../enums/entity.enum';
 import { EntityReference } from '../../../generated/entity/type';
+import { useEntityRules } from '../../../hooks/useEntityRules';
 import {
   getAPIfromSource,
   getEntityAPIfromSource,
@@ -29,10 +30,11 @@ import { AssetsUnion } from '../../DataAssets/AssetsSelectionModal/AssetSelectio
 import DomainSelectableList from '../DomainSelectableList/DomainSelectableList.component';
 import Loader from '../Loader/Loader';
 import './DomainsSection.less';
+
 interface DomainsSectionProps {
   domains?: EntityReference[];
   showEditButton?: boolean;
-  entityType?: EntityType;
+  entityType: EntityType;
   entityFqn?: string;
   entityId?: string;
   hasPermission?: boolean;
@@ -55,6 +57,7 @@ const DomainsSection: React.FC<DomainsSectionProps> = ({
   const [activeDomains, setActiveDomains] = useState<EntityReference[]>([]);
   const [showAllDomains, setShowAllDomains] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const { entityRules } = useEntityRules(entityType);
 
   // Sync activeDomains with domains prop, similar to DomainLabel
   useEffect(() => {
@@ -121,6 +124,8 @@ const DomainsSection: React.FC<DomainsSectionProps> = ({
 
         const domainsToSave = Array.isArray(selectedDomain)
           ? selectedDomain
+          : isEmpty(selectedDomain)
+          ? []
           : [selectedDomain];
 
         // Create JSON patch
@@ -195,7 +200,8 @@ const DomainsSection: React.FC<DomainsSectionProps> = ({
                   domainWithStyle.fullyQualifiedName ||
                   domainWithStyle.name ||
                   JSON.stringify(domainWithStyle)
-                }>
+                }
+              >
                 <div className="domain-card-bar">
                   <div className="domain-card-content">
                     <div className="domain-card-icon">
@@ -211,7 +217,8 @@ const DomainsSection: React.FC<DomainsSectionProps> = ({
             <button
               className="show-more-domains-button"
               type="button"
-              onClick={() => setShowAllDomains(!showAllDomains)}>
+              onClick={() => setShowAllDomains(!showAllDomains)}
+            >
               {showAllDomains
                 ? t('label.less')
                 : `+${activeDomains.length - maxVisibleDomains} ${t(
@@ -231,6 +238,7 @@ const DomainsSection: React.FC<DomainsSectionProps> = ({
       hasPermission && (
         <DomainSelectableList
           hasPermission={hasPermission}
+          multiple={entityRules.canAddMultipleDomains}
           overlayClassName="domain-popover"
           popoverProps={{
             open: popoverOpen,

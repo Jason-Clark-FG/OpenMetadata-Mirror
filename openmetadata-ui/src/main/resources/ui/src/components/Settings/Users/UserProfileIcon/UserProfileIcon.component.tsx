@@ -134,9 +134,23 @@ export const UserProfileIcon = () => {
         : currentUser?.roles,
       teams: currentUser?.teams,
       inheritedRoles: currentUser?.inheritedRoles,
-      personas: currentUser?.personas,
+      personas: (() => {
+        const directPersonas = currentUser?.personas ?? [];
+        const inheritedPersonas = currentUser?.inheritedPersonas ?? [];
+        const allPersonas = [...directPersonas, ...inheritedPersonas];
+
+        if (currentUser?.defaultPersona) {
+          allPersonas.push(currentUser.defaultPersona);
+        }
+
+        // Deduplicate by id
+        const uniquePersonasMap = new Map();
+        allPersonas.forEach((p) => uniquePersonasMap.set(p.id, p));
+
+        return Array.from(uniquePersonasMap.values());
+      })(),
     };
-  }, [currentUser, currentUser?.personas]);
+  }, [currentUser, currentUser?.personas, currentUser?.inheritedPersonas]);
 
   const personaLabelRenderer = useCallback(
     (item: EntityReference) => {
@@ -146,12 +160,9 @@ export const UserProfileIcon = () => {
         <div
           className="w-full d-flex items-center persona-label cursor-pointer d-flex justify-between"
           data-testid="persona-label"
-          onClick={() => handleSelectedPersonaChange(item)}>
-          <div
-            className="d-flex items-center default-persona-container"
-            style={{
-              flex: isDefaultPersona ? 2 : 'auto',
-            }}>
+          onClick={() => handleSelectedPersonaChange(item)}
+        >
+          <div className="d-flex items-center default-persona-container">
             <Typography.Text ellipsis={{ tooltip: true }}>
               {getEntityName(item)}
             </Typography.Text>
@@ -159,26 +170,26 @@ export const UserProfileIcon = () => {
             {isDefaultPersona && (
               <Tag
                 className="m-l-xs default-persona-tag"
-                data-testid="default-persona-tag">
+                data-testid="default-persona-tag"
+              >
                 {t('label.default')}
               </Tag>
             )}
           </div>
 
-          <div className="flex-1">
-            <Radio checked={selectedPersona?.id === item.id} />
-          </div>
+          <Radio checked={selectedPersona?.id === item.id} />
         </div>
       );
     },
-    [handleSelectedPersonaChange, selectedPersona, defaultPersona]
+    [handleSelectedPersonaChange, selectedPersona, defaultPersona, t]
   );
 
   const teamLabelRenderer = useCallback(
     (item: EntityReference) => (
       <Link
         className="ant-typography-ellipsis-custom text-sm m-b-0 p-0"
-        to={getTeamAndUserDetailsPath(item.name as string)}>
+        to={getTeamAndUserDetailsPath(item.name as string)}
+      >
         {getEntityName(item)}
       </Link>
     ),
@@ -193,17 +204,19 @@ export const UserProfileIcon = () => {
           onClick={(e) => {
             e.stopPropagation();
             setShowAllPersona(true);
-          }}>
+          }}
+        >
           {count} {t('label.more')}
         </Typography.Text>
       ) : (
         <Link
           className="more-teams-pill"
-          to={getUserPath(currentUser?.name as string)}>
+          to={getUserPath(currentUser?.name as string)}
+        >
           {count} {t('label.more')}
         </Link>
       ),
-    [currentUser]
+    [currentUser, t]
   );
 
   const handleCloseDropdown = useCallback(() => {
@@ -251,10 +264,12 @@ export const UserProfileIcon = () => {
           <Link
             data-testid="user-name"
             to={getUserPath(currentUser?.name as string)}
-            onClick={handleCloseDropdown}>
+            onClick={handleCloseDropdown}
+          >
             <Typography.Paragraph
               className="ant-typography-ellipsis-custom font-medium cursor-pointer text-link-color m-b-0"
-              ellipsis={{ rows: 1, tooltip: true }}>
+              ellipsis={{ rows: 1, tooltip: true }}
+            >
               {t('label.view-entity', { entity: t('label.profile') })}
             </Typography.Paragraph>
           </Link>
@@ -367,7 +382,8 @@ export const UserProfileIcon = () => {
           <Button
             className="text-primary d-flex items-center gap-2 p-0 font-medium"
             type="text"
-            onClick={onLogoutHandler}>
+            onClick={onLogoutHandler}
+          >
             <LogoutIcon height={20} width={20} />
             {t('label.logout')}
           </Button>
@@ -383,6 +399,9 @@ export const UserProfileIcon = () => {
       roles,
       personas,
       showAllPersona,
+      sortedPersonas,
+      inheritedRoles,
+      t,
     ]
   );
 
@@ -396,7 +415,8 @@ export const UserProfileIcon = () => {
       open={isDropdownOpen}
       overlayClassName="user-profile-dropdown-overlay"
       trigger={['click']}
-      onOpenChange={setIsDropdownOpen}>
+      onOpenChange={setIsDropdownOpen}
+    >
       <Button
         className="user-profile-btn flex-center"
         data-testid="dropdown-profile"
@@ -419,19 +439,22 @@ export const UserProfileIcon = () => {
           )
         }
         size="large"
-        type="text">
+        type="text"
+      >
         <div className="name-persona-container">
           <Tooltip title={getEntityName(currentUser)}>
             <Typography.Text
               className="font-semibold"
-              data-testid="nav-user-name">
+              data-testid="nav-user-name"
+            >
               {getEntityName(currentUser)}
             </Typography.Text>
           </Tooltip>
 
           <Typography.Text
             data-testid="default-persona"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             {isEmpty(selectedPersona)
               ? t('label.default')
               : getEntityName(selectedPersona)}

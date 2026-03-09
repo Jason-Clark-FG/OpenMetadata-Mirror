@@ -151,6 +151,11 @@ const AsyncSelectList: FC<
     return newTags;
   }, [options]);
 
+  const defaultSelectedValues = useMemo(
+    () => initialOptions?.map((option) => option.value) ?? [],
+    [initialOptions]
+  );
+
   const onScroll = async (e: React.UIEvent<HTMLDivElement>) => {
     const { currentTarget } = e;
     if (
@@ -187,13 +192,15 @@ const AsyncSelectList: FC<
             htmlType="submit"
             loading={isSubmitLoading}
             size="small"
-            onClick={() => form.submit()}>
+            onClick={() => form.submit()}
+          >
             {t('label.update')}
           </Button>
           <Button
             data-testid="cancelAssociatedTag"
             size="small"
-            onClick={onCancel}>
+            onClick={onCancel}
+          >
             {t('label.cancel')}
           </Button>
         </Space>
@@ -300,6 +307,7 @@ const AsyncSelectList: FC<
         'new-chip-style': newLook,
       })}
       data-testid="tag-selector"
+      defaultValue={defaultSelectedValues}
       dropdownRender={dropdownRender}
       filterOption={false}
       mode={mode}
@@ -332,20 +340,23 @@ const AsyncSelectList: FC<
       }}
       onPopupScroll={onScroll}
       onSearch={debounceFetcher}
-      {...props}>
+      {...props}
+    >
       {tagOptions.map(({ label, value, displayName, data }) => (
         <Select.Option
           className={classNames(optionClassName, 'w-full')}
           data={data}
           data-testid={`tag-${value}`}
           key={label}
-          value={value}>
+          value={value}
+        >
           <Tooltip
             destroyTooltipOnHide
             mouseEnterDelay={1.5}
             placement="leftTop"
             title={label}
-            trigger="hover">
+            trigger="hover"
+          >
             {displayName}
           </Tooltip>
         </Select.Option>

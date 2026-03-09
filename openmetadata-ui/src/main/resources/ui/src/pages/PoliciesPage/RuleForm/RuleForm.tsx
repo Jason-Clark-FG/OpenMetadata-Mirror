@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 /*
  *  Copyright 2022 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -232,7 +231,8 @@ const RuleForm: FC<RuleFormProps> = ({
       <Form.Item
         label={`${t('label.rule-name')}:`}
         name="ruleName"
-        rules={NAME_FIELD_RULES}>
+        rules={NAME_FIELD_RULES}
+      >
         <Input
           data-testid="rule-name"
           placeholder={t('label.rule-name')}
@@ -245,7 +245,8 @@ const RuleForm: FC<RuleFormProps> = ({
       </Form.Item>
       <EntityAttachmentProvider
         entityFqn={ruleData.name}
-        entityType={EntityType.POLICY}>
+        entityType={EntityType.POLICY}
+      >
         {getField(descriptionField)}
       </EntityAttachmentProvider>
       <Form.Item
@@ -258,7 +259,8 @@ const RuleForm: FC<RuleFormProps> = ({
               field: t('label.resource-plural'),
             }),
           },
-        ]}>
+        ]}
+      >
         <TreeSelect
           treeCheckable
           autoClearSearchValue={false}
@@ -287,7 +289,8 @@ const RuleForm: FC<RuleFormProps> = ({
               field: t('label.operation-plural'),
             }),
           },
-        ]}>
+        ]}
+      >
         <TreeSelect
           treeCheckable
           autoClearSearchValue={false}
@@ -314,7 +317,8 @@ const RuleForm: FC<RuleFormProps> = ({
             required: true,
             message: t('label.field-required', { field: t('label.effect') }),
           },
-        ]}>
+        ]}
+      >
         <Select
           data-testid="effect"
           placeholder={t('label.select-field', {
@@ -323,7 +327,8 @@ const RuleForm: FC<RuleFormProps> = ({
           value={ruleData.effect}
           onChange={(value) =>
             setRuleData((prev: Rule) => ({ ...prev, effect: value }))
-          }>
+          }
+        >
           <Option key={Effect.Allow}>{capitalize(Effect.Allow)}</Option>
           <Option key={Effect.Deny}>{capitalize(Effect.Deny)}</Option>
         </Select>
@@ -356,7 +361,8 @@ const RuleForm: FC<RuleFormProps> = ({
             <div
               className="m-t-xss"
               data-testid="condition-success"
-              role="alert">
+              role="alert"
+            >
               {`✅ ${t('label.valid-condition')}`}
             </div>
           )}

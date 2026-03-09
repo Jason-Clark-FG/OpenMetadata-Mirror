@@ -15,6 +15,7 @@ import cronstrue from 'cronstrue';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SCHEDULAR_OPTIONS } from '../../../../constants/Schedular.constants';
 import { useLimitStore } from '../../../../context/LimitsProvider/useLimitsStore';
 import {
   AppScheduleClass,
@@ -157,6 +158,16 @@ const AppSchedule = ({
     };
   }, [appData.name, appData.appType, appData.appSchedule, pipelineSchedules]);
 
+  const translatedSchedularOptions = useMemo(
+    () =>
+      SCHEDULAR_OPTIONS.map((option) => ({
+        ...option,
+        title: t(option.title),
+        description: t(option.description),
+      })),
+    [t]
+  );
+
   useEffect(() => {
     fetchPipelineDetails();
   }, []);
@@ -177,7 +188,8 @@ const AppSchedule = ({
                 </Typography.Text>
                 <Typography.Text
                   className="font-medium"
-                  data-testid="schedule-type">
+                  data-testid="schedule-type"
+                >
                   {(appData.appSchedule as AppScheduleClass).scheduleTimeline ??
                     ''}
                 </Typography.Text>
@@ -190,7 +202,8 @@ const AppSchedule = ({
                   </Typography.Text>
                   <Typography.Text
                     className="font-medium"
-                    data-testid="cron-string">
+                    data-testid="cron-string"
+                  >
                     {cronString}
                   </Typography.Text>
                 </div>
@@ -207,7 +220,8 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isDeployLoading}
                   type="primary"
-                  onClick={onDeployTrigger}>
+                  onClick={onDeployTrigger}
+                >
                   {t('label.deploy')}
                 </Button>
               )}
@@ -217,7 +231,8 @@ const AppSchedule = ({
                   data-testid="edit-button"
                   disabled={appData.deleted}
                   type="primary"
-                  onClick={() => setShowModal(true)}>
+                  onClick={() => setShowModal(true)}
+                >
                   {t('label.edit')}
                 </Button>
               )}
@@ -228,7 +243,8 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isRunLoading}
                   type="primary"
-                  onClick={onAppTrigger}>
+                  onClick={onAppTrigger}
+                >
                   {t('label.run-now')}
                 </Button>
               )}
@@ -250,7 +266,8 @@ const AppSchedule = ({
         okText={t('label.save')}
         open={showModal}
         title={t('label.update-entity', { entity: t('label.schedule') })}
-        width={650}>
+        width={650}
+      >
         <ScheduleInterval
           isEditMode
           buttonProps={{
@@ -260,6 +277,7 @@ const AppSchedule = ({
           defaultSchedule={defaultCron}
           includePeriodOptions={initialOptions}
           initialData={initialData}
+          schedularOptions={translatedSchedularOptions}
           status={isSaveLoading ? 'waiting' : 'initial'}
           onBack={onDialogCancel}
           onDeploy={onDialogSave}

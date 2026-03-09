@@ -20,6 +20,7 @@ import {
 import { AxiosError } from 'axios';
 import { EntityType } from '../../../enums/entity.enum';
 import { EntityReference } from '../../../generated/entity/type';
+import { useEntityRules } from '../../../hooks/useEntityRules';
 import DataProductsSection from './DataProductsSection';
 
 // Mock react-router-dom
@@ -134,12 +135,14 @@ jest.mock(
                     type: 'dataProduct',
                   },
                 ])
-              }>
+              }
+            >
               Submit
             </button>
             <button
               data-testid="dps-fetch"
-              onClick={() => fetchOptions?.('term', 2)}>
+              onClick={() => fetchOptions?.('term', 2)}
+            >
               Fetch
             </button>
             <div data-testid="dps-default-values">
@@ -169,7 +172,8 @@ jest.mock('../IconButtons/EditIconButton', () => ({
       className="edit-icon"
       data-testid="edit-icon-button"
       onClick={onClick}
-      {...props}>
+      {...props}
+    >
       Edit
     </button>
   )),
@@ -203,6 +207,11 @@ jest.mock('../../../rest/mlModelAPI', () => ({
 }));
 jest.mock('../../../rest/chartsAPI', () => ({ patchChartDetails: jest.fn() }));
 
+// Mock useEntityRules hook
+jest.mock('../../../hooks/useEntityRules', () => ({
+  useEntityRules: jest.fn(),
+}));
+
 const validUUID = '123e4567-e89b-12d3-a456-426614174000';
 
 const defaultDataProducts: EntityReference[] = [
@@ -230,6 +239,16 @@ const defaultProps = {
 describe('DataProductsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set default entity rules
+    (useEntityRules as jest.Mock).mockReturnValue({
+      entityRules: {
+        canAddMultipleDataProducts: true,
+        maxDataProducts: Infinity,
+        requireDomainForDataProduct: false,
+      },
+      rules: [],
+      isLoading: false,
+    });
   });
 
   describe('Rendering', () => {
@@ -380,7 +399,8 @@ describe('DataProductsSection', () => {
                     type: 'dataProduct',
                   },
                 ])
-              }>
+              }
+            >
               Submit
             </button>
           </div>

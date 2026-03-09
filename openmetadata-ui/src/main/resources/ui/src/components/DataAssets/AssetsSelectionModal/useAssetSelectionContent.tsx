@@ -18,37 +18,20 @@ import {
 import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
 import {
   Box,
-  Button as MuiButton,
+  Button,
   CircularProgress,
   Divider as MuiDivider,
   Typography as MuiTypography,
 } from '@mui/material';
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Divider,
-  Dropdown,
-  List,
-  Space,
-  Typography,
-} from 'antd';
-import { ItemType } from 'antd/lib/menu/hooks/useItems';
+import { Alert, Checkbox, Divider, List, Space, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { isUndefined } from 'lodash';
 import { EntityDetailUnion } from 'Models';
 import { useSnackbar } from 'notistack';
 import VirtualList from 'rc-virtual-list';
-import {
-  UIEventHandler,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { UIEventHandler, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as FilterIcon } from '../../../assets/svg/ic-feeds-filter.svg';
 import {
   ES_UPDATE_DELAY,
   PAGE_SIZE_MEDIUM,
@@ -70,6 +53,8 @@ import { Aggregations } from '../../../interface/search.interface';
 import { QueryFilterInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
 import {
   addAssetsToDataProduct,
+  addInputPortsToDataProduct,
+  addOutputPortsToDataProduct,
   getDataProductByName,
 } from '../../../rest/dataProductAPI';
 import { addAssetsToDomain, getDomainByName } from '../../../rest/domainAPI';
@@ -112,6 +97,7 @@ export interface AssetSelectionContentProps {
   onCancel?: () => void;
   queryFilter?: QueryFilterInterface;
   emptyPlaceHolderText?: string;
+  infoBannerText?: string;
 }
 
 export const useAssetSelectionContent = ({
@@ -123,6 +109,7 @@ export const useAssetSelectionContent = ({
   variant = 'modal',
   queryFilter,
   emptyPlaceHolderText,
+  infoBannerText,
 }: AssetSelectionContentProps) => {
   const { theme } = useApplicationStore();
   const { t } = useTranslation();
@@ -135,7 +122,13 @@ export const useAssetSelectionContent = ({
     useState<Map<string, EntityDetailUnion>>();
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<SearchIndex>(
-    type === AssetsOfEntity.GLOSSARY ? SearchIndex.DATA_ASSET : SearchIndex.ALL
+    [
+      AssetsOfEntity.GLOSSARY,
+      AssetsOfEntity.DATA_PRODUCT_INPUT_PORT,
+      AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT,
+    ].includes(type)
+      ? SearchIndex.DATA_ASSET
+      : SearchIndex.ALL
   );
   const [activeEntity, setActiveEntity] = useState<
     Domain | DataProduct | Tag
@@ -146,27 +139,11 @@ export const useAssetSelectionContent = ({
   const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
   const [assetJobResponse, setAssetJobResponse] = useState<CSVExportResponse>();
   const [aggregations, setAggregations] = useState<Aggregations>();
-  const [selectedQuickFilters, setSelectedQuickFilters] = useState<
-    ExploreQuickFilterField[]
-  >([]);
   const [quickFilterQuery, setQuickFilterQuery] =
     useState<QueryFilterInterface>();
-  const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
   const [filters, setFilters] = useState<ExploreQuickFilterField[]>([]);
 
   const { socket } = useWebSocketConnector();
-
-  const handleMenuClick = ({ key }: { key: string }) => {
-    setSelectedFilter((prevSelected) => [...prevSelected, key]);
-  };
-
-  const filterMenu: ItemType[] = useMemo(() => {
-    return filters.map((filter) => ({
-      key: filter.key,
-      label: filter.label,
-      onClick: handleMenuClick,
-    }));
-  }, [filters]);
 
   const fetchEntities = useCallback(
     async ({
@@ -195,8 +172,6 @@ export const useAssetSelectionContent = ({
         setItems(page === 1 ? hits : (prevItems) => [...prevItems, ...hits]);
         setPageNumber(page);
         setAggregations(getAggregations(res?.aggregations));
-      } catch (_) {
-        // Nothing here
       } finally {
         setIsLoading(false);
       }
@@ -214,6 +189,8 @@ export const useAssetSelectionContent = ({
         break;
 
       case AssetsOfEntity.DATA_PRODUCT:
+      case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+      case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
         data = await getDataProductByName(entityFqn, {
           fields: [TabSpecificField.DOMAINS, TabSpecificField.ASSETS],
         });
@@ -305,7 +282,7 @@ export const useAssetSelectionContent = ({
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setIsSaveLoading(true);
       setFailedStatus(undefined);
@@ -326,6 +303,23 @@ export const useAssetSelectionContent = ({
           );
 
           break;
+
+        case AssetsOfEntity.DATA_PRODUCT_INPUT_PORT:
+          res = await addInputPortsToDataProduct(
+            activeEntity.fullyQualifiedName ?? '',
+            entities
+          );
+
+          break;
+
+        case AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT:
+          res = await addOutputPortsToDataProduct(
+            activeEntity.fullyQualifiedName ?? '',
+            entities
+          );
+
+          break;
+
         case AssetsOfEntity.GLOSSARY:
           res = await addAssetsToGlossaryTerm(
             activeEntity as GlossaryTerm,
@@ -381,34 +375,18 @@ export const useAssetSelectionContent = ({
     } finally {
       setIsSaveLoading(false);
     }
-  };
+  }, [
+    activeEntity,
+    selectedItems,
+    onSave,
+    onCancel,
+    enqueueSnackbar,
+    closeSnackbar,
+  ]);
 
   const onSaveAction = useCallback(() => {
     handleSave();
-  }, [type, handleSave]);
-
-  useEffect(() => {
-    const updatedQuickFilters = filters
-      .filter((filter) => selectedFilter.includes(filter.key))
-      .map((selectedFilterItem) => {
-        const originalFilterItem = selectedQuickFilters?.find(
-          (filter) => filter.key === selectedFilterItem.key
-        );
-
-        return originalFilterItem || selectedFilterItem;
-      });
-
-    const newItems = updatedQuickFilters.filter(
-      (item) =>
-        !selectedQuickFilters.some(
-          (existingItem) => item.key === existingItem.key
-        )
-    );
-
-    if (newItems.length > 0) {
-      setSelectedQuickFilters((prevSelected) => [...prevSelected, ...newItems]);
-    }
-  }, [selectedFilter, selectedQuickFilters, filters]);
+  }, [handleSave]);
 
   const onScroll: UIEventHandler<HTMLElement> = useCallback(
     (e) => {
@@ -425,13 +403,17 @@ export const useAssetSelectionContent = ({
           quickFilterQuery as QueryFilterInterface
         );
 
-        !isLoading &&
-          fetchEntities({
-            searchText: search,
-            page: pageNumber + 1,
-            index: activeFilter,
-            updatedQueryFilter: combinedQueryFilter,
-          });
+        if (isLoading) {
+          // No need to fetchEntities if already loading
+          return;
+        }
+
+        fetchEntities({
+          searchText: search,
+          page: pageNumber + 1,
+          index: activeFilter,
+          updatedQueryFilter: combinedQueryFilter,
+        });
       }
     },
     [
@@ -494,7 +476,7 @@ export const useAssetSelectionContent = ({
 
   const handleQuickFiltersValueSelect = useCallback(
     (field: ExploreQuickFilterField) => {
-      setSelectedQuickFilters((pre) => {
+      setFilters((pre) => {
         const data = pre.map((preField) => {
           if (preField.key === field.key) {
             return field;
@@ -508,21 +490,17 @@ export const useAssetSelectionContent = ({
         return data;
       });
     },
-    [setSelectedQuickFilters]
+    [setFilters]
   );
 
   const clearFilters = useCallback(() => {
-    setQuickFilterQuery(undefined);
-    setSelectedQuickFilters((pre) => {
-      const data = pre.map((preField) => {
-        return { ...preField, value: [] };
-      });
-
-      handleQuickFiltersChange(data);
-
-      return data;
+    const clearedData = filters.map((preField) => {
+      return { ...preField, value: [] };
     });
-  }, [setQuickFilterQuery, handleQuickFiltersChange, setSelectedQuickFilters]);
+
+    setFilters(clearedData);
+    setQuickFilterQuery(undefined);
+  }, [filters]);
 
   useEffect(() => {
     if (socket) {
@@ -559,15 +537,16 @@ export const useAssetSelectionContent = ({
             {selectedItems.size} {t('label.selected-lowercase')}
           </Typography.Text>
         )}
-        {failedStatus?.failedRequest && failedStatus.failedRequest.length > 0 && (
-          <>
-            <Divider className="m-x-xss" type="vertical" />
-            <Typography.Text type="danger">
-              <CloseOutlined className="m-r-xs" />
-              {failedStatus.failedRequest.length} {t('label.error')}
-            </Typography.Text>
-          </>
-        )}
+        {failedStatus?.failedRequest &&
+          failedStatus.failedRequest.length > 0 && (
+            <>
+              <Divider className="m-x-xss" type="vertical" />
+              <Typography.Text type="danger">
+                <CloseOutlined className="m-r-xs" />
+                {failedStatus.failedRequest.length} {t('label.error')}
+              </Typography.Text>
+            </>
+          )}
       </div>
 
       <div>
@@ -578,8 +557,9 @@ export const useAssetSelectionContent = ({
           data-testid="save-btn"
           disabled={!selectedItems?.size || isLoading}
           loading={isSaveLoading || !isUndefined(assetJobResponse)}
-          type="primary"
-          onClick={onSaveAction}>
+          variant="contained"
+          onClick={onSaveAction}
+        >
           {t('label.save')}
         </Button>
       </div>
@@ -592,7 +572,8 @@ export const useAssetSelectionContent = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-      }}>
+      }}
+    >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         {selectedItems && selectedItems.size >= 1 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -602,24 +583,25 @@ export const useAssetSelectionContent = ({
             </MuiTypography>
           </Box>
         )}
-        {failedStatus?.failedRequest && failedStatus.failedRequest.length > 0 && (
-          <>
-            <MuiDivider flexItem orientation="vertical" sx={{ mx: 1 }} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <ErrorOutline color="error" fontSize="small" />
-              <MuiTypography color="error" variant="body2">
-                {failedStatus.failedRequest.length} {t('label.error')}
-              </MuiTypography>
-            </Box>
-          </>
-        )}
+        {failedStatus?.failedRequest &&
+          failedStatus.failedRequest.length > 0 && (
+            <>
+              <MuiDivider flexItem orientation="vertical" sx={{ mx: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <ErrorOutline color="error" fontSize="small" />
+                <MuiTypography color="error" variant="body2">
+                  {failedStatus.failedRequest.length} {t('label.error')}
+                </MuiTypography>
+              </Box>
+            </>
+          )}
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <MuiButton data-testid="cancel-btn" onClick={onCancel}>
+        <Button data-testid="cancel-btn" onClick={onCancel}>
           {t('label.cancel')}
-        </MuiButton>
-        <MuiButton
+        </Button>
+        <Button
           data-testid="save-btn"
           disabled={
             !selectedItems?.size ||
@@ -633,9 +615,10 @@ export const useAssetSelectionContent = ({
             )
           }
           variant="contained"
-          onClick={onSaveAction}>
+          onClick={onSaveAction}
+        >
           {t('label.save')}
-        </MuiButton>
+        </Button>
       </Box>
     </Box>
   );
@@ -646,7 +629,8 @@ export const useAssetSelectionContent = ({
     <Space
       className="w-full h-full overflow-hidden asset-selection-space"
       direction="vertical"
-      size={16}>
+      size={16}
+    >
       {(assetJobResponse || exportJob?.error) && (
         <Banner
           className="border-radius"
@@ -656,15 +640,11 @@ export const useAssetSelectionContent = ({
         />
       )}
 
+      {infoBannerText && (
+        <Alert showIcon message={infoBannerText} type="info" />
+      )}
+
       <div className="d-flex items-center gap-3">
-        <Dropdown
-          menu={{
-            items: filterMenu,
-            selectedKeys: selectedFilter,
-          }}
-          trigger={['click']}>
-          <Button className="flex-center" icon={<FilterIcon height={16} />} />
-        </Dropdown>
         <div className="flex-1">
           <Searchbar
             removeMargin
@@ -678,28 +658,25 @@ export const useAssetSelectionContent = ({
         </div>
       </div>
 
-      {selectedQuickFilters && selectedQuickFilters.length > 0 && (
-        <div className="d-flex items-center">
-          <div className="d-flex justify-between flex-1">
-            <ExploreQuickFilters
-              aggregations={aggregations}
-              fields={selectedQuickFilters}
-              index={SearchIndex.ALL}
-              showDeleted={false}
-              onFieldValueSelect={handleQuickFiltersValueSelect}
-            />
-            {quickFilterQuery && (
-              <Typography.Text
-                className="p-r-xss text-primary self-center cursor-pointer"
-                onClick={clearFilters}>
-                {t('label.clear-entity', {
-                  entity: '',
-                })}
-              </Typography.Text>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="asset-filters-wrapper">
+        <ExploreQuickFilters
+          aggregations={aggregations}
+          fields={filters}
+          index={SearchIndex.ALL}
+          showDeleted={false}
+          onFieldValueSelect={handleQuickFiltersValueSelect}
+        />
+        {quickFilterQuery && (
+          <Typography.Text
+            className="text-primary cursor-pointer"
+            onClick={clearFilters}
+          >
+            {t('label.clear-entity', {
+              entity: '',
+            })}
+          </Typography.Text>
+        )}
+      </div>
 
       {failedStatus?.failedRequest && failedStatus.failedRequest.length > 0 && (
         <Alert
@@ -731,7 +708,8 @@ export const useAssetSelectionContent = ({
         <div className="border p-xs asset-list-wrapper">
           <Checkbox
             className="assets-checkbox p-x-sm"
-            onChange={(e) => onSelectAll(e.target.checked)}>
+            onChange={(e) => onSelectAll(e.target.checked)}
+          >
             {t('label.select-field', {
               field: t('label.all'),
             })}
@@ -741,7 +719,8 @@ export const useAssetSelectionContent = ({
               data={items}
               height={variant === 'modal' ? 500 : undefined}
               itemKey="id"
-              onScroll={onScroll}>
+              onScroll={onScroll}
+            >
               {({ _source: item }) => {
                 const { isError, errorMessage } = getErrorStatusAndMessage(
                   item.id ?? ''
@@ -752,7 +731,8 @@ export const useAssetSelectionContent = ({
                     className={classNames({
                       'm-y-sm border-danger rounded-4': isError,
                     })}
-                    key={item.id}>
+                    key={item.id}
+                  >
                     <TableDataCardV2
                       openEntityInNewPage
                       showCheckboxes
@@ -790,6 +770,11 @@ export const useAssetSelectionContent = ({
               }}
             </VirtualList>
           </List>
+          {isLoading && items.length < totalCount && (
+            <div className="d-flex justify-center p-y-sm">
+              <Loader size="small" />
+            </div>
+          )}
         </div>
       )}
 

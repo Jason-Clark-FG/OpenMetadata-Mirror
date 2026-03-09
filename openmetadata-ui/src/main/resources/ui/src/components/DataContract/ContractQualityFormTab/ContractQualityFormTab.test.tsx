@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  *  Copyright 2025 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,7 +74,8 @@ jest.mock('../../common/Table/Table', () => {
           <div data-testid={`table-row-${item.id}`} key={item[rowKey]}>
             <button
               data-testid={`select-row-${item.id}`}
-              onClick={() => rowSelection?.onChange?.([item.id])}>
+              onClick={() => rowSelection?.onChange?.([item.id])}
+            >
               Select {item.name}
             </button>
           </div>

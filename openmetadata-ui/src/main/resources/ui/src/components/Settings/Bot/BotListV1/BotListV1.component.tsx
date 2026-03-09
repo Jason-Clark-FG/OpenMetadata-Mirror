@@ -134,7 +134,8 @@ const BotListV1 = ({
             <Link data-testid={`bot-link-${name}`} to={getBotsPath(fqn)}>
               <Typography.Text
                 className="text-ellipsis bot-link"
-                ellipsis={{ tooltip: true }}>
+                ellipsis={{ tooltip: true }}
+              >
                 {stringToHTML(highlightSearchText(name, searchTerm))}
               </Typography.Text>
             </Link>
@@ -145,21 +146,14 @@ const BotListV1 = ({
         title: t('label.description'),
         dataIndex: 'description',
         key: 'description',
-        render: (_, record) =>
-          record?.description ? (
-            <RichTextEditorPreviewerNew
-              markdown={highlightSearchText(
-                record?.description || '',
-                searchTerm
-              )}
-            />
-          ) : (
-            <span data-testid="no-description">
-              {t('label.no-entity', {
-                entity: t('label.description'),
-              })}
-            </span>
-          ),
+        render: (_, record) => (
+          <RichTextEditorPreviewerNew
+            markdown={highlightSearchText(
+              record?.description || '',
+              searchTerm
+            )}
+          />
+        ),
       },
       {
         title: t('label.action-plural'),
@@ -241,6 +235,10 @@ const BotListV1 = ({
     } else {
       setSearchedData(botUsers);
     }
+    handlePageChange(INITIAL_PAGING_VALUE, {
+      cursorType: null,
+      cursorValue: undefined,
+    });
   };
 
   const handleShowDeletedBots = (checked: boolean) => {
@@ -299,7 +297,12 @@ const BotListV1 = ({
       </Col>
 
       <Col span={12}>
-        <PageHeader data={PAGE_HEADERS.BOTS} />
+        <PageHeader
+          data={{
+            header: t(PAGE_HEADERS.BOTS.header),
+            subHeader: t(PAGE_HEADERS.BOTS.subHeader),
+          }}
+        />
       </Col>
 
       <Col span={12}>
@@ -316,13 +319,15 @@ const BotListV1 = ({
 
           <Tooltip
             placement="topLeft"
-            title={!isAdminUser && t('message.admin-only-action')}>
+            title={!isAdminUser && t('message.admin-only-action')}
+          >
             <LimitWrapper resource="bot">
               <Button
                 data-testid="add-bot"
                 disabled={!isAdminUser}
                 type="primary"
-                onClick={handleAddBotClick}>
+                onClick={handleAddBotClick}
+              >
                 {addBotLabel}
               </Button>
             </LimitWrapper>

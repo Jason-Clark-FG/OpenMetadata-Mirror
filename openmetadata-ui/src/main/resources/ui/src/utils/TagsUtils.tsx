@@ -253,13 +253,15 @@ export const tagRender = (customTagProps: CustomTagProps) => {
       }
       data-testid={`selected-tag-${tagLabel}`}
       onClose={onClose}
-      onMouseDown={onPreventMouseDown}>
+      onMouseDown={onPreventMouseDown}
+    >
       <Tooltip
         className="cursor-pointer"
         mouseEnterDelay={1.5}
         placement="topLeft"
         title={getTagTooltip(label as string)}
-        trigger="hover">
+        trigger="hover"
+      >
         <Typography.Paragraph className="m-0 d-inline-block break-all whitespace-normal">
           {tagLabel}
         </Typography.Paragraph>
@@ -604,18 +606,6 @@ export const getTagAssetsQueryFilter = (fqn: string) => {
   }
 
   return getTermQuery({ [fieldName]: fqn });
-};
-
-export const getTagImageSrc = (iconURL: string) => {
-  if (!iconURL) {
-    return '';
-  }
-
-  if (iconURL.startsWith('http') || iconURL.startsWith('data:image')) {
-    return iconURL;
-  }
-
-  return `${window.location.origin}/${iconURL}`;
 };
 
 /**

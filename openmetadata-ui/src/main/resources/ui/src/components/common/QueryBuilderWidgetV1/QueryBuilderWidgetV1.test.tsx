@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { JsonTree, Utils } from '@react-awesome-query-builder/antd';
 import '@testing-library/jest-dom';
 import {
@@ -110,7 +109,8 @@ jest.mock('@react-awesome-query-builder/antd', () => {
       <div data-testid="query-builder" {...props}>
         <button
           data-testid="mock-query-change"
-          onClick={() => onChange?.(mocks.treeInternal, mocks.config)}>
+          onClick={() => onChange?.(mocks.treeInternal, mocks.config)}
+        >
           Change Query
         </button>
       </div>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /*
  *  Copyright 2025 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,7 +127,8 @@ jest.mock('../../common/DatePickerMenu/DatePickerMenu.component', () => {
               startTs: 1640908800000,
               endTs: 1640995200000,
             })
-          }>
+          }
+        >
           Change Date Range
         </button>
       </div>

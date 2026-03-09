@@ -51,6 +51,7 @@ const UserProfileRoles = ({
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   const useRolesOption = useMemo(() => {
     const options = roles?.map((role) => ({
@@ -96,6 +97,8 @@ const UserProfileRoles = ({
 
     setSelectedRoles(defaultUserRoles);
   }, [userRoles, isUserAdmin]);
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const handleRolesSave = async () => {
     setIsLoading(true);
@@ -144,7 +147,7 @@ const UserProfileRoles = ({
   const handleCloseEditRole = useCallback(() => {
     setIsRolesEdit(false);
     setUserRoles();
-  }, [setUserRoles, setIsRolesEdit]);
+  }, [setUserRoles]);
 
   useEffect(() => {
     setUserRoles();
@@ -156,11 +159,21 @@ const UserProfileRoles = ({
     }
   }, [isRolesEdit, roles]);
 
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  useEffect(() => {
+    setIsDropdownOpen(isRolesEdit);
+  }, [isRolesEdit]);
+
+  const handleDropdownChange = (open: boolean) => {
+    setIsDropdownOpen(open);
+  };
+
   const [popoverHeight, setPopoverHeight] = useState<number>(156);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!isDropdownOpen) {
+      return;
+    }
+
     const observer = new MutationObserver(() => {
       const dropdown = document.querySelector(
         '.roles-custom-dropdown-class'
@@ -186,7 +199,8 @@ const UserProfileRoles = ({
   return (
     <div
       className="d-flex flex-col m-b-0 w-full p-[20px] user-profile-card"
-      data-testid="user-profile-roles">
+      data-testid="user-profile-roles"
+    >
       <div className="user-profile-card-header d-flex items-center justify-start gap-2 w-full">
         <div className="d-flex flex-center user-page-icon">
           <RoleIcon height={16} />
@@ -196,13 +210,15 @@ const UserProfileRoles = ({
             {t('label.role-plural')}
           </Typography.Text>
           <Popover
+            destroyTooltipOnHide
             content={
               <div
                 className="user-profile-edit-popover-card relative"
                 data-testid="user-profile-edit-popover"
                 style={{
                   height: `${popoverHeight}px`,
-                }}>
+                }}
+              >
                 <div className="d-flex justify-start items-center gap-2 m-b-sm">
                   <div className="d-flex flex-start items-center">
                     <RoleIcon height={16} />
@@ -216,7 +232,8 @@ const UserProfileRoles = ({
                   className="border p-2 bg-gray-100 rounded-md"
                   style={{
                     borderRadius: '5px',
-                  }}>
+                  }}
+                >
                   <Select
                     allowClear
                     showSearch
@@ -242,9 +259,7 @@ const UserProfileRoles = ({
                     tagRender={TagRenderer}
                     value={selectedRoles}
                     onChange={setSelectedRoles}
-                    onDropdownVisibleChange={(open) => {
-                      setIsDropdownOpen(open);
-                    }}
+                    onDropdownVisibleChange={handleDropdownChange}
                   />
                 </div>
 
@@ -288,12 +303,14 @@ const UserProfileRoles = ({
             overlayClassName="profile-edit-popover-card"
             placement="right"
             trigger="click"
-            onOpenChange={setIsRolesEdit}>
+            onOpenChange={setIsRolesEdit}
+          >
             {isAdminUser && (
               <Tooltip
                 title={t('label.edit-entity', {
                   entity: t('label.role-plural'),
-                })}>
+                })}
+              >
                 <EditIcon
                   className="cursor-pointer align-middle"
                   data-testid="edit-roles-button"

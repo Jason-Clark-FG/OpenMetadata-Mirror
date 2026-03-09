@@ -11,7 +11,16 @@
  *  limitations under the License.
  */
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { Button, Card, Popover, Radio, Space, Spin, Typography } from 'antd';
+import {
+  Button,
+  Card,
+  Empty,
+  Popover,
+  Radio,
+  Space,
+  Spin,
+  Typography,
+} from 'antd';
 import { AxiosError } from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,8 +29,8 @@ import { Tag } from '../../generated/entity/classification/tag';
 import { Paging } from '../../generated/type/paging';
 import { getTags } from '../../rest/tagAPI';
 import { getEntityName } from '../../utils/EntityUtils';
+import { getTagImageSrc } from '../../utils/IconUtils';
 import { stringToHTML } from '../../utils/StringsUtils';
-import { getTagImageSrc } from '../../utils/TagsUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { FocusTrapWithContainer } from '../common/FocusTrap/FocusTrapWithContainer';
 import Loader from '../common/Loader/Loader';
@@ -59,6 +68,7 @@ const Certification = ({
         parent: 'Certification',
         limit: 50,
         after: page > 1 ? paging.after : undefined,
+        disabled: false,
       });
 
       const { data, paging: newPaging } = response;
@@ -126,10 +136,22 @@ const Certification = ({
   };
 
   const certificationCardData = useMemo(() => {
+    if (certifications.length === 0 && !isLoadingCertificationData) {
+      return (
+        <Empty
+          description={t('label.no-entity-available', {
+            entity: t('label.certification-plural-lowercase'),
+          })}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      );
+    }
+
     return (
       <div
         className="h-max-100 overflow-y-auto overflow-x-hidden"
-        onScroll={handleScroll}>
+        onScroll={handleScroll}
+      >
         <Radio.Group className="w-full" value={selectedCertification}>
           {certifications.map((certificate) => {
             const tagSrc = getTagImageSrc(certificate.style?.iconURL ?? '');
@@ -143,7 +165,8 @@ const Certification = ({
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
                   setSelectedCertification(fullyQualifiedName ?? '');
-                }}>
+                }}
+              >
                 <Radio
                   className="certification-radio-top-right"
                   data-testid={`radio-btn-${fullyQualifiedName}`}
@@ -177,7 +200,14 @@ const Certification = ({
         )}
       </div>
     );
-  }, [certifications, selectedCertification, hasContentLoading, handleScroll]);
+  }, [
+    certifications,
+    selectedCertification,
+    hasContentLoading,
+    handleScroll,
+    isLoadingCertificationData,
+    t,
+  ]);
 
   const handleCloseCertification = async () => {
     popoverRef.current?.close();
@@ -197,8 +227,14 @@ const Certification = ({
   };
 
   useEffect(() => {
-    if (popoverProps?.open && certifications.length === 0) {
+    if (popoverProps?.open) {
+      setSelectedCertification(currentCertificate);
+      setCurrentPage(1);
+      setPaging({} as Paging);
       getCertificationData(1);
+    } else if (popoverProps?.open === false) {
+      setCertifications([]);
+      setSelectedCertification('');
     }
   }, [popoverProps?.open]);
 
@@ -230,28 +266,31 @@ const Certification = ({
                       e.preventDefault();
                       updateCertificationData();
                     }
-                  }}>
+                  }}
+                >
                   {t('label.clear')}
                 </Typography.Text>
               </Space>
-            }>
+            }
+          >
             <Spin
               indicator={<Loader size="small" />}
-              spinning={isLoadingCertificationData}>
+              spinning={isLoadingCertificationData}
+            >
               {certificationCardData}
               <div className="flex justify-end text-lg gap-2 mt-4">
                 <Button
                   data-testid="close-certification"
                   type="default"
-                  onClick={handleCloseCertification}>
+                  onClick={handleCloseCertification}
+                >
                   <CloseOutlined />
                 </Button>
                 <Button
                   data-testid="update-certification"
                   type="primary"
-                  onClick={() =>
-                    updateCertificationData(selectedCertification)
-                  }>
+                  onClick={() => updateCertificationData(selectedCertification)}
+                >
                   <CheckOutlined />
                 </Button>
               </div>
@@ -265,7 +304,8 @@ const Certification = ({
       showArrow={false}
       trigger="click"
       onOpenChange={onOpenChange}
-      {...popoverProps}>
+      {...popoverProps}
+    >
       {children}
     </Popover>
   );

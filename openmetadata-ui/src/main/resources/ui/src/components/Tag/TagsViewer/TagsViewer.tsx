@@ -39,6 +39,7 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
   displayType = DisplayType.POPOVER,
   showNoDataPlaceholder = true,
   newLook = false,
+  entityFqn,
 }: TagsViewerProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -70,14 +71,17 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
                 },
               },
             }}
-            title={getTagTooltip(tag.tagFQN, tag.description) ?? ''}>
+            title={getTagTooltip(tag.tagFQN, tag.description) ?? ''}
+          >
             <Link
               className={classNames(
+                'w-full',
                 { 'diff-added tw-mx-1': tag?.added },
                 { 'diff-removed': tag?.removed }
               )}
               data-testid="tag-redirect-link"
-              to={redirectLink}>
+              to={redirectLink}
+            >
               <TagChip
                 data-testid="tags"
                 label={tagName}
@@ -97,6 +101,7 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
             { 'diff-added tw-mx-1': tag?.added },
             { 'diff-removed': tag?.removed }
           )}
+          entityFqn={entityFqn}
           isVersionPage={tag?.added || tag?.removed}
           key={tag.tagFQN}
           newLook={newLook}
@@ -106,7 +111,7 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
         />
       );
     },
-    [muiTags, newLook]
+    [muiTags, newLook, entityFqn]
   );
 
   // sort tags by source so that "Glossary" tags always comes first
@@ -129,7 +134,8 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
             data-testid="read-button"
             size="small"
             type="link"
-            onClick={() => setIsOpen(!isOpen)}>
+            onClick={() => setIsOpen(!isOpen)}
+          >
             {isOpen
               ? t('label.less')
               : t('label.plus-count-more', {
@@ -156,14 +162,14 @@ const TagsViewer: FunctionComponent<TagsViewerProps> = ({
             }
             overlayClassName="tag-popover-container"
             placement="bottom"
-            trigger="click">
+            trigger="click"
+          >
             <Tag
               className={classNames('cursor-pointer plus-more-tag', {
                 'new-look': newLook,
               })}
-              data-testid="plus-more-count">{`+${
-              sortedTagsBySource.length - (sizeCap ?? 0)
-            } more`}</Tag>
+              data-testid="plus-more-count"
+            >{`+${sortedTagsBySource.length - (sizeCap ?? 0)} more`}</Tag>
           </Popover>
         </div>
       ),

@@ -70,16 +70,18 @@ const PasswordWidget: FC<WidgetProps> = (props) => {
   if (isInputTypeFileOrInput) {
     return (
       <Radio.Group
-        className="password-widget"
+        className="password-widget m-t-sm"
         data-testid={`password-input-radio-group-${props.id}`}
         value={inputType}
-        onChange={onRadioChange}>
+        onChange={onRadioChange}
+      >
         <Row>
           <Col span={8}>
             <Radio
               className="widget-radio-option"
               data-testid={`radio-${CertificationInputType.FILE_UPLOAD}`}
-              value={CertificationInputType.FILE_UPLOAD}>
+              value={CertificationInputType.FILE_UPLOAD}
+            >
               <Typography.Text>{t('message.upload-file')}</Typography.Text>
               <FileUploadWidget
                 {...props}
@@ -91,7 +93,8 @@ const PasswordWidget: FC<WidgetProps> = (props) => {
             <Radio
               className="widget-radio-option"
               data-testid={`radio-${CertificationInputType.FILE_PATH}`}
-              value={CertificationInputType.FILE_PATH}>
+              value={CertificationInputType.FILE_PATH}
+            >
               <Typography.Text>{t('label.enter-file-content')}</Typography.Text>
               {getPasswordInput(
                 inputType === CertificationInputType.FILE_UPLOAD

@@ -35,7 +35,6 @@ import {
 } from '@react-awesome-query-builder/antd';
 import 'antd/dist/antd.css';
 import { debounce, isEmpty, isUndefined } from 'lodash';
-import Qs from 'qs';
 import { FC, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityType } from '../../../../../../enums/entity.enum';
@@ -49,6 +48,7 @@ import {
 import { elasticSearchFormat } from '../../../../../../utils/QueryBuilderElasticsearchFormatUtils';
 import {
   addEntityTypeFilter,
+  buildExploreUrlParams,
   getEntityTypeAggregationFilter,
   getJsonTreeFromQueryFilter,
   migrateJsonLogic,
@@ -101,11 +101,9 @@ const QueryBuilderWidget: FC<
         config
       ).fixedTree;
 
-      const queryFilterString = !isEmpty(tree)
-        ? Qs.stringify({ queryFilter: JSON.stringify(tree) })
-        : '';
+      const extraParameters = buildExploreUrlParams(tree, qFilter);
 
-      setQueryURL(`${getExplorePath({})}${queryFilterString}`);
+      setQueryURL(getExplorePath({ extraParameters }));
 
       try {
         setIsCountLoading(true);
@@ -240,14 +238,16 @@ const QueryBuilderWidget: FC<
   return (
     <div
       className="query-builder-form-field"
-      data-testid="query-builder-form-field">
+      data-testid="query-builder-form-field"
+    >
       <Card className={classNames('query-builder-card', outputType)}>
         <Row gutter={[8, 8]}>
           <Col
             className={classNames({
               'p-t-sm': outputType === SearchOutputType.ElasticSearch,
             })}
-            span={24}>
+            span={24}
+          >
             {outputType === SearchOutputType.JSONLogic && (
               <>
                 <Typography.Text className="query-filter-label text-grey-muted">
@@ -300,7 +300,8 @@ const QueryBuilderWidget: FC<
                   disabled={false}
                   href={queryURL}
                   target="_blank"
-                  type="link">
+                  type="link"
+                >
                   <Alert
                     closable
                     showIcon

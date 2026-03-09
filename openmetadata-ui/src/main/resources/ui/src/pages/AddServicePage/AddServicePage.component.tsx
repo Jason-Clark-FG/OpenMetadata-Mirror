@@ -42,6 +42,7 @@ import { postService } from '../../rest/serviceAPI';
 import { getServiceLogo } from '../../utils/CommonUtils';
 import { getEntityFeedLink } from '../../utils/EntityUtils';
 import { handleEntityCreationError } from '../../utils/formUtils';
+import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import {
   getAddServicePath,
   getServiceDetailsPath,
@@ -61,8 +62,9 @@ import { ServiceConfig } from './AddServicePage.interface';
 const AddServicePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { serviceCategory } =
-    useRequiredParams<{ serviceCategory: ServiceCategory }>();
+  const { serviceCategory } = useRequiredParams<{
+    serviceCategory: ServiceCategory;
+  }>();
   const { currentUser, setInlineAlertDetails } = useApplicationStore();
 
   const [showErrorMessage, setShowErrorMessage] = useState(
@@ -82,6 +84,15 @@ const AddServicePage = () => {
   const [activeField, setActiveField] = useState<string>('');
 
   const slashedBreadcrumb = getAddServiceEntityBreadcrumb(serviceCategory);
+
+  const translatedSteps = useMemo(
+    () =>
+      STEPS_FOR_ADD_SERVICE.map((step) => ({
+        ...step,
+        name: translateWithNestedKeys(step.name, step.nameData),
+      })),
+    []
+  );
 
   const handleServiceTypeClick = (type: string) => {
     setShowErrorMessage({ ...showErrorMessage, serviceType: false });
@@ -252,7 +263,7 @@ const AddServicePage = () => {
 
           <IngestionStepper
             activeStep={activeServiceStep}
-            steps={STEPS_FOR_ADD_SERVICE}
+            steps={translatedSteps}
           />
           <div className="m-t-lg">
             {activeServiceStep === 1 && (

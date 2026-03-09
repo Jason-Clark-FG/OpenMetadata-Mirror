@@ -24,6 +24,7 @@ import {
   TagLabel,
   TagSource,
 } from '../../../generated/type/tagLabel';
+import { useEntityRules } from '../../../hooks/useEntityRules';
 import { updateEntityField } from '../../../utils/EntityUpdateUtils';
 import GlossaryTermsSection from './GlossaryTermsSection';
 
@@ -129,7 +130,8 @@ jest.mock(
                       state: State.Confirmed,
                     },
                   ])
-                }>
+                }
+              >
                 SubmitStrings
               </button>
               <button
@@ -147,7 +149,8 @@ jest.mock(
                       state: State.Confirmed,
                     },
                   ])
-                }>
+                }
+              >
                 SubmitObjects
               </button>
               {children}
@@ -182,7 +185,8 @@ jest.mock('../IconButtons/EditIconButton', () => ({
       className="edit-icon"
       data-testid="edit-icon-button"
       onClick={onClick}
-      {...props}>
+      {...props}
+    >
       Edit
     </button>
   )),
@@ -208,6 +212,11 @@ jest.mock('../../../utils/EntityUpdateUtils', () => ({
 
       return { success: true };
     }),
+}));
+
+// Mock useEntityRules hook
+jest.mock('../../../hooks/useEntityRules', () => ({
+  useEntityRules: jest.fn(),
 }));
 
 jest.requireMock('../../../utils/ToastUtils');
@@ -254,12 +263,24 @@ const clickHeaderEdit = () => {
 describe('GlossaryTermsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set default entity rules
+    (useEntityRules as jest.Mock).mockReturnValue({
+      entityRules: {
+        canAddMultipleGlossaryTerm: true,
+      },
+      rules: [],
+      isLoading: false,
+    });
   });
 
   describe('Rendering - No Terms', () => {
     it('shows header, no data placeholder, and edit control when permitted', () => {
       const { container } = render(
-        <GlossaryTermsSection hasPermission showEditButton />
+        <GlossaryTermsSection
+          hasPermission
+          showEditButton
+          entityType={EntityType.TABLE}
+        />
       );
 
       expect(
@@ -285,7 +306,13 @@ describe('GlossaryTermsSection', () => {
     });
 
     it('enters edit mode and cancels back', () => {
-      render(<GlossaryTermsSection hasPermission showEditButton />);
+      render(
+        <GlossaryTermsSection
+          hasPermission
+          showEditButton
+          entityType={EntityType.TABLE}
+        />
+      );
 
       clickHeaderEdit();
 
@@ -299,12 +326,29 @@ describe('GlossaryTermsSection', () => {
         )
       ).toBeInTheDocument();
     });
+
+    it('keeps showing no glossary terms placeholder while the popup is open', async () => {
+      render(<GlossaryTermsSection hasPermission showEditButton />);
+
+      clickHeaderEdit();
+
+      expect(screen.getByTestId('tag-select-form')).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            'label.no-entity-assigned - {"entity":"label.glossary-term-plural"}'
+          )
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   describe('Rendering - With Terms', () => {
     it('lists glossary terms using getEntityName and shows icon', () => {
       const { container } = render(
         <GlossaryTermsSection
+          entityType={EntityType.TABLE}
           tags={[...nonGlossaryTags, ...baseGlossaryTags]}
         />
       );
@@ -324,6 +368,7 @@ describe('GlossaryTermsSection', () => {
         <GlossaryTermsSection
           hasPermission
           showEditButton
+          entityType={EntityType.TABLE}
           tags={baseGlossaryTags as TagLabel[]}
         />
       );
@@ -380,7 +425,6 @@ describe('GlossaryTermsSection', () => {
       (updateEntityField as jest.Mock).mockImplementationOnce(() =>
         Promise.resolve({ success: false })
       );
-      const onUpdate = jest.fn();
 
       render(
         <GlossaryTermsSection
@@ -389,7 +433,6 @@ describe('GlossaryTermsSection', () => {
           entityId="123"
           entityType={EntityType.TABLE}
           tags={baseGlossaryTags as TagLabel[]}
-          onGlossaryTermsUpdate={onUpdate}
         />
       );
 
@@ -399,7 +442,7 @@ describe('GlossaryTermsSection', () => {
       });
 
       await waitFor(() => {
-        expect(onUpdate).not.toHaveBeenCalled();
+        expect(updateEntityField).toHaveBeenCalled();
       });
     });
   });

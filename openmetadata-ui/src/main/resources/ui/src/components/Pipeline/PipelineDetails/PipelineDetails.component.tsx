@@ -364,10 +364,7 @@ const PipelineDetails = ({
   }
 
   return (
-    <PageLayoutV1
-      pageTitle={t('label.entity-detail-plural', {
-        entity: t('label.pipeline'),
-      })}>
+    <PageLayoutV1 pageTitle={entityName}>
       <Row gutter={[0, 12]}>
         <Col span={24}>
           <DataAssetsHeader
@@ -395,7 +392,8 @@ const PipelineDetails = ({
           isTabExpanded={isTabExpanded}
           permissions={pipelinePermissions}
           type={EntityType.PIPELINE}
-          onUpdate={settingsUpdateHandler}>
+          onUpdate={settingsUpdateHandler}
+        >
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={tab}

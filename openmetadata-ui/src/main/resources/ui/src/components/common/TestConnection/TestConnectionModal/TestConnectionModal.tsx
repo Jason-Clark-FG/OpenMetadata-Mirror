@@ -100,15 +100,17 @@ const TestConnectionModal: FC<TestConnectionModalProps> = ({
       title={t('label.connection-status')}
       width={748}
       onCancel={onCancel}
-      onOk={onConfirm}>
+      onOk={onConfirm}
+    >
       <Space
         className="p-x-md w-full overflow-hidden"
         direction="vertical"
-        size={16}>
+        size={16}
+      >
         {errorMessage && (
           <InlineAlert
             description={errorMessage.description}
-            heading={TEST_CONNECTION_FAILURE_MESSAGE}
+            heading={t(TEST_CONNECTION_FAILURE_MESSAGE)}
             type="error"
             onClose={handleCloseErrorMessage}
           />
@@ -126,7 +128,8 @@ const TestConnectionModal: FC<TestConnectionModalProps> = ({
             className="timeout-widget justify-center w-full"
             data-testid="test-connection-timeout-widget"
             direction="vertical"
-            size={20}>
+            size={20}
+          >
             <IconTimeOut height={100} width={100} />
             <Typography.Title level={5}>
               {t('label.connection-timeout')}
@@ -140,7 +143,8 @@ const TestConnectionModal: FC<TestConnectionModalProps> = ({
               data-testid="try-again-button"
               icon={<IconTimeOutButton height={14} width={14} />}
               type="primary"
-              onClick={onTestConnection}>
+              onClick={onTestConnection}
+            >
               {t('label.try-again')}
             </Button>
           </Space>

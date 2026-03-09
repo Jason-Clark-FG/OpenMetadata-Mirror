@@ -19,9 +19,11 @@ import { Link } from 'react-router-dom';
 import { SearchedDataProps } from '../../src/components/SearchedData/SearchedData.interface';
 import { ReactComponent as IconExternalLink } from '../assets/svg/external-links.svg';
 import { GenericProvider } from '../components/Customization/GenericProvider/GenericProvider';
+import { ColumnOrTask } from '../components/Database/ColumnDetailPanel/ColumnDetailPanel.interface';
 import SchemaEditor from '../components/Database/SchemaEditor/SchemaEditor';
 import APIEndpointSummary from '../components/Explore/EntitySummaryPanel/APIEndpointSummary/APIEndpointSummary';
 import { ColumnSummaryList } from '../components/Explore/EntitySummaryPanel/ColumnSummaryList/ColumnsSummaryList';
+import { EntityData } from '../components/Explore/EntitySummaryPanel/CustomPropertiesSection/CustomPropertiesSection.interface';
 import DataProductSummary from '../components/Explore/EntitySummaryPanel/DataProductSummary/DataProductSummary.component';
 import DomainSummary from '../components/Explore/EntitySummaryPanel/DomainSummary/DomainSummary.component';
 import GlossaryTermSummary from '../components/Explore/EntitySummaryPanel/GlossaryTermSummary/GlossaryTermSummary.component';
@@ -99,11 +101,13 @@ export const getTitle = (
         to={entityUtilClassBase.getEntityLink(
           EntityType.DASHBOARD,
           listItem.fullyQualifiedName ?? ''
-        )}>
+        )}
+      >
         <Text
           className="entity-title text-link-color font-medium m-r-xss"
           data-testid="entity-title"
-          ellipsis={{ tooltip: true }}>
+          ellipsis={{ tooltip: true }}
+        >
           {title}
         </Text>
       </Link>
@@ -116,7 +120,8 @@ export const getTitle = (
         <Text
           className="entity-title text-link-color font-medium m-r-xss"
           data-testid="entity-title"
-          ellipsis={{ tooltip: true }}>
+          ellipsis={{ tooltip: true }}
+        >
           {title}
         </Text>
         <Icon component={IconExternalLink} style={ICON_DIMENSION} />
@@ -126,7 +131,8 @@ export const getTitle = (
     <Text
       className="entity-title"
       data-testid="entity-title"
-      ellipsis={{ tooltip: true }}>
+      ellipsis={{ tooltip: true }}
+    >
       {title}
     </Text>
   );
@@ -455,11 +461,13 @@ export const getEntityChildDetails = (
         <>
           <Row
             className="p-md border-radius-card summary-panel-card"
-            gutter={[0, 8]}>
+            gutter={[0, 8]}
+          >
             <Col span={24}>
               <Typography.Text
                 className="summary-panel-section-title"
-                data-testid="charts-header">
+                data-testid="charts-header"
+              >
                 {t('label.chart-plural')}
               </Typography.Text>
             </Col>
@@ -473,11 +481,13 @@ export const getEntityChildDetails = (
 
           <Row
             className="p-md border-radius-card summary-panel-card"
-            gutter={[0, 8]}>
+            gutter={[0, 8]}
+          >
             <Col span={24}>
               <Typography.Text
                 className="summary-panel-section-title"
-                data-testid="data-model-header">
+                data-testid="data-model-header"
+              >
                 {t('label.data-model-plural')}
               </Typography.Text>
             </Col>
@@ -579,7 +589,8 @@ export const getEntityChildDetails = (
           data={entityInfo as Metric}
           permissions={{} as OperationPermission}
           type={EntityType.METRIC as CustomizeEntityType}
-          onUpdate={() => Promise.resolve()}>
+          onUpdate={() => Promise.resolve()}
+        >
           <MetricExpression />
         </GenericProvider>
       );
@@ -589,7 +600,8 @@ export const getEntityChildDetails = (
           data={entityInfo as Metric}
           permissions={{} as OperationPermission}
           type={EntityType.METRIC as CustomizeEntityType}
-          onUpdate={() => Promise.resolve()}>
+          onUpdate={() => Promise.resolve()}
+        >
           <RelatedMetrics isInSummaryPanel />
         </GenericProvider>
       );
@@ -678,11 +690,43 @@ export const getEntityChildDetails = (
       <Col span={24}>
         <Typography.Text
           className="summary-panel-section-title"
-          data-testid={headingTestId}>
+          data-testid={headingTestId}
+        >
           {heading}
         </Typography.Text>
       </Col>
       <Col span={24}>{childComponent}</Col>
     </Row>
   );
+};
+
+/**
+ * Convert ColumnOrTask to EntityData for CustomPropertiesSection
+ * @param column - Column or task-like entity
+ * @returns EntityData object with extension property if available, or undefined
+ */
+export const toEntityData = (
+  column: ColumnOrTask | null
+): EntityData | undefined => {
+  if (!column) {
+    return undefined;
+  }
+
+  // Check if column has extension property and create a new object that satisfies EntityData
+  // extension is typed as 'any' in entity interfaces, but EntityData.extension expects Record<string, unknown>
+  // so we cast it after runtime validation to ensure type safety
+  const extension =
+    'extension' in column &&
+    typeof column.extension === 'object' &&
+    column.extension !== null
+      ? (column.extension as Table['extension'])
+      : undefined;
+
+  // Create an object that satisfies EntityData interface with index signature
+  const entityData: EntityData = {};
+  if (extension) {
+    entityData.extension = extension;
+  }
+
+  return entityData;
 };

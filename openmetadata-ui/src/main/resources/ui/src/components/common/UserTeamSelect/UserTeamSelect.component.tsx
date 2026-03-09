@@ -243,7 +243,8 @@ export const UserTeamSelect = ({
         className={isSelected ? 'selected-option' : ''}
         disabled={isSelected}
         key={option.id}
-        value={option.id}>
+        value={option.id}
+      >
         {option.type === EntityType.TEAM ? (
           <TeamOptionRenderer {...option} />
         ) : (
@@ -271,7 +272,6 @@ export const UserTeamSelect = ({
     ));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dropdownRender = (_menu: React.ReactElement) => (
     <div className="user-team-select-dropdown">
       <Tabs
@@ -315,7 +315,8 @@ export const UserTeamSelect = ({
 
       <div
         className="options-container"
-        style={{ maxHeight: ADD_USER_CONTAINER_HEIGHT, overflowY: 'auto' }}>
+        style={{ maxHeight: ADD_USER_CONTAINER_HEIGHT, overflowY: 'auto' }}
+      >
         {loading && (
           <div className="loading-container">
             <Spin size="small" />
@@ -367,7 +368,8 @@ export const UserTeamSelect = ({
       value={value.map((item) => item.id)}
       onDeselect={handleDeselect}
       onDropdownVisibleChange={setOpen}
-      onSelect={handleSelect}>
+      onSelect={handleSelect}
+    >
       {/* Render selected values */}
       <div className="selected-values-container">{renderSelectedValue()}</div>
     </Select>

@@ -46,8 +46,10 @@ const BlockEditor = forwardRef<BlockEditorRef, BlockEditorProps>(
       autoFocus,
       placeholder,
       onChange,
+      onFocus,
       showInlineAlert = true,
       extensionOptions,
+      showMenu,
     },
     ref
   ) => {
@@ -63,15 +65,20 @@ const BlockEditor = forwardRef<BlockEditorRef, BlockEditorProps>(
 
     const editorWrapperRef = useRef<HTMLDivElement>(null);
 
+    const extensions =
+      blockEditorExtensionsClassBase.getExtensions(extensionOptions);
+
     const editor = useCustomEditor({
       ...EDITOR_OPTIONS,
-      extensions:
-        blockEditorExtensionsClassBase.getExtensions(extensionOptions),
+      extensions,
       onUpdate({ editor }) {
         handleErrorMessage?.(undefined);
         const htmlContent = editor.getHTML();
         const backendFormat = formatContent(htmlContent, 'server');
         onChange?.(backendFormat);
+      },
+      onFocus() {
+        onFocus?.();
       },
       editorProps: {
         attributes: {
@@ -235,7 +242,8 @@ const BlockEditor = forwardRef<BlockEditorRef, BlockEditorProps>(
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}>
+        onDrop={handleDrop}
+      >
         {showInlineAlert && errorMessage && (
           <Banner
             className="border-radius"
@@ -244,7 +252,7 @@ const BlockEditor = forwardRef<BlockEditorRef, BlockEditorProps>(
             type="error"
           />
         )}
-        {menuType === 'bar' && !isNil(editor) && (
+        {showMenu && menuType === 'bar' && !isNil(editor) && (
           <BarMenu
             editor={editor}
             onLinkToggle={editorSlots.current?.onLinkToggle}

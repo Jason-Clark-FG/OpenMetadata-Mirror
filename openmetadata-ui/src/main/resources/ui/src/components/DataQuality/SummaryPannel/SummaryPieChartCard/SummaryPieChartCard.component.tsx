@@ -49,7 +49,8 @@ const SummaryPieChartCard = ({
         <div
           className={classNames('chart-container', {
             'd-flex items-center': showLegends,
-          })}>
+          })}
+        >
           {showLegends && (
             <Space className="m-r-md" direction="vertical" size={4}>
               {chartData.map((item) => (
@@ -82,7 +83,8 @@ const SummaryPieChartCard = ({
               paddingAngle={paddingAngle}
               // to hide tooltip when there is no data
               pointerEvents="none"
-              startAngle={90}>
+              startAngle={90}
+            >
               <Cell fill={GREY_200} />
             </Pie>
             <Pie
@@ -94,7 +96,8 @@ const SummaryPieChartCard = ({
               innerRadius={45}
               outerRadius={60}
               paddingAngle={paddingAngle}
-              startAngle={90}>
+              startAngle={90}
+            >
               {chartData.map((entry, index) => (
                 <Cell fill={entry.color} key={`cell-${index}`} />
               ))}
@@ -105,8 +108,9 @@ const SummaryPieChartCard = ({
               dominantBaseline="middle"
               textAnchor="middle"
               x="50%"
-              y="50%">
-              {`${percentage}%`}
+              y="50%"
+            >
+              {percentage}
             </text>
           </PieChart>
         </div>

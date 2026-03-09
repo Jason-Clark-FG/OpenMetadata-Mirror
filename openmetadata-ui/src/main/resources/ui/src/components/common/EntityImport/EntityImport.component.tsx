@@ -12,7 +12,7 @@
  */
 import { Affix, Button, Card, Col, Row, Space, Typography } from 'antd';
 import { AxiosError } from 'axios';
-import { isUndefined } from 'lodash';
+import { isUndefined, startCase } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as SuccessBadgeIcon } from '../../../assets/svg/success-badge.svg';
@@ -66,6 +66,15 @@ export const EntityImport = ({
       isAborted,
     };
   }, [csvImportResult]);
+
+  const translatedSteps = useMemo(
+    () =>
+      STEPS_FOR_IMPORT_ENTITY.map((step) => ({
+        ...step,
+        name: startCase(t(step.name)),
+      })),
+    [t]
+  );
 
   const handleLoadData = async (e: ProgressEvent<FileReader>) => {
     try {
@@ -206,7 +215,7 @@ export const EntityImport = ({
   return (
     <Row className="entity-import-container" gutter={[16, 16]}>
       <Col span={24}>
-        <Stepper activeStep={activeStep} steps={STEPS_FOR_IMPORT_ENTITY} />
+        <Stepper activeStep={activeStep} steps={translatedSteps} />
       </Col>
       <>
         {activeStep === 1 && (
@@ -228,7 +237,8 @@ export const EntityImport = ({
                     data-testid="cancel-button"
                     type="primary"
                     // as we need to redirect back, from where we enter import screen
-                    onClick={onCancel}>
+                    onClick={onCancel}
+                  >
                     {t('label.cancel')}
                   </Button>
                 </Space>
@@ -244,10 +254,12 @@ export const EntityImport = ({
                   align="center"
                   className="w-full justify-center p-lg text-center"
                   direction="vertical"
-                  size={16}>
+                  size={16}
+                >
                   <Typography.Text
                     className="text-center"
-                    data-testid="abort-reason">
+                    data-testid="abort-reason"
+                  >
                     <strong className="d-block">{t('label.aborted')}</strong>{' '}
                     {csvImportResult.abortReason}
                   </Typography.Text>
@@ -256,7 +268,8 @@ export const EntityImport = ({
                       ghost
                       data-testid="cancel-button"
                       type="primary"
-                      onClick={handleCancel}>
+                      onClick={handleCancel}
+                    >
                       {t('label.back')}
                     </Button>
                   </Space>
@@ -279,7 +292,8 @@ export const EntityImport = ({
                       data-testid="preview-cancel-button"
                       disabled={isImporting}
                       type="primary"
-                      onClick={handleCancel}>
+                      onClick={handleCancel}
+                    >
                       {t('label.back')}
                     </Button>
                     {!isFailure && (
@@ -287,7 +301,8 @@ export const EntityImport = ({
                         data-testid="import-button"
                         disabled={isImporting}
                         type="primary"
-                        onClick={handleImport}>
+                        onClick={handleImport}
+                      >
                         {t('label.import')}
                       </Button>
                     )}
@@ -305,7 +320,8 @@ export const EntityImport = ({
                 align="center"
                 className="w-full justify-center p-lg"
                 direction="vertical"
-                size={16}>
+                size={16}
+              >
                 <SuccessBadgeIcon data-testid="success-badge" width={36} />
 
                 <Typography.Text>
@@ -316,7 +332,8 @@ export const EntityImport = ({
                   <Button
                     data-testid="preview-button"
                     type="primary"
-                    onClick={onSuccess}>
+                    onClick={onSuccess}
+                  >
                     {t('label.view')}
                   </Button>
                 </Space>

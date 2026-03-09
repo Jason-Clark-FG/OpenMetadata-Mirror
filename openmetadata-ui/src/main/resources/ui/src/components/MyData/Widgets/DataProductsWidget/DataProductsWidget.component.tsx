@@ -37,6 +37,7 @@ import {
   WidgetCommonProps,
   WidgetConfig,
 } from '../../../../pages/CustomizablePage/CustomizablePage.interface';
+import { getAllDataProductsWithAssetsCount } from '../../../../rest/dataProductAPI';
 import { searchData } from '../../../../rest/miscAPI';
 import { getEntityTypeExploreQueryFilter } from '../../../../utils/CommonUtils';
 import { getDataProductIconByUrl } from '../../../../utils/DataProductUtils';
@@ -67,6 +68,7 @@ const DataProductsWidget = ({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [assetsCounts, setAssetsCounts] = useState<Record<string, number>>({});
 
   const fetchDataProducts = useCallback(async () => {
     setLoading(true);
@@ -75,19 +77,23 @@ const DataProductsWidget = ({
       const sortField = getSortField(selectedSortBy);
       const sortOrder = getSortOrder(selectedSortBy);
 
-      const res = await searchData(
-        '',
-        INITIAL_PAGING_VALUE,
-        PAGE_SIZE_MEDIUM,
-        '',
-        sortField,
-        sortOrder,
-        SearchIndex.DATA_PRODUCT
-      );
+      const [res, counts] = await Promise.all([
+        searchData(
+          '',
+          INITIAL_PAGING_VALUE,
+          PAGE_SIZE_MEDIUM,
+          '',
+          sortField,
+          sortOrder,
+          SearchIndex.DATA_PRODUCT
+        ),
+        getAllDataProductsWithAssetsCount(),
+      ]);
 
       const dataProducts = res?.data?.hits?.hits.map((hit) => hit._source);
       const sortedDataProducts = applySortToData(dataProducts, selectedSortBy);
       setDataProducts(sortedDataProducts as DataProduct[]);
+      setAssetsCounts(counts);
     } catch {
       setError(t('message.fetch-data-product-list-error'));
       setDataProducts([]);
@@ -160,13 +166,15 @@ const DataProductsWidget = ({
               })}
               data-testid={`data-product-card-${dataProduct.id}`}
               key={dataProduct.id}
-              onClick={() => handleDataProductClick(dataProduct)}>
+              onClick={() => handleDataProductClick(dataProduct)}
+            >
               {isFullSize ? (
                 <div className="d-flex gap-2">
                   <div
                     className="data-product-card-full-icon"
                     data-testid="data-product-icon-container"
-                    style={{ background: dataProduct.style?.color }}>
+                    style={{ background: dataProduct.style?.color }}
+                  >
                     {getDataProductIconByUrl(dataProduct.style?.iconURL)}
                   </div>
                   <div className="data-product-card-full-content">
@@ -176,13 +184,16 @@ const DataProductsWidget = ({
                         data-testid="data-product-name"
                         ellipsis={{
                           tooltip: true,
-                        }}>
+                        }}
+                      >
                         {dataProduct.displayName || dataProduct.name}
                       </Typography.Text>
                       <span
                         className="data-product-card-full-count"
-                        data-testid="data-product-asset-count">
-                        {dataProduct.assets?.length || 0}
+                        data-testid="data-product-asset-count"
+                      >
+                        {assetsCounts[dataProduct.fullyQualifiedName ?? ''] ??
+                          0}
                       </span>
                     </div>
                   </div>
@@ -190,25 +201,29 @@ const DataProductsWidget = ({
               ) : (
                 <div
                   className="d-flex data-product-card-bar"
-                  style={{ borderLeftColor: dataProduct.style?.color }}>
+                  style={{ borderLeftColor: dataProduct.style?.color }}
+                >
                   <div className="data-product-card-content">
                     <span className="data-product-card-title">
                       <div
                         className="data-product-card-icon"
-                        data-testid="data-product-icon-container">
+                        data-testid="data-product-icon-container"
+                      >
                         {getDataProductIconByUrl(dataProduct.style?.iconURL)}
                       </div>
                       <Typography.Text
                         className="data-product-card-name"
                         data-testid="data-product-name"
-                        ellipsis={{ tooltip: true }}>
+                        ellipsis={{ tooltip: true }}
+                      >
                         {dataProduct.displayName || dataProduct.name}
                       </Typography.Text>
                     </span>
                     <span
                       className="data-product-card-count"
-                      data-testid="data-product-asset-count">
-                      {dataProduct.assets?.length || 0}
+                      data-testid="data-product-asset-count"
+                    >
+                      {assetsCounts[dataProduct.fullyQualifiedName ?? ''] ?? 0}
                     </span>
                   </div>
                 </div>
@@ -280,13 +295,15 @@ const DataProductsWidget = ({
     <WidgetWrapper
       dataTestId="KnowledgePanel.DataProducts"
       header={widgetHeader}
-      loading={loading}>
+      loading={loading}
+    >
       <div className="data-products-widget-container">
         <div className="widget-content flex-1">
           {error ? (
             <ErrorPlaceHolder
               className="data-products-widget-error border-none"
-              type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+              type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+            >
               {error}
             </ErrorPlaceHolder>
           ) : isEmpty(dataProducts) ? (

@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import { ExclamationCircleFilled } from '@ant-design/icons';
-import { Button, Card, Space, Typography } from 'antd';
+import { Button, Card, Typography } from 'antd';
 import classNames from 'classnames';
 import { kebabCase } from 'lodash';
 import { useTranslation } from 'react-i18next';
-import RichTextEditorPreviewerV1 from '../../../common/RichTextEditor/RichTextEditorPreviewerV1';
+import RichTextEditorPreviewerNew from '../../../common/RichTextEditor/RichTextEditorPreviewNew';
 import AppLogo from '../AppLogo/AppLogo.component';
 import './application-card.less';
 import { ApplicationCardProps } from './ApplicationCard.interface';
@@ -39,12 +39,13 @@ const ApplicationCard = ({
         className,
         'application-card card-body-border-none'
       )}
-      data-testid={`${kebabCase(appName)}-card`}>
+      data-testid={`${kebabCase(appName)}-card`}
+    >
       <div className="d-flex items-center gap-3">
         <div className="application-logo">
           <AppLogo appName={appName} />
         </div>
-        <Space className="application-info" direction="vertical" size={0}>
+        <div className="application-info">
           <div className="d-flex gap-2">
             <Typography.Title className="m-0" level={5}>
               {title}
@@ -52,15 +53,16 @@ const ApplicationCard = ({
             {deleted && (
               <div
                 className="deleted-badge-button text-xss flex-center"
-                data-testid="deleted-badge">
+                data-testid="deleted-badge"
+              >
                 <ExclamationCircleFilled className="d-flex m-r-xss font-medium text-xs" />
                 {t('label.disabled')}
               </div>
             )}
           </div>
           {showDescription && (
-            <RichTextEditorPreviewerV1
-              className="max-two-lines"
+            <RichTextEditorPreviewerNew
+              enableSeeMoreVariant={false}
               markdown={description}
             />
           )}
@@ -68,10 +70,11 @@ const ApplicationCard = ({
             className="p-0"
             data-testid="config-btn"
             type="link"
-            onClick={onClick}>
+            onClick={onClick}
+          >
             {linkTitle}
           </Button>
-        </Space>
+        </div>
       </div>
     </Card>
   );

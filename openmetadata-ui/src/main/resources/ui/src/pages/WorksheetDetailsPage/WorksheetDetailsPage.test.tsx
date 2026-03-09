@@ -164,7 +164,8 @@ jest.mock('../../components/DriveService/Worksheet/WorksheetDetails', () =>
           </button>
           <button
             data-testid="unfollow-button"
-            onClick={unFollowWorksheetHandler}>
+            onClick={unFollowWorksheetHandler}
+          >
             Unfollow
           </button>
           <button
@@ -174,17 +175,20 @@ jest.mock('../../components/DriveService/Worksheet/WorksheetDetails', () =>
                 ...worksheetDetails,
                 displayName: 'Updated Worksheet',
               })
-            }>
+            }
+          >
             Update
           </button>
           <button
             data-testid="vote-button"
-            onClick={() => onUpdateVote(mockQueryVote, 'test-worksheet-id')}>
+            onClick={() => onUpdateVote(mockQueryVote, 'test-worksheet-id')}
+          >
             Vote
           </button>
           <button
             data-testid="delete-button"
-            onClick={() => handleToggleDelete(2)}>
+            onClick={() => handleToggleDelete(2)}
+          >
             Toggle Delete
           </button>
           <button data-testid="version-button" onClick={versionHandler}>
@@ -254,6 +258,9 @@ describe('WorksheetDetailsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
+    (getDriveAssetByFqn as jest.Mock).mockImplementation(() =>
+      Promise.resolve(mockWorksheetDetails)
+    );
   });
 
   const renderComponent = async (props = {}) => {
@@ -302,7 +309,7 @@ describe('WorksheetDetailsPage', () => {
       error.response = {
         status: 404,
       } as AxiosResponse;
-      (getDriveAssetByFqn as jest.Mock).mockImplementationOnce(() =>
+      (getDriveAssetByFqn as jest.Mock).mockImplementation(() =>
         Promise.reject(error)
       );
 

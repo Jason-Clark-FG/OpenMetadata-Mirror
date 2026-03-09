@@ -16,7 +16,7 @@ import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { isEmpty, isUndefined } from 'lodash';
-import { EntityTags, PagingWithoutTotal, ServiceTypes } from 'Models';
+import { EntityTags, ServiceTypes } from 'Models';
 import QueryString from 'qs';
 import {
   Dispatch,
@@ -87,7 +87,6 @@ interface ServiceMainTabContentProps {
   paging: Paging;
   currentPage: number;
   setFilters: (val: { [key: string]: string | undefined }) => void;
-  getServiceDetails: (paging?: PagingWithoutTotal) => void;
   saveUpdatedServiceData: (updatedData: ServicesType) => Promise<void>;
   pagingInfo: UsePagingInterface;
   isVersionPage?: boolean;
@@ -111,12 +110,12 @@ function ServiceMainTabContent({
   isVersionPage = false,
   onDataProductUpdate,
   setFilters,
-  getServiceDetails,
   setIsServiceLoading,
 }: Readonly<ServiceMainTabContentProps>) {
   const { t } = useTranslation();
-  const { serviceCategory } =
-    useRequiredParams<{ serviceCategory: ServiceTypes }>();
+  const { serviceCategory } = useRequiredParams<{
+    serviceCategory: ServiceTypes;
+  }>();
   const { permissions } = usePermissionProvider();
   const navigate = useNavigate();
   const [pageData, setPageData] = useState<ServicePageData[]>([]);
@@ -254,10 +253,6 @@ function ServiceMainTabContent({
       }
       try {
         setIsServiceLoading(true);
-        pagingInfo.handlePageChange(pageNumber, {
-          cursorType: null,
-          cursorValue: undefined,
-        });
         const res = await searchQuery({
           pageNumber,
           pageSize: pagingInfo.pageSize,
@@ -293,11 +288,10 @@ function ServiceMainTabContent({
   const onServiceSearch = useCallback(
     (value: string) => {
       setFilters({ schema: isEmpty(value) ? undefined : value });
-      if (value) {
-        searchService(value);
-      } else {
-        getServiceDetails({ limit: paging.limit });
-      }
+      pagingInfo.handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
     },
     [searchService, pagingInfo]
   );
@@ -305,19 +299,24 @@ function ServiceMainTabContent({
   const tablePaginationHandler = useCallback(
     ({ cursorType, currentPage }: PagingHandlerParams) => {
       if (searchValue) {
-        searchService(searchValue, currentPage);
+        pagingInfo.handlePageChange(currentPage);
       } else if (cursorType) {
-        getServiceDetails({ [cursorType]: paging[cursorType] });
+        pagingInfo.handlePageChange(
+          currentPage,
+          { cursorType, cursorValue: paging[cursorType] },
+          pagingInfo.pageSize
+        );
       }
-      pagingInfo.handlePageChange(currentPage);
     },
-    [searchValue, searchService, pagingInfo]
+    [searchValue, pagingInfo]
   );
 
   const searchProps = useMemo(
     () => ({
       placeholder: t('label.search-for-type', {
-        type: servicesDisplayName[serviceCategory],
+        type: t(servicesDisplayName[serviceCategory].key, {
+          entity: t(servicesDisplayName[serviceCategory].entity),
+        }),
       }),
       typingInterval: 500,
       searchValue: searchValue,
@@ -370,6 +369,12 @@ function ServiceMainTabContent({
     setPageData(data);
   }, [data]);
 
+  useEffect(() => {
+    if (searchValue) {
+      searchService(searchValue, currentPage);
+    }
+  }, [searchValue, currentPage, showDeleted]);
+
   return (
     <Row className="main-tab-content" gutter={[0, 16]} wrap={false}>
       <Col className="tab-content-height-with-resizable-panel" span={24}>
@@ -393,7 +398,8 @@ function ServiceMainTabContent({
                   <Space
                     className="w-full m-b-md"
                     direction="vertical"
-                    size="large">
+                    size="large"
+                  >
                     <Table
                       columns={tableColumn}
                       customPaginationProps={{
@@ -457,7 +463,8 @@ function ServiceMainTabContent({
                 data={serviceDetails}
                 permissions={servicePermission}
                 type={entityType as CustomizeEntityType}
-                onUpdate={saveUpdatedServiceData}>
+                onUpdate={saveUpdatedServiceData}
+              >
                 <div data-testid="entity-right-panel">
                   <EntityRightPanel
                     editDataProductPermission={editDataProductPermission}

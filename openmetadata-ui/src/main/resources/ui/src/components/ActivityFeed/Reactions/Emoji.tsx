@@ -21,6 +21,7 @@ import { ReactionOperation } from '../../../enums/reactions.enum';
 import { Reaction, ReactionType } from '../../../generated/type/reaction';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import useImage from '../../../hooks/useImage';
+import { getEntityName } from '../../../utils/EntityUtils';
 
 interface EmojiProps {
   reaction: ReactionType;
@@ -55,8 +56,8 @@ const Emoji: FC<EmojiProps> = ({
     (reactionItem) => reactionItem.user.id === currentUser?.id
   );
 
-  const reactedUserList = reactionList.map(
-    (reactionItem) => reactionItem.user.name
+  const reactedUserList = reactionList.map((reactionItem) =>
+    getEntityName(reactionItem.user)
   );
 
   const handleEmojiOnClick = (e: React.MouseEvent) => {
@@ -111,7 +112,8 @@ const Emoji: FC<EmojiProps> = ({
       open={visible}
       trigger="hover"
       zIndex={9999}
-      onOpenChange={setVisible}>
+      onOpenChange={setVisible}
+    >
       <Button
         className={classNames(
           'ant-btn-reaction m-r-xss flex-center transparent',
@@ -124,7 +126,8 @@ const Emoji: FC<EmojiProps> = ({
         shape="round"
         size="small"
         onClick={handleEmojiOnClick}
-        onMouseOver={() => setVisible(true)}>
+        onMouseOver={() => setVisible(true)}
+      >
         {element}
         <span className="text-xs m-l-xs self-center" data-testid="emoji-count">
           {reactionList.length.toLocaleString('en-US', {

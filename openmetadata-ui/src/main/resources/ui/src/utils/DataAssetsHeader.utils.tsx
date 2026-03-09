@@ -91,7 +91,8 @@ export const ExtraInfoLabel = ({
         <Divider className="self-center" type="vertical" />
         <Typography.Text
           className="self-center text-xs whitespace-nowrap"
-          data-testid={dataTestId}>
+          data-testid={dataTestId}
+        >
           {!isEmpty(label) && (
             <span className="text-grey-muted">{`${label}: `}</span>
           )}
@@ -105,13 +106,20 @@ export const ExtraInfoLabel = ({
     <div className="d-flex align-start extra-info-container">
       <Typography.Text
         className="whitespace-nowrap text-sm d-flex flex-col gap-2 w-full"
-        data-testid={dataTestId}>
+        data-testid={dataTestId}
+      >
         {!isEmpty(label) && (
           <span className="extra-info-label-heading">{label}</span>
         )}
-        <div className={classNames('font-medium extra-info-value')}>
+
+        <Typography.Text
+          className={classNames('font-medium extra-info-value')}
+          ellipsis={{
+            tooltip: true,
+          }}
+        >
           {value ?? NO_DATA_PLACEHOLDER}
-        </div>
+        </Typography.Text>
       </Typography.Text>
     </div>
   );
@@ -133,7 +141,8 @@ export const ExtraInfoLink = ({
   <div
     className={classNames('d-flex  text-sm  flex-col gap-2', {
       'w-48': ellipsis,
-    })}>
+    })}
+  >
     {!isEmpty(label) && (
       <span className="extra-info-label-heading  m-r-xss">{label}</span>
     )}
@@ -144,7 +153,8 @@ export const ExtraInfoLink = ({
           className="extra-info-link"
           href={href}
           rel={newTab ? 'noopener noreferrer' : undefined}
-          target={newTab ? '_blank' : undefined}>
+          target={newTab ? '_blank' : undefined}
+        >
           {value}
         </Typography.Link>
       </Tooltip>

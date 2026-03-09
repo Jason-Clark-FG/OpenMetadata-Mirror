@@ -114,7 +114,9 @@ const DescriptionV1 = ({
   }, [entityType, entityFqn]);
 
   const taskActionButton = useMemo(() => {
-    const hasDescription = !isDescriptionContentEmpty(description.trim());
+    const hasDescription = !isDescriptionContentEmpty(
+      description?.trim() ?? ''
+    );
 
     const isTaskEntity = TASK_ENTITIES.includes(entityType);
 
@@ -222,7 +224,8 @@ const DescriptionV1 = ({
       <div
         className={classNames('d-flex justify-between flex-wrap', {
           'm-t-sm': suggestions?.length > 0,
-        })}>
+        })}
+      >
         <div className="d-flex items-center gap-2">
           <Text className={classNames('text-sm font-medium')}>
             {t('label.description')}
@@ -244,7 +247,8 @@ const DescriptionV1 = ({
             })}
         className={classNames('schema-description d-flex', className)}
         direction="vertical"
-        size={16}>
+        size={16}
+      >
         {!wrapInCard ? header : null}
         <div>
           {descriptionContent}
@@ -266,7 +270,8 @@ const DescriptionV1 = ({
   return wrapInCard ? (
     <ExpandableCard
       cardProps={{ title: header, className: 'new-description-card' }}
-      dataTestId="asset-description-container">
+      dataTestId="asset-description-container"
+    >
       {content}
     </ExpandableCard>
   ) : (

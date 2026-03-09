@@ -114,8 +114,10 @@ const TableQueries: FC<TableQueriesProp> = ({
   const [isTagsLoading, setIsTagsLoading] = useState(false);
   const [isOwnerLoading, setIsOwnerLoading] = useState(false);
   const [isClickedCalendar, setIsClickedCalendar] = useState(false);
-  const [queryDateFilter, setQueryDateFilter] =
-    useState<{ startTs: number; endTs: number }>();
+  const [queryDateFilter, setQueryDateFilter] = useState<{
+    startTs: number;
+    endTs: number;
+  }>();
   const [sortQuery, setSortQuery] = useState<{
     field: string;
     order: SORT_ORDER;
@@ -124,6 +126,15 @@ const TableQueries: FC<TableQueriesProp> = ({
   const isAscSortOrder = useMemo(
     () => sortQuery.order === SORT_ORDER.ASC,
     [sortQuery.order]
+  );
+
+  const translatedQuerySortOptions = useMemo(
+    () =>
+      QUERY_SORT_OPTIONS.map((option) => ({
+        ...option,
+        name: t(option.name),
+      })),
+    [t]
   );
 
   const {
@@ -479,12 +490,14 @@ const TableQueries: FC<TableQueriesProp> = ({
   const addButton = (
     <Tooltip
       placement="top"
-      title={!permissions?.query.Create && NO_PERMISSION_FOR_ACTION}>
+      title={!permissions?.query.Create && t(NO_PERMISSION_FOR_ACTION)}
+    >
       <Button
         data-testid="add-query-btn"
         disabled={!permissions?.query.Create}
         type="primary"
-        onClick={handleAddQueryClick}>
+        onClick={handleAddQueryClick}
+      >
         {t('label.add')}
       </Button>
     </Tooltip>
@@ -525,7 +538,8 @@ const TableQueries: FC<TableQueriesProp> = ({
     <Col
       className="flex-center font-medium mt-24 p-b-md"
       data-testid="no-queries"
-      span={24}>
+      span={24}
+    >
       <ErrorPlaceHolder>
         <Typography.Paragraph>
           {t('message.adding-new-entity-is-easy-just-give-it-a-spin', {
@@ -592,7 +606,8 @@ const TableQueries: FC<TableQueriesProp> = ({
                         type="text"
                         onClick={() => {
                           setIsClickedCalendar(true);
-                        }}>
+                        }}
+                      >
                         <span>
                           <label>{t('label.created-date')}</label>
                           <DatePicker.RangePicker
@@ -614,7 +629,7 @@ const TableQueries: FC<TableQueriesProp> = ({
                     </Space>
                     <Space size={16}>
                       <SortingDropDown
-                        fieldList={QUERY_SORT_OPTIONS}
+                        fieldList={translatedQuerySortOptions}
                         handleFieldDropDown={handleSortFieldChange}
                         sortField={sortQuery.field}
                       />
@@ -626,7 +641,8 @@ const TableQueries: FC<TableQueriesProp> = ({
                           handleSortOderChange(
                             isAscSortOrder ? SORT_ORDER.DESC : SORT_ORDER.ASC
                           )
-                        }>
+                        }
+                      >
                         {isAscSortOrder ? (
                           <SortAscendingOutlined
                             className="text-base text-grey-muted"

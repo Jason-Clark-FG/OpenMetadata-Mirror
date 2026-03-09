@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import Loader from '../../components/common/Loader/Loader';
 import {
   GRAPH_BACKGROUND_COLOR,
   TEXT_BODY_COLOR,
@@ -34,16 +35,23 @@ const SwaggerPage = () => {
     fetchIdToken();
   }, []);
 
+  const apiKeyValue = `Bearer ${idToken}`;
+
+  if (!idToken) {
+    return <Loader />;
+  }
+
   return (
     <div
       className="container-fluid"
       data-testid="fluid-container"
-      id="doc-container">
+      id="doc-container"
+    >
       <RapiDocReact
         allow-spec-file-download
         api-key-location="header"
         api-key-name="Authorization"
-        api-key-value={`Bearer ${idToken}`}
+        api-key-value={apiKeyValue}
         font-size="large"
         nav-bg-color={GRAPH_BACKGROUND_COLOR}
         nav-item-spacing="compact"

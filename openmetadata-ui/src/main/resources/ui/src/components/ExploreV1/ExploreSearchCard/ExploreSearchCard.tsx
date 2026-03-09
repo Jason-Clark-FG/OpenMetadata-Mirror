@@ -236,12 +236,14 @@ const ExploreSearchCard: React.FC<ExploreSearchCardProps> = forwardRef<
             data-testid={`${
               source.service?.name ? `${source.service.name}-` : 'explore-card-'
             }${source.name}`}
-            span={24}>
+            span={24}
+          >
             {isTourOpen ? (
               <Button data-testid={source.fullyQualifiedName} type="link">
                 <Typography.Text
                   className="text-lg font-medium text-link-color"
-                  data-testid="entity-header-display-name">
+                  data-testid="entity-header-display-name"
+                >
                   {stringToHTML(
                     highlightSearchText(
                       searchClassBase.getEntityName(source),
@@ -265,10 +267,12 @@ const ExploreSearchCard: React.FC<ExploreSearchCardProps> = forwardRef<
                     source,
                     openEntityInNewPage
                   )}
-                  to={isObject(entityLink) ? entityLink.pathname : entityLink}>
+                  to={isObject(entityLink) ? entityLink.pathname : entityLink}
+                >
                   <Typography.Text
                     className="text-lg font-medium text-link-color break-word whitespace-normal"
-                    data-testid="entity-header-display-name">
+                    data-testid="entity-header-display-name"
+                  >
                     {stringToHTML(
                       highlightSearchText(
                         searchClassBase.getEntityName(source),
@@ -320,7 +324,8 @@ const ExploreSearchCard: React.FC<ExploreSearchCardProps> = forwardRef<
         ref={ref}
         onClick={() => {
           handleSummaryPanelDisplay?.(source, tab);
-        }}>
+        }}
+      >
         {header}
 
         <div className="p-t-sm">
@@ -336,13 +341,13 @@ const ExploreSearchCard: React.FC<ExploreSearchCardProps> = forwardRef<
         {matches && matches.length > 0 ? (
           <div
             className="p-t-sm text-grey-muted text-xs"
-            data-testid="matches-stats">
+            data-testid="matches-stats"
+          >
             <span>{`${t('label.matches')}:`}</span>
             {matches.map((data, i) => (
               <span className="m-l-xs" key={uniqueId()}>
-                {`${data.value} in ${startCase(data.key)}${
-                  i !== matches.length - 1 ? ',' : ''
-                }`}
+                {`${data.value} ${t('label.in-lowercase')} 
+                ${startCase(data.key)}${i !== matches.length - 1 ? ',' : ''}`}
               </span>
             ))}
           </div>

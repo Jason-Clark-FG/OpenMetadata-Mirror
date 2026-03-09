@@ -14,9 +14,7 @@
 import { FC, Suspense } from 'react';
 import Loader from '../common/Loader/Loader';
 
-export default function withSuspenseFallback<T extends unknown>(
-  Component: FC<T>
-) {
+export default function withSuspenseFallback<T>(Component: FC<T>) {
   return function DefaultFallback(
     props: JSX.IntrinsicAttributes & { children?: React.ReactNode } & T
   ) {
@@ -26,7 +24,8 @@ export default function withSuspenseFallback<T extends unknown>(
           <div className="ant-layout-content flex-center">
             <Loader />
           </div>
-        }>
+        }
+      >
         <Component {...props} />
       </Suspense>
     );

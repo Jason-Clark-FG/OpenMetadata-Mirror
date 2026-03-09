@@ -75,19 +75,23 @@ export const useCardView = <T extends { id: string }>({
     () =>
       isEmpty(listing.entities) ? (
         <Box
-          sx={{ textAlign: 'center', margin: '16px 24px', padding: '9px 0' }}>
+          sx={{ textAlign: 'center', margin: '16px 24px', padding: '9px 0' }}
+        >
           {t('server.no-records-found')}
         </Box>
       ) : (
         <Box
+          data-testid="card-view-container"
           sx={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)', // Strict 3 columns
             gap: 4, // 16px spacing
             m: 6, // 24px margin
-          }}>
+          }}
+        >
           {listing.entities.map((entity) => (
             <Card
+              data-testid="entity-card"
               elevation={0}
               key={entity.id}
               sx={{
@@ -111,7 +115,8 @@ export const useCardView = <T extends { id: string }>({
                   },
                 },
               }}
-              onClick={() => listing.actionHandlers?.onEntityClick?.(entity)}>
+              onClick={() => listing.actionHandlers?.onEntityClick?.(entity)}
+            >
               <CardContent>{cardTemplate(entity, renderCell)}</CardContent>
             </Card>
           ))}

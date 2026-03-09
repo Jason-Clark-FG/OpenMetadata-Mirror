@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg';
 import { ReactComponent as PlusIcon } from '../../../assets/svg/plus-primary.svg';
 import { TermReference } from '../../../generated/entity/data/glossaryTerm';
+import { referenceURLValidator } from '../../../utils/GlossaryUtils';
 
 interface GlossaryTermReferencesModalProps {
   references: TermReference[];
@@ -40,8 +41,6 @@ const GlossaryTermReferencesModal = ({
       setSaving(true);
       await form.validateFields();
       await onSave(obj.references);
-    } catch (_) {
-      // Nothing here
     } finally {
       setSaving(false);
     }
@@ -75,13 +74,15 @@ const GlossaryTermReferencesModal = ({
           key="save-btn"
           loading={saving}
           type="primary"
-          onClick={form.submit}>
+          onClick={form.submit}
+        >
           {t('label.save')}
         </Button>,
       ]}
       open={isVisible}
       title={t('label.reference-plural')}
-      onCancel={onClose}>
+      onCancel={onClose}
+    >
       <Form className="reference-edit-form" form={form} onFinish={handleSubmit}>
         <Form.List name="references">
           {(fields, { add, remove }) => (
@@ -100,7 +101,8 @@ const GlossaryTermReferencesModal = ({
                             field: t('label.name'),
                           }),
                         },
-                      ]}>
+                      ]}
+                    >
                       <Input placeholder={t('label.name')} />
                     </Form.Item>
                   </Col>
@@ -120,13 +122,18 @@ const GlossaryTermReferencesModal = ({
                           type: 'url',
                           message: t('message.endpoint-should-be-valid'),
                         },
-                      ]}>
+                        {
+                          validator: referenceURLValidator,
+                        },
+                      ]}
+                    >
                       <Input placeholder={t('label.endpoint')} />
                     </Form.Item>
                   </Col>
 
                   <Col span={1}>
                     <Button
+                      data-testid="delete-ref-btn"
                       icon={
                         <Icon
                           className="align-middle"
@@ -147,7 +154,8 @@ const GlossaryTermReferencesModal = ({
                   data-testid="add-references-button"
                   icon={<PlusIcon className="anticon" />}
                   size="small"
-                  onClick={() => add()}>
+                  onClick={() => add()}
+                >
                   {t('label.add')}
                 </Button>
               </Form.Item>

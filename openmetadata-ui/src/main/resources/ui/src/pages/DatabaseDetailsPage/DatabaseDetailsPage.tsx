@@ -99,10 +99,13 @@ const DatabaseDetails: FunctionComponent = () => {
   const { t } = useTranslation();
 
   const { getEntityPermissionByFqn } = usePermissionProvider();
-  const { withinPageSearch } =
-    useLocationSearch<{ withinPageSearch: string }>();
+  const { withinPageSearch } = useLocationSearch<{
+    withinPageSearch: string;
+  }>();
   const { tab: activeTab } = useRequiredParams<{ tab: EntityTabs }>();
-  const { fqn: decodedDatabaseFQN } = useFqn();
+  const { entityFqn: decodedDatabaseFQN } = useFqn({
+    type: EntityType.DATABASE,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const { customizedPage, isLoading: loading } = useCustomPages(
     PageType.Database
@@ -593,10 +596,7 @@ const DatabaseDetails: FunctionComponent = () => {
   }
 
   return (
-    <PageLayoutV1
-      pageTitle={t('label.entity-detail-plural', {
-        entity: getEntityName(database),
-      })}>
+    <PageLayoutV1 pageTitle={getEntityName(database)}>
       {isEmpty(database) ? (
         <ErrorPlaceHolder className="m-0">
           {getEntityMissingError(EntityType.DATABASE, decodedDatabaseFQN)}
@@ -630,7 +630,8 @@ const DatabaseDetails: FunctionComponent = () => {
             isTabExpanded={isTabExpanded}
             permissions={databasePermission}
             type={EntityType.DATABASE}
-            onUpdate={settingsUpdateHandler}>
+            onUpdate={settingsUpdateHandler}
+          >
             <Col className="entity-details-page-tabs" span={24}>
               <Tabs
                 activeKey={activeTab}

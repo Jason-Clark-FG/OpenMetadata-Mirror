@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { FC, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { renderIcon } from '../../../utils/IconUtils';
+import { isImageUrl, renderIcon } from '../../../utils/IconUtils';
 import { useSearch } from '../atoms/navigation/useSearch';
 import { AVAILABLE_ICONS, DEFAULT_ICON_NAME } from './IconPicker.constants';
 import {
@@ -45,6 +45,7 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
   defaultIcon,
   onChange,
   customStyles,
+  'data-testid': dataTestId,
 }) => {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -58,7 +59,7 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
       return { type: 'icons' as IconPickerTabValue, value: resolvedIconName };
     }
     if (typeof val === 'string') {
-      if (val.startsWith('http') || val.startsWith('/')) {
+      if (isImageUrl(val)) {
         return { type: 'url' as IconPickerTabValue, value: val };
       }
 
@@ -83,6 +84,7 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
       setUrlValue(newParsedValue.value);
       setActiveTab('url');
     } else {
+      setUrlValue('');
       setActiveTab('icons');
     }
   }, [value]);
@@ -105,13 +107,28 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
     if (onChange) {
       onChange(iconName);
     }
+    setUrlValue('');
     setOpen(false);
   };
 
   const handleUrlChange = (url: string) => {
     setUrlValue(url);
-    if (onChange && url) {
-      onChange(url);
+  };
+
+  const handleUrlBlur = () => {
+    if (urlValue && onChange && urlValue !== parsedValue.value) {
+      onChange(urlValue);
+    }
+  };
+
+  const handleUrlKeyDown = (e: React.KeyboardEvent) => {
+    if (
+      e.key === 'Enter' &&
+      urlValue &&
+      onChange &&
+      urlValue !== parsedValue.value
+    ) {
+      onChange(urlValue);
     }
   };
 
@@ -143,6 +160,7 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
 
       {/* Inline icon display - just a box */}
       <Box
+        data-testid={dataTestId}
         ref={anchorRef}
         sx={{
           display: 'inline-flex',
@@ -174,7 +192,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
             e.preventDefault();
             handleToggle();
           }
-        }}>
+        }}
+      >
         {renderIcon(parsedValue.value, {
           size: 24,
           strokeWidth: 1.5,
@@ -186,7 +205,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
         anchorEl={anchorRef.current}
         open={open}
         placement="bottom-start"
-        style={{ zIndex: 1300 }}>
+        style={{ zIndex: 1300 }}
+      >
         <ClickAwayListener onClickAway={handleClose}>
           <Paper
             elevation={0}
@@ -199,7 +219,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
               borderRadius: '8px',
               boxShadow:
                 '0px 12px 16px -4px rgba(10, 13, 18, 0.08), 0px 4px 6px -2px rgba(10, 13, 18, 0.03)',
-            }}>
+            }}
+          >
             {allowUrl && (
               <Tabs
                 sx={{
@@ -214,9 +235,14 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                   },
                 }}
                 value={activeTab}
-                onChange={handleTabChange}>
-                <Tab label={t('label.icon-plural')} value="icons" />
-                <Tab label={t('label.url')} value="url" />
+                onChange={handleTabChange}
+              >
+                <Tab
+                  data-testid="icon-tab"
+                  label={t('label.icon-plural')}
+                  value="icons"
+                />
+                <Tab data-testid="url-tab" label={t('label.url')} value="url" />
               </Tabs>
             )}
 
@@ -232,14 +258,16 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       mb: 1.5,
-                    }}>
+                    }}
+                  >
                     <Box
                       component="span"
                       sx={{
                         fontSize: '0.875rem',
                         fontWeight: 500,
                         color: theme.palette.grey?.[900],
-                      }}>
+                      }}
+                    >
                       {t('label.default')}
                     </Box>
                   </Box>
@@ -274,7 +302,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                         e.preventDefault();
                         handleIconSelect(resolvedIconName);
                       }
-                    }}>
+                    }}
+                  >
                     {(defaultIcon?.component || AVAILABLE_ICONS[0].component)({
                       size: 20,
                       style: { display: 'block', strokeWidth: 1.25 },
@@ -291,7 +320,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                         fontWeight: 500,
                         color: theme.palette.grey?.[900],
                         mb: 1.5,
-                      }}>
+                      }}
+                    >
                       {t('label.icon-plural')}
                     </Box>
 
@@ -303,7 +333,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                         gap: '0',
                         maxHeight: '250px',
                         overflowY: 'auto',
-                      }}>
+                      }}
+                    >
                       {filteredIcons.slice(0).map((icon) => {
                         const IconComponent = icon.component;
                         const isSelected = selectedIcon === icon.name;
@@ -339,7 +370,8 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                                 e.preventDefault();
                                 handleIconSelect(icon.name);
                               }
-                            }}>
+                            }}
+                          >
                             <IconComponent
                               size={20}
                               style={{ display: 'block', strokeWidth: 1.25 }}
@@ -357,8 +389,15 @@ const MUIIconPicker: FC<MUIIconPickerProps> = ({
                   fullWidth
                   placeholder={placeholder}
                   size="small"
+                  slotProps={{
+                    htmlInput: {
+                      'data-testid': 'icon-url-input',
+                    },
+                  }}
                   value={urlValue}
+                  onBlur={handleUrlBlur}
                   onChange={(e) => handleUrlChange(e.target.value)}
+                  onKeyDown={handleUrlKeyDown}
                 />
               </Box>
             )}

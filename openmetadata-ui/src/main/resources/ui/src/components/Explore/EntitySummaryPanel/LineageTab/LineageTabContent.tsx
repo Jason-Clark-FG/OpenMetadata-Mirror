@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Tooltip } from '@mui/material';
 import { Button, Typography } from 'antd';
 import { capitalize } from 'lodash';
 import React, { useMemo, useState } from 'react';
@@ -24,7 +25,10 @@ import { EntityType } from '../../../../enums/entity.enum';
 import { EntityReference } from '../../../../generated/entity/type';
 import { getServiceLogo } from '../../../../utils/CommonUtils';
 import { getUpstreamDownstreamNodesEdges } from '../../../../utils/EntityLineageUtils';
-import { getEntityLinkFromType } from '../../../../utils/EntityUtils';
+import {
+  getEntityLinkFromType,
+  getEntityName,
+} from '../../../../utils/EntityUtils';
 import { FormattedDatabaseServiceType } from '../../../../utils/EntityUtils.interface';
 import { getTruncatedPath } from '../../../../utils/Lineage/LineageUtils';
 import searchClassBase from '../../../../utils/SearchClassBase';
@@ -132,20 +136,67 @@ const LineageTabContent: React.FC<LineageTabContentProps> = ({
     const searchLower = searchText.toLowerCase();
 
     return lineageItems.filter((item) => {
-      const entityName = item.entity.name?.toLowerCase() || '';
-      const entityDisplayName = item.entity.displayName?.toLowerCase() || '';
+      const entityName = getEntityName(item.entity)?.toLowerCase() || '';
       const entityFqn = item.entity.fullyQualifiedName?.toLowerCase() || '';
 
       return (
-        entityName.includes(searchLower) ||
-        entityDisplayName.includes(searchLower) ||
-        entityFqn.includes(searchLower)
+        entityName.includes(searchLower) || entityFqn.includes(searchLower)
       );
     });
   }, [lineageItems, searchText]);
 
   return (
     <div className="lineage-tab-content">
+      <div className="lineage-filter-buttons">
+        <Button
+          className={`lineage-filter-button ${
+            filter === 'upstream' ? 'active' : ''
+          }`}
+          data-testid={`upstream-button-${
+            filter === 'upstream' ? 'active' : ''
+          }`}
+          size="small"
+          onClick={() => onFilterChange('upstream')}
+        >
+          <span
+            className="lineage-filter-button-text"
+            data-testid="upstream-button-text"
+          >
+            {t('label.upstream')}
+          </span>
+          <span
+            className={`lineage-filter-button-count ${
+              filter === 'upstream' ? 'active' : ''
+            }`}
+          >
+            {upstreamCount}
+          </span>
+        </Button>
+        <Button
+          className={`lineage-filter-button ${
+            filter === 'downstream' ? 'active' : ''
+          }`}
+          data-testid={`downstream-button-${
+            filter === 'downstream' ? 'active' : ''
+          }`}
+          size="small"
+          onClick={() => onFilterChange('downstream')}
+        >
+          <span
+            className="lineage-filter-button-text"
+            data-testid="downstream-button-text"
+          >
+            {t('label.downstream')}
+          </span>
+          <span
+            className={`lineage-filter-button-count ${
+              filter === 'downstream' ? 'active' : ''
+            }`}
+          >
+            {downstreamCount}
+          </span>
+        </Button>
+      </div>
       <SearchBarComponent
         containerClassName="searchbar-container"
         placeholder={t('label.search-for-type', {
@@ -155,37 +206,6 @@ const LineageTabContent: React.FC<LineageTabContentProps> = ({
         typingInterval={350}
         onSearch={setSearchText}
       />
-      <div className="lineage-filter-buttons">
-        <Button
-          className={`lineage-filter-button ${
-            filter === 'upstream' ? 'active' : ''
-          }`}
-          size="small"
-          onClick={() => onFilterChange('upstream')}>
-          {t('label.upstream')}
-          <span
-            className={`lineage-filter-button-count ${
-              filter === 'upstream' ? 'active' : ''
-            }`}>
-            {upstreamCount}
-          </span>
-        </Button>
-        <Button
-          className={`lineage-filter-button ${
-            filter === 'downstream' ? 'active' : ''
-          }`}
-          size="small"
-          onClick={() => onFilterChange('downstream')}>
-          {t('label.downstream')}
-          <span
-            className={`lineage-filter-button-count ${
-              filter === 'downstream' ? 'active' : ''
-            }`}>
-            {downstreamCount}
-          </span>
-        </Button>
-      </div>
-
       {/* Lineage Items */}
       <div className="lineage-items-list">
         {filteredLineageItems.length > 0 ? (
@@ -201,14 +221,16 @@ const LineageTabContent: React.FC<LineageTabContentProps> = ({
               to={getEntityLinkFromType(
                 item.entity.fullyQualifiedName ?? '',
                 item.entity.entityType as EntityType
-              )}>
+              )}
+            >
               <div
                 className="lineage-item-card"
                 key={
                   item.entity.id ||
                   item.entity.fullyQualifiedName ||
                   `${item.direction}-${item.path}`
-                }>
+                }
+              >
                 <div className="lineage-item-header">
                   <div className="d-flex align-items-center gap-1">
                     <div className="service-icon">
@@ -227,15 +249,31 @@ const LineageTabContent: React.FC<LineageTabContentProps> = ({
                   </div>
                   <div className="lineage-item-direction">
                     {item.direction === 'upstream' ? (
-                      <UpstreamIcon height={18} width={18} />
+                      <Tooltip
+                        arrow
+                        placement="top"
+                        title={t('label.upstream')}
+                      >
+                        <span>
+                          <UpstreamIcon height={18} width={18} />
+                        </span>
+                      </Tooltip>
                     ) : (
-                      <DownstreamIcon height={18} width={18} />
+                      <Tooltip
+                        arrow
+                        placement="top"
+                        title={t('label.downstream')}
+                      >
+                        <span>
+                          <DownstreamIcon height={18} width={18} />
+                        </span>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
                 <div className="lineage-card-content">
                   <Typography.Text className="item-name-text">
-                    {item.entity.displayName || item.entity.name}
+                    {getEntityName(item.entity)}
                   </Typography.Text>
                   <div className="d-flex align-items-center gap-1 lineage-info-container">
                     {item.entity.entityType && (
@@ -285,7 +323,8 @@ const LineageTabContent: React.FC<LineageTabContentProps> = ({
             <ErrorPlaceHolderNew
               className="text-grey-14 m-t-lg"
               icon={<AddPlaceHolderIcon height={100} width={100} />}
-              type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+              type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+            >
               <Typography.Paragraph className="text-center  no-data-placeholder">
                 {t('label.lineage-not-found')}
               </Typography.Paragraph>

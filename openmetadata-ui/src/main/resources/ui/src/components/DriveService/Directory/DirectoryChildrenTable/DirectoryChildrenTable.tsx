@@ -24,8 +24,8 @@ import {
 } from '../../../../generated/entity/data/directory';
 import { getColumnSorter, getEntityName } from '../../../../utils/EntityUtils';
 import { getEntityDetailsPath } from '../../../../utils/RouterUtils';
+import { descriptionTableObject } from '../../../../utils/TableColumn.util';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
-import RichTextEditorPreviewerNew from '../../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../../common/Table/Table';
 import { useGenericContext } from '../../../Customization/GenericProvider/GenericProvider';
 
@@ -49,7 +49,8 @@ function DirectoryChildrenTable() {
               to={getEntityDetailsPath(
                 record.type as EntityType,
                 record.fullyQualifiedName ?? ''
-              )}>
+              )}
+            >
               {getEntityName(record)}
             </Link>
           </div>
@@ -69,31 +70,15 @@ function DirectoryChildrenTable() {
               overflowWrap: 'break-word',
               textAlign: 'center',
             }}
-            title={toLower(type)}>
+            title={toLower(type)}
+          >
             <Typography.Text ellipsis className="cursor-pointer">
               {type ?? record.type}
             </Typography.Text>
           </Tooltip>
         ),
       },
-      {
-        title: t('label.description'),
-        dataIndex: 'description',
-        key: 'description',
-        render: (description: EntityReference['description']) => (
-          <>
-            {description ? (
-              <RichTextEditorPreviewerNew markdown={description} />
-            ) : (
-              <Typography.Text className="text-grey-muted">
-                {t('label.no-entity', {
-                  entity: t('label.description'),
-                })}
-              </Typography.Text>
-            )}
-          </>
-        ),
-      },
+      ...descriptionTableObject(),
     ],
     []
   );

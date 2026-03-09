@@ -32,6 +32,7 @@ import {
 } from '../../../../generated/entity/data/table';
 import { searchQuery } from '../../../../rest/searchAPI';
 import { getBreadcrumbsFromFqn } from '../../../../utils/EntityUtils';
+import { translateWithNestedKeys } from '../../../../utils/i18next/LocalUtil';
 import { getServiceNameQueryFilter } from '../../../../utils/ServiceUtils';
 import {
   escapeESReservedCharacters,
@@ -170,7 +171,8 @@ const TableConstraintsModal = ({
                 <Fragment key={breadcrumb.name}>
                   <Typography.Text
                     className="constraint-breadcrumb-item"
-                    ellipsis={{ tooltip: true }}>
+                    ellipsis={{ tooltip: true }}
+                  >
                     {breadcrumb.name}
                   </Typography.Text>
                   {index !== breadcrumbs.length - 2 && (
@@ -183,7 +185,8 @@ const TableConstraintsModal = ({
             </Space>
             <Typography.Text
               className="constraint-breadcrumb-item constraint-column-name"
-              ellipsis={{ tooltip: true }}>
+              ellipsis={{ tooltip: true }}
+            >
               {breadcrumbs[4].name}
             </Typography.Text>
           </div>
@@ -249,6 +252,24 @@ const TableConstraintsModal = ({
     getSearchResults(searchValue);
   }, []);
 
+  const translatedRelationShipTypeOptions = useMemo(
+    () =>
+      RELATIONSHIP_TYPE_OPTION.map((option) => ({
+        ...option,
+        label: t(option.label),
+      })),
+    [t]
+  );
+
+  const translatedTableConstrantTypeOptions = useMemo(
+    () =>
+      TABLE_CONSTRAINTS_TYPE_OPTIONS.map((option) => ({
+        ...option,
+        label: translateWithNestedKeys(option.label, option.labelData),
+      })),
+    [t]
+  );
+
   return (
     <Modal
       centered
@@ -261,7 +282,8 @@ const TableConstraintsModal = ({
           disabled={isLoading}
           key="cancel-btn"
           type="link"
-          onClick={onClose}>
+          onClick={onClose}
+        >
           {t('label.cancel')}
         </Button>,
         <Button
@@ -269,7 +291,8 @@ const TableConstraintsModal = ({
           key="save-btn"
           loading={isLoading}
           type="primary"
-          onClick={form.submit}>
+          onClick={form.submit}
+        >
           {t('label.save')}
         </Button>,
       ]}
@@ -277,21 +300,24 @@ const TableConstraintsModal = ({
       title={t(`label.${isEmpty(constraint) ? 'add' : 'update'}-entity`, {
         entity: t('label.table-constraint-plural'),
       })}
-      onCancel={onClose}>
+      onCancel={onClose}
+    >
       <Form
         className="table-constraint-form"
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}>
+        onFinish={handleSubmit}
+      >
         <Form.Item
           className="w-full"
           label={t('label.constraint-type')}
-          name="constraintType">
+          name="constraintType"
+        >
           <Select
             allowClear
             autoClearSearchValue
             data-testid="constraint-type-select"
-            options={TABLE_CONSTRAINTS_TYPE_OPTIONS}
+            options={translatedTableConstrantTypeOptions}
             placeholder={t('label.select-entity', {
               entity: t('label.constraint-type'),
             })}
@@ -305,7 +331,8 @@ const TableConstraintsModal = ({
               label={t('label.entity-key-plural', {
                 entity: t('label.primary'),
               })}
-              name="primaryConstraints">
+              name="primaryConstraints"
+            >
               <Select
                 allowClear
                 autoClearSearchValue
@@ -325,7 +352,8 @@ const TableConstraintsModal = ({
             <Form.Item
               className="w-full"
               label={t('label.unique')}
-              name="uniqueConstraints">
+              name="uniqueConstraints"
+            >
               <Select
                 allowClear
                 autoClearSearchValue
@@ -349,7 +377,8 @@ const TableConstraintsModal = ({
               label={t('label.entity-key-plural', {
                 entity: t('label.sort'),
               })}
-              name="sortConstraints">
+              name="sortConstraints"
+            >
               <Select
                 allowClear
                 autoClearSearchValue
@@ -373,7 +402,8 @@ const TableConstraintsModal = ({
               label={t('label.entity-key-plural', {
                 entity: t('label.dist'),
               })}
-              name="distConstraints">
+              name="distConstraints"
+            >
               <Select
                 allowClear
                 autoClearSearchValue
@@ -412,7 +442,8 @@ const TableConstraintsModal = ({
                             }),
                           }),
                         },
-                      ]}>
+                      ]}
+                    >
                       <Select
                         data-testid={`${key}-column-type-select`}
                         options={tableColumnNameOptions}
@@ -439,10 +470,11 @@ const TableConstraintsModal = ({
                             }),
                           }),
                         },
-                      ]}>
+                      ]}
+                    >
                       <Select
                         data-testid={`${key}-relationship-type-select`}
-                        options={RELATIONSHIP_TYPE_OPTION}
+                        options={translatedRelationShipTypeOptions}
                         placeholder={t('label.select-entity', {
                           entity: t('label.relationship-type'),
                         })}
@@ -460,7 +492,8 @@ const TableConstraintsModal = ({
                             field: t('label.related-column'),
                           }),
                         },
-                      ]}>
+                      ]}
+                    >
                       <Select
                         allowClear
                         showSearch
@@ -481,12 +514,14 @@ const TableConstraintsModal = ({
                         placeholder={t('label.select-entity', {
                           entity: t('label.related-column'),
                         })}
-                        onSearch={debounceFetcher}>
+                        onSearch={debounceFetcher}
+                      >
                         {relatedColumnOptions.map(({ label, value, data }) => (
                           <Select.Option
                             data-testid={`option-label-${data.label}`}
                             key={value}
-                            value={value}>
+                            value={value}
+                          >
                             {label}
                           </Select.Option>
                         ))}
@@ -513,7 +548,8 @@ const TableConstraintsModal = ({
                   data-testid="add-constraint-button"
                   icon={<PlusIcon className="anticon" />}
                   size="small"
-                  onClick={() => add()}>
+                  onClick={() => add()}
+                >
                   {t('label.add-entity', {
                     entity: t('label.constraint-plural'),
                   })}

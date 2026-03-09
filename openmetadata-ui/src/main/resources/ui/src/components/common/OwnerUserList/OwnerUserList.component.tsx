@@ -61,9 +61,11 @@ const OwnerUserList = ({
   return (
     <Box
       sx={{
+        width: '100%',
         display: 'flex',
         alignItems: 'center',
-      }}>
+      }}
+    >
       {!isCompactView && (
         <IconUser
           data-testid="user-owner-icon"
@@ -84,11 +86,13 @@ const OwnerUserList = ({
           alignItems: 'center',
           position: 'relative',
           marginLeft: '4px',
+          width: '100%',
           marginRight: isCompactView ? '8px' : '0',
           flexDirection: isCompactView ? 'inherit' : 'row-reverse',
           gap: isCompactView ? '8px' : '0',
           flexWrap: isCompactView ? 'wrap' : 'initial',
-        }}>
+        }}
+      >
         {renderVisibleOwners.map((owner: EntityReference) => (
           <Box
             className={classNames(
@@ -97,7 +101,8 @@ const OwnerUserList = ({
               },
               ownerLabelClassName
             )}
-            key={owner.id}>
+            key={owner.id}
+          >
             <OwnerItem
               avatarSize={avatarSize}
               className={className}

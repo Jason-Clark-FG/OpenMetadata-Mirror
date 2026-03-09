@@ -47,8 +47,11 @@ jest.mock('../../../../utils/ServiceConnectionUtils', () => ({
     validConfig: {},
   }),
   getFilteredSchema: jest.fn((properties) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { filter1, filter2, ...rest } = properties as Record<string, unknown>;
+    const {
+      filter1: _filter1,
+      filter2: _filter2,
+      ...rest
+    } = properties as Record<string, unknown>;
 
     return rest;
   }),
@@ -68,7 +71,8 @@ const MockFormBuilder = React.forwardRef<
     <div data-testid="form-builder">
       <button
         data-testid="submit-button"
-        onClick={() => onSubmit({ formData: {} } as IChangeEvent<ConfigData>)}>
+        onClick={() => onSubmit({ formData: {} } as IChangeEvent<ConfigData>)}
+      >
         Submit
       </button>
       <button data-testid="cancel-button" onClick={onCancel}>

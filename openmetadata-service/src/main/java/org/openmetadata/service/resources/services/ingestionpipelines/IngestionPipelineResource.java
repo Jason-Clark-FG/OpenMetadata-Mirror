@@ -19,12 +19,12 @@ import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.schema.type.MetadataOperation.CREATE;
 import static org.openmetadata.sdk.PipelineServiceClientInterface.TYPE_TO_TASK;
 import static org.openmetadata.service.Entity.FIELD_OWNERS;
-import static org.openmetadata.service.Entity.FIELD_PIPELINE_STATUS;
 import static org.openmetadata.service.jdbi3.IngestionPipelineRepository.validateProfileSample;
 
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -59,7 +59,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.common.utils.CommonUtil;
 import org.openmetadata.schema.ServiceEntityInterface;
@@ -112,7 +111,7 @@ import org.openmetadata.service.util.OpenMetadataConnectionBuilder;
 public class IngestionPipelineResource
     extends EntityResource<IngestionPipeline, IngestionPipelineRepository> {
   private IngestionPipelineMapper mapper;
-  public static final String COLLECTION_PATH = "v1/services/ingestionPipelines/";
+  public static final String COLLECTION_PATH = "/v1/services/ingestionPipelines/";
   private PipelineServiceClientInterface pipelineServiceClient;
   private OpenMetadataApplicationConfig openMetadataApplicationConfig;
   static final String FIELDS = "owners,followers";
@@ -181,6 +180,10 @@ public class IngestionPipelineResource
     /* Required for serde */
   }
 
+  public static class PipelineStatusList extends ResultList<PipelineStatus> {
+    /* Required for serde */
+  }
+
   /**
    * Handle permissions based on the pipeline type
    */
@@ -227,7 +230,7 @@ public class IngestionPipelineResource
             content =
                 @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = IngestionPipeline.class)))
+                    schema = @Schema(implementation = IngestionPipelineList.class)))
       })
   public ResultList<IngestionPipeline> list(
       @Context UriInfo uriInfo,
@@ -302,10 +305,6 @@ public class IngestionPipelineResource
             uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
 
     for (IngestionPipeline ingestionPipeline : listOrEmpty(ingestionPipelines.getData())) {
-      if (fieldsParam != null && fieldsParam.contains(FIELD_PIPELINE_STATUS)) {
-        ingestionPipeline.setPipelineStatuses(
-            repository.getLatestPipelineStatus(ingestionPipeline));
-      }
       decryptOrNullify(securityContext, ingestionPipeline, false);
     }
     return ingestionPipelines;
@@ -432,12 +431,18 @@ public class IngestionPipelineResource
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
-          Include include) {
+          Include include,
+      @Parameter(
+              description =
+                  "Per-relation include control. Format: field:value,field2:value2. "
+                      + "Example: owners:non-deleted,followers:all. "
+                      + "Valid values: all, deleted, non-deleted. "
+                      + "If not specified for a field, uses the entity's include value.",
+              schema = @Schema(type = "string", example = "owners:non-deleted,followers:all"))
+          @QueryParam("includeRelations")
+          String includeRelations) {
     IngestionPipeline ingestionPipeline =
-        getInternal(uriInfo, securityContext, id, fieldsParam, include);
-    if (fieldsParam != null && fieldsParam.contains(FIELD_PIPELINE_STATUS)) {
-      ingestionPipeline.setPipelineStatuses(repository.getLatestPipelineStatus(ingestionPipeline));
-    }
+        getInternal(uriInfo, securityContext, id, fieldsParam, include, includeRelations);
     decryptOrNullify(securityContext, ingestionPipeline, false);
     return ingestionPipeline;
   }
@@ -512,12 +517,18 @@ public class IngestionPipelineResource
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
-          Include include) {
+          Include include,
+      @Parameter(
+              description =
+                  "Per-relation include control. Format: field:value,field2:value2. "
+                      + "Example: owners:non-deleted,followers:all. "
+                      + "Valid values: all, deleted, non-deleted. "
+                      + "If not specified for a field, uses the entity's include value.",
+              schema = @Schema(type = "string", example = "owners:non-deleted,followers:all"))
+          @QueryParam("includeRelations")
+          String includeRelations) {
     IngestionPipeline ingestionPipeline =
-        getByNameInternal(uriInfo, securityContext, fqn, fieldsParam, include);
-    if (fieldsParam != null && fieldsParam.contains(FIELD_PIPELINE_STATUS)) {
-      ingestionPipeline.setPipelineStatuses(repository.getLatestPipelineStatus(ingestionPipeline));
-    }
+        getByNameInternal(uriInfo, securityContext, fqn, fieldsParam, include, includeRelations);
     decryptOrNullify(securityContext, ingestionPipeline, false);
     return ingestionPipeline;
   }
@@ -676,7 +687,10 @@ public class IngestionPipelineResource
             content =
                 @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = PipelineServiceClientResponse.class)))
+                    array =
+                        @ArraySchema(
+                            schema =
+                                @Schema(implementation = PipelineServiceClientResponse.class))))
       })
   public List<PipelineServiceClientResponse> bulkDeployIngestion(
       @Context UriInfo uriInfo,
@@ -1148,7 +1162,8 @@ public class IngestionPipelineResource
       operationId = "listPipelineStatuses",
       summary = "List of pipeline status",
       description =
-          "Get a list of all the pipeline status for the given ingestion pipeline id, optionally filtered by  `startTs` and `endTs` of the profile. "
+          "Get a list of pipeline statuses for the given ingestion pipeline id. Optionally filter by `startTs` and `endTs`. "
+              + "When no time range is provided, the latest 5 runs are returned by default. "
               + "Use cursor-based pagination to limit the number of "
               + "entries in the list using `limit` and `before` or `after` query params.",
       responses = {
@@ -1158,7 +1173,7 @@ public class IngestionPipelineResource
             content =
                 @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = IngestionPipeline.class)))
+                    schema = @Schema(implementation = PipelineStatusList.class)))
       })
   public ResultList<PipelineStatus> listPipelineStatuses(
       @Context SecurityContext securityContext,
@@ -1170,16 +1185,20 @@ public class IngestionPipelineResource
       @Parameter(
               description = "Filter pipeline status after the given start timestamp",
               schema = @Schema(type = "number"))
-          @NonNull
           @QueryParam("startTs")
           Long startTs,
       @Parameter(
               description = "Filter pipeline status before the given end timestamp",
               schema = @Schema(type = "number"))
-          @NonNull
           @QueryParam("endTs")
-          Long endTs) {
-    return repository.listPipelineStatus(fqn, startTs, endTs);
+          Long endTs,
+      @Parameter(
+              description = "Maximum number of pipeline statuses to return",
+              schema = @Schema(type = "integer"))
+          @Min(1)
+          @QueryParam("limit")
+          Integer limit) {
+    return repository.listPipelineStatus(fqn, startTs, endTs, limit);
   }
 
   @GET
@@ -1195,7 +1214,7 @@ public class IngestionPipelineResource
             content =
                 @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = IngestionPipeline.class)))
+                    schema = @Schema(implementation = PipelineStatus.class)))
       })
   public PipelineStatus getPipelineStatus(
       @Context UriInfo uriInfo,
@@ -1212,6 +1231,34 @@ public class IngestionPipelineResource
         new OperationContext(entityType, MetadataOperation.VIEW_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContextByName(fqn));
     return repository.getPipelineStatus(fqn, runId);
+  }
+
+  @DELETE
+  @Path("/{id}/pipelineStatus/{runId}")
+  @Operation(
+      operationId = "deletePipelineStatusByRunId",
+      summary = "Delete pipeline status by run ID",
+      description =
+          "Delete a specific pipeline status by its run ID for the given ingestion pipeline.",
+      responses = {
+        @ApiResponse(responseCode = "204", description = "Pipeline status deleted successfully"),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Ingestion Pipeline or Pipeline Status not found")
+      })
+  public Response deletePipelineStatusByRunId(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the Ingestion Pipeline", schema = @Schema(type = "UUID"))
+          @PathParam("id")
+          UUID id,
+      @Parameter(description = "Run ID of the pipeline status", schema = @Schema(type = "UUID"))
+          @PathParam("runId")
+          UUID runId) {
+    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
+    authorizer.authorize(securityContext, operationContext, getResourceContextById(id));
+    repository.deletePipelineStatusByRunId(id, runId);
+    return Response.noContent().build();
   }
 
   @DELETE
@@ -1260,7 +1307,7 @@ public class IngestionPipelineResource
     limits.enforceLimits(securityContext, createResourceContext, operationContext);
     decryptOrNullify(securityContext, ingestionPipeline, true);
     ServiceEntityInterface service =
-        Entity.getEntity(ingestionPipeline.getService(), "", Include.NON_DELETED);
+        Entity.getEntity(ingestionPipeline.getService(), "ingestionRunner", Include.NON_DELETED);
     // Flag the ingestion pipeline with streamable logs only if configured and enabled for use
     if (repository.isS3LogStorageEnabled()
         && repository.getLogStorageConfiguration().getEnabled()) {
@@ -1292,7 +1339,7 @@ public class IngestionPipelineResource
     }
     decryptOrNullify(securityContext, ingestionPipeline, true);
     ServiceEntityInterface service =
-        Entity.getEntity(ingestionPipeline.getService(), "", Include.NON_DELETED);
+        Entity.getEntity(ingestionPipeline.getService(), "ingestionRunner", Include.NON_DELETED);
     return pipelineServiceClient.runPipeline(ingestionPipeline, service);
   }
 
@@ -1308,10 +1355,22 @@ public class IngestionPipelineResource
       ingestionPipeline.getSourceConfig().setConfig(null);
     }
     secretsManager.decryptIngestionPipeline(ingestionPipeline);
-    OpenMetadataConnection openMetadataServerConnection =
-        new OpenMetadataConnectionBuilder(openMetadataApplicationConfig, ingestionPipeline).build();
-    ingestionPipeline.setOpenMetadataServerConnection(
-        secretsManager.encryptOpenMetadataConnection(openMetadataServerConnection, false));
+
+    // SECURITY: Only include OpenMetadataServerConnection for deploy operations
+    // (forceNotMask=true).
+    // The connection contains the bot's JWT token which should NOT be exposed in GET/LIST
+    // responses.
+    // For API responses, we nullify this field to prevent token leakage.
+    if (forceNotMask) {
+      OpenMetadataConnection openMetadataServerConnection =
+          new OpenMetadataConnectionBuilder(openMetadataApplicationConfig, ingestionPipeline)
+              .build();
+      ingestionPipeline.setOpenMetadataServerConnection(
+          secretsManager.encryptOpenMetadataConnection(openMetadataServerConnection, false));
+    } else {
+      ingestionPipeline.setOpenMetadataServerConnection(null);
+    }
+
     if (authorizer.shouldMaskPasswords(securityContext) && !forceNotMask) {
       EntityMaskerFactory.getEntityMasker().maskIngestionPipeline(ingestionPipeline);
     }

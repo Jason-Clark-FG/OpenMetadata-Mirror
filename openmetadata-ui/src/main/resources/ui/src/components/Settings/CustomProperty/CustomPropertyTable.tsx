@@ -24,8 +24,8 @@ import { TABLE_SCROLL_VALUE } from '../../../constants/Table.constants';
 import { ERROR_PLACEHOLDER_TYPE, OPERATION } from '../../../enums/common.enum';
 import { CustomProperty } from '../../../generated/type/customProperty';
 import { columnSorter, getEntityName } from '../../../utils/EntityUtils';
+import { descriptionTableObject } from '../../../utils/TableColumn.util';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
-import RichTextEditorPreviewerNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../common/Table/Table';
 import ConfirmationModal from '../../Modals/ConfirmationModal/ConfirmationModal';
 import './custom-property-table.less';
@@ -159,7 +159,10 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
           if (!isString(config) && !isArray(config)) {
             if (config?.columns) {
               return (
-                <div className="w-full d-flex gap-2 flex-column">
+                <div
+                  className="w-full d-flex gap-2 flex-column"
+                  data-testid="table-config"
+                >
                   <Typography.Text>
                     <span className="font-medium">{`${t(
                       'label.column-plural'
@@ -177,7 +180,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
             return (
               <div
                 className="w-full d-flex gap-2 flex-column"
-                data-testid="enum-config">
+                data-testid="enum-config"
+              >
                 <Typography.Text>
                   {JSON.stringify(config?.values ?? [])}
                 </Typography.Text>
@@ -193,22 +197,7 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
           return <Typography.Text>{config}</Typography.Text>;
         },
       },
-      {
-        title: t('label.description'),
-        dataIndex: 'description',
-        key: 'description',
-        width: 300,
-        render: (text) =>
-          text ? (
-            <RichTextEditorPreviewerNew markdown={text ?? ''} />
-          ) : (
-            <Typography.Text
-              className="text-grey-muted "
-              data-testid="no-description">
-              {t('label.no-description')}
-            </Typography.Text>
-          ),
-      },
+      ...descriptionTableObject<CustomProperty>({ width: 300 }),
       {
         title: t('label.action-plural'),
         dataIndex: 'actions',
@@ -223,8 +212,9 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                   ? t('label.edit-entity', {
                       entity: t('label.property'),
                     })
-                  : NO_PERMISSION_FOR_ACTION
-              }>
+                  : t(NO_PERMISSION_FOR_ACTION)
+              }
+            >
               <Button
                 className="cursor-pointer p-0"
                 data-testid="edit-button"
@@ -234,7 +224,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                 onClick={() => {
                   setSelectedProperty(record);
                   setOperation(OPERATION.UPDATE);
-                }}>
+                }}
+              >
                 <IconEdit name={t('label.edit')} width={16} />
               </Button>
             </Tooltip>
@@ -244,8 +235,9 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                   ? t('label.delete-entity', {
                       entity: t('label.property'),
                     })
-                  : NO_PERMISSION_FOR_ACTION
-              }>
+                  : t(NO_PERMISSION_FOR_ACTION)
+              }
+            >
               <Button
                 className="cursor-pointer p-0"
                 data-testid="delete-button"
@@ -255,7 +247,8 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
                 onClick={() => {
                   setSelectedProperty(record);
                   setOperation(OPERATION.DELETE);
-                }}>
+                }}
+              >
                 <IconDelete name={t('label.delete')} width={16} />
               </Button>
             </Tooltip>
@@ -263,7 +256,7 @@ export const CustomPropertyTable: FC<CustomPropertyTableProp> = ({
         ),
       },
     ],
-    [hasAccess]
+    [hasAccess, t]
   );
 
   return (

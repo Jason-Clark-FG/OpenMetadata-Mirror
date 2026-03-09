@@ -24,7 +24,7 @@ import {
 } from 'antd';
 import { AxiosError } from 'axios';
 import { startCase, toString } from 'lodash';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as DomainIcon } from '../../assets/svg/ic-domain.svg';
@@ -42,6 +42,8 @@ import { Settings, SettingType } from '../../generated/settings/settings';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { FieldProp, FieldTypes } from '../../interface/FormUtils.interface';
 import { updateSettingsConfig } from '../../rest/settingConfigAPI';
+import { generatePalette } from '../../styles/colorPallet';
+import brandClassBase from '../../utils/BrandData/BrandClassBase';
 import { getField } from '../../utils/formUtils';
 import { getSettingPageEntityBreadCrumb } from '../../utils/GlobalSettingsUtils';
 import { getThemeConfig } from '../../utils/ThemeUtils';
@@ -64,6 +66,14 @@ const AppearanceConfigSettingsPage = () => {
     ...applicationConfig?.customLogoConfig,
     ...applicationConfig?.customTheme,
   });
+
+  // Track if hover color was manually edited by user
+  const isHoverColorManuallyEdited = useRef<boolean>(false);
+  const isSelectedColorManuallyEdited = useRef<boolean>(false);
+  // Track the last primary color to detect changes
+  const lastPrimaryColor = useRef<string>(
+    applicationConfig?.customTheme?.primaryColor ?? ''
+  );
 
   const breadcrumbs: TitleBreadcrumbProps['titleLinks'] = useMemo(
     () =>
@@ -88,6 +98,8 @@ const AppearanceConfigSettingsPage = () => {
         },
         customTheme: {
           primaryColor: values?.primaryColor ?? '',
+          hoverColor: values?.hoverColor ?? '',
+          selectedColor: values?.selectedColor ?? '',
           errorColor: values?.errorColor ?? '',
           successColor: values?.successColor ?? '',
           warningColor: values?.warningColor ?? '',
@@ -119,6 +131,8 @@ const AppearanceConfigSettingsPage = () => {
         },
         customTheme: {
           primaryColor: '',
+          hoverColor: '',
+          selectedColor: '',
           errorColor: '',
           successColor: '',
           warningColor: '',
@@ -134,6 +148,12 @@ const AppearanceConfigSettingsPage = () => {
         ...configValues,
         customTheme: getThemeConfig(configValues.customTheme),
       });
+
+      // Reset the manual edit flag
+      isHoverColorManuallyEdited.current = false;
+      isSelectedColorManuallyEdited.current = false;
+
+      lastPrimaryColor.current = '';
     } catch (error) {
       showErrorToast(error as AxiosError);
     } finally {
@@ -156,6 +176,38 @@ const AppearanceConfigSettingsPage = () => {
       ],
       props: {
         'data-testid': 'primaryColor',
+      },
+    },
+    {
+      name: 'selectedColor',
+      id: 'selectedColor',
+      label: 'Selected Color',
+      required: false,
+      type: FieldTypes.COLOR_PICKER,
+      rules: [
+        {
+          pattern: HEX_COLOR_CODE_REGEX,
+          message: t('message.hex-color-validation'),
+        },
+      ],
+      props: {
+        'data-testid': 'selectedColor',
+      },
+    },
+    {
+      name: 'hoverColor',
+      id: 'hoverColor',
+      label: 'Hover Color',
+      required: false,
+      type: FieldTypes.COLOR_PICKER,
+      rules: [
+        {
+          pattern: HEX_COLOR_CODE_REGEX,
+          message: t('message.hex-color-validation'),
+        },
+      ],
+      props: {
+        'data-testid': 'hoverColor',
       },
     },
     {
@@ -285,6 +337,59 @@ const AppearanceConfigSettingsPage = () => {
     },
   ];
 
+  const handleValuesChange = (
+    changedValues: Partial<
+      UIThemePreference['customLogoConfig'] & UIThemePreference['customTheme']
+    >,
+    allValues: UIThemePreference['customLogoConfig'] &
+      UIThemePreference['customTheme']
+  ) => {
+    // Check if primary color changed
+    if (
+      'primaryColor' in changedValues &&
+      changedValues.primaryColor !== lastPrimaryColor.current
+    ) {
+      lastPrimaryColor.current = changedValues.primaryColor ?? '';
+
+      // Always auto-generate hover color when primary color changes
+      if (changedValues.primaryColor) {
+        const palette = generatePalette(changedValues.primaryColor);
+        const generatedHoverColor = palette[2]; // 2nd element (index 3)
+        const generatedSelectedColor = palette[8];
+
+        // Update form field
+        form.setFieldValue('hoverColor', generatedHoverColor);
+        form.setFieldValue('selectedColor', generatedSelectedColor);
+
+        // Update allValues with the generated hover color
+        allValues = {
+          ...allValues,
+          hoverColor: generatedHoverColor,
+          selectedColor: generatedSelectedColor,
+        };
+
+        // Reset manual edit flag since primary color changed
+        isHoverColorManuallyEdited.current = false;
+        isSelectedColorManuallyEdited.current = false;
+      }
+    }
+
+    // Check if hover color was manually changed (without primary color change)
+    if ('hoverColor' in changedValues && !('primaryColor' in changedValues)) {
+      isHoverColorManuallyEdited.current = true;
+    }
+    // Check if Selected color was manually changed (without primary color change)
+    if (
+      'selectedColor' in changedValues &&
+      !('primaryColor' in changedValues)
+    ) {
+      isSelectedColorManuallyEdited.current = true;
+    }
+
+    // Update form state
+    setFormState({ ...allValues });
+  };
+
   useEffect(() => {
     const configValues = {
       ...applicationConfig?.customLogoConfig,
@@ -292,6 +397,12 @@ const AppearanceConfigSettingsPage = () => {
     };
     setFormState(configValues);
     form.setFieldsValue(configValues);
+
+    // Reset tracking refs when loading saved config
+    lastPrimaryColor.current =
+      applicationConfig?.customTheme?.primaryColor ?? '';
+    isHoverColorManuallyEdited.current = false;
+    isSelectedColorManuallyEdited.current = false;
   }, [applicationConfig]);
 
   return (
@@ -307,14 +418,17 @@ const AppearanceConfigSettingsPage = () => {
                 <PageHeader
                   data={{
                     header: t('label.theme'),
-                    subHeader: t('message.appearance-configuration-message'),
+                    subHeader: t('message.appearance-configuration-message', {
+                      brandName: brandClassBase.getPageTitle(),
+                    }),
                   }}
                 />
                 <Button
                   data-testid="reset-button"
                   loading={resetting}
                   type="primary"
-                  onClick={handleReset}>
+                  onClick={handleReset}
+                >
                   {t('label.reset')}
                 </Button>
               </Space>
@@ -330,11 +444,13 @@ const AppearanceConfigSettingsPage = () => {
             }}
             layout="vertical"
             onFinish={handleSave}
-            onValuesChange={(_, allValues) => setFormState({ ...allValues })}>
+            onValuesChange={handleValuesChange}
+          >
             <div className="white-label-card-wrapper m-b-md">
               <Card
                 className="white-label-config-card"
-                title={t('label.custom-logo')}>
+                title={t('label.custom-logo')}
+              >
                 <Row className="w-full" gutter={[16, 16]}>
                   {customLogoFormFields.map((field) => {
                     return (
@@ -364,7 +480,8 @@ const AppearanceConfigSettingsPage = () => {
                 className="white-label-config-card"
                 title={
                   <Typography.Text>{t('label.custom-theme')}</Typography.Text>
-                }>
+                }
+              >
                 <Row className="w-full" gutter={[16, 16]}>
                   {themeFormFields.map((field) => {
                     const currentColor =
@@ -383,7 +500,8 @@ const AppearanceConfigSettingsPage = () => {
                                   background: currentColor,
                                   color: 'white',
                                   width: '86px',
-                                }}>
+                                }}
+                              >
                                 {startCase(
                                   toString(field.name).replace('Color', '')
                                 )}
@@ -403,7 +521,8 @@ const AppearanceConfigSettingsPage = () => {
                                   borderColor: currentColor,
                                   width: '86px',
                                 }}
-                                type="default">
+                                type="default"
+                              >
                                 {startCase(
                                   toString(field.name).replace('Color', '')
                                 )}
@@ -419,7 +538,8 @@ const AppearanceConfigSettingsPage = () => {
                                   color: currentColor,
                                   padding: 0,
                                 }}
-                                type="link">
+                                type="link"
+                              >
                                 {t('label.link')}
                               </Button>
                             </Card>
@@ -435,18 +555,21 @@ const AppearanceConfigSettingsPage = () => {
             <Space
               className="w-full justify-end appearance-cta-buttons"
               data-testid="cta-buttons"
-              size={16}>
+              size={16}
+            >
               <Button
                 data-testid="cancel-btn"
                 type="link"
-                onClick={() => navigate(-1)}>
+                onClick={() => navigate(-1)}
+              >
                 {t('label.cancel')}
               </Button>
               <Button
                 data-testid="save-btn"
                 htmlType="submit"
                 loading={loading}
-                type="primary">
+                type="primary"
+              >
                 {t('label.save')}
               </Button>
             </Space>

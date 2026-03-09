@@ -60,7 +60,8 @@ function DestinationFormItem({ isViewMode = false }: DestinationFormItemProps) {
       if (!isUndefined(formattedDestinations)) {
         const externalDestinations = formattedDestinations.filter(
           (destination) =>
-            destination.category === SubscriptionCategory.External
+            destination.category === SubscriptionCategory.External &&
+            !isEmpty(destination?.config)
         );
 
         const results = await testAlertDestination({
@@ -102,7 +103,8 @@ function DestinationFormItem({ isViewMode = false }: DestinationFormItemProps) {
   return (
     <FormCardSection
       heading={t('label.destination')}
-      subHeading={t('message.alerts-destination-description')}>
+      subHeading={t('message.alerts-destination-description')}
+    >
       {getConnectionTimeoutField()}
       {getReadTimeoutField()}
       <Form.List
@@ -111,14 +113,16 @@ function DestinationFormItem({ isViewMode = false }: DestinationFormItemProps) {
           {
             validator: listLengthValidator(t('label.destination')),
           },
-        ]}>
+        ]}
+      >
         {(fields, { add, remove }, { errors }) => {
           return (
             <Row
               className="destination-list"
               data-testid="destination-list"
               gutter={[16, 16]}
-              key="destinations">
+              key="destinations"
+            >
               {fields.map(({ key, name }, index) => (
                 <Fragment key={key}>
                   <DestinationSelectItem
@@ -147,7 +151,8 @@ function DestinationFormItem({ isViewMode = false }: DestinationFormItemProps) {
                           isEmpty(selectedSource) || isNil(selectedSource)
                         }
                         type="primary"
-                        onClick={() => add({})}>
+                        onClick={() => add({})}
+                      >
                         {t('label.add-entity', {
                           entity: t('label.destination'),
                         })}
@@ -156,11 +161,13 @@ function DestinationFormItem({ isViewMode = false }: DestinationFormItemProps) {
                     <Col>
                       <Tooltip
                         placement="right"
-                        title={t('message.external-destination-selection')}>
+                        title={t('message.external-destination-selection')}
+                      >
                         <Button
                           data-testid="test-destination-button"
                           disabled={disableTestDestinationButton}
-                          onClick={handleTestDestinationClick}>
+                          onClick={handleTestDestinationClick}
+                        >
                           {t('label.test-entity', {
                             entity: t('label.destination-plural'),
                           })}

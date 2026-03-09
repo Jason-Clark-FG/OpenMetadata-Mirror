@@ -30,7 +30,7 @@ import { getRoleWithFqnPath, getTeamsWithFqnPath } from './RouterUtils';
 
 export const userCellRenderer = (user: EntityReference | User) => {
   return user.name ? (
-    <div className="w-fit-content">
+    <div className="w-max-full">
       <UserPopOverCard showUserName profileWidth={16} userName={user.name} />
     </div>
   ) : (
@@ -45,12 +45,14 @@ export const commonUserDetailColumns = (
     title: t('label.username'),
     dataIndex: 'username',
     key: 'username',
+    ellipsis: { showTitle: false },
     render: (_, record) => userCellRenderer(record),
   },
   {
     title: t('label.name'),
     dataIndex: 'name',
     key: 'name',
+    ellipsis: { showTitle: false },
     render: (_, record) => getEntityName(record),
   },
   {
@@ -74,7 +76,8 @@ export const commonUserDetailColumns = (
               <Link
                 className="cursor-pointer"
                 key={uniqueId()}
-                to={getTeamsWithFqnPath(team.fullyQualifiedName ?? '')}>
+                to={getTeamsWithFqnPath(team.fullyQualifiedName ?? '')}
+              >
                 {getEntityName(team)}
               </Link>
             ))}
@@ -87,14 +90,16 @@ export const commonUserDetailColumns = (
                       <Link
                         className="cursor-pointer"
                         key={uniqueId()}
-                        to={getTeamsWithFqnPath(team.fullyQualifiedName ?? '')}>
+                        to={getTeamsWithFqnPath(team.fullyQualifiedName ?? '')}
+                      >
                         {getEntityName(team)}
                       </Link>
                     ))}
                   </Space>
                 }
                 overlayClassName="w-40"
-                trigger="click">
+                trigger="click"
+              >
                 <Tag className="m-l-xs" data-testid="plus-more-count">{`+${
                   listLength - LIST_CAP
                 } more`}</Tag>
@@ -126,7 +131,8 @@ export const commonUserDetailColumns = (
               <Link
                 className="cursor-pointer"
                 key={uniqueId()}
-                to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}>
+                to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}
+              >
                 {getEntityName(role)}
               </Link>
             ))}
@@ -139,14 +145,16 @@ export const commonUserDetailColumns = (
                       <Link
                         className="cursor-pointer"
                         key={uniqueId()}
-                        to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}>
+                        to={getRoleWithFqnPath(role.fullyQualifiedName ?? '')}
+                      >
                         {getEntityName(role)}
                       </Link>
                     ))}
                   </Space>
                 }
                 overlayClassName="w-40"
-                trigger="click">
+                trigger="click"
+              >
                 <Tag className="m-l-xs" data-testid="plus-more-count">{`+${
                   listLength - LIST_CAP
                 } more`}</Tag>

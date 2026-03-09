@@ -76,10 +76,14 @@ import { useRequiredParams } from '../../utils/useRequiredParams';
 
 function SearchIndexDetailsPage() {
   const { getEntityPermissionByFqn } = usePermissionProvider();
-  const { tab: activeTab = EntityTabs.FIELDS } =
-    useRequiredParams<{ tab: EntityTabs }>();
-  const { fqn: decodedSearchIndexFQN } = useFqn();
+  const { tab: activeTab = EntityTabs.FIELDS } = useRequiredParams<{
+    tab: EntityTabs;
+  }>();
+  const { entityFqn: decodedSearchIndexFQN } = useFqn({
+    type: EntityType.SEARCH_INDEX,
+  });
   const { t } = useTranslation();
+
   const navigate = useNavigate();
   const { currentUser } = useApplicationStore();
   const USERId = currentUser?.id ?? '';
@@ -582,12 +586,11 @@ function SearchIndexDetailsPage() {
 
   return (
     <PageLayoutV1
-      pageTitle={t('label.entity-detail-plural', {
-        entity: t('label.search-index'),
-      })}
+      pageTitle={entityName}
       title={t('label.entity-detail-plural', {
         entity: t('label.search-index'),
-      })}>
+      })}
+    >
       <Row gutter={[0, 12]}>
         <Col data-testid="entity-page-header" span={24}>
           <DataAssetsHeader
@@ -616,7 +619,8 @@ function SearchIndexDetailsPage() {
           isTabExpanded={isTabExpanded}
           permissions={searchIndexPermissions}
           type={EntityType.SEARCH_INDEX}
-          onUpdate={onSearchIndexUpdate}>
+          onUpdate={onSearchIndexUpdate}
+        >
           <Col className="entity-details-page-tabs" span={24}>
             <Tabs
               activeKey={activeTab}

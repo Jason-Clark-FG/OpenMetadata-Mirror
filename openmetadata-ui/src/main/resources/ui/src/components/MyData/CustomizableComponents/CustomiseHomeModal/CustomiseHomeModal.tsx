@@ -39,7 +39,7 @@ const CustomiseHomeModal = ({
   onClose,
   open,
   onBackgroundColorUpdate,
-  currentBackgroundColor,
+  currentBackgroundColor = DEFAULT_HEADER_BG_COLOR,
   placeholderWidgetKey,
   onHomePage,
   defaultSelectedKey = CustomiseHomeModalSelectedKey.HEADER_THEME,
@@ -47,7 +47,7 @@ const CustomiseHomeModal = ({
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedColor, setSelectedColor] = useState<string>(
-    currentBackgroundColor ?? DEFAULT_HEADER_BG_COLOR
+    currentBackgroundColor
   );
 
   const [widgets, setWidgets] = useState<Document[]>([]);
@@ -222,7 +222,8 @@ const CustomiseHomeModal = ({
               key={item.key}
               role="button"
               tabIndex={0}
-              onClick={() => handleSidebarClick(item.key)}>
+              onClick={() => handleSidebarClick(item.key)}
+            >
               <span>{startCase(item.label)}</span>
               {isAllWidgetsTab && (
                 <span className="widget-count text-xs border-radius-md m-l-sm">
@@ -296,7 +297,8 @@ const CustomiseHomeModal = ({
         </div>
       }
       width={1800}
-      onCancel={onClose}>
+      onCancel={onClose}
+    >
       <Row className="customise-home-modal-body d-flex gap-1">
         <Col className="sidebar p-box sticky top-0 self-start">
           {sidebarOptions}
@@ -321,7 +323,8 @@ const CustomiseHomeModal = ({
           <Button
             className="cancel-btn border-radius-xs font-medium text-md bg-white"
             data-testid="cancel-btn"
-            onClick={onClose}>
+            onClick={onClose}
+          >
             {t('label.cancel')}
           </Button>
           <Button
@@ -330,7 +333,8 @@ const CustomiseHomeModal = ({
             disabled={!hasChanges}
             loading={isLoading}
             type="primary"
-            onClick={handleApply}>
+            onClick={handleApply}
+          >
             {t('label.apply')}
           </Button>
         </Col>

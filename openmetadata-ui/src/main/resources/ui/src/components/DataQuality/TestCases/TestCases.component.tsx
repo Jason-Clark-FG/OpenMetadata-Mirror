@@ -26,14 +26,7 @@ import { useForm } from 'antd/lib/form/Form';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { DefaultOptionType } from 'antd/lib/select';
 import { AxiosError } from 'axios';
-import {
-  debounce,
-  entries,
-  isEmpty,
-  isUndefined,
-  startCase,
-  uniq,
-} from 'lodash';
+import { debounce, entries, isEmpty, isUndefined, uniq } from 'lodash';
 import QueryString from 'qs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,13 +42,15 @@ import {
   DEFAULT_SORT_ORDER,
   TEST_CASE_DIMENSIONS_OPTION,
   TEST_CASE_FILTERS,
+  TEST_CASE_FILTERS_LABELS,
   TEST_CASE_PLATFORM_OPTION,
   TEST_CASE_STATUS_OPTION,
   TEST_CASE_TYPE_OPTION,
 } from '../../../constants/profiler.constant';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
+import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
-import { TabSpecificField } from '../../../enums/entity.enum';
+import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { Operation } from '../../../generated/entity/policies/policy';
 import { TestCase } from '../../../generated/tests/testCase';
@@ -73,23 +68,30 @@ import {
 import { getTestCaseFiltersValue } from '../../../utils/DataQuality/DataQualityUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getPopupContainer } from '../../../utils/formUtils';
-import { getPrioritizedViewPermission } from '../../../utils/PermissionsUtils';
+import {
+  checkPermission,
+  getPrioritizedViewPermission,
+} from '../../../utils/PermissionsUtils';
 import { getDataQualityPagePath } from '../../../utils/RouterUtils';
 import tagClassBase from '../../../utils/TagClassBase';
+import { ExtraTestCaseDropdownOptions } from '../../../utils/TestCaseUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import DatePickerMenu from '../../common/DatePickerMenu/DatePickerMenu.component';
+import ManageButton from '../../common/EntityPageInfos/ManageButton/ManageButton';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PagingHandlerParams } from '../../common/NextPrevious/NextPrevious.interface';
 import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import DataQualityTab from '../../Database/Profiler/DataQualityTab/DataQualityTab';
+import { useEntityExportModalProvider } from '../../Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import PageHeader from '../../PageHeader/PageHeader.component';
 import { TestCaseSearchParams } from '../DataQuality.interface';
 import PieChartSummaryPanel from '../SummaryPannel/PieChartSummaryPanel.component';
 
 export const TestCases = () => {
   const [form] = useForm();
-  const { tab = DataQualityClassBase.getDefaultActiveTab() } =
-    useParams<{ tab: DataQualityPageTabs }>();
+  const { tab = DataQualityClassBase.getDefaultActiveTab() } = useParams<{
+    tab: DataQualityPageTabs;
+  }>();
   const navigate = useNavigate();
   const location = useCustomLocation();
   const { t } = useTranslation();
@@ -97,6 +99,7 @@ export const TestCases = () => {
   const { isTestCaseSummaryLoading, testCaseSummary } =
     useDataQualityProvider();
   const { testCase: testCasePermission } = permissions;
+  const { showModal } = useEntityExportModalProvider();
   const [tableOptions, setTableOptions] = useState<DefaultOptionType[]>([]);
   const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   const [tagOptions, setTagOptions] = useState<DefaultOptionType[]>([]);
@@ -263,7 +266,8 @@ export const TestCases = () => {
             <Space
               data-testid={hit.fullyQualifiedName}
               direction="vertical"
-              size={0}>
+              size={0}
+            >
               <Typography.Text className="text-xs text-grey-muted">
                 {hit.fullyQualifiedName}
               </Typography.Text>
@@ -334,7 +338,8 @@ export const TestCases = () => {
             <Space
               data-testid={hit._source.fullyQualifiedName}
               direction="vertical"
-              size={0}>
+              size={0}
+            >
               <Typography.Text className="text-xs text-grey-muted">
                 {hit._source.fullyQualifiedName}
               </Typography.Text>
@@ -372,7 +377,8 @@ export const TestCases = () => {
             <Space
               data-testid={hit._source.fullyQualifiedName}
               direction="vertical"
-              size={0}>
+              size={0}
+            >
               <Typography.Text className="text-xs text-grey-muted">
                 {hit._source.fullyQualifiedName}
               </Typography.Text>
@@ -416,9 +422,32 @@ export const TestCases = () => {
     }
   };
 
+  const extraDropdownContent = useMemo(() => {
+    return ExtraTestCaseDropdownOptions(
+      WILD_CARD_CHAR,
+      {
+        ViewAll:
+          checkPermission(
+            Operation.ViewAll,
+            ResourceEntity.TEST_CASE,
+            permissions
+          ) ?? false,
+        EditAll:
+          checkPermission(
+            Operation.EditAll,
+            ResourceEntity.TEST_CASE,
+            permissions
+          ) ?? false,
+      },
+      false,
+      navigate,
+      showModal
+    );
+  }, [permissions, navigate, showModal]);
+
   const dqTableHeader = useMemo(() => {
     return (
-      <Row gutter={[16, 16]}>
+      <Row align="middle" gutter={[16, 16]}>
         <Col span={16}>
           <PageHeader
             data={{
@@ -427,7 +456,7 @@ export const TestCases = () => {
             }}
           />
         </Col>
-        <Col span={8}>
+        <Col className="d-flex justify-end gap-4" span={8}>
           <Searchbar
             removeMargin
             placeholder={t('label.search-entity', {
@@ -436,10 +465,18 @@ export const TestCases = () => {
             searchValue={searchValue}
             onSearch={(value) => handleSearchParam('searchValue', value)}
           />
+          <ManageButton
+            entityFQN={WILD_CARD_CHAR}
+            entityId=""
+            entityName={WILD_CARD_CHAR}
+            entityType={EntityType.TEST_CASE}
+            extraDropdownContent={extraDropdownContent}
+            isRecursiveDelete={false}
+          />
         </Col>
       </Row>
     );
-  }, [searchValue, handleSearchParam]);
+  }, [searchValue, handleSearchParam, extraDropdownContent]);
 
   const handleMenuClick = ({ key }: { key: string }) => {
     setSelectedFilter((prevSelected) => {
@@ -462,7 +499,7 @@ export const TestCases = () => {
   const filterMenu: ItemType[] = useMemo(() => {
     return entries(TEST_CASE_FILTERS).map(([name, filter]) => ({
       key: filter,
-      label: startCase(name),
+      label: TEST_CASE_FILTERS_LABELS[name],
       value: filter,
     }));
   }, []);
@@ -536,7 +573,8 @@ export const TestCases = () => {
           className="new-form-style"
           form={form}
           layout="horizontal"
-          onValuesChange={handleFilterChange}>
+          onValuesChange={handleFilterChange}
+        >
           <Space wrap align="center" className="w-full" size={16}>
             <Form.Item noStyle name="selectedFilters">
               <Dropdown
@@ -545,12 +583,14 @@ export const TestCases = () => {
                   selectedKeys: selectedFilter,
                   onClick: handleMenuClick,
                 }}
-                trigger={['click']}>
+                trigger={['click']}
+              >
                 <Button
                   ghost
                   className="expand-btn"
                   data-testid="advanced-filter"
-                  type="primary">
+                  type="primary"
+                >
                   {t('label.advanced')}
                   <RightOutlined />
                 </Button>
@@ -560,7 +600,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-80"
                 label={t('label.table')}
-                name="tableFqn">
+                name="tableFqn"
+              >
                 <Select
                   allowClear
                   showSearch
@@ -577,7 +618,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-min-20"
                 label={t('label.platform')}
-                name="testPlatforms">
+                name="testPlatforms"
+              >
                 <Select
                   allowClear
                   data-testid="platform-select-filter"
@@ -592,7 +634,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-40"
                 label={t('label.type')}
-                name="testCaseType">
+                name="testCaseType"
+              >
                 <Select
                   allowClear
                   data-testid="test-case-type-select-filter"
@@ -606,7 +649,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-40"
                 label={t('label.status')}
-                name="testCaseStatus">
+                name="testCaseStatus"
+              >
                 <Select
                   allowClear
                   data-testid="status-select-filter"
@@ -622,7 +666,8 @@ export const TestCases = () => {
                 label={t('label.last-run')}
                 name="lastRunRange"
                 trigger="handleDateRangeChange"
-                valuePropName="defaultDateRange">
+                valuePropName="defaultDateRange"
+              >
                 <DatePickerMenu showSelectedCustomRange size="small" />
               </Form.Item>
             )}
@@ -630,7 +675,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-80"
                 label={t('label.tag-plural')}
-                name="tags">
+                name="tags"
+              >
                 <Select
                   allowClear
                   showSearch
@@ -648,7 +694,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-40"
                 label={t('label.tier')}
-                name="tier">
+                name="tier"
+              >
                 <Select
                   allowClear
                   showSearch
@@ -663,7 +710,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-80"
                 label={t('label.service')}
-                name="serviceName">
+                name="serviceName"
+              >
                 <Select
                   allowClear
                   showSearch
@@ -680,7 +728,8 @@ export const TestCases = () => {
               <Form.Item
                 className="m-0 w-80"
                 label={t('label.dimension')}
-                name="dataQualityDimension">
+                name="dataQualityDimension"
+              >
                 <Select
                   allowClear
                   showSearch

@@ -106,7 +106,6 @@ const AuthMechanismForm: FC<Props> = ({
           config_value: scimConfig,
         });
       } catch (error) {
-        // eslint-disable-next-line no-console
         showErrorToast(error as AxiosError);
       }
     }
@@ -114,7 +113,8 @@ const AuthMechanismForm: FC<Props> = ({
     onSave({
       authType: AuthType.Jwt,
       config: {
-        JWTTokenExpiry: JWTTokenExpiry.OneHour,
+        // For SCIM we only want token with Unlimited expiry
+        JWTTokenExpiry: JWTTokenExpiry.Unlimited,
       },
     });
   }, [onSave, isSCIMBot]);
@@ -136,7 +136,8 @@ const AuthMechanismForm: FC<Props> = ({
         data-testid="generate-scim-token"
         size="small"
         type="primary"
-        onClick={handleGenerateSCIMToken}>
+        onClick={handleGenerateSCIMToken}
+      >
         {t('label.generate-token')}
       </Button>
     </div>
@@ -146,7 +147,8 @@ const AuthMechanismForm: FC<Props> = ({
       initialValues={{ authType, tokenExpiry }}
       layout="vertical"
       validateMessages={VALIDATION_MESSAGES}
-      onFinish={handleSave}>
+      onFinish={handleSave}
+    >
       <Form.Item label={t('label.auth-mechanism')} name="authType">
         <Select
           disabled
@@ -154,7 +156,8 @@ const AuthMechanismForm: FC<Props> = ({
           data-testid="auth-mechanism"
           placeholder={t('label.select-field', {
             field: t('label.auth-mechanism'),
-          })}>
+          })}
+        >
           <Option key={authOptions.value}>{authOptions.label}</Option>
         </Select>
       </Form.Item>
@@ -162,11 +165,13 @@ const AuthMechanismForm: FC<Props> = ({
       <Form.Item
         label={t('label.token-expiration')}
         name="tokenExpiry"
-        rules={[{ required: true }]}>
+        rules={[{ required: true }]}
+      >
         <Select
           className="w-full"
           data-testid="token-expiry"
-          placeholder={t('message.select-token-expiration')}>
+          placeholder={t('message.select-token-expiration')}
+        >
           {getJWTTokenExpiryOptions(!isBot)}
         </Select>
       </Form.Item>
@@ -182,7 +187,8 @@ const AuthMechanismForm: FC<Props> = ({
           form="update-auth-mechanism-form"
           htmlType="submit"
           loading={isUpdating}
-          type="primary">
+          type="primary"
+        >
           {t('label.generate')}
         </Button>
       </Space>

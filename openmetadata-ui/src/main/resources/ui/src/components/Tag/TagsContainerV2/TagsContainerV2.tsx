@@ -234,6 +234,7 @@ const TagsContainerV2 = ({
         <Col span={24}>
           <TagsViewer
             displayType={displayType}
+            entityFqn={columnData?.fqn ?? ''}
             newLook={tagNewLook}
             showNoDataPlaceholder={showNoDataPlaceholder}
             sizeCap={sizeCap}
@@ -242,7 +243,13 @@ const TagsContainerV2 = ({
           />
         </Col>
       ),
-    [displayType, showNoDataPlaceholder, tags?.[tagType], layoutType]
+    [
+      displayType,
+      showNoDataPlaceholder,
+      tags?.[tagType],
+      layoutType,
+      columnData?.fqn,
+    ]
   );
 
   const tagsSelectContainer = useMemo(() => {
@@ -320,7 +327,8 @@ const TagsContainerV2 = ({
           className={classNames({
             'text-sm font-medium': newLook,
             'right-panel-label': !newLook,
-          })}>
+          })}
+        >
           {isGlossaryType ? t('label.glossary-term') : t('label.tag-plural')}
         </Typography.Text>
         {permission && (
@@ -394,6 +402,7 @@ const TagsContainerV2 = ({
         ) : null}
         <TagsViewer
           displayType={displayType}
+          entityFqn={columnData?.fqn ?? ''}
           newLook={newLook}
           showNoDataPlaceholder={showNoDataPlaceholder}
           sizeCap={sizeCap}
@@ -410,30 +419,40 @@ const TagsContainerV2 = ({
     tags?.[tagType],
     showInlineEditButton,
     handleAddClick,
+    columnData?.fqn,
   ]);
 
   const tagBody = useMemo(() => {
     if (isEditTags) {
       return tagsSelectContainer;
-    } else {
-      return isHoriZontalLayout ? (
-        horizontalLayout
-      ) : showInlineEditButton || !isEmpty(renderTags) || !newLook ? (
-        <Row data-testid="entity-tags">
-          {showAddTagButton && (
-            <Col className="m-t-xss" onClick={handleAddClick}>
-              <TagsV1
-                startWith={TAG_START_WITH.PLUS}
-                tag={isGlossaryType ? GLOSSARY_CONSTANT : TAG_CONSTANT}
-                tagType={tagType}
-              />
-            </Col>
-          )}
-          {renderTags}
-          {showInlineEditButton ? <Col>{editTagButton}</Col> : null}
-        </Row>
-      ) : null;
     }
+
+    if (isHoriZontalLayout) {
+      return horizontalLayout;
+    }
+
+    const shouldShowVerticalLayout =
+      showInlineEditButton || !isEmpty(renderTags) || !newLook;
+
+    if (!shouldShowVerticalLayout) {
+      return null;
+    }
+
+    return (
+      <Row data-testid="entity-tags">
+        {showAddTagButton && (
+          <Col className="m-t-xss" onClick={handleAddClick}>
+            <TagsV1
+              startWith={TAG_START_WITH.PLUS}
+              tag={isGlossaryType ? GLOSSARY_CONSTANT : TAG_CONSTANT}
+              tagType={tagType}
+            />
+          </Col>
+        )}
+        {renderTags}
+        {showInlineEditButton ? <Col>{editTagButton}</Col> : null}
+      </Row>
+    );
   }, [
     isEditTags,
     tagsSelectContainer,
@@ -482,7 +501,8 @@ const TagsContainerV2 = ({
           title: header,
         }}
         dataTestId={isGlossaryType ? 'glossary-container' : 'tags-container'}
-        isExpandDisabled={isEmpty(tags?.[tagType])}>
+        isExpandDisabled={isEmpty(tags?.[tagType])}
+      >
         {suggestionDataRender ?? tagBody}
       </ExpandableCard>
     );
@@ -491,7 +511,8 @@ const TagsContainerV2 = ({
   return (
     <div
       className="w-full tags-container"
-      data-testid={isGlossaryType ? 'glossary-container' : 'tags-container'}>
+      data-testid={isGlossaryType ? 'glossary-container' : 'tags-container'}
+    >
       {suggestionDataRender ?? (
         <>
           {tagBody}

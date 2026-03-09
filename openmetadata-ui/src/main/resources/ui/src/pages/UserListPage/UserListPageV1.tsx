@@ -36,6 +36,7 @@ import {
   GlobalSettingsMenuCategory,
 } from '../../constants/GlobalSettings.constants';
 import { ADMIN_ONLY_ACTION } from '../../constants/HelperTextUtil';
+import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
@@ -197,18 +198,12 @@ const UserListPageV1 = () => {
     ({ cursorType, currentPage }: PagingHandlerParams) => {
       if (searchValue) {
         handlePageChange(currentPage);
-        getSearchedUsers(searchValue, currentPage);
       } else if (cursorType && paging[cursorType]) {
         handlePageChange(
           currentPage,
           { cursorType, cursorValue: paging[cursorType] },
           pageSize
         );
-        fetchUsersList({
-          isAdmin: isAdminPage,
-          [cursorType]: paging[cursorType],
-          include: isDeleted ? Include.Deleted : Include.NonDeleted,
-        });
       }
     },
     [
@@ -230,14 +225,16 @@ const UserListPageV1 = () => {
       globalPageSize
     );
     // Clear search value, on Toggle delete
-    setFilters({ isDeleted: value || null, user: null });
+    setFilters({ isDeleted: value || null });
   };
 
   const handleSearch = useCallback(
     (value: string) => {
-      handlePageChange(INITIAL_PAGING_VALUE);
-
       setFilters({ user: isEmpty(value) ? null : value });
+      handlePageChange(INITIAL_PAGING_VALUE, {
+        cursorType: null,
+        cursorValue: undefined,
+      });
     },
     [handlePageChange, setFilters]
   );
@@ -249,22 +246,27 @@ const UserListPageV1 = () => {
 
   useEffect(() => {
     if (searchValue) {
-      getSearchedUsers(searchValue, 1);
-    } else {
-      const { cursorType, cursorValue } = pagingCursor ?? {};
+      getSearchedUsers(searchValue, currentPage);
+    }
+  }, [searchValue, currentPage, isDeleted]);
 
-      if (cursorType && cursorValue) {
-        fetchUsersList({
-          isAdmin: isAdminPage,
-          include: isDeleted ? Include.Deleted : Include.NonDeleted,
-          [cursorType]: cursorValue,
-        });
-      } else {
-        fetchUsersList({
-          isAdmin: isAdminPage,
-          include: isDeleted ? Include.Deleted : Include.NonDeleted,
-        });
-      }
+  useEffect(() => {
+    if (searchValue) {
+      return;
+    }
+    const { cursorType, cursorValue } = pagingCursor ?? {};
+
+    if (cursorType && cursorValue) {
+      fetchUsersList({
+        isAdmin: isAdminPage,
+        include: isDeleted ? Include.Deleted : Include.NonDeleted,
+        [cursorType]: cursorValue,
+      });
+    } else {
+      fetchUsersList({
+        isAdmin: isAdminPage,
+        include: isDeleted ? Include.Deleted : Include.NonDeleted,
+      });
     }
   }, [pageSize, isAdminPage, searchValue, isDeleted, pagingCursor]);
 
@@ -319,7 +321,8 @@ const UserListPageV1 = () => {
           <Space
             align="center"
             className="w-full justify-center action-icons"
-            size={8}>
+            size={8}
+          >
             {showRestore && (
               <Tooltip
                 placement={isAdminUser ? 'bottom' : 'left'}
@@ -328,8 +331,9 @@ const UserListPageV1 = () => {
                     ? t('label.restore-entity', {
                         entity: t('label.user'),
                       })
-                    : ADMIN_ONLY_ACTION
-                }>
+                    : t(ADMIN_ONLY_ACTION)
+                }
+              >
                 <Button
                   data-testid={`restore-user-btn-${record.name}`}
                   disabled={!isAdminUser}
@@ -349,8 +353,9 @@ const UserListPageV1 = () => {
                   ? t('label.delete-entity', {
                       entity: t('label.user'),
                     })
-                  : ADMIN_ONLY_ACTION
-              }>
+                  : t(ADMIN_ONLY_ACTION)
+              }
+            >
               <Button
                 disabled={!isAdminUser}
                 icon={
@@ -476,13 +481,26 @@ const UserListPageV1 = () => {
       <Row
         className="user-listing p-b-md"
         data-testid="user-list-v1-component"
-        gutter={[0, 16]}>
+        gutter={[0, 16]}
+      >
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
         <Col span={12}>
           <PageHeader
-            data={isAdminPage ? PAGE_HEADERS.ADMIN : PAGE_HEADERS.USERS}
+            data={
+              isAdminPage
+                ? {
+                    header: t(PAGE_HEADERS.ADMIN.header),
+                    subHeader: t(PAGE_HEADERS.ADMIN.subHeader),
+                  }
+                : {
+                    header: t(PAGE_HEADERS.USERS.header),
+                    subHeader: t(PAGE_HEADERS.USERS.subHeader),
+                  }
+            }
+            learningPageId={LEARNING_PAGE_IDS.USERS}
+            title={t('label.user')}
           />
         </Col>
         <Col span={12}>
@@ -492,7 +510,8 @@ const UserListPageV1 = () => {
                 <Button
                   data-testid="add-user"
                   type="primary"
-                  onClick={handleAddNewUser}>
+                  onClick={handleAddNewUser}
+                >
                   {t('label.add-entity', {
                     entity: t(`label.${isAdminPage ? 'admin' : 'user'}`),
                   })}
@@ -556,7 +575,8 @@ const UserListPageV1 = () => {
             setShowReactiveModal(false);
             setSelectedUser(undefined);
           }}
-          onOk={handleReactiveUser}>
+          onOk={handleReactiveUser}
+        >
           <p>
             {t('message.are-you-want-to-restore', {
               entity: getEntityName(selectedUser),

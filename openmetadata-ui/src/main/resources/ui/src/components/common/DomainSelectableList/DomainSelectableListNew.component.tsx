@@ -26,6 +26,7 @@ const DomainSelectableListNew = ({
   multiple = false,
   onUpdate,
   selectedDomain,
+  isClearable,
 }: DomainSelectableListProps) => {
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
@@ -65,6 +66,10 @@ const DomainSelectableListNew = ({
   const dropdownRef = useRef<BaseSelectRef>(null);
 
   useEffect(() => {
+    setIsDropdownOpen(popupVisible);
+  }, [popupVisible]);
+
+  useEffect(() => {
     const observer = new MutationObserver(() => {
       const dropdown = document.querySelector(
         '.domain-custom-dropdown-class'
@@ -94,7 +99,8 @@ const DomainSelectableListNew = ({
   return (
     <Button
       className="remove-button-default-styling"
-      onClick={(e) => e.stopPropagation()}>
+      onClick={(e) => e.stopPropagation()}
+    >
       <Popover
         destroyTooltipOnHide
         content={
@@ -102,7 +108,8 @@ const DomainSelectableListNew = ({
             className="user-profile-edit-popover-card"
             style={{
               height: `${popoverHeight}px`,
-            }}>
+            }}
+          >
             <div className="d-flex justify-start items-center gap-2 m-b-sm">
               <div className="d-flex flex-start items-center">
                 <DomainIcon height={16} />
@@ -116,7 +123,9 @@ const DomainSelectableListNew = ({
               dropdownRef={dropdownRef}
               handleDropdownChange={handleDropdownChange}
               initialDomains={initialDomains}
+              isClearable={isClearable}
               isMultiple={multiple}
+              open={isDropdownOpen}
               value={selectedDomainsList as string[]}
               visible={popupVisible}
               onCancel={() => setPopupVisible(false)}
@@ -130,12 +139,14 @@ const DomainSelectableListNew = ({
         showArrow={false}
         style={{ borderRadius: '12px' }}
         trigger="click"
-        onOpenChange={setPopupVisible}>
+        onOpenChange={setPopupVisible}
+      >
         {hasPermission && (
           <Tooltip
             title={t('label.edit-entity', {
               entity: t('label.domain-plural'),
-            })}>
+            })}
+          >
             <EditIcon
               className="cursor-pointer"
               data-testid="edit-domains"

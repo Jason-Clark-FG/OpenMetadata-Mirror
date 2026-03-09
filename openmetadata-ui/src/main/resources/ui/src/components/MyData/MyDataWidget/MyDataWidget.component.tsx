@@ -212,14 +212,16 @@ const MyDataWidgetInternal = ({
               <div
                 className="my-data-widget-list-item card-wrapper w-full p-xs border-radius-sm"
                 data-testid={`My-Data-${getEntityName(item)}`}
-                key={item.id}>
+                key={item.id}
+              >
                 <div className="d-flex items-center justify-between ">
                   <Link
                     className="item-link w-min-0"
                     to={entityUtilClassBase.getEntityLink(
                       item.entityType ?? '',
                       item.fullyQualifiedName as string
-                    )}>
+                    )}
+                  >
                     <Button
                       className="entity-button flex items-center gap-2 p-0 w-full"
                       icon={
@@ -227,18 +229,21 @@ const MyDataWidgetInternal = ({
                           {getEntityIcon(item)}
                         </div>
                       }
-                      type="text">
+                      type="text"
+                    >
                       <div className="d-flex w-max-full w-min-0 flex-column">
                         {'serviceType' in item && item.serviceType && (
                           <Typography.Text
                             className="text-left text-xs font-regular text-grey-600"
-                            ellipsis={{ tooltip: true }}>
+                            ellipsis={{ tooltip: true }}
+                          >
                             {item.serviceType}
                           </Typography.Text>
                         )}
                         <Typography.Text
                           className="text-left text-sm font-regular text-grey-800"
-                          ellipsis={{ tooltip: true }}>
+                          ellipsis={{ tooltip: true }}
+                        >
                           {getEntityName(item)}
                         </Typography.Text>
                       </div>
@@ -272,6 +277,15 @@ const MyDataWidgetInternal = ({
     [data, isLoading]
   );
 
+  const translatedSortOptions = useMemo(
+    () =>
+      MY_DATA_WIDGET_FILTER_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+      })),
+    [t]
+  );
+
   const widgetHeader = useMemo(
     () => (
       <WidgetHeader
@@ -281,7 +295,7 @@ const MyDataWidgetInternal = ({
         icon={<MyDataIcon height={24} width={24} />}
         isEditView={isEditView}
         selectedSortBy={selectedFilter}
-        sortOptions={MY_DATA_WIDGET_FILTER_OPTIONS}
+        sortOptions={translatedSortOptions}
         title={t('label.my-data')}
         widgetKey={widgetKey}
         onSortChange={(key) => handleFilterChange({ key })}
@@ -300,6 +314,7 @@ const MyDataWidgetInternal = ({
       widgetKey,
       widgetData?.w,
       handleFilterChange,
+      translatedSortOptions,
     ]
   );
 
@@ -332,7 +347,8 @@ const MyDataWidgetInternal = ({
     <WidgetWrapper
       dataTestId="KnowledgePanel.MyData"
       header={widgetHeader}
-      loading={isLoading}>
+      loading={isLoading}
+    >
       {widgetContent}
     </WidgetWrapper>
   );

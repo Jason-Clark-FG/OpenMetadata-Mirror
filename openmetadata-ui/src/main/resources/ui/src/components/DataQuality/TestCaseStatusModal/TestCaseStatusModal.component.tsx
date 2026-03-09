@@ -33,6 +33,7 @@ import {
   PAGE_SIZE_MEDIUM,
   VALIDATION_MESSAGES,
 } from '../../../constants/constants';
+import { TEST_CASE_RESOLUTION_STATUS_LABELS } from '../../../constants/TestSuite.constant';
 import { EntityReference } from '../../../generated/tests/testCase';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
@@ -83,7 +84,7 @@ export const TestCaseStatusModal = ({
         : Object.values(TestCaseResolutionStatusTypes);
 
     return status.map((value) => ({
-      label: value,
+      label: TEST_CASE_RESOLUTION_STATUS_LABELS[value],
       value,
     }));
   }, [data]);
@@ -214,7 +215,8 @@ export const TestCaseStatusModal = ({
       open={open}
       title={t('label.update-entity', { entity: t('label.status') })}
       width={750}
-      onCancel={onCancel}>
+      onCancel={onCancel}
+    >
       <Form<CreateTestCaseResolutionStatus>
         data-testid="update-status-form"
         form={form}
@@ -222,7 +224,8 @@ export const TestCaseStatusModal = ({
         initialValues={data}
         layout="vertical"
         validateMessages={VALIDATION_MESSAGES}
-        onFinish={handleFormSubmit}>
+        onFinish={handleFormSubmit}
+      >
         <Form.Item
           label={t('label.status')}
           name="testCaseResolutionStatusType"
@@ -230,7 +233,8 @@ export const TestCaseStatusModal = ({
             {
               required: true,
             },
-          ]}>
+          ]}
+        >
           <Select
             data-testid="test-case-resolution-status-type"
             options={statusOptions}
@@ -251,12 +255,14 @@ export const TestCaseStatusModal = ({
                 {
                   required: true,
                 },
-              ]}>
+              ]}
+            >
               <Select
                 data-testid="test-case-failure-reason"
                 placeholder={t('label.please-select-entity', {
                   entity: t('label.reason'),
-                })}>
+                })}
+              >
                 {Object.values(TestCaseFailureReasonType).map((value) => (
                   <Select.Option key={value}>{startCase(value)}</Select.Option>
                 ))}
@@ -273,7 +279,8 @@ export const TestCaseStatusModal = ({
               {
                 required: true,
               },
-            ]}>
+            ]}
+          >
             <Assignees
               allowClear
               isSingleSelect

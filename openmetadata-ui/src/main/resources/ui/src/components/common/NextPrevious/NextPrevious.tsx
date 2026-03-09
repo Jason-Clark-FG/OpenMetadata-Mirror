@@ -90,7 +90,8 @@ const NextPrevious: FC<NextPreviousProps> = ({
         'pagination-container flex-center gap-3',
         className
       )}
-      data-testid="pagination">
+      data-testid="pagination"
+    >
       <Button
         className="pagination-button hover-button"
         data-testid="previous"
@@ -102,12 +103,13 @@ const NextPrevious: FC<NextPreviousProps> = ({
           />
         }
         type="text"
-        onClick={onPreviousHandler}>
+        onClick={onPreviousHandler}
+      >
         <span>{t('label.previous')}</span>
       </Button>
       <span className="pagination-indicator" data-testid="page-indicator">{`${t(
         'label.page'
-      )} ${currentPage} of ${computeTotalPages(
+      )} ${currentPage} ${t('label.of')} ${computeTotalPages(
         pageSize,
         paging.total
       )} `}</span>
@@ -116,7 +118,8 @@ const NextPrevious: FC<NextPreviousProps> = ({
         data-testid="next"
         disabled={computeNextDisableState() || isLoading}
         type="text"
-        onClick={onNextHandler}>
+        onClick={onNextHandler}
+      >
         <span> {t('label.next')}</span>
         <Icon className="pagination-next-icon" component={ArrowRightOutlined} />
       </Button>
@@ -130,12 +133,14 @@ const NextPrevious: FC<NextPreviousProps> = ({
               key: size,
               onClick: () => onShowSizeChange(size),
             })),
-          }}>
+          }}
+        >
           <Button
             className="pagination-button"
             data-testid="page-size-selection-dropdown"
             type="text"
-            onClick={(e) => e.preventDefault()}>
+            onClick={(e) => e.preventDefault()}
+          >
             {`${pageSize} / ${t('label.page')}`}
             <Icon component={DownOutlined} style={ICON_DIMENSION} />
           </Button>

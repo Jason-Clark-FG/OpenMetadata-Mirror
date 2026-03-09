@@ -30,7 +30,7 @@ import { TooltipPlacement } from 'antd/lib/tooltip';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compact, startCase, toString } from 'lodash';
-import { Fragment, ReactNode } from 'react';
+import React, { Fragment, ReactNode } from 'react';
 import AsyncSelectList from '../components/common/AsyncSelectList/AsyncSelectList';
 import { AsyncSelectListProps } from '../components/common/AsyncSelectList/AsyncSelectList.interface';
 import TreeAsyncSelectList from '../components/common/AsyncSelectList/TreeAsyncSelectList';
@@ -64,6 +64,10 @@ import { UserSelectableListProps } from '../components/common/UserSelectableList
 import { UserTeamSelectableList } from '../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
 import { UserSelectDropdownProps } from '../components/common/UserTeamSelectableList/UserTeamSelectableList.interface';
 import UserTeamSelectableListSearchInput from '../components/common/UserTeamSelectableListSearchInput/UserTeamSelectableListSearchInput.component';
+import MUIAutocomplete, {
+  MUIAutocompleteProps,
+} from '../components/form/MUIAutocomplete';
+import MUISwitch, { MUISwitchProps } from '../components/form/MUISwitch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
@@ -332,7 +336,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <DomainSelectableList
-            {...(rest as unknown as DomainSelectableListProps)}>
+            {...(rest as unknown as DomainSelectableListProps)}
+          >
             {children}
           </DomainSelectableList>
         );
@@ -361,7 +366,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <UserTeamSelectableList
-            {...(rest as unknown as UserSelectDropdownProps)}>
+            {...(rest as unknown as UserSelectDropdownProps)}
+          >
             {children}
           </UserTeamSelectableList>
         );
@@ -370,13 +376,11 @@ export const getField = (field: FieldProp) => {
       break;
 
     case FieldTypes.USER_TEAM_SELECT_INPUT:
-      {
-        fieldElement = (
-          <UserTeamSelectableListSearchInput
-            {...(props as unknown as UserSelectDropdownProps)}
-          />
-        );
-      }
+      fieldElement = (
+        <UserTeamSelectableListSearchInput
+          {...(props as unknown as UserSelectDropdownProps)}
+        />
+      );
 
       break;
 
@@ -448,6 +452,35 @@ export const getField = (field: FieldProp) => {
       );
     }
 
+    case FieldTypes.AUTOCOMPLETE_MUI: {
+      return (
+        <Form.Item {...formProps}>
+          <MUIAutocomplete
+            label={muiLabel as string}
+            placeholder={placeholder}
+            {...(props as MUIAutocompleteProps)}
+          />
+        </Form.Item>
+      );
+    }
+
+    case FieldTypes.SWITCH_MUI: {
+      return (
+        <Form.Item {...formProps} valuePropName="checked">
+          <MUISwitch
+            label={muiLabel as string}
+            {...(props as MUISwitchProps)}
+          />
+        </Form.Item>
+      );
+    }
+
+    case FieldTypes.COMPONENT: {
+      fieldElement = props.children;
+
+      break;
+    }
+
     default:
       break;
   }
@@ -486,7 +519,8 @@ export const getField = (field: FieldProp) => {
           'm-b-xss': helperTextType === HelperTextType.ALERT,
         })}
         {...formProps}
-        label={labelValue}>
+        label={labelValue}
+      >
         {fieldElement}
       </Form.Item>
 

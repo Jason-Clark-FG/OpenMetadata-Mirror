@@ -38,8 +38,11 @@ const TagSelectForm = ({
     tags: DefaultOptionType | DefaultOptionType[];
   }) => {
     setIsSubmitLoading(true);
-    await onSubmit(data.tags);
-    setIsSubmitLoading(false);
+    try {
+      await onSubmit(data.tags);
+    } finally {
+      setIsSubmitLoading(false);
+    }
   };
 
   return (
@@ -48,7 +51,8 @@ const TagSelectForm = ({
       form={form}
       initialValues={{ tags: defaultValue }}
       name="tagsForm"
-      onFinish={handleSave}>
+      onFinish={handleSave}
+    >
       <Form.Item noStyle name="tags">
         {tagType === TagSource.Classification && fetchApi ? (
           <AsyncSelectList

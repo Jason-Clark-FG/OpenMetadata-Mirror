@@ -21,10 +21,6 @@ import { isEmpty, isUndefined } from 'lodash';
 import { FC, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import {
-  DESCRIPTION_LENGTH,
-  NO_DATA_PLACEHOLDER,
-} from '../../../../constants/constants';
 import { TABLE_CONSTANTS } from '../../../../constants/Teams.constants';
 import { TabSpecificField } from '../../../../enums/entity.enum';
 import { Team } from '../../../../generated/entity/teams/team';
@@ -37,12 +33,12 @@ import {
 } from '../../../../utils/EntityUtils';
 import { getTeamsWithFqnPath } from '../../../../utils/RouterUtils';
 import { stringToHTML } from '../../../../utils/StringsUtils';
+import { descriptionTableObject } from '../../../../utils/TableColumn.util';
 import { getTableExpandableConfig } from '../../../../utils/TableUtils';
 import { isDropRestricted } from '../../../../utils/TeamUtils';
 import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
 import { DraggableBodyRowProps } from '../../../common/Draggable/DraggableBodyRowProps.interface';
 import FilterTablePlaceHolder from '../../../common/ErrorWithPlaceholder/FilterTablePlaceHolder';
-import RichTextEditorPreviewerNew from '../../../common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../../common/Table/Table';
 import { MovedTeamProps, TeamHierarchyProps } from './team.interface';
 import './teams.less';
@@ -52,6 +48,7 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   data,
   onTeamExpand,
   isFetchingAllTeamAdvancedDetails,
+  isSearchLoading,
   searchTerm,
   showDeletedTeam,
   onShowDeletedTeamChange,
@@ -59,6 +56,8 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
   createTeamPermission,
   isTeamDeleted,
   handleTeamSearch,
+  isTeamBasicDataLoading,
+  teamAssetCounts,
 }) => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -88,7 +87,8 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         render: (_, record) => (
           <Link
             className="link-hover"
-            to={getTeamsWithFqnPath(record.fullyQualifiedName || record.name)}>
+            to={getTeamsWithFqnPath(record.fullyQualifiedName || record.name)}
+          >
             {stringToHTML(
               highlightSearchText(getEntityName(record), searchTerm)
             )}
@@ -135,39 +135,24 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         title: t('label.entity-count', {
           entity: t('label.asset'),
         }),
-        dataIndex: 'owns',
+        dataIndex: 'fullyQualifiedName',
         width: 120,
         key: 'owns',
-        render: (owns: Team['owns']) =>
+        render: (fullyQualifiedName: string) =>
           isFetchingAllTeamAdvancedDetails ? (
             <Skeleton
               active={isFetchingAllTeamAdvancedDetails}
               paragraph={{ rows: 0 }}
             />
           ) : (
-            owns?.length ?? 0
+            <Typography.Text data-testid="team-asset-count">
+              {teamAssetCounts?.[fullyQualifiedName] ?? 0}
+            </Typography.Text>
           ),
       },
-      {
-        title: t('label.description'),
-        dataIndex: 'description',
-        width: 300,
-        key: 'description',
-        render: (description: string) =>
-          isEmpty(description) ? (
-            <Typography.Paragraph className="m-b-0">
-              {NO_DATA_PLACEHOLDER}
-            </Typography.Paragraph>
-          ) : (
-            <RichTextEditorPreviewerNew
-              markdown={description}
-              maxLength={DESCRIPTION_LENGTH}
-              showReadMoreBtn={false}
-            />
-          ),
-      },
+      ...descriptionTableObject<Team>({ width: 300 }),
     ];
-  }, [data, isFetchingAllTeamAdvancedDetails, onTeamExpand]);
+  }, [data, isFetchingAllTeamAdvancedDetails, onTeamExpand, teamAssetCounts]);
 
   const handleTableHover = useCallback(
     (value: boolean) => setIsTableHovered(value),
@@ -295,13 +280,14 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
               <Button
                 data-testid="add-team"
                 type="primary"
-                onClick={handleAddTeamButtonClick}>
+                onClick={handleAddTeamButtonClick}
+              >
                 {t('label.add-entity', { entity: t('label.team') })}
               </Button>
             )}
           </Space>
         }
-        loading={isTableLoading}
+        loading={isTableLoading || isTeamBasicDataLoading || isSearchLoading}
         locale={{
           emptyText: <FilterTablePlaceHolder />,
         }}
@@ -324,7 +310,8 @@ const TeamHierarchy: FC<TeamHierarchyProps> = ({
         open={isModalOpen}
         title={t('label.move-the-entity', { entity: t('label.team') })}
         onCancel={onDragConfirmationModalClose}
-        onOk={handleChangeTeam}>
+        onOk={handleChangeTeam}
+      >
         <Transi18next
           i18nKey="message.entity-transfer-message"
           renderElement={<strong />}

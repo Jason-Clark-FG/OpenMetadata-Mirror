@@ -40,7 +40,8 @@ jest.mock(
           </button>
           <button
             data-testid="display-name-btn"
-            onClick={() => onEditDisplayName({ displayName: 'Updated Name' })}>
+            onClick={() => onEditDisplayName({ displayName: 'Updated Name' })}
+          >
             Update Display Name
           </button>
         </div>
@@ -56,7 +57,8 @@ jest.mock(
         .mockImplementation(({ children, onUpdate }) => (
           <div
             data-testid="user-selectable-list"
-            onClick={() => onUpdate({ id: 'ID', type: 'user' })}>
+            onClick={() => onUpdate({ id: 'ID', type: 'user' })}
+          >
             {children}
           </div>
         )),
@@ -162,7 +164,7 @@ jest.mock('../../../rest/userAPI', () => {
 
 describe('PersonaDetailsPage', () => {
   it('Component should render', async () => {
-    render(<PersonaDetailsPage />), { wrapper: MemoryRouter };
+    render(<PersonaDetailsPage />, { wrapper: MemoryRouter });
 
     await waitForElementToBeRemoved(() => screen.getByTestId('loader'));
 

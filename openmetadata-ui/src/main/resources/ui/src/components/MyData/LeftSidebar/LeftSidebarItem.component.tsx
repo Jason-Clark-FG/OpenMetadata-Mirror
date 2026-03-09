@@ -26,22 +26,24 @@ const LeftSidebarItem = ({
       data-testid={dataTestId}
       to={{
         pathname: redirect_url,
-      }}>
+      }}
+    >
       {t(title)}
 
       {isBeta && (
         <Badge
           className="service-beta-tag"
           count={t('label.beta')}
-          offset={[10, 0]}
           size="small"
+          style={{ marginLeft: 8 }}
         />
       )}
     </NavLink>
   ) : (
     <span
       className="left-panel-item left-panel-label p-0"
-      data-testid={dataTestId}>
+      data-testid={dataTestId}
+    >
       {t(title)}
     </span>
   );

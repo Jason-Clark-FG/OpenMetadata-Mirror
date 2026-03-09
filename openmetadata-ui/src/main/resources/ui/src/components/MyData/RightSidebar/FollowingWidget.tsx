@@ -179,7 +179,7 @@ function FollowingWidget({
     () => (
       <WidgetEmptyState
         actionButtonLink={ROUTES.EXPLORE}
-        actionButtonText={t('label.browse-assets')}
+        actionButtonText={t('label.explore-assets')}
         description={t('message.not-followed-anything')}
         icon={
           <NoDataAssetsPlaceholder height={SIZE.MEDIUM} width={SIZE.MEDIUM} />
@@ -206,14 +206,16 @@ function FollowingWidget({
               <div
                 className="following-widget-list-item w-full p-xs border-radius-sm"
                 data-testid={`Following-${getEntityName(item)}`}
-                key={item.id}>
+                key={item.id}
+              >
                 <div className="d-flex items-center justify-between w-full">
                   <Link
                     className="item-link w-min-0"
                     to={entityUtilClassBase.getEntityLink(
                       item.entityType ?? '',
                       item.fullyQualifiedName as string
-                    )}>
+                    )}
+                  >
                     <Button
                       className="entity-button flex items-center gap-2 p-0 w-full"
                       icon={
@@ -221,18 +223,21 @@ function FollowingWidget({
                           {getEntityIcon(item)}
                         </div>
                       }
-                      type="text">
+                      type="text"
+                    >
                       <div className="d-flex w-max-full w-min-0 flex-column">
                         {'serviceType' in item && item.serviceType && (
                           <Typography.Text
                             className="text-left text-sm font-regular text-grey-600"
-                            ellipsis={{ tooltip: true }}>
+                            ellipsis={{ tooltip: true }}
+                          >
                             {item.serviceType}
                           </Typography.Text>
                         )}
                         <Typography.Text
                           className="text-left text-sm font-regular text-grey-800"
-                          ellipsis={{ tooltip: true }}>
+                          ellipsis={{ tooltip: true }}
+                        >
                           {getEntityName(item)}
                         </Typography.Text>
                       </div>
@@ -261,6 +266,15 @@ function FollowingWidget({
     );
   }, [followedData, emptyState, isExpanded]);
 
+  const translatedSortOptions = useMemo(
+    () =>
+      FOLLOWING_WIDGET_FILTER_OPTIONS.map((option) => ({
+        ...option,
+        label: t(option.label),
+      })),
+    [t]
+  );
+
   const widgetHeader = useMemo(
     () => (
       <WidgetHeader
@@ -270,7 +284,7 @@ function FollowingWidget({
         icon={<FollowingAssetsIcon height={22} width={22} />}
         isEditView={isEditView}
         selectedSortBy={selectedEntityFilter}
-        sortOptions={FOLLOWING_WIDGET_FILTER_OPTIONS}
+        sortOptions={translatedSortOptions}
         title={t('label.following-assets')}
         widgetKey={widgetKey}
         onSortChange={(key) => handleEntityFilterChange({ key })}
@@ -289,6 +303,7 @@ function FollowingWidget({
       widgetKey,
       widgetData?.w,
       handleEntityFilterChange,
+      translatedSortOptions,
     ]
   );
 
@@ -296,7 +311,8 @@ function FollowingWidget({
     return (
       <div
         className="following-widget-container"
-        data-testId="following-widget">
+        data-testId="following-widget"
+      >
         <div className="widget-content flex-1">
           {isEmpty(followedData) ? emptyState : followingContent}
           <WidgetFooter
@@ -323,7 +339,8 @@ function FollowingWidget({
     <WidgetWrapper
       dataTestId="KnowledgePanel.Following"
       header={widgetHeader}
-      loading={isLoadingOwnedData}>
+      loading={isLoadingOwnedData}
+    >
       {WidgetContent}
     </WidgetWrapper>
   );

@@ -21,6 +21,7 @@ import static org.openmetadata.schema.settings.SettingsType.EMAIL_CONFIGURATION;
 import static org.openmetadata.schema.settings.SettingsType.ENTITY_RULES_SETTINGS;
 import static org.openmetadata.schema.settings.SettingsType.LINEAGE_SETTINGS;
 import static org.openmetadata.schema.settings.SettingsType.LOGIN_CONFIGURATION;
+import static org.openmetadata.schema.settings.SettingsType.OPEN_LINEAGE_SETTINGS;
 import static org.openmetadata.schema.settings.SettingsType.OPEN_METADATA_BASE_URL_CONFIGURATION;
 import static org.openmetadata.schema.settings.SettingsType.SCIM_CONFIGURATION;
 import static org.openmetadata.schema.settings.SettingsType.SEARCH_SETTINGS;
@@ -55,6 +56,7 @@ import org.openmetadata.schema.configuration.AssetCertificationSettings;
 import org.openmetadata.schema.configuration.EntityRulesSettings;
 import org.openmetadata.schema.configuration.ExecutorConfiguration;
 import org.openmetadata.schema.configuration.HistoryCleanUpConfiguration;
+import org.openmetadata.schema.configuration.OpenLineageSettings;
 import org.openmetadata.schema.configuration.WorkflowSettings;
 import org.openmetadata.schema.email.SmtpSettings;
 import org.openmetadata.schema.security.scim.ScimConfiguration;
@@ -66,6 +68,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.EntityRepository;
+import org.openmetadata.service.resources.system.SearchSettingsHandler;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.util.EntityUtil;
@@ -163,23 +166,34 @@ public class SettingsCache {
     // Initialise Search Settings
     Settings storedSearchSettings =
         Entity.getSystemRepository().getConfigWithKey(SEARCH_SETTINGS.toString());
-    if (storedSearchSettings == null) {
-      try {
-        List<String> jsonDataFiles =
-            EntityUtil.getJsonDataResources(".*json/data/settings/searchSettings.json$");
-        if (!jsonDataFiles.isEmpty()) {
-          String json =
-              CommonUtil.getResourceAsStream(
-                  EntityRepository.class.getClassLoader(), jsonDataFiles.get(0));
+    try {
+      List<String> jsonDataFiles =
+          EntityUtil.getJsonDataResources(".*json/data/settings/searchSettings.json$");
+      if (!jsonDataFiles.isEmpty()) {
+        String json =
+            CommonUtil.getResourceAsStream(
+                EntityRepository.class.getClassLoader(), jsonDataFiles.get(0));
+        SearchSettings defaultSearchSettings = JsonUtils.readValue(json, SearchSettings.class);
+        if (storedSearchSettings == null) {
           Settings setting =
-              new Settings()
-                  .withConfigType(SEARCH_SETTINGS)
-                  .withConfigValue(JsonUtils.readValue(json, SearchSettings.class));
+              new Settings().withConfigType(SEARCH_SETTINGS).withConfigValue(defaultSearchSettings);
           Entity.getSystemRepository().createNewSetting(setting);
+        } else {
+          SearchSettings existingSearchSettings =
+              JsonUtils.convertValue(storedSearchSettings.getConfigValue(), SearchSettings.class);
+          SearchSettings mergedSettings =
+              new SearchSettingsHandler()
+                  .mergeSearchSettings(defaultSearchSettings, existingSearchSettings);
+          // Only update if merged settings differ from existing settings
+          if (!JsonUtils.pojoToJson(mergedSettings)
+              .equals(JsonUtils.pojoToJson(existingSearchSettings))) {
+            storedSearchSettings.setConfigValue(mergedSettings);
+            Entity.getSystemRepository().createOrUpdate(storedSearchSettings);
+          }
         }
-      } catch (IOException e) {
-        LOG.error("Failed to read default search settings. Message: {}", e.getMessage(), e);
       }
+    } catch (IOException e) {
+      LOG.error("Failed to read default search settings. Message: {}", e.getMessage(), e);
     }
 
     // Initialise Certification Settings
@@ -221,7 +235,23 @@ public class SettingsCache {
                   new LineageSettings()
                       .withDownstreamDepth(2)
                       .withUpstreamDepth(2)
-                      .withLineageLayer(LineageLayer.ENTITY_LINEAGE));
+                      .withLineageLayer(LineageLayer.ENTITY_LINEAGE)
+                      .withGraphPerformanceConfig(
+                          new org.openmetadata.schema.api.lineage.GraphPerformanceConfig()
+                              .withSmallGraphThreshold(5000)
+                              .withMediumGraphThreshold(50000)
+                              .withMaxInMemoryNodes(100000)
+                              .withSmallGraphBatchSize(10000)
+                              .withMediumGraphBatchSize(5000)
+                              .withLargeGraphBatchSize(1000)
+                              .withStreamingBatchSize(500)
+                              .withEnableCaching(true)
+                              .withCacheTTLSeconds(300)
+                              .withMaxCachedGraphs(100)
+                              .withEnableProgressTracking(false)
+                              .withProgressReportInterval(1000)
+                              .withUseScrollForLargeGraphs(true)
+                              .withScrollTimeoutMinutes(5)));
       Entity.getSystemRepository().createNewSetting(setting);
     }
 
@@ -282,6 +312,21 @@ public class SettingsCache {
       } catch (IOException e) {
         LOG.error("Failed to read default Enitty Rules settings. Message: {}", e.getMessage(), e);
       }
+    }
+
+    // Initialize OpenLineage Settings
+    Settings openLineageSettings =
+        Entity.getSystemRepository().getConfigWithKey(OPEN_LINEAGE_SETTINGS.toString());
+    if (openLineageSettings == null) {
+      Settings setting =
+          new Settings()
+              .withConfigType(OPEN_LINEAGE_SETTINGS)
+              .withConfigValue(
+                  new OpenLineageSettings()
+                      .withEnabled(true)
+                      .withAutoCreateEntities(true)
+                      .withDefaultPipelineService("openlineage"));
+      Entity.getSystemRepository().createNewSetting(setting);
     }
   }
 

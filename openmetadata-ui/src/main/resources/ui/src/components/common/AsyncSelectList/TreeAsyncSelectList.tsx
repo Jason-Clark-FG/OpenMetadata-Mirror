@@ -142,7 +142,8 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
         <Space
           className="p-sm p-b-xss p-l-xs custom-dropdown-render"
           data-testid="custom-drop-down-menu"
-          size={8}>
+          size={8}
+        >
           <Button
             className="update-btn"
             data-testid="saveAssociatedTag"
@@ -152,14 +153,16 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
             size="small"
             tabIndex={0}
             type="default"
-            onClick={() => handleSubmit()}>
+            onClick={() => handleSubmit()}
+          >
             {t('label.update')}
           </Button>
           <Button
             data-testid="cancelAssociatedTag"
             size="small"
             tabIndex={0}
-            onClick={onCancel}>
+            onClick={onCancel}
+          >
             {t('label.cancel')}
           </Button>
         </Space>
@@ -373,6 +376,20 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
     );
   }, [glossaries, searchOptions, expandableKeys.current, isParentSelectable]);
 
+  const defaultSelectedValues = useMemo(() => {
+    if (!initialOptions || initialOptions.length === 0) {
+      return isMultiSelect ? [] : undefined;
+    }
+    if (isMultiSelect) {
+      return initialOptions.map((option) => ({
+        value: option.value,
+        label: option.label,
+      }));
+    }
+
+    return initialOptions[0]?.value;
+  }, [initialOptions, isMultiSelect]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'Escape':
@@ -413,6 +430,7 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
         'new-chip-style': newLook,
       })}
       data-testid="tag-selector"
+      defaultValue={defaultSelectedValues}
       dropdownRender={
         hasNoActionButtons ? (menu: ReactElement) => menu : dropdownRender
       }

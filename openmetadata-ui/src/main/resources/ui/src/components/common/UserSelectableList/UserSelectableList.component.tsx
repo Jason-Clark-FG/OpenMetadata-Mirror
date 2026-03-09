@@ -131,11 +131,13 @@ export const UserSelectableList = ({
       showArrow={false}
       trigger="click"
       onOpenChange={setPopupVisible}
-      {...popoverProps}>
+      {...popoverProps}
+    >
       {children ?? (
         <Tooltip
           placement="topRight"
-          title={hasPermission ? '' : NO_PERMISSION_FOR_ACTION}>
+          title={hasPermission ? '' : t(NO_PERMISSION_FOR_ACTION)}
+        >
           <Button
             className="p-0 flex-center"
             data-testid="add-user"

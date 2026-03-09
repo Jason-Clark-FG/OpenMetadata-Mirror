@@ -125,7 +125,8 @@ export const DomainLabelV2 = <
           <Tooltip
             title={t('label.inherited-entity', {
               entity: t('label.domain-plural'),
-            })}>
+            })}
+          >
             <InheritIcon className="inherit-icon cursor-pointer" width={14} />
           </Tooltip>
         ) : null;
@@ -159,7 +160,8 @@ export const DomainLabelV2 = <
             { 'font-medium text-xs': !props.showDomainHeading },
             props.textClassName
           )}
-          data-testid="no-domain-text">
+          data-testid="no-domain-text"
+        >
           {t('label.no-entity', { entity: t('label.domain-plural') })}
         </Typography.Text>
       );
@@ -175,13 +177,14 @@ export const DomainLabelV2 = <
       hasPermission && (
         <DomainSelectableList
           hasPermission={Boolean(hasPermission)}
+          isClearable={props.isClearable}
           multiple={props.multiple}
           selectedDomain={activeDomain}
           onUpdate={handleDomainSave}
         />
       )
     );
-  }, [hasPermission, activeDomain, handleDomainSave]);
+  }, [hasPermission, activeDomain, handleDomainSave, props.isClearable]);
 
   const label = useMemo(() => {
     if (props.showDomainHeading) {
@@ -197,7 +200,8 @@ export const DomainLabelV2 = <
               </div>
             ),
           }}
-          isExpandDisabled={!Array.isArray(domainLink)}>
+          isExpandDisabled={!Array.isArray(domainLink)}
+        >
           <div className="d-flex items-center gap-1 flex-wrap">
             {domainLink}
           </div>
@@ -208,7 +212,8 @@ export const DomainLabelV2 = <
     return (
       <Card
         className="d-flex items-center gap-1 flex-wrap"
-        data-testid="header-domain-container">
+        data-testid="header-domain-container"
+      >
         {domainLink}
         {selectableList}
       </Card>

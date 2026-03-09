@@ -16,7 +16,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TagChip } from '../TagChip';
 
 interface TagsCellProps {
-  tags: Array<{ id?: string; name?: string; tagFQN?: string }>;
+  tags: Array<{
+    id?: string;
+    name?: string;
+    tagFQN?: string;
+    displayName?: string;
+  }>;
   chipSize?: 'small' | 'large';
 }
 
@@ -76,7 +81,8 @@ const TagsCell = ({ tags, chipSize = 'small' }: TagsCellProps) => {
         alignItems: 'center',
         position: 'relative',
         minHeight: chipSize === 'small' ? 24 : 32,
-      }}>
+      }}
+    >
       {!measured && (
         <Box
           ref={measureRef}
@@ -88,7 +94,8 @@ const TagsCell = ({ tags, chipSize = 'small' }: TagsCellProps) => {
             top: 0,
             left: 0,
             width: '100%',
-          }}>
+          }}
+        >
           {tags.map((tag, index) => (
             <TagChip
               className="measure-chip"
@@ -112,17 +119,16 @@ const TagsCell = ({ tags, chipSize = 'small' }: TagsCellProps) => {
           {tags.slice(0, visibleCount).map((tag, index) => {
             const isSingleTag = visibleCount === 1;
 
+            let maxWidth = '200px';
+            if (isSingleTag) {
+              maxWidth = hiddenCount > 0 ? 'calc(100% - 70px)' : '100%';
+            }
+
             return (
               <TagChip
                 key={tag.id || `${tag.tagFQN}-${index}`}
-                label={tag.name || tag.tagFQN || ''}
-                maxWidth={
-                  isSingleTag && hiddenCount > 0
-                    ? 'calc(100% - 70px)'
-                    : isSingleTag
-                    ? '100%'
-                    : '200px'
-                }
+                label={tag.displayName || tag.name || tag.tagFQN || ''}
+                maxWidth={maxWidth}
                 size={chipSize}
               />
             );

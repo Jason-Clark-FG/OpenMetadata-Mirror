@@ -34,7 +34,6 @@ import {
   DAY_IN_MONTH_OPTIONS,
   DAY_OPTIONS,
   PERIOD_OPTIONS,
-  SCHEDULAR_OPTIONS,
 } from '../../../../../constants/Schedular.constants';
 import { LOADING_STATE } from '../../../../../enums/common.enum';
 import {
@@ -80,7 +79,7 @@ const ScheduleInterval = <T,>({
   defaultSchedule,
   topChildren,
   showActionButtons = true,
-  schedularOptions = SCHEDULAR_OPTIONS,
+  schedularOptions,
 }: ScheduleIntervalProps<T>) => {
   const { t } = useTranslation();
   // Since includePeriodOptions can limit the schedule options
@@ -199,14 +198,17 @@ const ScheduleInterval = <T,>({
   };
 
   const filteredPeriodOptions = useMemo(() => {
-    if (includePeriodOptions) {
-      return PERIOD_OPTIONS.filter((option) =>
-        includePeriodOptions.includes(option.value)
-      );
-    } else {
-      return PERIOD_OPTIONS;
-    }
-  }, [includePeriodOptions]);
+    const options = includePeriodOptions
+      ? PERIOD_OPTIONS.filter((option) =>
+          includePeriodOptions.includes(option.value)
+        )
+      : PERIOD_OPTIONS;
+
+    return options.map((option) => ({
+      ...option,
+      label: t(option.label),
+    }));
+  }, [includePeriodOptions, t]);
 
   return (
     <Form
@@ -217,21 +219,24 @@ const ScheduleInterval = <T,>({
       layout="vertical"
       name="schedular-form"
       onFinish={handleFormSubmit}
-      onValuesChange={handleValuesChange}>
+      onValuesChange={handleValuesChange}
+    >
       <Row gutter={[16, 16]}>
         {topChildren}
         <Col span={24}>
           <Radio.Group
             className="schedular-card-container"
             data-testid="schedular-card-container"
-            value={selectedSchedular}>
+            value={selectedSchedular}
+          >
             {schedularOptions.map(({ description, title, value }) => (
               <Card
                 className={classNames('schedular-card', {
                   active: value === selectedSchedular,
                 })}
                 key={value}
-                onClick={() => handleSelectedSchedular(value)}>
+                onClick={() => handleSelectedSchedular(value)}
+              >
                 <Radio value={value}>
                   <Space direction="vertical" size={6}>
                     <Typography.Text className="font-medium text-md">
@@ -254,7 +259,8 @@ const ScheduleInterval = <T,>({
                 <Form.Item
                   label={`${t('label.every')}:`}
                   labelCol={{ span: 24 }}
-                  name="selectedPeriod">
+                  name="selectedPeriod"
+                >
                   <Select
                     className="w-full"
                     data-testid="cron-type"
@@ -274,7 +280,8 @@ const ScheduleInterval = <T,>({
                   hidden={!showHourSelect}
                   label={`${t('label.hour')}:`}
                   labelCol={{ span: 24 }}
-                  name="hour">
+                  name="hour"
+                >
                   {getHourMinuteSelect({
                     cronType: CronTypes.HOUR,
                     disabled,
@@ -287,7 +294,8 @@ const ScheduleInterval = <T,>({
                   hidden={!showMinuteSelect}
                   label={`${t('label.minute')}:`}
                   labelCol={{ span: 24 }}
-                  name="min">
+                  name="min"
+                >
                   {getHourMinuteSelect({
                     cronType: CronTypes.MINUTE,
                     disabled,
@@ -300,18 +308,21 @@ const ScheduleInterval = <T,>({
                   hidden={!showWeekSelect}
                   label={`${t('label.day')}:`}
                   labelCol={{ span: 24 }}
-                  name="dow">
+                  name="dow"
+                >
                   <Radio.Group
                     buttonStyle="solid"
                     className="d-flex gap-2"
-                    value={dow}>
+                    value={dow}
+                  >
                     {DAY_OPTIONS.map(({ label, value: optionValue }) => (
                       <Radio.Button
                         className="week-selector-buttons"
                         data-value={optionValue}
                         disabled={disabled}
                         key={`${label}-${optionValue}`}
-                        value={optionValue}>
+                        value={optionValue}
+                      >
                         {label[0]}
                       </Radio.Button>
                     ))}
@@ -325,11 +336,13 @@ const ScheduleInterval = <T,>({
                   hidden={!showMonthSelect}
                   label={`${t('label.date')}:`}
                   labelCol={{ span: 24 }}
-                  name="dom">
+                  name="dom"
+                >
                   <Radio.Group
                     buttonStyle="solid"
                     className="d-flex flex-wrap gap-2"
-                    value={dom}>
+                    value={dom}
+                  >
                     {DAY_IN_MONTH_OPTIONS.map(
                       ({ label, value: optionValue }) => (
                         <Radio.Button
@@ -337,7 +350,8 @@ const ScheduleInterval = <T,>({
                           data-value={optionValue}
                           disabled={disabled}
                           key={`day-${label}-${optionValue}`}
-                          value={optionValue}>
+                          value={optionValue}
+                        >
                           {label}
                         </Radio.Button>
                       )
@@ -362,7 +376,8 @@ const ScheduleInterval = <T,>({
                     {
                       validator: cronValidator,
                     },
-                  ]}>
+                  ]}
+                >
                   <Input />
                 </Form.Item>
               </Col>
@@ -401,7 +416,8 @@ const ScheduleInterval = <T,>({
               className="m-r-xs"
               data-testid="back-button"
               type="link"
-              onClick={onBack}>
+              onClick={onBack}
+            >
               <span>{buttonProps?.cancelText ?? t('label.back')}</span>
             </Button>
 
@@ -409,7 +425,8 @@ const ScheduleInterval = <T,>({
               <Button
                 disabled
                 className="w-16 opacity-100 p-x-md p-y-xxs"
-                type="primary">
+                type="primary"
+              >
                 <CheckOutlined />
               </Button>
             ) : (
@@ -418,7 +435,8 @@ const ScheduleInterval = <T,>({
                 data-testid="deploy-button"
                 htmlType="submit"
                 loading={status === LOADING_STATE.WAITING}
-                type="primary">
+                type="primary"
+              >
                 {buttonProps?.okText ?? t('label.create')}
               </Button>
             )}

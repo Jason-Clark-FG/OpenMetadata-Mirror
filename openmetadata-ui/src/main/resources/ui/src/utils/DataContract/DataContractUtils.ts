@@ -90,12 +90,32 @@ export const getUpdatedContractDetails = (
   contract: DataContract,
   formValues: DataContract
 ) => {
-  return omit({ ...contract, ...formValues, name: contract?.name ?? '' }, [
+  const merged: Record<string, unknown> = {
+    ...contract,
+    ...formValues,
+    name: contract?.name ?? '',
+  };
+
+  // Convert termsOfUse from object {content, inherited} to plain string (CreateDataContract format)
+  if (
+    merged.termsOfUse &&
+    typeof merged.termsOfUse === 'object' &&
+    'content' in merged.termsOfUse
+  ) {
+    merged.termsOfUse = (merged.termsOfUse as { content?: string }).content;
+  }
+
+  return omit(merged, [
     'id',
     'fullyQualifiedName',
     'version',
     'updatedAt',
     'updatedBy',
+    'createdAt',
+    'createdBy',
+    'href',
+    'contractUpdates',
+    'inherited',
     'testSuite',
     'deleted',
     'changeDescription',
@@ -111,6 +131,22 @@ export const downloadContractYamlFile = (contract: DataContract) => {
   element.textContent = 'download-file';
   element.href = URL.createObjectURL(file);
   element.download = `${contract.name}.yaml`;
+  document.body.appendChild(element);
+  element.click();
+
+  URL.revokeObjectURL(element.href);
+  document.body.removeChild(element);
+};
+
+export const downloadContractAsODCSYaml = (
+  yamlContent: string,
+  contractName: string
+) => {
+  const element = document.createElement('a');
+  const file = new Blob([yamlContent], { type: 'application/yaml' });
+  element.textContent = 'download-file';
+  element.href = URL.createObjectURL(file);
+  element.download = `${contractName}.odcs.yaml`;
   document.body.appendChild(element);
   element.click();
 
@@ -377,6 +413,14 @@ export const getDataContractTabByEntity = (entityType: EntityType) => {
         EDataContractTab.CONTRACT_DETAIL,
         EDataContractTab.TERMS_OF_SERVICE,
         EDataContractTab.SCHEMA,
+        EDataContractTab.SEMANTICS,
+        EDataContractTab.SECURITY,
+        EDataContractTab.SLA,
+      ];
+    case EntityType.DATA_PRODUCT:
+      return [
+        EDataContractTab.CONTRACT_DETAIL,
+        EDataContractTab.TERMS_OF_SERVICE,
         EDataContractTab.SEMANTICS,
         EDataContractTab.SECURITY,
         EDataContractTab.SLA,

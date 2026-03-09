@@ -43,6 +43,7 @@ import {
   getCustomizePagePath,
   getSettingPageEntityBreadCrumb,
 } from '../../utils/GlobalSettingsUtils';
+import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import { getSettingPath } from '../../utils/RouterUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import './custom-page-settings.less';
@@ -131,7 +132,8 @@ export const CustomPageSettings = () => {
       <Col className="mt-24 text-center" span={24}>
         <ErrorPlaceHolder
           className="m-t-lg"
-          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}
+        >
           <Typography.Paragraph className="w-max-500">
             <Transi18next
               i18nKey="message.no-persona-message"
@@ -164,16 +166,29 @@ export const CustomPageSettings = () => {
     <PageLayoutV1
       pageTitle={t('label.customize-entity', {
         entity: t('label.landing-page'),
-      })}>
+      })}
+    >
       <Row
         className="customize-landing-page user-listing p-b-md page-container"
         data-testid="custom-page-setting-component"
-        gutter={[16, 16]}>
+        gutter={[16, 16]}
+      >
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
         <Col span={18}>
-          <PageHeader data={PAGE_HEADERS.CUSTOM_PAGE} />
+          <PageHeader
+            data={{
+              header: translateWithNestedKeys(
+                PAGE_HEADERS.CUSTOM_PAGE.header,
+                PAGE_HEADERS.CUSTOM_PAGE.headerParams
+              ),
+              subHeader: translateWithNestedKeys(
+                PAGE_HEADERS.CUSTOM_PAGE.subHeader,
+                PAGE_HEADERS.CUSTOM_PAGE.subHeaderParams
+              ),
+            }}
+          />
         </Col>
 
         {isLoading
@@ -196,13 +211,15 @@ export const CustomPageSettings = () => {
                       data-testid="customize-page-button"
                       size="small"
                       type="text"
-                      onClick={() => handleCustomisePersona(persona)}>
+                      onClick={() => handleCustomisePersona(persona)}
+                    >
                       {t('label.customize-entity', {
                         entity: t('label.landing-page'),
                       })}
                     </Button>
                   }
-                  title={getEntityName(persona)}>
+                  title={getEntityName(persona)}
+                >
                   {persona.description ? (
                     <RichTextEditorPreviewerV1
                       markdown={persona.description ?? ''}

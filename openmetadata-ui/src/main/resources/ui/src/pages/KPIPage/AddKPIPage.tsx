@@ -47,6 +47,7 @@ import { FieldProp, FieldTypes } from '../../interface/FormUtils.interface';
 import { getListKPIs, postKPI } from '../../rest/KpiAPI';
 import { getDisabledDates } from '../../utils/DataInsightUtils';
 import { getField } from '../../utils/formUtils';
+import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import {
   filterChartOptions,
   getDataInsightChartForKPI,
@@ -171,6 +172,15 @@ const AddKPIPage = () => {
     fetchKpiList();
   }, []);
 
+  const translatedKPIBreadcrumb = useMemo(
+    () =>
+      ADD_KPI_BREADCRUMB.map((option) => ({
+        ...option,
+        name: translateWithNestedKeys(option.name, option.nameData),
+      })),
+    [t]
+  );
+
   return (
     <ResizablePanels
       className="content-height-with-resizable-panel"
@@ -182,11 +192,12 @@ const AddKPIPage = () => {
           <div data-testid="add-kpi-container">
             <TitleBreadcrumb
               className="m-t-0 my-4"
-              titleLinks={ADD_KPI_BREADCRUMB}
+              titleLinks={translatedKPIBreadcrumb}
             />
             <Typography.Paragraph
               className="text-base"
-              data-testid="form-title">
+              data-testid="form-title"
+            >
               {t('label.add-new-entity', {
                 entity: t('label.kpi-uppercase'),
               })}
@@ -198,7 +209,8 @@ const AddKPIPage = () => {
               layout="vertical"
               validateMessages={VALIDATION_MESSAGES}
               onFinish={handleSubmit}
-              onValuesChange={handleFormValuesChange}>
+              onValuesChange={handleFormValuesChange}
+            >
               <Form.Item
                 label={t('label.select-a-chart')}
                 name="chartType"
@@ -209,7 +221,8 @@ const AddKPIPage = () => {
                       fieldText: t('label.data-insight-chart'),
                     }),
                   },
-                ]}>
+                ]}
+              >
                 <Select
                   data-testid="chartType"
                   notFoundContent={t('message.all-charts-are-mapped')}
@@ -229,7 +242,8 @@ const AddKPIPage = () => {
               <Form.Item
                 initialValue={KpiTargetType.Percentage}
                 label={t('label.metric-type')}
-                name="metricType">
+                name="metricType"
+              >
                 <Select
                   data-testid="metricType"
                   options={KPIMetricTypeOptions}
@@ -256,7 +270,8 @@ const AddKPIPage = () => {
                         );
                       },
                     },
-                  ]}>
+                  ]}
+                >
                   <>
                     {metricType === KpiTargetType.Percentage && (
                       <>
@@ -265,7 +280,8 @@ const AddKPIPage = () => {
                             <Form.Item
                               noStyle
                               name="targetValue"
-                              wrapperCol={{ span: 20 }}>
+                              wrapperCol={{ span: 20 }}
+                            >
                               <Slider
                                 className="kpi-slider"
                                 marks={{
@@ -284,7 +300,8 @@ const AddKPIPage = () => {
                             <Form.Item
                               noStyle
                               name="targetValue"
-                              wrapperCol={{ span: 4 }}>
+                              wrapperCol={{ span: 4 }}
+                            >
                               <InputNumber
                                 formatter={(value) => `${value}%`}
                                 max={100}
@@ -326,7 +343,8 @@ const AddKPIPage = () => {
                           }),
                         }),
                       },
-                    ]}>
+                    ]}
+                  >
                     <DatePicker
                       className="w-full"
                       data-testid="start-date"
@@ -347,7 +365,8 @@ const AddKPIPage = () => {
                           field: t('label.end-date'),
                         }),
                       },
-                    ]}>
+                    ]}
+                  >
                     <DatePicker
                       className="w-full"
                       data-testid="end-date"
@@ -364,7 +383,8 @@ const AddKPIPage = () => {
                 <Button
                   data-testid="cancel-btn"
                   type="link"
-                  onClick={handleCancel}>
+                  onClick={handleCancel}
+                >
                   {t('label.cancel')}
                 </Button>
                 <Button
@@ -372,7 +392,8 @@ const AddKPIPage = () => {
                   form="kpi-form"
                   htmlType="submit"
                   loading={isCreatingKPI}
-                  type="primary">
+                  type="primary"
+                >
                   {t('label.create')}
                 </Button>
               </Space>

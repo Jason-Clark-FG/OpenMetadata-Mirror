@@ -11,10 +11,11 @@
  *  limitations under the License.
  */
 
-import ViewComfyOutlinedIcon from '@mui/icons-material/ViewComfyOutlined';
 import { Button, ButtonGroup, useTheme } from '@mui/material';
+import { defaultColors } from '@openmetadata/ui-core-components';
 import { Grid01, Menu01 } from '@untitledui/icons';
 import { useCallback, useMemo, useState } from 'react';
+import { ReactComponent as WorkflowIcon } from '../../../../assets/svg/data-flow.svg';
 
 export type ViewMode = 'table' | 'card' | 'tree';
 
@@ -93,7 +94,7 @@ export const useViewToggle = ({
       case 'card':
         return <Grid01 size={16} />;
       case 'tree':
-        return <ViewComfyOutlinedIcon fontSize="small" />;
+        return <WorkflowIcon aria-label="Tree view" height={16} width={16} />;
       case 'table':
       default:
         return <Menu01 size={16} />;
@@ -122,17 +123,19 @@ export const useViewToggle = ({
             },
           },
         }}
-        variant="outlined">
+        variant="outlined"
+      >
         {availableViews.map((mode) => {
           const isActive = view === mode;
 
           return (
             <Button
+              data-testid={`${mode}-view-toggle`}
               key={mode}
               sx={{
                 backgroundColor: isActive
-                  ? theme.palette.allShades?.brand?.[50]
-                  : 'inherit',
+                  ? `${defaultColors.blue[50]} !important`
+                  : 'transparent',
                 color: isActive
                   ? theme.palette.allShades?.brand?.[600]
                   : 'inherit',
@@ -144,7 +147,8 @@ export const useViewToggle = ({
               }}
               title={mode}
               variant="outlined"
-              onClick={() => setView(mode)}>
+              onClick={() => setView(mode)}
+            >
               {renderIcon(mode)}
             </Button>
           );

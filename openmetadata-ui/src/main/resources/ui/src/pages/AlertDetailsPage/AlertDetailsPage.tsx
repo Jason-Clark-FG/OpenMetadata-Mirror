@@ -353,16 +353,14 @@ function AlertDetailsPage({
   }
 
   return (
-    <PageLayoutV1
-      pageTitle={t('label.entity-detail-plural', {
-        entity: t('label.alert'),
-      })}>
+    <PageLayoutV1 pageTitle={getEntityName(alertDetails)}>
       {loadingCount ? (
         <Loader />
       ) : (
         <Card
           className="steps-form-container"
-          data-testid="alert-details-container">
+          data-testid="alert-details-container"
+        >
           <Row className="add-notification-container" gutter={[0, 16]}>
             <Col span={24}>
               <TitleBreadcrumb titleLinks={breadcrumb} />
@@ -404,7 +402,8 @@ function AlertDetailsPage({
                     <Tooltip
                       title={t('label.sync-alert-offset', {
                         entity: t('label.alert'),
-                      })}>
+                      })}
+                    >
                       <Button
                         className="flex flex-center"
                         data-testid="sync-button"
@@ -418,7 +417,8 @@ function AlertDetailsPage({
                         <Tooltip
                           title={t('label.edit-entity', {
                             entity: t('label.alert'),
-                          })}>
+                          })}
+                        >
                           <Button
                             className="flex flex-center"
                             data-testid="edit-button"
@@ -438,7 +438,8 @@ function AlertDetailsPage({
                         <Tooltip
                           title={t('label.delete-entity', {
                             entity: t('label.alert'),
-                          })}>
+                          })}
+                        >
                           <Button
                             className="flex flex-center"
                             data-testid="delete-button"
@@ -455,7 +456,8 @@ function AlertDetailsPage({
             <Col
               className="alert-description"
               data-testid="alert-description"
-              span={24}>
+              span={24}
+            >
               <DescriptionV1
                 description={alertDetails?.description}
                 entityType={EntityType.EVENT_SUBSCRIPTION}

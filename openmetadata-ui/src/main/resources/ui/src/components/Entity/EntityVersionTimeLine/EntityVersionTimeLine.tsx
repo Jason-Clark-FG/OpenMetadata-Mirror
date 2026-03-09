@@ -1,4 +1,3 @@
-/* eslint-disable i18next/no-literal-string */
 /*
  *  Copyright 2022 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import { Button, Col, Divider, Drawer, Row, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { isEmpty, toString } from 'lodash';
@@ -63,7 +61,8 @@ export const VersionButton = forwardRef<
         className
       )}
       ref={ref}
-      onClick={() => onVersionSelect(toString(versionNumber))}>
+      onClick={() => onVersionSelect(toString(versionNumber))}
+    >
       <div className="timeline-wrapper">
         <span
           className={classNames(
@@ -83,12 +82,14 @@ export const VersionButton = forwardRef<
         <Typography.Text
           className={classNames('d-flex font-medium', {
             'text-primary': selected,
-          })}>
+          })}
+        >
           <span>{versionText}</span>
           {isMajorVersion ? (
             <span
               className="m-l-xs text-xs font-medium text-grey-body tw-bg-tag p-x-xs p-y-xss bg-grey rounded-4"
-              style={{ backgroundColor: '#EEEAF8' }}>
+              style={{ backgroundColor: '#EEEAF8' }}
+            >
               {t('label.major')}
             </span>
           ) : null}
@@ -96,7 +97,8 @@ export const VersionButton = forwardRef<
         <div
           className={classNames('text-xs font-normal break-all', {
             'diff-description': selected,
-          })}>
+          })}
+        >
           {getSummary({
             changeDescription: changeDescription,
             isGlossaryTerm: !isEmpty(glossary),
@@ -106,7 +108,8 @@ export const VersionButton = forwardRef<
           <UserPopOverCard
             className="font-italic"
             profileWidth={16}
-            userName={updatedBy}>
+            userName={updatedBy}
+          >
             <Link className="thread-author m-r-xss" to={getUserPath(updatedBy)}>
               {getEntityName(user)}
             </Link>
@@ -183,7 +186,8 @@ const EntityVersionTimeLine: React.FC<EntityVersionTimelineProps> = ({
                 block
                 className="m-t-lg"
                 href="/settings/billing/plans"
-                type="primary">
+                type="primary"
+              >
                 See Upgrade Options
               </Button>
             </div>
@@ -217,7 +221,8 @@ const EntityVersionTimeLine: React.FC<EntityVersionTimelineProps> = ({
           <Divider className="m-0" />
         </>
       }
-      width={330}>
+      width={330}
+    >
       {versions}
     </Drawer>
   );

@@ -26,7 +26,9 @@ import AddNotificationPage from '../../pages/AddNotificationPage/AddNotification
 import AlertDetailsPage from '../../pages/AlertDetailsPage/AlertDetailsPage';
 import AppearanceConfigSettingsPage from '../../pages/AppearanceConfigSettingsPage/AppearanceConfigSettingsPage';
 import ApplicationPage from '../../pages/Application/ApplicationPage';
+import AuditLogsPage from '../../pages/AuditLogsPage/AuditLogsPage';
 import BotsPageV1 from '../../pages/BotsPageV1/BotsPageV1.component';
+import ColumnBulkOperations from '../../pages/ColumnBulkOperations/ColumnBulkOperations.component';
 import DataAssetRulesPage from '../../pages/Configuration/DataAssetRules/DataAssetRulesPage';
 import EditLoginConfiguration from '../../pages/Configuration/EditLoginConfiguration/EditLoginConfigurationPage';
 import EditUrlConfigurationPage from '../../pages/Configuration/EditUrlConfiguration/EditUrlConfigurationPage';
@@ -38,6 +40,7 @@ import EditEmailConfigPage from '../../pages/EditEmailConfigPage/EditEmailConfig
 import EmailConfigSettingsPage from '../../pages/EmailConfigSettingsPage/EmailConfigSettingsPage.component';
 import GlobalSettingCategoryPage from '../../pages/GlobalSettingPage/GlobalSettingCategory/GlobalSettingCategoryPage';
 import GlobalSettingPage from '../../pages/GlobalSettingPage/GlobalSettingPage';
+import { LearningResourcesPage } from '../../pages/LearningResourcesPage/LearningResourcesPage';
 import LineageConfigPage from '../../pages/LineageConfigPage/LineageConfigPage';
 import NotificationListPage from '../../pages/NotificationListPage/NotificationListPage';
 import OmHealthPage from '../../pages/OmHealth/OmHealthPage';
@@ -91,7 +94,8 @@ const SettingsRouter = () => {
               Operation.Create,
               ResourceEntity.ROLE,
               permissions
-            )}>
+            )}
+          >
             <AddRolePage
               pageTitle={t('label.add-new-entity', {
                 entity: t('label.role'),
@@ -108,7 +112,8 @@ const SettingsRouter = () => {
               Operation.Create,
               ResourceEntity.POLICY,
               permissions
-            )}>
+            )}
+          >
             <AddPolicyPage
               pageTitle={t('label.add-entity', {
                 entity: t('label.policy'),
@@ -125,7 +130,8 @@ const SettingsRouter = () => {
               Operation.EditAll,
               ResourceEntity.POLICY,
               permissions
-            )}>
+            )}
+          >
             <AddRulePage />
           </AdminProtectedRoute>
         }
@@ -184,7 +190,8 @@ const SettingsRouter = () => {
               Operation.EditAll,
               ResourceEntity.POLICY,
               permissions
-            )}>
+            )}
+          >
             <EditRulePage />
           </AdminProtectedRoute>
         }
@@ -197,7 +204,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.EVENT_SUBSCRIPTION,
               permissions
-            )}>
+            )}
+          >
             <NotificationListPage />
           </AdminProtectedRoute>
         }
@@ -210,7 +218,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.EVENT_SUBSCRIPTION,
               permissions
-            )}>
+            )}
+          >
             <NotificationAlertDetailsPage />
           </AdminProtectedRoute>
         }
@@ -253,7 +262,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.BOT,
               permissions
-            )}>
+            )}
+          >
             <BotsPageV1 />
           </AdminProtectedRoute>
         }
@@ -265,7 +275,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.APPLICATION,
               permissions
-            )}>
+            )}
+          >
             <ApplicationPage />
           </AdminProtectedRoute>
         }
@@ -277,7 +288,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.APPLICATION,
               permissions
-            )}>
+            )}
+          >
             <AppDetails />
           </AdminProtectedRoute>
         }
@@ -316,7 +328,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.TEAM,
               permissions
-            )}>
+            )}
+          >
             <TeamsPage />
           </AdminProtectedRoute>
         }
@@ -333,7 +346,8 @@ const SettingsRouter = () => {
               Operation.EditAll,
               ResourceEntity.TEAM,
               permissions
-            )}>
+            )}
+          >
             <ImportTeamsPage />
           </AdminProtectedRoute>
         }
@@ -370,7 +384,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.ROLE,
               permissions
-            )}>
+            )}
+          >
             <RolesListPage />
           </AdminProtectedRoute>
         }
@@ -385,7 +400,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.ROLE,
               permissions
-            )}>
+            )}
+          >
             <RolesDetailPage />
           </AdminProtectedRoute>
         }
@@ -401,7 +417,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.ROLE,
               permissions
-            )}>
+            )}
+          >
             <RolesDetailPage />
           </AdminProtectedRoute>
         }
@@ -482,7 +499,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.POLICY,
               permissions
-            )}>
+            )}
+          >
             <PoliciesListPage />
           </AdminProtectedRoute>
         }
@@ -497,7 +515,8 @@ const SettingsRouter = () => {
             hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.POLICY,
               permissions
-            )}>
+            )}
+          >
             <PoliciesDetailPage />
           </AdminProtectedRoute>
         }
@@ -522,9 +541,26 @@ const SettingsRouter = () => {
         element={
           <AdminProtectedRoute
             hasPermission={userPermissions.hasViewPermissions(
+              ResourceEntity.AUDIT_LOG,
+              permissions
+            )}
+          >
+            <AuditLogsPage />
+          </AdminProtectedRoute>
+        }
+        path={getSettingPathRelative(
+          GlobalSettingsMenuCategory.ACCESS,
+          GlobalSettingOptions.AUDIT_LOGS
+        )}
+      />
+      <Route
+        element={
+          <AdminProtectedRoute
+            hasPermission={userPermissions.hasViewPermissions(
               ResourceEntity.USER,
               permissions
-            )}>
+            )}
+          >
             <UserListPageV1 />
           </AdminProtectedRoute>
         }
@@ -592,7 +628,8 @@ const SettingsRouter = () => {
               Operation.EditAll,
               ResourceEntity.PERSONA,
               permissions
-            )}>
+            )}
+          >
             <CustomPageSettings />
           </AdminProtectedRoute>
         }
@@ -622,12 +659,31 @@ const SettingsRouter = () => {
       <Route
         element={
           <AdminProtectedRoute hasPermission={false}>
+            <ColumnBulkOperations />
+          </AdminProtectedRoute>
+        }
+        path={ROUTES.COLUMN_BULK_OPERATIONS.replace(ROUTES.SETTINGS, '')}
+      />
+      <Route
+        element={
+          <AdminProtectedRoute hasPermission={false}>
             <OmHealthPage />
           </AdminProtectedRoute>
         }
         path={getSettingPathRelative(
           GlobalSettingsMenuCategory.PREFERENCES,
           GlobalSettingOptions.OM_HEALTH
+        )}
+      />
+      <Route
+        element={
+          <AdminProtectedRoute>
+            <LearningResourcesPage />
+          </AdminProtectedRoute>
+        }
+        path={getSettingPathRelative(
+          GlobalSettingsMenuCategory.PREFERENCES,
+          GlobalSettingOptions.LEARNING_RESOURCES
         )}
       />
       <Route

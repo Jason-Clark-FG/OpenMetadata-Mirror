@@ -22,18 +22,18 @@ import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg'
 import DeleteWidgetModal from '../../../components/common/DeleteWidget/DeleteWidgetModal';
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PagingHandlerParams } from '../../../components/common/NextPrevious/NextPrevious.interface';
-import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../../components/common/Table/Table';
 import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
 import PageHeader from '../../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../../components/PageLayoutV1/PageLayoutV1';
-import { NO_DATA_PLACEHOLDER, ROUTES } from '../../../constants/constants';
+import { ROUTES } from '../../../constants/constants';
 import { GlobalSettingsMenuCategory } from '../../../constants/GlobalSettings.constants';
 import {
   NO_PERMISSION_FOR_ACTION,
   NO_PERMISSION_TO_VIEW,
 } from '../../../constants/HelperTextUtil';
+import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { PAGE_HEADERS } from '../../../constants/PageHeaders.constant';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
@@ -55,6 +55,7 @@ import {
   getPolicyWithFqnPath,
   getRoleWithFqnPath,
 } from '../../../utils/RouterUtils';
+import { descriptionTableObject } from '../../../utils/TableColumn.util';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import './roles-list.less';
 
@@ -117,22 +118,13 @@ const RolesListPage = () => {
           <Link
             className="link-hover"
             data-testid="role-name"
-            to={getRoleWithFqnPath(record.fullyQualifiedName ?? '')}>
+            to={getRoleWithFqnPath(record.fullyQualifiedName ?? '')}
+          >
             {getEntityName(record)}
           </Link>
         ),
       },
-      {
-        title: t('label.description').toString(),
-        dataIndex: 'description',
-        key: 'description',
-        render: (_, record) =>
-          isEmpty(record?.description) ? (
-            NO_DATA_PLACEHOLDER
-          ) : (
-            <RichTextEditorPreviewerNew markdown={record?.description ?? ''} />
-          ),
-      },
+      ...descriptionTableObject(),
       {
         title: t('label.policy-plural').toString(),
         dataIndex: 'policies',
@@ -148,11 +140,12 @@ const RolesListPage = () => {
                 viewPolicyPermission ? (
                   <Link
                     key={uniqueId()}
-                    to={getPolicyWithFqnPath(policy.fullyQualifiedName || '')}>
+                    to={getPolicyWithFqnPath(policy.fullyQualifiedName || '')}
+                  >
                     {getEntityName(policy)}
                   </Link>
                 ) : (
-                  <Tooltip key={uniqueId()} title={NO_PERMISSION_TO_VIEW}>
+                  <Tooltip key={uniqueId()} title={t(NO_PERMISSION_TO_VIEW)}>
                     {getEntityName(policy)}
                   </Tooltip>
                 )
@@ -168,13 +161,15 @@ const RolesListPage = () => {
                             key={uniqueId()}
                             to={getPolicyWithFqnPath(
                               policy.fullyQualifiedName || ''
-                            )}>
+                            )}
+                          >
                             {getEntityName(policy)}
                           </Link>
                         ) : (
                           <Tooltip
                             key={uniqueId()}
-                            title={NO_PERMISSION_TO_VIEW}>
+                            title={t(NO_PERMISSION_TO_VIEW)}
+                          >
                             {getEntityName(policy)}
                           </Tooltip>
                         )
@@ -182,7 +177,8 @@ const RolesListPage = () => {
                     </Space>
                   }
                   overlayClassName="w-40 text-center"
-                  trigger="click">
+                  trigger="click"
+                >
                   <Tag className="m-l-xss" data-testid="plus-more-count">{`+${
                     listLength - LIST_CAP
                   } more`}</Tag>
@@ -209,8 +205,9 @@ const RolesListPage = () => {
                   ? t('label.delete-entity', {
                       entity: t('label.role-plural').toString(),
                     })
-                  : NO_PERMISSION_FOR_ACTION
-              }>
+                  : t(NO_PERMISSION_FOR_ACTION)
+              }
+            >
               <Button
                 data-testid={`delete-action-${getEntityName(record)}`}
                 disabled={!deleteRolePermission}
@@ -282,19 +279,28 @@ const RolesListPage = () => {
       <Row
         className="roles-list-container"
         data-testid="roles-list-container"
-        gutter={[0, 16]}>
+        gutter={[0, 16]}
+      >
         <Col span={24}>
           <TitleBreadcrumb titleLinks={breadcrumbs} />
         </Col>
         <Col span={24}>
           <Space className="w-full justify-between">
-            <PageHeader data={PAGE_HEADERS.ROLES} />
+            <PageHeader
+              data={{
+                header: t(PAGE_HEADERS.ROLES.header),
+                subHeader: t(PAGE_HEADERS.ROLES.subHeader),
+              }}
+              learningPageId={LEARNING_PAGE_IDS.ROLES}
+              title={t('label.role')}
+            />
 
             {addRolePermission && (
               <Button
                 data-testid="add-role"
                 type="primary"
-                onClick={handleAddRole}>
+                onClick={handleAddRole}
+              >
                 {t('label.add-entity', { entity: t('label.role').toString() })}
               </Button>
             )}

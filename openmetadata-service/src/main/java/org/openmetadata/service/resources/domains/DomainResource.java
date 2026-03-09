@@ -75,7 +75,8 @@ import org.openmetadata.service.util.EntityHierarchyList;
 public class DomainResource extends EntityResource<Domain, DomainRepository> {
   public static final String COLLECTION_PATH = "/v1/domains/";
   private final DomainMapper mapper = new DomainMapper();
-  static final String FIELDS = "tags,children,childrenCount,owners,experts,extension,followers";
+  static final String FIELDS =
+      "tags,children,childrenCount,owners,experts,extension,followers,votes,certification";
 
   public DomainResource(Authorizer authorizer, Limits limits) {
     super(Entity.DOMAIN, authorizer, limits);
@@ -336,7 +337,10 @@ public class DomainResource extends EntityResource<Domain, DomainRepository> {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.EDIT_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
-    return Response.ok().entity(repository.bulkAddAssets(name, request)).build();
+    return Response.ok()
+        .entity(
+            repository.bulkAddAssets(name, request, securityContext.getUserPrincipal().getName()))
+        .build();
   }
 
   @PUT
@@ -365,7 +369,11 @@ public class DomainResource extends EntityResource<Domain, DomainRepository> {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.EDIT_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
-    return Response.ok().entity(repository.bulkRemoveAssets(name, request)).build();
+    return Response.ok()
+        .entity(
+            repository.bulkRemoveAssets(
+                name, request, securityContext.getUserPrincipal().getName()))
+        .build();
   }
 
   @PATCH
@@ -423,6 +431,33 @@ public class DomainResource extends EntityResource<Domain, DomainRepository> {
                       }))
           JsonPatch patch) {
     return patchInternal(uriInfo, securityContext, fqn, patch);
+  }
+
+  @PUT
+  @Path("/{id}/vote")
+  @Operation(
+      operationId = "updateVoteForEntity",
+      summary = "Update Vote for an Entity",
+      description = "Update vote for an Entity",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "OK",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ChangeEvent.class))),
+        @ApiResponse(responseCode = "404", description = "model for instance {id} is not found")
+      })
+  public Response updateVote(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the Entity", schema = @Schema(type = "UUID")) @PathParam("id")
+          UUID id,
+      @Valid org.openmetadata.schema.api.VoteRequest request) {
+    return repository
+        .updateVote(securityContext.getUserPrincipal().getName(), id, request)
+        .toResponse();
   }
 
   @DELETE
@@ -664,5 +699,24 @@ public class DomainResource extends EntityResource<Domain, DomainRepository> {
           @Min(0)
           int offset) {
     return Response.ok(repository.getDomainAssetsByName(fqn, limit, offset)).build();
+  }
+
+  @GET
+  @Path("/assets/counts")
+  @Operation(
+      operationId = "getAllDomainsWithAssetsCount",
+      summary = "Get all domains with their asset counts",
+      description =
+          "Get a map of domain fully qualified names to their asset counts using search aggregation.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Map of domain FQN to asset count",
+            content = @Content(mediaType = "application/json"))
+      })
+  public Response getAllDomainsWithAssetsCount(
+      @Context UriInfo uriInfo, @Context SecurityContext securityContext) {
+    java.util.Map<String, Integer> result = repository.getAllDomainsWithAssetsCount();
+    return Response.ok(result).build();
   }
 }

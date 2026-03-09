@@ -85,7 +85,7 @@ const QueryCardExtraOption = ({
         ),
         disabled: !(EditAll || EditQueries),
         onClick: () => onEditClick(true),
-        title: EditAll || EditQueries ? undefined : NO_PERMISSION_FOR_ACTION,
+        title: EditAll || EditQueries ? undefined : t(NO_PERMISSION_FOR_ACTION),
       },
       {
         key: 'delete-query',
@@ -93,7 +93,7 @@ const QueryCardExtraOption = ({
         icon: <DeleteIcon height={16} opacity={Delete ? 1 : 0.5} width={16} />,
         disabled: !Delete,
         onClick: () => setShowDeleteModal(true),
-        title: Delete ? undefined : NO_PERMISSION_FOR_ACTION,
+        title: Delete ? undefined : t(NO_PERMISSION_FOR_ACTION),
       },
     ];
 
@@ -143,7 +143,8 @@ const QueryCardExtraOption = ({
     <Space
       className="query-card-extra-option"
       data-testid="extra-option-container"
-      size={8}>
+      size={8}
+    >
       {QueryHeaderButton && (
         <QueryHeaderButton onClickHandler={onExpandClick} />
       )}
@@ -165,7 +166,8 @@ const QueryCardExtraOption = ({
           }
           loading={loading === QueryVoteType.votedUp}
           size="small"
-          onClick={() => handleVoteChange(QueryVoteType.votedUp)}>
+          onClick={() => handleVoteChange(QueryVoteType.votedUp)}
+        >
           {query.votes?.upVotes || 0}
         </Button>
       </Tooltip>
@@ -191,7 +193,8 @@ const QueryCardExtraOption = ({
           }
           loading={loading === QueryVoteType.votedDown}
           size="small"
-          onClick={() => handleVoteChange(QueryVoteType.votedDown)}>
+          onClick={() => handleVoteChange(QueryVoteType.votedDown)}
+        >
           {query.votes?.downVotes || 0}
         </Button>
       </Tooltip>
@@ -206,11 +209,13 @@ const QueryCardExtraOption = ({
           },
         }}
         placement="bottomRight"
-        trigger={['click']}>
+        trigger={['click']}
+      >
         <Tooltip
           title={t('label.manage-entity', {
             entity: t('label.query'),
-          })}>
+          })}
+        >
           <Button
             className="flex-center button-size"
             data-testid="query-btn"

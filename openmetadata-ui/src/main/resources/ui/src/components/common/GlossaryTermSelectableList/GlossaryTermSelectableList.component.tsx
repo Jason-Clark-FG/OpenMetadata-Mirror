@@ -59,6 +59,7 @@ export const GlossaryTermSelectableList = ({
   popoverProps,
   onCancel,
   listHeight = ADD_USER_CONTAINER_HEIGHT,
+  multiSelect = true,
 }: GlossaryTermSelectableListProps & { listHeight?: number }) => {
   const { t } = useTranslation();
 
@@ -81,10 +82,12 @@ export const GlossaryTermSelectableList = ({
     <EntitySelectableList
       config={config}
       listHeight={listHeight}
+      multiSelect={multiSelect}
       popoverProps={popoverProps}
       selectedItems={selectedTerms}
       onCancel={onCancel}
-      onUpdate={onUpdate}>
+      onUpdate={onUpdate}
+    >
       {children}
     </EntitySelectableList>
   );

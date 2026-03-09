@@ -28,8 +28,10 @@ import { Policy } from '../../../generated/entity/policies/policy';
 import { withPageLayout } from '../../../hoc/withPageLayout';
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
 import { addRole, getPolicies } from '../../../rest/rolesAPIV1';
+import brandClassBase from '../../../utils/BrandData/BrandClassBase';
 import { getIsErrorMatch } from '../../../utils/CommonUtils';
 import { getField } from '../../../utils/formUtils';
+import { translateWithNestedKeys } from '../../../utils/i18next/LocalUtil';
 import { getPath, getRoleWithFqnPath } from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 const { Option } = Select;
@@ -116,6 +118,15 @@ const AddRolePage = () => {
     fetchPolicies();
   }, []);
 
+  const translatedRoleBreadcrumb = useMemo(
+    () =>
+      ADD_ROLE_PAGE_BREADCRUMB.map((option) => ({
+        ...option,
+        name: translateWithNestedKeys(option.name, option.nameData),
+      })),
+    [t]
+  );
+
   return (
     <ResizablePanels
       className="content-height-with-resizable-panel"
@@ -125,11 +136,12 @@ const AddRolePage = () => {
         allowScroll: true,
         children: (
           <div data-testid="add-role-container">
-            <TitleBreadcrumb titleLinks={ADD_ROLE_PAGE_BREADCRUMB} />
+            <TitleBreadcrumb titleLinks={translatedRoleBreadcrumb} />
             <div className="m-t-md">
               <Typography.Paragraph
                 className="text-base"
-                data-testid="form-title">
+                data-testid="form-title"
+              >
                 {t('label.add-new-entity', {
                   entity: t('label.role'),
                 })}
@@ -138,11 +150,13 @@ const AddRolePage = () => {
                 data-testid="role-form"
                 id="role-form"
                 layout="vertical"
-                onFinish={handleSubmit}>
+                onFinish={handleSubmit}
+              >
                 <Form.Item
                   label={`${t('label.name')}:`}
                   name="name"
-                  rules={NAME_FIELD_RULES}>
+                  rules={NAME_FIELD_RULES}
+                >
                   <Input
                     data-testid="name"
                     placeholder={t('label.role-name')}
@@ -161,13 +175,15 @@ const AddRolePage = () => {
                       required: true,
                       message: t('message.at-least-one-policy'),
                     },
-                  ]}>
+                  ]}
+                >
                   <Select
                     data-testid="policies"
                     mode="multiple"
                     placeholder={t('label.select-a-policy')}
                     value={selectedPolicies}
-                    onChange={(values) => setSelectedPolicies(values)}>
+                    onChange={(values) => setSelectedPolicies(values)}
+                  >
                     {policies.map((policy) => (
                       <Option key={policy.fullyQualifiedName}>
                         {policy.displayName || policy.name}
@@ -180,7 +196,8 @@ const AddRolePage = () => {
                   <Button
                     data-testid="cancel-btn"
                     type="link"
-                    onClick={handleCancel}>
+                    onClick={handleCancel}
+                  >
                     {t('label.cancel')}
                   </Button>
                   <Button
@@ -188,7 +205,8 @@ const AddRolePage = () => {
                     form="role-form"
                     htmlType="submit"
                     loading={isSaveLoading}
-                    type="primary">
+                    type="primary"
+                  >
                     {t('label.create')}
                   </Button>
                 </Space>
@@ -210,7 +228,11 @@ const AddRolePage = () => {
                 entity: t('label.role'),
               })}
             </Typography.Paragraph>
-            <Typography.Text>{t('message.add-role-message')}</Typography.Text>
+            <Typography.Text>
+              {t('message.add-role-message', {
+                brandName: brandClassBase.getPageTitle(),
+              })}
+            </Typography.Text>
           </>
         ),
         className: 'content-resizable-panel-container',

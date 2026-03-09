@@ -37,7 +37,8 @@ export const mockTextBasedSummaryTitleResponse = (
   <Text
     className="entity-title"
     data-testid="entity-title"
-    ellipsis={{ tooltip: true }}>
+    ellipsis={{ tooltip: true }}
+  >
     <span className="text-highlighter">title2</span>
   </Text>
 );
@@ -45,12 +46,14 @@ export const mockTextBasedSummaryTitleResponse = (
 export const mockLinkBasedSummaryTitleResponse = (
   <Link
     target="_blank"
-    to="http://localhost:8080/taskinstance/list/?flt1_dag_id_equals=dim_address_task">
+    to="http://localhost:8080/taskinstance/list/?_flt_3_dag_id=dim_address_task"
+  >
     <div className="d-flex items-center">
       <Text
         className="entity-title text-link-color font-medium m-r-xss"
         data-testid="entity-title"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+      >
         dim_address Task
       </Text>
       <Icon component={IconExternalLink} style={ICON_DIMENSION} />
@@ -63,7 +66,8 @@ export const mockLinkBasedSummaryTitleDashboardResponse = (
     <Text
       className="entity-title text-link-color font-medium m-r-xss"
       data-testid="entity-title"
-      ellipsis={{ tooltip: true }}>
+      ellipsis={{ tooltip: true }}
+    >
       deck.gl Demo
     </Text>
   </Link>
@@ -127,7 +131,7 @@ export const mockEntityDataWithoutNesting: Task[] = [
     description:
       'Airflow operator to perform ETL and generate dim_address table',
     sourceUrl:
-      'http://localhost:8080/taskinstance/list/?flt1_dag_id_equals=dim_address_task',
+      'http://localhost:8080/taskinstance/list/?_flt_3_dag_id=dim_address_task',
     downstreamTasks: ['assert_table_exists'],
     taskType: 'PrestoOperator',
     tags: [],
@@ -138,7 +142,7 @@ export const mockEntityDataWithoutNesting: Task[] = [
     fullyQualifiedName: 'sample_airflow.dim_address_etl.assert_table_exists',
     description: 'Assert if a table exists',
     sourceUrl:
-      'http://localhost:8080/taskinstance/list/?flt1_dag_id_equals=assert_table_exists',
+      'http://localhost:8080/taskinstance/list/?_flt_3_dag_id=assert_table_exists',
     downstreamTasks: [],
     taskType: 'HiveOperator',
     tags: [],
@@ -169,12 +173,14 @@ export const mockEntityDataWithoutNestingResponse: BasicEntityInfo[] = [
     title: (
       <Link
         target="_blank"
-        to="http://localhost:8080/taskinstance/list/?flt1_dag_id_equals=assert_table_exists">
+        to="http://localhost:8080/taskinstance/list/?_flt_3_dag_id=assert_table_exists"
+      >
         <div className="d-flex items-center">
           <Text
             className="entity-title text-link-color font-medium m-r-xss"
             data-testid="entity-title"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             Assert Table Exists
           </Text>
           <Icon component={IconExternalLink} style={ICON_DIMENSION} />
@@ -280,7 +286,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
       <Text
         className="entity-title"
         data-testid="entity-title"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+      >
         api_client_id
       </Text>
     ),
@@ -298,7 +305,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
       <Text
         className="entity-title"
         data-testid="entity-title"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+      >
         Customer
       </Text>
     ),
@@ -315,7 +323,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
           <Text
             className="entity-title"
             data-testid="entity-title"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             id
           </Text>
         ),
@@ -332,7 +341,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
           <Text
             className="entity-title"
             data-testid="entity-title"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             first_name
           </Text>
         ),
@@ -349,7 +359,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
           <Text
             className="entity-title"
             data-testid="entity-title"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             last_name
           </Text>
         ),
@@ -366,7 +377,8 @@ export const mockEntityDataWithNestingResponse: BasicEntityInfo[] = [
           <Text
             className="entity-title"
             data-testid="entity-title"
-            ellipsis={{ tooltip: true }}>
+            ellipsis={{ tooltip: true }}
+          >
             email
           </Text>
         ),
@@ -393,7 +405,8 @@ export const mockInvalidDataResponse = [
       <Text
         className="entity-title"
         data-testid="entity-title"
-        ellipsis={{ tooltip: true }}>
+        ellipsis={{ tooltip: true }}
+      >
         --
       </Text>
     ),

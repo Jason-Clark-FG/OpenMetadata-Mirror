@@ -96,13 +96,19 @@ const LoginConfigurationPage = () => {
         <Col span={24}>
           <Row align="middle" justify="space-between">
             <Col>
-              <PageHeader data={PAGE_HEADERS.LOGIN_CONFIGURATION} />
+              <PageHeader
+                data={{
+                  header: t(PAGE_HEADERS.LOGIN_CONFIGURATION.header),
+                  subHeader: t(PAGE_HEADERS.LOGIN_CONFIGURATION.subHeader),
+                }}
+              />
             </Col>
             <Col>
               <Button
                 data-testid="edit-button"
                 icon={<Icon component={IconEdit} size={12} />}
-                onClick={handleEditClick}>
+                onClick={handleEditClick}
+              >
                 {t('label.edit')}
               </Button>
             </Col>
@@ -116,7 +122,8 @@ const LoginConfigurationPage = () => {
                 <Tooltip
                   placement="top"
                   title={t('message.login-fail-attempt-message')}
-                  trigger="hover">
+                  trigger="hover"
+                >
                   <InfoCircleOutlined
                     className="m-x-xss"
                     data-testid="max-login-fail-attampts-url-info"
@@ -140,7 +147,8 @@ const LoginConfigurationPage = () => {
                 <Tooltip
                   placement="top"
                   title={t('message.access-block-time-message')}
-                  trigger="hover">
+                  trigger="hover"
+                >
                   <InfoCircleOutlined
                     className="m-x-xss"
                     data-testid="access-block-time-info"
@@ -164,7 +172,8 @@ const LoginConfigurationPage = () => {
                 <Tooltip
                   placement="top"
                   title={t('message.jwt-token-expiry-time-message')}
-                  trigger="hover">
+                  trigger="hover"
+                >
                   <InfoCircleOutlined
                     className="m-x-xss"
                     data-testid="jwt-token-expiry-time-info"

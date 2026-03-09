@@ -13,6 +13,7 @@
 
 import { act, render, screen } from '@testing-library/react';
 import { EntityType } from '../../../enums/entity.enum';
+import { ServiceCategoryPlural } from '../../../enums/service.enum';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { MOCK_TAG_DATA, MOCK_TAG_ENCODED_FQN } from '../../../mocks/Tags.mock';
 import { getAlertsFromName } from '../../../rest/alertsAPI';
@@ -236,7 +237,8 @@ describe('Test EntityPopoverCard component', () => {
     render(
       <EntityPopOverCard
         entityFQN={MOCK_TAG_ENCODED_FQN}
-        entityType={EntityType.TAG}>
+        entityType={EntityType.TAG}
+      >
         <div data-testid="popover-container">Test_Popover</div>
       </EntityPopOverCard>
     );
@@ -526,7 +528,17 @@ describe('Test EntityPopoverCard component', () => {
         );
       });
 
-      expect(getServiceByFQN).toHaveBeenCalledWith(serviceType, mockServiceFQN);
+      const expectedServiceType =
+        serviceType === EntityType.SERVICE
+          ? serviceType
+          : ServiceCategoryPlural[
+              serviceType as keyof typeof ServiceCategoryPlural
+            ];
+
+      expect(getServiceByFQN).toHaveBeenCalledWith(
+        expectedServiceType,
+        mockServiceFQN
+      );
     }
   });
 

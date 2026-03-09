@@ -22,11 +22,11 @@ import { AlertBarProps } from './AlertBar.interface';
 const AlertBar = ({
   type,
   message,
-  defafultExpand,
+  defaultExpand,
   className: alertClassName,
 }: AlertBarProps): JSX.Element => {
   const { resetAlert, animationClass } = useAlertStore();
-  const [expanded, setExpanded] = useState(defafultExpand);
+  const [expanded, setExpanded] = useState(defaultExpand);
 
   const {
     icon: AlertIcon,
@@ -59,14 +59,16 @@ const AlertBar = ({
         <>
           <span
             className={classNames('alert-message', { expanded })}
-            data-testid="alert-message">
+            data-testid="alert-message"
+          >
             {message}
           </span>
           {typeof message === 'string' && message.length > 400 && (
             <button
               className="alert-toggle-btn"
               data-testid="alert-toggle-btn"
-              onClick={() => setExpanded(!expanded)}>
+              onClick={() => setExpanded(!expanded)}
+            >
               {expanded ? 'Show Less' : 'Show More'}
             </button>
           )}

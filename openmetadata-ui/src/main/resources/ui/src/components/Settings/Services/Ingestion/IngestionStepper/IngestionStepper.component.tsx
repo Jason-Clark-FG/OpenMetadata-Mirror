@@ -17,7 +17,10 @@ import { useMemo } from 'react';
 import './ingestion-stepper.style.less';
 
 type Props = {
-  steps: Array<{ name: string; step: number }>;
+  steps: Array<{
+    name: string;
+    step: number;
+  }>;
   activeStep: number;
   excludeSteps?: Array<number>;
   className?: string;
@@ -56,7 +59,8 @@ const IngestionStepper = ({
   return (
     <div
       className={classNames('stepper-container p-x-24', className)}
-      data-testid="stepper-container">
+      data-testid="stepper-container"
+    >
       <Steps
         current={activeStep}
         items={items}

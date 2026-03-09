@@ -12,23 +12,32 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 
 import { noop } from 'lodash';
-import { act } from 'react';
+import { act, ReactNode } from 'react';
+import { NextPreviousProps } from '../../components/common/NextPrevious/NextPrevious.interface';
+import { TabsLabelProps } from '../../components/common/TabsLabel/TabsLabel.interface';
 import { TestConnectionProps } from '../../components/common/TestConnection/TestConnection.interface';
+import { DataAssetsHeaderProps } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
+import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
+import { ServiceInsightsTabProps } from '../../components/ServiceInsights/ServiceInsightsTab.interface';
 import { ROUTES } from '../../constants/constants';
 import { OPEN_METADATA } from '../../constants/Services.constant';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ClientErrors } from '../../enums/Axios.enum';
 import { EntityTabs } from '../../enums/entity.enum';
+import { CursorType } from '../../enums/pagination.enum';
 import { ServiceCategory } from '../../enums/service.enum';
+import { AgentType } from '../../generated/entity/applications/app';
 import { WorkflowStatus } from '../../generated/governance/workflows/workflowInstanceState';
 import { Include } from '../../generated/type/include';
+import { usePaging } from '../../hooks/paging/usePaging';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useFqn } from '../../hooks/useFqn';
 import { useTableFilters } from '../../hooks/useTableFilters';
+import { getApplicationList } from '../../rest/applicationAPI';
 import { getDashboards, getDataModels } from '../../rest/dashboardAPI';
 import { getDatabases } from '../../rest/databaseAPI';
 import { getPipelineServiceHostIp } from '../../rest/ingestionPipelineAPI';
@@ -44,6 +53,7 @@ import {
   getWorkflowInstancesForApplication,
   getWorkflowInstanceStateById,
 } from '../../rest/workflowAPI';
+import { getPrioritizedViewPermission } from '../../utils/PermissionsUtils';
 import serviceUtilClassBase from '../../utils/ServiceUtilClassBase';
 import { getCountLabel, shouldTestConnection } from '../../utils/ServiceUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
@@ -201,6 +211,7 @@ jest.mock('../../rest/apiCollectionsAPI', () => ({
 jest.mock('../../rest/applicationAPI', () => ({
   getApplicationList: jest.fn().mockImplementation(() =>
     Promise.resolve({
+      data: [],
       paging: {
         total: 0,
       },
@@ -246,7 +257,7 @@ jest.mock('react-router-dom', () => ({
     key: '',
     hash: '',
   }),
-  MemoryRouter: ({ children }: any) => (
+  MemoryRouter: ({ children }: { children: ReactNode }) => (
     <div data-testid="memory-router">{children}</div>
   ),
 }));
@@ -298,16 +309,25 @@ jest.mock('../../context/PermissionProvider/PermissionProvider', () => ({
       .mockImplementation(() =>
         Promise.resolve({ ViewAll: true, EditAll: true, Create: true })
       ),
+    permissions: {
+      database: { ViewAll: true, EditAll: true },
+      dashboard: { ViewAll: true, EditAll: true },
+      pipeline: { ViewAll: true, EditAll: true },
+    },
   })),
 }));
 
 // Mock components
 jest.mock('../../components/PageLayoutV1/PageLayoutV1', () =>
-  jest.fn().mockImplementation(({ children, pageTitle }: any) => (
-    <div data-testid="page-layout" title={pageTitle}>
-      {children}
-    </div>
-  ))
+  jest
+    .fn()
+    .mockImplementation(
+      ({ children, pageTitle }: { children: ReactNode; pageTitle: string }) => (
+        <div data-testid="page-layout" title={pageTitle}>
+          {children}
+        </div>
+      )
+    )
 );
 
 jest.mock(
@@ -319,14 +339,17 @@ jest.mock(
       onRestoreDataAsset,
       disableRunAgentsButton,
       disableRunAgentsButtonMessage,
-    }: any) => (
+    }: DataAssetsHeaderProps) => (
       <div data-testid="data-assets-header">
         <button data-testid="follow-button" onClick={onFollowClick}>
           Follow
         </button>
         <button
           data-testid="update-name-button"
-          onClick={() => onDisplayNameUpdate({ displayName: 'Updated Name' })}>
+          onClick={() =>
+            onDisplayNameUpdate({ name: 'name', displayName: 'Updated Name' })
+          }
+        >
           Update Name
         </button>
         <button data-testid="restore-button" onClick={onRestoreDataAsset}>
@@ -335,7 +358,8 @@ jest.mock(
         <button
           data-testid="run-agents"
           disabled={disableRunAgentsButton}
-          title={disableRunAgentsButtonMessage}>
+          title={disableRunAgentsButtonMessage}
+        >
           Run Agents
         </button>
       </div>
@@ -366,11 +390,13 @@ jest.mock(
 );
 
 jest.mock('../../components/ServiceInsights/ServiceInsightsTab', () =>
-  jest.fn().mockImplementation(({ serviceDetails }: any) => (
-    <div data-testid="service-insights-tab">
-      <span data-testid="insights-service-id">{serviceDetails?.id}</span>
-    </div>
-  ))
+  jest
+    .fn()
+    .mockImplementation(({ serviceDetails }: ServiceInsightsTabProps) => (
+      <div data-testid="service-insights-tab">
+        <span data-testid="insights-service-id">{serviceDetails?.id}</span>
+      </div>
+    ))
 );
 
 jest.mock('./ServiceMainTabContent', () =>
@@ -430,20 +456,26 @@ jest.mock(
 jest.mock('../../components/common/TabsLabel/TabsLabel.component', () =>
   jest
     .fn()
-    .mockImplementation(({ name }: any) => (
+    .mockImplementation(({ name }: TabsLabelProps) => (
       <div data-testid="tabs-label">{name}</div>
     ))
 );
 
 jest.mock('../../components/common/NextPrevious/NextPrevious', () =>
-  jest.fn().mockImplementation(({ pagingHandler }: any) => (
+  jest.fn().mockImplementation(({ pagingHandler }: NextPreviousProps) => (
     <div data-testid="next-previous">
       <button
-        onClick={() => pagingHandler({ cursorType: 'before', currentPage: 1 })}>
+        onClick={() =>
+          pagingHandler({ cursorType: CursorType.BEFORE, currentPage: 1 })
+        }
+      >
         Previous
       </button>
       <button
-        onClick={() => pagingHandler({ cursorType: 'after', currentPage: 2 })}>
+        onClick={() =>
+          pagingHandler({ cursorType: CursorType.AFTER, currentPage: 2 })
+        }
+      >
         Next
       </button>
     </div>
@@ -524,6 +556,7 @@ jest.mock('../../utils/date-time/DateTimeUtils', () => ({
 
 jest.mock('../../utils/PermissionsUtils', () => ({
   DEFAULT_ENTITY_PERMISSION: { ViewAll: false, EditAll: false },
+  getPrioritizedViewPermission: jest.fn().mockReturnValue(true),
 }));
 
 // Additional utility mocks
@@ -566,6 +599,17 @@ describe('ServiceDetailsPage', () => {
       expect(screen.getByTestId('loader')).toBeInTheDocument();
     });
 
+    it('should pass service name as pageTitle to PageLayoutV1', async () => {
+      await renderComponent();
+
+      expect(PageLayoutV1).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageTitle: 'Test Service',
+        }),
+        expect.anything()
+      );
+    });
+
     it('should render service details when loaded', async () => {
       await renderComponent();
 
@@ -594,7 +638,7 @@ describe('ServiceDetailsPage', () => {
       (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
 
       const error = new Error('Forbidden') as AxiosError;
-      error.response = { status: ClientErrors.FORBIDDEN } as any;
+      error.response = { status: ClientErrors.FORBIDDEN } as AxiosResponse;
       (getServiceByFQN as jest.Mock).mockImplementationOnce(() =>
         Promise.reject(error)
       );
@@ -634,6 +678,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: { ViewAll: true, EditAll: true },
+          dashboard: { ViewAll: true, EditAll: true },
+          pipeline: { ViewAll: true, EditAll: true },
+        },
       }));
 
       await renderComponent();
@@ -816,6 +865,42 @@ describe('ServiceDetailsPage', () => {
       await waitFor(() => {
         expect(getDatabases).toHaveBeenCalled();
       });
+    });
+
+    it('should include usageSummary in database fields when ViewUsage is allowed', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(true);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).toContain('usageSummary');
+    });
+
+    it('should exclude usageSummary from database fields when ViewUsage is denied', async () => {
+      (getPrioritizedViewPermission as jest.Mock).mockReturnValue(false);
+      (getDatabases as jest.Mock).mockResolvedValue({
+        data: [{ id: 'db1', name: 'Database 1' }],
+        paging: { total: 1 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getDatabases).toHaveBeenCalled();
+      });
+
+      const fields = (getDatabases as jest.Mock).mock.calls[0][1];
+
+      expect(fields).not.toContain('usageSummary');
     });
 
     it('should fetch topics for messaging service', async () => {
@@ -1333,6 +1418,11 @@ describe('ServiceDetailsPage', () => {
 
       (usePermissionProvider as jest.Mock).mockImplementation(() => ({
         getEntityPermissionByFqn: mockGetEntityPermissionByFqn,
+        permissions: {
+          database: {},
+          dashboard: {},
+          pipeline: {},
+        },
       }));
 
       await renderComponent();
@@ -1343,6 +1433,210 @@ describe('ServiceDetailsPage', () => {
 
       // Should not fetch permissions for OpenMetadata service
       expect(mockGetEntityPermissionByFqn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Collate AI Agents Functionality', () => {
+    beforeEach(() => {
+      // Reset all mocks before each test
+      jest.clearAllMocks();
+
+      // Set up database service context (CollateAI widgets are only supported for DB services)
+      (useRequiredParams as jest.Mock).mockReturnValue({
+        serviceCategory: ServiceCategory.DATABASE_SERVICES,
+        tab: EntityTabs.AGENTS,
+      });
+    });
+
+    it('should call getApplicationList with multiple agent types', async () => {
+      const mockAgentsData = [
+        {
+          id: 'agent1',
+          name: 'CollateAI Agent 1',
+          agentType: AgentType.CollateAI,
+        },
+        {
+          id: 'agent2',
+          name: 'CollateAI Quality Agent',
+          agentType: AgentType.CollateAIQualityAgent,
+        },
+        {
+          id: 'agent3',
+          name: 'CollateAI Tier Agent',
+          agentType: AgentType.CollateAITierAgent,
+        },
+      ];
+
+      (getApplicationList as jest.Mock).mockResolvedValue({
+        data: mockAgentsData,
+        paging: { total: 3 },
+      });
+
+      await renderComponent();
+
+      // Wait for the agents to be fetched
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalledWith({
+          agentType: [
+            AgentType.CollateAI,
+            AgentType.CollateAIQualityAgent,
+            AgentType.CollateAITierAgent,
+          ],
+          limit: 10,
+        });
+      });
+    });
+
+    it('should handle agent list fetching with paging parameters', async () => {
+      const mockPagingInfo = {
+        after: 'cursor123',
+        before: 'cursor456',
+        limit: 25,
+      };
+
+      (getApplicationList as jest.Mock).mockResolvedValue({
+        data: [],
+        paging: { total: 0 },
+      });
+
+      // We need to mock usePaging specifically for collate agent paging
+      (usePaging as jest.Mock)
+        .mockReturnValueOnce({
+          // ingestionPagingInfo
+          paging: {},
+          pageSize: 15,
+          pagingCursor: {},
+          handlePageChange: jest.fn(),
+          handlePagingChange: jest.fn(),
+        })
+        .mockReturnValueOnce({
+          // collateAgentPagingInfo
+          paging: mockPagingInfo,
+          pageSize: 25,
+          pagingCursor: {},
+          handlePageChange: jest.fn(),
+          handlePagingChange: jest.fn(),
+        })
+        .mockReturnValue({
+          // Default for other usages
+          paging: {},
+          pageSize: 15,
+          pagingCursor: {},
+          handlePageChange: jest.fn(),
+          handlePagingChange: jest.fn(),
+        });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalledWith(
+          expect.objectContaining({
+            agentType: [
+              AgentType.CollateAI,
+              AgentType.CollateAIQualityAgent,
+              AgentType.CollateAITierAgent,
+            ],
+          })
+        );
+      });
+    });
+
+    it('should handle errors during agent list fetching', async () => {
+      const mockError = new Error('Failed to fetch agents');
+      (getApplicationList as jest.Mock).mockRejectedValue(mockError);
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalled();
+      });
+
+      // The showErrorToast should be called with the error
+      await waitFor(() => {
+        expect(showErrorToast).toHaveBeenCalledWith(mockError);
+      });
+    });
+
+    it('should not fetch agents for non-database services', async () => {
+      // Set up messaging service context (CollateAI widgets not supported)
+      (useRequiredParams as jest.Mock).mockReturnValue({
+        serviceCategory: ServiceCategory.MESSAGING_SERVICES,
+        tab: EntityTabs.INSIGHTS,
+      });
+
+      await renderComponent();
+
+      // Should not call getApplicationList for non-DB services
+      expect(getApplicationList).not.toHaveBeenCalled();
+    });
+
+    it('should properly handle CollateAI widget support check', async () => {
+      // Mock serviceUtilClassBase.getAgentsTabWidgets to return CollateAI widget
+      const mockCollateAIWidget = jest
+        .fn()
+        .mockReturnValue(<div data-testid="collate-ai-widget" />);
+
+      (serviceUtilClassBase.getAgentsTabWidgets as jest.Mock).mockReturnValue({
+        CollateAIAgentsWidget: mockCollateAIWidget,
+      });
+
+      await renderComponent();
+
+      // For database services, the CollateAI widget should be supported
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalled();
+      });
+    });
+
+    it('should handle empty agent list response', async () => {
+      (getApplicationList as jest.Mock).mockResolvedValue({
+        data: [],
+        paging: { total: 0 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalledWith({
+          agentType: [
+            AgentType.CollateAI,
+            AgentType.CollateAIQualityAgent,
+            AgentType.CollateAITierAgent,
+          ],
+          limit: 15,
+        });
+      });
+    });
+
+    it('should call fetchCollateAgentsList with correct agent types instead of single agent type', async () => {
+      // This test ensures the refactor from single agentType to array is correct
+      const expectedAgentTypes = [
+        AgentType.CollateAI,
+        AgentType.CollateAIQualityAgent,
+        AgentType.CollateAITierAgent,
+      ];
+
+      (getApplicationList as jest.Mock).mockResolvedValue({
+        data: [],
+        paging: { total: 0 },
+      });
+
+      await renderComponent();
+
+      await waitFor(() => {
+        expect(getApplicationList).toHaveBeenCalledWith(
+          expect.objectContaining({
+            agentType: expectedAgentTypes,
+          })
+        );
+      });
+
+      // Ensure it was NOT called with the old single agent type format
+      expect(getApplicationList).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentType: AgentType.CollateAI, // Single value (old format)
+        })
+      );
     });
   });
 });

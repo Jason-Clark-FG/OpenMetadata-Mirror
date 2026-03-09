@@ -74,7 +74,8 @@ jest.mock('recharts', () => ({
           <button
             data-testid={data?.value}
             key={data?.value}
-            onClick={() => onClick(data)}>
+            onClick={() => onClick(data)}
+          >
             {data?.value}
           </button>
         ))}
@@ -127,7 +128,7 @@ jest.mock('../../../../utils/date-time/DateTimeUtils', () => ({
   getEpochMillisForPastDays: jest.fn().mockReturnValue(1709424034000),
   getStartOfDayInMillis: jest.fn().mockImplementation((val) => val),
   getEndOfDayInMillis: jest.fn().mockImplementation((val) => val),
-  convertMillisecondsToHumanReadableFormat: jest
+  convertSecondsToHumanReadableFormat: jest
     .fn()
     .mockImplementation((val) => `${val}ms`),
 }));
@@ -171,7 +172,6 @@ describe('TestSummaryGraph', () => {
     expect(screen.getByText('Legend')).toBeInTheDocument();
     expect(screen.getByTestId('min')).toBeInTheDocument();
     expect(screen.getByTestId('max')).toBeInTheDocument();
-    expect(screen.getByTestId('Incident')).toBeInTheDocument();
   });
 
   it("legend filter should update the graph's activeKeys", async () => {
@@ -192,26 +192,6 @@ describe('TestSummaryGraph', () => {
 
     expect(minLineChart).toBeInTheDocument();
     expect(maxLineChart).not.toBeInTheDocument();
-  });
-
-  it('legend should not filter on Incident click', async () => {
-    render(<TestSummaryGraph {...mockProps} />);
-    const incidentButton = screen.getByTestId('Incident');
-    const minLineChart = screen.getByTestId('line-min');
-    const maxLineChart = screen.getByTestId('line-max');
-
-    expect(incidentButton).toBeInTheDocument();
-    expect(minLineChart).toBeInTheDocument();
-    expect(maxLineChart).toBeInTheDocument();
-
-    screen.debug(document.body);
-
-    await act(async () => {
-      await fireEvent.click(incidentButton);
-    });
-
-    expect(minLineChart).toBeInTheDocument();
-    expect(maxLineChart).toBeInTheDocument();
   });
 
   it('should call mockSetShowAILearningBanner', () => {

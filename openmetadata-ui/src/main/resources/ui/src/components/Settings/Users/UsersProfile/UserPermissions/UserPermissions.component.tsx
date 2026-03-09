@@ -107,7 +107,6 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
         </Space>
         {!isEmpty(rule.operations) && (
           <div>
-            {/* eslint-disable-next-line i18next/no-literal-string */}
             <Text type="secondary">{t('label.operation-plural')}: </Text>
             {rule.operations.map((op, idx) => (
               <Tag className="m-r-xs" key={idx}>
@@ -118,7 +117,6 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
         )}
         {!isEmpty(rule.resources) && (
           <div>
-            {/* eslint-disable-next-line i18next/no-literal-string */}
             <Text type="secondary">{t('label.resource-plural')}: </Text>
             {rule.resources.map((res, idx) => (
               <Tag className="m-r-xs" key={idx}>
@@ -129,7 +127,6 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
         )}
         {rule.condition && (
           <div>
-            {/* eslint-disable-next-line i18next/no-literal-string */}
             <Text type="secondary">{t('label.condition')}: </Text>
             <Text code>{rule.condition}</Text>
           </div>
@@ -147,7 +144,8 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
               to={getEntityLink(
                 'policy',
                 policy.policy.fullyQualifiedName || ''
-              )}>
+              )}
+            >
               {getEntityName(policy.policy)}
             </Link>
             <Tag
@@ -157,18 +155,18 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
                   : policy.effect === 'DENY'
                   ? 'error'
                   : 'warning'
-              }>
+              }
+            >
               {policy.effect}
             </Tag>
-            {/* eslint-disable-next-line i18next/no-literal-string */}
-            {/* eslint-disable-next-line i18next/no-literal-string */}
             <Text type="secondary">
               <span>{policy.rules.length}</span>
               {t('label.rule-lowercase-plural')}
             </Text>
           </Space>
         }
-        key={index}>
+        key={index}
+      >
         <div className="rules-container">
           {policy.rules.map((rule, ruleIndex) => renderRule(rule, ruleIndex))}
         </div>
@@ -187,13 +185,13 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
           (rolePermission: DirectRolePermission, index: number) => (
             <div className="m-b-md" key={index}>
               <Space className="m-b-sm">
-                {/* eslint-disable-next-line i18next/no-literal-string */}
                 <Text strong>{t('label.role')}: </Text>
                 <Link
                   to={getEntityLink(
                     'role',
                     rolePermission.role.fullyQualifiedName || ''
-                  )}>
+                  )}
+                >
                   {getEntityName(rolePermission.role)}
                 </Link>
               </Space>
@@ -219,7 +217,8 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
             to={getEntityLink(
               'role',
               rolePermission.role.fullyQualifiedName || ''
-            )}>
+            )}
+          >
             {getEntityName(rolePermission.role)}
           </Link>
           {rolePermission.isDefaultRole && (
@@ -249,13 +248,13 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
             <div className="team-permission m-b-lg" key={index}>
               <Space className="w-full" direction="vertical">
                 <Space>
-                  {/* eslint-disable-next-line i18next/no-literal-string */}
                   <Text strong>{t('label.team')}: </Text>
                   <Link
                     to={getEntityLink(
                       'team',
                       teamPermission.team.fullyQualifiedName || ''
-                    )}>
+                    )}
+                  >
                     {getEntityName(teamPermission.team)}
                   </Link>
                   <Tag>{teamPermission.teamType}</Tag>
@@ -282,7 +281,8 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
                             to={getEntityLink(
                               'team',
                               team.fullyQualifiedName || ''
-                            )}>
+                            )}
+                          >
                             {getEntityName(team)}
                           </Link>
                           {idx < teamPermission.teamHierarchy.length - 1 &&
@@ -331,7 +331,8 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
     return (
       <Card
         className="m-b-md"
-        title={t('label.other-inherited-permission-plural')}>
+        title={t('label.other-inherited-permission-plural')}
+      >
         {permissionInfo?.inheritedPermissions.map(
           (inherited: InheritedPermission, index: number) => (
             <div className="m-b-md" key={index}>
@@ -351,7 +352,8 @@ const UserPermissions: React.FC<UserPermissionsProps> = ({
                       to={getEntityLink(
                         inherited.source.type || '',
                         inherited.source.fullyQualifiedName || ''
-                      )}>
+                      )}
+                    >
                       {getEntityName(inherited.source)}
                     </Link>
                   </div>

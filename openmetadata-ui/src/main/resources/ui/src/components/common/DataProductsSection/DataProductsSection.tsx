@@ -19,6 +19,7 @@ import { DE_ACTIVE_COLOR } from '../../../constants/constants';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { EntityReference } from '../../../generated/entity/type';
 import { useEditableSection } from '../../../hooks/useEditableSection';
+import { useEntityRules } from '../../../hooks/useEntityRules';
 import { fetchDataProductsElasticSearch } from '../../../rest/dataProductAPI';
 import { updateEntityField } from '../../../utils/EntityUpdateUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -45,6 +46,7 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
   const [showAllDataProducts, setShowAllDataProducts] = useState(false);
   const [displayActiveDomains, setDisplayActiveDomains] =
     useState<EntityReference[]>(activeDomains);
+  const { entityRules } = useEntityRules(entityType);
 
   const {
     isEditing,
@@ -63,11 +65,11 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
     setDisplayActiveDomains((prev) => {
       const prevIds = prev
         .map((item) => item.id)
-        .sort()
+        .sort((a, b) => (a ?? '').localeCompare(b ?? ''))
         .join(',');
       const newIds = activeDomains
         .map((item) => item.id)
-        .sort()
+        .sort((a, b) => (a ?? '').localeCompare(b ?? ''))
         .join(',');
 
       if (prevIds !== newIds) {
@@ -79,9 +81,14 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
   }, [activeDomains]);
 
   const handleEditClick = () => {
-    setEditingDataProducts(
-      displayDataProducts.map((dp) => dp as unknown as DataProduct)
-    );
+    const dpList: DataProduct[] = displayDataProducts.map((dp) => ({
+      id: dp.id,
+      name: dp.name || '',
+      displayName: dp.displayName || dp.name,
+      fullyQualifiedName: dp.fullyQualifiedName || '',
+      description: dp.description || '',
+    }));
+    setEditingDataProducts(dpList);
     startEditing();
   };
 
@@ -154,8 +161,7 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
       name: dp.name || '',
       displayName: dp.displayName || dp.name,
       fullyQualifiedName: dp.fullyQualifiedName || '',
-      description: dp.description,
-      type: 'dataProduct',
+      description: dp.description || '',
     })) as DataProduct[];
 
     setEditingDataProducts(dpList);
@@ -165,6 +171,7 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
     () => (
       <DataProductsSelectListV1
         fetchOptions={fetchAPI}
+        multiSelect={entityRules.canAddMultipleDataProducts}
         popoverProps={{
           open: popoverOpen,
           onOpenChange: handlePopoverOpenChange,
@@ -174,7 +181,8 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
           setPopoverOpen(false);
           cancelEditing();
         }}
-        onUpdate={handleSaveWithDataProducts}>
+        onUpdate={handleSaveWithDataProducts}
+      >
         <div className="data-product-selector-trigger" />
       </DataProductsSelectListV1>
     ),
@@ -184,6 +192,7 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
       handlePopoverOpenChange,
       editingDataProducts,
       handleSaveWithDataProducts,
+      entityRules.canAddMultipleDataProducts,
       cancelEditing,
     ]
   );
@@ -216,14 +225,16 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
   const dataProductsDisplay = useMemo(
     () => (
       <div className="data-products-display">
-        <div className="data-products-list">
+        <div className="data-products-list" data-testid="data-products-list">
           {(showAllDataProducts
             ? displayDataProducts
             : displayDataProducts.slice(0, maxVisibleDataProducts)
           ).map((dataProduct) => (
             <div
               className="data-product-item"
-              key={dataProduct.id || dataProduct.fullyQualifiedName}>
+              data-testid="data-product-item"
+              key={dataProduct.id || dataProduct.fullyQualifiedName}
+            >
               <div className="data-product-card-bar">
                 <div className="data-product-card-content">
                   <DataProductIcon className="data-product-icon" />
@@ -238,7 +249,8 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
             <button
               className="show-more-data-products-button"
               type="button"
-              onClick={() => setShowAllDataProducts(!showAllDataProducts)}>
+              onClick={() => setShowAllDataProducts(!showAllDataProducts)}
+            >
               {showAllDataProducts
                 ? t('label.less')
                 : `+${displayDataProducts.length - maxVisibleDataProducts} ${t(
@@ -266,7 +278,6 @@ const DataProductsSectionV1: React.FC<DataProductsSectionProps> = ({
   const canShowEditButton =
     showEditButton &&
     hasPermission &&
-    !isEditing &&
     !isLoading &&
     displayActiveDomains?.length > 0;
 

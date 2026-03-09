@@ -166,13 +166,16 @@ const ScheduleIntervalV1: React.FC<ScheduleIntervalV1Props> = ({
   );
 
   const filteredPeriodOptions = useMemo(() => {
-    if (includePeriodOptions) {
-      return PERIOD_OPTIONS.filter((option) =>
-        includePeriodOptions.includes(option.value)
-      );
-    } else {
-      return PERIOD_OPTIONS;
-    }
+    const options = includePeriodOptions
+      ? PERIOD_OPTIONS.filter((option) =>
+          includePeriodOptions.includes(option.value)
+        )
+      : PERIOD_OPTIONS;
+
+    return options.map((option) => ({
+      ...option,
+      label: t(option.label),
+    }));
   }, [includePeriodOptions]);
 
   const cronExpressionCard = useMemo(() => {
@@ -310,15 +313,15 @@ const ScheduleIntervalV1: React.FC<ScheduleIntervalV1Props> = ({
                     className="d-flex gap-2 m-t-xs"
                     disabled={disabled}
                     value={dow}
-                    onChange={(e) =>
-                      handleStateChange({ dow: e.target.value })
-                    }>
+                    onChange={(e) => handleStateChange({ dow: e.target.value })}
+                  >
                     {DAY_OPTIONS.map(({ label, value: optionValue }) => (
                       <Radio.Button
                         className="week-selector-buttons"
                         disabled={disabled}
                         key={`${label}-${optionValue}`}
-                        value={optionValue}>
+                        value={optionValue}
+                      >
                         {label[0]}
                       </Radio.Button>
                     ))}
@@ -334,16 +337,16 @@ const ScheduleIntervalV1: React.FC<ScheduleIntervalV1Props> = ({
                     className="d-flex flex-wrap gap-2 m-t-xs"
                     disabled={disabled}
                     value={dom}
-                    onChange={(e) =>
-                      handleStateChange({ dom: e.target.value })
-                    }>
+                    onChange={(e) => handleStateChange({ dom: e.target.value })}
+                  >
                     {DAY_IN_MONTH_OPTIONS.map(
                       ({ label, value: optionValue }) => (
                         <Radio.Button
                           className="week-selector-buttons"
                           disabled={disabled}
                           key={`day-${label}-${optionValue}`}
-                          value={optionValue}>
+                          value={optionValue}
+                        >
                           {label}
                         </Radio.Button>
                       )
