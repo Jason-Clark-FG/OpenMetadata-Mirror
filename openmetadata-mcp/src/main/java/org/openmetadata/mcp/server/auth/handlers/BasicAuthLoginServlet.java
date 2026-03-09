@@ -24,8 +24,9 @@ import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.AuthenticationException;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.McpPendingAuthRequest;
-import org.openmetadata.service.security.auth.BasicAuthenticator;
+import org.openmetadata.service.security.auth.AuthenticatorHandler;
 import org.openmetadata.service.security.auth.LoginAttemptCache;
+import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 
 /**
  * Servlet that handles the Basic Auth login flow for MCP OAuth.
@@ -49,14 +50,14 @@ public class BasicAuthLoginServlet extends HttpServlet {
   private static final String SESSION_AUTH_REQUEST_ID = "mcp.login.auth_request_id";
 
   private final UserSSOOAuthProvider authProvider;
-  private final BasicAuthenticator basicAuthenticator;
+  private final AuthenticatorHandler authenticator;
   private final McpPendingAuthRequestRepository pendingAuthRepository;
   private final OAuthClientRepository clientRepository;
 
   public BasicAuthLoginServlet(
-      UserSSOOAuthProvider authProvider, BasicAuthenticator basicAuthenticator) {
+      UserSSOOAuthProvider authProvider, AuthenticatorHandler authenticator) {
     this.authProvider = authProvider;
-    this.basicAuthenticator = basicAuthenticator;
+    this.authenticator = authenticator;
     this.pendingAuthRepository = new McpPendingAuthRequestRepository();
     this.clientRepository = new OAuthClientRepository();
   }
@@ -175,7 +176,7 @@ public class BasicAuthLoginServlet extends HttpServlet {
       }
 
       try {
-        basicAuthenticator.checkIfLoginBlocked(email);
+        authenticator.checkIfLoginBlocked(email);
       } catch (AuthenticationException e) {
         LOG.warn("Login blocked for user", e);
         renderLoginFormWithError(request, response, pending, "Login blocked");
@@ -183,8 +184,14 @@ public class BasicAuthLoginServlet extends HttpServlet {
       }
 
       try {
-        User user = basicAuthenticator.lookUserInProvider(email, password);
-        basicAuthenticator.validatePassword(email, password, user);
+        // lookUserInProvider validates credentials for LDAP (via LDAP bind) but NOT for
+        // BasicAuth (just finds user). Call validatePassword separately for non-LDAP providers.
+        User user = authenticator.lookUserInProvider(email, password);
+        org.openmetadata.schema.services.connections.metadata.AuthProvider provider =
+            SecurityConfigurationManager.getCurrentAuthConfig().getProvider();
+        if (provider != org.openmetadata.schema.services.connections.metadata.AuthProvider.LDAP) {
+          authenticator.validatePassword(email, password, user);
+        }
         LoginAttemptCache.getInstance().recordSuccessfulLogin(email);
         LOG.debug("Successful basic auth login for MCP");
 
@@ -231,7 +238,7 @@ public class BasicAuthLoginServlet extends HttpServlet {
       } catch (AuthenticationException e) {
         LOG.warn("Basic Auth login failed");
         try {
-          basicAuthenticator.recordFailedLoginAttempt(email, email);
+          authenticator.recordFailedLoginAttempt(email, email);
         } catch (Exception recordEx) {
           LOG.error("Failed to record login attempt for security tracking", recordEx);
         }

@@ -46,7 +46,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.McpPendingAuthRequest;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.OAuthAuthorizationCodeRecord;
 import org.openmetadata.service.security.AuthenticationCodeFlowHandler;
-import org.openmetadata.service.security.auth.BasicAuthenticator;
+import org.openmetadata.service.security.auth.AuthenticatorHandler;
 import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 
@@ -71,7 +71,7 @@ import org.openmetadata.service.security.jwt.JWTTokenGenerator;
  * seamless authentication for tools like Claude Desktop.
  *
  * @see org.openmetadata.service.security.AuthenticationCodeFlowHandler
- * @see org.openmetadata.service.security.auth.BasicAuthenticator
+ * @see org.openmetadata.service.security.auth.AuthenticatorHandler
  * @see org.openmetadata.service.security.jwt.JWTTokenGenerator
  */
 @Slf4j
@@ -89,7 +89,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
   private static final long REFRESH_TOKEN_EXPIRY_SECONDS = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
 
   private final JWTTokenGenerator jwtGenerator;
-  private final BasicAuthenticator basicAuthenticator;
+  private final AuthenticatorHandler credentialAuthenticator;
 
   private final OAuthClientRepository clientRepository;
   private final OAuthAuthorizationCodeRepository codeRepository;
@@ -105,9 +105,9 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
   public UserSSOOAuthProvider(
-      JWTTokenGenerator jwtGenerator, BasicAuthenticator basicAuthenticator) {
+      JWTTokenGenerator jwtGenerator, AuthenticatorHandler credentialAuthenticator) {
     this.jwtGenerator = jwtGenerator;
-    this.basicAuthenticator = basicAuthenticator;
+    this.credentialAuthenticator = credentialAuthenticator;
 
     this.clientRepository = new OAuthClientRepository();
     this.codeRepository = new OAuthAuthorizationCodeRepository();
@@ -118,8 +118,8 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
     LOG.info("Initialized UserSSOOAuthProvider with unified auth (SSO + Basic Auth)");
   }
 
-  public BasicAuthenticator getBasicAuthenticator() {
-    return basicAuthenticator;
+  public AuthenticatorHandler getCredentialAuthenticator() {
+    return credentialAuthenticator;
   }
 
   /**
@@ -219,7 +219,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
           client.getClientId(),
           provider);
 
-      if (provider == AuthProvider.BASIC) {
+      if (provider == AuthProvider.BASIC || provider == AuthProvider.LDAP) {
         return handleBasicAuthAuthorization(client, params);
       } else {
         return handleSSOAuthorization(client, params);

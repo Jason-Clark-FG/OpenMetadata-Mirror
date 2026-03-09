@@ -1,5 +1,6 @@
 package org.openmetadata.mcp.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.URI;
@@ -10,6 +11,7 @@ import java.util.List;
  * RFC 7591 OAuth 2.0 Dynamic Client Registration metadata. See
  * https://datatracker.ietf.org/doc/html/rfc7591#section-2 for the full specification.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class OAuthClientMetadata {
 
