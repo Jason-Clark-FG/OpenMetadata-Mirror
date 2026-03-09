@@ -12,7 +12,7 @@
 Unit tests for SSRS source
 """
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -30,6 +30,7 @@ from metadata.generated.schema.metadataIngestion.workflow import (
 from metadata.generated.schema.type.basic import FullyQualifiedEntityName
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.dashboard.ssrs.client import SsrsClient
 from metadata.ingestion.source.dashboard.ssrs.metadata import SsrsSource
 from metadata.ingestion.source.dashboard.ssrs.models import SsrsFolder, SsrsReport
 
@@ -130,6 +131,7 @@ EXPECTED_DASHBOARDS = [
         sourceUrl="http://ssrs.example.com/reports/report/Finance/Sales Report",
         service=FullyQualifiedEntityName("mock_ssrs"),
         project="Finance",
+        charts=[],
     ),
     CreateDashboardRequest(
         name="report-2",
@@ -138,11 +140,12 @@ EXPECTED_DASHBOARDS = [
         sourceUrl="http://ssrs.example.com/reports/report/Operations/Inventory Report",
         service=FullyQualifiedEntityName("mock_ssrs"),
         project="Operations",
+        charts=[],
     ),
 ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def ssrs_source():
     with patch(
         "metadata.ingestion.source.dashboard.dashboard_service.DashboardServiceSource.test_connection"
@@ -217,8 +220,8 @@ class TestSsrsSource:
         assert results[0].right.description is None
 
     def test_yield_dashboard_lineage_is_noop(self, ssrs_source):
-        results = list(ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0]))
-        assert results == []
+        result = ssrs_source.yield_dashboard_lineage_details(MOCK_REPORTS[0])
+        assert result is None
 
 
 class TestSsrsModels:
@@ -267,3 +270,88 @@ class TestSsrsModels:
         }
         report = SsrsReport(**data)
         assert report.hidden is True
+
+
+class TestSsrsClientPagination:
+    def test_get_reports_single_page(self):
+        client = MagicMock(spec=SsrsClient)
+        client.get_reports = SsrsClient.get_reports.__get__(client)
+        client._get = MagicMock(
+            return_value={
+                "value": [
+                    {
+                        "Id": f"r-{i}",
+                        "Name": f"Report {i}",
+                        "Path": f"/Reports/Report {i}",
+                    }
+                    for i in range(3)
+                ]
+            }
+        )
+        reports = client.get_reports()
+        assert len(reports) == 3
+        client._get.assert_called_once()
+
+    def test_get_reports_multi_page(self):
+        client = MagicMock(spec=SsrsClient)
+        client.get_reports = SsrsClient.get_reports.__get__(client)
+
+        page1 = {
+            "value": [
+                {
+                    "Id": f"r-{i}",
+                    "Name": f"Report {i}",
+                    "Path": f"/Reports/Report {i}",
+                }
+                for i in range(100)
+            ]
+        }
+        page2 = {
+            "value": [
+                {
+                    "Id": f"r-{i}",
+                    "Name": f"Report {i}",
+                    "Path": f"/Reports/Report {i}",
+                }
+                for i in range(100, 150)
+            ]
+        }
+        client._get = MagicMock(side_effect=[page1, page2])
+
+        reports = client.get_reports()
+        assert len(reports) == 150
+        assert client._get.call_count == 2
+        _, kwargs1 = client._get.call_args_list[0]
+        _, kwargs2 = client._get.call_args_list[1]
+        assert kwargs1["params"]["$skip"] == "0"
+        assert kwargs2["params"]["$skip"] == "100"
+
+    def test_get_folders_multi_page(self):
+        client = MagicMock(spec=SsrsClient)
+        client.get_folders = SsrsClient.get_folders.__get__(client)
+
+        page1 = {
+            "value": [
+                {"Id": f"f-{i}", "Name": f"Folder {i}", "Path": f"/Folder {i}"}
+                for i in range(100)
+            ]
+        }
+        page2 = {
+            "value": [
+                {"Id": f"f-{i}", "Name": f"Folder {i}", "Path": f"/Folder {i}"}
+                for i in range(100, 120)
+            ]
+        }
+        client._get = MagicMock(side_effect=[page1, page2])
+
+        folders = client.get_folders()
+        assert len(folders) == 120
+        assert client._get.call_count == 2
+
+    def test_get_reports_empty(self):
+        client = MagicMock(spec=SsrsClient)
+        client.get_reports = SsrsClient.get_reports.__get__(client)
+        client._get = MagicMock(return_value={"value": []})
+        reports = client.get_reports()
+        assert len(reports) == 0
+        client._get.assert_called_once()

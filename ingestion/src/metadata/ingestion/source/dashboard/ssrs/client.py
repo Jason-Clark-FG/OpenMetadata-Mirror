@@ -22,8 +22,6 @@ from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnect
 )
 from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.source.dashboard.ssrs.models import (
-    SsrsDataSource,
-    SsrsDataSourceListResponse,
     SsrsFolder,
     SsrsFolderListResponse,
     SsrsReport,
@@ -78,9 +76,9 @@ class SsrsClient:
                     break
                 skip += PAGE_SIZE
             return results
-        except Exception:
+        except Exception as exc:
             logger.debug(traceback.format_exc())
-            logger.warning("Failed to fetch SSRS folders")
+            logger.warning("Failed to fetch SSRS folders: %s", exc)
         return []
 
     def get_reports(self) -> List[SsrsReport]:
@@ -97,16 +95,7 @@ class SsrsClient:
                     break
                 skip += PAGE_SIZE
             return results
-        except Exception:
+        except Exception as exc:
             logger.debug(traceback.format_exc())
-            logger.warning("Failed to fetch SSRS reports")
-        return []
-
-    def get_report_datasources(self, report_id: str) -> List[SsrsDataSource]:
-        try:
-            data = self._get(f"/Reports('{report_id}')/DataSources")
-            return SsrsDataSourceListResponse(**data).value
-        except Exception:
-            logger.debug(traceback.format_exc())
-            logger.warning("Failed to fetch data sources for report id: %s", report_id)
+            logger.warning("Failed to fetch SSRS reports: %s", exc)
         return []

@@ -241,6 +241,53 @@ Other service URLs:
 - Test connection fails → check `test_fn` keys match test connection JSON step names
 - Container logs: `docker compose -f docker/development/docker-compose.yml logs ingestion`
 
+### Phase 9: CREATE PR — Submit with Quality Summary
+
+When creating a PR for the connector, include the review summary in the PR description so reviewers see the quality assessment upfront:
+
+```bash
+# Run the static analyzer
+analysis=$(python skills/connector-review/scripts/analyze_connector.py {service_type} {name} --json)
+
+# Create PR with quality summary in description
+gh pr create --title "feat(ingestion): Add {Name} {service_type} connector" --body "$(cat <<'EOF'
+## Summary
+- New {service_type} connector for {Name}
+- Capabilities: {list capabilities}
+
+## Test plan
+- [ ] Unit tests pass (`pytest ingestion/tests/unit/topology/{service_type}/test_{name}.py`)
+- [ ] Integration tests pass
+- [ ] Local Docker test: connector appears in UI, test connection passes
+
+## Connector Quality Review
+
+**Verdict**: {VERDICT} | **Score**: {SCORE}/10
+
+| Category | Score |
+|----------|-------|
+| Schema & Registration | X/10 |
+| Connection & Auth | X/10 |
+| Source, Topology & Performance | X/10 |
+| Test Quality | X/10 |
+| Code Quality & Style | X/10 |
+
+**Blockers**: 0 | **Warnings**: {count} | **Suggestions**: {count}
+
+<details>
+<summary>Static analysis output</summary>
+
+{paste analyze_connector.py output here}
+
+</details>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+The quality summary gives maintainers confidence about the connector's state without needing to review every file manually.
+
 ## Standards Reference
 
 All standards are in `${CLAUDE_SKILL_DIR}/standards/`:

@@ -36,16 +36,6 @@ class SsrsFolder(BaseModel):
     path: str = Field(alias="Path")
 
 
-class SsrsDataSource(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    id: str = Field(alias="Id")
-    name: str = Field(alias="Name")
-    connection_string: Optional[str] = Field(None, alias="ConnectionString")
-    data_source_type: Optional[str] = Field(None, alias="DataSourceType")
-    is_enabled: bool = Field(True, alias="IsEnabled")
-
-
 class SsrsODataResponse(BaseModel):
     odata_count: Optional[int] = Field(None, alias="@odata.count")
 
@@ -56,7 +46,3 @@ class SsrsReportListResponse(SsrsODataResponse):
 
 class SsrsFolderListResponse(SsrsODataResponse):
     value: List[SsrsFolder] = Field(default_factory=list)
-
-
-class SsrsDataSourceListResponse(BaseModel):
-    value: List[SsrsDataSource] = Field(default_factory=list)

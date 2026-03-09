@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from metadata.generated.schema.api.data.createChart import CreateChartRequest
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
-from metadata.generated.schema.entity.data.chart import ChartType
+from metadata.generated.schema.entity.data.chart import Chart, ChartType
 from metadata.generated.schema.entity.services.connections.dashboard.ssrsConnection import (
     SsrsConnection,
 )
@@ -30,12 +30,18 @@ from metadata.generated.schema.entity.services.ingestionPipelines.status import 
 from metadata.generated.schema.metadataIngestion.workflow import (
     Source as WorkflowSource,
 )
-from metadata.generated.schema.type.basic import EntityName, Markdown, SourceUrl
+from metadata.generated.schema.type.basic import (
+    EntityName,
+    FullyQualifiedEntityName,
+    Markdown,
+    SourceUrl,
+)
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.dashboard.dashboard_service import DashboardServiceSource
 from metadata.ingestion.source.dashboard.ssrs.models import SsrsReport
+from metadata.utils import fqn
 from metadata.utils.filters import filter_by_chart
 from metadata.utils.helpers import clean_uri
 from metadata.utils.logger import ingestion_logger
@@ -113,6 +119,17 @@ class SsrsSource(DashboardServiceSource):
                     if dashboard_details.description
                     else None
                 ),
+                charts=[
+                    FullyQualifiedEntityName(
+                        fqn.build(
+                            self.metadata,
+                            entity_type=Chart,
+                            service_name=self.context.get().dashboard_service,
+                            chart_name=chart,
+                        )
+                    )
+                    for chart in self.context.get().charts or []
+                ],
                 project=self.context.get().project_name,
                 service=self.context.get().dashboard_service,
             )
@@ -167,4 +184,4 @@ class SsrsSource(DashboardServiceSource):
         dashboard_details: SsrsReport,
         db_service_prefix: Optional[str] = None,
     ) -> Iterable[Either[AddLineageRequest]]:
-        return []
+        return
