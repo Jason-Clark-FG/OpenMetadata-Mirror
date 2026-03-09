@@ -74,11 +74,13 @@ export const visitEntityPage = async (data: {
     await page.waitForLoadState('networkidle');
   }
 
-  const waitForSearchResponse = page.waitForResponse(
-    '/api/v1/search/query?q=*index=dataAsset*'
-  );
   await page.getByTestId('searchBox').fill(searchTerm);
-  await waitForSearchResponse;
+  await page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/search/query') &&
+      response.url().includes('index=dataAsset') &&
+      response.url().includes('exclude_source_fields')
+  );
 
   await page.getByTestId(dataTestId).getByTestId('data-name').click();
   await page.waitForLoadState('networkidle');

@@ -63,7 +63,9 @@ public class SearchUtil {
   public static boolean isTimeSeriesIndex(String indexName) {
     return switch (indexName) {
       case "test_case_result_search_index",
+          "testCaseResult",
           "test_case_resolution_status_search_index",
+          "testCaseResolutionStatus",
           "raw_cost_analysis_report_data_index",
           "aggregated_cost_analysis_report_data_index" -> true;
       default -> false;
@@ -80,16 +82,27 @@ public class SearchUtil {
   public static boolean isServiceIndex(String indexName) {
     return switch (indexName) {
       case "api_service_search_index",
+          "apiService",
           "mlmodel_service_search_index",
+          "mlModelService",
           "database_service_search_index",
+          "databaseService",
           "messaging_service_index",
+          "messagingService",
           "dashboard_service_index",
+          "dashboardService",
           "pipeline_service_index",
+          "pipelineService",
           "storage_service_index",
+          "storageService",
           "search_service_index",
+          "searchService",
           "security_service_index",
+          "securityService",
           "metadata_service_index",
-          "drive_service_index" -> true;
+          "metadataService",
+          "drive_service_index",
+          "driveService" -> true;
       default -> false;
     };
   }

@@ -283,11 +283,15 @@ export const filterOptionsByIndex = (
   options: Array<Option>,
   searchIndex: SearchIndex,
   maxItemsPerType = 5
-) =>
-  options
-    .filter((option) => option._index.includes(searchIndex))
+) => {
+  const entityType =
+    searchClassBase.getSearchIndexEntityTypeMapping()[searchIndex];
+
+  return options
+    .filter((option) => option._source?.entityType === entityType)
     .map((option) => option._source)
     .slice(0, maxItemsPerType);
+};
 
 export const getEntityTypeFromSearchIndex = (searchIndex: string) => {
   const commonAssets: Record<string, EntityType> = {
