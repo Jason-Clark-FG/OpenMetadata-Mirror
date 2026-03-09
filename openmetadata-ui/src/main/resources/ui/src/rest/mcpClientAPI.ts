@@ -32,7 +32,7 @@ export interface TextMessage {
 export interface ToolCallInfo {
   name: string;
   input?: Record<string, unknown>;
-  result?: Record<string, unknown>;
+  result?: unknown;
 }
 
 export interface MessageBlock {
@@ -105,9 +105,7 @@ export const listConversations = async (
   return response.data;
 };
 
-export const getConversation = async (
-  id: string
-): Promise<McpConversation> => {
+export const getConversation = async (id: string): Promise<McpConversation> => {
   const response = await APIClient.get<McpConversation>(
     `${BASE}/conversations/${id}`
   );
@@ -132,4 +130,103 @@ export const listMessages = async (
   );
 
   return response.data;
+};
+
+export type ChatStreamEvent =
+  | { event: 'conversation_created'; data: { conversationId: string } }
+  | { event: 'text'; data: { content: string } }
+  | {
+      event: 'tool_call_start';
+      data: { name: string; input: Record<string, unknown> };
+    }
+  | { event: 'tool_call_end'; data: { name: string; result: unknown } }
+  | { event: 'message_complete'; data: { message: McpMessage } }
+  | { event: 'error'; data: { message: string } }
+  | { event: 'done'; data: Record<string, never> };
+
+export interface ChatStreamCallbacks {
+  onEvent: (event: ChatStreamEvent) => void;
+  onError?: (error: Error) => void;
+}
+
+export const streamChatMessage = async (
+  request: ChatRequest,
+  callbacks: ChatStreamCallbacks
+): Promise<void> => {
+  const { getOidcToken } = await import('../utils/SwTokenStorageUtils');
+  const { getBasePath } = await import('../utils/HistoryUtils');
+
+  const token = await getOidcToken();
+  const basePath = getBasePath();
+
+  const response = await fetch(`${basePath}/api/v1${BASE}/chat/stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(errorText || `HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('ReadableStream not supported');
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+
+      for (const eventBlock of events) {
+        if (!eventBlock.trim()) {
+          continue;
+        }
+
+        let eventName = '';
+        let eventData = '';
+
+        for (const line of eventBlock.split('\n')) {
+          if (line.startsWith('event: ')) {
+            eventName = line.slice(7);
+          } else if (line.startsWith('data: ')) {
+            eventData = line.slice(6);
+          }
+        }
+
+        if (eventName && eventData) {
+          try {
+            const parsed = JSON.parse(eventData);
+            callbacks.onEvent({
+              event: eventName,
+              data: parsed,
+            } as ChatStreamEvent);
+          } catch {
+            // skip malformed events
+          }
+        }
+      }
+    }
+  } catch (error) {
+    callbacks.onError?.(
+      error instanceof Error ? error : new Error(String(error))
+    );
+  } finally {
+    reader.releaseLock();
+  }
 };
