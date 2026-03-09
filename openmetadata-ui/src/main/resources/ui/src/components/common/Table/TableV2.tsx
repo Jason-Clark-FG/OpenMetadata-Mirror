@@ -37,6 +37,7 @@ import {
   Dropdown,
   Table as UntitledTable,
 } from '@openmetadata/ui-core-components';
+import { ArrowDown, ChevronSelectorVertical } from '@untitledui/icons';
 import type {
   ColumnType,
   FilterValue,
@@ -578,6 +579,7 @@ const TableV2 = <T extends object>(
               const colWidth =
                 columnWidths[colKey] ?? (colType.width as number) ?? 150;
 
+              const isSorted = sortState.columnKey === colKey;
               const headNode = (
                 <UntitledTable.Head
                   allowsSorting={!!colType.sorter}
@@ -589,7 +591,25 @@ const TableV2 = <T extends object>(
                       ? { width: colWidth, minWidth: colWidth }
                       : undefined
                   }>
-                  {resolveColumnTitle(colType)}
+                  <div className="tw:flex tw:items-center tw:gap-1">
+                    {resolveColumnTitle(colType)}
+                    {!!colType.sorter &&
+                      (isSorted && sortState.direction ? (
+                        <ArrowDown
+                          className={classNames(
+                            'tw:size-3 tw:text-fg-quaternary',
+                            sortState.direction === 'ascending' &&
+                              'tw:rotate-180'
+                          )}
+                          strokeWidth={3}
+                        />
+                      ) : (
+                        <ChevronSelectorVertical
+                          className="tw:size-3 tw:text-fg-quaternary"
+                          strokeWidth={3}
+                        />
+                      ))}
+                  </div>
                 </UntitledTable.Head>
               );
 
@@ -627,11 +647,12 @@ const TableV2 = <T extends object>(
 
               return (
                 <UntitledTable.Row
-                  className={
+                  className={classNames(
+                    'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
                     typeof rest.rowClassName === 'function'
                       ? rest.rowClassName(record, actualIndex, 0)
                       : rest.rowClassName
-                  }
+                  )}
                   data-row-key={getRowKey(record, actualIndex)}
                   id={getRowKey(record, actualIndex)}
                   key={getRowKey(record, actualIndex)}
