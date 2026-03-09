@@ -55,7 +55,8 @@ class LogsClassBase {
           activeTitle: true,
         },
         {
-          name: getEntityName(ingestionDetails) || getNameFromFQN(ingestionName),
+          name:
+            getEntityName(ingestionDetails) || getNameFromFQN(ingestionName),
           url: '',
           activeTitle: true,
         },
@@ -119,9 +120,9 @@ class LogsClassBase {
       const isLast = index === urlPath.length - 1;
 
       return {
-        name: index === 0 ? startCase(path) : isLast ? pipelineDisplayName : path,
-        url:
-          !isLast ? getLogEntityPath(path, serviceType) : '',
+        name:
+          index === 0 ? startCase(path) : isLast ? pipelineDisplayName : path,
+        url: !isLast ? getLogEntityPath(path, serviceType) : '',
       };
     });
   }
