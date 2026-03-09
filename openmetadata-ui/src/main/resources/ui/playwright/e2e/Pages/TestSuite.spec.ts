@@ -73,14 +73,13 @@ test(
     const loggedInUser = await loggedInUserResponse.json();
 
     await test.step('Open create test suite form', async () => {
-      await page.click('[data-testid="add-test-suite-btn"]');
-      await page.fill('[data-testid="test-suite-name"]', NEW_TEST_SUITE.name);
-      await page.locator(descriptionBox).fill(NEW_TEST_SUITE.description);
-
       const initialListResponse = page.waitForResponse(
         `/api/v1/dataQuality/testCases/search/list*`
       );
+      await page.click('[data-testid="add-test-suite-btn"]');
       await initialListResponse;
+      await page.fill('[data-testid="test-suite-name"]', NEW_TEST_SUITE.name);
+      await page.locator(descriptionBox).fill(NEW_TEST_SUITE.description);
       await page.waitForSelector(
         "[data-testid='test-case-selection-card'] [data-testid='loader']",
         { state: 'detached' }
