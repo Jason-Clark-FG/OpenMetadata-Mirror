@@ -16,6 +16,7 @@ import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectCont
 
 import jakarta.ws.rs.core.SecurityContext;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class McpClientService {
   private final Limits limits;
   private final McpClientConfiguration config;
   private volatile ToolExecutor toolExecutor;
-  private volatile List<Map<String, Object>> toolDefinitions = new ArrayList<>();
+  private volatile List<Map<String, Object>> toolDefinitions = Collections.emptyList();
 
   public McpClientService(
       CollectionDAO dao, McpClientConfiguration config, Authorizer authorizer, Limits limits) {
@@ -71,12 +72,16 @@ public class McpClientService {
     this.config = config;
   }
 
+  public boolean isEnabled() {
+    return config.isEnabled();
+  }
+
   public void setToolExecutor(ToolExecutor toolExecutor) {
     this.toolExecutor = toolExecutor;
   }
 
   public void setToolDefinitions(List<Map<String, Object>> toolDefinitions) {
-    this.toolDefinitions = toolDefinitions;
+    this.toolDefinitions = Collections.unmodifiableList(new ArrayList<>(toolDefinitions));
   }
 
   public record ChatResponse(UUID conversationId, McpMessage message) {}
@@ -114,42 +119,77 @@ public class McpClientService {
 
     List<LlmMessage> llmMessages = buildLlmMessages(conversation.getId());
 
-    CatalogSecurityContext catalogSecurityContext = (CatalogSecurityContext) securityContext;
+    CatalogSecurityContext catalogSecurityContext =
+        new CatalogSecurityContext(
+            securityContext.getUserPrincipal(),
+            securityContext.isSecure() ? "https" : "http",
+            securityContext.getAuthenticationScheme(),
+            Collections.emptySet());
+
     List<ToolCall> allToolCalls = new ArrayList<>();
     int totalInputTokens = 0;
     int totalOutputTokens = 0;
+    StringBuilder textCollector = new StringBuilder();
     String assistantText = null;
 
-    for (int i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      LlmResponse response = llmClient.sendMessages(llmMessages, toolDefinitions);
-      totalInputTokens += response.inputTokens();
-      totalOutputTokens += response.outputTokens();
+    try {
+      ToolExecutor executor = this.toolExecutor;
+      List<Map<String, Object>> tools = this.toolDefinitions;
+      for (int i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+        LlmResponse response = llmClient.sendMessages(llmMessages, tools);
+        totalInputTokens += response.inputTokens();
+        totalOutputTokens += response.outputTokens();
 
-      if (!response.hasToolCalls()) {
-        assistantText = response.content();
-        break;
+        if (response.content() != null && !response.content().isBlank()) {
+          if (!textCollector.isEmpty()) {
+            textCollector.append("\n\n");
+          }
+          textCollector.append(response.content());
+        }
+
+        if (!response.hasToolCalls()) {
+          break;
+        }
+
+        if (executor == null) {
+          if (textCollector.isEmpty()) {
+            textCollector.append(
+                "Tool execution is not available. The MCP Server is not installed or configured.");
+          }
+          break;
+        }
+
+        llmMessages.add(
+            LlmMessage.assistantWithToolCalls(response.content(), response.toolCalls()));
+
+        for (LlmToolCall toolCall : response.toolCalls()) {
+          String resultContent =
+              executor.executeTool(
+                  authorizer,
+                  limits,
+                  catalogSecurityContext,
+                  toolCall.name(),
+                  toolCall.arguments());
+
+          llmMessages.add(LlmMessage.toolResult(toolCall.id(), resultContent));
+
+          Map<String, Object> inputArgs = parseToolArguments(toolCall.arguments());
+          Object parsedResult = parseToolResult(resultContent);
+          allToolCalls.add(
+              new ToolCall()
+                  .withName(toolCall.name())
+                  .withInput(inputArgs)
+                  .withResult(parsedResult));
+        }
       }
 
-      llmMessages.add(LlmMessage.assistantWithToolCalls(response.toolCalls()));
-
-      for (LlmToolCall toolCall : response.toolCalls()) {
-        String resultContent =
-            toolExecutor.executeTool(
-                authorizer, limits, catalogSecurityContext, toolCall.name(), toolCall.arguments());
-
-        llmMessages.add(LlmMessage.toolResult(toolCall.id(), resultContent));
-
-        Map<String, Object> inputArgs = parseToolArguments(toolCall.arguments());
-        allToolCalls.add(
-            new ToolCall()
-                .withName(toolCall.name())
-                .withInput(inputArgs)
-                .withResult(resultContent));
-      }
-    }
-
-    if (assistantText == null) {
-      assistantText = "I was unable to complete the request within the allowed tool call limit.";
+      assistantText =
+          textCollector.isEmpty()
+              ? "I was unable to complete the request within the allowed tool call limit."
+              : textCollector.toString();
+    } catch (Exception e) {
+      LOG.error("LLM call failed for conversation {}", conversation.getId(), e);
+      assistantText = "Sorry, an error occurred while processing your request. Please try again.";
     }
 
     List<MessageBlock> contentBlocks = new ArrayList<>();
@@ -185,6 +225,158 @@ public class McpClientService {
     conversationRepository.update(conversation);
 
     return new ChatResponse(conversation.getId(), assistantMsg);
+  }
+
+  public void chatStream(
+      SecurityContext securityContext,
+      UUID conversationId,
+      String userMessage,
+      ChatEventEmitter emitter) {
+    User user = getSubjectContext(securityContext).user();
+    EntityReference userRef = user.getEntityReference();
+
+    McpConversation conversation;
+    boolean isNewConversation;
+    if (conversationId == null) {
+      conversation = conversationRepository.create(new CreateMcpConversation(), userRef);
+      isNewConversation = true;
+      emitter.emit(ChatEvent.conversationCreated(conversation.getId()));
+    } else {
+      conversation = getConversation(securityContext, conversationId);
+      isNewConversation = false;
+    }
+
+    int currentMessageCount = conversation.getMessageCount();
+
+    storeMessage(
+        conversation.getId(),
+        CreateMcpMessage.Sender.HUMAN,
+        List.of(
+            new MessageBlock()
+                .withType(ChatContentType.GENERIC)
+                .withTextMessage(
+                    new TextMessage()
+                        .withType(TextMessage.TextMessageType.MARKDOWN)
+                        .withMessage(userMessage))),
+        null,
+        currentMessageCount);
+    currentMessageCount++;
+
+    List<LlmMessage> llmMessages = buildLlmMessages(conversation.getId());
+
+    CatalogSecurityContext catalogSecurityContext =
+        new CatalogSecurityContext(
+            securityContext.getUserPrincipal(),
+            securityContext.isSecure() ? "https" : "http",
+            securityContext.getAuthenticationScheme(),
+            Collections.emptySet());
+
+    List<ToolCall> allToolCalls = new ArrayList<>();
+    int totalInputTokens = 0;
+    int totalOutputTokens = 0;
+    StringBuilder textCollector = new StringBuilder();
+    String assistantText = null;
+
+    try {
+      ToolExecutor executor = this.toolExecutor;
+      List<Map<String, Object>> tools = this.toolDefinitions;
+      for (int i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+        LlmResponse response = llmClient.sendMessages(llmMessages, tools);
+        totalInputTokens += response.inputTokens();
+        totalOutputTokens += response.outputTokens();
+
+        if (response.content() != null && !response.content().isBlank()) {
+          if (!textCollector.isEmpty()) {
+            textCollector.append("\n\n");
+          }
+          textCollector.append(response.content());
+          emitter.emit(ChatEvent.text(response.content()));
+        }
+
+        if (!response.hasToolCalls()) {
+          break;
+        }
+
+        if (executor == null) {
+          if (textCollector.isEmpty()) {
+            textCollector.append(
+                "Tool execution is not available. The MCP Server is not installed or configured.");
+          }
+          break;
+        }
+
+        llmMessages.add(
+            LlmMessage.assistantWithToolCalls(response.content(), response.toolCalls()));
+
+        for (LlmToolCall toolCall : response.toolCalls()) {
+          Map<String, Object> inputArgs = parseToolArguments(toolCall.arguments());
+          emitter.emit(ChatEvent.toolCallStart(toolCall.name(), inputArgs));
+
+          String resultContent =
+              executor.executeTool(
+                  authorizer,
+                  limits,
+                  catalogSecurityContext,
+                  toolCall.name(),
+                  toolCall.arguments());
+
+          llmMessages.add(LlmMessage.toolResult(toolCall.id(), resultContent));
+
+          Object parsedResult = parseToolResult(resultContent);
+          emitter.emit(ChatEvent.toolCallEnd(toolCall.name(), parsedResult));
+
+          allToolCalls.add(
+              new ToolCall()
+                  .withName(toolCall.name())
+                  .withInput(inputArgs)
+                  .withResult(parsedResult));
+        }
+      }
+
+      assistantText =
+          textCollector.isEmpty()
+              ? "I was unable to complete the request within the allowed tool call limit."
+              : textCollector.toString();
+    } catch (Exception e) {
+      LOG.error("LLM call failed for conversation {}", conversation.getId(), e);
+      assistantText = "Sorry, an error occurred while processing your request. Please try again.";
+      emitter.emit(ChatEvent.error(assistantText));
+    }
+
+    List<MessageBlock> contentBlocks = new ArrayList<>();
+    contentBlocks.add(
+        new MessageBlock()
+            .withType(ChatContentType.GENERIC)
+            .withTextMessage(
+                new TextMessage()
+                    .withType(TextMessage.TextMessageType.MARKDOWN)
+                    .withMessage(assistantText))
+            .withTools(allToolCalls));
+
+    TokenUsage tokenUsage =
+        new TokenUsage()
+            .withInputTokens(totalInputTokens)
+            .withOutputTokens(totalOutputTokens)
+            .withTotalTokens(totalInputTokens + totalOutputTokens);
+
+    McpMessage assistantMsg =
+        storeMessage(
+            conversation.getId(),
+            CreateMcpMessage.Sender.ASSISTANT,
+            contentBlocks,
+            tokenUsage,
+            currentMessageCount);
+    currentMessageCount++;
+
+    conversation.setMessageCount(currentMessageCount);
+    conversation.setUpdatedBy(userRef.getName());
+    if (isNewConversation && conversation.getTitle() == null) {
+      conversation.setTitle(truncateTitle(userMessage));
+    }
+    conversationRepository.update(conversation);
+
+    emitter.emit(ChatEvent.messageComplete(assistantMsg));
+    emitter.emit(ChatEvent.done());
   }
 
   public McpConversation createConversation(
@@ -261,11 +453,22 @@ public class McpClientService {
         messageRepository.listByConversation(conversationId, CONVERSATION_HISTORY_LIMIT, 0);
 
     for (McpMessage msg : history) {
-      LlmMessage.Role role =
-          msg.getSender() == CreateMcpMessage.Sender.HUMAN
-              ? LlmMessage.Role.user
-              : LlmMessage.Role.assistant;
+      boolean isHuman = msg.getSender() == CreateMcpMessage.Sender.HUMAN;
+      LlmMessage.Role role = isHuman ? LlmMessage.Role.user : LlmMessage.Role.assistant;
+
       String textContent = extractTextFromMessage(msg);
+      if (!isHuman) {
+        String toolSummary = extractToolSummaryFromMessage(msg);
+        if (toolSummary != null) {
+          String combined =
+              (textContent != null ? textContent + "\n\n" : "")
+                  + "[Tools used: "
+                  + toolSummary
+                  + "]";
+          llmMessages.add(new LlmMessage(role, combined, null, null));
+          continue;
+        }
+      }
       if (textContent != null) {
         llmMessages.add(new LlmMessage(role, textContent, null, null));
       }
@@ -286,6 +489,21 @@ public class McpClientService {
     return null;
   }
 
+  private String extractToolSummaryFromMessage(McpMessage message) {
+    if (message.getContent() == null) {
+      return null;
+    }
+    List<String> toolNames = new ArrayList<>();
+    for (MessageBlock block : message.getContent()) {
+      if (block.getTools() != null) {
+        for (ToolCall tc : block.getTools()) {
+          toolNames.add(tc.getName());
+        }
+      }
+    }
+    return toolNames.isEmpty() ? null : String.join(", ", toolNames);
+  }
+
   @SuppressWarnings("unchecked")
   private Map<String, Object> parseToolArguments(String arguments) {
     if (arguments == null || arguments.isBlank()) {
@@ -296,6 +514,17 @@ public class McpClientService {
     } catch (Exception e) {
       LOG.warn("Failed to parse tool arguments: {}", arguments, e);
       return new HashMap<>();
+    }
+  }
+
+  private Object parseToolResult(String resultContent) {
+    if (resultContent == null || resultContent.isBlank()) {
+      return Collections.emptyMap();
+    }
+    try {
+      return JsonUtils.readValue(resultContent, Object.class);
+    } catch (Exception e) {
+      return resultContent;
     }
   }
 
