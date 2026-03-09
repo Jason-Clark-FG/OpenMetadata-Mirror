@@ -261,6 +261,8 @@ public final class UserUtil {
     List<EntityReference> currentTeams = user.getTeams();
     if (currentTeams == null) {
       currentTeams = new ArrayList<>();
+    } else {
+      currentTeams = new ArrayList<>(currentTeams);
     }
 
     boolean anyTeamAssigned = false;
@@ -440,25 +442,28 @@ public final class UserUtil {
   public static boolean reSyncUserRolesFromToken(
       UriInfo uriInfo, User user, Set<String> rolesFromToken) {
     boolean syncUser = false;
+    Set<String> mutableRolesFromToken =
+        rolesFromToken == null ? new HashSet<>() : new HashSet<>(rolesFromToken);
 
     User updatedUser = JsonUtils.deepCopy(user, User.class);
     // Check if Admin User
-    if (rolesFromToken.contains(ADMIN_ROLE)) {
+    if (mutableRolesFromToken.contains(ADMIN_ROLE)) {
       if (Boolean.FALSE.equals(user.getIsAdmin())) {
         syncUser = true;
         updatedUser.setIsAdmin(true);
       }
 
       // Remove the Admin Role from the list
-      rolesFromToken.remove(ADMIN_ROLE);
+      mutableRolesFromToken.remove(ADMIN_ROLE);
     }
 
     Set<String> rolesFromUser = getRoleListFromUser(user);
 
     // Check if roles are different
-    if (!nullOrEmpty(rolesFromToken) && isRolesSyncNeeded(rolesFromToken, rolesFromUser)) {
+    if (!nullOrEmpty(mutableRolesFromToken)
+        && isRolesSyncNeeded(mutableRolesFromToken, rolesFromUser)) {
       syncUser = true;
-      List<EntityReference> rolesReferenceFromToken = validateAndGetRolesRef(rolesFromToken);
+      List<EntityReference> rolesReferenceFromToken = validateAndGetRolesRef(mutableRolesFromToken);
       updatedUser.setRoles(rolesReferenceFromToken);
     }
 
@@ -471,6 +476,7 @@ public final class UserUtil {
 
       // Set the updated roles to the original user
       user.setRoles(updatedUser.getRoles());
+      user.setIsAdmin(updatedUser.getIsAdmin());
     }
 
     return syncUser;
