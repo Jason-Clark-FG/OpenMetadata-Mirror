@@ -250,7 +250,7 @@ export const verifyDataProductsFilters = async (
   const aToZFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('index=data_product') &&
+      response.url().includes('index=dataProduct') &&
       response.url().includes('sort_field=name.keyword') &&
       response.url().includes('sort_order=asc')
   );
@@ -267,7 +267,7 @@ export const verifyDataProductsFilters = async (
   const zToAFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('index=data_product') &&
+      response.url().includes('index=dataProduct') &&
       response.url().includes('sort_field=name.keyword') &&
       response.url().includes('sort_order=desc')
   );
@@ -284,7 +284,7 @@ export const verifyDataProductsFilters = async (
   const latestFilter = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/search/query') &&
-      response.url().includes('index=data_product') &&
+      response.url().includes('index=dataProduct') &&
       response.url().includes('sort_field=updatedAt') &&
       response.url().includes('sort_order=desc')
   );
