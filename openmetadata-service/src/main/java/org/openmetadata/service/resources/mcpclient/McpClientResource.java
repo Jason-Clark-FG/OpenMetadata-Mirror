@@ -35,6 +35,10 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,11 +47,13 @@ import lombok.Setter;
 import org.openmetadata.schema.api.chat.CreateMcpConversation;
 import org.openmetadata.schema.entity.chat.McpConversation;
 import org.openmetadata.schema.entity.chat.McpMessage;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.config.McpClientConfiguration;
 import org.openmetadata.service.limits.Limits;
+import org.openmetadata.service.mcpclient.ChatEvent;
 import org.openmetadata.service.mcpclient.McpClientService;
 import org.openmetadata.service.mcpclient.McpClientService.ChatResponse;
 import org.openmetadata.service.mcpclient.ToolExecutor;
@@ -123,9 +129,61 @@ public class McpClientResource {
         @ApiResponse(responseCode = "400", description = "Bad request")
       })
   public Response chat(@Context SecurityContext securityContext, @Valid ChatRequest request) {
+    if (mcpClientService == null || !mcpClientService.isEnabled()) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+          .entity(
+              Map.of(
+                  "message",
+                  "MCP Client is not enabled. Configure mcpClientConfiguration in openmetadata.yaml."))
+          .build();
+    }
     ChatResponse response =
         mcpClientService.chat(securityContext, request.getConversationId(), request.getMessage());
     return Response.ok(response).build();
+  }
+
+  @POST
+  @Path("/chat/stream")
+  @Produces("text/event-stream")
+  @Operation(
+      operationId = "mcpClientChatStream",
+      summary = "Chat with the MCP assistant (streaming)",
+      description = "Send a message and get a streaming response via Server-Sent Events.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "SSE event stream",
+            content = @Content(mediaType = "text/event-stream")),
+        @ApiResponse(responseCode = "400", description = "Bad request")
+      })
+  public Response chatStream(@Context SecurityContext securityContext, @Valid ChatRequest request) {
+    if (mcpClientService == null || !mcpClientService.isEnabled()) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+          .type(MediaType.APPLICATION_JSON_TYPE)
+          .entity(
+              Map.of(
+                  "message",
+                  "MCP Client is not enabled. Configure mcpClientConfiguration in openmetadata.yaml."))
+          .build();
+    }
+    StreamingOutput streamingOutput =
+        output -> {
+          try {
+            mcpClientService.chatStream(
+                securityContext,
+                request.getConversationId(),
+                request.getMessage(),
+                event -> writeSseEvent(output, event.event(), event.data()));
+          } catch (Exception e) {
+            writeSseEvent(output, "error", ChatEvent.error(e.getMessage()).data());
+            writeSseEvent(output, "done", ChatEvent.done().data());
+          }
+        };
+    return Response.ok(streamingOutput)
+        .type("text/event-stream")
+        .header("Cache-Control", "no-cache")
+        .header("X-Accel-Buffering", "no")
+        .build();
   }
 
   @POST
@@ -262,5 +320,16 @@ public class McpClientResource {
           UUID id) {
     mcpClientService.deleteConversation(securityContext, id);
     return Response.noContent().build();
+  }
+
+  private static void writeSseEvent(OutputStream output, String event, Object data) {
+    try {
+      String json = JsonUtils.pojoToJson(data);
+      String frame = "event: " + event + "\ndata: " + json + "\n\n";
+      output.write(frame.getBytes(StandardCharsets.UTF_8));
+      output.flush();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
