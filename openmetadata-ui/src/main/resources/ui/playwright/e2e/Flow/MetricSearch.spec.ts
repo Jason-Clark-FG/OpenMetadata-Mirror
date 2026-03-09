@@ -11,11 +11,10 @@
  *  limitations under the License.
  */
 import test, { expect } from '@playwright/test';
-import { MetricClass } from '../../support/entity/MetricClass';
-import { performAdminLogin } from '../../utils/admin';
-import { redirectToHomePage } from '../../utils/common';
-import { sidebarClick } from '../../utils/sidebar';
 import { SidebarItem } from '../../constant/sidebar';
+import { MetricClass } from '../../support/entity/MetricClass';
+import { createNewPage, redirectToHomePage } from '../../utils/common';
+import { sidebarClick } from '../../utils/sidebar';
 
 const metric = new MetricClass();
 
@@ -24,7 +23,7 @@ test.describe(
   { tag: ['@Discovery'] },
   () => {
     test.beforeAll('Setup metric with long name', async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
+      const { apiContext, afterAction } = await createNewPage(browser);
 
       // Override the metric entity with a long multi-word name
       metric.entity = {
@@ -41,12 +40,24 @@ test.describe(
       };
 
       await metric.create(apiContext);
+
+      // Wait for the metric to be indexed in OpenSearch
+      await expect(async () => {
+        const response = await apiContext.get(
+          `/api/v1/search/query?q=${metric.entity.name}&index=metric_search_index&from=0&size=10`
+        );
+        const data = await response.json();
+
+        expect(data.hits.total.value).toBeGreaterThan(0);
+      }).toPass({ timeout: 90_000, intervals: [2_000] });
+
       await afterAction();
     });
 
     test.afterAll('Cleanup metric', async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-      await metric.delete(apiContext);
+      const { apiContext, afterAction } = await createNewPage(browser);
+      // Skip deletion to keep metric for debugging
+      // await metric.delete(apiContext);
       await afterAction();
     });
 
@@ -61,12 +72,27 @@ test.describe(
       await redirectToHomePage(page);
 
       await sidebarClick(page, SidebarItem.EXPLORE);
+      await page.waitForLoadState('networkidle');
 
       await test.step('Select Metric search index and search', async () => {
         await page.getByTestId('global-search-selector').click();
-        await page
-          .getByTestId('global-search-select-option-Metric')
-          .click();
+
+        // Wait for dropdown to be visible
+        await page.waitForSelector('[data-testid="global-search-select-dropdown"]', {
+          state: 'visible',
+        });
+
+        // Scroll within the dropdown to find Metric option
+        const dropdownMenu = page.locator('.global-search-select-menu .rc-virtual-list-holder');
+        await dropdownMenu.evaluate((el) => {
+          el.scrollTop = el.scrollHeight;
+        });
+
+        // Wait a moment for the virtualized list to render
+        await page.waitForTimeout(500);
+
+        const metricOption = page.getByTestId('global-search-select-option-Metric');
+        await metricOption.click();
 
         const searchQuery =
           'AcceleratedConnection WBA Ethernet ServiceLevel';
@@ -97,11 +123,11 @@ test.describe(
             { state: 'detached', timeout: 30_000 }
           );
 
-          await expect(page.getByTestId('alert-bar')).not.toBeVisible();
+          await page.waitForSelector('[data-testid="search-results"]', {
+            state: 'visible',
+          });
 
-          await expect(
-            page.getByTestId('search-results')
-          ).toBeVisible();
+          await expect(page.getByTestId('alert-bar')).not.toBeVisible();
         }
       );
     });
