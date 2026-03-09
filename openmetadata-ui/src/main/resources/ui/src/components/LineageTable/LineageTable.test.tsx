@@ -20,6 +20,7 @@ import { EntityType } from '../../enums/entity.enum';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import { usePaging } from '../../hooks/paging/usePaging';
 import { useFqn } from '../../hooks/useFqn';
+import { useLineageStore } from '../../hooks/useLineageStore';
 import {
   getLineageByEntityCount,
   getLineageDataByFQN,
@@ -44,13 +45,18 @@ jest.mock('../../hooks/useFqn');
 jest.mock('../../utils/useRequiredParams');
 jest.mock('./useLineageTableState');
 jest.mock('../../rest/lineageAPI');
+jest.mock('../../utils/StringsUtils', () => ({
+  ...jest.requireActual('../../utils/StringsUtils'),
+  stringToHTML: jest.fn((str: string) => str),
+}));
+jest.mock('../../hooks/useLineageStore');
 jest.mock('../../utils/Lineage/LineageUtils');
 jest.mock('./LineageTable.styled', () => {
   const { Menu: MuiMenu } = jest.requireActual('@mui/material');
 
   return {
     StyledMenu: (props: React.ComponentProps<typeof MuiMenu>) => (
-      <MuiMenu {...props} container={document.body} />
+      <MuiMenu {...props} />
     ),
     StyledToggleButtonGroup: ToggleButtonGroup,
     StyledIconButton: IconButton,
@@ -71,6 +77,10 @@ jest.mock('../../utils/CommonUtils', () => ({
     .mockImplementation((fqn: string) => fqn),
 }));
 
+jest.mock('../../utils/Fqn', () => ({
+  split: jest.fn().mockReturnValue(['mockGlossary']),
+}));
+
 jest.mock('lodash', () => {
   const module = jest.requireActual('lodash');
   module.debounce = jest.fn((fn) => fn);
@@ -83,6 +93,9 @@ jest.mock('../Entity/EntityLineage/CustomControls.component', () => {
 
 const mockUseLineageProvider = useLineageProvider as jest.MockedFunction<
   typeof useLineageProvider
+>;
+const mockUseLineageStore = useLineageStore as jest.MockedFunction<
+  typeof useLineageStore
 >;
 const mockUsePaging = usePaging as jest.MockedFunction<typeof usePaging>;
 const mockUseFqn = useFqn as jest.MockedFunction<typeof useFqn>;
@@ -203,8 +216,15 @@ describe('LineageTable', () => {
       } as LineageConfig,
       updateEntityData: jest.fn(),
       onExportClick: jest.fn(),
-      onLineageConfigUpdate: jest.fn(),
     } as unknown as LineageContextType);
+
+    mockUseLineageStore.mockReturnValue({
+      lineageConfig: {
+        downstreamDepth: 2,
+        upstreamDepth: 2,
+      } as LineageConfig,
+      setLineageConfig: jest.fn(),
+    });
 
     mockUsePaging.mockReturnValue({
       currentPage: 1,
@@ -219,6 +239,7 @@ describe('LineageTable', () => {
       fqn: 'test.table',
       ingestionFQN: '',
       ruleName: '',
+      entityFqn: '',
     });
 
     mockUseRequiredParams.mockReturnValue({
@@ -280,7 +301,7 @@ describe('LineageTable', () => {
   });
 
   it('should open impact level menu when clicked', async () => {
-    const { container } = render(<LineageTable entity={mockEntity} />, {
+    render(<LineageTable entity={mockEntity} />, {
       wrapper: MemoryRouter,
     });
 
@@ -293,7 +314,7 @@ describe('LineageTable', () => {
     fireEvent.click(impactButton);
 
     await waitFor(() => {
-      const menu = container.querySelector('[role="presentation"]');
+      const menu = screen.getByRole('menu');
 
       expect(menu).toBeInTheDocument();
     });
@@ -347,7 +368,8 @@ describe('LineageTable', () => {
         id: 'col1',
         fromEntity: { fullyQualifiedName: 'test.table1', name: 'table1' },
         toEntity: { fullyQualifiedName: 'test.table2', name: 'table2' },
-        column: { fromColumns: ['col1'], toColumn: ['col2'] },
+        fromColumn: 'col1',
+        toColumn: 'col2',
       },
     ];
 

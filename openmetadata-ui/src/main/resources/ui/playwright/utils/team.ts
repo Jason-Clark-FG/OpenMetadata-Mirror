@@ -29,6 +29,11 @@ import { settingClick } from './sidebar';
 
 const TEAM_TYPES = ['Department', 'Division', 'Group'];
 
+interface SearchTeamOptions {
+  expectEmptyResults?: boolean;
+  expectNotFound?: boolean;
+}
+
 export const createTeam = async (page: Page, isPublic?: boolean) => {
   const teamData = {
     name: `pw%team-${uuid()}`,
@@ -268,15 +273,17 @@ export const removeOrganizationPolicyAndRole = async (
 export const searchTeam = async (
   page: Page,
   teamName: string,
-  searchWillBeEmpty?: boolean
+  options?: SearchTeamOptions
 ) => {
   const searchResponse = page.waitForResponse('/api/v1/search/query?q=**');
 
   await page.fill('[data-testid="searchbar"]', teamName);
   await searchResponse;
 
-  if (searchWillBeEmpty) {
+  if (options?.expectEmptyResults) {
     await expect(page.getByTestId('search-error-placeholder')).toBeVisible();
+  } else if (options?.expectNotFound) {
+    await expect(page.getByRole('cell', { name: teamName })).not.toBeVisible();
   } else {
     await expect(page.getByRole('cell', { name: teamName })).toBeVisible();
   }
@@ -326,6 +333,40 @@ export const verifyAssetsInTeamsPage = async (
   await expect(
     page.getByTestId('assets').getByTestId('filter-count')
   ).toContainText(assetCount.toString());
+};
+
+export const verifyTeamListingAssetCount = async (
+  page: Page,
+  team: TeamClass,
+  expectedCount: number
+) => {
+  const teamsAssetsCountsResponse = page.waitForResponse(
+    '/api/v1/teams/assets/counts'
+  );
+  await settingClick(page, GlobalSettingOptions.TEAMS);
+  await teamsAssetsCountsResponse;
+
+  await searchTeam(page, team.data.displayName);
+
+  await expect(
+    page
+      .locator(`[data-row-key="${team.data.name}"]`)
+      .getByTestId('team-asset-count')
+  ).toHaveText(expectedCount.toString());
+
+  await page
+    .locator(`[data-row-key="${team.data.name}"]`)
+    .getByRole('link')
+    .first()
+    .click();
+
+  const res = page.waitForResponse('/api/v1/search/query?*size=15*');
+  await page.getByTestId('assets').click();
+  await res;
+
+  await expect(
+    page.getByTestId('assets').getByTestId('filter-count')
+  ).toHaveText(expectedCount.toString());
 };
 
 export const addUserInTeam = async (page: Page, user: UserClass) => {

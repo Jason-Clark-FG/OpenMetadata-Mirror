@@ -29,8 +29,8 @@ import { Tag } from '../../generated/entity/classification/tag';
 import { Paging } from '../../generated/type/paging';
 import { getTags } from '../../rest/tagAPI';
 import { getEntityName } from '../../utils/EntityUtils';
+import { getTagImageSrc } from '../../utils/IconUtils';
 import { stringToHTML } from '../../utils/StringsUtils';
-import { getTagImageSrc } from '../../utils/TagsUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { FocusTrapWithContainer } from '../common/FocusTrap/FocusTrapWithContainer';
 import Loader from '../common/Loader/Loader';
@@ -225,8 +225,14 @@ const Certification = ({
   };
 
   useEffect(() => {
-    if (popoverProps?.open && certifications.length === 0) {
+    if (popoverProps?.open) {
+      setSelectedCertification(currentCertificate);
+      setCurrentPage(1);
+      setPaging({} as Paging);
       getCertificationData(1);
+    } else if (popoverProps?.open === false) {
+      setCertifications([]);
+      setSelectedCertification('');
     }
   }, [popoverProps?.open]);
 

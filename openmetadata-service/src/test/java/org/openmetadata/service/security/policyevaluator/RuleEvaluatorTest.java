@@ -12,7 +12,6 @@ import static org.openmetadata.common.utils.CommonUtil.listOf;
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.schema.type.MetadataOperation.CREATE;
 import static org.openmetadata.schema.type.MetadataOperation.EDIT_TAGS;
-import static org.openmetadata.service.resources.EntityResourceTest.DATA_CONSUMER_ROLE_NAME;
 import static org.openmetadata.service.security.policyevaluator.CompiledRule.parseExpression;
 import static org.openmetadata.service.security.policyevaluator.SubjectContext.TEAM_FIELDS;
 
@@ -30,6 +29,7 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.openmetadata.schema.entity.data.Database;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
+import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.DataProduct;
 import org.openmetadata.schema.entity.domains.Domain;
@@ -48,6 +48,7 @@ import org.openmetadata.service.jdbi3.DatabaseRepository;
 import org.openmetadata.service.jdbi3.DatabaseSchemaRepository;
 import org.openmetadata.service.jdbi3.DomainRepository;
 import org.openmetadata.service.jdbi3.EntityRepository;
+import org.openmetadata.service.jdbi3.GlossaryRepository;
 import org.openmetadata.service.jdbi3.TableRepository;
 import org.openmetadata.service.jdbi3.TeamRepository;
 import org.openmetadata.service.security.policyevaluator.SubjectContext.PolicyContext;
@@ -57,6 +58,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 @Slf4j
 class RuleEvaluatorTest {
+  private static final String DATA_CONSUMER_ROLE_NAME = "DataConsumer";
   private static final Table table =
       new Table().withId(UUID.randomUUID()).withName("table").withFullyQualifiedName("test.table");
   private static User user;
@@ -323,6 +325,48 @@ class RuleEvaluatorTest {
         new RuleEvaluator(policyContext, subjectContext, createResourceContextDataProduct);
     evaluationContext = new StandardEvaluationContext(ruleEvaluator);
     assertFalse(evaluateExpression("isOwner()"));
+  }
+
+  @Test
+  void test_isReviewer() {
+    GlossaryRepository glossaryRepository = mock(GlossaryRepository.class);
+    Entity.registerEntity(Glossary.class, Entity.GLOSSARY, glossaryRepository);
+
+    User reviewer = new User().withId(UUID.randomUUID()).withName("reviewerUser");
+    EntityReference reviewerRef =
+        new EntityReference()
+            .withId(reviewer.getId())
+            .withType(Entity.USER)
+            .withName("reviewerUser");
+
+    Glossary glossary =
+        new Glossary()
+            .withId(UUID.randomUUID())
+            .withName("testGlossary")
+            .withReviewers(List.of(reviewerRef));
+
+    EntityRepository.CACHE_WITH_ID.put(
+        new ImmutablePair<>(Entity.GLOSSARY, glossary.getId()), glossary);
+
+    SubjectContext subjectContext = new SubjectContext(reviewer, null);
+
+    ResourceContext<Glossary> glossaryResourceContext =
+        new ResourceContext<>(Entity.GLOSSARY, glossary, glossaryRepository);
+
+    RuleEvaluator ruleEvaluator = new RuleEvaluator(null, subjectContext, glossaryResourceContext);
+    EvaluationContext evaluationContext = new StandardEvaluationContext(ruleEvaluator);
+
+    assertTrue(
+        parseExpression("isReviewer()").getValue(evaluationContext, Boolean.class),
+        "Reviewer user should return true for isReviewer()");
+
+    User otherUser = new User().withId(UUID.randomUUID()).withName("otherUser");
+    SubjectContext otherSubjectContext = new SubjectContext(otherUser, null);
+    ruleEvaluator = new RuleEvaluator(null, otherSubjectContext, glossaryResourceContext);
+    evaluationContext = new StandardEvaluationContext(ruleEvaluator);
+    assertFalse(
+        parseExpression("isReviewer()").getValue(evaluationContext, Boolean.class),
+        "Non-reviewer user should return false for isReviewer()");
   }
 
   @Test

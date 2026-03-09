@@ -21,6 +21,7 @@ import {
   Col,
   Drawer,
   Form,
+  InputNumber,
   Row,
   Select,
   Space,
@@ -97,7 +98,10 @@ import {
   replaceAllSpacialCharWith_,
   Transi18next,
 } from '../../../../utils/CommonUtils';
-import { convertSearchSourceToTable } from '../../../../utils/DataQuality/DataQualityUtils';
+import {
+  convertSearchSourceToTable,
+  getServiceTypeForTestDefinition,
+} from '../../../../utils/DataQuality/DataQualityUtils';
 import { getEntityName } from '../../../../utils/EntityUtils';
 import {
   createScrollToErrorHandler,
@@ -529,7 +533,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           limit: 0,
         });
         setCanCreatePipeline(paging.total === 0);
-      } catch (error) {
+      } catch {
         setCanCreatePipeline(true);
       }
     },
@@ -642,7 +646,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           data,
           paging: { total: response.hits.total.value },
         };
-      } catch (error) {
+      } catch {
         return { data: [], paging: { total: 0 } };
       }
     },
@@ -652,6 +656,11 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
   const fetchTestDefinitions = useCallback(
     async (columnType?: string) => {
       try {
+        // Derive service type from table for filtering
+        const serviceType = getServiceTypeForTestDefinition(
+          selectedTableData || table
+        );
+
         const { data } = await getListTestDefinitions({
           limit: PAGE_SIZE_LARGE,
           entityType:
@@ -660,13 +669,14 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
               : EntityType.Table,
           testPlatform: TestPlatform.OpenMetadata,
           supportedDataType: columnType,
+          supportedService: serviceType,
         });
         setTestDefinitions(data);
-      } catch (error) {
+      } catch {
         setTestDefinitions([]);
       }
     },
-    [selectedTestLevel]
+    [selectedTestLevel, selectedTableData, table]
   );
 
   const fetchSelectedTableData = useCallback(async (tableFqn: string) => {
@@ -707,7 +717,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
       });
 
       setExistingTestCases(data.map((testCase) => testCase.name));
-    } catch (error) {
+    } catch {
       setExistingTestCases([]);
     }
   }, [selectedTableData, selectedTable, hasTestSuite]);
@@ -781,6 +791,10 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
         dimensionColumns:
           value.testLevel === TestLevel.COLUMN_DIMENSION
             ? value.dimensionColumns
+            : undefined,
+        topDimensions:
+          value.testLevel === TestLevel.COLUMN_DIMENSION
+            ? value.topDimensions
             : undefined,
         description: isEmpty(value.description) ? undefined : value.description,
         tags: [...(value.tags ?? []), ...(value.glossaryTerms ?? [])],
@@ -941,6 +955,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
     form.setFieldsValue({
       selectedColumn: undefined,
       dimensionColumns: undefined,
+      topDimensions: undefined,
     });
   }, [selectedTable, table, tablesCache, fetchSelectedTableData, form]);
 
@@ -968,6 +983,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
 
     // Reset dimensionColumns when selectedColumn changes
     form.setFieldValue('dimensionColumns', undefined);
+    form.setFieldValue('topDimensions', undefined);
   }, [
     selectedColumn,
     selectedTableData,
@@ -1043,7 +1059,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
       {errorMessage && (
         <div className="floating-error-alert">
           <AlertBar
-            defafultExpand
+            defaultExpand
             className="test-case-form-alert custom-alert-description"
             message={errorMessage}
             type="error"
@@ -1181,6 +1197,19 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
               />
             </Form.Item>
           )}
+          {testLevelFieldValue === TestLevel.COLUMN_DIMENSION && (
+            <Form.Item
+              label={t('label.top-dimension-plural')}
+              name="topDimensions">
+              <InputNumber
+                className="w-full"
+                id="root/topDimensions"
+                max={50}
+                min={1}
+                placeholder="5"
+              />
+            </Form.Item>
+          )}
         </Card>
 
         <Card
@@ -1293,7 +1322,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           <Row gutter={[20, 20]}>
             <Col span={24}>
               <AlertBar
-                defafultExpand
+                defaultExpand
                 className="test-case-form-alert custom-alert-description"
                 message={
                   <Transi18next

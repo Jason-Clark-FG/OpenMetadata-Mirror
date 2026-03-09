@@ -11,9 +11,21 @@
  *  limitations under the License.
  */
 
+import { EntityReference } from '../../../generated/entity/type';
 import { PipelineViewMode } from '../../../generated/settings/settings';
+import { EntityData } from '../../../pages/TasksPage/TasksPage.interface';
 import { SearchedDataProps } from '../../SearchedData/SearchedData.interface';
 import { EntityDetailsObjectInterface } from '../ExplorePage.interface';
+
+export type SearchSourceDetails =
+  SearchedDataProps['data'][number]['_source'] & {
+    serviceType?: string;
+    dataProducts?: EntityReference[];
+    columnNames?: string[];
+    database?: EntityReference;
+    databaseSchema?: EntityReference;
+    tableType?: string;
+  };
 
 export interface EntitySummaryPanelProps {
   entityDetails: EntityDetailsObjectInterface;
@@ -25,4 +37,5 @@ export interface EntitySummaryPanelProps {
   pipelineViewMode?: PipelineViewMode;
   downstreamDepth?: number;
   nodesPerLayer?: number;
+  onEntityUpdate?: (updatedEntity: Partial<EntityData>) => void;
 }

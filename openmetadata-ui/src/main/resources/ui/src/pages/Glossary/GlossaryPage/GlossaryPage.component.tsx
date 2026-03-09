@@ -13,7 +13,7 @@
 
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
-import { isEmpty, isNil } from 'lodash';
+import { isEmpty } from 'lodash';
 import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +31,7 @@ import {
 import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
 import { PAGE_SIZE_LARGE, ROUTES } from '../../../constants/constants';
 import { GLOSSARIES_DOCS } from '../../../constants/docs.constants';
+import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { observerOptions } from '../../../constants/Mydata.constants';
 import { useAsyncDeleteProvider } from '../../../context/AsyncDeleteProvider/AsyncDeleteProvider';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
@@ -57,6 +58,7 @@ import {
   updateGlossaryTermVotes,
   updateGlossaryVotes,
 } from '../../../rest/glossaryAPI';
+import { getEntityName } from '../../../utils/EntityUtils';
 import Fqn from '../../../utils/Fqn';
 import { checkPermission } from '../../../utils/PermissionsUtils';
 import { getGlossaryPath } from '../../../utils/RouterUtils';
@@ -268,7 +270,7 @@ const GlossaryPage = () => {
           ) || glossaries[0]
         );
 
-        if (isNil(glossaryFqn) && glossaries[0].fullyQualifiedName) {
+        if (isEmpty(glossaryFqn) && glossaries[0].fullyQualifiedName) {
           navigate(getGlossaryPath(glossaries[0].fullyQualifiedName), {
             replace: true,
           });
@@ -499,6 +501,7 @@ const GlossaryPage = () => {
 
   const resizableLayout = isGlossaryActive ? (
     <ResizableLeftPanels
+      showLearningIcon
       className="content-height-with-resizable-panel"
       firstPanel={{
         className:
@@ -520,7 +523,9 @@ const GlossaryPage = () => {
         ),
       }}
       hideFirstPanel={isImportAction}
-      pageTitle={t('label.glossary')}
+      learningPageId={LEARNING_PAGE_IDS.GLOSSARY}
+      learningTitle={t('label.glossary')}
+      pageTitle={getEntityName(activeGlossary)}
       secondPanel={{
         children: glossaryElement,
         className: 'content-resizable-panel-container',

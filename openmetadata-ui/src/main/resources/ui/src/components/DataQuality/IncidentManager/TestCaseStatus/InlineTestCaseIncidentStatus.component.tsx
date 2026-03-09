@@ -24,13 +24,13 @@ import {
   MenuItem,
   Popover,
   TextField,
-  Typography,
 } from '@mui/material';
+import { Typography } from '@openmetadata/ui-core-components';
 import {
   ArrowLeft as ArrowBackIcon,
+  Check as CheckIcon,
   ChevronDown as ArrowDownIcon,
   ChevronUp as ArrowUpIcon,
-  Check as CheckIcon,
   XClose as CloseIcon,
 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
@@ -39,6 +39,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { STATUS_COLORS } from '../../../../constants/Color.constants';
 import { PAGE_SIZE_BASE } from '../../../../constants/constants';
+import { TEST_CASE_RESOLUTION_STATUS_LABELS } from '../../../../constants/TestSuite.constant';
 import { EntityType } from '../../../../enums/entity.enum';
 import { CreateTestCaseResolutionStatus } from '../../../../generated/api/tests/createTestCaseResolutionStatus';
 import {
@@ -379,7 +380,7 @@ const InlineTestCaseIncidentStatus = ({
     if (userOptions.length === 0) {
       return (
         <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography color="text.secondary" variant="body2">
+          <Typography as="span" className="tw:text-body tw:text-tertiary">
             {t('message.no-username-available', { user: '' })}
           </Typography>
         </Box>
@@ -417,7 +418,7 @@ const InlineTestCaseIncidentStatus = ({
       <Chip
         data-testid={`${data.testCaseReference?.name}-status`}
         deleteIcon={dropdownIcon}
-        label={statusType}
+        label={TEST_CASE_RESOLUTION_STATUS_LABELS[statusType]}
         sx={{
           px: 1,
           backgroundColor: statusColor.bg,
@@ -479,7 +480,7 @@ const InlineTestCaseIncidentStatus = ({
               },
             }}
             onClick={() => handleStatusChange(status)}>
-            {status}
+            {TEST_CASE_RESOLUTION_STATUS_LABELS[status]}
           </MenuItem>
         ))}
       </Menu>
@@ -519,7 +520,7 @@ const InlineTestCaseIncidentStatus = ({
           <IconButton size="small" onClick={handleBackToStatusMenu}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+          <Typography as="span" className="tw:text-base tw:font-semibold">
             {t('label.assigned')}
           </Typography>
           <Box sx={{ flex: 1 }} />
@@ -589,7 +590,7 @@ const InlineTestCaseIncidentStatus = ({
           <IconButton size="small" onClick={handleBackToStatusMenu}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography sx={{ fontWeight: 600, fontSize: 16 }}>
+          <Typography as="span" className="tw:text-base tw:font-semibold">
             {t('label.resolved')}
           </Typography>
           <Box sx={{ flex: 1 }} />

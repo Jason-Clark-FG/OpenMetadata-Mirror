@@ -2,7 +2,7 @@
 
 # Discovery
 
-> **7 Components** | **26 Files** | **355 Tests** | **367 Scenarios** 🚀
+> **7 Components** | **28 Files** | **697 Tests** | **827 Scenarios** 🚀
 
 ## Table of Contents
 - [Feed](#feed)
@@ -20,7 +20,7 @@
 ## Feed
 
 <details open>
-<summary>📄 <b>ActivityFeed.spec.ts</b> (9 tests, 11 scenarios)</summary>
+<summary>📄 <b>ActivityFeed.spec.ts</b> (11 tests, 14 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/ActivityFeed.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/ActivityFeed.spec.ts)
 
@@ -45,6 +45,14 @@
 | | ↳ *Admin user creates a conversation on an entity* | |
 | | ↳ *User1 mentions admin user in a reply* | |
 | | ↳ *Admin user checks notification for correct user and timestamp* | |
+| | ↳ *Update user display name and verify reaction tooltip* | |
+
+### Mentions: Chinese character encoding in activity feed
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Mentions: Chinese character encoding in activity feed** - Should allow mentioning a user with Chinese characters in the activity feed | Allow mentioning a user with Chinese characters in the activity feed |
+| 2 | **Mentions: Chinese character encoding in activity feed** - Should encode the chinese character while mentioning api endpoint | Encode the chinese character while mentioning api endpoint |
 
 </details>
 
@@ -56,7 +64,7 @@
 ## Search
 
 <details open>
-<summary>📄 <b>AdvancedSearch.spec.ts</b> (116 tests, 116 scenarios)</summary>
+<summary>📄 <b>AdvancedSearch.spec.ts</b> (111 tests, 111 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/AdvancedSearch.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/AdvancedSearch.spec.ts)
 
@@ -82,104 +90,99 @@
 | 16 | **Advanced Search** - Verify All conditions for Name field | All conditions for Name field |
 | 17 | **Advanced Search** - Verify All conditions for Project field | All conditions for Project field |
 | 18 | **Advanced Search** - Verify All conditions for Status field | All conditions for Status field |
-| 19 | **Advanced Search** - Verify All conditions for Table Type field | All conditions for Table Type field |
-| 20 | **Advanced Search** - Verify All conditions for Chart field | All conditions for Chart field |
-| 21 | **Advanced Search** - Verify All conditions for Response Schema Field field | All conditions for Response Schema Field field |
-| 22 | **Advanced Search** - Verify All conditions for Request Schema Field field | All conditions for Request Schema Field field |
-| 23 | **Advanced Search** - Verify All conditions for Data Product field | All conditions for Data Product field |
-| 24 | **Advanced Search** - Verify Rule functionality for field Owners with AND operator | Rule functionality for field Owners with AND operator |
-| 25 | **Advanced Search** - Verify Group functionality for field Owners with AND operator | Group functionality for field Owners with AND operator |
-| 26 | **Advanced Search** - Verify Rule functionality for field Tags with AND operator | Rule functionality for field Tags with AND operator |
-| 27 | **Advanced Search** - Verify Group functionality for field Tags with AND operator | Group functionality for field Tags with AND operator |
-| 28 | **Advanced Search** - Verify Rule functionality for field Tier with AND operator | Rule functionality for field Tier with AND operator |
-| 29 | **Advanced Search** - Verify Group functionality for field Tier with AND operator | Group functionality for field Tier with AND operator |
-| 30 | **Advanced Search** - Verify Rule functionality for field Service with AND operator | Rule functionality for field Service with AND operator |
-| 31 | **Advanced Search** - Verify Group functionality for field Service with AND operator | Group functionality for field Service with AND operator |
-| 32 | **Advanced Search** - Verify Rule functionality for field Database with AND operator | Rule functionality for field Database with AND operator |
-| 33 | **Advanced Search** - Verify Group functionality for field Database with AND operator | Group functionality for field Database with AND operator |
-| 34 | **Advanced Search** - Verify Rule functionality for field Database Schema with AND operator | Rule functionality for field Database Schema with AND operator |
-| 35 | **Advanced Search** - Verify Group functionality for field Database Schema with AND operator | Group functionality for field Database Schema with AND operator |
-| 36 | **Advanced Search** - Verify Rule functionality for field Column with AND operator | Rule functionality for field Column with AND operator |
-| 37 | **Advanced Search** - Verify Group functionality for field Column with AND operator | Group functionality for field Column with AND operator |
-| 38 | **Advanced Search** - Verify Rule functionality for field Display Name with AND operator | Rule functionality for field Display Name with AND operator |
-| 39 | **Advanced Search** - Verify Group functionality for field Display Name with AND operator | Group functionality for field Display Name with AND operator |
-| 40 | **Advanced Search** - Verify Rule functionality for field Service Type with AND operator | Rule functionality for field Service Type with AND operator |
-| 41 | **Advanced Search** - Verify Group functionality for field Service Type with AND operator | Group functionality for field Service Type with AND operator |
-| 42 | **Advanced Search** - Verify Rule functionality for field Schema Field with AND operator | Rule functionality for field Schema Field with AND operator |
-| 43 | **Advanced Search** - Verify Group functionality for field Schema Field with AND operator | Group functionality for field Schema Field with AND operator |
-| 44 | **Advanced Search** - Verify Rule functionality for field Container Column with AND operator | Rule functionality for field Container Column with AND operator |
-| 45 | **Advanced Search** - Verify Group functionality for field Container Column with AND operator | Group functionality for field Container Column with AND operator |
-| 46 | **Advanced Search** - Verify Rule functionality for field Data Model Type with AND operator | Rule functionality for field Data Model Type with AND operator |
-| 47 | **Advanced Search** - Verify Group functionality for field Data Model Type with AND operator | Group functionality for field Data Model Type with AND operator |
-| 48 | **Advanced Search** - Verify Rule functionality for field Field with AND operator | Rule functionality for field Field with AND operator |
-| 49 | **Advanced Search** - Verify Group functionality for field Field with AND operator | Group functionality for field Field with AND operator |
-| 50 | **Advanced Search** - Verify Rule functionality for field Task with AND operator | Rule functionality for field Task with AND operator |
-| 51 | **Advanced Search** - Verify Group functionality for field Task with AND operator | Group functionality for field Task with AND operator |
-| 52 | **Advanced Search** - Verify Rule functionality for field Domains with AND operator | Rule functionality for field Domains with AND operator |
-| 53 | **Advanced Search** - Verify Group functionality for field Domains with AND operator | Group functionality for field Domains with AND operator |
-| 54 | **Advanced Search** - Verify Rule functionality for field Name with AND operator | Rule functionality for field Name with AND operator |
-| 55 | **Advanced Search** - Verify Group functionality for field Name with AND operator | Group functionality for field Name with AND operator |
-| 56 | **Advanced Search** - Verify Rule functionality for field Project with AND operator | Rule functionality for field Project with AND operator |
-| 57 | **Advanced Search** - Verify Group functionality for field Project with AND operator | Group functionality for field Project with AND operator |
-| 58 | **Advanced Search** - Verify Rule functionality for field Status with AND operator | Rule functionality for field Status with AND operator |
-| 59 | **Advanced Search** - Verify Group functionality for field Status with AND operator | Group functionality for field Status with AND operator |
-| 60 | **Advanced Search** - Verify Rule functionality for field Table Type with AND operator | Rule functionality for field Table Type with AND operator |
-| 61 | **Advanced Search** - Verify Group functionality for field Table Type with AND operator | Group functionality for field Table Type with AND operator |
-| 62 | **Advanced Search** - Verify Rule functionality for field Chart with AND operator | Rule functionality for field Chart with AND operator |
-| 63 | **Advanced Search** - Verify Group functionality for field Chart with AND operator | Group functionality for field Chart with AND operator |
-| 64 | **Advanced Search** - Verify Rule functionality for field Response Schema Field with AND operator | Rule functionality for field Response Schema Field with AND operator |
-| 65 | **Advanced Search** - Verify Group functionality for field Response Schema Field with AND operator | Group functionality for field Response Schema Field with AND operator |
-| 66 | **Advanced Search** - Verify Rule functionality for field Request Schema Field with AND operator | Rule functionality for field Request Schema Field with AND operator |
-| 67 | **Advanced Search** - Verify Group functionality for field Request Schema Field with AND operator | Group functionality for field Request Schema Field with AND operator |
-| 68 | **Advanced Search** - Verify Rule functionality for field Data Product with AND operator | Rule functionality for field Data Product with AND operator |
-| 69 | **Advanced Search** - Verify Group functionality for field Data Product with AND operator | Group functionality for field Data Product with AND operator |
-| 70 | **Advanced Search** - Verify Rule functionality for field Owners with OR operator | Rule functionality for field Owners with OR operator |
-| 71 | **Advanced Search** - Verify Group functionality for field Owners with OR operator | Group functionality for field Owners with OR operator |
-| 72 | **Advanced Search** - Verify Rule functionality for field Tags with OR operator | Rule functionality for field Tags with OR operator |
-| 73 | **Advanced Search** - Verify Group functionality for field Tags with OR operator | Group functionality for field Tags with OR operator |
-| 74 | **Advanced Search** - Verify Rule functionality for field Tier with OR operator | Rule functionality for field Tier with OR operator |
-| 75 | **Advanced Search** - Verify Group functionality for field Tier with OR operator | Group functionality for field Tier with OR operator |
-| 76 | **Advanced Search** - Verify Rule functionality for field Service with OR operator | Rule functionality for field Service with OR operator |
-| 77 | **Advanced Search** - Verify Group functionality for field Service with OR operator | Group functionality for field Service with OR operator |
-| 78 | **Advanced Search** - Verify Rule functionality for field Database with OR operator | Rule functionality for field Database with OR operator |
-| 79 | **Advanced Search** - Verify Group functionality for field Database with OR operator | Group functionality for field Database with OR operator |
-| 80 | **Advanced Search** - Verify Rule functionality for field Database Schema with OR operator | Rule functionality for field Database Schema with OR operator |
-| 81 | **Advanced Search** - Verify Group functionality for field Database Schema with OR operator | Group functionality for field Database Schema with OR operator |
-| 82 | **Advanced Search** - Verify Rule functionality for field Column with OR operator | Rule functionality for field Column with OR operator |
-| 83 | **Advanced Search** - Verify Group functionality for field Column with OR operator | Group functionality for field Column with OR operator |
-| 84 | **Advanced Search** - Verify Rule functionality for field Display Name with OR operator | Rule functionality for field Display Name with OR operator |
-| 85 | **Advanced Search** - Verify Group functionality for field Display Name with OR operator | Group functionality for field Display Name with OR operator |
-| 86 | **Advanced Search** - Verify Rule functionality for field Service Type with OR operator | Rule functionality for field Service Type with OR operator |
-| 87 | **Advanced Search** - Verify Group functionality for field Service Type with OR operator | Group functionality for field Service Type with OR operator |
-| 88 | **Advanced Search** - Verify Rule functionality for field Schema Field with OR operator | Rule functionality for field Schema Field with OR operator |
-| 89 | **Advanced Search** - Verify Group functionality for field Schema Field with OR operator | Group functionality for field Schema Field with OR operator |
-| 90 | **Advanced Search** - Verify Rule functionality for field Container Column with OR operator | Rule functionality for field Container Column with OR operator |
-| 91 | **Advanced Search** - Verify Group functionality for field Container Column with OR operator | Group functionality for field Container Column with OR operator |
-| 92 | **Advanced Search** - Verify Rule functionality for field Data Model Type with OR operator | Rule functionality for field Data Model Type with OR operator |
-| 93 | **Advanced Search** - Verify Group functionality for field Data Model Type with OR operator | Group functionality for field Data Model Type with OR operator |
-| 94 | **Advanced Search** - Verify Rule functionality for field Field with OR operator | Rule functionality for field Field with OR operator |
-| 95 | **Advanced Search** - Verify Group functionality for field Field with OR operator | Group functionality for field Field with OR operator |
-| 96 | **Advanced Search** - Verify Rule functionality for field Task with OR operator | Rule functionality for field Task with OR operator |
-| 97 | **Advanced Search** - Verify Group functionality for field Task with OR operator | Group functionality for field Task with OR operator |
-| 98 | **Advanced Search** - Verify Rule functionality for field Domains with OR operator | Rule functionality for field Domains with OR operator |
-| 99 | **Advanced Search** - Verify Group functionality for field Domains with OR operator | Group functionality for field Domains with OR operator |
-| 100 | **Advanced Search** - Verify Rule functionality for field Name with OR operator | Rule functionality for field Name with OR operator |
-| 101 | **Advanced Search** - Verify Group functionality for field Name with OR operator | Group functionality for field Name with OR operator |
-| 102 | **Advanced Search** - Verify Rule functionality for field Project with OR operator | Rule functionality for field Project with OR operator |
-| 103 | **Advanced Search** - Verify Group functionality for field Project with OR operator | Group functionality for field Project with OR operator |
-| 104 | **Advanced Search** - Verify Rule functionality for field Status with OR operator | Rule functionality for field Status with OR operator |
-| 105 | **Advanced Search** - Verify Group functionality for field Status with OR operator | Group functionality for field Status with OR operator |
-| 106 | **Advanced Search** - Verify Rule functionality for field Table Type with OR operator | Rule functionality for field Table Type with OR operator |
-| 107 | **Advanced Search** - Verify Group functionality for field Table Type with OR operator | Group functionality for field Table Type with OR operator |
-| 108 | **Advanced Search** - Verify Rule functionality for field Chart with OR operator | Rule functionality for field Chart with OR operator |
-| 109 | **Advanced Search** - Verify Group functionality for field Chart with OR operator | Group functionality for field Chart with OR operator |
-| 110 | **Advanced Search** - Verify Rule functionality for field Response Schema Field with OR operator | Rule functionality for field Response Schema Field with OR operator |
-| 111 | **Advanced Search** - Verify Group functionality for field Response Schema Field with OR operator | Group functionality for field Response Schema Field with OR operator |
-| 112 | **Advanced Search** - Verify Rule functionality for field Request Schema Field with OR operator | Rule functionality for field Request Schema Field with OR operator |
-| 113 | **Advanced Search** - Verify Group functionality for field Request Schema Field with OR operator | Group functionality for field Request Schema Field with OR operator |
-| 114 | **Advanced Search** - Verify Rule functionality for field Data Product with OR operator | Rule functionality for field Data Product with OR operator |
-| 115 | **Advanced Search** - Verify Group functionality for field Data Product with OR operator | Group functionality for field Data Product with OR operator |
-| 116 | **Advanced Search** - Verify search with non existing value do not result in infinite search | Search with non existing value do not result in infinite search |
+| 19 | **Advanced Search** - Verify All conditions for Chart field | All conditions for Chart field |
+| 20 | **Advanced Search** - Verify All conditions for Response Schema Field field | All conditions for Response Schema Field field |
+| 21 | **Advanced Search** - Verify All conditions for Request Schema Field field | All conditions for Request Schema Field field |
+| 22 | **Advanced Search** - Verify All conditions for Data Product field | All conditions for Data Product field |
+| 23 | **Advanced Search** - Verify Rule functionality for field Owners with AND operator | Rule functionality for field Owners with AND operator |
+| 24 | **Advanced Search** - Verify Group functionality for field Owners with AND operator | Group functionality for field Owners with AND operator |
+| 25 | **Advanced Search** - Verify Rule functionality for field Tags with AND operator | Rule functionality for field Tags with AND operator |
+| 26 | **Advanced Search** - Verify Group functionality for field Tags with AND operator | Group functionality for field Tags with AND operator |
+| 27 | **Advanced Search** - Verify Rule functionality for field Tier with AND operator | Rule functionality for field Tier with AND operator |
+| 28 | **Advanced Search** - Verify Group functionality for field Tier with AND operator | Group functionality for field Tier with AND operator |
+| 29 | **Advanced Search** - Verify Rule functionality for field Service with AND operator | Rule functionality for field Service with AND operator |
+| 30 | **Advanced Search** - Verify Group functionality for field Service with AND operator | Group functionality for field Service with AND operator |
+| 31 | **Advanced Search** - Verify Rule functionality for field Database with AND operator | Rule functionality for field Database with AND operator |
+| 32 | **Advanced Search** - Verify Group functionality for field Database with AND operator | Group functionality for field Database with AND operator |
+| 33 | **Advanced Search** - Verify Rule functionality for field Database Schema with AND operator | Rule functionality for field Database Schema with AND operator |
+| 34 | **Advanced Search** - Verify Group functionality for field Database Schema with AND operator | Group functionality for field Database Schema with AND operator |
+| 35 | **Advanced Search** - Verify Rule functionality for field Column with AND operator | Rule functionality for field Column with AND operator |
+| 36 | **Advanced Search** - Verify Group functionality for field Column with AND operator | Group functionality for field Column with AND operator |
+| 37 | **Advanced Search** - Verify Rule functionality for field Display Name with AND operator | Rule functionality for field Display Name with AND operator |
+| 38 | **Advanced Search** - Verify Group functionality for field Display Name with AND operator | Group functionality for field Display Name with AND operator |
+| 39 | **Advanced Search** - Verify Rule functionality for field Service Type with AND operator | Rule functionality for field Service Type with AND operator |
+| 40 | **Advanced Search** - Verify Group functionality for field Service Type with AND operator | Group functionality for field Service Type with AND operator |
+| 41 | **Advanced Search** - Verify Rule functionality for field Schema Field with AND operator | Rule functionality for field Schema Field with AND operator |
+| 42 | **Advanced Search** - Verify Group functionality for field Schema Field with AND operator | Group functionality for field Schema Field with AND operator |
+| 43 | **Advanced Search** - Verify Rule functionality for field Container Column with AND operator | Rule functionality for field Container Column with AND operator |
+| 44 | **Advanced Search** - Verify Group functionality for field Container Column with AND operator | Group functionality for field Container Column with AND operator |
+| 45 | **Advanced Search** - Verify Rule functionality for field Data Model Type with AND operator | Rule functionality for field Data Model Type with AND operator |
+| 46 | **Advanced Search** - Verify Group functionality for field Data Model Type with AND operator | Group functionality for field Data Model Type with AND operator |
+| 47 | **Advanced Search** - Verify Rule functionality for field Field with AND operator | Rule functionality for field Field with AND operator |
+| 48 | **Advanced Search** - Verify Group functionality for field Field with AND operator | Group functionality for field Field with AND operator |
+| 49 | **Advanced Search** - Verify Rule functionality for field Task with AND operator | Rule functionality for field Task with AND operator |
+| 50 | **Advanced Search** - Verify Group functionality for field Task with AND operator | Group functionality for field Task with AND operator |
+| 51 | **Advanced Search** - Verify Rule functionality for field Domains with AND operator | Rule functionality for field Domains with AND operator |
+| 52 | **Advanced Search** - Verify Group functionality for field Domains with AND operator | Group functionality for field Domains with AND operator |
+| 53 | **Advanced Search** - Verify Rule functionality for field Name with AND operator | Rule functionality for field Name with AND operator |
+| 54 | **Advanced Search** - Verify Group functionality for field Name with AND operator | Group functionality for field Name with AND operator |
+| 55 | **Advanced Search** - Verify Rule functionality for field Project with AND operator | Rule functionality for field Project with AND operator |
+| 56 | **Advanced Search** - Verify Group functionality for field Project with AND operator | Group functionality for field Project with AND operator |
+| 57 | **Advanced Search** - Verify Rule functionality for field Status with AND operator | Rule functionality for field Status with AND operator |
+| 58 | **Advanced Search** - Verify Group functionality for field Status with AND operator | Group functionality for field Status with AND operator |
+| 59 | **Advanced Search** - Verify Rule functionality for field Chart with AND operator | Rule functionality for field Chart with AND operator |
+| 60 | **Advanced Search** - Verify Group functionality for field Chart with AND operator | Group functionality for field Chart with AND operator |
+| 61 | **Advanced Search** - Verify Rule functionality for field Response Schema Field with AND operator | Rule functionality for field Response Schema Field with AND operator |
+| 62 | **Advanced Search** - Verify Group functionality for field Response Schema Field with AND operator | Group functionality for field Response Schema Field with AND operator |
+| 63 | **Advanced Search** - Verify Rule functionality for field Request Schema Field with AND operator | Rule functionality for field Request Schema Field with AND operator |
+| 64 | **Advanced Search** - Verify Group functionality for field Request Schema Field with AND operator | Group functionality for field Request Schema Field with AND operator |
+| 65 | **Advanced Search** - Verify Rule functionality for field Data Product with AND operator | Rule functionality for field Data Product with AND operator |
+| 66 | **Advanced Search** - Verify Group functionality for field Data Product with AND operator | Group functionality for field Data Product with AND operator |
+| 67 | **Advanced Search** - Verify Rule functionality for field Owners with OR operator | Rule functionality for field Owners with OR operator |
+| 68 | **Advanced Search** - Verify Group functionality for field Owners with OR operator | Group functionality for field Owners with OR operator |
+| 69 | **Advanced Search** - Verify Rule functionality for field Tags with OR operator | Rule functionality for field Tags with OR operator |
+| 70 | **Advanced Search** - Verify Group functionality for field Tags with OR operator | Group functionality for field Tags with OR operator |
+| 71 | **Advanced Search** - Verify Rule functionality for field Tier with OR operator | Rule functionality for field Tier with OR operator |
+| 72 | **Advanced Search** - Verify Group functionality for field Tier with OR operator | Group functionality for field Tier with OR operator |
+| 73 | **Advanced Search** - Verify Rule functionality for field Service with OR operator | Rule functionality for field Service with OR operator |
+| 74 | **Advanced Search** - Verify Group functionality for field Service with OR operator | Group functionality for field Service with OR operator |
+| 75 | **Advanced Search** - Verify Rule functionality for field Database with OR operator | Rule functionality for field Database with OR operator |
+| 76 | **Advanced Search** - Verify Group functionality for field Database with OR operator | Group functionality for field Database with OR operator |
+| 77 | **Advanced Search** - Verify Rule functionality for field Database Schema with OR operator | Rule functionality for field Database Schema with OR operator |
+| 78 | **Advanced Search** - Verify Group functionality for field Database Schema with OR operator | Group functionality for field Database Schema with OR operator |
+| 79 | **Advanced Search** - Verify Rule functionality for field Column with OR operator | Rule functionality for field Column with OR operator |
+| 80 | **Advanced Search** - Verify Group functionality for field Column with OR operator | Group functionality for field Column with OR operator |
+| 81 | **Advanced Search** - Verify Rule functionality for field Display Name with OR operator | Rule functionality for field Display Name with OR operator |
+| 82 | **Advanced Search** - Verify Group functionality for field Display Name with OR operator | Group functionality for field Display Name with OR operator |
+| 83 | **Advanced Search** - Verify Rule functionality for field Service Type with OR operator | Rule functionality for field Service Type with OR operator |
+| 84 | **Advanced Search** - Verify Group functionality for field Service Type with OR operator | Group functionality for field Service Type with OR operator |
+| 85 | **Advanced Search** - Verify Rule functionality for field Schema Field with OR operator | Rule functionality for field Schema Field with OR operator |
+| 86 | **Advanced Search** - Verify Group functionality for field Schema Field with OR operator | Group functionality for field Schema Field with OR operator |
+| 87 | **Advanced Search** - Verify Rule functionality for field Container Column with OR operator | Rule functionality for field Container Column with OR operator |
+| 88 | **Advanced Search** - Verify Group functionality for field Container Column with OR operator | Group functionality for field Container Column with OR operator |
+| 89 | **Advanced Search** - Verify Rule functionality for field Data Model Type with OR operator | Rule functionality for field Data Model Type with OR operator |
+| 90 | **Advanced Search** - Verify Group functionality for field Data Model Type with OR operator | Group functionality for field Data Model Type with OR operator |
+| 91 | **Advanced Search** - Verify Rule functionality for field Field with OR operator | Rule functionality for field Field with OR operator |
+| 92 | **Advanced Search** - Verify Group functionality for field Field with OR operator | Group functionality for field Field with OR operator |
+| 93 | **Advanced Search** - Verify Rule functionality for field Task with OR operator | Rule functionality for field Task with OR operator |
+| 94 | **Advanced Search** - Verify Group functionality for field Task with OR operator | Group functionality for field Task with OR operator |
+| 95 | **Advanced Search** - Verify Rule functionality for field Domains with OR operator | Rule functionality for field Domains with OR operator |
+| 96 | **Advanced Search** - Verify Group functionality for field Domains with OR operator | Group functionality for field Domains with OR operator |
+| 97 | **Advanced Search** - Verify Rule functionality for field Name with OR operator | Rule functionality for field Name with OR operator |
+| 98 | **Advanced Search** - Verify Group functionality for field Name with OR operator | Group functionality for field Name with OR operator |
+| 99 | **Advanced Search** - Verify Rule functionality for field Project with OR operator | Rule functionality for field Project with OR operator |
+| 100 | **Advanced Search** - Verify Group functionality for field Project with OR operator | Group functionality for field Project with OR operator |
+| 101 | **Advanced Search** - Verify Rule functionality for field Status with OR operator | Rule functionality for field Status with OR operator |
+| 102 | **Advanced Search** - Verify Group functionality for field Status with OR operator | Group functionality for field Status with OR operator |
+| 103 | **Advanced Search** - Verify Rule functionality for field Chart with OR operator | Rule functionality for field Chart with OR operator |
+| 104 | **Advanced Search** - Verify Group functionality for field Chart with OR operator | Group functionality for field Chart with OR operator |
+| 105 | **Advanced Search** - Verify Rule functionality for field Response Schema Field with OR operator | Rule functionality for field Response Schema Field with OR operator |
+| 106 | **Advanced Search** - Verify Group functionality for field Response Schema Field with OR operator | Group functionality for field Response Schema Field with OR operator |
+| 107 | **Advanced Search** - Verify Rule functionality for field Request Schema Field with OR operator | Rule functionality for field Request Schema Field with OR operator |
+| 108 | **Advanced Search** - Verify Group functionality for field Request Schema Field with OR operator | Group functionality for field Request Schema Field with OR operator |
+| 109 | **Advanced Search** - Verify Rule functionality for field Data Product with OR operator | Rule functionality for field Data Product with OR operator |
+| 110 | **Advanced Search** - Verify Group functionality for field Data Product with OR operator | Group functionality for field Data Product with OR operator |
+| 111 | **Advanced Search** - Verify search with non existing value do not result in infinite search | Search with non existing value do not result in infinite search |
 
 </details>
 
@@ -259,7 +262,7 @@
 ## Data Assets
 
 <details open>
-<summary>📄 <b>DataAssetRulesDisabled.spec.ts</b> (31 tests, 31 scenarios)</summary>
+<summary>📄 <b>DataAssetRulesDisabled.spec.ts</b> (32 tests, 32 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataAssetRulesDisabled.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataAssetRulesDisabled.spec.ts)
 
@@ -307,10 +310,16 @@
 | 3 | **Data Asset Rules Disabled Bulk Edit Actions** - Database Schema | Database Schema |
 | | ↳ *Perform bulk edit action* | |
 
+### GlossaryTerm Domain Entity Rules Disabled
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **GlossaryTerm Domain Entity Rules Disabled** - should allow multiple domain selection for glossary term when entity rules are disabled | Allow multiple domain selection for glossary term when entity rules are disabled |
+
 </details>
 
 <details open>
-<summary>📄 <b>DataAssetRulesEnabled.spec.ts</b> (28 tests, 28 scenarios)</summary>
+<summary>📄 <b>DataAssetRulesEnabled.spec.ts</b> (29 tests, 29 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataAssetRulesEnabled.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataAssetRulesEnabled.spec.ts)
 
@@ -347,10 +356,16 @@
 | 27 | **Data Asset Rules Enabled** - Verify the Database Schema Entity Action items after rules is Enabled | The Database Schema Entity Action items after rules is Enabled |
 | 28 | **Data Asset Rules Enabled** - Verify the Drive Service Entity Action items after rules is Enabled | The Drive Service Entity Action items after rules is Enabled |
 
+### GlossaryTerm Domain Entity Rules Enabled
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **GlossaryTerm Domain Entity Rules Enabled** - should enforce single domain selection for glossary term when entity rules are enabled | Enforce single domain selection for glossary term when entity rules are enabled |
+
 </details>
 
 <details open>
-<summary>📄 <b>Table.spec.ts</b> (12 tests, 12 scenarios)</summary>
+<summary>📄 <b>Table.spec.ts</b> (13 tests, 13 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/Table.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Table.spec.ts)
 
@@ -359,8 +374,8 @@
 | # | Test Case | Description |
 |---|-----------|-------------|
 | 1 | **Table pagination sorting search scenarios ** - Table pagination with sorting should works | Table pagination with sorting should works |
-| 2 | **Table pagination sorting search scenarios ** - Table search with sorting should works | Table search with sorting should works |
-| 3 | **Table pagination sorting search scenarios ** - Table filter with sorting should works | Table filter with sorting should works |
+| 2 | **Table pagination sorting search scenarios ** - Table search with sorting should work | Table search with sorting should work |
+| 3 | **Table pagination sorting search scenarios ** - Table filter with sorting should work | Table filter with sorting should work |
 | 4 | **Table pagination sorting search scenarios ** - Table page should show schema tab with count | Table page should show schema tab with count |
 | 5 | **Table pagination sorting search scenarios ** - should persist current page | Persist current page |
 | 6 | **Table pagination sorting search scenarios ** - should persist page size | Persist page size |
@@ -369,10 +384,8 @@
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Table & Data Model columns table pagination** - pagination for table column should work | Pagination for table column should work |
-| 2 | **Table & Data Model columns table pagination** - pagination for dashboard data model columns should work | Pagination for dashboard data model columns should work |
-| 3 | **Table & Data Model columns table pagination** - expand collapse should only visible for nested columns | Expand collapse should only visible for nested columns |
-| 4 | **Table & Data Model columns table pagination** - expand / collapse should not appear after updating nested fields table | Expand / collapse should not appear after updating nested fields table |
+| 1 | **Table & Data Model columns table pagination** - expand collapse should only visible for nested columns | Expand collapse should only visible for nested columns |
+| 2 | **Table & Data Model columns table pagination** - expand / collapse should not appear after updating nested fields table | Expand / collapse should not appear after updating nested fields table |
 
 ### Tags and glossary terms should be consistent for search 
 
@@ -380,6 +393,19 @@
 |---|-----------|-------------|
 | 1 | **Tags and glossary terms should be consistent for search ** - Glossary term should be consistent for search | Glossary term should be consistent for search |
 | 2 | **Tags and glossary terms should be consistent for search ** - Tags term should be consistent for search | Tags term should be consistent for search |
+
+### Large Table Column Search & Copy Link
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Large Table Column Search & Copy Link** - Search for column, copy link, and verify side panel behavior | Search for column, copy link, and verify side panel behavior |
+
+### dbt Tab Visibility for Seed Files
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **dbt Tab Visibility for Seed Files** - should show dbt tab if only path is present | Show dbt tab if only path is present |
+| 2 | **dbt Tab Visibility for Seed Files** - should show dbt tab if only source project is present | Show dbt tab if only source project is present |
 
 </details>
 
@@ -456,7 +482,7 @@
 </details>
 
 <details open>
-<summary>📄 <b>Container.spec.ts</b> (3 tests, 3 scenarios)</summary>
+<summary>📄 <b>Container.spec.ts</b> (5 tests, 5 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/Container.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Container.spec.ts)
 
@@ -467,11 +493,32 @@
 | 1 | **Container entity specific tests ** - Container page should show Schema and Children count | Container page should show Schema and Children count |
 | 2 | **Container entity specific tests ** - Container page children pagination | Container page children pagination |
 | 3 | **Container entity specific tests ** - expand / collapse should not appear after updating nested fields for container | Expand / collapse should not appear after updating nested fields for container |
+| 4 | **Container entity specific tests ** - Copy column link button should copy the column URL to clipboard | Copy column link button should copy the column URL to clipboard |
+| 5 | **Container entity specific tests ** - Copy column link should have valid URL format | Copy column link should have valid URL format |
 
 </details>
 
 <details open>
-<summary>📄 <b>Dashboards.spec.ts</b> (3 tests, 3 scenarios)</summary>
+<summary>📄 <b>SchemaTable.spec.ts</b> (5 tests, 6 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Flow/SchemaTable.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Flow/SchemaTable.spec.ts)
+
+### Standalone Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | schema table test | Schema table test |
+| | ↳ *set owner* | |
+| | ↳ *set the description* | |
+| 2 | Schema Table Pagination should work Properly | Schema Table Pagination should work Properly |
+| 3 | Copy column link button should copy the column URL to clipboard | Copy column link button should copy the column URL to clipboard |
+| 4 | Copy column link should have valid URL format | Copy column link should have valid URL format |
+| 5 | Copy nested column link should include full hierarchical path | Copy nested column link should include full hierarchical path |
+
+</details>
+
+<details open>
+<summary>📄 <b>Dashboards.spec.ts</b> (4 tests, 4 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/Dashboards.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Dashboards.spec.ts)
 
@@ -493,21 +540,27 @@
 |---|-----------|-------------|
 | 1 | **Data Model** - expand / collapse should not appear after updating nested fields for dashboardDataModels | Expand / collapse should not appear after updating nested fields for dashboardDataModels |
 
-</details>
-
-<details open>
-<summary>📄 <b>SchemaTable.spec.ts</b> (2 tests, 3 scenarios)</summary>
-
-> Source: [`src/main/resources/ui/playwright/e2e/Flow/SchemaTable.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Flow/SchemaTable.spec.ts)
-
-### Standalone Tests
+### Data Model with special characters in name
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | schema table test | Schema table test |
-| | ↳ *set owner* | |
-| | ↳ *set the description* | |
-| 2 | Schema Table Pagination should work Properly | Schema Table Pagination should work Properly |
+| 1 | **Data Model with special characters in name** - should display data model when service name contains dots | Display data model when service name contains dots |
+
+</details>
+
+<details open>
+<summary>📄 <b>Topic.spec.ts</b> (4 tests, 4 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/Topic.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Topic.spec.ts)
+
+### Topic entity specific tests 
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Topic entity specific tests ** - Topic page should show schema tab with count | Topic page should show schema tab with count |
+| 2 | **Topic entity specific tests ** - Copy field link button should copy the field URL to clipboard | Copy field link button should copy the field URL to clipboard |
+| 3 | **Topic entity specific tests ** - Copy field link should have valid URL format | Copy field link should have valid URL format |
+| 4 | **Topic entity specific tests ** - Copy nested field link should include full hierarchical path | Copy nested field link should include full hierarchical path |
 
 </details>
 
@@ -541,15 +594,20 @@
 </details>
 
 <details open>
-<summary>📄 <b>Topic.spec.ts</b> (1 tests, 1 scenarios)</summary>
+<summary>📄 <b>PipelineExecution.spec.ts</b> (1 tests, 5 scenarios)</summary>
 
-> Source: [`src/main/resources/ui/playwright/e2e/Features/Topic.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Topic.spec.ts)
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/PipelineExecution.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/PipelineExecution.spec.ts)
 
-### Topic entity specific tests 
+### Pipeline Execution Tab
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Topic entity specific tests ** - Topic page should show schema tab with count | Topic page should show schema tab with count |
+| 1 | **Pipeline Execution Tab** - Execution tab should display start time, end time, and duration columns | Execution tab should display start time, end time, and duration columns |
+| | ↳ *Navigate to pipeline entity page* | |
+| | ↳ *Navigate to Executions tab* | |
+| | ↳ *Verify ListView displays timing columns* | |
+| | ↳ *Verify execution data rows are present* | |
+| | ↳ *Verify duration is 10 minutes for both tasks* | |
 
 </details>
 
@@ -618,7 +676,465 @@
 ## Explore
 
 <details open>
-<summary>📄 <b>ExploreTree.spec.ts</b> (26 tests, 32 scenarios)</summary>
+<summary>📄 <b>ExplorePageRightPanel.spec.ts</b> (326 tests, 436 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/ExplorePageRightPanel.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/ExplorePageRightPanel.spec.ts)
+
+### Right Panel Test Suite
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for table | Perform CRUD and Removal operations for table |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 2 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for dashboard | Perform CRUD and Removal operations for dashboard |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 3 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for pipeline | Perform CRUD and Removal operations for pipeline |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 4 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for topic | Perform CRUD and Removal operations for topic |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 5 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for database | Perform CRUD and Removal operations for database |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 6 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for databaseSchema | Perform CRUD and Removal operations for databaseSchema |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 7 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for dashboardDataModel | Perform CRUD and Removal operations for dashboardDataModel |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 8 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for mlmodel | Perform CRUD and Removal operations for mlmodel |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 9 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for container | Perform CRUD and Removal operations for container |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 10 | **Right Panel Test Suite** - Should perform CRUD and Removal operations for searchIndex | Perform CRUD and Removal operations for searchIndex |
+| | ↳ *Navigate to entity* | |
+| | ↳ *Update description* | |
+| | ↳ *Update/edit tags* | |
+| | ↳ *Update/edit tier* | |
+| | ↳ *Update/edit glossary terms* | |
+| | ↳ *Update owners* | |
+| | ↳ *Update domain* | |
+| | ↳ *Remove tag* | |
+| | ↳ *Remove tier* | |
+| | ↳ *Remove glossary term* | |
+| | ↳ *Remove domain* | |
+| | ↳ *Remove user owner* | |
+| 11 | **Right Panel Test Suite** - Should display and verify schema fields for table | Display and verify schema fields for table |
+| 12 | **Right Panel Test Suite** - Should display and verify schema fields for dashboard | Display and verify schema fields for dashboard |
+| 13 | **Right Panel Test Suite** - Should display and verify schema fields for pipeline | Display and verify schema fields for pipeline |
+| 14 | **Right Panel Test Suite** - Should display and verify schema fields for topic | Display and verify schema fields for topic |
+| 15 | **Right Panel Test Suite** - Should display and verify schema fields for database | Display and verify schema fields for database |
+| 16 | **Right Panel Test Suite** - Should display and verify schema fields for databaseSchema | Display and verify schema fields for databaseSchema |
+| 17 | **Right Panel Test Suite** - Should display and verify schema fields for dashboardDataModel | Display and verify schema fields for dashboardDataModel |
+| 18 | **Right Panel Test Suite** - Should display and verify schema fields for mlmodel | Display and verify schema fields for mlmodel |
+| 19 | **Right Panel Test Suite** - Should display and verify schema fields for container | Display and verify schema fields for container |
+| 20 | **Right Panel Test Suite** - Should display and verify schema fields for searchIndex | Display and verify schema fields for searchIndex |
+| 21 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for table | Validates visible/hidden tabs and tab content for table |
+| 22 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for dashboard | Validates visible/hidden tabs and tab content for dashboard |
+| 23 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for pipeline | Validates visible/hidden tabs and tab content for pipeline |
+| 24 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for topic | Validates visible/hidden tabs and tab content for topic |
+| 25 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for database | Validates visible/hidden tabs and tab content for database |
+| 26 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for databaseSchema | Validates visible/hidden tabs and tab content for databaseSchema |
+| 27 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for dashboardDataModel | Validates visible/hidden tabs and tab content for dashboardDataModel |
+| 28 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for mlmodel | Validates visible/hidden tabs and tab content for mlmodel |
+| 29 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for container | Validates visible/hidden tabs and tab content for container |
+| 30 | **Right Panel Test Suite** - validates visible/hidden tabs and tab content for searchIndex | Validates visible/hidden tabs and tab content for searchIndex |
+| 31 | **Right Panel Test Suite** - Should navigate to lineage and test controls for table | Navigate to lineage and test controls for table |
+| 32 | **Right Panel Test Suite** - Should handle lineage expansion buttons for table | Handle lineage expansion buttons for table |
+| 33 | **Right Panel Test Suite** - Should navigate to lineage and test controls for dashboard | Navigate to lineage and test controls for dashboard |
+| 34 | **Right Panel Test Suite** - Should handle lineage expansion buttons for dashboard | Handle lineage expansion buttons for dashboard |
+| 35 | **Right Panel Test Suite** - Should navigate to lineage and test controls for pipeline | Navigate to lineage and test controls for pipeline |
+| 36 | **Right Panel Test Suite** - Should handle lineage expansion buttons for pipeline | Handle lineage expansion buttons for pipeline |
+| 37 | **Right Panel Test Suite** - Should navigate to lineage and test controls for topic | Navigate to lineage and test controls for topic |
+| 38 | **Right Panel Test Suite** - Should handle lineage expansion buttons for topic | Handle lineage expansion buttons for topic |
+| 39 | **Right Panel Test Suite** - Should navigate to lineage and test controls for database | Navigate to lineage and test controls for database |
+| 40 | **Right Panel Test Suite** - Should handle lineage expansion buttons for database | Handle lineage expansion buttons for database |
+| 41 | **Right Panel Test Suite** - Should navigate to lineage and test controls for databaseSchema | Navigate to lineage and test controls for databaseSchema |
+| 42 | **Right Panel Test Suite** - Should handle lineage expansion buttons for databaseSchema | Handle lineage expansion buttons for databaseSchema |
+| 43 | **Right Panel Test Suite** - Should navigate to lineage and test controls for dashboardDataModel | Navigate to lineage and test controls for dashboardDataModel |
+| 44 | **Right Panel Test Suite** - Should handle lineage expansion buttons for dashboardDataModel | Handle lineage expansion buttons for dashboardDataModel |
+| 45 | **Right Panel Test Suite** - Should navigate to lineage and test controls for mlmodel | Navigate to lineage and test controls for mlmodel |
+| 46 | **Right Panel Test Suite** - Should handle lineage expansion buttons for mlmodel | Handle lineage expansion buttons for mlmodel |
+| 47 | **Right Panel Test Suite** - Should navigate to lineage and test controls for container | Navigate to lineage and test controls for container |
+| 48 | **Right Panel Test Suite** - Should handle lineage expansion buttons for container | Handle lineage expansion buttons for container |
+| 49 | **Right Panel Test Suite** - Should navigate to lineage and test controls for searchIndex | Navigate to lineage and test controls for searchIndex |
+| 50 | **Right Panel Test Suite** - Should handle lineage expansion buttons for searchIndex | Handle lineage expansion buttons for searchIndex |
+| 51 | **Right Panel Test Suite** - Should show lineage connections created via API in the lineage tab | Show lineage connections created via API in the lineage tab |
+| 52 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for table | Navigate to data quality and verify tab structure for table |
+| 53 | **Right Panel Test Suite** - Should display incidents tab for table | Display incidents tab for table |
+| 54 | **Right Panel Test Suite** - Should verify empty state when no test cases for table | Empty state when no test cases for table |
+| 55 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for dashboard | Navigate to data quality and verify tab structure for dashboard |
+| 56 | **Right Panel Test Suite** - Should display incidents tab for dashboard | Display incidents tab for dashboard |
+| 57 | **Right Panel Test Suite** - Should verify empty state when no test cases for dashboard | Empty state when no test cases for dashboard |
+| 58 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for pipeline | Navigate to data quality and verify tab structure for pipeline |
+| 59 | **Right Panel Test Suite** - Should display incidents tab for pipeline | Display incidents tab for pipeline |
+| 60 | **Right Panel Test Suite** - Should verify empty state when no test cases for pipeline | Empty state when no test cases for pipeline |
+| 61 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for topic | Navigate to data quality and verify tab structure for topic |
+| 62 | **Right Panel Test Suite** - Should display incidents tab for topic | Display incidents tab for topic |
+| 63 | **Right Panel Test Suite** - Should verify empty state when no test cases for topic | Empty state when no test cases for topic |
+| 64 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for database | Navigate to data quality and verify tab structure for database |
+| 65 | **Right Panel Test Suite** - Should display incidents tab for database | Display incidents tab for database |
+| 66 | **Right Panel Test Suite** - Should verify empty state when no test cases for database | Empty state when no test cases for database |
+| 67 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for databaseSchema | Navigate to data quality and verify tab structure for databaseSchema |
+| 68 | **Right Panel Test Suite** - Should display incidents tab for databaseSchema | Display incidents tab for databaseSchema |
+| 69 | **Right Panel Test Suite** - Should verify empty state when no test cases for databaseSchema | Empty state when no test cases for databaseSchema |
+| 70 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for dashboardDataModel | Navigate to data quality and verify tab structure for dashboardDataModel |
+| 71 | **Right Panel Test Suite** - Should display incidents tab for dashboardDataModel | Display incidents tab for dashboardDataModel |
+| 72 | **Right Panel Test Suite** - Should verify empty state when no test cases for dashboardDataModel | Empty state when no test cases for dashboardDataModel |
+| 73 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for mlmodel | Navigate to data quality and verify tab structure for mlmodel |
+| 74 | **Right Panel Test Suite** - Should display incidents tab for mlmodel | Display incidents tab for mlmodel |
+| 75 | **Right Panel Test Suite** - Should verify empty state when no test cases for mlmodel | Empty state when no test cases for mlmodel |
+| 76 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for container | Navigate to data quality and verify tab structure for container |
+| 77 | **Right Panel Test Suite** - Should display incidents tab for container | Display incidents tab for container |
+| 78 | **Right Panel Test Suite** - Should verify empty state when no test cases for container | Empty state when no test cases for container |
+| 79 | **Right Panel Test Suite** - Should navigate to data quality and verify tab structure for searchIndex | Navigate to data quality and verify tab structure for searchIndex |
+| 80 | **Right Panel Test Suite** - Should display incidents tab for searchIndex | Display incidents tab for searchIndex |
+| 81 | **Right Panel Test Suite** - Should verify empty state when no test cases for searchIndex | Empty state when no test cases for searchIndex |
+| 82 | **Right Panel Test Suite** - Should display stat cards and filterable test case cards when runs exist | Display stat cards and filterable test case cards when runs exist |
+| 83 | **Right Panel Test Suite** - Should search and filter test cases in Data Quality tab | Search and filter test cases in Data Quality tab |
+| 84 | **Right Panel Test Suite** - Should show incidents tab content and verify incident details when a failed test case exists | Show incidents tab content and verify incident details when a failed test case exists |
+| 85 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for table | Navigate to custom properties and show interface for table |
+| 86 | **Right Panel Test Suite** - Should display custom properties for table | Display custom properties for table |
+| 87 | **Right Panel Test Suite** - Should search custom properties for table | Search custom properties for table |
+| 88 | **Right Panel Test Suite** - Should clear search and show all properties for table | Clear search and show all properties for table |
+| 89 | **Right Panel Test Suite** - Should show no results for invalid search for table | Show no results for invalid search for table |
+| 90 | **Right Panel Test Suite** - Should verify property name is visible for table | Property name is visible for table |
+| 91 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for dashboard | Navigate to custom properties and show interface for dashboard |
+| 92 | **Right Panel Test Suite** - Should display custom properties for dashboard | Display custom properties for dashboard |
+| 93 | **Right Panel Test Suite** - Should search custom properties for dashboard | Search custom properties for dashboard |
+| 94 | **Right Panel Test Suite** - Should clear search and show all properties for dashboard | Clear search and show all properties for dashboard |
+| 95 | **Right Panel Test Suite** - Should show no results for invalid search for dashboard | Show no results for invalid search for dashboard |
+| 96 | **Right Panel Test Suite** - Should verify property name is visible for dashboard | Property name is visible for dashboard |
+| 97 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for pipeline | Navigate to custom properties and show interface for pipeline |
+| 98 | **Right Panel Test Suite** - Should display custom properties for pipeline | Display custom properties for pipeline |
+| 99 | **Right Panel Test Suite** - Should search custom properties for pipeline | Search custom properties for pipeline |
+| 100 | **Right Panel Test Suite** - Should clear search and show all properties for pipeline | Clear search and show all properties for pipeline |
+| 101 | **Right Panel Test Suite** - Should show no results for invalid search for pipeline | Show no results for invalid search for pipeline |
+| 102 | **Right Panel Test Suite** - Should verify property name is visible for pipeline | Property name is visible for pipeline |
+| 103 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for topic | Navigate to custom properties and show interface for topic |
+| 104 | **Right Panel Test Suite** - Should display custom properties for topic | Display custom properties for topic |
+| 105 | **Right Panel Test Suite** - Should search custom properties for topic | Search custom properties for topic |
+| 106 | **Right Panel Test Suite** - Should clear search and show all properties for topic | Clear search and show all properties for topic |
+| 107 | **Right Panel Test Suite** - Should show no results for invalid search for topic | Show no results for invalid search for topic |
+| 108 | **Right Panel Test Suite** - Should verify property name is visible for topic | Property name is visible for topic |
+| 109 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for database | Navigate to custom properties and show interface for database |
+| 110 | **Right Panel Test Suite** - Should display custom properties for database | Display custom properties for database |
+| 111 | **Right Panel Test Suite** - Should search custom properties for database | Search custom properties for database |
+| 112 | **Right Panel Test Suite** - Should clear search and show all properties for database | Clear search and show all properties for database |
+| 113 | **Right Panel Test Suite** - Should show no results for invalid search for database | Show no results for invalid search for database |
+| 114 | **Right Panel Test Suite** - Should verify property name is visible for database | Property name is visible for database |
+| 115 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for databaseSchema | Navigate to custom properties and show interface for databaseSchema |
+| 116 | **Right Panel Test Suite** - Should display custom properties for databaseSchema | Display custom properties for databaseSchema |
+| 117 | **Right Panel Test Suite** - Should search custom properties for databaseSchema | Search custom properties for databaseSchema |
+| 118 | **Right Panel Test Suite** - Should clear search and show all properties for databaseSchema | Clear search and show all properties for databaseSchema |
+| 119 | **Right Panel Test Suite** - Should show no results for invalid search for databaseSchema | Show no results for invalid search for databaseSchema |
+| 120 | **Right Panel Test Suite** - Should verify property name is visible for databaseSchema | Property name is visible for databaseSchema |
+| 121 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for dashboardDataModel | Navigate to custom properties and show interface for dashboardDataModel |
+| 122 | **Right Panel Test Suite** - Should display custom properties for dashboardDataModel | Display custom properties for dashboardDataModel |
+| 123 | **Right Panel Test Suite** - Should search custom properties for dashboardDataModel | Search custom properties for dashboardDataModel |
+| 124 | **Right Panel Test Suite** - Should clear search and show all properties for dashboardDataModel | Clear search and show all properties for dashboardDataModel |
+| 125 | **Right Panel Test Suite** - Should show no results for invalid search for dashboardDataModel | Show no results for invalid search for dashboardDataModel |
+| 126 | **Right Panel Test Suite** - Should verify property name is visible for dashboardDataModel | Property name is visible for dashboardDataModel |
+| 127 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for mlmodel | Navigate to custom properties and show interface for mlmodel |
+| 128 | **Right Panel Test Suite** - Should display custom properties for mlmodel | Display custom properties for mlmodel |
+| 129 | **Right Panel Test Suite** - Should search custom properties for mlmodel | Search custom properties for mlmodel |
+| 130 | **Right Panel Test Suite** - Should clear search and show all properties for mlmodel | Clear search and show all properties for mlmodel |
+| 131 | **Right Panel Test Suite** - Should show no results for invalid search for mlmodel | Show no results for invalid search for mlmodel |
+| 132 | **Right Panel Test Suite** - Should verify property name is visible for mlmodel | Property name is visible for mlmodel |
+| 133 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for container | Navigate to custom properties and show interface for container |
+| 134 | **Right Panel Test Suite** - Should display custom properties for container | Display custom properties for container |
+| 135 | **Right Panel Test Suite** - Should search custom properties for container | Search custom properties for container |
+| 136 | **Right Panel Test Suite** - Should clear search and show all properties for container | Clear search and show all properties for container |
+| 137 | **Right Panel Test Suite** - Should show no results for invalid search for container | Show no results for invalid search for container |
+| 138 | **Right Panel Test Suite** - Should verify property name is visible for container | Property name is visible for container |
+| 139 | **Right Panel Test Suite** - Should navigate to custom properties and show interface for searchIndex | Navigate to custom properties and show interface for searchIndex |
+| 140 | **Right Panel Test Suite** - Should display custom properties for searchIndex | Display custom properties for searchIndex |
+| 141 | **Right Panel Test Suite** - Should search custom properties for searchIndex | Search custom properties for searchIndex |
+| 142 | **Right Panel Test Suite** - Should clear search and show all properties for searchIndex | Clear search and show all properties for searchIndex |
+| 143 | **Right Panel Test Suite** - Should show no results for invalid search for searchIndex | Show no results for invalid search for searchIndex |
+| 144 | **Right Panel Test Suite** - Should verify property name is visible for searchIndex | Property name is visible for searchIndex |
+| 145 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for table | Deleted user not visible in owner selection for table |
+| 146 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for table | Deleted tag not visible in tag selection for table |
+| 147 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for table | Deleted glossary term not visible in selection for table |
+| 148 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for dashboard | Deleted user not visible in owner selection for dashboard |
+| 149 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for dashboard | Deleted tag not visible in tag selection for dashboard |
+| 150 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for dashboard | Deleted glossary term not visible in selection for dashboard |
+| 151 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for pipeline | Deleted user not visible in owner selection for pipeline |
+| 152 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for pipeline | Deleted tag not visible in tag selection for pipeline |
+| 153 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for pipeline | Deleted glossary term not visible in selection for pipeline |
+| 154 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for topic | Deleted user not visible in owner selection for topic |
+| 155 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for topic | Deleted tag not visible in tag selection for topic |
+| 156 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for topic | Deleted glossary term not visible in selection for topic |
+| 157 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for database | Deleted user not visible in owner selection for database |
+| 158 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for database | Deleted tag not visible in tag selection for database |
+| 159 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for database | Deleted glossary term not visible in selection for database |
+| 160 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for databaseSchema | Deleted user not visible in owner selection for databaseSchema |
+| 161 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for databaseSchema | Deleted tag not visible in tag selection for databaseSchema |
+| 162 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for databaseSchema | Deleted glossary term not visible in selection for databaseSchema |
+| 163 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for dashboardDataModel | Deleted user not visible in owner selection for dashboardDataModel |
+| 164 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for dashboardDataModel | Deleted tag not visible in tag selection for dashboardDataModel |
+| 165 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for dashboardDataModel | Deleted glossary term not visible in selection for dashboardDataModel |
+| 166 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for mlmodel | Deleted user not visible in owner selection for mlmodel |
+| 167 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for mlmodel | Deleted tag not visible in tag selection for mlmodel |
+| 168 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for mlmodel | Deleted glossary term not visible in selection for mlmodel |
+| 169 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for container | Deleted user not visible in owner selection for container |
+| 170 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for container | Deleted tag not visible in tag selection for container |
+| 171 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for container | Deleted glossary term not visible in selection for container |
+| 172 | **Right Panel Test Suite** - Should verify deleted user not visible in owner selection for searchIndex | Deleted user not visible in owner selection for searchIndex |
+| 173 | **Right Panel Test Suite** - Should verify deleted tag not visible in tag selection for searchIndex | Deleted tag not visible in tag selection for searchIndex |
+| 174 | **Right Panel Test Suite** - Should verify deleted glossary term not visible in selection for searchIndex | Deleted glossary term not visible in selection for searchIndex |
+| 175 | **Right Panel Test Suite** - Should allow Data Steward to edit description for table | Allow Data Steward to edit description for table |
+| 176 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for table | Allow Data Steward to edit owners for table |
+| 177 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for table | Allow Data Steward to edit tags for table |
+| 178 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for table | Allow Data Steward to edit glossary terms for table |
+| 179 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for table | Allow Data Steward to edit tier for table |
+| 180 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for table | Allow Data Steward to view all tabs for table |
+| 181 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for table | NOT show restricted edit buttons for Data Steward for table |
+| 182 | **Right Panel Test Suite** - Should allow Data Steward to edit description for dashboard | Allow Data Steward to edit description for dashboard |
+| 183 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for dashboard | Allow Data Steward to edit owners for dashboard |
+| 184 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for dashboard | Allow Data Steward to edit tags for dashboard |
+| 185 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for dashboard | Allow Data Steward to edit glossary terms for dashboard |
+| 186 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for dashboard | Allow Data Steward to edit tier for dashboard |
+| 187 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for dashboard | Allow Data Steward to view all tabs for dashboard |
+| 188 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for dashboard | NOT show restricted edit buttons for Data Steward for dashboard |
+| 189 | **Right Panel Test Suite** - Should allow Data Steward to edit description for pipeline | Allow Data Steward to edit description for pipeline |
+| 190 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for pipeline | Allow Data Steward to edit owners for pipeline |
+| 191 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for pipeline | Allow Data Steward to edit tags for pipeline |
+| 192 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for pipeline | Allow Data Steward to edit glossary terms for pipeline |
+| 193 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for pipeline | Allow Data Steward to edit tier for pipeline |
+| 194 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for pipeline | Allow Data Steward to view all tabs for pipeline |
+| 195 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for pipeline | NOT show restricted edit buttons for Data Steward for pipeline |
+| 196 | **Right Panel Test Suite** - Should allow Data Steward to edit description for topic | Allow Data Steward to edit description for topic |
+| 197 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for topic | Allow Data Steward to edit owners for topic |
+| 198 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for topic | Allow Data Steward to edit tags for topic |
+| 199 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for topic | Allow Data Steward to edit glossary terms for topic |
+| 200 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for topic | Allow Data Steward to edit tier for topic |
+| 201 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for topic | Allow Data Steward to view all tabs for topic |
+| 202 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for topic | NOT show restricted edit buttons for Data Steward for topic |
+| 203 | **Right Panel Test Suite** - Should allow Data Steward to edit description for database | Allow Data Steward to edit description for database |
+| 204 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for database | Allow Data Steward to edit owners for database |
+| 205 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for database | Allow Data Steward to edit tags for database |
+| 206 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for database | Allow Data Steward to edit glossary terms for database |
+| 207 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for database | Allow Data Steward to edit tier for database |
+| 208 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for database | Allow Data Steward to view all tabs for database |
+| 209 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for database | NOT show restricted edit buttons for Data Steward for database |
+| 210 | **Right Panel Test Suite** - Should allow Data Steward to edit description for databaseSchema | Allow Data Steward to edit description for databaseSchema |
+| 211 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for databaseSchema | Allow Data Steward to edit owners for databaseSchema |
+| 212 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for databaseSchema | Allow Data Steward to edit tags for databaseSchema |
+| 213 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for databaseSchema | Allow Data Steward to edit glossary terms for databaseSchema |
+| 214 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for databaseSchema | Allow Data Steward to edit tier for databaseSchema |
+| 215 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for databaseSchema | Allow Data Steward to view all tabs for databaseSchema |
+| 216 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for databaseSchema | NOT show restricted edit buttons for Data Steward for databaseSchema |
+| 217 | **Right Panel Test Suite** - Should allow Data Steward to edit description for dashboardDataModel | Allow Data Steward to edit description for dashboardDataModel |
+| 218 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for dashboardDataModel | Allow Data Steward to edit owners for dashboardDataModel |
+| 219 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for dashboardDataModel | Allow Data Steward to edit tags for dashboardDataModel |
+| 220 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for dashboardDataModel | Allow Data Steward to edit glossary terms for dashboardDataModel |
+| 221 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for dashboardDataModel | Allow Data Steward to edit tier for dashboardDataModel |
+| 222 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for dashboardDataModel | Allow Data Steward to view all tabs for dashboardDataModel |
+| 223 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for dashboardDataModel | NOT show restricted edit buttons for Data Steward for dashboardDataModel |
+| 224 | **Right Panel Test Suite** - Should allow Data Steward to edit description for mlmodel | Allow Data Steward to edit description for mlmodel |
+| 225 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for mlmodel | Allow Data Steward to edit owners for mlmodel |
+| 226 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for mlmodel | Allow Data Steward to edit tags for mlmodel |
+| 227 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for mlmodel | Allow Data Steward to edit glossary terms for mlmodel |
+| 228 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for mlmodel | Allow Data Steward to edit tier for mlmodel |
+| 229 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for mlmodel | Allow Data Steward to view all tabs for mlmodel |
+| 230 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for mlmodel | NOT show restricted edit buttons for Data Steward for mlmodel |
+| 231 | **Right Panel Test Suite** - Should allow Data Steward to edit description for container | Allow Data Steward to edit description for container |
+| 232 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for container | Allow Data Steward to edit owners for container |
+| 233 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for container | Allow Data Steward to edit tags for container |
+| 234 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for container | Allow Data Steward to edit glossary terms for container |
+| 235 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for container | Allow Data Steward to edit tier for container |
+| 236 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for container | Allow Data Steward to view all tabs for container |
+| 237 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for container | NOT show restricted edit buttons for Data Steward for container |
+| 238 | **Right Panel Test Suite** - Should allow Data Steward to edit description for searchIndex | Allow Data Steward to edit description for searchIndex |
+| 239 | **Right Panel Test Suite** - Should allow Data Steward to edit owners for searchIndex | Allow Data Steward to edit owners for searchIndex |
+| 240 | **Right Panel Test Suite** - Should allow Data Steward to edit tags for searchIndex | Allow Data Steward to edit tags for searchIndex |
+| 241 | **Right Panel Test Suite** - Should allow Data Steward to edit glossary terms for searchIndex | Allow Data Steward to edit glossary terms for searchIndex |
+| 242 | **Right Panel Test Suite** - Should allow Data Steward to edit tier for searchIndex | Allow Data Steward to edit tier for searchIndex |
+| 243 | **Right Panel Test Suite** - Should allow Data Steward to view all tabs for searchIndex | Allow Data Steward to view all tabs for searchIndex |
+| 244 | **Right Panel Test Suite** - Should NOT show restricted edit buttons for Data Steward for searchIndex | NOT show restricted edit buttons for Data Steward for searchIndex |
+| 245 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for table | Allow Data Consumer to edit description for table |
+| 246 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for table | Allow Data Consumer to edit tags for table |
+| 247 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for table | Allow Data Consumer to edit glossary terms for table |
+| 248 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for table | Allow Data Consumer to edit tier for table |
+| 249 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for table | Allow Data Consumer to view all tabs for table |
+| 250 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless table | Follow Data Consumer role policies for ownerless table |
+| 251 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for dashboard | Allow Data Consumer to edit description for dashboard |
+| 252 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for dashboard | Allow Data Consumer to edit tags for dashboard |
+| 253 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for dashboard | Allow Data Consumer to edit glossary terms for dashboard |
+| 254 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for dashboard | Allow Data Consumer to edit tier for dashboard |
+| 255 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for dashboard | Allow Data Consumer to view all tabs for dashboard |
+| 256 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless dashboard | Follow Data Consumer role policies for ownerless dashboard |
+| 257 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for pipeline | Allow Data Consumer to edit description for pipeline |
+| 258 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for pipeline | Allow Data Consumer to edit tags for pipeline |
+| 259 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for pipeline | Allow Data Consumer to edit glossary terms for pipeline |
+| 260 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for pipeline | Allow Data Consumer to edit tier for pipeline |
+| 261 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for pipeline | Allow Data Consumer to view all tabs for pipeline |
+| 262 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless pipeline | Follow Data Consumer role policies for ownerless pipeline |
+| 263 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for topic | Allow Data Consumer to edit description for topic |
+| 264 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for topic | Allow Data Consumer to edit tags for topic |
+| 265 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for topic | Allow Data Consumer to edit glossary terms for topic |
+| 266 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for topic | Allow Data Consumer to edit tier for topic |
+| 267 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for topic | Allow Data Consumer to view all tabs for topic |
+| 268 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless topic | Follow Data Consumer role policies for ownerless topic |
+| 269 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for database | Allow Data Consumer to edit description for database |
+| 270 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for database | Allow Data Consumer to edit tags for database |
+| 271 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for database | Allow Data Consumer to edit glossary terms for database |
+| 272 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for database | Allow Data Consumer to edit tier for database |
+| 273 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for database | Allow Data Consumer to view all tabs for database |
+| 274 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless database | Follow Data Consumer role policies for ownerless database |
+| 275 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for databaseSchema | Allow Data Consumer to edit description for databaseSchema |
+| 276 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for databaseSchema | Allow Data Consumer to edit tags for databaseSchema |
+| 277 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for databaseSchema | Allow Data Consumer to edit glossary terms for databaseSchema |
+| 278 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for databaseSchema | Allow Data Consumer to edit tier for databaseSchema |
+| 279 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for databaseSchema | Allow Data Consumer to view all tabs for databaseSchema |
+| 280 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless databaseSchema | Follow Data Consumer role policies for ownerless databaseSchema |
+| 281 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for dashboardDataModel | Allow Data Consumer to edit description for dashboardDataModel |
+| 282 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for dashboardDataModel | Allow Data Consumer to edit tags for dashboardDataModel |
+| 283 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for dashboardDataModel | Allow Data Consumer to edit glossary terms for dashboardDataModel |
+| 284 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for dashboardDataModel | Allow Data Consumer to edit tier for dashboardDataModel |
+| 285 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for dashboardDataModel | Allow Data Consumer to view all tabs for dashboardDataModel |
+| 286 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless dashboardDataModel | Follow Data Consumer role policies for ownerless dashboardDataModel |
+| 287 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for mlmodel | Allow Data Consumer to edit description for mlmodel |
+| 288 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for mlmodel | Allow Data Consumer to edit tags for mlmodel |
+| 289 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for mlmodel | Allow Data Consumer to edit glossary terms for mlmodel |
+| 290 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for mlmodel | Allow Data Consumer to edit tier for mlmodel |
+| 291 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for mlmodel | Allow Data Consumer to view all tabs for mlmodel |
+| 292 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless mlmodel | Follow Data Consumer role policies for ownerless mlmodel |
+| 293 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for container | Allow Data Consumer to edit description for container |
+| 294 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for container | Allow Data Consumer to edit tags for container |
+| 295 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for container | Allow Data Consumer to edit glossary terms for container |
+| 296 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for container | Allow Data Consumer to edit tier for container |
+| 297 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for container | Allow Data Consumer to view all tabs for container |
+| 298 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless container | Follow Data Consumer role policies for ownerless container |
+| 299 | **Right Panel Test Suite** - Should allow Data Consumer to edit description for searchIndex | Allow Data Consumer to edit description for searchIndex |
+| 300 | **Right Panel Test Suite** - Should allow Data Consumer to edit tags for searchIndex | Allow Data Consumer to edit tags for searchIndex |
+| 301 | **Right Panel Test Suite** - Should allow Data Consumer to edit glossary terms for searchIndex | Allow Data Consumer to edit glossary terms for searchIndex |
+| 302 | **Right Panel Test Suite** - Should allow Data Consumer to edit tier for searchIndex | Allow Data Consumer to edit tier for searchIndex |
+| 303 | **Right Panel Test Suite** - Should allow Data Consumer to view all tabs for searchIndex | Allow Data Consumer to view all tabs for searchIndex |
+| 304 | **Right Panel Test Suite** - Should follow Data Consumer role policies for ownerless searchIndex | Follow Data Consumer role policies for ownerless searchIndex |
+| 305 | **Right Panel Test Suite** - Should NOT allow Data Consumer to edit owners when entity has owner | NOT allow Data Consumer to edit owners when entity has owner |
+| 306 | **Right Panel Test Suite** - Should show appropriate message when no owners assigned | Show appropriate message when no owners assigned |
+| 307 | **Right Panel Test Suite** - Should show appropriate message when no tags assigned | Show appropriate message when no tags assigned |
+| 308 | **Right Panel Test Suite** - Should show appropriate message when no tier assigned | Show appropriate message when no tier assigned |
+| 309 | **Right Panel Test Suite** - Should show appropriate message when no domain assigned | Show appropriate message when no domain assigned |
+| 310 | **Right Panel Test Suite** - Should show appropriate message when no glossary terms assigned | Show appropriate message when no glossary terms assigned |
+| 311 | **Right Panel Test Suite** - Should show lineage not found when no lineage exists | Show lineage not found when no lineage exists |
+| 312 | **Right Panel Test Suite** - Should show no test cases message when data quality tab is empty | Show no test cases message when data quality tab is empty |
+| 313 | **Right Panel Test Suite** - Should clear description for table | Clear description for table |
+| 314 | **Right Panel Test Suite** - Should clear description for dashboard | Clear description for dashboard |
+| 315 | **Right Panel Test Suite** - Should clear description for pipeline | Clear description for pipeline |
+| 316 | **Right Panel Test Suite** - Should clear description for topic | Clear description for topic |
+| 317 | **Right Panel Test Suite** - Should clear description for database | Clear description for database |
+| 318 | **Right Panel Test Suite** - Should clear description for databaseSchema | Clear description for databaseSchema |
+| 319 | **Right Panel Test Suite** - Should clear description for dashboardDataModel | Clear description for dashboardDataModel |
+| 320 | **Right Panel Test Suite** - Should clear description for mlmodel | Clear description for mlmodel |
+| 321 | **Right Panel Test Suite** - Should clear description for container | Clear description for container |
+| 322 | **Right Panel Test Suite** - Should clear description for searchIndex | Clear description for searchIndex |
+| 323 | **Right Panel Test Suite** - Should update panel content when switching between entities | Update panel content when switching between entities |
+| 324 | **Right Panel Test Suite** - Should add multiple tags simultaneously | Add multiple tags simultaneously |
+| 325 | **Right Panel Test Suite** - Data Quality tab should show permission placeholder for ViewBasic-only user in column detail panel | Data Quality tab should show permission placeholder for ViewBasic-only user in column detail panel |
+| 326 | **Right Panel Test Suite** - Should not make forbidden API calls when ViewBasic-only user opens column detail panel | Not make forbidden API calls when ViewBasic-only user opens column detail panel |
+
+</details>
+
+<details open>
+<summary>📄 <b>ExploreTree.spec.ts</b> (32 tests, 41 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/ExploreTree.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/ExploreTree.spec.ts)
 
@@ -631,10 +1147,15 @@
 | | ↳ *Check the quick filters* | |
 | | ↳ *Click on tree item and check quick filter* | |
 | | ↳ *Click on tree item metrics and check quick filter* | |
-| 2 | **Explore Tree scenarios** - Verify Database and Database Schema available in explore tree | Database and Database Schema available in explore tree |
+| 2 | **Explore Tree scenarios** - Verify Tags navigation via Governance tree and breadcrumb renders page correctly | Tags navigation via Governance tree and breadcrumb renders page correctly |
+| | ↳ *Expand Governance node in explore tree* | |
+| | ↳ *Click on Tags under Governance* | |
+| | ↳ *Click parent classification breadcrumb from a tag result* | |
+| | ↳ *Verify full Tags page renders with left panel, table and headers* | |
+| 3 | **Explore Tree scenarios** - Verify Database and Database Schema available in explore tree | Database and Database Schema available in explore tree |
 | | ↳ *Verify first table database and schema* | |
 | | ↳ *Verify second table database and schema* | |
-| 3 | **Explore Tree scenarios** - Verify Database and Database schema after rename | Database and Database schema after rename |
+| 4 | **Explore Tree scenarios** - Verify Database and Database schema after rename | Database and Database schema after rename |
 | | ↳ *Visit explore page and verify existing values* | |
 | | ↳ *Rename schema and database* | |
 | | ↳ *Verify renamed values in explore page* | |
@@ -646,26 +1167,31 @@
 | 1 | **Explore page** - Check the listing of tags | The listing of tags |
 | 2 | **Explore page** - Check listing of entities when index is dataAsset | Listing of entities when index is dataAsset |
 | 3 | **Explore page** - Check listing of entities when index is all | Listing of entities when index is all |
-| 4 | **Explore page** - Check listing of table when sort is descending | Listing of table when sort is descending |
-| 5 | **Explore page** - Check listing of storedProcedure when sort is descending | Listing of storedProcedure when sort is descending |
-| 6 | **Explore page** - Check listing of database when sort is descending | Listing of database when sort is descending |
-| 7 | **Explore page** - Check listing of databaseSchema when sort is descending | Listing of databaseSchema when sort is descending |
-| 8 | **Explore page** - Check listing of dashboard when sort is descending | Listing of dashboard when sort is descending |
-| 9 | **Explore page** - Check listing of dashboardDataModel when sort is descending | Listing of dashboardDataModel when sort is descending |
-| 10 | **Explore page** - Check listing of pipeline when sort is descending | Listing of pipeline when sort is descending |
-| 11 | **Explore page** - Check listing of topic when sort is descending | Listing of topic when sort is descending |
-| 12 | **Explore page** - Check listing of mlmodel when sort is descending | Listing of mlmodel when sort is descending |
-| 13 | **Explore page** - Check listing of container when sort is descending | Listing of container when sort is descending |
-| 14 | **Explore page** - Check listing of searchIndex when sort is descending | Listing of searchIndex when sort is descending |
-| 15 | **Explore page** - Check listing of glossaryTerm when sort is descending | Listing of glossaryTerm when sort is descending |
-| 16 | **Explore page** - Check listing of tag when sort is descending | Listing of tag when sort is descending |
-| 17 | **Explore page** - Check listing of dataProduct when sort is descending | Listing of dataProduct when sort is descending |
-| 18 | **Explore page** - Check listing of apiCollection when sort is descending | Listing of apiCollection when sort is descending |
-| 19 | **Explore page** - Check listing of apiEndpoint when sort is descending | Listing of apiEndpoint when sort is descending |
-| 20 | **Explore page** - Check listing of directory when sort is descending | Listing of directory when sort is descending |
-| 21 | **Explore page** - Check listing of file when sort is descending | Listing of file when sort is descending |
-| 22 | **Explore page** - Check listing of spreadsheet when sort is descending | Listing of spreadsheet when sort is descending |
-| 23 | **Explore page** - Check listing of worksheet when sort is descending | Listing of worksheet when sort is descending |
+| 4 | **Explore page** - Verify charts are visible in explore tree | Charts are visible in explore tree |
+| 5 | **Explore page** - Check listing of table when sort is descending | Listing of table when sort is descending |
+| 6 | **Explore page** - Check listing of storedProcedure when sort is descending | Listing of storedProcedure when sort is descending |
+| 7 | **Explore page** - Check listing of database when sort is descending | Listing of database when sort is descending |
+| 8 | **Explore page** - Check listing of databaseSchema when sort is descending | Listing of databaseSchema when sort is descending |
+| 9 | **Explore page** - Check listing of dashboard when sort is descending | Listing of dashboard when sort is descending |
+| 10 | **Explore page** - Check listing of dashboardDataModel when sort is descending | Listing of dashboardDataModel when sort is descending |
+| 11 | **Explore page** - Check listing of pipeline when sort is descending | Listing of pipeline when sort is descending |
+| 12 | **Explore page** - Check listing of topic when sort is descending | Listing of topic when sort is descending |
+| 13 | **Explore page** - Check listing of mlmodel when sort is descending | Listing of mlmodel when sort is descending |
+| 14 | **Explore page** - Check listing of container when sort is descending | Listing of container when sort is descending |
+| 15 | **Explore page** - Check listing of searchIndex when sort is descending | Listing of searchIndex when sort is descending |
+| 16 | **Explore page** - Check listing of glossaryTerm when sort is descending | Listing of glossaryTerm when sort is descending |
+| 17 | **Explore page** - Check listing of tag when sort is descending | Listing of tag when sort is descending |
+| 18 | **Explore page** - Check listing of dataProduct when sort is descending | Listing of dataProduct when sort is descending |
+| 19 | **Explore page** - Check listing of apiCollection when sort is descending | Listing of apiCollection when sort is descending |
+| 20 | **Explore page** - Check listing of apiEndpoint when sort is descending | Listing of apiEndpoint when sort is descending |
+| 21 | **Explore page** - Check listing of directory when sort is descending | Listing of directory when sort is descending |
+| 22 | **Explore page** - Check listing of file when sort is descending | Listing of file when sort is descending |
+| 23 | **Explore page** - Check listing of spreadsheet when sort is descending | Listing of spreadsheet when sort is descending |
+| 24 | **Explore page** - Check listing of worksheet when sort is descending | Listing of worksheet when sort is descending |
+| 25 | **Explore page** - Copy field link button should copy the field URL to clipboard for SearchIndex | Copy field link button should copy the field URL to clipboard for SearchIndex |
+| 26 | **Explore page** - Copy field link button should copy the field URL to clipboard for APIEndpoint | Copy field link button should copy the field URL to clipboard for APIEndpoint |
+| 27 | **Explore page** - Copy field link should have valid URL format for SearchIndex | Copy field link should have valid URL format for SearchIndex |
+| 28 | **Explore page** - Copy field link should have valid URL format for APIEndpoint | Copy field link should have valid URL format for APIEndpoint |
 
 </details>
 

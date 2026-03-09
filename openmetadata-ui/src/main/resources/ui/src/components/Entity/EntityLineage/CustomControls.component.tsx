@@ -33,7 +33,10 @@ import { ReactComponent as FilterLinesIcon } from '../../../assets/svg/ic-filter
 import { ReactComponent as FullscreenIcon } from '../../../assets/svg/ic-fullscreen.svg';
 import { ReactComponent as SettingsOutlined } from '../../../assets/svg/ic-settings-gear.svg';
 import { LINEAGE_DROPDOWN_ITEMS } from '../../../constants/AdvancedSearch.constants';
-import { FULLSCREEN_QUERY_PARAM_KEY } from '../../../constants/constants';
+import {
+  AGGREGATE_PAGE_SIZE_LARGE,
+  FULLSCREEN_QUERY_PARAM_KEY,
+} from '../../../constants/constants';
 import { ExportTypes } from '../../../constants/Export.constants';
 import { SERVICE_TYPES } from '../../../constants/Services.constant';
 import { useLineageProvider } from '../../../context/LineageProvider/LineageProvider';
@@ -43,6 +46,7 @@ import { SearchIndex } from '../../../enums/search.enum';
 import { LineageDirection } from '../../../generated/api/lineage/entityCountLineageRequest';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useFqn } from '../../../hooks/useFqn';
+import { useLineageStore } from '../../../hooks/useLineageStore';
 import { QueryFieldInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
 import { exportLineageByEntityCountAsync } from '../../../rest/lineageAPI';
 import { getQuickFilterQuery } from '../../../utils/ExploreUtils';
@@ -80,13 +84,15 @@ const CustomControls: FC<{
     setSelectedQuickFilters,
     nodes,
     selectedQuickFilters,
-    lineageConfig,
     onExportClick,
-    onLineageConfigUpdate,
-    onLineageEditClick,
+  } = useLineageProvider();
+  const {
+    lineageConfig,
+    toggleEditMode,
     isEditMode,
     platformView,
-  } = useLineageProvider();
+    setLineageConfig,
+  } = useLineageStore();
   const [filterSelectionActive, setFilterSelectionActive] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [nodeDepthAnchorEl, setNodeDepthAnchorEl] =
@@ -294,7 +300,7 @@ const CustomControls: FC<{
 
   const handleDialogSave = (newConfig: LineageConfig) => {
     // Implement save logic here
-    onLineageConfigUpdate?.(newConfig);
+    setLineageConfig(newConfig);
     setDialogVisible(false);
   };
 
@@ -328,7 +334,7 @@ const CustomControls: FC<{
           type: t('label.asset-or-column'),
         })}
         searchValue={searchValue}
-        typingInterval={0}
+        typingInterval={300}
         onSearch={onSearchValueChange}
       />
     ) : (
@@ -360,7 +366,7 @@ const CustomControls: FC<{
           color={isEditMode ? 'primary' : 'default'}
           data-testid="edit-lineage"
           size="large"
-          onClick={onLineageEditClick}>
+          onClick={toggleEditMode}>
           <EditIcon />
         </StyledIconButton>
       </Tooltip>
@@ -371,7 +377,7 @@ const CustomControls: FC<{
     platformView,
     entityType,
     isEditMode,
-    onLineageEditClick,
+    toggleEditMode,
     t,
   ]);
 
@@ -511,6 +517,7 @@ const CustomControls: FC<{
               defaultQueryFilter={queryFilter}
               fields={selectedQuickFilters}
               index={SearchIndex.ALL}
+              optionPageSize={AGGREGATE_PAGE_SIZE_LARGE}
               showDeleted={false}
               onFieldValueSelect={handleQuickFiltersValueSelect}
             />
