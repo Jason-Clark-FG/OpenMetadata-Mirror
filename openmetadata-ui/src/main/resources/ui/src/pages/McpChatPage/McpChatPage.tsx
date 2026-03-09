@@ -44,14 +44,14 @@ import { ReactComponent as AddChatIcon } from '../../assets/svg/add-chat.svg';
 import { ReactComponent as TrashIcon } from '../../assets/svg/ic-trash.svg';
 import RichTextEditorPreviewerV1 from '../../components/common/RichTextEditor/RichTextEditorPreviewerV1';
 import {
-  ChatResponse,
+  ChatStreamEvent,
   deleteConversation,
   listConversations,
   listMessages,
   McpConversation,
   McpMessage,
   MessageBlock,
-  sendChatMessage,
+  streamChatMessage,
   ToolCallInfo,
 } from '../../rest/mcpClientAPI';
 import { showErrorToast } from '../../utils/ToastUtils';
@@ -118,9 +118,7 @@ const McpChatPage = () => {
     async (conversationId: string) => {
       try {
         await deleteConversation(conversationId);
-        setConversations((prev) =>
-          prev.filter((c) => c.id !== conversationId)
-        );
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
         if (activeConversationId === conversationId) {
           handleNewChat();
         }
@@ -138,7 +136,7 @@ const McpChatPage = () => {
     }
 
     const userMessage: McpMessage = {
-      id: `temp-${Date.now()}`,
+      id: `temp-user-${Date.now()}`,
       conversationId: activeConversationId ?? '',
       sender: 'human',
       index: messages.length,
@@ -151,34 +149,159 @@ const McpChatPage = () => {
       ],
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantTempId = `temp-assistant-${Date.now()}`;
+    const assistantMessage: McpMessage = {
+      id: assistantTempId,
+      conversationId: activeConversationId ?? '',
+      sender: 'assistant',
+      index: messages.length + 1,
+      timestamp: Date.now(),
+      content: [],
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInputValue('');
     setIsSending(true);
 
     try {
-      const response: ChatResponse = await sendChatMessage({
-        conversationId: activeConversationId,
-        message: trimmedInput,
-      });
+      await streamChatMessage(
+        {
+          conversationId: activeConversationId,
+          message: trimmedInput,
+        },
+        {
+          onEvent: (event: ChatStreamEvent) => {
+            switch (event.event) {
+              case 'conversation_created':
+                setActiveConversationId(event.data.conversationId);
+                fetchConversations();
 
-      if (!activeConversationId) {
-        setActiveConversationId(response.conversationId);
-        fetchConversations();
-      }
+                break;
 
-      setMessages((prev) => {
-        const filtered = prev.filter((m) => m.id !== userMessage.id);
+              case 'text':
+                setMessages((prev) =>
+                  prev.map((m) => {
+                    if (m.id !== assistantTempId) {
+                      return m;
+                    }
+                    const existingText =
+                      m.content?.find((b) => b.textMessage)?.textMessage
+                        ?.message ?? '';
+                    const newText = existingText
+                      ? `${existingText}\n\n${event.data.content}`
+                      : event.data.content;
 
-        const realUserMessage: McpMessage = {
-          ...userMessage,
-          conversationId: response.conversationId,
-        };
+                    return {
+                      ...m,
+                      content: [
+                        {
+                          type: 'Generic' as const,
+                          textMessage: {
+                            type: 'markdown' as const,
+                            message: newText,
+                          },
+                          tools: m.content?.[0]?.tools,
+                        },
+                      ],
+                    };
+                  })
+                );
 
-        return [...filtered, realUserMessage, response.message];
-      });
+                break;
+
+              case 'tool_call_start':
+                setMessages((prev) =>
+                  prev.map((m) => {
+                    if (m.id !== assistantTempId) {
+                      return m;
+                    }
+                    const currentTools = m.content?.[0]?.tools ?? [];
+                    const updatedTools = [
+                      ...currentTools,
+                      {
+                        name: event.data.name,
+                        input: event.data.input,
+                      },
+                    ];
+
+                    return {
+                      ...m,
+                      content: [
+                        {
+                          type: 'Generic' as const,
+                          textMessage: m.content?.[0]?.textMessage,
+                          tools: updatedTools,
+                        },
+                      ],
+                    };
+                  })
+                );
+
+                break;
+
+              case 'tool_call_end':
+                setMessages((prev) =>
+                  prev.map((m) => {
+                    if (m.id !== assistantTempId) {
+                      return m;
+                    }
+                    const updatedTools = (m.content?.[0]?.tools ?? []).map(
+                      (tool) => {
+                        if (
+                          tool.name === event.data.name &&
+                          tool.result === undefined
+                        ) {
+                          return { ...tool, result: event.data.result };
+                        }
+
+                        return tool;
+                      }
+                    );
+
+                    return {
+                      ...m,
+                      content: [
+                        {
+                          type: 'Generic' as const,
+                          textMessage: m.content?.[0]?.textMessage,
+                          tools: updatedTools,
+                        },
+                      ],
+                    };
+                  })
+                );
+
+                break;
+
+              case 'message_complete':
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantTempId ? event.data.message : m
+                  )
+                );
+
+                break;
+
+              case 'error':
+                showErrorToast(event.data.message);
+
+                break;
+
+              case 'done':
+                break;
+            }
+          },
+          onError: (error: Error) => {
+            showErrorToast(error.message);
+          },
+        }
+      );
     } catch (error) {
       showErrorToast(error as AxiosError);
-      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== userMessage.id && m.id !== assistantTempId)
+      );
+      setInputValue(trimmedInput);
     } finally {
       setIsSending(false);
     }
@@ -228,7 +351,8 @@ const McpChatPage = () => {
         flex={1}
         flexDirection="column"
         overflow="hidden"
-        sx={{ backgroundColor: theme.palette.background.default }}>
+        sx={{ backgroundColor: theme.palette.background.default }}
+      >
         {activeConversationId || !isEmpty(messages) ? (
           <>
             {activeConversation?.title && (
@@ -237,7 +361,8 @@ const McpChatPage = () => {
                 py={1.5}
                 sx={{
                   borderBottom: `1px solid ${theme.palette.divider}`,
-                }}>
+                }}
+              >
                 <Typography fontWeight={600} variant="subtitle1">
                   {activeConversation.title}
                 </Typography>
@@ -263,7 +388,8 @@ const McpChatPage = () => {
             flex={1}
             flexDirection="column"
             gap={2}
-            justifyContent="center">
+            justifyContent="center"
+          >
             <AddChatIcon height={48} width={48} />
             <Typography color="text.secondary" variant="body1">
               {t('message.mcp-chat-empty')}
@@ -311,13 +437,15 @@ const ConversationSidebar = ({
         minWidth: 280,
         borderRight: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.paper,
-      }}>
+      }}
+    >
       <Box
         alignItems="center"
         display="flex"
         justifyContent="space-between"
         px={2}
-        py={1.5}>
+        py={1.5}
+      >
         <Typography fontWeight={600} variant="subtitle1">
           {t('label.mcp-chat')}
         </Typography>
@@ -325,7 +453,8 @@ const ConversationSidebar = ({
           <IconButton
             data-testid="new-chat-button"
             size="small"
-            onClick={onNewChat}>
+            onClick={onNewChat}
+          >
             <AddChatIcon height={20} width={20} />
           </IconButton>
         </Tooltip>
@@ -348,7 +477,8 @@ const ConversationSidebar = ({
                     backgroundColor: theme.palette.action.selected,
                   },
                 }}
-                onClick={() => onSelect(conversation.id)}>
+                onClick={() => onSelect(conversation.id)}
+              >
                 <ListItemText
                   primary={
                     conversation.title ??
@@ -358,7 +488,9 @@ const ConversationSidebar = ({
                     noWrap: true,
                     variant: 'body2',
                   }}
-                  secondary={`${conversation.messageCount} ${t('label.message-lowercase-plural')}`}
+                  secondary={`${conversation.messageCount} ${t(
+                    'label.message-lowercase-plural'
+                  )}`}
                   secondaryTypographyProps={{
                     variant: 'caption',
                   }}
@@ -370,7 +502,8 @@ const ConversationSidebar = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(conversation.id);
-                    }}>
+                    }}
+                  >
                     <TrashIcon height={14} width={14} />
                   </IconButton>
                 </Tooltip>
@@ -398,11 +531,7 @@ const MessageList = ({
 
   if (isLoading) {
     return (
-      <Box
-        alignItems="center"
-        display="flex"
-        flex={1}
-        justifyContent="center">
+      <Box alignItems="center" display="flex" flex={1} justifyContent="center">
         <CircularProgress />
       </Box>
     );
@@ -410,11 +539,7 @@ const MessageList = ({
 
   if (isEmpty(messages)) {
     return (
-      <Box
-        alignItems="center"
-        display="flex"
-        flex={1}
-        justifyContent="center">
+      <Box alignItems="center" display="flex" flex={1} justifyContent="center">
         <Typography color="text.secondary" variant="body2">
           {t('message.mcp-chat-empty')}
         </Typography>
@@ -476,7 +601,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     <Box
       display="flex"
       justifyContent={isHuman ? 'flex-end' : 'flex-start'}
-      mb={2}>
+      mb={2}
+    >
       <Paper
         elevation={0}
         sx={{
@@ -490,7 +616,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           color: isHuman
             ? theme.palette.primary.contrastText
             : theme.palette.text.primary,
-        }}>
+        }}
+      >
         {!isEmpty(textContent) &&
           (isMarkdown && !isHuman ? (
             <RichTextEditorPreviewerV1
@@ -500,7 +627,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           ) : (
             <Typography
               sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-              variant="body2">
+              variant="body2"
+            >
               {textContent}
             </Typography>
           ))}
@@ -516,7 +644,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             color={isHuman ? 'inherit' : 'text.secondary'}
             mt={0.5}
             sx={{ opacity: 0.7 }}
-            variant="caption">
+            variant="caption"
+          >
             {message.tokens.totalTokens
               ? `${message.tokens.totalTokens} ${t('label.token-plural')}`
               : ''}
@@ -545,12 +674,14 @@ const ToolCallDisplay = ({ tool }: ToolCallDisplayProps) => {
         borderRadius: 1,
         mb: 0.5,
         '&:before': { display: 'none' },
-      }}>
+      }}
+    >
       <AccordionSummary
         sx={{
           minHeight: 32,
           '& .MuiAccordionSummary-content': { margin: '4px 0' },
-        }}>
+        }}
+      >
         <Typography color="text.secondary" variant="caption">
           {tool.name}
         </Typography>
@@ -561,7 +692,8 @@ const ToolCallDisplay = ({ tool }: ToolCallDisplayProps) => {
             <Typography
               color="text.secondary"
               sx={{ fontWeight: 600 }}
-              variant="caption">
+              variant="caption"
+            >
               {t('label.input')}
             </Typography>
             <Box
@@ -574,7 +706,8 @@ const ToolCallDisplay = ({ tool }: ToolCallDisplayProps) => {
                 borderRadius: 1,
                 p: 1,
                 m: 0,
-              }}>
+              }}
+            >
               {JSON.stringify(tool.input, null, 2)}
             </Box>
           </Box>
@@ -584,7 +717,8 @@ const ToolCallDisplay = ({ tool }: ToolCallDisplayProps) => {
             <Typography
               color="text.secondary"
               sx={{ fontWeight: 600 }}
-              variant="caption">
+              variant="caption"
+            >
               {t('label.result')}
             </Typography>
             <Box
@@ -597,7 +731,8 @@ const ToolCallDisplay = ({ tool }: ToolCallDisplayProps) => {
                 borderRadius: 1,
                 p: 1,
                 m: 0,
-              }}>
+              }}
+            >
               {JSON.stringify(tool.result, null, 2)}
             </Box>
           </Box>
@@ -630,7 +765,8 @@ const ChatInput = ({
       display="flex"
       gap={1}
       p={2}
-      sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+      sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+    >
       <TextField
         fullWidth
         multiline
@@ -648,7 +784,8 @@ const ChatInput = ({
         disabled={isEmpty(inputValue.trim()) || isSending}
         size="small"
         variant="contained"
-        onClick={onSend}>
+        onClick={onSend}
+      >
         {isSending ? (
           <CircularProgress color="inherit" size={20} />
         ) : (
