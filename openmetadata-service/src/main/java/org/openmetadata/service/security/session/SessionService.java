@@ -250,7 +250,17 @@ public class SessionService implements Managed {
       }
 
       if (current.getStatus() == SessionStatus.REFRESHING && !current.hasStaleRefreshLease(now)) {
-        throw new SessionRefreshInProgressException(current.getRefreshLeaseUntil() - now);
+        UserSession refreshed = reloadSession(current.getId()).orElse(null);
+        if (refreshed == null) {
+          SessionCookieUtil.clearSessionCookie(request, response, authConfig);
+          return Optional.empty();
+        }
+        if (refreshed.getStatus() == SessionStatus.REFRESHING
+            && !refreshed.hasStaleRefreshLease(now)) {
+          throw new SessionRefreshInProgressException(getRetryAfterMillis(refreshed, now));
+        }
+        current = refreshed;
+        continue;
       }
 
       long expectedVersion = safeVersion(current);
@@ -268,10 +278,7 @@ public class SessionService implements Managed {
         return Optional.of(leased);
       }
 
-      current = repository.findById(current.getId()).orElse(null);
-      if (current != null) {
-        cache.put(current.getId(), current);
-      }
+      current = reloadSession(current.getId()).orElse(null);
     }
 
     SessionCookieUtil.clearSessionCookie(request, response, authConfig);
@@ -300,7 +307,7 @@ public class SessionService implements Managed {
             .version(expectedVersion + 1)
             .build();
     if (!repository.updateIfVersion(refreshed, expectedVersion)) {
-      return repository.findById(refreshed.getId());
+      return reloadSession(refreshed.getId());
     }
     cache.put(refreshed.getId(), refreshed);
     return Optional.of(refreshed);
@@ -314,31 +321,50 @@ public class SessionService implements Managed {
   }
 
   public Optional<UserSession> revokeSession(String sessionId) {
-    Optional<UserSession> maybeSession = repository.findById(sessionId);
-    if (maybeSession.isEmpty()) {
+    UserSession current = reloadSession(sessionId).orElse(null);
+    if (current == null) {
       cache.invalidate(sessionId);
       return Optional.empty();
     }
 
-    UserSession current = maybeSession.get();
-    long now = System.currentTimeMillis();
-    long expectedVersion = safeVersion(current);
-    UserSession revoked =
-        current.toBuilder()
-            .status(SessionStatus.REVOKED)
-            .refreshLeaseUntil(null)
-            .updatedAt(now)
-            .lastAccessedAt(now)
-            .version(expectedVersion + 1)
-            .build();
-    if (!repository.updateIfVersion(revoked, expectedVersion)) {
-      Optional<UserSession> latest = repository.findById(sessionId);
-      latest.ifPresent(value -> cache.put(value.getId(), value));
-      return latest;
+    for (int attempt = 0; attempt < SESSION_LIMIT_RETRIES && current != null; attempt++) {
+      if (current.getStatus() == SessionStatus.REVOKED
+          || current.getStatus() == SessionStatus.EXPIRED) {
+        cache.put(current.getId(), current);
+        return Optional.of(current);
+      }
+
+      long now = System.currentTimeMillis();
+      if (current.isExpired(now)) {
+        expireIfNecessary(current);
+        current = reloadSession(sessionId).orElse(null);
+        continue;
+      }
+
+      long expectedVersion = safeVersion(current);
+      UserSession revoked =
+          current.toBuilder()
+              .status(SessionStatus.REVOKED)
+              .refreshLeaseUntil(null)
+              .updatedAt(now)
+              .lastAccessedAt(now)
+              .version(expectedVersion + 1)
+              .build();
+      if (repository.updateIfVersion(revoked, expectedVersion)) {
+        cache.put(revoked.getId(), revoked);
+        return Optional.of(revoked);
+      }
+
+      current = reloadSession(sessionId).orElse(null);
     }
 
-    cache.put(revoked.getId(), revoked);
-    return Optional.of(revoked);
+    if (current == null) {
+      cache.invalidate(sessionId);
+      return Optional.empty();
+    }
+    LOG.error("Failed to revoke session {} after {} attempts", sessionId, SESSION_LIMIT_RETRIES);
+    cache.put(current.getId(), current);
+    return Optional.of(current);
   }
 
   public Optional<UserSession> getSessionById(String sessionId) {
@@ -347,13 +373,7 @@ public class SessionService implements Managed {
       return Optional.of(cachedSession);
     }
 
-    Optional<UserSession> session = repository.findById(sessionId);
-    if (session.isPresent()) {
-      cache.put(session.get().getId(), session.get());
-    } else {
-      cache.invalidate(sessionId);
-    }
-    return session;
+    return reloadSession(sessionId);
   }
 
   public String decryptProviderRefreshToken(UserSession session) {
@@ -425,6 +445,23 @@ public class SessionService implements Managed {
         return;
       }
     }
+  }
+
+  private Optional<UserSession> reloadSession(String sessionId) {
+    Optional<UserSession> session = repository.findById(sessionId);
+    if (session.isPresent()) {
+      cache.put(session.get().getId(), session.get());
+    } else {
+      cache.invalidate(sessionId);
+    }
+    return session;
+  }
+
+  private long getRetryAfterMillis(UserSession session, long now) {
+    if (session.getRefreshLeaseUntil() == null) {
+      return REFRESH_LEASE_MILLIS;
+    }
+    return Math.max(1L, session.getRefreshLeaseUntil() - now);
   }
 
   private void pruneSessionsInBatches(long cutoff) {

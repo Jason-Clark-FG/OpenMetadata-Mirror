@@ -17,7 +17,6 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +31,6 @@ import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.auth.JwtResponse;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.TokenRepository;
@@ -44,7 +42,7 @@ import org.openmetadata.service.util.EntityUtil.Fields;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class LdapAuthServletHandlerTest {
+class BasicAuthServletHandlerTest {
 
   @Mock private AuthenticationConfiguration authConfig;
   @Mock private AuthorizerConfiguration authorizerConfig;
@@ -52,63 +50,26 @@ class LdapAuthServletHandlerTest {
   @Mock private HttpServletRequest request;
   @Mock private HttpServletResponse response;
   @Mock private ServletOutputStream servletOutputStream;
-  @Mock private AuditLogRepository auditLogRepository;
   @Mock private UserRepository userRepository;
   @Mock private TokenRepository tokenRepository;
 
-  private LdapAuthServletHandler handler;
-  private MockedConstruction<LdapAuthenticator> authenticatorConstruction;
-  private LdapAuthenticator authenticator;
+  private BasicAuthServletHandler handler;
+  private MockedConstruction<BasicAuthenticator> authenticatorConstruction;
+  private BasicAuthenticator authenticator;
 
   @BeforeEach
   void setUp() throws Exception {
-    when(authConfig.getProvider()).thenReturn(AuthProvider.LDAP);
+    when(authConfig.getProvider()).thenReturn(AuthProvider.BASIC);
     when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
     when(response.getOutputStream()).thenReturn(servletOutputStream);
-    SecurityConfigurationManager.getInstance().setCurrentAuthConfig(authConfig);
-    SecurityConfigurationManager.getInstance().setCurrentAuthzConfig(authorizerConfig);
-    authenticatorConstruction = mockConstruction(LdapAuthenticator.class);
-    handler = new LdapAuthServletHandler(authConfig, authorizerConfig, sessionService);
+    authenticatorConstruction = mockConstruction(BasicAuthenticator.class);
+    handler = new BasicAuthServletHandler(authConfig, authorizerConfig, sessionService);
     authenticator = authenticatorConstruction.constructed().get(0);
   }
 
   @AfterEach
   void tearDown() {
     authenticatorConstruction.close();
-    SecurityConfigurationManager.getInstance().setCurrentAuthConfig(null);
-    SecurityConfigurationManager.getInstance().setCurrentAuthzConfig(null);
-  }
-
-  @Test
-  void handleLogout_writesAuditEvent() {
-    UUID userId = UUID.randomUUID();
-    UserSession session =
-        UserSession.builder()
-            .id("session-id")
-            .userId(userId.toString())
-            .username("ldap-user")
-            .build();
-    when(sessionService.getSession(request)).thenReturn(Optional.of(session));
-    when(sessionService.decryptOmRefreshToken(session)).thenReturn(null);
-
-    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
-      entityMock.when(Entity::getAuditLogRepository).thenReturn(auditLogRepository);
-
-      handler.handleLogout(request, response);
-    }
-
-    verify(auditLogRepository)
-        .writeAuthEvent(AuditLogRepository.AUTH_EVENT_LOGOUT, "ldap-user", userId);
-    verify(sessionService).revokeSession(request, response);
-  }
-
-  @Test
-  void handleRefresh_withoutActiveSession_returnsUnauthorized() {
-    when(sessionService.acquireRefreshLease(request, response)).thenReturn(Optional.empty());
-
-    handler.handleRefresh(request, response);
-
-    verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 
   @Test
@@ -119,14 +80,14 @@ class LdapAuthServletHandlerTest {
         .thenReturn(
             new BufferedReader(
                 new StringReader(
-                    "{\"email\":\"ldap-user@example.com\",\"password\":\"cGFzc3dvcmQ=\"}")));
+                    "{\"email\":\"basic-user@example.com\",\"password\":\"cGFzc3dvcmQ=\"}")));
     JwtResponse jwtResponse = new JwtResponse();
     jwtResponse.setAccessToken("access-token");
-    jwtResponse.setRefreshToken("ldap-refresh-token");
+    jwtResponse.setRefreshToken("basic-refresh-token");
     jwtResponse.setTokenType("Bearer");
     jwtResponse.setExpiryDuration(100L);
     when(authenticator.loginUser(any())).thenReturn(jwtResponse);
-    when(userRepository.getByEmail(isNull(), eq("ldap-user@example.com"), eq(Fields.EMPTY_FIELDS)))
+    when(userRepository.getByEmail(isNull(), eq("basic-user@example.com"), eq(Fields.EMPTY_FIELDS)))
         .thenThrow(EntityNotFoundException.byMessage("missing"));
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
@@ -136,7 +97,7 @@ class LdapAuthServletHandlerTest {
       handler.handleLogin(request, response);
     }
 
-    verify(tokenRepository).deleteToken("ldap-refresh-token");
+    verify(tokenRepository).deleteToken("basic-refresh-token");
     verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     verify(sessionService, never()).createActiveSession(any(), any(), any(), any(), any());
   }

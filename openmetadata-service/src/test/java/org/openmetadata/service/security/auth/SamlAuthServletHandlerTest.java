@@ -30,18 +30,26 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.openmetadata.catalog.security.client.SamlSSOClientConfig;
+import org.openmetadata.schema.TokenInterface;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
+import org.openmetadata.schema.type.Include;
+import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.TokenRepository;
 import org.openmetadata.service.security.saml.SamlSettingsHolder;
 import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.SessionStatus;
 import org.openmetadata.service.security.session.UserSession;
+import org.openmetadata.service.util.TokenUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -54,6 +62,7 @@ class SamlAuthServletHandlerTest {
   @Mock private HttpServletRequest request;
   @Mock private HttpServletResponse response;
   @Mock private ServletOutputStream servletOutputStream;
+  @Mock private TokenRepository tokenRepository;
 
   private SamlAuthServletHandler handler;
 
@@ -141,6 +150,51 @@ class SamlAuthServletHandlerTest {
 
     handler.handleRefresh(request, response);
 
+    verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+  }
+
+  @Test
+  void handleRefresh_revokedSessionRotatesAndDeletesOrphanedRefreshToken() {
+    UserSession leasedSession =
+        UserSession.builder()
+            .id("session-id")
+            .status(SessionStatus.REFRESHING)
+            .username("saml-user")
+            .build();
+    UserSession revokedSession =
+        leasedSession.toBuilder().status(SessionStatus.REVOKED).version(2L).build();
+    User user =
+        new User()
+            .withId(java.util.UUID.randomUUID())
+            .withName("saml-user")
+            .withEmail("saml-user@example.com");
+    org.openmetadata.schema.auth.RefreshToken currentRefreshToken =
+        TokenUtil.getRefreshToken(user.getId(), java.util.UUID.randomUUID());
+
+    when(sessionService.acquireRefreshLease(request, response))
+        .thenReturn(Optional.of(leasedSession));
+    when(sessionService.decryptOmRefreshToken(leasedSession)).thenReturn("current-refresh-token");
+    when(sessionService.completeRefresh(eq(leasedSession), any(), eq(null)))
+        .thenReturn(Optional.of(revokedSession));
+    when(tokenRepository.findByToken("current-refresh-token")).thenReturn(currentRefreshToken);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "saml-user", "id,roles,isAdmin,email", Include.NON_DELETED))
+          .thenReturn(user);
+      entityMock.when(Entity::getTokenRepository).thenReturn(tokenRepository);
+
+      handler.handleRefresh(request, response);
+    }
+
+    ArgumentCaptor<TokenInterface> tokenCaptor = ArgumentCaptor.forClass(TokenInterface.class);
+    verify(tokenRepository).insertToken(tokenCaptor.capture());
+    verify(tokenRepository).deleteToken("current-refresh-token");
+    verify(tokenRepository).deleteToken(tokenCaptor.getValue().getToken().toString());
+    verify(sessionService).revokeSession(request, response);
     verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
   }
 

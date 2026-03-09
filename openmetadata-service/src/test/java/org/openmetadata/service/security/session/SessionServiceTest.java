@@ -12,6 +12,7 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -266,6 +267,41 @@ class SessionServiceTest {
   }
 
   @Test
+  void acquireRefreshLease_rechecksDatabaseBeforeRejectingCachedBusySession() {
+    String sessionId = validSessionId('q');
+    long now = System.currentTimeMillis();
+    UserSession cachedRefreshingSession =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.REFRESHING)
+            .refreshLeaseUntil(now + 5_000)
+            .version(2L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+    UserSession freshActiveSession =
+        cachedRefreshingSession.toBuilder()
+            .status(SessionStatus.ACTIVE)
+            .refreshLeaseUntil(null)
+            .version(3L)
+            .build();
+
+    when(request.getCookies()).thenReturn(new Cookie[] {new Cookie("OM_SESSION", sessionId)});
+    when(repository.findById(sessionId))
+        .thenReturn(Optional.of(cachedRefreshingSession))
+        .thenReturn(Optional.of(freshActiveSession));
+    when(repository.updateIfVersion(any(UserSession.class), eq(3L))).thenReturn(true);
+
+    sessionService.getSessionById(sessionId);
+    UserSession leased = sessionService.acquireRefreshLease(request, response).orElseThrow();
+
+    assertEquals(SessionStatus.REFRESHING, leased.getStatus());
+    assertEquals(4L, leased.getVersion());
+    verify(repository, times(2)).findById(sessionId);
+    verify(repository).updateIfVersion(any(UserSession.class), eq(3L));
+  }
+
+  @Test
   void completeRefresh_restoresActiveSessionAndEncryptsTokens() {
     long now = System.currentTimeMillis();
     UserSession leasedSession =
@@ -314,6 +350,37 @@ class SessionServiceTest {
         .addHeader(eq("Set-Cookie"), org.mockito.ArgumentMatchers.contains("Max-Age=0"));
 
     assertEquals(SessionStatus.REVOKED, sessionCaptor.getValue().getStatus());
+  }
+
+  @Test
+  void revokeSession_retriesVersionConflictUntilSessionIsRevoked() {
+    String sessionId = validSessionId('v');
+    long now = System.currentTimeMillis();
+    UserSession firstRead =
+        UserSession.builder()
+            .id(sessionId)
+            .status(SessionStatus.ACTIVE)
+            .version(4L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .updatedAt(now)
+            .lastAccessedAt(now)
+            .build();
+    UserSession secondRead = firstRead.toBuilder().version(5L).build();
+
+    when(repository.findById(sessionId))
+        .thenReturn(Optional.of(firstRead))
+        .thenReturn(Optional.of(secondRead));
+    when(repository.updateIfVersion(any(UserSession.class), eq(4L))).thenReturn(false);
+    when(repository.updateIfVersion(any(UserSession.class), eq(5L))).thenReturn(true);
+
+    UserSession revoked = sessionService.revokeSession(sessionId).orElseThrow();
+
+    assertEquals(SessionStatus.REVOKED, revoked.getStatus());
+    assertEquals(6L, revoked.getVersion());
+    verify(repository).updateIfVersion(any(UserSession.class), eq(4L));
+    verify(repository).updateIfVersion(any(UserSession.class), eq(5L));
+    verify(repository, times(2)).findById(sessionId);
   }
 
   @Test

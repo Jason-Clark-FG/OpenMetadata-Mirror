@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
@@ -20,11 +21,13 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.auth.JwtResponse;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.AuthServeletHandler;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.session.SessionRefreshInProgressException;
 import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.SessionStatus;
 import org.openmetadata.service.security.session.UserSession;
 import org.openmetadata.service.util.EntityUtil.Fields;
 
@@ -72,7 +75,14 @@ public class BasicAuthServletHandler implements AuthServeletHandler {
       }
 
       JwtResponse jwtResponse = authenticator.loginUser(loginRequest);
-      User user = getUserByEmail(loginRequest.getEmail());
+      User user;
+      try {
+        user = getUserByEmail(loginRequest.getEmail());
+      } catch (EntityNotFoundException e) {
+        deleteRefreshTokenIfPresent(jwtResponse.getRefreshToken());
+        sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "User not found");
+        return;
+      }
       sessionService.createActiveSession(
           req, resp, authConfig.getProvider().value(), user, jwtResponse.getRefreshToken());
 
@@ -130,10 +140,11 @@ public class BasicAuthServletHandler implements AuthServeletHandler {
       TokenRefreshRequest tokenRequest = new TokenRefreshRequest();
       tokenRequest.setRefreshToken(refreshToken);
       JwtResponse newTokens = authenticator.getNewAccessToken(tokenRequest);
-      sessionService.completeRefresh(
-          session,
-          newTokens.getRefreshToken() != null ? newTokens.getRefreshToken() : refreshToken,
-          null);
+      String updatedRefreshToken =
+          newTokens.getRefreshToken() != null ? newTokens.getRefreshToken() : refreshToken;
+      if (!completeRefresh(req, resp, session, refreshToken, updatedRefreshToken)) {
+        return;
+      }
 
       JwtResponse responseToClient = new JwtResponse();
       responseToClient.setAccessToken(newTokens.getAccessToken());
@@ -227,5 +238,46 @@ public class BasicAuthServletHandler implements AuthServeletHandler {
   private User getUserByEmail(String email) {
     UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
     return userRepository.getByEmail(null, email, Fields.EMPTY_FIELDS);
+  }
+
+  private boolean completeRefresh(
+      HttpServletRequest req,
+      HttpServletResponse resp,
+      UserSession session,
+      String previousRefreshToken,
+      String updatedRefreshToken) {
+    Optional<UserSession> completedSession =
+        sessionService.completeRefresh(session, updatedRefreshToken, null);
+    if (completedSession.isEmpty() || completedSession.get().getStatus() != SessionStatus.ACTIVE) {
+      deleteOrphanedRefreshToken(previousRefreshToken, updatedRefreshToken);
+      sessionService.revokeSession(req, resp);
+      sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Session revoked during refresh");
+      return false;
+    }
+    cleanupUnusedRefreshToken(previousRefreshToken, updatedRefreshToken, completedSession.get());
+    return true;
+  }
+
+  private void cleanupUnusedRefreshToken(
+      String previousRefreshToken, String updatedRefreshToken, UserSession completedSession) {
+    if (updatedRefreshToken == null || updatedRefreshToken.equals(previousRefreshToken)) {
+      return;
+    }
+    String persistedRefreshToken = sessionService.decryptOmRefreshToken(completedSession);
+    if (!updatedRefreshToken.equals(persistedRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteOrphanedRefreshToken(String previousRefreshToken, String updatedRefreshToken) {
+    if (updatedRefreshToken != null && !updatedRefreshToken.equals(previousRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteRefreshTokenIfPresent(String refreshToken) {
+    if (refreshToken != null) {
+      Entity.getTokenRepository().deleteToken(refreshToken);
+    }
   }
 }

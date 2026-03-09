@@ -11,13 +11,16 @@ import com.onelogin.saml2.Auth;
 import com.onelogin.saml2.exception.SAMLException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.BadRequestException;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -43,6 +46,7 @@ import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.saml.SamlSettingsHolder;
 import org.openmetadata.service.security.session.SessionRefreshInProgressException;
 import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.SessionStatus;
 import org.openmetadata.service.security.session.UserSession;
 import org.openmetadata.service.util.TokenUtil;
 import org.openmetadata.service.util.UserUtil;
@@ -258,7 +262,12 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
           Entity.getEntityByName(
               Entity.USER, username, "id,roles,isAdmin,email", Include.NON_DELETED);
 
-      // Generate new access token
+      RefreshToken rotatedRefreshToken = rotateRefreshToken(session, user.getId(), refreshToken);
+      if (!completeRefresh(
+          req, resp, session, refreshToken, rotatedRefreshToken.getToken().toString())) {
+        return;
+      }
+
       JWTAuthMechanism jwtAuthMechanism =
           JWTTokenGenerator.getInstance()
               .generateJWTToken(
@@ -270,14 +279,10 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
                   false,
                   ServiceTokenType.OM_USER);
 
-      // Return JSON response WITHOUT refresh token (security: refresh token stays server-side)
       JwtResponse responseToClient = new JwtResponse();
       responseToClient.setAccessToken(jwtAuthMechanism.getJWTToken());
       responseToClient.setTokenType("Bearer");
       responseToClient.setExpiryDuration(jwtAuthMechanism.getJWTTokenExpiresAt());
-      // Explicitly NOT setting refresh token - it stays in session only
-
-      sessionService.completeRefresh(session, refreshToken, null);
       resp.setStatus(HttpServletResponse.SC_OK);
       resp.setContentType("application/json");
       writeJsonResponse(resp, JsonUtils.pojoToJson(responseToClient));
@@ -285,6 +290,8 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
     } catch (SessionRefreshInProgressException e) {
       resp.setHeader("Retry-After", Integer.toString(e.getRetryAfterSeconds()));
       sendError(resp, HttpServletResponse.SC_SERVICE_UNAVAILABLE, e.getMessage());
+    } catch (BadRequestException e) {
+      sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
     } catch (Exception e) {
       LOG.error("Error handling SAML refresh", e);
       sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
@@ -508,6 +515,60 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       writeErrorResponse(resp, status, message);
     } catch (IOException e) {
       LOG.error("Error writing error response", e);
+    }
+  }
+
+  private RefreshToken rotateRefreshToken(
+      UserSession session, UUID userId, String currentRefreshToken) {
+    RefreshToken storedRefreshToken =
+        (RefreshToken) Entity.getTokenRepository().findByToken(currentRefreshToken);
+    if (storedRefreshToken.getExpiryDate().compareTo(Instant.now().toEpochMilli()) < 0) {
+      throw new BadRequestException("Expired token. Please login again.");
+    }
+    Entity.getTokenRepository().deleteToken(currentRefreshToken);
+    RefreshToken newRefreshToken = TokenUtil.getRefreshToken(userId, UUID.randomUUID());
+    Entity.getTokenRepository().insertToken(newRefreshToken);
+    return newRefreshToken;
+  }
+
+  private boolean completeRefresh(
+      HttpServletRequest req,
+      HttpServletResponse resp,
+      UserSession session,
+      String previousRefreshToken,
+      String updatedRefreshToken) {
+    Optional<UserSession> completedSession =
+        sessionService.completeRefresh(session, updatedRefreshToken, null);
+    if (completedSession.isEmpty() || completedSession.get().getStatus() != SessionStatus.ACTIVE) {
+      deleteOrphanedRefreshToken(previousRefreshToken, updatedRefreshToken);
+      sessionService.revokeSession(req, resp);
+      sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, "Session revoked during refresh");
+      return false;
+    }
+    cleanupUnusedRefreshToken(previousRefreshToken, updatedRefreshToken, completedSession.get());
+    return true;
+  }
+
+  private void cleanupUnusedRefreshToken(
+      String previousRefreshToken, String updatedRefreshToken, UserSession completedSession) {
+    if (updatedRefreshToken == null || updatedRefreshToken.equals(previousRefreshToken)) {
+      return;
+    }
+    String persistedRefreshToken = sessionService.decryptOmRefreshToken(completedSession);
+    if (!updatedRefreshToken.equals(persistedRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteOrphanedRefreshToken(String previousRefreshToken, String updatedRefreshToken) {
+    if (updatedRefreshToken != null && !updatedRefreshToken.equals(previousRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteRefreshTokenIfPresent(String refreshToken) {
+    if (refreshToken != null) {
+      Entity.getTokenRepository().deleteToken(refreshToken);
     }
   }
 }

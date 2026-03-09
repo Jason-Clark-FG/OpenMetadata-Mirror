@@ -93,6 +93,7 @@ import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.session.SessionRefreshInProgressException;
 import org.openmetadata.service.security.session.SessionService;
+import org.openmetadata.service.security.session.SessionStatus;
 import org.openmetadata.service.security.session.UserSession;
 import org.openmetadata.service.util.TokenUtil;
 import org.openmetadata.service.util.UserUtil;
@@ -178,7 +179,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     this.clientAuthentication = getClientAuthentication(client.getConfiguration());
   }
 
-  private OidcClient buildOidcClient(OidcClientConfig clientConfig) {
+  private static OidcClient buildOidcClient(OidcClientConfig clientConfig) {
     String id = clientConfig.getId();
     String secret = clientConfig.getSecret();
     if (CommonHelper.isNotBlank(id) && CommonHelper.isNotBlank(secret)) {
@@ -457,7 +458,8 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       }
 
       User user = getSessionUser(session);
-      if (user == null || nullOrEmpty(sessionService.decryptOmRefreshToken(session))) {
+      String currentRefreshToken = sessionService.decryptOmRefreshToken(session);
+      if (user == null || nullOrEmpty(currentRefreshToken)) {
         sessionService.revokeSession(httpServletRequest, httpServletResponse);
         httpServletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         writeJsonResponse(
@@ -468,8 +470,15 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
       org.openmetadata.schema.auth.RefreshToken rotatedRefreshToken =
           validateAndReturnNewRefresh(user.getId(), session);
+      if (!completeRefresh(
+          httpServletRequest,
+          httpServletResponse,
+          session,
+          currentRefreshToken,
+          rotatedRefreshToken.getToken().toString())) {
+        return;
+      }
       JWTAuthMechanism jwtAuthMechanism = generateJwtToken(user);
-      sessionService.completeRefresh(session, rotatedRefreshToken.getToken().toString(), null);
 
       JwtResponse jwtResponse = new JwtResponse();
       jwtResponse.setTokenType("Bearer");
@@ -817,8 +826,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     Date expirationTime = credentials.getIdToken().getJWTClaimsSet().getExpirationTime();
     if (expirationTime != null
         && expirationTime.before(Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime())) {
-      throw new TechnicalException(
-          "OIDC provider returned an expired token for session " + session.getId());
+      LOG.warn(
+          "OIDC provider returned an expired ID token for session {}. Proceeding with claim extraction.",
+          session.getId());
     }
   }
 
@@ -977,34 +987,76 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     return newRefreshToken;
   }
 
+  private boolean completeRefresh(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      UserSession session,
+      String previousRefreshToken,
+      String updatedRefreshToken)
+      throws IOException {
+    Optional<UserSession> completedSession =
+        sessionService.completeRefresh(session, updatedRefreshToken, null);
+    if (completedSession.isEmpty() || completedSession.get().getStatus() != SessionStatus.ACTIVE) {
+      deleteOrphanedRefreshToken(previousRefreshToken, updatedRefreshToken);
+      sessionService.revokeSession(request, response);
+      org.openmetadata.service.security.SecurityUtil.writeErrorResponse(
+          response, HttpServletResponse.SC_UNAUTHORIZED, "Session revoked during refresh");
+      return false;
+    }
+    cleanupUnusedRefreshToken(previousRefreshToken, updatedRefreshToken, completedSession.get());
+    return true;
+  }
+
+  private void cleanupUnusedRefreshToken(
+      String previousRefreshToken, String updatedRefreshToken, UserSession completedSession) {
+    if (updatedRefreshToken == null || updatedRefreshToken.equals(previousRefreshToken)) {
+      return;
+    }
+    String persistedRefreshToken = sessionService.decryptOmRefreshToken(completedSession);
+    if (!updatedRefreshToken.equals(persistedRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteOrphanedRefreshToken(String previousRefreshToken, String updatedRefreshToken) {
+    if (updatedRefreshToken != null && !updatedRefreshToken.equals(previousRefreshToken)) {
+      deleteRefreshTokenIfPresent(updatedRefreshToken);
+    }
+  }
+
+  private void deleteRefreshTokenIfPresent(String refreshToken) {
+    if (refreshToken != null) {
+      Entity.getTokenRepository().deleteToken(refreshToken);
+    }
+  }
+
   private record PendingLoginContext(String state, String nonce, String pkceVerifier) {}
 
   public static void validateConfig(
       AuthenticationConfiguration authConfig, AuthorizerConfiguration authzConfig) {
     try {
-      // Create a temporary handler just for validation
-      AuthenticationCodeFlowHandler tempHandler =
-          new AuthenticationCodeFlowHandler(authConfig, authzConfig, null);
-
-      // Validate required configurations
       CommonHelper.assertNotNull("OidcConfiguration", authConfig.getOidcConfiguration());
       CommonHelper.assertNotBlank(
           "CallbackUrl", authConfig.getOidcConfiguration().getCallbackUrl());
       CommonHelper.assertNotBlank("ServerUrl", authConfig.getOidcConfiguration().getServerUrl());
+      validatePrincipalClaimsMapping(
+          listOrEmpty(authConfig.getJwtPrincipalClaimsMapping()).stream()
+              .map(s -> s.split(":"))
+              .collect(Collectors.toMap(s -> s[0], s -> s[1])));
 
-      // Use the temporary handler's client to validate
-      if (tempHandler.client == null) {
+      OidcClient validationClient = buildOidcClient(authConfig.getOidcConfiguration());
+      validationClient.setCallbackUrl(authConfig.getOidcConfiguration().getCallbackUrl());
+
+      if (validationClient == null) {
         throw new IllegalArgumentException("Failed to initialize OIDC client");
       }
 
-      // Validate provider metadata
       OIDCProviderMetadata providerMetadata =
-          tempHandler.client.getConfiguration().findProviderMetadata();
+          validationClient.getConfiguration().findProviderMetadata();
       if (providerMetadata == null) {
         throw new IllegalArgumentException("Failed to retrieve provider metadata from server URL");
       }
 
-      // Validate required endpoints
       if (providerMetadata.getAuthorizationEndpointURI() == null) {
         throw new IllegalArgumentException("Authorization endpoint not found in provider metadata");
       }
