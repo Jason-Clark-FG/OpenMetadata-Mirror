@@ -176,6 +176,31 @@ public class OAuthTokenRepository {
   }
 
   /**
+   * Rotate a refresh token: revoke all existing tokens for the user/client, then store
+   * the new one. These are two sequential DB operations (not wrapped in a single transaction).
+   * If the server crashes or insert fails after revoke, the user must re-authenticate via SSO
+   * — this is the safer failure mode compared to having two valid tokens simultaneously.
+   */
+  public void rotateRefreshToken(
+      RefreshToken newToken, String clientId, String userName, List<String> scopes) {
+    // Revoke all existing tokens for this user+client first
+    refreshTokenDAO.revokeAllForUser(clientId, userName);
+
+    // Store the new token
+    String tokenHash = hashToken(newToken.getToken());
+    String encryptedToken = fernet.encrypt(newToken.getToken());
+    refreshTokenDAO.insert(
+        tokenHash,
+        encryptedToken,
+        clientId,
+        userName,
+        JsonUtils.pojoToJson(scopes),
+        newToken.getExpiresAt());
+
+    LOG.debug("Rotated refresh token for user: {}, client: {}", userName, clientId);
+  }
+
+  /**
    * Delete a refresh token.
    */
   public void deleteRefreshToken(String tokenValue) {

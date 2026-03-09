@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -41,6 +42,7 @@ import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.McpPendingAuthRequest;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.OAuthAuthorizationCodeRecord;
 import org.openmetadata.service.security.AuthenticationCodeFlowHandler;
@@ -76,7 +78,13 @@ import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
   private static final int AUTH_CODE_EXPIRY_SECONDS = 600;
-  private static final long JWT_EXPIRY_SECONDS = 3600L;
+
+  // Short-lived access tokens (10 minutes) limit the exposure window when a refresh token
+  // is revoked. Since JWTs are stateless and cannot be individually invalidated, a shorter
+  // TTL ensures that a revoked session loses access within 10 minutes. MCP clients handle
+  // automatic token refresh seamlessly using the long-lived refresh token.
+  private static final long JWT_EXPIRY_SECONDS = 600L;
+
   private static final long REFRESH_TOKEN_EXPIRY_DAYS = 30L;
   private static final long REFRESH_TOKEN_EXPIRY_SECONDS = REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
 
@@ -476,7 +484,40 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
           "Invalid SSO response: email is required but was not provided by identity provider");
     }
 
-    LOG.debug("SSO callback received valid user identity: username={}, email={}", userName, email);
+    LOG.debug("SSO callback received valid user identity");
+
+    // Verify user exists in OpenMetadata BEFORE generating an auth code.
+    // Without this check, non-OM users who authenticate via SSO see the success page
+    // but then fail silently at token exchange with a confusing "invalid_grant" error.
+    // getEntityByName throws EntityNotFoundException (never returns null).
+    try {
+      Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
+    } catch (EntityNotFoundException e) {
+      LOG.warn("SSO-authenticated user not found in OpenMetadata. Denying access.");
+      LOG.debug("Denied user details: {}", userName);
+      response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+      response.setContentType("text/html; charset=UTF-8");
+      response
+          .getWriter()
+          .write(
+              "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
+                  + "<style>"
+                  + "body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+                  + "display:flex;justify-content:center;align-items:center;min-height:100vh;"
+                  + "margin:0;background:#f5f5f5;color:#333}"
+                  + ".card{text-align:center;background:#fff;border-radius:12px;"
+                  + "padding:48px;box-shadow:0 2px 8px rgba(0,0,0,0.1);max-width:480px}"
+                  + "h1{color:#c62828;margin:0 0 12px}"
+                  + "p{margin:4px 0;color:#666}"
+                  + "</style></head><body>"
+                  + "<div class=\"card\">"
+                  + "<h1>Access Denied</h1>"
+                  + "<p>Your account is not registered in OpenMetadata.</p>"
+                  + "<p>Please contact your administrator to get access.</p>"
+                  + "<p style=\"font-size:13px;margin-top:16px\">You can close this window.</p>"
+                  + "</div></body></html>");
+      return;
+    }
 
     // Extract authRequestId from composite state
     if (ssoState == null || !ssoState.startsWith("mcp:")) {
@@ -542,36 +583,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
     // (e.g., Azure's "Enter password" form stuck with loading dots). By serving our own
     // HTML page first, the browser replaces the SSO page with a clear success message.
     LOG.info("Serving success page with redirect to client callback");
-    response.setStatus(HttpServletResponse.SC_OK);
-    response.setContentType("text/html; charset=UTF-8");
-    String safeRedirectUrl = redirectUrl.replace("\"", "&quot;").replace("'", "&#39;");
-    response
-        .getWriter()
-        .write(
-            "<!DOCTYPE html><html><head>"
-                + "<meta charset=\"UTF-8\">"
-                + "<meta http-equiv=\"refresh\" content=\"1;url="
-                + safeRedirectUrl
-                + "\">"
-                + "<style>"
-                + "body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
-                + "display:flex;justify-content:center;align-items:center;min-height:100vh;"
-                + "margin:0;background:#f5f5f5;color:#333}"
-                + ".card{text-align:center;background:#fff;border-radius:12px;"
-                + "padding:48px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}"
-                + "h1{color:#2e7d32;margin:0 0 12px}"
-                + "p{margin:4px 0;color:#666}"
-                + "</style></head><body>"
-                + "<div class=\"card\">"
-                + "<h1>Authentication Successful</h1>"
-                + "<p>Redirecting back to your application...</p>"
-                + "<p style=\"font-size:13px;margin-top:16px\">"
-                + "If you are not redirected automatically, you can close this window.</p>"
-                + "</div>"
-                + "<script>setTimeout(function(){window.location.href=\""
-                + safeRedirectUrl
-                + "\"},500);</script>"
-                + "</body></html>");
+    serveSuccessPage(response, redirectUrl);
 
     // Best-effort cleanup — failure here doesn't affect the user
     try {
@@ -679,9 +691,11 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       String userName = codeRecord.userName();
       LOG.debug("Generating JWT token");
 
-      User user = Entity.getEntityByName(Entity.USER, userName, "roles,teams", Include.NON_DELETED);
-      if (user == null) {
-        throw new TokenException("invalid_grant", "User not found: " + userName);
+      User user;
+      try {
+        user = Entity.getEntityByName(Entity.USER, userName, "roles,teams", Include.NON_DELETED);
+      } catch (EntityNotFoundException e) {
+        throw new TokenException("invalid_grant", "User not found or deactivated");
       }
 
       JWTAuthMechanism jwtAuth =
@@ -822,25 +836,18 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       String userName = tokenRecord.getUserName();
       LOG.debug("Refresh token validated successfully (rotating token)");
 
-      // HIGH: Validate user account status before issuing new tokens
-      // Check if user still exists and is not deleted (security requirement)
-      User user = Entity.getEntityByName(Entity.USER, userName, "roles,teams", Include.NON_DELETED);
-      if (user == null) {
-        LOG.error(
-            "SECURITY: User account deleted or not found during refresh token exchange: {}. "
-                + "Revoking refresh token to prevent further use.",
-            userName);
-
-        // Revoke the refresh token since the user no longer exists
+      User user;
+      try {
+        user = Entity.getEntityByName(Entity.USER, userName, "roles,teams", Include.NON_DELETED);
+      } catch (EntityNotFoundException e) {
+        LOG.warn("User account not found during refresh token exchange. Revoking token.");
         tokenRepository.revokeRefreshToken(refreshTokenValue);
-
         throw new TokenException(
             "invalid_grant",
-            "User account has been deleted or deactivated. All tokens have been revoked. "
-                + "Please re-authenticate if your account has been restored.");
+            "User account has been deleted or deactivated. Please re-authenticate.");
       }
 
-      LOG.debug("User status validated: User {} is active and not deleted", userName);
+      LOG.debug("User status validated, proceeding with token rotation");
 
       // Generate cryptographically secure new refresh token (32 bytes = 256 bits)
       String newRefreshTokenValue = generateSecureToken(32);
@@ -850,17 +857,11 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
           new RefreshToken(
               newRefreshTokenValue, client.getClientId(), requestedScopes, newRefreshExpiresAt);
 
-      // Store new refresh token before revoking old one
-      // This ensures atomicity: if revocation fails, both tokens work briefly
-      // If storage fails, old token still works - no lock-out
-      tokenRepository.storeRefreshToken(
+      // Atomic rotation: revoke all existing tokens for this user+client, then store the new one.
+      // This prevents the window where both old and new tokens are valid simultaneously.
+      tokenRepository.rotateRefreshToken(
           newRefreshToken, client.getClientId(), userName, requestedScopes);
-      LOG.debug("New refresh token stored for user: {}", userName);
-
-      // Revoke old token after new one is safely stored
-      // This implements the refresh token rotation pattern (RFC 6749 Section 10.4)
-      tokenRepository.revokeRefreshToken(refreshTokenValue);
-      LOG.debug("Old refresh token revoked for user: {}", userName);
+      LOG.debug("Refresh token rotated for user: {}", userName);
 
       LOG.info(
           "New refresh token generated for user: {} (expires in {} days)",
@@ -958,6 +959,72 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
     byte[] tokenBytes = new byte[numBytes];
     SECURE_RANDOM.nextBytes(tokenBytes);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
+  }
+
+  /**
+   * Serves an HTML success page that auto-redirects to the client callback URL.
+   * A raw 302 redirect leaves the SSO provider's login page visible in the browser
+   * (e.g., Azure's "Enter password" form stuck with loading dots). By serving our own
+   * HTML page first, the browser replaces the SSO page with a clear success message.
+   */
+  private void serveSuccessPage(HttpServletResponse response, String redirectUrl)
+      throws IOException {
+    response.setStatus(HttpServletResponse.SC_OK);
+    response.setContentType("text/html; charset=UTF-8");
+
+    // Escape for two different contexts: HTML attribute and JavaScript string literal.
+    // The redirect URL is constructed from validated inputs (UriUtils.constructRedirectUri),
+    // but defense-in-depth requires proper context-aware escaping.
+    String htmlSafe = escapeForHtmlAttribute(redirectUrl);
+    String jsSafe = escapeForJavaScriptString(redirectUrl);
+
+    response
+        .getWriter()
+        .write(
+            "<!DOCTYPE html><html><head>"
+                + "<meta charset=\"UTF-8\">"
+                + "<meta http-equiv=\"refresh\" content=\"1;url="
+                + htmlSafe
+                + "\">"
+                + "<style>"
+                + "body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+                + "display:flex;justify-content:center;align-items:center;min-height:100vh;"
+                + "margin:0;background:#f5f5f5;color:#333}"
+                + ".card{text-align:center;background:#fff;border-radius:12px;"
+                + "padding:48px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}"
+                + "h1{color:#2e7d32;margin:0 0 12px}"
+                + "p{margin:4px 0;color:#666}"
+                + "</style></head><body>"
+                + "<div class=\"card\">"
+                + "<h1>Authentication Successful</h1>"
+                + "<p>Redirecting back to your application...</p>"
+                + "<p style=\"font-size:13px;margin-top:16px\">"
+                + "If you are not redirected automatically, you can close this window.</p>"
+                + "</div>"
+                + "<script>setTimeout(function(){window.location.href=\""
+                + jsSafe
+                + "\"},500);</script>"
+                + "</body></html>");
+  }
+
+  private static String escapeForHtmlAttribute(String value) {
+    return value
+        .replace("&", "&amp;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;");
+  }
+
+  private static String escapeForJavaScriptString(String value) {
+    return value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("'", "\\'")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("<", "\\x3c")
+        .replace(">", "\\x3e");
   }
 
   private boolean verifyPKCE(String codeVerifier, String codeChallenge) {

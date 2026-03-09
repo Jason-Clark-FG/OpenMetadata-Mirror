@@ -10885,6 +10885,10 @@ public interface CollectionDAO {
 
     @SqlUpdate("DELETE FROM oauth_refresh_tokens WHERE expires_at < :currentTime")
     void deleteExpired(@Bind("currentTime") long currentTime);
+
+    @SqlUpdate(
+        "UPDATE oauth_refresh_tokens SET revoked = TRUE WHERE client_id = :clientId AND user_name = :userName AND revoked = FALSE")
+    void revokeAllForUser(@Bind("clientId") String clientId, @Bind("userName") String userName);
   }
 
   interface McpPendingAuthRequestDAO {

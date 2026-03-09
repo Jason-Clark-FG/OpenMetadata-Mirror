@@ -175,11 +175,18 @@ public class SSOCallbackServlet extends HttpServlet {
       expectedIssuer = authConfig.getAuthority();
     }
 
-    return new IdTokenValidator(
-        authConfig.getPublicKeyUrls(),
-        expectedIssuer,
-        null // Audience (client ID) validation is optional - some providers don't set it
-        );
+    // Validate audience (client ID) when available. Without this, an ID token issued to
+    // a different application at the same SSO provider could be accepted.
+    String expectedAudience = null;
+    try {
+      expectedAudience = ssoHandler.getClient().getConfiguration().getClientId();
+      LOG.debug("ID token audience validation enabled for client ID: {}", expectedAudience);
+    } catch (Exception e) {
+      LOG.warn(
+          "Could not extract SSO client ID for audience validation, skipping: {}", e.getMessage());
+    }
+
+    return new IdTokenValidator(authConfig.getPublicKeyUrls(), expectedIssuer, expectedAudience);
   }
 
   @Override
