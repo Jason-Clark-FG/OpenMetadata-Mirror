@@ -905,9 +905,11 @@ public class K8sPipelineClient extends PipelineServiceClient {
         // Only return jobs that are QUEUED (created but not started)
         if (isJobQueued(job)) {
           String runId =
-              job.getMetadata().getLabels() != null
-                  ? job.getMetadata().getLabels().get(LABEL_RUN_ID)
-                  : job.getMetadata().getName();
+              StringUtils.defaultIfBlank(
+                  job.getMetadata().getLabels() != null
+                      ? job.getMetadata().getLabels().get(LABEL_RUN_ID)
+                      : null,
+                  job.getMetadata().getName());
 
           Long startTime =
               job.getMetadata().getCreationTimestamp() != null

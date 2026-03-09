@@ -30,6 +30,7 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
+import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1CronJobSpec;
 import io.kubernetes.client.openapi.models.V1EnvVar;
@@ -38,9 +39,12 @@ import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobList;
 import io.kubernetes.client.openapi.models.V1JobStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1Status;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,10 +60,14 @@ import org.openmetadata.schema.ServiceEntityInterface;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.Parameters;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.PipelineServiceClientConfiguration;
 import org.openmetadata.schema.api.services.CreateDatabaseService;
+import org.openmetadata.schema.entity.app.App;
+import org.openmetadata.schema.entity.automations.Workflow;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.ingestionPipelines.AirflowConfig;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
+import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServiceClientResponse;
+import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatusType;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
 import org.openmetadata.schema.security.client.OpenMetadataJWTClientConfig;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
@@ -88,6 +96,9 @@ class K8sPipelineClientTest {
   @Mock private CoreV1Api.APIdeleteNamespacedConfigMapRequest deleteConfigMapRequest;
   @Mock private CoreV1Api.APIdeleteNamespacedSecretRequest deleteSecretRequest;
   @Mock private CoreV1Api.APIlistNamespacedPodRequest listPodRequest;
+  @Mock private CoreV1Api.APIlistNamespacedConfigMapRequest listConfigMapRequest;
+  @Mock private CoreV1Api.APIlistNamespacedSecretRequest listSecretRequest;
+  @Mock private CoreV1Api.APIreadNamespacedPodLogRequest readPodLogRequest;
 
   private K8sPipelineClient client;
   private ServiceEntityInterface testService;
@@ -683,6 +694,244 @@ class K8sPipelineClientTest {
     assertEquals("30 2 * * 1-5", cronJobCaptor.getValue().getSpec().getSchedule());
   }
 
+  @Test
+  void testGetQueuedPipelineStatusReturnsOnlyQueuedJobs() throws Exception {
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+
+    V1Job queuedWithRunId =
+        new V1Job()
+            .metadata(
+                new V1ObjectMeta()
+                    .name("queued-with-run-id")
+                    .labels(Map.of("app.kubernetes.io/run-id", "run-1"))
+                    .creationTimestamp(OffsetDateTime.parse("2026-03-09T10:15:30Z")));
+    V1Job queuedWithoutRunId =
+        new V1Job()
+            .metadata(
+                new V1ObjectMeta()
+                    .name("queued-without-run-id")
+                    .creationTimestamp(OffsetDateTime.parse("2026-03-09T10:16:30Z")))
+            .status(new V1JobStatus().active(0).succeeded(0).failed(0));
+    V1Job activeJob =
+        new V1Job()
+            .metadata(new V1ObjectMeta().name("active-job"))
+            .status(new V1JobStatus().active(1));
+    V1Job deletingJob =
+        new V1Job()
+            .metadata(
+                new V1ObjectMeta()
+                    .name("deleting-job")
+                    .deletionTimestamp(OffsetDateTime.parse("2026-03-09T10:17:30Z")))
+            .status(new V1JobStatus().active(0).succeeded(0).failed(0));
+
+    when(batchApi.listNamespacedJob(eq(NAMESPACE))).thenReturn(listJobRequest);
+    when(listJobRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listJobRequest);
+    when(listJobRequest.execute())
+        .thenReturn(new V1JobList().items(List.of(queuedWithRunId, queuedWithoutRunId, activeJob, deletingJob)));
+
+    List<PipelineStatus> queuedStatuses = client.getQueuedPipelineStatus(pipeline);
+
+    assertEquals(2, queuedStatuses.size());
+    assertEquals("run-1", queuedStatuses.get(0).getRunId());
+    assertEquals(PipelineStatusType.QUEUED, queuedStatuses.get(0).getPipelineState());
+    assertEquals("queued-without-run-id", queuedStatuses.get(1).getRunId());
+    assertEquals(
+        queuedWithRunId.getMetadata().getCreationTimestamp().toInstant().toEpochMilli(),
+        queuedStatuses.get(0).getStartDate());
+  }
+
+  @Test
+  void testGetQueuedPipelineStatusHandlesApiFailure() throws Exception {
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+
+    when(batchApi.listNamespacedJob(eq(NAMESPACE))).thenReturn(listJobRequest);
+    when(listJobRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listJobRequest);
+    when(listJobRequest.execute()).thenThrow(new ApiException(500, "boom"));
+
+    assertTrue(client.getQueuedPipelineStatus(pipeline).isEmpty());
+  }
+
+  @Test
+  void testGetLastIngestionLogsPrefersMainPodAndReturnsTaskLogs() throws Exception {
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+
+    V1Pod newerSidecarPod =
+        pod(
+            "newer-sidecar",
+            OffsetDateTime.parse("2026-03-09T10:20:30Z"),
+            Map.of(),
+            List.of("worker"));
+    V1Pod olderMainPod =
+        pod(
+            "older-main",
+            OffsetDateTime.parse("2026-03-09T10:19:30Z"),
+            Map.of("omjob.pipelines.openmetadata.org/pod-type", "main"),
+            List.of("main", "sidecar"));
+
+    when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
+    when(listPodRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listPodRequest);
+    when(listPodRequest.execute()).thenReturn(new V1PodList().items(List.of(newerSidecarPod, olderMainPod)));
+    when(coreApi.readNamespacedPodLog(eq("older-main"), eq(NAMESPACE))).thenReturn(readPodLogRequest);
+    when(readPodLogRequest.container(eq("main"))).thenReturn(readPodLogRequest);
+    when(readPodLogRequest.execute()).thenReturn("hello from ingestion");
+
+    Map<String, String> logs = client.getLastIngestionLogs(pipeline, null);
+
+    assertEquals("hello from ingestion", logs.get("ingestion_task"));
+    assertEquals("1", logs.get("total"));
+  }
+
+  @Test
+  void testGetLastIngestionLogsHandlesEmptyLogsAndApiFailures() throws Exception {
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+    V1Pod workerPod =
+        pod(
+            "worker-pod",
+            OffsetDateTime.parse("2026-03-09T10:20:30Z"),
+            Map.of(),
+            List.of("worker"));
+
+    when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
+    when(listPodRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listPodRequest);
+    when(listPodRequest.execute()).thenReturn(new V1PodList().items(List.of(workerPod)));
+    when(coreApi.readNamespacedPodLog(eq("worker-pod"), eq(NAMESPACE))).thenReturn(readPodLogRequest);
+    when(readPodLogRequest.container(eq("worker"))).thenReturn(readPodLogRequest);
+    when(readPodLogRequest.execute()).thenReturn("");
+
+    Map<String, String> emptyLogs = client.getLastIngestionLogs(pipeline, null);
+    assertEquals("No logs available for pod: worker-pod", emptyLogs.get("logs"));
+
+    reset(listPodRequest);
+    when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
+    when(listPodRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listPodRequest);
+    when(listPodRequest.execute()).thenThrow(new ApiException(500, "pod lookup failed"));
+
+    Map<String, String> failureLogs = client.getLastIngestionLogs(pipeline, null);
+    assertTrue(failureLogs.get("logs").contains("Failed to retrieve logs"));
+  }
+
+  @Test
+  void testGetServiceStatusHealthyWhenPermissionsAreAvailable() throws Exception {
+    when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
+    when(listPodRequest.limit(1)).thenReturn(listPodRequest);
+    when(listPodRequest.execute()).thenReturn(new V1PodList());
+
+    when(batchApi.listNamespacedJob(eq(NAMESPACE))).thenReturn(listJobRequest);
+    when(listJobRequest.limit(1)).thenReturn(listJobRequest);
+    when(listJobRequest.execute()).thenReturn(new V1JobList());
+
+    when(coreApi.listNamespacedConfigMap(eq(NAMESPACE))).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.limit(1)).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.execute()).thenReturn(null);
+
+    when(coreApi.listNamespacedSecret(eq(NAMESPACE))).thenReturn(listSecretRequest);
+    when(listSecretRequest.limit(1)).thenReturn(listSecretRequest);
+    when(listSecretRequest.execute()).thenReturn(null);
+
+    PipelineServiceClientResponse response = client.getServiceStatus();
+
+    assertEquals(200, response.getCode());
+    assertEquals("kubernetes", response.getVersion());
+    assertTrue(response.getPlatform().contains("openmetadata-pipelines"));
+  }
+
+  @Test
+  void testGetServiceStatusSurfacesMissingConfigMapAndSecretPermissions() throws Exception {
+    when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
+    when(listPodRequest.limit(1)).thenReturn(listPodRequest);
+    when(listPodRequest.execute()).thenReturn(new V1PodList());
+
+    when(batchApi.listNamespacedJob(eq(NAMESPACE))).thenReturn(listJobRequest);
+    when(listJobRequest.limit(1)).thenReturn(listJobRequest);
+    when(listJobRequest.execute()).thenReturn(new V1JobList());
+
+    when(coreApi.listNamespacedConfigMap(eq(NAMESPACE))).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.limit(1)).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.execute()).thenThrow(new ApiException(403, "forbidden configmaps"));
+
+    PipelineServiceClientResponse configMapFailure = client.getServiceStatus();
+    assertEquals(500, configMapFailure.getCode());
+    assertTrue(configMapFailure.getReason().contains("missing ConfigMap permissions"));
+
+    reset(listConfigMapRequest);
+    when(coreApi.listNamespacedConfigMap(eq(NAMESPACE))).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.limit(1)).thenReturn(listConfigMapRequest);
+    when(listConfigMapRequest.execute()).thenReturn(null);
+
+    when(coreApi.listNamespacedSecret(eq(NAMESPACE))).thenReturn(listSecretRequest);
+    when(listSecretRequest.limit(1)).thenReturn(listSecretRequest);
+    when(listSecretRequest.execute()).thenThrow(new ApiException(403, "forbidden secrets"));
+
+    PipelineServiceClientResponse secretFailure = client.getServiceStatus();
+    assertEquals(500, secretFailure.getCode());
+    assertTrue(secretFailure.getReason().contains("missing Secret permissions"));
+  }
+
+  @Test
+  void testRunAutomationAndApplicationFlowsCreateJobs() throws Exception {
+    Workflow workflow = createTestWorkflow("Nightly Cleanup");
+
+    when(batchApi.createNamespacedJob(eq(NAMESPACE), any())).thenReturn(createJobRequest);
+    when(createJobRequest.execute()).thenReturn(new V1Job());
+
+    PipelineServiceClientResponse workflowResponse = client.runAutomationsWorkflow(workflow);
+
+    assertEquals(200, workflowResponse.getCode());
+    ArgumentCaptor<V1Job> workflowJobCaptor = ArgumentCaptor.forClass(V1Job.class);
+    verify(batchApi).createNamespacedJob(eq(NAMESPACE), workflowJobCaptor.capture());
+    assertEquals(
+        List.of("python", "run_automation.py"),
+        workflowJobCaptor
+            .getValue()
+            .getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getCommand());
+
+    reset(batchApi, createJobRequest);
+    when(batchApi.createNamespacedJob(eq(NAMESPACE), any())).thenReturn(createJobRequest);
+    when(createJobRequest.execute()).thenReturn(new V1Job());
+
+    App application = createTestApplication("Query Runner");
+    PipelineServiceClientResponse applicationResponse = client.runApplicationFlow(application);
+
+    assertEquals(200, applicationResponse.getCode());
+    ArgumentCaptor<V1Job> applicationJobCaptor = ArgumentCaptor.forClass(V1Job.class);
+    verify(batchApi).createNamespacedJob(eq(NAMESPACE), applicationJobCaptor.capture());
+    V1Job applicationJob = applicationJobCaptor.getValue();
+    assertEquals(
+        List.of("python", "-m", "metadata.applications.runner"),
+        applicationJob.getSpec().getTemplate().getSpec().getContainers().get(0).getCommand());
+    assertEquals(
+        "query-runner",
+        applicationJob.getMetadata().getLabels().get("app.kubernetes.io/app-name"));
+  }
+
+  @Test
+  void testRunAutomationAndApplicationFlowsSurfaceApiFailures() throws Exception {
+    when(batchApi.createNamespacedJob(eq(NAMESPACE), any())).thenReturn(createJobRequest);
+    when(createJobRequest.execute()).thenThrow(new ApiException(500, "job create failed"));
+
+    assertThrows(
+        IngestionPipelineDeploymentException.class,
+        () -> client.runAutomationsWorkflow(createTestWorkflow("Nightly Cleanup")));
+
+    reset(batchApi, createJobRequest);
+    when(batchApi.createNamespacedJob(eq(NAMESPACE), any())).thenReturn(createJobRequest);
+    when(createJobRequest.execute()).thenThrow(new ApiException(500, "job create failed"));
+
+    assertThrows(
+        IngestionPipelineDeploymentException.class,
+        () -> client.runApplicationFlow(createTestApplication("Query Runner")));
+  }
+
   private void resetAllMocks() {
     reset(
         batchApi,
@@ -866,6 +1115,29 @@ class K8sPipelineClientTest {
   private static Map<String, String> toEnvMap(List<V1EnvVar> envVars) {
     return envVars.stream()
         .collect(Collectors.toMap(V1EnvVar::getName, V1EnvVar::getValue, (a, b) -> b));
+  }
+
+  private static V1Pod pod(
+      String name, OffsetDateTime createdAt, Map<String, String> labels, List<String> containerNames) {
+    List<V1Container> containers =
+        containerNames.stream().map(containerName -> new V1Container().name(containerName)).toList();
+    return new V1Pod()
+        .metadata(new V1ObjectMeta().name(name).labels(labels).creationTimestamp(createdAt))
+        .spec(new V1PodSpec().containers(containers));
+  }
+
+  private static Workflow createTestWorkflow(String name) {
+    Workflow workflow = new Workflow();
+    workflow.setId(UUID.randomUUID());
+    workflow.setName(name);
+    return workflow;
+  }
+
+  private static App createTestApplication(String name) {
+    App application = new App();
+    application.setId(UUID.randomUUID());
+    application.setName(name);
+    return application;
   }
 
   private ServiceEntityInterface createTestService() {
