@@ -55,6 +55,7 @@ import { DataQualityDashboardChartFilters } from '../../pages/DataQuality/DataQu
 import { ListTestCaseParamsBySearch } from '../../rest/testAPI';
 import { getEntryFormattedValue } from '../DataInsightUtils';
 import { formatDate } from '../date-time/DateTimeUtils';
+import EntityLink from '../EntityLink';
 import { getColumnNameFromEntityLink } from '../EntityUtils';
 import { getEntityFQN } from '../FeedUtils';
 import { generateEntityLink } from '../TableUtils';
@@ -621,4 +622,61 @@ export function filterTestCasesByTableAndColumn(
   }
 
   return result;
+}
+
+export const COLUMN_AGGREGATE_FIELD = 'columns.name.keyword';
+
+export function getEntityLinkForColumnFilter(
+  tableFqn: string,
+  columnName: string
+): string {
+  return EntityLink.getTableEntityLink(tableFqn, columnName);
+}
+
+export function parseColumnAggregateBuckets(
+  buckets: { key?: string }[],
+  tableFqn?: string
+): SearchDropdownOption[] {
+  const seen = new Set<string>();
+
+  return (buckets ?? []).reduce<SearchDropdownOption[]>((acc, b) => {
+    const colKey = b.key ?? '';
+    const key = tableFqn ? `${tableFqn}::${colKey}` : colKey;
+    if (!key || seen.has(key)) {
+      return acc;
+    }
+    seen.add(key);
+    acc.push({ key, label: colKey });
+
+    return acc;
+  }, []);
+}
+
+export function getColumnFilterEntityLink(
+  columnFilterKey: string
+): string | undefined {
+  if (
+    !columnFilterKey.includes('::') ||
+    columnFilterKey.includes('::columns::') ||
+    columnFilterKey.startsWith('<#E')
+  ) {
+    return undefined;
+  }
+  const lastSep = columnFilterKey.lastIndexOf('::');
+  const tableFqn = columnFilterKey.slice(0, lastSep);
+  const columnName = columnFilterKey.slice(lastSep + 2);
+
+  return getEntityLinkForColumnFilter(tableFqn, columnName);
+}
+
+export function getColumnNameFromColumnFilterKey(
+  columnFilterKey: string
+): string | undefined {
+  if (!columnFilterKey?.trim()) {
+    return undefined;
+  }
+
+  return columnFilterKey.includes('::')
+    ? columnFilterKey.slice(columnFilterKey.lastIndexOf('::') + 2)
+    : columnFilterKey;
 }

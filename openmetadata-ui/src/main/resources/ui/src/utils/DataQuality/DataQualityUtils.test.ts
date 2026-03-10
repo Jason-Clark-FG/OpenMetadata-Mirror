@@ -28,10 +28,14 @@ import {
   buildTestCaseParams,
   createTestCaseParameters,
   filterTestCasesByTableAndColumn,
+  getColumnFilterEntityLink,
   getColumnFilterOptions,
+  getColumnNameFromColumnFilterKey,
+  getEntityLinkForColumnFilter,
   getSelectedOptionsFromKeys,
   getServiceTypeForTestDefinition,
   getTestCaseFiltersValue,
+  parseColumnAggregateBuckets,
   transformToTestCaseStatusObject,
 } from './DataQualityUtils';
 
@@ -795,6 +799,107 @@ describe('DataQualityUtils', () => {
       expect(
         filterTestCasesByTableAndColumn(items, ['nonexistent.table'], [])
       ).toEqual([]);
+    });
+  });
+
+  describe('parseColumnAggregateBuckets', () => {
+    it('returns empty array for empty buckets', () => {
+      expect(parseColumnAggregateBuckets([])).toEqual([]);
+      expect(parseColumnAggregateBuckets([], 'table.fqn')).toEqual([]);
+    });
+
+    it('maps buckets to options with key and label when no tableFqn', () => {
+      const buckets = [{ key: 'col1' }, { key: 'col2' }];
+
+      expect(parseColumnAggregateBuckets(buckets)).toEqual([
+        { key: 'col1', label: 'col1' },
+        { key: 'col2', label: 'col2' },
+      ]);
+    });
+
+    it('prefixes key with tableFqn:: when tableFqn provided', () => {
+      const buckets = [{ key: 'col1' }];
+
+      expect(
+        parseColumnAggregateBuckets(buckets, 'svc.db.schema.table')
+      ).toEqual([{ key: 'svc.db.schema.table::col1', label: 'col1' }]);
+    });
+
+    it('deduplicates by key', () => {
+      const buckets = [{ key: 'col1' }, { key: 'col1' }];
+
+      expect(parseColumnAggregateBuckets(buckets)).toHaveLength(1);
+    });
+
+    it('skips buckets with undefined key', () => {
+      const buckets = [{ key: 'col1' }, { key: undefined }, { key: 'col2' }];
+
+      expect(parseColumnAggregateBuckets(buckets)).toEqual([
+        { key: 'col1', label: 'col1' },
+        { key: 'col2', label: 'col2' },
+      ]);
+    });
+  });
+
+  describe('getEntityLinkForColumnFilter', () => {
+    it('returns entity link for table and column', () => {
+      const result = getEntityLinkForColumnFilter(
+        'sample_snowflake.ANALYTICS_DB.prod.customer_360',
+        'customer_id'
+      );
+
+      expect(result).toContain('table');
+      expect(result).toContain('columns');
+      expect(result).toContain('customer_id');
+      expect(result).toContain('customer_360');
+    });
+  });
+
+  describe('getColumnFilterEntityLink', () => {
+    it('returns undefined when key has no ::', () => {
+      expect(getColumnFilterEntityLink('col1')).toBeUndefined();
+    });
+
+    it('returns undefined when key contains ::columns::', () => {
+      expect(
+        getColumnFilterEntityLink('<#E::table::sample.table::columns::id>')
+      ).toBeUndefined();
+    });
+
+    it('returns undefined when key starts with <#E', () => {
+      expect(
+        getColumnFilterEntityLink(
+          '<#E::table::sample.table::columns::id>::something'
+        )
+      ).toBeUndefined();
+    });
+
+    it('returns entity link when key is tableFqn::columnName', () => {
+      const result = getColumnFilterEntityLink(
+        'sample_snowflake.ANALYTICS_DB.prod.customer_360::customer_id'
+      );
+
+      expect(result).toBeDefined();
+      expect(result).toContain('customer_id');
+    });
+  });
+
+  describe('getColumnNameFromColumnFilterKey', () => {
+    it('returns undefined for empty or whitespace key', () => {
+      expect(getColumnNameFromColumnFilterKey('')).toBeUndefined();
+      expect(getColumnNameFromColumnFilterKey('   ')).toBeUndefined();
+    });
+
+    it('returns key as-is when no ::', () => {
+      expect(getColumnNameFromColumnFilterKey('zip')).toBe('zip');
+    });
+
+    it('returns part after last :: when key contains ::', () => {
+      expect(
+        getColumnNameFromColumnFilterKey(
+          'sample_snowflake.ANALYTICS_DB.prod.customer_360::zip'
+        )
+      ).toBe('zip');
     });
   });
 });

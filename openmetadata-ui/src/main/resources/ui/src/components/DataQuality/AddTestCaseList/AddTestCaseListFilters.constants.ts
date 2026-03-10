@@ -43,14 +43,15 @@ export const ADD_TEST_CASE_LIST_FILTERS: AddTestCaseListFilterConfig[] = [
   {
     searchKey: 'table',
     labelKey: 'label.table',
-    singleSelect: false,
+    singleSelect: true,
     showSelectedCounts: true,
     enableSearch: true,
   },
   {
     searchKey: 'column',
     labelKey: 'label.column',
-    singleSelect: false,
+    singleSelect: true,
     showSelectedCounts: true,
+    enableSearch: true,
   },
 ];

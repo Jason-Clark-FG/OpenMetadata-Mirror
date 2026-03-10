@@ -79,6 +79,16 @@ jest.mock('../../../rest/searchAPI', () => ({
   }),
 }));
 
+jest.mock('../../../rest/miscAPI', () => ({
+  getAggregateFieldOptions: jest.fn().mockResolvedValue({
+    data: {
+      aggregations: {
+        'sterms#columns.name.keyword': { buckets: [] },
+      },
+    },
+  }),
+}));
+
 jest.mock('../../../constants/constants', () => ({
   ...jest.requireActual('../../../constants/constants'),
   getEntityDetailsPath: jest.fn(),
@@ -139,7 +149,7 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
             onChange(
               [
                 {
-                  key: '<#E::table::sample.table>',
+                  key: 'sample.table',
                   label: 'sample.table',
                 },
               ],
@@ -160,15 +170,7 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           data-testid="filter-column"
           type="button"
           onClick={() =>
-            onChange(
-              [
-                {
-                  key: '<#E::table::sample.table::columns::id>::<#E::table::sample.table::columns::id>',
-                  label: 'id',
-                },
-              ],
-              'column'
-            )
+            onChange([{ key: 'sample.table::id', label: 'id' }], 'column')
           }
         >
           Apply column filter
@@ -479,10 +481,46 @@ describe('AddTestCaseList', () => {
       });
     });
 
-    it('filters list by table selection (client-side)', async () => {
+    it('calls API with columnName when column filter is applied', async () => {
       mockGetListTestCaseBySearch.mockResolvedValue({
         data: mockTestCases,
         paging: { total: 3 },
+      });
+
+      await act(async () => {
+        renderWithRouter(mockProps);
+      });
+
+      await waitFor(() => {
+        expect(mockGetListTestCaseBySearch).toHaveBeenCalled();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('filter-column'));
+      });
+
+      await waitFor(() => {
+        expect(mockGetListTestCaseBySearch).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            columnName: 'id',
+          })
+        );
+      });
+    });
+
+    it('filters list by table selection (server-side)', async () => {
+      mockGetListTestCaseBySearch.mockImplementation((params) => {
+        if (params?.entityLink === '<#E::table::sample.table>') {
+          return Promise.resolve({
+            data: [mockTestCases[0]],
+            paging: { total: 1 },
+          });
+        }
+
+        return Promise.resolve({
+          data: mockTestCases,
+          paging: { total: 3 },
+        });
       });
 
       await act(async () => {
@@ -498,16 +536,26 @@ describe('AddTestCaseList', () => {
         fireEvent.click(screen.getByTestId('filter-table'));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
-        expect(screen.queryByTestId('test_case_3')).not.toBeInTheDocument();
-      });
+      expect(mockGetListTestCaseBySearch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          entityLink: '<#E::table::sample.table>',
+        })
+      );
     });
 
-    it('filters list by column selection (client-side)', async () => {
-      mockGetListTestCaseBySearch.mockResolvedValue({
-        data: mockTestCases,
-        paging: { total: 3 },
+    it('filters list by column selection (server-side)', async () => {
+      mockGetListTestCaseBySearch.mockImplementation((params) => {
+        if (params?.columnName) {
+          return Promise.resolve({
+            data: [mockTestCases[1]],
+            paging: { total: 1 },
+          });
+        }
+
+        return Promise.resolve({
+          data: mockTestCases,
+          paging: { total: 3 },
+        });
       });
 
       await act(async () => {
@@ -515,7 +563,8 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('test_case_2')).toBeInTheDocument();
+        expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
+        expect(screen.getByTestId('test_case_3')).toBeInTheDocument();
       });
 
       await act(async () => {
@@ -523,9 +572,15 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
+        expect(mockGetListTestCaseBySearch).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            columnName: 'id',
+          })
+        );
+      });
+
+      await waitFor(() => {
         expect(screen.getByTestId('test_case_2')).toBeInTheDocument();
-        expect(screen.queryByTestId('test_case_1')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('test_case_3')).not.toBeInTheDocument();
       });
     });
 

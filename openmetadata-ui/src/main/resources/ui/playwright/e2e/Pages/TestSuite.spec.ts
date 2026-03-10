@@ -86,7 +86,7 @@ test(
       );
     });
 
-    await test.step('Add test case modal filters (verify, apply, clear)', async () => {
+    await test.step('Verify add test case modal filter dropdowns are visible', async () => {
       const addTestCaseCard = page.locator(
         '[data-testid="test-case-selection-card"]'
       );
@@ -103,7 +103,12 @@ test(
       await expect(
         addTestCaseCard.getByTestId('search-dropdown-Column')
       ).toBeVisible();
+    });
 
+    await test.step('Filter by Test Type Table and wait for API', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
       const testTypeFilterResponse = page.waitForResponse(
         '/api/v1/dataQuality/testCases/search/list*'
       );
@@ -121,7 +126,12 @@ test(
         "[data-testid='test-case-selection-card'] [data-testid='loader']",
         { state: 'detached' }
       );
+    });
 
+    await test.step('Filter by Status Success and wait for API', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
       const statusFilterResponse = page.waitForResponse(
         '/api/v1/dataQuality/testCases/search/list*'
       );
@@ -139,6 +149,86 @@ test(
         "[data-testid='test-case-selection-card'] [data-testid='loader']",
         { state: 'detached' }
       );
+    });
+
+    await test.step('Filter by Table and wait for API', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
+      const tableSearchResponse = page.waitForResponse(
+        '/api/v1/search/query?*index=table_search_index*'
+      );
+      await addTestCaseCard.getByTestId('search-dropdown-Table').click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('search-input')
+        .fill(table.entity?.name ?? '');
+      await tableSearchResponse;
+
+      const tableOption = page
+        .getByTestId('drop-down-menu')
+        .getByTestId(table.entityResponseData?.fullyQualifiedName ?? '');
+      await tableOption.waitFor({ state: 'visible' });
+      await tableOption.click();
+
+      const testCaseByTableResponse = page.waitForResponse(
+        (url) =>
+          url.url().includes('/api/v1/dataQuality/testCases/search/list') &&
+          url.url().includes('entityLink')
+      );
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('update-btn')
+        .click();
+      await testCaseByTableResponse;
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
+      );
+    });
+
+    await test.step('Filter by Column and wait for API', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
+      const columnAggregateResponse = page.waitForResponse(
+        (url) =>
+          url.url().includes('/api/v1/search/aggregate') &&
+          url.url().includes('columns.name.keyword')
+      );
+      await addTestCaseCard.getByTestId('search-dropdown-Column').click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('search-input')
+        .fill('category_id');
+      await columnAggregateResponse;
+
+      const columnOption = page
+        .getByTestId('drop-down-menu')
+        .getByTestId('category_id');
+      await columnOption.waitFor({ state: 'visible' });
+      await columnOption.click();
+
+      const testCaseByColumnResponse = page.waitForResponse(
+        (url) =>
+          url.url().includes('/api/v1/dataQuality/testCases/search/list') &&
+          url.url().includes('columnName')
+      );
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('update-btn')
+        .click();
+      await testCaseByColumnResponse;
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
+      );
+    });
+
+    await test.step('Reset Test Type to All and clear filters, wait for API', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
 
       await addTestCaseCard.getByTestId('search-dropdown-Test Type').click();
       await page
@@ -149,6 +239,42 @@ test(
         .getByTestId('drop-down-menu')
         .getByTestId('update-btn')
         .click();
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
+      );
+
+      const clearTableResponse = page.waitForResponse(
+        '/api/v1/dataQuality/testCases/search/list*'
+      );
+      await addTestCaseCard.getByTestId('search-dropdown-Table').click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId(table.entityResponseData?.fullyQualifiedName ?? '')
+        .click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('update-btn')
+        .click();
+      await clearTableResponse;
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
+      );
+
+      const clearColumnResponse = page.waitForResponse(
+        '/api/v1/dataQuality/testCases/search/list*'
+      );
+      await addTestCaseCard.getByTestId('search-dropdown-Column').click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('category_id')
+        .click();
+      await page
+        .getByTestId('drop-down-menu')
+        .getByTestId('update-btn')
+        .click();
+      await clearColumnResponse;
       await page.waitForSelector(
         "[data-testid='test-case-selection-card'] [data-testid='loader']",
         { state: 'detached' }

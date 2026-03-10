@@ -36,13 +36,15 @@ import { EntityTabs, EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { TestCaseType } from '../../../enums/TestSuite.enum';
 import { TestCase, TestCaseStatus } from '../../../generated/tests/testCase';
+import { getAggregateFieldOptions } from '../../../rest/miscAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { getNameFromFQN } from '../../../utils/CommonUtils';
 import {
-  filterTestCasesByTableAndColumn,
-  getColumnFilterOptions,
+  COLUMN_AGGREGATE_FIELD,
+  getColumnNameFromColumnFilterKey,
   getSelectedOptionsFromKeys,
+  parseColumnAggregateBuckets,
 } from '../../../utils/DataQuality/DataQualityUtils';
 import {
   getColumnNameFromEntityLink,
@@ -89,6 +91,10 @@ export const AddTestCaseList = ({
     SearchDropdownOption[]
   >([]);
   const [isTableOptionsLoading, setIsTableOptionsLoading] = useState(false);
+  const [columnOptionsFromApi, setColumnOptionsFromApi] = useState<
+    SearchDropdownOption[]
+  >([]);
+  const [isColumnOptionsLoading, setIsColumnOptionsLoading] = useState(false);
 
   const statusOptions = useMemo<SearchDropdownOption[]>(
     () =>
@@ -108,7 +114,10 @@ export const AddTestCaseList = ({
     []
   );
 
-  const columnOptions = useMemo(() => getColumnFilterOptions(items), [items]);
+  const columnOptions = useMemo(
+    () => columnOptionsFromApi,
+    [columnOptionsFromApi]
+  );
 
   const statusSelectedKeys = useMemo<SearchDropdownOption[]>(
     () =>
@@ -153,11 +162,6 @@ export const AddTestCaseList = ({
     [filterColumns, columnOptions]
   );
 
-  const filteredItems = useMemo(
-    () => filterTestCasesByTableAndColumn(items, filterTables, filterColumns),
-    [items, filterTables, filterColumns]
-  );
-
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
@@ -175,7 +179,7 @@ export const AddTestCaseList = ({
       });
 
       const options: SearchDropdownOption[] = response.hits.hits.map((hit) => ({
-        key: hit._source.fullyQualifiedName,
+        key: hit._source.fullyQualifiedName ?? '',
         label: getEntityName(hit._source),
       }));
       setTableOptionsFromApi(options);
@@ -191,6 +195,37 @@ export const AddTestCaseList = ({
     [fetchTableData]
   );
 
+  const fetchColumnOptions = useCallback(async (search?: string) => {
+    setIsColumnOptionsLoading(true);
+    try {
+      const response = await getAggregateFieldOptions(
+        SearchIndex.DATA_ASSET,
+        COLUMN_AGGREGATE_FIELD,
+        search ?? '',
+        '',
+        undefined,
+        false
+      );
+      const buckets =
+        response.data?.aggregations?.[`sterms#${COLUMN_AGGREGATE_FIELD}`]
+          ?.buckets ?? [];
+      const options = parseColumnAggregateBuckets(
+        buckets as { key: string }[],
+        undefined
+      );
+      setColumnOptionsFromApi(options);
+    } catch {
+      setColumnOptionsFromApi([]);
+    } finally {
+      setIsColumnOptionsLoading(false);
+    }
+  }, []);
+
+  const debounceFetchColumnData = useCallback(
+    debounce((search: string) => fetchColumnOptions(search), 500),
+    [fetchColumnOptions]
+  );
+
   const fetchTestCases = useCallback(
     async ({
       searchText,
@@ -204,6 +239,21 @@ export const AddTestCaseList = ({
         const globalSearch = searchText ? `*${searchText}*` : WILD_CARD_CHAR;
         const q = filters ? `${globalSearch} && ${filters}` : globalSearch;
 
+        const columnNamesFromKeys =
+          filterColumns.length > 0
+            ? (filterColumns
+                .map((k) => getColumnNameFromColumnFilterKey(k))
+                .filter(Boolean) as string[])
+            : [];
+        const columnName =
+          columnNamesFromKeys.length > 0
+            ? columnNamesFromKeys.join(',')
+            : undefined;
+        const entityLink =
+          filterTables.length > 0
+            ? `<#E::table::${filterTables[0]}>`
+            : undefined;
+
         const requestParams = {
           q,
           limit: PAGE_SIZE_MEDIUM,
@@ -213,12 +263,15 @@ export const AddTestCaseList = ({
             filterTestType !== TestCaseType.all && {
               testCaseType: filterTestType,
             }),
+          ...(entityLink && { entityLink }),
+          ...(columnName && { columnName }),
         };
         if (testCaseParams) {
           Object.assign(requestParams, {
             ...omit(testCaseParams, Object.keys(requestParams)),
           });
         }
+
         const testCaseResponse = await getListTestCaseBySearch(requestParams);
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
@@ -245,7 +298,15 @@ export const AddTestCaseList = ({
         setIsLoading(false);
       }
     },
-    [filters, selectedTest, testCaseParams, filterStatus, filterTestType]
+    [
+      filters,
+      selectedTest,
+      testCaseParams,
+      filterStatus,
+      filterTestType,
+      filterTables,
+      filterColumns,
+    ]
   );
 
   const handleSubmit = async () => {
@@ -308,32 +369,49 @@ export const AddTestCaseList = ({
   };
   useEffect(() => {
     fetchTestCases({ searchText: searchTerm });
-  }, [searchTerm, filterStatus, filterTestType, fetchTestCases]);
+  }, [
+    searchTerm,
+    filterStatus,
+    filterTestType,
+    filterTables,
+    filterColumns,
+    fetchTestCases,
+  ]);
 
   useEffect(() => {
     fetchTableData();
   }, [fetchTableData]);
 
+  useEffect(() => {
+    fetchColumnOptions();
+  }, [fetchColumnOptions]);
+
   const handleFilterSearch = useCallback(
     (searchText: string, searchKey: string) => {
       if (searchKey === 'table') {
         debounceFetchTableData(searchText);
+      } else if (searchKey === 'column' && searchText.trim().length > 0) {
+        debounceFetchColumnData(searchText);
       }
     },
-    [debounceFetchTableData]
+    [debounceFetchTableData, debounceFetchColumnData]
   );
 
+  const listSource = items;
+
   const renderList = useMemo(() => {
-    const listSource =
-      filterTables.length > 0 || filterColumns.length > 0
-        ? filteredItems
-        : items;
-    if (!isLoading && isEmpty(listSource)) {
+    const source = listSource;
+    if (!isLoading && isEmpty(source)) {
       return (
         <Col span={24}>
-          <Space align="center" className="w-full" direction="vertical">
+          <Space
+            align="center"
+            className="w-full"
+            direction="vertical"
+            prefixCls="w-full"
+          >
             <ErrorPlaceHolder
-              className="mt-0-important"
+              className="mt-0-important p-b-sm"
               type={ERROR_PLACEHOLDER_TYPE.FILTER}
             />
           </Space>
@@ -418,15 +496,7 @@ export const AddTestCaseList = ({
         </Col>
       );
     }
-  }, [
-    items,
-    filteredItems,
-    filterTables,
-    filterColumns,
-    selectedItems,
-    isLoading,
-    onScroll,
-  ]);
+  }, [items, listSource, selectedItems, isLoading, onScroll]);
 
   const handleFilterChange = useCallback(
     (values: SearchDropdownOption[], searchKey: AddTestCaseListFilterKey) => {
@@ -444,12 +514,12 @@ export const AddTestCaseList = ({
           break;
         }
         case 'table': {
-          setFilterTables(values.map((o) => o.key));
+          setFilterTables(values.length > 0 ? [values[0].key] : []);
 
           break;
         }
         case 'column': {
-          setFilterColumns(values.map((o) => o.key));
+          setFilterColumns(values.length > 0 ? [values[0].key] : []);
 
           break;
         }
@@ -469,8 +539,11 @@ export const AddTestCaseList = ({
   );
 
   const filterLoading = useMemo(
-    () => ({ table: isTableOptionsLoading }),
-    [isTableOptionsLoading]
+    () => ({
+      table: isTableOptionsLoading,
+      column: isColumnOptionsLoading,
+    }),
+    [isTableOptionsLoading, isColumnOptionsLoading]
   );
 
   const filterSelectedKeys = useMemo(
