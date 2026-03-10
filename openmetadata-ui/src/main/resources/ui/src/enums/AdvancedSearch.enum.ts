@@ -54,7 +54,7 @@ export enum EntityFields {
   SCHEMA_FIELD = 'messageSchema.schemaFields.name.keyword',
   FEATURE = 'mlFeatures.name',
   FIELD = 'fields.name.keyword',
-  OWNERS = 'owners.displayName.keyword',
+  OWNERS = 'ownerDisplayName',
   TAG = 'tags.tagFQN',
   TIER = 'tier.tagFQN',
   CLASSIFICATION_TAGS = 'classificationTags',
@@ -113,4 +113,7 @@ export enum EntityReferenceFields {
   DELETED = 'deleted',
   UPDATED_AT = 'updatedAt',
   VERSION = 'version',
+  RELATED_TERMS = 'relatedTerms',
+  SYNONYMS = 'synonyms',
+  ENTITY_STATUS = 'entityStatus',
 }
