@@ -114,11 +114,6 @@ export const AddTestCaseList = ({
     []
   );
 
-  const columnOptions = useMemo(
-    () => columnOptionsFromApi,
-    [columnOptionsFromApi]
-  );
-
   const statusSelectedKeys = useMemo<SearchDropdownOption[]>(
     () =>
       filterStatus == null
@@ -156,10 +151,10 @@ export const AddTestCaseList = ({
     () =>
       getSelectedOptionsFromKeys(
         filterColumns,
-        columnOptions,
+        columnOptionsFromApi,
         (key) => key.split('::').pop() ?? '--'
       ),
-    [filterColumns, columnOptions]
+    [filterColumns, columnOptionsFromApi]
   );
 
   const handleSearch = (value: string) => {
@@ -225,6 +220,13 @@ export const AddTestCaseList = ({
     debounce((search: string) => fetchColumnOptions(search), 500),
     [fetchColumnOptions]
   );
+
+  useEffect(() => {
+    return () => {
+      debounceFetchTableData.cancel();
+      debounceFetchColumnData.cancel();
+    };
+  }, [debounceFetchTableData, debounceFetchColumnData]);
 
   const fetchTestCases = useCallback(
     async ({
@@ -390,11 +392,11 @@ export const AddTestCaseList = ({
     (searchText: string, searchKey: string) => {
       if (searchKey === 'table') {
         debounceFetchTableData(searchText);
-      } else if (searchKey === 'column' && searchText.trim().length > 0) {
+      } else if (searchKey === 'column') {
         debounceFetchColumnData(searchText);
       }
     },
-    [debounceFetchTableData, debounceFetchColumnData]
+    [debounceFetchTableData, debounceFetchColumnData, fetchColumnOptions]
   );
 
   const listSource = items;
@@ -533,9 +535,9 @@ export const AddTestCaseList = ({
       status: statusOptions,
       testType: testTypeOptions,
       table: tableOptionsFromApi,
-      column: columnOptions,
+      column: columnOptionsFromApi,
     }),
-    [statusOptions, testTypeOptions, tableOptionsFromApi, columnOptions]
+    [statusOptions, testTypeOptions, tableOptionsFromApi, columnOptionsFromApi]
   );
 
   const filterLoading = useMemo(
