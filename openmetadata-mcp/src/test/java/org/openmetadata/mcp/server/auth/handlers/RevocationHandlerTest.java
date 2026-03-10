@@ -74,10 +74,12 @@ public class RevocationHandlerTest {
   @Test
   void testRevokeNonExistentToken() {
     String token = "non-existent-token";
-    doThrow(new RuntimeException("Token not found"))
+    doThrow(new IllegalArgumentException("Token not found"))
         .when(tokenRepository)
         .revokeRefreshToken(token);
-    doThrow(new RuntimeException("Token not found")).when(tokenRepository).deleteAccessToken(token);
+    doThrow(new IllegalArgumentException("Token not found"))
+        .when(tokenRepository)
+        .deleteAccessToken(token);
 
     CompletableFuture<Void> result = revocationHandler.revokeToken(token, null);
 
@@ -110,7 +112,7 @@ public class RevocationHandlerTest {
   @Test
   void testRevokeWithRefreshTokenHintButIsAccessToken() {
     String token = "access-token";
-    doThrow(new RuntimeException("Token not found"))
+    doThrow(new IllegalArgumentException("Token not found"))
         .when(tokenRepository)
         .revokeRefreshToken(token);
 
