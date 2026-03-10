@@ -159,7 +159,6 @@ MAP_CONNECTION_TYPE_DIALECT: Dict[str, Dialect] = {
     str(DorisType.Doris.value): Dialect.MYSQL,
     str(StarrocksType.StarRocks.value): Dialect.MYSQL,
     str(MicrosoftFabricType.MicrosoftFabric.value): Dialect.TSQL,
-
 }
 
 
