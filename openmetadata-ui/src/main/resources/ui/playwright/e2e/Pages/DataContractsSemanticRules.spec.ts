@@ -1714,10 +1714,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await saveAndTriggerDataContractValidation(page, true);
 
-      // After the reload inside saveAndTriggerDataContractValidation, the
-      // version button in the header reflects the entity's current version.
-      // Read it from the UI so the rule always matches regardless of how many
-      // bumps session consolidation produced.
+        // After the reload inside saveAndTriggerDataContractValidation, the
+        // version button in the header reflects the entity's current version.
+        // Read it from the UI so the rule always matches regardless of how many
+        // bumps session consolidation produced.
         const actualVersionText = await page
           .getByTestId('version-button')
           .textContent();
@@ -1725,12 +1725,12 @@ test.describe('Data Contracts Semantics Rule Version', () => {
           actualVersionText,
           'Could not read current entity version from version-button'
         ).toBeTruthy();
-        const actualVersion = actualVersionText!;
+        const actualVersion = actualVersionText!.trim();
 
-      // Edit the contract to set the rule to the actual entity version, then
-      // re-validate to confirm the IS check now passes.
-      await clickEditContractButton(page);
-      await page.getByRole('tab', { name: 'Semantics' }).click();
+        // Edit the contract to set the rule to the actual entity version, then
+        // re-validate to confirm the IS check now passes.
+        await clickEditContractButton(page);
+        await page.getByRole('tab', { name: 'Semantics' }).click();
 
         const versionInput = page
           .locator('.group')
