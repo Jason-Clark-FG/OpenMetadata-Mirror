@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import StyleModal from './StyleModal.component';
 import { StyleModalProps } from './StyleModal.interface';
 
@@ -36,7 +36,6 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     children: React.ReactNode;
     'data-testid'?: string;
   }) => <span data-testid={testId}>{children}</span>,
-  createMuiTheme: jest.fn(),
 }));
 
 const mockProps: StyleModalProps = {
@@ -78,14 +77,14 @@ describe('StyleModal component', () => {
     expect(submitBtn).toBeInTheDocument();
     expect(url).toBeInTheDocument();
 
-    await act(async () => {
-      fireEvent.change(url, { target: { value: 'url' } });
-      fireEvent.click(submitBtn);
-    });
+    fireEvent.change(url, { target: { value: 'url' } });
+    fireEvent.click(submitBtn);
 
-    expect(mockProps.onSubmit).toHaveBeenCalledWith({
-      color: undefined,
-      iconURL: 'url',
-    });
+    await waitFor(() =>
+      expect(mockProps.onSubmit).toHaveBeenCalledWith({
+        color: undefined,
+        iconURL: 'url',
+      })
+    );
   });
 });

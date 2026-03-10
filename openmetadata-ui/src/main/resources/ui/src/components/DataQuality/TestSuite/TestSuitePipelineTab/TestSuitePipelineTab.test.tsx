@@ -114,7 +114,6 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     children: React.ReactNode;
     'data-testid'?: string;
   }) => <span data-testid={testId}>{children}</span>,
-  createMuiTheme: jest.fn(),
 }));
 
 jest.mock('../../../../rest/ingestionPipelineAPI', () => {
@@ -219,7 +218,8 @@ jest.mock(
           <button
             onClick={() =>
               onPageChange({ cursorType: 'after', currentPage: 2 })
-            }>
+            }
+          >
             Next Page
           </button>
         </div>

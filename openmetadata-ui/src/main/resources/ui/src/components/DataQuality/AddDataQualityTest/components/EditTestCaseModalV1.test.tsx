@@ -56,7 +56,6 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     children: React.ReactNode;
     'data-testid'?: string;
   }) => <span data-testid={testId}>{children}</span>,
-  createMuiTheme: jest.fn(),
 }));
 
 jest.mock('../../../../utils/DataQuality/DataQualityUtils', () => {

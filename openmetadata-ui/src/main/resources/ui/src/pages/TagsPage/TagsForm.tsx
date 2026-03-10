@@ -237,7 +237,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      muiLabel: t(field.muiLabel),
+      label: t(field.label),
     };
   }, [t, disableMutuallyExclusiveField, isMutuallyExclusive]);
 
@@ -278,9 +278,8 @@ const TagsForm = ({
   return (
     <EntityAttachmentProvider
       entityFqn={initialValues?.fullyQualifiedName}
-      entityType={
-        isClassification ? EntityType.CLASSIFICATION : EntityType.TAG
-      }>
+      entityType={isClassification ? EntityType.CLASSIFICATION : EntityType.TAG}
+    >
       <Form
         className="tags-form"
         data-testid="tags-form"
@@ -289,7 +288,8 @@ const TagsForm = ({
         layout="vertical"
         name="tags"
         validateMessages={VALIDATION_MESSAGES}
-        onFinish={handleSave}>
+        onFinish={handleSave}
+      >
         <Grid colGap="4">
           <Grid.Item span={12}>{getField(nameField)}</Grid.Item>
           <Grid.Item span={12}>{getField(displayNameField)}</Grid.Item>

@@ -47,7 +47,8 @@ const FormItemLabel: FC<FormItemLabelProps> = ({
     <div className="tw:inline-flex tw:items-center tw:gap-1">
       <label
         className="tw:font-medium tw:text-gray-700"
-        data-testid="form-item-label">
+        data-testid="form-item-label"
+      >
         {label}
         {required && <span aria-hidden="true"> *</span>}
       </label>
@@ -55,7 +56,7 @@ const FormItemLabel: FC<FormItemLabelProps> = ({
         helperText &&
         showHelperText && (
           <Tooltip placement={placement} title={helperText}>
-            <TooltipTrigger className="tw:flex tw:items-center tw:leading-none tw:cursor-help">
+            <TooltipTrigger>
               <InfoCircle
                 className="tw:size-4 tw:text-secondary"
                 data-testid="form-item-helper-icon"
@@ -68,7 +69,8 @@ const FormItemLabel: FC<FormItemLabelProps> = ({
           color="brand"
           data-testid="form-item-beta-badge"
           size="sm"
-          type="pill-color">
+          type="pill-color"
+        >
           {t('label.beta')}
         </Badge>
       )}

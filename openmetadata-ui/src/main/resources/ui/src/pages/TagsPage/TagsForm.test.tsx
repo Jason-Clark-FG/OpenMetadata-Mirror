@@ -37,7 +37,8 @@ jest.mock('@openmetadata/ui-core-components', () => ({
       disabled={isDisabled}
       role="switch"
       onClick={() => onChange?.(!isSelected)}
-      {...props}>
+      {...props}
+    >
       {children}
     </button>
   ),
@@ -62,7 +63,14 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     children: React.ReactNode;
     'data-testid'?: string;
   }) => <span data-testid={testId}>{children}</span>,
-  createMuiTheme: jest.fn(),
+  Grid: Object.assign(
+    ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    {
+      Item: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
+      ),
+    }
+  ),
 }));
 
 jest.mock('../../components/common/RichTextEditor/RichTextEditor', () => {

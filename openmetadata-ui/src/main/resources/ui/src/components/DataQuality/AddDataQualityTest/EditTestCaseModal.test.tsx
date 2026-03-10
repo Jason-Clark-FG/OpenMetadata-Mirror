@@ -10,13 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { forwardRef } from 'react';
 import { LabelType, State, TagSource } from '../../../generated/type/tagLabel';
@@ -59,7 +53,6 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     children: React.ReactNode;
     'data-testid'?: string;
   }) => <span data-testid={testId}>{children}</span>,
-  createMuiTheme: jest.fn(),
 }));
 
 jest.mock('../../../utils/DataQuality/DataQualityUtils', () => {
@@ -204,11 +197,8 @@ describe('EditTestCaseModal Component', () => {
 
     const cancelBtn = await screen.findByText('label.cancel');
 
-    await act(async () => {
-      fireEvent.click(cancelBtn);
-    });
-
-    expect(mockProps.onCancel).toHaveBeenCalled();
+    fireEvent.click(cancelBtn);
+    await waitFor(() => expect(mockProps.onCancel).toHaveBeenCalled());
   });
 
   it('should call onUpdate function, on click of submit button', async () => {
@@ -216,15 +206,11 @@ describe('EditTestCaseModal Component', () => {
 
     const displayNameInput = await screen.findByLabelText('label.display-name');
 
-    await act(async () => {
-      fireEvent.change(displayNameInput, {
-        target: { value: 'Updated Display Name' },
-      });
+    fireEvent.change(displayNameInput, {
+      target: { value: 'Updated Display Name' },
     });
 
-    await act(async () => {
-      userEvent.click(await screen.findByText('label.save'));
-    });
+    userEvent.click(await screen.findByText('label.save'));
 
     await waitFor(() => {
       expect(mockProps.onUpdate).toHaveBeenCalled();
@@ -477,12 +463,10 @@ describe('EditTestCaseModal Component', () => {
     // Submit the form
     const submitBtn = await screen.findByText('label.save');
 
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
+    fireEvent.click(submitBtn);
 
     // Verify that onUpdate was called (indicating form submission with compute row count preserved)
-    expect(mockProps.onUpdate).toHaveBeenCalled();
+    await waitFor(() => expect(mockProps.onUpdate).toHaveBeenCalled());
   });
 
   it('should include tags and glossary terms in form submission', async () => {
@@ -494,12 +478,10 @@ describe('EditTestCaseModal Component', () => {
     // Submit the form
     const submitBtn = await screen.findByText('label.save');
 
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
+    fireEvent.click(submitBtn);
 
     // Verify that onUpdate was called (indicating form submission)
-    expect(mockProps.onUpdate).toHaveBeenCalled();
+    await waitFor(() => expect(mockProps.onUpdate).toHaveBeenCalled());
   });
 
   // Tier tag filtering tests
@@ -583,12 +565,10 @@ describe('EditTestCaseModal Component', () => {
     // Submit the form
     const submitBtn = await screen.findByText('label.save');
 
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
+    fireEvent.click(submitBtn);
 
     // The tier tag should be preserved in the update
-    expect(mockProps.onUpdate).toHaveBeenCalled();
+    await waitFor(() => expect(mockProps.onUpdate).toHaveBeenCalled());
   });
 
   it('should handle multiple tier tags correctly', async () => {
@@ -659,12 +639,10 @@ describe('EditTestCaseModal Component', () => {
     // Submit the form
     const submitBtn = await screen.findByText('label.save');
 
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
+    fireEvent.click(submitBtn);
 
     // Should work normally without tier tags
-    expect(mockProps.onUpdate).toHaveBeenCalled();
+    await waitFor(() => expect(mockProps.onUpdate).toHaveBeenCalled());
   });
 
   it('should convert boolean parameter string "false" to boolean false', async () => {

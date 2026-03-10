@@ -192,7 +192,6 @@ export const getMutuallyExclusiveField = ({
   showHelperText: boolean;
 }): FieldProp => ({
   name: 'mutuallyExclusive',
-  muiLabel: 'label.mutually-exclusive',
   label: 'label.mutually-exclusive',
   type: FieldTypes.UT_SWITCH,
   required: false,
