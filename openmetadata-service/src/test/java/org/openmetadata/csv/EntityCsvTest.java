@@ -1612,6 +1612,144 @@ public class EntityCsvTest {
   }
 
   @Test
+  void test_createSchemaEntityRequiresFqnAndExistingDatabaseOutsideDryRun() throws Exception {
+    TestCsv nullFqnCsv = new TestCsv();
+    nullFqnCsv.enableProcessing();
+
+    IllegalArgumentException missingFqn =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                nullFqnCsv.createSchemaEntity(
+                    mock(CSVPrinter.class), entityRecord(nullFqnCsv, "sales", "", ""), null));
+    assertEquals(
+        "Schema import requires fullyQualifiedName to determine the schema it belongs to",
+        missingFqn.getMessage());
+
+    TestCsv missingDatabaseCsv = new TestCsv();
+    missingDatabaseCsv.enableProcessing();
+    missingDatabaseCsv.setDryRun(false);
+    CSVRecord record = entityRecord(missingDatabaseCsv, "sales", "Sales", "Sales schema");
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class)) {
+      entity
+          .when(
+              () ->
+                  Entity.getEntityByNameWithExcludedFields(
+                      Entity.DATABASE,
+                      "service.db",
+                      "owners,tags,domains,extension",
+                      org.openmetadata.schema.type.Include.NON_DELETED))
+          .thenThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db"));
+
+      IllegalArgumentException missingDatabase =
+          assertThrows(
+              IllegalArgumentException.class,
+              () ->
+                  missingDatabaseCsv.createSchemaEntity(
+                      mock(CSVPrinter.class), record, "service.db.sales"));
+      assertEquals("Database not found: service.db", missingDatabase.getMessage());
+    }
+  }
+
+  @Test
+  void test_createTableEntityDryRunSimulatesMissingSchemaAndTable() throws Exception {
+    TestCsv testCsv = new TestCsv();
+    testCsv.enableProcessing();
+    testCsv.setDryRun(true);
+
+    String tableFqn = "service.db.schema.orders";
+    CSVRecord record = entityRecord(testCsv, "orders", "Orders", "Orders table");
+    TableRepository repository = mock(TableRepository.class);
+    RuleEngine ruleEngine = mock(RuleEngine.class);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
+        MockedStatic<RuleEngine> ruleEngineStatic = Mockito.mockStatic(RuleEngine.class);
+        MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class)) {
+      entity
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.DATABASE_SCHEMA,
+                      "service.db.schema",
+                      "name,displayName,service,database",
+                      org.openmetadata.schema.type.Include.NON_DELETED))
+          .thenThrow(
+              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"));
+      entity
+          .when(
+              () ->
+                  Entity.getEntityByNameWithExcludedFields(
+                      Entity.TABLE,
+                      tableFqn,
+                      "owners,tags,domains,extension",
+                      org.openmetadata.schema.type.Include.NON_DELETED))
+          .thenThrow(org.openmetadata.service.exception.EntityNotFoundException.byName(tableFqn));
+      entity.when(() -> Entity.getEntityRepository(Entity.TABLE)).thenReturn(repository);
+      ruleEngineStatic.when(RuleEngine::getInstance).thenReturn(ruleEngine);
+      validatorUtil.when(() -> ValidatorUtil.validate(Mockito.any(Table.class))).thenReturn(null);
+
+      Table[] captured = new Table[1];
+      Mockito.doAnswer(
+              invocation -> {
+                captured[0] = invocation.getArgument(0);
+                return null;
+              })
+          .when(repository)
+          .findMatchForImport(Mockito.any(Table.class));
+
+      testCsv.createTableEntity(mock(CSVPrinter.class), record, tableFqn);
+
+      assertNotNull(captured[0]);
+      assertEquals("orders", captured[0].getName());
+      assertEquals(tableFqn, captured[0].getFullyQualifiedName());
+      assertNull(captured[0].getDatabase());
+      assertNull(captured[0].getService());
+      assertEquals(0, captured[0].getColumns().size());
+      assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(record));
+      assertEquals(1, testCsv.importResult.getNumberOfRowsPassed());
+      assertEquals(captured[0], testCsv.dryRunCreatedEntities.get(tableFqn));
+    }
+  }
+
+  @Test
+  void test_createTableEntityRejectsMissingFqnAndSchemaOutsideDryRun() throws Exception {
+    TestCsv nullFqnCsv = new TestCsv();
+    nullFqnCsv.enableProcessing();
+
+    IllegalArgumentException missingFqn =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                nullFqnCsv.createTableEntity(
+                    mock(CSVPrinter.class), entityRecord(nullFqnCsv, "orders", "", ""), null));
+    assertEquals(
+        "Table import requires fullyQualifiedName to determine the schema it belongs to",
+        missingFqn.getMessage());
+
+    TestCsv missingSchemaCsv = Mockito.spy(new TestCsv());
+    missingSchemaCsv.enableProcessing();
+    missingSchemaCsv.setDryRun(false);
+    CSVRecord record = entityRecord(missingSchemaCsv, "orders", "Orders", "Orders table");
+
+    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
+        .when(missingSchemaCsv)
+        .getEntityWithDependencyResolution(
+            Entity.DATABASE_SCHEMA,
+            "service.db.schema",
+            "name,displayName,service,database",
+            org.openmetadata.schema.type.Include.NON_DELETED);
+
+    IllegalArgumentException missingSchema =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                missingSchemaCsv.createTableEntity(
+                    mock(CSVPrinter.class), record, "service.db.schema.orders"));
+    assertEquals("Schema not found: service.db.schema", missingSchema.getMessage());
+  }
+
+  @Test
   void test_createTableEntityQueuesNewTableUsingResolvedSchema() throws Exception {
     TestCsv testCsv = Mockito.spy(new TestCsv());
     testCsv.enableProcessing();
@@ -1673,6 +1811,54 @@ public class EntityCsvTest {
       assertTrue(testCsv.pendingEntityFQNs.contains(tableFqn));
       assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(record));
     }
+  }
+
+  @Test
+  void test_createStoredProcedureEntityRejectsMissingFqnAndSchemaOutsideDryRun()
+      throws Exception {
+    TestCsv nullFqnCsv = new TestCsv();
+    nullFqnCsv.enableProcessing();
+    CSVRecord nullFqnRecord =
+        storedProcedureRecord(
+            nullFqnCsv, "daily_sales", "Daily Sales", "Daily sales procedure", "select 1", "SQL");
+
+    IllegalArgumentException missingFqn =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                nullFqnCsv.createStoredProcedureEntity(
+                    mock(CSVPrinter.class), nullFqnRecord, null));
+    assertEquals(
+        "Stored procedure import requires fullyQualifiedName to determine the schema it belongs to",
+        missingFqn.getMessage());
+
+    TestCsv missingSchemaCsv = Mockito.spy(new TestCsv());
+    missingSchemaCsv.enableProcessing();
+    missingSchemaCsv.setDryRun(false);
+    CSVRecord record =
+        storedProcedureRecord(
+            missingSchemaCsv,
+            "daily_sales",
+            "Daily Sales",
+            "Daily sales procedure",
+            "select 1",
+            "SQL");
+
+    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
+        .when(missingSchemaCsv)
+        .getEntityWithDependencyResolution(
+            Entity.DATABASE_SCHEMA,
+            "service.db.schema",
+            "name,displayName,service,database",
+            org.openmetadata.schema.type.Include.NON_DELETED);
+
+    IllegalArgumentException missingSchema =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                missingSchemaCsv.createStoredProcedureEntity(
+                    mock(CSVPrinter.class), record, "service.db.schema.daily_sales"));
+    assertEquals("Schema not found: service.db.schema", missingSchema.getMessage());
   }
 
   @Test
@@ -1744,6 +1930,87 @@ public class EntityCsvTest {
       assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(record));
       assertEquals(1, testCsv.importResult.getNumberOfRowsPassed());
       assertEquals(captured[0], testCsv.dryRunCreatedEntities.get(storedProcedureFqn));
+    }
+  }
+
+  @Test
+  void test_createStoredProcedureEntityQueuesMissingProcedureWhenSchemaExists()
+      throws Exception {
+    TestCsv testCsv = Mockito.spy(new TestCsv());
+    testCsv.enableProcessing();
+    testCsv.setDryRun(false);
+
+    String storedProcedureFqn = "service.db.schema.daily_sales";
+    CSVRecord record =
+        storedProcedureRecord(
+            testCsv, "daily_sales", "Daily Sales", "Daily sales procedure", "select 1", "SQL");
+    DatabaseSchema schema =
+        new DatabaseSchema()
+            .withId(UUID.randomUUID())
+            .withName("schema")
+            .withFullyQualifiedName("service.db.schema")
+            .withDatabase(new EntityReference().withId(UUID.randomUUID()).withName("service.db"))
+            .withService(new EntityReference().withId(UUID.randomUUID()).withName("service"));
+    StoredProcedureRepository repository = mock(StoredProcedureRepository.class);
+    RuleEngine ruleEngine = mock(RuleEngine.class);
+
+    Mockito.doReturn(schema)
+        .when(testCsv)
+        .getEntityWithDependencyResolution(
+            Entity.DATABASE_SCHEMA,
+            "service.db.schema",
+            "name,displayName,service,database",
+            org.openmetadata.schema.type.Include.NON_DELETED);
+    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName(storedProcedureFqn))
+        .when(testCsv)
+        .getEntityWithDependencyResolution(
+            Entity.STORED_PROCEDURE,
+            storedProcedureFqn,
+            "name,displayName,fullyQualifiedName",
+            org.openmetadata.schema.type.Include.NON_DELETED);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
+        MockedStatic<RuleEngine> ruleEngineStatic = Mockito.mockStatic(RuleEngine.class);
+        MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.STORED_PROCEDURE)).thenReturn(repository);
+      ruleEngineStatic.when(RuleEngine::getInstance).thenReturn(ruleEngine);
+      validatorUtil
+          .when(() -> ValidatorUtil.validate(Mockito.any(StoredProcedure.class)))
+          .thenReturn(null);
+
+      Mockito.doAnswer(
+              invocation -> {
+                StoredProcedure storedProcedure = invocation.getArgument(0);
+                storedProcedure.setFullyQualifiedName(storedProcedureFqn);
+                return null;
+              })
+          .when(repository)
+          .setFullyQualifiedName(Mockito.any(StoredProcedure.class));
+
+      StoredProcedure[] captured = new StoredProcedure[1];
+      Mockito.doAnswer(
+              invocation -> {
+                captured[0] = invocation.getArgument(0);
+                return null;
+              })
+          .when(repository)
+          .findMatchForImport(Mockito.any(StoredProcedure.class));
+      Mockito.doNothing()
+          .when(repository)
+          .prepareInternal(Mockito.any(StoredProcedure.class), Mockito.eq(false));
+
+      testCsv.createStoredProcedureEntity(mock(CSVPrinter.class), record, storedProcedureFqn);
+
+      assertNotNull(captured[0]);
+      assertEquals("daily_sales", captured[0].getName());
+      assertEquals(storedProcedureFqn, captured[0].getFullyQualifiedName());
+      assertEquals("service", captured[0].getService().getName());
+      assertEquals("service.db", captured[0].getDatabase().getName());
+      assertEquals("select 1", captured[0].getStoredProcedureCode().getCode());
+      assertEquals(StoredProcedureLanguage.SQL, captured[0].getStoredProcedureCode().getLanguage());
+      assertEquals(1, testCsv.pendingEntityOperations.size());
+      assertTrue(testCsv.pendingEntityFQNs.contains(storedProcedureFqn));
+      assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(record));
     }
   }
 
