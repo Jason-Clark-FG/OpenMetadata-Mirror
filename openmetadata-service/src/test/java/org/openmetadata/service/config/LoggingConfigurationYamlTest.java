@@ -23,6 +23,8 @@ class LoggingConfigurationYamlTest {
         List.of(
             "../conf/openmetadata.yaml",
             "../docker/development/distributed-test/local/server1.yaml",
+            "../docker/development/distributed-test/local/server2.yaml",
+            "../docker/development/distributed-test/local/server3.yaml",
             "../openmetadata-integration-tests/src/test/resources/openmetadata-secure-test.yaml")) {
       assertDoesNotThrow(() -> parse(path), path);
     }
