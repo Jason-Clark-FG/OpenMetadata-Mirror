@@ -22,9 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.entity.app.internal.McpChatAppConfig;
 import org.openmetadata.schema.security.credentials.AWSBaseConfig;
-import org.openmetadata.schema.utils.JsonUtils;
-import org.openmetadata.service.config.McpClientConfiguration;
 import org.openmetadata.service.util.AwsCredentialsUtil;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
@@ -42,11 +41,11 @@ public class BedrockLlmClient implements LlmClient {
   private final ObjectMapper mapper;
   private final BedrockRuntimeClient bedrockClient;
 
-  public BedrockLlmClient(McpClientConfiguration config) {
-    this.model = config.getModel();
+  public BedrockLlmClient(McpChatAppConfig config) {
+    this.model = config.getLlmModel();
     this.mapper = new ObjectMapper();
 
-    AWSBaseConfig awsConfig = JsonUtils.convertValue(config.getAwsConfig(), AWSBaseConfig.class);
+    AWSBaseConfig awsConfig = config.getAwsConfig();
     BedrockRuntimeClientBuilder builder =
         BedrockRuntimeClient.builder()
             .credentialsProvider(AwsCredentialsUtil.buildCredentialsProvider(awsConfig))

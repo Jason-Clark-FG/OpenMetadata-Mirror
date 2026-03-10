@@ -12,14 +12,13 @@
  */
 package org.openmetadata.service.apps.bundles.mcp;
 
-import java.util.Map;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.app.App;
+import org.openmetadata.schema.entity.app.internal.McpChatAppConfig;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.AbstractNativeApplication;
-import org.openmetadata.service.config.McpClientConfiguration;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.mcpclient.McpClientService;
 import org.openmetadata.service.search.SearchRepository;
@@ -45,7 +44,6 @@ public class McpChatApplication extends AbstractNativeApplication {
     initializeService();
   }
 
-  @SuppressWarnings("unchecked")
   private void initializeService() {
     Object appConfigObj = getApp().getAppConfiguration();
     if (appConfigObj == null) {
@@ -53,19 +51,7 @@ public class McpChatApplication extends AbstractNativeApplication {
       return;
     }
 
-    Map<String, Object> appConfig = JsonUtils.getMap(appConfigObj);
-    McpClientConfiguration mcpConfig = new McpClientConfiguration();
-    mcpConfig.setProvider((String) appConfig.getOrDefault("llmProvider", "openai"));
-    mcpConfig.setApiKey((String) appConfig.get("llmApiKey"));
-    mcpConfig.setModel((String) appConfig.getOrDefault("llmModel", "gpt-4o"));
-    mcpConfig.setApiEndpoint((String) appConfig.get("llmApiEndpoint"));
-    if (appConfig.containsKey("awsConfig")) {
-      mcpConfig.setAwsConfig(JsonUtils.getMap(appConfig.get("awsConfig")));
-    }
-    if (appConfig.containsKey("systemPrompt")) {
-      mcpConfig.setSystemPrompt((String) appConfig.get("systemPrompt"));
-    }
-
+    McpChatAppConfig mcpConfig = JsonUtils.convertValue(appConfigObj, McpChatAppConfig.class);
     this.mcpClientService = new McpClientService(Entity.getCollectionDAO(), mcpConfig);
     LOG.info(
         "McpChatApplication service initialized (chat enabled: {})",

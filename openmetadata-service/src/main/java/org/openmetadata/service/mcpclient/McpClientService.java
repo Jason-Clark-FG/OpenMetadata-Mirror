@@ -39,7 +39,7 @@ import org.openmetadata.service.clients.llm.LlmClientFactory;
 import org.openmetadata.service.clients.llm.LlmMessage;
 import org.openmetadata.service.clients.llm.LlmResponse;
 import org.openmetadata.service.clients.llm.LlmToolCall;
-import org.openmetadata.service.config.McpClientConfiguration;
+import org.openmetadata.schema.entity.app.internal.McpChatAppConfig;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.McpConversationRepository;
@@ -53,17 +53,17 @@ public class McpClientService {
 
   private final McpConversationRepository conversationRepository;
   private final McpMessageRepository messageRepository;
-  private final McpClientConfiguration config;
+  private final McpChatAppConfig config;
   private volatile LlmClient llmClient;
   private volatile ToolExecutor toolExecutor;
   private volatile List<Map<String, Object>> toolDefinitions = Collections.emptyList();
 
-  public McpClientService(CollectionDAO dao, McpClientConfiguration config) {
+  public McpClientService(CollectionDAO dao, McpChatAppConfig config) {
     this.conversationRepository = new McpConversationRepository(dao.mcpConversationDAO());
     this.messageRepository = new McpMessageRepository(dao.mcpMessageDAO());
     this.config = config;
-    boolean hasApiKey = config.getApiKey() != null && !config.getApiKey().isBlank();
-    boolean hasAwsConfig = config.getAwsConfig() != null && !config.getAwsConfig().isEmpty();
+    boolean hasApiKey = config.getLlmApiKey() != null && !config.getLlmApiKey().isBlank();
+    boolean hasAwsConfig = config.getAwsConfig() != null;
     if (hasApiKey || hasAwsConfig) {
       this.llmClient = LlmClientFactory.create(config);
     }

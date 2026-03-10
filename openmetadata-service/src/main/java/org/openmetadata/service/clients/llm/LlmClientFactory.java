@@ -12,18 +12,18 @@
  */
 package org.openmetadata.service.clients.llm;
 
-import org.openmetadata.service.config.McpClientConfiguration;
+import org.openmetadata.schema.entity.app.internal.McpChatAppConfig;
 
 public final class LlmClientFactory {
 
   private LlmClientFactory() {}
 
-  public static LlmClient create(McpClientConfiguration config) {
-    return switch (config.getProvider()) {
+  public static LlmClient create(McpChatAppConfig config) {
+    return switch (config.getLlmProvider()) {
       case "openai" -> new OpenAiLlmClient(config);
       case "anthropic" -> new BedrockLlmClient(config);
       default -> throw new IllegalArgumentException(
-          "Unknown LLM provider: " + config.getProvider());
+          "Unknown LLM provider: " + config.getLlmProvider());
     };
   }
 }

@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
-import org.openmetadata.service.config.McpClientConfiguration;
+import org.openmetadata.schema.entity.app.internal.McpChatAppConfig;
 
 @Slf4j
 public class AnthropicLlmClient implements LlmClient {
@@ -46,10 +46,11 @@ public class AnthropicLlmClient implements LlmClient {
   private final ObjectMapper mapper;
   private final HttpClient httpClient;
 
-  public AnthropicLlmClient(McpClientConfiguration config) {
-    this.apiKey = config.getApiKey();
-    this.model = config.getModel();
-    this.apiEndpoint = config.getApiEndpoint() != null ? config.getApiEndpoint() : DEFAULT_ENDPOINT;
+  public AnthropicLlmClient(McpChatAppConfig config) {
+    this.apiKey = config.getLlmApiKey();
+    this.model = config.getLlmModel();
+    this.apiEndpoint =
+        config.getLlmApiEndpoint() != null ? config.getLlmApiEndpoint() : DEFAULT_ENDPOINT;
     this.mapper = new ObjectMapper();
     this.httpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
   }
