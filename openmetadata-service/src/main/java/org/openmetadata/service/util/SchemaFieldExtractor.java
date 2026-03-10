@@ -4,7 +4,9 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.Resource;
 import io.github.classgraph.ScanResult;
 import jakarta.ws.rs.core.UriInfo;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -28,6 +30,7 @@ import org.everit.json.schema.Schema;
 import org.everit.json.schema.StringSchema;
 import org.everit.json.schema.loader.SchemaClient;
 import org.everit.json.schema.loader.SchemaLoader;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.openmetadata.schema.entity.Type;
@@ -38,6 +41,9 @@ import org.openmetadata.service.jdbi3.TypeRepository;
 
 @Slf4j
 public class SchemaFieldExtractor {
+  private static final String DRAFT_07_SCHEMA_URI = "http://json-schema.org/draft-07/schema#";
+  private static final String DRAFT_2020_12_SCHEMA_URI =
+      "https://json-schema.org/draft/2020-12/schema";
 
   private static final Map<String, Map<String, FieldDefinition>> entityFieldsCache =
       new ConcurrentHashMap<>();
@@ -154,7 +160,8 @@ public class SchemaFieldExtractor {
           SchemaProcessingException.ErrorType.RESOURCE_NOT_FOUND);
     }
 
-    JSONObject rawSchema = new JSONObject(new JSONTokener(schemaInputStream));
+    JSONObject rawSchema =
+        normalizeSchemaForEverit(new JSONObject(new JSONTokener(schemaInputStream)));
     SchemaLoader schemaLoader =
         SchemaLoader.builder()
             .schemaJson(rawSchema)
@@ -404,7 +411,8 @@ public class SchemaFieldExtractor {
           SchemaProcessingException.ErrorType.RESOURCE_NOT_FOUND);
     }
 
-    JSONObject rawSchema = new JSONObject(new JSONTokener(schemaInputStream));
+    JSONObject rawSchema =
+        normalizeSchemaForEverit(new JSONObject(new JSONTokener(schemaInputStream)));
     SchemaLoader schemaLoader =
         SchemaLoader.builder()
             .schemaJson(rawSchema)
@@ -427,8 +435,11 @@ public class SchemaFieldExtractor {
   private static String determineReferenceType(String refUri) {
     // Handle internal schema references first (e.g., #/definitions/column,
     // #/definitions/tableConstraint, etc.)
-    if (refUri.startsWith("#/definitions/")) {
-      String definitionName = refUri.substring("#/definitions/".length());
+    if (refUri.startsWith("#/definitions/") || refUri.startsWith("#/$defs/")) {
+      String definitionName =
+          refUri.startsWith("#/definitions/")
+              ? refUri.substring("#/definitions/".length())
+              : refUri.substring("#/$defs/".length());
       LOG.debug("Found internal schema reference: {}", definitionName);
       // Return the definition name as the type - this preserves the actual type name
       return definitionName;
@@ -626,12 +637,16 @@ public class SchemaFieldExtractor {
       LOG.debug("SchemaClient: Resolving URL '{}' against base URI '{}'", url, baseUri);
       String resourcePath = mapUrlToResourcePath(url);
       LOG.debug("SchemaClient: Loading resource from path '{}'", resourcePath);
-      InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
-      if (is == null) {
-        LOG.error("Resource not found: {}", resourcePath);
-        throw new RuntimeException("Resource not found: " + resourcePath);
+      try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+        if (is == null) {
+          LOG.error("Resource not found: {}", resourcePath);
+          throw new RuntimeException("Resource not found: " + resourcePath);
+        }
+        JSONObject schema = normalizeSchemaForEverit(new JSONObject(new JSONTokener(is)));
+        return new ByteArrayInputStream(schema.toString().getBytes(StandardCharsets.UTF_8));
+      } catch (Exception e) {
+        throw new RuntimeException("Failed to load schema resource: " + resourcePath, e);
       }
-      return is;
     }
 
     private String mapUrlToResourcePath(String url) {
@@ -671,5 +686,36 @@ public class SchemaFieldExtractor {
         String name, String displayName, String type, Object customPropertyConfig) {
       return new FieldDefinition(name, displayName, type, customPropertyConfig);
     }
+  }
+
+  private static JSONObject normalizeSchemaForEverit(JSONObject schema) {
+    normalizeSchemaNode(schema);
+    return schema;
+  }
+
+  private static Object normalizeSchemaNode(Object node) {
+    if (node instanceof JSONObject jsonObject) {
+      if (DRAFT_2020_12_SCHEMA_URI.equals(jsonObject.optString("$schema"))) {
+        jsonObject.put("$schema", DRAFT_07_SCHEMA_URI);
+      }
+      if (jsonObject.has("$ref")) {
+        jsonObject.put("$ref", jsonObject.getString("$ref").replace("#/$defs/", "#/definitions/"));
+      }
+      if (jsonObject.has("$defs")) {
+        Object defs = jsonObject.remove("$defs");
+        jsonObject.put("definitions", normalizeSchemaNode(defs));
+      }
+      for (String key : new ArrayList<>(jsonObject.keySet())) {
+        jsonObject.put(key, normalizeSchemaNode(jsonObject.get(key)));
+      }
+      return jsonObject;
+    }
+    if (node instanceof JSONArray array) {
+      for (int i = 0; i < array.length(); i++) {
+        array.put(i, normalizeSchemaNode(array.get(i)));
+      }
+      return array;
+    }
+    return node;
   }
 }

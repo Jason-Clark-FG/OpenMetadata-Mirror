@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "newType": {
+      "type": "string",
+      "description": "A field type defined in $defs",
+      "$comment": "@om-field-type"
+    }
+  }
+}

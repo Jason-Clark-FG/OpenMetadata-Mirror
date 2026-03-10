@@ -85,12 +85,18 @@ public final class JsonUtils {
   public static final String FIELD_TYPE_ANNOTATION = "@om-field-type";
   public static final String ENTITY_TYPE_ANNOTATION = "@om-entity-type";
   public static final String JSON_FILE_EXTENSION = ".json";
+  private static final String DRAFT_2020_12_SCHEMA_URI =
+      "https://json-schema.org/draft/2020-12/schema";
   private static final ObjectMapper OBJECT_MAPPER;
   private static final ObjectMapper OBJECT_MAPPER_LENIENT;
   private static final ObjectMapper EXPOSED_OBJECT_MAPPER;
   private static final ObjectMapper MASKER_OBJECT_MAPPER;
-  private static final SchemaRegistry schemaFactory =
-      SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_7);
+  private static final Map<SpecificationVersion, SchemaRegistry> SCHEMA_FACTORIES =
+      Map.of(
+          SpecificationVersion.DRAFT_7,
+          SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_7),
+          SpecificationVersion.DRAFT_2020_12,
+          SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12));
   private static final String FAILED_TO_PROCESS_JSON = "Failed to process JSON ";
 
   static {
@@ -415,7 +421,10 @@ public final class JsonUtils {
   }
 
   public static Schema getJsonSchema(String schema) {
-    return schemaFactory.getSchema(schema);
+    SpecificationVersion version = getSpecificationVersion(schema);
+    return SCHEMA_FACTORIES
+        .getOrDefault(version, SCHEMA_FACTORIES.get(SpecificationVersion.DRAFT_7))
+        .getSchema(schema);
   }
 
   public static JsonNode valueToTree(Object object) {
@@ -478,20 +487,21 @@ public final class JsonUtils {
     } catch (IOException e) {
       throw new JsonParsingException("Failed to read jsonSchemaFile " + jsonSchemaFile, e);
     }
-    if (node.get("definitions") == null) {
+    JsonNode definitionsNode = getDefinitionsNode(node);
+    if (definitionsNode == null) {
       return Collections.emptyList();
     }
 
     String jsonNamespace = getSchemaName(jsonSchemaFile);
 
     List<Type> types = new ArrayList<>();
-    Iterator<Entry<String, JsonNode>> definitions = node.get("definitions").fields();
+    Iterator<Entry<String, JsonNode>> definitions = definitionsNode.fields();
     while (definitions != null && definitions.hasNext()) {
       Entry<String, JsonNode> entry = definitions.next();
       String typeName = entry.getKey();
       JsonNode value = entry.getValue();
       if (JsonUtils.hasAnnotation(value, JsonUtils.FIELD_TYPE_ANNOTATION)) {
-        String description = String.valueOf(value.get("description"));
+        String description = value.path("description").asText(null);
         Type type =
             new Type()
                 .withName(typeName)
@@ -528,7 +538,7 @@ public final class JsonUtils {
     String entityName = getSchemaName(jsonSchemaFile);
     String namespace = getSchemaGroup(jsonSchemaFile);
 
-    String description = String.valueOf(node.get("description"));
+    String description = node.path("description").asText(null);
     return new Type()
         .withName(entityName)
         .withCategory(Category.Entity)
@@ -774,6 +784,30 @@ public final class JsonUtils {
               : getResourcesFromJarFile(file, pattern));
     }
     return resources;
+  }
+
+  private static SpecificationVersion getSpecificationVersion(String schema) {
+    try {
+      String dialectId = OBJECT_MAPPER.readTree(schema).path("$schema").asText("");
+      if (dialectId.isBlank()) {
+        return SpecificationVersion.DRAFT_7;
+      }
+      return SpecificationVersion.fromDialectId(dialectId)
+          .orElse(
+              DRAFT_2020_12_SCHEMA_URI.equals(dialectId)
+                  ? SpecificationVersion.DRAFT_2020_12
+                  : SpecificationVersion.DRAFT_7);
+    } catch (IOException e) {
+      LOG.debug("Falling back to Draft-07 schema registry", e);
+      return SpecificationVersion.DRAFT_7;
+    }
+  }
+
+  private static JsonNode getDefinitionsNode(JsonNode node) {
+    if (node.get("definitions") != null) {
+      return node.get("definitions");
+    }
+    return node.get("$defs");
   }
 
   private static Collection<String> getResourcesFromDirectory(File file, Pattern pattern)

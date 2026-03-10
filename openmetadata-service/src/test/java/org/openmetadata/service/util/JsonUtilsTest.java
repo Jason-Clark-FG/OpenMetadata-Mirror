@@ -14,6 +14,7 @@
 package org.openmetadata.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,11 +28,13 @@ import jakarta.json.JsonPatchBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.api.services.DatabaseConnection;
+import org.openmetadata.schema.entity.Type;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.services.connections.dashboard.TableauConnection;
@@ -150,5 +153,35 @@ class JsonUtilsTest {
                             .withAuthType(new basicAuth().withPassword("password"))));
     String actualJson = JsonUtils.pojoToMaskedJson(databaseService);
     assertEquals(expectedJson, actualJson);
+  }
+
+  @Test
+  void testGetJsonSchemaSupportsDraft202012ArraySemantics() {
+    String schema =
+        """
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "array",
+          "prefixItems": [
+            { "type": "string" },
+            { "type": "integer" }
+          ],
+          "items": false
+        }
+        """;
+
+    var compiledSchema = JsonUtils.getJsonSchema(schema);
+
+    assertTrue(compiledSchema.validate(JsonUtils.readTree("[\"valid\", 1]")).isEmpty());
+    assertFalse(compiledSchema.validate(JsonUtils.readTree("[1, \"invalid\"]")).isEmpty());
+  }
+
+  @Test
+  void testGetFieldTypesSupportsDefs() {
+    List<Type> fieldTypes = JsonUtils.getFieldTypes("json/type/objectType202012.json");
+
+    assertEquals(1, fieldTypes.size());
+    assertEquals("newType", fieldTypes.getFirst().getName());
+    assertEquals("A field type defined in $defs", fieldTypes.getFirst().getDescription());
   }
 }
