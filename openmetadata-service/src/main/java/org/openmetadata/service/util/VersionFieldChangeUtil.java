@@ -89,7 +89,7 @@ public final class VersionFieldChangeUtil {
   private static void addFieldChangeKeys(
       Set<String> fieldChangeKeys, List<FieldChange> fieldChanges) {
     for (FieldChange fieldChange : fieldChanges) {
-      addFieldNameSuffixes(fieldChangeKeys, fieldChange.getName());
+      addFieldName(fieldChangeKeys, fieldChange.getName());
     }
   }
 
@@ -101,21 +101,16 @@ public final class VersionFieldChangeUtil {
     for (JsonNode fieldChange : fieldChanges) {
       JsonNode fieldName = fieldChange.get(FIELD_NAME);
       if (fieldName != null && !fieldName.isNull()) {
-        addFieldNameSuffixes(fieldChangeKeys, fieldName.asText());
+        addFieldName(fieldChangeKeys, fieldName.asText());
       }
     }
   }
 
-  private static void addFieldNameSuffixes(Set<String> fieldChangeKeys, String fieldName) {
+  private static void addFieldName(Set<String> fieldChangeKeys, String fieldName) {
     if (nullOrEmpty(fieldName)) {
       return;
     }
-
-    String[] pathParts = fieldName.split("\\.");
-    for (int index = 0; index < pathParts.length; index++) {
-      fieldChangeKeys.add(
-          String.join(".", java.util.Arrays.copyOfRange(pathParts, index, pathParts.length)));
-    }
+    fieldChangeKeys.add(fieldName);
   }
 
   @Getter
@@ -138,22 +133,6 @@ public final class VersionFieldChangeUtil {
       this.extension = extension;
       this.jsonSchema = jsonSchema;
       this.json = json;
-      this.versionNum = versionNum;
-      this.changedFieldKeys = changedFieldKeys;
-    }
-  }
-
-  @Getter
-  public static class VersionExtensionMetadata {
-    private final UUID id;
-    private final String extension;
-    private final Double versionNum;
-    private final String changedFieldKeys;
-
-    public VersionExtensionMetadata(
-        UUID id, String extension, Double versionNum, String changedFieldKeys) {
-      this.id = id;
-      this.extension = extension;
       this.versionNum = versionNum;
       this.changedFieldKeys = changedFieldKeys;
     }

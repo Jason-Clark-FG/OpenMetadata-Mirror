@@ -141,6 +141,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -320,6 +321,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
               });
 
   private final String collectionPath;
+  private static final long VERSION_FIELD_METADATA_RETRY_MILLIS = 30_000L;
+  private static volatile boolean versionFieldMetadataColumnsAvailable = true;
+  private static volatile long nextVersionFieldMetadataRetryAt;
   @Getter public final Class<T> entityClass;
   @Getter protected final String entityType;
   @Getter protected final EntityDAO<T> dao;
@@ -338,7 +342,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected final boolean supportsFollower;
   protected final boolean supportsExtension;
   protected final boolean supportsVotes;
-  private volatile boolean versionFieldMetadataColumnsAvailable;
   @Getter protected final boolean supportsDomains;
   protected final boolean supportsDataProducts;
   @Getter protected final boolean supportsReviewers;
@@ -1263,168 +1266,205 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   public final EntityHistoryWithOffset listVersionsWithOffset(
       UUID id, int limit, int offset, String fieldChanged) {
-    String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
-
-    T latest = setFieldsInternal(find(id, ALL), putFields);
-    setInheritedFields(latest, putFields);
-
-    if (fieldChanged != null && !fieldChanged.isEmpty()) {
+    T latest = getLatestVersionEntity(id);
+    if (hasFieldChangedFilter(fieldChanged)) {
       return listVersionsWithFieldFilter(id, latest, limit, offset, fieldChanged);
     }
+    return listAllVersionsWithOffset(id, latest, limit, offset);
+  }
 
-    final List<Object> versions = new ArrayList<>();
-    int dbLimit;
-    int dbOffset;
-
-    if (offset == 0) {
-      versions.add(JsonUtils.pojoToJson(latest));
-      dbLimit = limit - 1;
-      dbOffset = 0;
-    } else {
-      dbLimit = limit;
-      dbOffset = offset - 1;
-    }
-
-    if (dbLimit > 0) {
-      if (hasVersionFieldMetadataColumns()) {
-        List<ExtensionRecord> records =
-            daoCollection
-                .entityExtensionDAO()
-                .getExtensionsWithOffset(id, extensionPrefix, dbLimit, dbOffset);
-        records.forEach(r -> versions.add(new EntityVersionPair(r).getEntityJson()));
-      } else {
-        daoCollection.entityExtensionDAO().getExtensions(id, extensionPrefix).stream()
-            .map(EntityVersionPair::new)
-            .sorted(EntityUtil.compareVersion.reversed())
-            .skip(dbOffset)
-            .limit(dbLimit)
-            .forEach(version -> versions.add(version.getEntityJson()));
-      }
-    }
-
+  private EntityHistoryWithOffset listAllVersionsWithOffset(
+      UUID id, T latest, int limit, int offset) {
+    List<Object> versions = new ArrayList<>();
+    String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
+    HistoryWindow historyWindow = buildHistoryWindow(true, latest, limit, offset, versions);
+    addExtensionRecords(versions, getHistoricalVersionPage(id, extensionPrefix, historyWindow));
     int extensionCount = daoCollection.entityExtensionDAO().getExtensionCount(id, extensionPrefix);
-    int total = extensionCount + 1;
-    Paging paging = new Paging();
-    paging.setOffset(offset);
-    paging.setLimit(limit);
-    paging.setTotal(total);
-
-    EntityHistory entityHistory =
-        new EntityHistory().withEntityType(entityType).withVersions(versions).withPaging(paging);
-    return new EntityHistoryWithOffset(entityHistory, Math.min(offset + limit, total));
+    return buildEntityHistoryWithOffset(versions, offset, limit, extensionCount + 1);
   }
 
   private EntityHistoryWithOffset listVersionsWithFieldFilter(
       UUID id, T latest, int limit, int offset, String rawFieldChanged) {
-    if (hasVersionFieldMetadataColumns()) {
-      return listVersionsWithFieldFilterIndexed(id, latest, limit, offset, rawFieldChanged);
-    }
-    LOG.debug(
-        "Version history metadata columns are unavailable for entityType={}; using in-memory fieldChanged filtering",
-        entityType);
-    return listVersionsWithFieldFilterFallback(id, latest, limit, offset, rawFieldChanged);
-  }
-
-  private EntityHistoryWithOffset listVersionsWithFieldFilterIndexed(
-      UUID id, T latest, int limit, int offset, String rawFieldChanged) {
-    final List<Object> versions = new ArrayList<>();
+    List<Object> versions = new ArrayList<>();
     boolean latestMatches = latestVersionMatchesFieldChanged(latest, rawFieldChanged);
-    String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
-    int matchingHistoricalVersionCount =
-        daoCollection
-            .entityExtensionDAO()
-            .getExtensionCountByFieldChanged(id, extensionPrefix, rawFieldChanged);
-
-    int historicalOffset = offset;
-    int historicalLimit = limit;
-    if (latestMatches) {
-      if (offset == 0) {
-        versions.add(JsonUtils.pojoToJson(latest));
-        historicalLimit = limit - 1;
-      }
-      historicalOffset = Math.max(0, offset - 1);
-    }
-
-    if (historicalLimit > 0 && historicalOffset < matchingHistoricalVersionCount) {
-      List<ExtensionRecord> records =
-          daoCollection
-              .entityExtensionDAO()
-              .getExtensionsWithFieldChanged(
-                  id, extensionPrefix, rawFieldChanged, historicalLimit, historicalOffset);
-      records.forEach(record -> versions.add(new EntityVersionPair(record).getEntityJson()));
-    }
-
-    int total = matchingHistoricalVersionCount + (latestMatches ? 1 : 0);
-
-    Paging paging = new Paging();
-    paging.setOffset(offset);
-    paging.setLimit(limit);
-    paging.setTotal(total);
-
-    EntityHistory entityHistory =
-        new EntityHistory().withEntityType(entityType).withVersions(versions).withPaging(paging);
-    return new EntityHistoryWithOffset(entityHistory, Math.min(offset + limit, total));
-  }
-
-  private EntityHistoryWithOffset listVersionsWithFieldFilterFallback(
-      UUID id, T latest, int limit, int offset, String rawFieldChanged) {
-    final List<Object> versions = new ArrayList<>();
-    boolean latestMatches = latestVersionMatchesFieldChanged(latest, rawFieldChanged);
-    String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
-    List<EntityVersionPair> matchingHistoricalVersions = new ArrayList<>();
-
-    daoCollection
-        .entityExtensionDAO()
-        .getExtensions(id, extensionPrefix)
-        .forEach(
-            record -> {
-              if (VersionFieldChangeUtil.matchesFieldChanged(
-                  record.extensionJson(), rawFieldChanged)) {
-                matchingHistoricalVersions.add(new EntityVersionPair(record));
-              }
-            });
-    matchingHistoricalVersions.sort(EntityUtil.compareVersion.reversed());
-
-    int historicalOffset = offset;
-    int historicalLimit = limit;
-    if (latestMatches) {
-      if (offset == 0) {
-        versions.add(JsonUtils.pojoToJson(latest));
-        historicalLimit = limit - 1;
-      }
-      historicalOffset = Math.max(0, offset - 1);
-    }
-
-    if (historicalLimit > 0 && historicalOffset < matchingHistoricalVersions.size()) {
-      matchingHistoricalVersions.stream()
-          .skip(historicalOffset)
-          .limit(historicalLimit)
-          .forEach(version -> versions.add(version.getEntityJson()));
-    }
-
-    int total = matchingHistoricalVersions.size() + (latestMatches ? 1 : 0);
-
-    Paging paging = new Paging();
-    paging.setOffset(offset);
-    paging.setLimit(limit);
-    paging.setTotal(total);
-
-    EntityHistory entityHistory =
-        new EntityHistory().withEntityType(entityType).withVersions(versions).withPaging(paging);
-    return new EntityHistoryWithOffset(entityHistory, Math.min(offset + limit, total));
+    HistoryWindow historyWindow =
+        buildHistoryWindow(latestMatches, latest, limit, offset, versions);
+    FieldChangedHistoryPage historicalVersions =
+        getFieldChangedHistoryPage(id, rawFieldChanged, historyWindow);
+    addExtensionRecords(versions, historicalVersions.records());
+    int total = historicalVersions.total() + (latestMatches ? 1 : 0);
+    return buildEntityHistoryWithOffset(versions, offset, limit, total);
   }
 
   private boolean latestVersionMatchesFieldChanged(T latest, String fieldChanged) {
     return VersionFieldChangeUtil.matchesFieldChanged(latest.getChangeDescription(), fieldChanged);
   }
 
-  private boolean hasVersionFieldMetadataColumns() {
-    if (versionFieldMetadataColumnsAvailable) {
-      return true;
+  private T getLatestVersionEntity(UUID id) {
+    T latest = setFieldsInternal(find(id, ALL), putFields);
+    setInheritedFields(latest, putFields);
+    return latest;
+  }
+
+  private boolean hasFieldChangedFilter(String fieldChanged) {
+    return fieldChanged != null && !fieldChanged.isEmpty();
+  }
+
+  private HistoryWindow buildHistoryWindow(
+      boolean includeLatest, T latest, int limit, int offset, List<Object> versions) {
+    int historicalOffset = includeLatest ? Math.max(0, offset - 1) : offset;
+    int historicalLimit = limit;
+    if (includeLatest && offset == 0) {
+      versions.add(JsonUtils.pojoToJson(latest));
+      historicalLimit = limit - 1;
     }
-    versionFieldMetadataColumnsAvailable =
-        daoCollection.entityExtensionDAO().getVersionFieldMetadataColumnCount() >= 2;
-    return versionFieldMetadataColumnsAvailable;
+    return new HistoryWindow(historicalLimit, historicalOffset);
+  }
+
+  private List<ExtensionRecord> getHistoricalVersionPage(
+      UUID id, String extensionPrefix, HistoryWindow historyWindow) {
+    if (!historyWindow.hasItems()) {
+      return List.of();
+    }
+    return readVersionHistory(
+        () ->
+            daoCollection
+                .entityExtensionDAO()
+                .getExtensionsWithOffset(
+                    id, extensionPrefix, historyWindow.limit(), historyWindow.offset()),
+        () ->
+            daoCollection
+                .entityExtensionDAO()
+                .getExtensionsWithOffsetLegacy(
+                    id, extensionPrefix, historyWindow.limit(), historyWindow.offset()));
+  }
+
+  private FieldChangedHistoryPage getFieldChangedHistoryPage(
+      UUID id, String fieldChanged, HistoryWindow historyWindow) {
+    String extensionPrefix = EntityUtil.getVersionExtensionPrefix(entityType);
+    return readVersionHistory(
+        () -> getIndexedFieldChangedHistoryPage(id, extensionPrefix, fieldChanged, historyWindow),
+        () -> getLegacyFieldChangedHistoryPage(id, extensionPrefix, fieldChanged, historyWindow));
+  }
+
+  private FieldChangedHistoryPage getIndexedFieldChangedHistoryPage(
+      UUID id, String extensionPrefix, String fieldChanged, HistoryWindow historyWindow) {
+    int total =
+        daoCollection
+            .entityExtensionDAO()
+            .getExtensionCountByFieldChanged(id, extensionPrefix, fieldChanged);
+    if (!historyWindow.isInRange(total)) {
+      return new FieldChangedHistoryPage(total, List.of());
+    }
+    List<ExtensionRecord> records =
+        daoCollection
+            .entityExtensionDAO()
+            .getExtensionsWithFieldChanged(
+                id, extensionPrefix, fieldChanged, historyWindow.limit(), historyWindow.offset());
+    return new FieldChangedHistoryPage(total, records);
+  }
+
+  private FieldChangedHistoryPage getLegacyFieldChangedHistoryPage(
+      UUID id, String extensionPrefix, String fieldChanged, HistoryWindow historyWindow) {
+    int total =
+        daoCollection
+            .entityExtensionDAO()
+            .getExtensionCountByFieldChangedLegacy(id, extensionPrefix, fieldChanged);
+    if (!historyWindow.isInRange(total)) {
+      return new FieldChangedHistoryPage(total, List.of());
+    }
+    List<ExtensionRecord> records =
+        daoCollection
+            .entityExtensionDAO()
+            .getExtensionsWithFieldChangedLegacy(
+                id, extensionPrefix, fieldChanged, historyWindow.limit(), historyWindow.offset());
+    return new FieldChangedHistoryPage(total, records);
+  }
+
+  private void addExtensionRecords(List<Object> versions, List<ExtensionRecord> records) {
+    records.forEach(record -> versions.add(new EntityVersionPair(record).getEntityJson()));
+  }
+
+  private <R> R readVersionHistory(Supplier<R> indexedRead, Supplier<R> legacyRead) {
+    if (!shouldUseVersionFieldMetadata()) {
+      return legacyRead.get();
+    }
+    try {
+      R result = indexedRead.get();
+      markVersionFieldMetadataAvailable();
+      return result;
+    } catch (RuntimeException e) {
+      if (!handleMissingVersionFieldMetadata(e)) {
+        throw e;
+      }
+      return legacyRead.get();
+    }
+  }
+
+  private boolean shouldUseVersionFieldMetadata() {
+    return versionFieldMetadataColumnsAvailable
+        || System.currentTimeMillis() >= nextVersionFieldMetadataRetryAt;
+  }
+
+  private static void markVersionFieldMetadataAvailable() {
+    versionFieldMetadataColumnsAvailable = true;
+    nextVersionFieldMetadataRetryAt = 0L;
+  }
+
+  private static void markVersionFieldMetadataUnavailable() {
+    versionFieldMetadataColumnsAvailable = false;
+    nextVersionFieldMetadataRetryAt =
+        System.currentTimeMillis() + VERSION_FIELD_METADATA_RETRY_MILLIS;
+  }
+
+  private EntityHistoryWithOffset buildEntityHistoryWithOffset(
+      List<Object> versions, int offset, int limit, int total) {
+    Paging paging = new Paging();
+    paging.setOffset(offset);
+    paging.setLimit(limit);
+    paging.setTotal(total);
+    EntityHistory entityHistory =
+        new EntityHistory().withEntityType(entityType).withVersions(versions).withPaging(paging);
+    return new EntityHistoryWithOffset(entityHistory, Math.min(offset + limit, total));
+  }
+
+  private boolean handleMissingVersionFieldMetadata(RuntimeException e) {
+    if (!isMissingVersionFieldMetadataColumnException(e)) {
+      return false;
+    }
+    markVersionFieldMetadataUnavailable();
+    return true;
+  }
+
+  private boolean isMissingVersionFieldMetadataColumnException(Throwable throwable) {
+    SQLException sqlException = findSqlException(throwable);
+    return sqlException != null && isMissingColumnSqlState(sqlException.getSQLState());
+  }
+
+  private static SQLException findSqlException(Throwable throwable) {
+    while (throwable != null) {
+      if (throwable instanceof SQLException sqlException) {
+        return sqlException;
+      }
+      throwable = throwable.getCause();
+    }
+    return null;
+  }
+
+  private static boolean isMissingColumnSqlState(String sqlState) {
+    return "42S22".equals(sqlState) || "42703".equals(sqlState);
+  }
+
+  private record FieldChangedHistoryPage(int total, List<ExtensionRecord> records) {}
+
+  private record HistoryWindow(int limit, int offset) {
+    private boolean hasItems() {
+      return limit > 0;
+    }
+
+    private boolean isInRange(int total) {
+      return hasItems() && offset < total;
+    }
   }
 
   private VersionFieldChangeUtil.VersionExtensionRecord buildVersionExtensionRecord(
@@ -1444,64 +1484,96 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private void insertVersionExtensionRecord(
       VersionFieldChangeUtil.VersionExtensionRecord versionExtensionRecord) {
-    if (hasVersionFieldMetadataColumns()) {
-      daoCollection
-          .entityExtensionDAO()
-          .insertVersionExtension(
-              versionExtensionRecord.getId(),
-              versionExtensionRecord.getExtension(),
-              versionExtensionRecord.getJsonSchema(),
-              versionExtensionRecord.getJson(),
-              versionExtensionRecord.getVersionNum(),
-              versionExtensionRecord.getChangedFieldKeys());
-    } else {
-      daoCollection
-          .entityExtensionDAO()
-          .insert(
-              versionExtensionRecord.getId(),
-              versionExtensionRecord.getExtension(),
-              versionExtensionRecord.getJsonSchema(),
-              versionExtensionRecord.getJson());
-    }
+    writeVersionHistory(
+        () -> insertVersionExtensionWithMetadata(versionExtensionRecord),
+        () -> insertVersionExtensionLegacy(versionExtensionRecord));
   }
 
   private void insertVersionExtensionRecords(
       List<VersionFieldChangeUtil.VersionExtensionRecord> versionExtensionRecords) {
-    if (hasVersionFieldMetadataColumns()) {
-      daoCollection
-          .entityExtensionDAO()
-          .insertVersionExtensions(
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getId)
-                  .toList(),
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getExtension)
-                  .toList(),
-              entityType,
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getJson)
-                  .toList(),
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getVersionNum)
-                  .toList(),
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getChangedFieldKeys)
-                  .toList());
-    } else {
-      daoCollection
-          .entityExtensionDAO()
-          .insertMany(
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getId)
-                  .toList(),
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getExtension)
-                  .toList(),
-              entityType,
-              versionExtensionRecords.stream()
-                  .map(VersionFieldChangeUtil.VersionExtensionRecord::getJson)
-                  .toList());
+    writeVersionHistory(
+        () -> insertVersionExtensionsWithMetadata(versionExtensionRecords),
+        () -> insertVersionExtensionsLegacy(versionExtensionRecords));
+  }
+
+  private void writeVersionHistory(Runnable indexedWrite, Runnable legacyWrite) {
+    if (!shouldUseVersionFieldMetadata()) {
+      legacyWrite.run();
+      return;
     }
+    try {
+      indexedWrite.run();
+      markVersionFieldMetadataAvailable();
+    } catch (RuntimeException e) {
+      if (!handleMissingVersionFieldMetadata(e)) {
+        throw e;
+      }
+      legacyWrite.run();
+    }
+  }
+
+  private void insertVersionExtensionWithMetadata(
+      VersionFieldChangeUtil.VersionExtensionRecord versionExtensionRecord) {
+    daoCollection
+        .entityExtensionDAO()
+        .insertVersionExtension(
+            versionExtensionRecord.getId(),
+            versionExtensionRecord.getExtension(),
+            versionExtensionRecord.getJsonSchema(),
+            versionExtensionRecord.getJson(),
+            versionExtensionRecord.getVersionNum(),
+            versionExtensionRecord.getChangedFieldKeys());
+  }
+
+  private void insertVersionExtensionLegacy(
+      VersionFieldChangeUtil.VersionExtensionRecord versionExtensionRecord) {
+    daoCollection
+        .entityExtensionDAO()
+        .insert(
+            versionExtensionRecord.getId(),
+            versionExtensionRecord.getExtension(),
+            versionExtensionRecord.getJsonSchema(),
+            versionExtensionRecord.getJson());
+  }
+
+  private void insertVersionExtensionsWithMetadata(
+      List<VersionFieldChangeUtil.VersionExtensionRecord> versionExtensionRecords) {
+    daoCollection
+        .entityExtensionDAO()
+        .insertVersionExtensions(
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getId)
+                .toList(),
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getExtension)
+                .toList(),
+            entityType,
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getJson)
+                .toList(),
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getVersionNum)
+                .toList(),
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getChangedFieldKeys)
+                .toList());
+  }
+
+  private void insertVersionExtensionsLegacy(
+      List<VersionFieldChangeUtil.VersionExtensionRecord> versionExtensionRecords) {
+    daoCollection
+        .entityExtensionDAO()
+        .insertMany(
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getId)
+                .toList(),
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getExtension)
+                .toList(),
+            entityType,
+            versionExtensionRecords.stream()
+                .map(VersionFieldChangeUtil.VersionExtensionRecord::getJson)
+                .toList());
   }
 
   public final ResultList<T> listWithOffset(

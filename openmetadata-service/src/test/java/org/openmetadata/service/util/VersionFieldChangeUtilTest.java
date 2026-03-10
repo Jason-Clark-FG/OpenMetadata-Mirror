@@ -13,7 +13,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 class VersionFieldChangeUtilTest {
 
   @Test
-  void extractsSuffixKeysFromChangeDescription() {
+  void extractsExactFieldKeysFromChangeDescription() {
     ChangeDescription changeDescription =
         new ChangeDescription()
             .withFieldsUpdated(
@@ -24,41 +24,40 @@ class VersionFieldChangeUtilTest {
     Set<String> fieldChangeKeys = VersionFieldChangeUtil.extractFieldChangeKeys(changeDescription);
 
     assertTrue(fieldChangeKeys.contains("columns.tags.tagFQN"));
-    assertTrue(fieldChangeKeys.contains("tags.tagFQN"));
-    assertTrue(fieldChangeKeys.contains("tagFQN"));
     assertTrue(fieldChangeKeys.contains("description"));
+    assertEquals(2, fieldChangeKeys.size());
   }
 
   @Test
-  void serializesUniqueFieldChangeKeysPerSuffix() {
+  void serializesUniqueFieldChangeKeysExactlyOnce() {
     ChangeDescription changeDescription =
         new ChangeDescription()
             .withFieldsAdded(
-                java.util.List.of(new FieldChange().withName("schema.fields.description")))
+                java.util.List.of(new FieldChange().withName("columns.name.description")))
             .withFieldsUpdated(
-                java.util.List.of(new FieldChange().withName("schema.fields.description")));
+                java.util.List.of(new FieldChange().withName("columns.name.description")));
 
     var keys =
         JsonUtils.readObjects(
             VersionFieldChangeUtil.getChangedFieldKeysJson(changeDescription), String.class);
 
-    assertEquals(3, keys.size());
-    assertTrue(keys.contains("schema.fields.description"));
-    assertTrue(keys.contains("fields.description"));
-    assertTrue(keys.contains("description"));
+    assertEquals(1, keys.size());
+    assertTrue(keys.contains("columns.name.description"));
   }
 
   @Test
-  void matchesExactSuffixesButNotSubstrings() {
+  void matchesExactFieldNamesButNotNestedPathsOrSubstrings() {
     ChangeDescription changeDescription =
         new ChangeDescription()
             .withFieldsUpdated(
-                java.util.List.of(new FieldChange().withName("schema.fields.description")));
+                java.util.List.of(new FieldChange().withName("columns.name.description")));
 
-    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "description"));
-    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "fields.description"));
+    assertTrue(
+        VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "columns.name.description"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "description"));
+    assertFalse(
+        VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "columns.description"));
     assertFalse(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "script"));
-    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(changeDescription, "fields"));
   }
 
   @Test
@@ -70,10 +69,11 @@ class VersionFieldChangeUtilTest {
                 new ChangeDescription()
                     .withFieldsUpdated(
                         java.util.List.of(
-                            new FieldChange().withName("schema.fields.description")))));
+                            new FieldChange().withName("columns.name.description")))));
 
-    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "description"));
-    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "fields.description"));
+    assertTrue(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "columns.name.description"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "description"));
+    assertFalse(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "columns.description"));
     assertFalse(VersionFieldChangeUtil.matchesFieldChanged(entityJson, "owners"));
   }
 }

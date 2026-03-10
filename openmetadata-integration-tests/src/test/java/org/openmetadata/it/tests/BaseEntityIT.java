@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -1478,6 +1479,15 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
         "Substring matches should not be treated as field-name matches");
     assertEquals(0, (int) substringNoMatch.getPaging().getTotal());
 
+    org.openmetadata.schema.type.EntityHistory nestedPathNoMatch =
+        getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "nested.description");
+    assertNotNull(nestedPathNoMatch);
+    assertEquals(
+        0,
+        nestedPathNoMatch.getVersions().size(),
+        "Exact field filters should not match nested paths for a top-level description change");
+    assertEquals(0, (int) nestedPathNoMatch.getPaging().getTotal());
+
     org.openmetadata.schema.type.EntityHistory noMatch =
         getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "nonExistentField_xyz_12345");
     assertNotNull(noMatch);
@@ -1568,6 +1578,73 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
             .entityExtensionDAO()
             .delete(created.getId(), EntityUtil.getVersionExtension(getEntityType(), version));
       }
+    }
+  }
+
+  @Test
+  void get_entityVersionHistory_fieldChanged_matchesNullChangedFieldKeysRows(TestNamespace ns) {
+    if (!supportsPatch) return;
+
+    K createRequest = createMinimalRequest(ns);
+    T created = createEntity(createRequest);
+
+    created.setDescription("Description change for null changedFieldKeys test");
+    patchEntity(created.getId().toString(), created);
+
+    org.openmetadata.schema.type.EntityHistory baseline =
+        getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "description");
+    assertNotNull(baseline);
+    assertNotNull(baseline.getPaging());
+
+    double legacyVersion = 77.0;
+    String legacyExtension = EntityUtil.getVersionExtension(getEntityType(), legacyVersion);
+
+    try {
+      ObjectNode historicalVersion = (ObjectNode) JsonUtils.pojoToJsonNode(created);
+      historicalVersion.put("version", legacyVersion);
+      ObjectNode changeDescription = historicalVersion.putObject("changeDescription");
+      ArrayNode fieldsUpdated = changeDescription.putArray("fieldsUpdated");
+      fieldsUpdated.addObject().put("name", "nested.description");
+
+      Entity.getCollectionDAO()
+          .entityExtensionDAO()
+          .insert(
+              created.getId(),
+              legacyExtension,
+              getEntityType(),
+              JsonUtils.pojoToJson(historicalVersion));
+
+      org.openmetadata.schema.type.EntityHistory filtered =
+          getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "description");
+
+      assertNotNull(filtered);
+      assertNotNull(filtered.getPaging());
+      assertEquals(
+          baseline.getPaging().getTotal(),
+          (int) filtered.getPaging().getTotal(),
+          "Exact field filters should not match nested legacy rows without changedFieldKeys");
+      assertFalse(
+          filtered.getVersions().stream()
+              .anyMatch(
+                  version -> Math.abs(versionOfHistoryEntry(version) - legacyVersion) < 0.001),
+          "Top-level description filters should not include nested legacy rows");
+
+      org.openmetadata.schema.type.EntityHistory nestedFiltered =
+          getVersionHistoryWithFieldChanged(created.getId(), 100, 0, "nested.description");
+
+      assertNotNull(nestedFiltered);
+      assertNotNull(nestedFiltered.getPaging());
+      assertEquals(
+          1,
+          (int) nestedFiltered.getPaging().getTotal(),
+          "Exact nested field filters should still match legacy rows without changedFieldKeys");
+      assertTrue(
+          nestedFiltered.getVersions().stream()
+              .anyMatch(
+                  version -> Math.abs(versionOfHistoryEntry(version) - legacyVersion) < 0.001),
+          "Nested field filters should include the legacy row without changedFieldKeys");
+    } finally {
+      Entity.getCollectionDAO().entityExtensionDAO().delete(created.getId(), legacyExtension);
     }
   }
 

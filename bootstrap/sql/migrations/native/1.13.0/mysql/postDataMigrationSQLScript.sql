@@ -3,25 +3,7 @@ SET json = JSON_REMOVE(json, '$.sourceConfig.config.computeMetrics')
 WHERE JSON_EXTRACT(json, '$.sourceConfig.config.computeMetrics') IS NOT NULL
 AND pipelineType = 'profiler';
 
-SET @post_version_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'versionNum');
-SET @post_add_version_num_sql = IF(@post_version_col_exists = 0,
-  'ALTER TABLE entity_extension ADD COLUMN versionNum DOUBLE NULL',
-  'SELECT 1');
-PREPARE post_add_version_num_stmt FROM @post_add_version_num_sql;
-EXECUTE post_add_version_num_stmt;
-DEALLOCATE PREPARE post_add_version_num_stmt;
-
-SET @post_changed_fields_col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'entity_extension' AND COLUMN_NAME = 'changedFieldKeys');
-SET @post_add_changed_field_keys_sql = IF(@post_changed_fields_col_exists = 0,
-  'ALTER TABLE entity_extension ADD COLUMN changedFieldKeys JSON NULL',
-  'SELECT 1');
-PREPARE post_add_changed_field_keys_stmt FROM @post_add_changed_field_keys_sql;
-EXECUTE post_add_changed_field_keys_stmt;
-DEALLOCATE PREPARE post_add_changed_field_keys_stmt;
-
-WITH RECURSIVE
+WITH
 field_changes AS (
     SELECT e.id, e.extension, jt.field_name
     FROM entity_extension AS e
@@ -51,21 +33,11 @@ field_changes AS (
     ) AS jt ON TRUE
     WHERE e.extension LIKE '%.version.%'
 ),
-suffixes AS (
-    SELECT id, extension, field_name AS suffix
+distinct_field_changes AS (
+    SELECT DISTINCT id, extension, field_name
     FROM field_changes
     WHERE field_name IS NOT NULL
       AND field_name <> ''
-
-    UNION ALL
-
-    SELECT id, extension, SUBSTRING(suffix, LOCATE('.', suffix) + 1)
-    FROM suffixes
-    WHERE LOCATE('.', suffix) > 0
-),
-distinct_suffixes AS (
-    SELECT DISTINCT id, extension, suffix
-    FROM suffixes
 ),
 version_metadata AS (
     SELECT
@@ -73,12 +45,13 @@ version_metadata AS (
         e.extension,
         CAST(SUBSTRING_INDEX(e.extension, '.version.', -1) AS DOUBLE) AS version_num,
         CASE
-            WHEN COUNT(ds.suffix) = 0 THEN JSON_ARRAY()
-            ELSE JSON_ARRAYAGG(ds.suffix)
+            WHEN COUNT(fc.field_name) = 0 THEN JSON_ARRAY()
+            ELSE JSON_ARRAYAGG(fc.field_name)
         END AS changed_field_keys
     FROM entity_extension AS e
-    LEFT JOIN distinct_suffixes AS ds
-        ON ds.id = e.id AND ds.extension = e.extension
+    LEFT JOIN distinct_field_changes AS fc
+        ON fc.id = e.id
+       AND fc.extension = e.extension
     WHERE e.extension LIKE '%.version.%'
     GROUP BY e.id, e.extension
 )

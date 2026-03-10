@@ -1,5 +1,6 @@
 package org.openmetadata.service.migration.utils;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -35,6 +36,17 @@ class MigrationSqlStatementHashTest {
                 "bootstrap/sql/migrations/native/1.13.0/mysql/postDataMigrationSQLScript.sql"));
   }
 
+  @Test
+  void mysql1130MigrationFilesDoNotQueryInformationSchema() throws Exception {
+    assertDoesNotReferenceInformationSchema(
+        resolveRepoRoot()
+            .resolve("bootstrap/sql/migrations/native/1.13.0/mysql/schemaChanges.sql"));
+    assertDoesNotReferenceInformationSchema(
+        resolveRepoRoot()
+            .resolve(
+                "bootstrap/sql/migrations/native/1.13.0/mysql/postDataMigrationSQLScript.sql"));
+  }
+
   private void assertUniqueStatementHashes(Path sqlFile) {
     List<String> statements = parseStatements(sqlFile);
     Map<String, Long> duplicateHashes =
@@ -65,6 +77,12 @@ class MigrationSqlStatementHashTest {
     } catch (Exception e) {
       throw new RuntimeException("Failed to parse migration SQL file " + sqlFile, e);
     }
+  }
+
+  private void assertDoesNotReferenceInformationSchema(Path sqlFile) throws Exception {
+    String sql = Files.readString(sqlFile, StandardCharsets.UTF_8).toLowerCase();
+    assertFalse(
+        sql.contains("information_schema"), () -> sqlFile + " should not query INFORMATION_SCHEMA");
   }
 
   private Path resolveRepoRoot() {
