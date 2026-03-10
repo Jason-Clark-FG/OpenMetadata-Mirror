@@ -235,14 +235,19 @@ public class McpClientService implements AutoCloseable {
       conversationRepository.update(conversation);
       UUID convId = conversation.getId();
       CompletableFuture.runAsync(
-          () -> {
-            String title = generateTitle(userMessage);
-            if (title != null) {
-              McpConversation conv = conversationRepository.getById(convId);
-              conv.setTitle(title);
-              conversationRepository.update(conv);
-            }
-          });
+              () -> {
+                String title = generateTitle(userMessage);
+                if (title != null) {
+                  McpConversation conv = conversationRepository.getById(convId);
+                  conv.setTitle(title);
+                  conversationRepository.update(conv);
+                }
+              })
+          .exceptionally(
+              ex -> {
+                LOG.warn("Failed to update conversation title for {}", convId, ex);
+                return null;
+              });
     } else {
       conversationRepository.update(conversation);
     }
@@ -406,14 +411,19 @@ public class McpClientService implements AutoCloseable {
     if (isNewConversation) {
       UUID convId = conversation.getId();
       CompletableFuture.runAsync(
-          () -> {
-            String title = generateTitle(userMessage);
-            if (title != null) {
-              McpConversation conv = conversationRepository.getById(convId);
-              conv.setTitle(title);
-              conversationRepository.update(conv);
-            }
-          });
+              () -> {
+                String title = generateTitle(userMessage);
+                if (title != null) {
+                  McpConversation conv = conversationRepository.getById(convId);
+                  conv.setTitle(title);
+                  conversationRepository.update(conv);
+                }
+              })
+          .exceptionally(
+              ex -> {
+                LOG.warn("Failed to update conversation title for {}", convId, ex);
+                return null;
+              });
     }
   }
 
