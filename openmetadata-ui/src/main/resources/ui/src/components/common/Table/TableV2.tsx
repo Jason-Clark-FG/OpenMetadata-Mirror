@@ -48,20 +48,25 @@ import {
 import type {
   ColumnType,
   FilterValue,
-  SortOrder,
   SorterResult,
   TableCurrentDataSource,
   TablePaginationConfig,
 } from 'antd/lib/table/interface';
 import type { ColumnsType } from 'antd/es/table/interface';
-import type { ResizeCallbackData } from 'react-resizable';
 import 'react-resizable/css/styles.css';
 import type {
   AriaSortDescriptor,
   AriaSelection,
   FlatRow,
-  InlineResizeHandleProps,
 } from './TableV2.interface';
+
+import InlineResizeHandle from './InlineResizeHandle.component';
+import {
+  flattenTreeRows,
+  getColumnStickyStyle,
+  resolveCellValue,
+  resolveColumnTitle,
+} from './TableV2Utils';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import React, {
@@ -92,83 +97,9 @@ import {
   TableComponentProps,
 } from './Table.interface';
 import './table.less';
+import { ResizeCallbackData } from 'react-resizable';
 
 type TableV2Props<T extends object> = TableComponentProps<T>;
-
-const InlineResizeHandle = ({
-  currentWidth,
-  onResize,
-}: InlineResizeHandleProps) => {
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const startX = e.clientX;
-    const startWidth = currentWidth;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.max(80, startWidth + (moveEvent.clientX - startX));
-      onResize(moveEvent as unknown as React.SyntheticEvent, {
-        node: null as unknown as HTMLElement,
-        size: { width: newWidth, height: 0 },
-        handle: 'e',
-      });
-    };
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
-
-  return (
-    <span
-      aria-hidden="true"
-      className="react-resizable-handle react-resizable-handle-e"
-      onMouseDown={handleMouseDown}
-    />
-  );
-};
-
-// ─── Tree / expandable helpers ────────────────────────────────────────────────
-
-function flattenTreeRows<T>(
-  data: T[],
-  getRowKey: (r: T, i: number) => string,
-  expandedKeys: Set<string>,
-  rowExpandable: ((record: T) => boolean) | undefined,
-  depth = 0,
-  baseIdx = 0
-): FlatRow<T>[] {
-  const rows: FlatRow<T>[] = [];
-  data.forEach((record, localIdx) => {
-    const actualIndex = baseIdx + localIdx;
-    const rowKey = getRowKey(record, actualIndex);
-    const children = (record as Record<string, unknown>).children as
-      | T[]
-      | undefined;
-    const hasChildren = rowExpandable
-      ? rowExpandable(record)
-      : !isEmpty(children);
-
-    rows.push({ record, depth, actualIndex, hasChildren, rowKey });
-
-    if (hasChildren && expandedKeys.has(rowKey) && children?.length) {
-      rows.push(
-        ...flattenTreeRows(
-          children,
-          getRowKey,
-          expandedKeys,
-          rowExpandable,
-          depth + 1,
-          actualIndex + 1
-        )
-      );
-    }
-  });
-
-  return rows;
-}
 
 const TableV2 = <T extends object>(
   {
@@ -593,69 +524,6 @@ const TableV2 = <T extends object>(
     clientPagination,
   ]);
 
-  // ─── Cell value resolver ──────────────────────────────────────────────────
-
-  const resolveCellValue = useCallback(
-    (col: ColumnType<T>, record: T, index: number): ReactNode => {
-      const { dataIndex, render } = col;
-      const rawValue = Array.isArray(dataIndex)
-        ? dataIndex.reduce(
-            (obj: unknown, key) =>
-              (obj as Record<string, unknown>)?.[key as string],
-            record as unknown
-          )
-        : typeof dataIndex === 'string'
-        ? (record as Record<string, unknown>)[dataIndex]
-        : undefined;
-
-      if (render) {
-        const rendered = render(rawValue, record, index);
-        if (
-          rendered !== null &&
-          typeof rendered === 'object' &&
-          'children' in rendered &&
-          !('$$typeof' in rendered)
-        ) {
-          return (rendered as { children: ReactNode }).children;
-        }
-
-        return rendered as ReactNode;
-      }
-
-      return rawValue !== undefined && rawValue !== null
-        ? String(rawValue)
-        : null;
-    },
-    [] // intentional: all state is received via parameters, no external closures
-  );
-
-  // ─── Column title resolver ────────────────────────────────────────────────
-
-  const resolveColumnTitle = useCallback(
-    (col: ColumnType<T>): ReactNode => {
-      if (typeof col.title === 'function') {
-        const sortedColumn = propsColumns.find(
-          (c) => (c as ColumnType<T>).sortOrder
-        ) as ColumnType<T> | undefined;
-
-        return (
-          col.title as (props: {
-            sortOrder?: SortOrder;
-            sortColumn?: ColumnType<T>;
-            filters?: Record<string, FilterValue | null>;
-          }) => ReactNode
-        )({
-          sortOrder: col.sortOrder ?? null,
-          sortColumn: sortedColumn,
-          filters: {},
-        });
-      }
-
-      return col.title as ReactNode;
-    },
-    [propsColumns]
-  );
-
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -772,22 +640,7 @@ const TableV2 = <T extends object>(
                 columnWidths[colKey] ?? (colType.width as number) ?? 150;
 
               const isSorted = sortState.columnKey === colKey;
-              const stickyStyle: React.CSSProperties =
-                colType.fixed === 'left'
-                  ? {
-                      position: 'sticky',
-                      left: 0,
-                      zIndex: 2,
-                      background: 'white',
-                    }
-                  : colType.fixed === 'right'
-                  ? {
-                      position: 'sticky',
-                      right: 0,
-                      zIndex: 2,
-                      background: 'white',
-                    }
-                  : {};
+              const stickyStyle = getColumnStickyStyle(colType.fixed, 2);
 
               return (
                 <UntitledTable.Head
@@ -802,7 +655,7 @@ const TableV2 = <T extends object>(
                     ...stickyStyle,
                   }}>
                   <div className="tw:flex tw:items-center tw:gap-1">
-                    {resolveColumnTitle(colType)}
+                    {resolveColumnTitle(colType, propsColumns)}
                     {!!colType.sorter &&
                       (isSorted && sortState.direction ? (
                         <ArrowDown
@@ -902,22 +755,7 @@ const TableV2 = <T extends object>(
                     const cellKey = String(
                       col.key ?? colType.dataIndex ?? colIdx
                     );
-                    const stickyStyle: React.CSSProperties =
-                      colType.fixed === 'left'
-                        ? {
-                            position: 'sticky',
-                            left: 0,
-                            zIndex: 1,
-                            background: 'white',
-                          }
-                        : colType.fixed === 'right'
-                        ? {
-                            position: 'sticky',
-                            right: 0,
-                            zIndex: 1,
-                            background: 'white',
-                          }
-                        : {};
+                    const stickyStyle = getColumnStickyStyle(colType.fixed, 1);
 
                     const isFirstColumn = colIdx === 0;
                     const showExpandInCell = rest.expandable && isFirstColumn;
@@ -999,14 +837,14 @@ const TableV2 = <T extends object>(
       ) : clientPagination &&
         !(
           clientPagination.hideOnSinglePage &&
-          (rest.dataSource ?? []).length <= clientPagination.pageSize
+          filteredDataSource.length <= clientPagination.pageSize
         ) ? (
         <div>
           <NextPrevious
             isNumberBased
             currentPage={internalCurrentPage}
             pageSize={clientPagination.pageSize}
-            paging={{ total: (rest.dataSource ?? []).length }}
+            paging={{ total: filteredDataSource.length }}
             pagingHandler={({ currentPage }) =>
               setInternalCurrentPage(currentPage)
             }
