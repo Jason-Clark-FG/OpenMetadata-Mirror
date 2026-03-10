@@ -22,8 +22,6 @@ import {
   ListBox as AriaListBox,
   ComboBoxStateContext,
 } from 'react-aria-components';
-import type { ListData } from 'react-stately';
-import { useListData } from 'react-stately';
 import { CloseButton } from '../buttons/close-button';
 import { AutocompleteItem } from './autocomplete-item';
 
@@ -32,7 +30,7 @@ export type { SelectItemType as AutocompleteItemType } from '@/components/base/s
 interface AutocompleteContextValue {
   size: 'sm' | 'md';
   selectedKeys: Key[];
-  selectedItems: ListData<SelectItemType>;
+  selectedItems: SelectItemType[];
   onRemove: (keys: Set<Key>) => void;
   onInputChange: (value: string) => void;
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
@@ -41,7 +39,7 @@ interface AutocompleteContextValue {
 const AutocompleteContext = createContext<AutocompleteContextValue>({
   size: 'sm',
   selectedKeys: [],
-  selectedItems: {} as ListData<SelectItemType>,
+  selectedItems: [],
   onRemove: () => {},
   onInputChange: () => {},
 });
@@ -64,7 +62,7 @@ export interface AutocompleteProps
   placeholder?: string;
   items?: SelectItemType[];
   popoverClassName?: string;
-  selectedItems: ListData<SelectItemType>;
+  selectedItems: SelectItemType[];
   placeholderIcon?: IconComponentType | null;
   children: AriaListBoxProps<SelectItemType>['children'];
   onItemInserted?: (key: Key) => void;
@@ -72,6 +70,7 @@ export interface AutocompleteProps
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
   filterOption?: (item: SelectItemType, filterText: string) => boolean;
   onSearchChange?: (value: string) => void;
+  noOptionsMessage?: string;
 }
 
 const InnerAutocomplete = ({ isDisabled, placeholder }: { isDisabled?: boolean; placeholder?: string }) => {
@@ -108,7 +107,7 @@ const InnerAutocomplete = ({ isDisabled, placeholder }: { isDisabled?: boolean; 
 
     event.preventDefault();
 
-    const isFirstTag = context?.selectedItems?.items?.[0]?.id === value;
+    const isFirstTag = context?.selectedItems?.[0]?.id === value;
 
     switch (event.key) {
       case ' ':
@@ -133,12 +132,12 @@ const InnerAutocomplete = ({ isDisabled, placeholder }: { isDisabled?: boolean; 
     }
   };
 
-  const isSelectionEmpty = context?.selectedItems?.items?.length === 0;
+  const isSelectionEmpty = context?.selectedItems?.length === 0;
 
   return (
     <div className="tw:relative tw:flex tw:w-full tw:flex-1 tw:flex-row tw:flex-wrap tw:items-center tw:justify-start tw:gap-1.5">
       {!isSelectionEmpty &&
-        context?.selectedItems?.items?.map((item) =>
+        context?.selectedItems?.map((item) =>
           context.renderTag ? (
             context.renderTag(item, () => context.onRemove(new Set([item.id])))
           ) : (
@@ -224,63 +223,61 @@ export const AutocompleteBase = ({
   renderTag,
   filterOption,
   onSearchChange,
+  noOptionsMessage,
   name: _name,
   className: _className,
   ...props
 }: AutocompleteProps) => {
   const { contains } = useFilter({ sensitivity: 'base' });
-  const selectedKeys = selectedItems.items.map((item) => item.id);
 
-  const filter = useCallback(
-    (item: SelectItemType, filterText: string) => {
-      if (filterOption) {
-        return !selectedKeys.includes(item.id) && filterOption(item, filterText);
-      }
-      return !selectedKeys.includes(item.id) && contains(item.label || item.supportingText || '', filterText);
-    },
-    [contains, filterOption, selectedKeys],
-  );
-
-  const accessibleList = useListData({
-    initialItems: items,
-    filter,
-  });
+  const [internalSelected, setInternalSelected] = useState<SelectItemType[]>(selectedItems);
+  const selectedKeys = internalSelected.map((item) => item.id);
 
   useEffect(() => {
-    const currentIds = new Set(accessibleList.items.map((i) => i.id));
-    const newItems = items ?? [];
-    const newIds = new Set(newItems.map((i) => i.id));
-    accessibleList.items.forEach((item) => {
-      if (!newIds.has(item.id)) accessibleList.remove(item.id);
-    });
-    newItems.forEach((item) => {
-      if (!currentIds.has(item.id)) accessibleList.append(item);
-    });
+    setInternalSelected(selectedItems);
+  }, [selectedItems]);
+
+  const [allItems, setAllItems] = useState<SelectItemType[]>(items ?? []);
+  const [filterText, setFilterText] = useState('');
+
+  useEffect(() => {
+    setAllItems(items ?? []);
   }, [items]);
+
+  const visibleItems = useMemo(() => {
+    return allItems.filter((item) => {
+      if (selectedKeys.includes(item.id)) return false;
+      if (filterOption) return filterOption(item, filterText);
+      return contains(item.label || item.supportingText || '', filterText);
+    });
+  }, [allItems, filterText, selectedKeys, filterOption, contains]);
+
+  const itemMap = useMemo(() => new Map(allItems.map((item) => [item.id, item])), [allItems]);
 
   const onRemove = useCallback(
     (keys: Set<Key>) => {
       const key = keys.values().next().value;
       if (!key) return;
-      selectedItems.remove(key);
+      setInternalSelected((prev) => prev.filter((item) => item.id !== key));
       onItemCleared?.(key);
+      setFilterText('');
     },
-    [selectedItems, onItemCleared],
+    [onItemCleared],
   );
 
   const onSelectionChange = (id: Key | null) => {
     if (!id) return;
-    const item = accessibleList.getItem(id);
+    const item = itemMap.get(id as string);
     if (!item) return;
     if (!selectedKeys.includes(id as string)) {
-      selectedItems.append(item);
+      setInternalSelected((prev) => [...prev, item]);
       onItemInserted?.(id);
     }
-    accessibleList.setFilterText('');
+    setFilterText('');
   };
 
   const onInputChange = (value: string) => {
-    accessibleList.setFilterText(value);
+    setFilterText(value);
     onSearchChange?.(value);
   };
 
@@ -298,8 +295,8 @@ export const AutocompleteBase = ({
   const selectContextValue = useMemo(() => ({ size }), [size]);
 
   const autocompleteContextValue = useMemo(
-    () => ({ size, selectedKeys, selectedItems, onInputChange, onRemove, renderTag }),
-    [size, selectedKeys, selectedItems, onInputChange, onRemove, renderTag],
+    () => ({ size, selectedKeys, selectedItems: internalSelected, onInputChange, onRemove, renderTag }),
+    [size, selectedKeys, internalSelected, onInputChange, onRemove, renderTag],
   );
 
   return (
@@ -308,9 +305,9 @@ export const AutocompleteBase = ({
         <AriaComboBox
           allowsEmptyCollection
           menuTrigger="focus"
-          items={accessibleList.items}
+          items={visibleItems}
           onInputChange={onInputChange}
-          inputValue={accessibleList.filterText}
+          inputValue={filterText}
           selectedKey={null}
           onSelectionChange={onSelectionChange}
           {...props}
@@ -334,7 +331,17 @@ export const AutocompleteBase = ({
               </div>
 
               <Popover size="md" triggerRef={triggerRef} style={{ width: popoverWidth }} className={popoverClassName}>
-                <AriaListBox selectionMode="multiple" className="tw:size-full tw:outline-hidden">
+                <AriaListBox
+                  selectionMode="multiple"
+                  className="tw:size-full tw:outline-hidden"
+                  renderEmptyState={() =>
+                    noOptionsMessage ? (
+                      <div className="tw:px-3 tw:py-2 tw:select-none tw:text-center tw:text-sm">
+                        <HintText>{noOptionsMessage}</HintText>
+                      </div>
+                    ) : null
+                  }
+                >
                   {children}
                 </AriaListBox>
               </Popover>
@@ -354,5 +361,4 @@ const Autocomplete = AutocompleteBase as typeof AutocompleteBase & {
 
 Autocomplete.Item = AutocompleteItem;
 
-export { useListData as useAutocompleteListData } from 'react-stately';
 export { Autocomplete };

@@ -15,6 +15,7 @@ const sizes = {
 
 interface AutocompleteItemProps extends Omit<AriaListBoxItemProps<AutocompleteItemType>, "id">, Omit<AutocompleteItemType, "id"> {
     id: string;
+    "data-testid"?: string;
 }
 
 const renderItemIcon = (avatarUrl: string | undefined, Icon: AutocompleteItemType["icon"], label: string | undefined) => {
@@ -30,7 +31,7 @@ const renderItemIcon = (avatarUrl: string | undefined, Icon: AutocompleteItemTyp
     return null;
 };
 
-export const AutocompleteItem = ({ label, id, value, avatarUrl, supportingText, isDisabled, icon: Icon, className, children, ...props }: AutocompleteItemProps) => {
+export const AutocompleteItem = ({ label, id, value, avatarUrl, supportingText, isDisabled, icon: Icon, className, children, "data-testid": dataTestId, ...props }: AutocompleteItemProps) => {
     const { size } = useContext(SelectContext);
 
     const labelOrChildren = label || (typeof children === "string" ? children : "");
@@ -56,6 +57,7 @@ export const AutocompleteItem = ({ label, id, value, avatarUrl, supportingText, 
         >
             {(state) => (
                 <div
+                    data-testid={dataTestId}
                     className={cx(
                         "tw:flex tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-md tw:outline-hidden tw:select-none",
                         state.isSelected && "tw:bg-active",

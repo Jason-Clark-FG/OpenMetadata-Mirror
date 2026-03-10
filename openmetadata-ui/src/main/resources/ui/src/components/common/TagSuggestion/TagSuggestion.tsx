@@ -13,7 +13,6 @@
 
 import {
   Autocomplete,
-  useAutocompleteListData,
   type AutocompleteItemType,
 } from '@openmetadata/ui-core-components';
 import { debounce } from 'lodash';
@@ -55,14 +54,12 @@ const TagSuggestion: FC<TagSuggestionProps> = ({
   const [options, setOptions] = useState<AutocompleteItemType[]>([]);
   const tagDataMap = useRef<Map<string, TagLabel>>(new Map());
 
-  const selectedItems = useAutocompleteListData<AutocompleteItemType>({
-    initialItems: value.map((tag) => ({
-      id: tag.tagFQN,
-      label: getTagDisplay(tag.displayName || tag.name) || tag.tagFQN,
-      supportingText: tag.displayName || tag.name,
-      value: tag,
-    })),
-  });
+  const selectedItems: AutocompleteItemType[] = value.map((tag) => ({
+    id: tag.tagFQN,
+    label: getTagDisplay(tag.displayName || tag.name) || tag.tagFQN,
+    supportingText: tag.displayName || tag.name,
+    value: tag,
+  }));
 
   const fetchOptions = async (searchText: string) => {
     try {
@@ -108,7 +105,13 @@ const TagSuggestion: FC<TagSuggestionProps> = ({
 
   const handleSearchChange = useCallback(
     (searchText: string) => {
-      searchDebounced(searchText);
+      if (searchText === '') {
+        searchDebounced.cancel();
+        setOptions([]);
+        fetchOptions('');
+      } else {
+        searchDebounced(searchText);
+      }
     },
     [searchDebounced]
   );
@@ -127,8 +130,11 @@ const TagSuggestion: FC<TagSuggestionProps> = ({
       };
 
       onChange?.([...value, newTag]);
+      searchDebounced.cancel();
+      setOptions([]);
+      fetchOptions('');
     },
-    [value, onChange]
+    [value, onChange, searchDebounced]
   );
 
   const handleItemCleared = useCallback(
@@ -145,6 +151,7 @@ const TagSuggestion: FC<TagSuggestionProps> = ({
         isRequired={required}
         items={options}
         label={label}
+        noOptionsMessage={t('label.no-result-found')}
         placeholder={
           placeholder ??
           t('label.select-field', { field: t('label.tag-plural') })
@@ -165,6 +172,7 @@ const TagSuggestion: FC<TagSuggestionProps> = ({
       >
         {(item) => (
           <Autocomplete.Item
+            data-testid={`tag-option-${item.id}`}
             id={String(item.id)}
             key={item.id}
             label={item.label}

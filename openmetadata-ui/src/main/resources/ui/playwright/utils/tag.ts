@@ -596,7 +596,7 @@ export const verifyEntityTypeFilterInTagAssets = async (
   await clearResponse;
 };
 
-export const selectTagInMUITagSuggestion = async (
+export const selectTagInTagSuggestion = async (
   page: Page,
   {
     searchTerm,

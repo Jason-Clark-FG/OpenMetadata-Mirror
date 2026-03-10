@@ -28,7 +28,13 @@ jest.mock('lodash', () => {
 
   return {
     ...original,
-    debounce: (fn: (...args: unknown[]) => unknown) => fn,
+    debounce: (fn: (...args: unknown[]) => unknown) => {
+      const debounced = (...args: unknown[]) => fn(...args);
+
+      debounced.cancel = () => {};
+
+      return debounced;
+    },
   };
 });
 
@@ -47,23 +53,8 @@ jest.mock('../atoms/TagChip', () => ({
 
 type MockItem = { id: string; label: string; supportingText?: string };
 
-const appendItem = (prev: MockItem[], item: MockItem) => [...prev, item];
-const removeItem = (id: string) => (prev: MockItem[]) =>
-  prev.filter((i) => i.id !== id);
-
 jest.mock('@openmetadata/ui-core-components', () => {
   const { useState } = jest.requireActual('react');
-
-  const useAutocompleteListData = ({ initialItems = [] } = {}) => {
-    const [items, setItems] = useState(initialItems);
-
-    return {
-      items,
-      append: (item: MockItem) =>
-        setItems((prev: MockItem[]) => appendItem(prev, item)),
-      remove: (id: string) => setItems(removeItem(id)),
-    };
-  };
 
   const Autocomplete = ({
     items = [],
@@ -80,7 +71,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
     onItemInserted?: (key: string) => void;
     onSearchChange?: (value: string) => void;
     placeholder?: string;
-    selectedItems: { items: { id: string; label: string }[] };
+    selectedItems: MockItem[];
   }) => {
     const listboxId = 'mock-autocomplete-listbox';
     const [open, setOpen] = useState(false);
@@ -110,7 +101,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
           onFocus={() => setOpen(true)}
           onMouseDown={() => setOpen(true)}
         />
-        {selectedItems.items.map((item) => (
+        {selectedItems.map((item) => (
           <span data-testid="tag-chip" key={item.id}>
             {item.label}
             <button
@@ -149,7 +140,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
     supportingText?: string;
   }) => ({ id, label, supportingText });
 
-  return { Autocomplete, useAutocompleteListData };
+  return { Autocomplete };
 });
 
 describe('TagSuggestion', () => {
