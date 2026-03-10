@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,10 @@ public record SubjectContext(User user, String impersonatedBy) {
   private static final String USER_FIELDS = "roles,teams,isAdmin,profile,domains";
   public static final String TEAM_FIELDS =
       "defaultRoles, defaultPersona, policies, parents, profile,domains";
+
+  // Cache for user domains to avoid repeated DB queries within the same request
+  private static final ConcurrentHashMap<UUID, List<EntityReference>> USER_DOMAINS_CACHE =
+      new ConcurrentHashMap<>();
 
   public static SubjectContext getSubjectContext(String userName) {
     User user = SubjectCache.getUserContext(userName);
@@ -233,10 +238,18 @@ public record SubjectContext(User user, String impersonatedBy) {
   }
 
   // Get user's domains including all subdomains in the hierarchy.
+  // Results are cached per user to avoid repeated DB queries within the same request.
   public List<EntityReference> getUserDomains() {
     List<EntityReference> userDomains = listOrEmpty(user.getDomains());
     if (userDomains.isEmpty()) {
       return userDomains;
+    }
+
+    // Check cache first
+    UUID userId = user.getId();
+    List<EntityReference> cached = USER_DOMAINS_CACHE.get(userId);
+    if (cached != null) {
+      return cached;
     }
 
     List<EntityReference> allDomains = new ArrayList<>(userDomains);
@@ -263,7 +276,20 @@ public record SubjectContext(User user, String impersonatedBy) {
     } catch (Exception ex) {
       LOG.warn("Failed to fetch subdomains", ex);
     }
-    return allDomains.stream().distinct().collect(Collectors.toList());
+
+    List<EntityReference> result = allDomains.stream().distinct().collect(Collectors.toList());
+    USER_DOMAINS_CACHE.put(userId, result);
+    return result;
+  }
+
+  // Clear the user domains cache (called when user domains change)
+  public static void clearUserDomainsCache(UUID userId) {
+    USER_DOMAINS_CACHE.remove(userId);
+  }
+
+  // Clear all user domains cache (called on startup or cache invalidation)
+  public static void clearAllUserDomainsCache() {
+    USER_DOMAINS_CACHE.clear();
   }
 
   // Iterate over all the policies of the team hierarchy the user belongs to
