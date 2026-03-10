@@ -1708,9 +1708,12 @@ test.describe('Data Contracts Semantics Rule Version', () => {
       // the entity version, and session consolidation (same user, same entity,
       // rapid updates) may merge those into fewer bumps depending on execution
       // speed. The actual post-save version is read from the UI after reload.
+      // Use 99.9 so the placeholder never collides with the real entity version
+      // (which starts at 0.1), ensuring the second edit always produces a diff
+      // and the save button stays enabled.
       await ruleLocator
         .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input')
-        .fill('0.1');
+        .fill('99.9');
 
       await saveAndTriggerDataContractValidation(page, true);
 
@@ -1823,9 +1826,12 @@ test.describe('Data Contracts Semantics Rule Version', () => {
         // the entity version, and session consolidation (same user, same entity,
         // rapid updates) may merge those into fewer bumps depending on execution
         // speed. The actual post-save version is read from the UI after reload.
+        // Use 99.9 so the placeholder never collides with the real entity version
+        // (which starts at 0.1), ensuring the second edit always produces a diff
+        // and the save button stays enabled.
         await ruleLocator
           .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input')
-          .fill('0.1');
+          .fill('99.9');
 
         await saveAndTriggerDataContractValidation(page, true);
 
