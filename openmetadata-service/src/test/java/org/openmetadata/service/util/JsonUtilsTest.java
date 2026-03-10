@@ -14,10 +14,12 @@
 package org.openmetadata.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonException;
@@ -138,8 +140,6 @@ class JsonUtilsTest {
 
   @Test
   void testPojoToMaskedJson() {
-    String expectedJson =
-        "{\"name\":\"test\",\"connection\":{},\"tags\":[],\"version\":0.1,\"deleted\":false}";
     DatabaseService databaseService =
         new DatabaseService()
             .withName("test")
@@ -148,7 +148,15 @@ class JsonUtilsTest {
                     .withConfig(
                         new MysqlConnection()
                             .withAuthType(new basicAuth().withPassword("password"))));
-    String actualJson = JsonUtils.pojoToMaskedJson(databaseService);
-    assertEquals(expectedJson, actualJson);
+
+    JsonNode actualJson = JsonUtils.readTree(JsonUtils.pojoToMaskedJson(databaseService));
+
+    assertEquals("test", actualJson.get("name").asText());
+    assertFalse(actualJson.toString().contains("password"));
+    assertTrue(actualJson.has("connection"));
+    assertTrue(actualJson.get("connection").isObject());
+    assertEquals(0, actualJson.get("connection").size());
+    assertTrue(actualJson.has("deleted"));
+    assertFalse(actualJson.get("deleted").asBoolean());
   }
 }

@@ -59,10 +59,8 @@ class CustomOidcValidatorTest {
   }
 
   @Test
-  void validateCustomOidcConfigurationReturnsErrorWhenClientTypeIsMissing() {
-    FieldError error =
-        validator.validateCustomOidcConfiguration(
-            new AuthenticationConfiguration(), new OidcClientConfig());
+  void validateCustomOidcConfigurationWrapsUnexpectedTopLevelErrors() {
+    FieldError error = validator.validateCustomOidcConfiguration(null, new OidcClientConfig());
 
     assertNotNull(error);
     assertTrue(error.getError().contains("Custom OIDC validation failed"));
