@@ -43,6 +43,11 @@ export interface OpenMetadataWorkflowConfig {
      */
     ingestionPipelineFQN?: string;
     /**
+     * Name of the ingestion runner executing this workflow. Set at dispatch time by the
+     * execution environment.
+     */
+    ingestionRunnerName?: string;
+    /**
      * Unique identifier of pipeline run, used to identify the current pipeline run
      */
     pipelineRunId?: string;
@@ -1186,6 +1191,12 @@ export interface ConfigObject {
      * multi-regions are not yet in GA.
      */
     usageLocation?: string;
+    /**
+     * Catalog ID for Athena. For S3 Tables, use the format 's3tablescatalog/<bucket-name>'. For
+     * cross-account Glue catalogs, use the AWS account ID. If not provided, defaults to the
+     * caller's AWS account.
+     */
+    catalogId?: string;
     /**
      * Optional name to give to the database in OpenMetadata. If left blank, we will use default
      * as the database name.
