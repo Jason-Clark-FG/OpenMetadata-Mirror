@@ -341,6 +341,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public static synchronized void resetFieldFetchPoolSize() {
     setFieldFetchPoolSize(DEFAULT_FIELD_FETCH_POOL_SIZE);
   }
+
   private static final LoadingCache<String, Integer> COUNT_CACHE =
       CacheBuilder.newBuilder()
           .maximumSize(500)

@@ -1,6 +1,7 @@
 package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.time.Duration;
 import java.util.List;
@@ -45,6 +46,9 @@ public class RdfResourceIT {
 
   @BeforeAll
   static void enableRdf() {
+    assumeTrue(
+        RdfTestUtils.isRdfEnabled(),
+        "RDF is disabled for this test run. Use the RDF test profile to execute RdfResourceIT.");
     RdfConfiguration rdfConfig = new RdfConfiguration();
     rdfConfig.setEnabled(true);
     rdfConfig.setBaseUri(java.net.URI.create("https://open-metadata.org/"));
