@@ -376,17 +376,14 @@ public class RBACConditionEvaluator {
         }
       }
 
-      // Use 'should' (OR) to match entities in any of the user's domains
-      // Optimization: skip bool wrapper for single domain
+      // Also allow resources with no domain
       domainQueries.add(
           queryBuilderFactory
               .boolQuery()
               .mustNot(Collections.singletonList(queryBuilderFactory.existsQuery("domains.id"))));
 
-      collector.addMust(
-          domainQueries.size() == 1
-              ? domainQueries.get(0)
-              : queryBuilderFactory.boolQuery().should(domainQueries));
+      // Use 'should' (OR) to match entities in any of the user's domains or with no domain
+      collector.addMust(queryBuilderFactory.boolQuery().should(domainQueries));
     }
   }
 
