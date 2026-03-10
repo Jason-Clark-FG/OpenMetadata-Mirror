@@ -263,7 +263,8 @@ public class SSOCallbackServlet extends HttpServlet {
       String ssoCallbackUrl = ssoHandler.getClient().getCallbackUrl();
       session.setAttribute(AuthenticationCodeFlowHandler.SESSION_SSO_CALLBACK_URL, ssoCallbackUrl);
       // handleCallback() → sendRedirectWithToken() requires SESSION_REDIRECT_URI to be set.
-      // The actual redirect is intercepted by our response wrapper, so the value doesn't matter.
+      // We set it to /mcp/callback so pac4j completes the token exchange, but the actual redirect
+      // is intercepted by the response wrapper above — we handle the redirect ourselves.
       session.setAttribute(
           AuthenticationCodeFlowHandler.SESSION_REDIRECT_URI, baseUrl + "/mcp/callback");
       LOG.debug("Set session SSO callback URL to: {}", ssoCallbackUrl);

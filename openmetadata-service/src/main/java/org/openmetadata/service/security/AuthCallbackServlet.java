@@ -24,6 +24,13 @@ public class AuthCallbackServlet extends HttpServlet {
         return;
       } catch (Exception e) {
         LOG.error("Failed to forward MCP callback", e);
+        try {
+          resp.sendError(
+              HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process MCP callback");
+        } catch (Exception writeEx) {
+          LOG.error("Failed to write error response", writeEx);
+        }
+        return;
       }
     }
 

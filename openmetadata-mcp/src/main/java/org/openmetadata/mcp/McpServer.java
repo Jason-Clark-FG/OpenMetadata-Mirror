@@ -178,16 +178,27 @@ public class McpServer implements McpServerProvider {
       try {
         org.openmetadata.schema.api.security.AuthenticationConfiguration authConfig =
             SecurityConfigurationManager.getCurrentAuthConfig();
-        org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType ssoServiceType =
-            org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.GOOGLE;
+        // Only register SSO callback for actual SSO providers (not basic/ldap)
+        if (authConfig == null
+            || authConfig.getProvider() == null
+            || authConfig.getProvider()
+                == org.openmetadata.schema.services.connections.metadata.AuthProvider.BASIC
+            || authConfig.getProvider()
+                == org.openmetadata.schema.services.connections.metadata.AuthProvider.LDAP) {
+          LOG.info(
+              "Skipping SSO callback registration — auth provider is {}",
+              authConfig != null ? authConfig.getProvider() : "null");
+          throw new IllegalStateException("Non-SSO provider");
+        }
+        org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType ssoServiceType;
         try {
-          if (authConfig != null && authConfig.getProvider() != null) {
-            String providerStr = authConfig.getProvider().toString().toUpperCase();
-            ssoServiceType =
-                org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.valueOf(providerStr);
-          }
+          String providerStr = authConfig.getProvider().toString().toUpperCase();
+          ssoServiceType =
+              org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.valueOf(providerStr);
         } catch (Exception e) {
-          LOG.warn("Could not determine SSO provider type, using default GOOGLE", e);
+          ssoServiceType = org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.GOOGLE;
+          LOG.info(
+              "Using default SSO service type GOOGLE for provider: {}", authConfig.getProvider());
         }
 
         org.openmetadata.service.security.AuthenticationCodeFlowHandler ssoHandler =
