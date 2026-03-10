@@ -11,6 +11,7 @@
 """
 Hive Metastore Mysql Dialect
 """
+from sqlalchemy import text
 from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
 from sqlalchemy.engine import reflection
 
@@ -43,7 +44,6 @@ class HiveMysqlMetaStoreDialect(HiveMetaStoreDialectMixin, MySQLDialect_pymysql)
         ]
         logger.debug(f"Fetched schema names: {schema_names}")
         return schema_names
-
 
     def get_view_names(self, connection, schema=None, **kw):
         # Hive does not provide functionality to query tableType
