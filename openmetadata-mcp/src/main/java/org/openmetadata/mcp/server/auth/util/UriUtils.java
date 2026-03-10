@@ -99,7 +99,7 @@ public class UriUtils {
     String scheme = url.getScheme();
     String host = url.getHost();
 
-    if (!"https".equals(scheme) && !"localhost".equals(host) && !host.startsWith("127.0.0.1")) {
+    if (!"https".equals(scheme) && !"localhost".equals(host) && !"127.0.0.1".equals(host)) {
       throw new IllegalArgumentException("Issuer URL must be HTTPS");
     }
 

@@ -111,8 +111,27 @@ public class RegistrationHandler {
    * @param metadata The client registration metadata
    * @throws RegistrationException if validation fails
    */
+  private static final int MAX_STRING_FIELD_LENGTH = 255;
+
+  private static final int MAX_URI_FIELD_LENGTH = 2048;
+
   private void validateRegistrationRequest(OAuthClientMetadata metadata)
       throws RegistrationException {
+
+    // Validate string field lengths to prevent storage exhaustion
+    validateFieldLength(metadata.getClientName(), "client_name", MAX_STRING_FIELD_LENGTH);
+    validateFieldLength(metadata.getSoftwareId(), "software_id", MAX_STRING_FIELD_LENGTH);
+    validateFieldLength(metadata.getSoftwareVersion(), "software_version", MAX_STRING_FIELD_LENGTH);
+    validateFieldLength(metadata.getScope(), "scope", MAX_STRING_FIELD_LENGTH);
+    validateUriFieldLength(metadata.getClientUri(), "client_uri");
+    validateUriFieldLength(metadata.getLogoUri(), "logo_uri");
+    validateUriFieldLength(metadata.getTosUri(), "tos_uri");
+    validateUriFieldLength(metadata.getPolicyUri(), "policy_uri");
+    if (metadata.getContacts() != null) {
+      for (String contact : metadata.getContacts()) {
+        validateFieldLength(contact, "contacts entry", MAX_STRING_FIELD_LENGTH);
+      }
+    }
 
     // redirect_uris is REQUIRED per RFC 7591 Section 2
     if (metadata.getRedirectUris() == null || metadata.getRedirectUris().isEmpty()) {
@@ -202,5 +221,21 @@ public class RegistrationHandler {
     byte[] secretBytes = new byte[CLIENT_SECRET_BYTES];
     SECURE_RANDOM.nextBytes(secretBytes);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(secretBytes);
+  }
+
+  private void validateFieldLength(String value, String fieldName, int maxLength)
+      throws RegistrationException {
+    if (value != null && value.length() > maxLength) {
+      throw new RegistrationException(
+          "invalid_client_metadata", fieldName + " exceeds maximum length of " + maxLength);
+    }
+  }
+
+  private void validateUriFieldLength(URI value, String fieldName) throws RegistrationException {
+    if (value != null && value.toString().length() > MAX_URI_FIELD_LENGTH) {
+      throw new RegistrationException(
+          "invalid_client_metadata",
+          fieldName + " exceeds maximum length of " + MAX_URI_FIELD_LENGTH);
+    }
   }
 }
