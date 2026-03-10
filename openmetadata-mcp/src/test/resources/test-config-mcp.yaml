@@ -95,9 +95,7 @@ logging:
   level: INFO
   appenders:
     - type: console
-      layout:
-        type: json
-        appendLineSeparator: true
+      logFormat: "%level %logger{5} - %msg%n"
 
 database:
   # the name of the JDBC driver, h2 is used for testing
