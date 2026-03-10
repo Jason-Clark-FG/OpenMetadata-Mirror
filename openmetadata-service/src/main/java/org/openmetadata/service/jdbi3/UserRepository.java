@@ -1418,6 +1418,11 @@ public class UserRepository extends EntityRepository<User> {
           added,
           deleted,
           EntityUtil.entityReferenceMatch);
+
+      // Invalidate cached user domains when domains change
+      if (!added.isEmpty() || !deleted.isEmpty()) {
+        SubjectContext.clearUserDomainsCache(original.getId());
+      }
     }
 
     private void updateTeams(User original, User updated) {

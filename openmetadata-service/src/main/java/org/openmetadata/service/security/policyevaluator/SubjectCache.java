@@ -91,6 +91,11 @@ public class SubjectCache {
 
   public static void invalidateUser(String userName) {
     LOG.debug("Invalidating policy cache for user: {}", userName);
+    // Get user from cache before invalidating to clear domains cache
+    User user = USER_CONTEXT_CACHE.getIfPresent(userName);
+    if (user != null) {
+      SubjectContext.clearUserDomainsCache(user.getId());
+    }
     USER_POLICIES_CACHE.invalidate(userName);
     USER_CONTEXT_CACHE.invalidate(userName);
   }
@@ -99,6 +104,7 @@ public class SubjectCache {
     LOG.info("Invalidating all user policy caches");
     USER_POLICIES_CACHE.invalidateAll();
     USER_CONTEXT_CACHE.invalidateAll();
+    SubjectContext.clearAllUserDomainsCache();
   }
 
   public static User getUserContext(String userName) {
