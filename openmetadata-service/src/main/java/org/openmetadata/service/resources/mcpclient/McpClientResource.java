@@ -31,6 +31,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -44,14 +45,15 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.chat.CreateMcpConversation;
 import org.openmetadata.schema.entity.chat.McpConversation;
 import org.openmetadata.schema.entity.chat.McpMessage;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
-import org.openmetadata.service.Entity;
-import org.openmetadata.service.OpenMetadataApplicationConfig;
-import org.openmetadata.service.config.McpClientConfiguration;
+import org.openmetadata.service.apps.AbstractNativeApplication;
+import org.openmetadata.service.apps.ApplicationContext;
+import org.openmetadata.service.apps.bundles.mcp.McpChatApplication;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.mcpclient.ChatEvent;
 import org.openmetadata.service.mcpclient.McpClientService;
@@ -64,14 +66,14 @@ import org.openmetadata.service.security.Authorizer;
 @Tag(name = "McpClient")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 @Collection(name = "McpClient")
 public class McpClientResource {
 
   private static volatile McpClientResource instance;
 
-  private McpClientService mcpClientService;
-  private Authorizer authorizer;
-  private Limits limits;
+  private volatile ToolExecutor toolExecutor;
+  private volatile List<Map<String, Object>> toolDefinitions;
 
   public static McpClientResource getInstance() {
     return instance;
@@ -90,26 +92,13 @@ public class McpClientResource {
   public static class McpMessageList extends ResultList<McpMessage> {}
 
   public McpClientResource(Authorizer authorizer, Limits limits) {
-    this.authorizer = authorizer;
-    this.limits = limits;
     instance = this;
-  }
-
-  public void initialize(OpenMetadataApplicationConfig config) {
-    McpClientConfiguration mcpConfig = config.getMcpClientConfiguration();
-    if (mcpConfig == null) {
-      mcpConfig = new McpClientConfiguration();
-    }
-    this.mcpClientService =
-        new McpClientService(Entity.getCollectionDAO(), mcpConfig, authorizer, limits);
   }
 
   public void registerToolExecutor(
       ToolExecutor toolExecutor, List<Map<String, Object>> toolDefinitions) {
-    if (this.mcpClientService != null) {
-      this.mcpClientService.setToolExecutor(toolExecutor);
-      this.mcpClientService.setToolDefinitions(toolDefinitions);
-    }
+    this.toolExecutor = toolExecutor;
+    this.toolDefinitions = toolDefinitions;
   }
 
   @POST
@@ -129,16 +118,8 @@ public class McpClientResource {
         @ApiResponse(responseCode = "400", description = "Bad request")
       })
   public Response chat(@Context SecurityContext securityContext, @Valid ChatRequest request) {
-    if (mcpClientService == null || !mcpClientService.isEnabled()) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .entity(
-              Map.of(
-                  "message",
-                  "MCP Client is not enabled. Configure mcpClientConfiguration in openmetadata.yaml."))
-          .build();
-    }
     ChatResponse response =
-        mcpClientService.chat(securityContext, request.getConversationId(), request.getMessage());
+        getService().chat(securityContext, request.getConversationId(), request.getMessage());
     return Response.ok(response).build();
   }
 
@@ -157,19 +138,11 @@ public class McpClientResource {
         @ApiResponse(responseCode = "400", description = "Bad request")
       })
   public Response chatStream(@Context SecurityContext securityContext, @Valid ChatRequest request) {
-    if (mcpClientService == null || !mcpClientService.isEnabled()) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-          .type(MediaType.APPLICATION_JSON_TYPE)
-          .entity(
-              Map.of(
-                  "message",
-                  "MCP Client is not enabled. Configure mcpClientConfiguration in openmetadata.yaml."))
-          .build();
-    }
+    McpClientService service = getService();
     StreamingOutput streamingOutput =
         output -> {
           try {
-            mcpClientService.chatStream(
+            service.chatStream(
                 securityContext,
                 request.getConversationId(),
                 request.getMessage(),
@@ -204,7 +177,7 @@ public class McpClientResource {
       })
   public Response createConversation(
       @Context SecurityContext securityContext, @Valid CreateMcpConversation request) {
-    McpConversation conversation = mcpClientService.createConversation(securityContext, request);
+    McpConversation conversation = getService().createConversation(securityContext, request);
     return Response.status(Response.Status.CREATED).entity(conversation).build();
   }
 
@@ -236,9 +209,9 @@ public class McpClientResource {
           @Min(0)
           @QueryParam("offset")
           int offset) {
-    List<McpConversation> conversations =
-        mcpClientService.listConversations(securityContext, limit, offset);
-    int total = mcpClientService.getConversationCount(securityContext);
+    McpClientService service = getService();
+    List<McpConversation> conversations = service.listConversations(securityContext, limit, offset);
+    int total = service.getConversationCount(securityContext);
     return new ResultList<>(conversations, offset, total);
   }
 
@@ -263,7 +236,7 @@ public class McpClientResource {
       @Parameter(description = "Id of the conversation", schema = @Schema(type = "UUID"))
           @PathParam("id")
           UUID id) {
-    return mcpClientService.getConversationWithMessages(securityContext, id);
+    return getService().getConversationWithMessages(securityContext, id);
   }
 
   @GET
@@ -298,8 +271,9 @@ public class McpClientResource {
           @Min(0)
           @QueryParam("offset")
           int offset) {
-    List<McpMessage> messages = mcpClientService.listMessages(securityContext, id, limit, offset);
-    int total = mcpClientService.getMessageCount(securityContext, id);
+    McpClientService service = getService();
+    List<McpMessage> messages = service.listMessages(securityContext, id, limit, offset);
+    int total = service.getMessageCount(securityContext, id);
     return new ResultList<>(messages, offset, total);
   }
 
@@ -318,8 +292,37 @@ public class McpClientResource {
       @Parameter(description = "Id of the conversation", schema = @Schema(type = "UUID"))
           @PathParam("id")
           UUID id) {
-    mcpClientService.deleteConversation(securityContext, id);
+    getService().deleteConversation(securityContext, id);
     return Response.noContent().build();
+  }
+
+  private McpClientService getService() {
+    AbstractNativeApplication app =
+        ApplicationContext.getInstance().getAppIfExists("McpChatApplication");
+    if (app == null) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.SERVICE_UNAVAILABLE)
+              .entity(
+                  Map.of(
+                      "message",
+                      "MCP Chat is not enabled. Install the McpChatApplication from the App Marketplace."))
+              .build());
+    }
+    McpChatApplication chatApp = (McpChatApplication) app;
+    McpClientService service = chatApp.getMcpClientService();
+    if (service == null) {
+      throw new WebApplicationException(
+          Response.status(Response.Status.SERVICE_UNAVAILABLE)
+              .entity(Map.of("message", "MCP Chat service is initializing. Please try again."))
+              .build());
+    }
+
+    if (this.toolExecutor != null) {
+      service.setToolExecutor(this.toolExecutor);
+      service.setToolDefinitions(this.toolDefinitions);
+    }
+
+    return service;
   }
 
   private static void writeSseEvent(OutputStream output, String event, Object data) {

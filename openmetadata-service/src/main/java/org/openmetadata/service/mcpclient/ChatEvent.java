@@ -39,6 +39,10 @@ public record ChatEvent(String event, Object data) {
     return new ChatEvent("message_complete", Map.of("message", message));
   }
 
+  public static ChatEvent titleUpdated(String title) {
+    return new ChatEvent("title_updated", Map.of("title", title));
+  }
+
   public static ChatEvent error(String message) {
     return new ChatEvent("error", Map.of("message", message));
   }

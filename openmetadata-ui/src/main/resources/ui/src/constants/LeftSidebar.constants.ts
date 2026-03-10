@@ -12,7 +12,6 @@
  */
 
 import { Cube01 } from '@untitledui/icons';
-import { ReactComponent as McpChatIcon } from '../assets/svg/add-chat.svg';
 import { ReactComponent as GovernIcon } from '../assets/svg/bank.svg';
 import { ReactComponent as ClassificationIcon } from '../assets/svg/classification.svg';
 import { ReactComponent as DataQualityRulesIcon } from '../assets/svg/data-observability/data-quality-rules.svg';
@@ -175,13 +174,6 @@ export const SIDEBAR_LIST: Array<LeftSidebarItem> = [
         isBeta: true,
       },
     ],
-  },
-  {
-    key: ROUTES.MCP_CHAT,
-    title: 'label.mcp-chat',
-    redirect_url: ROUTES.MCP_CHAT,
-    icon: McpChatIcon,
-    dataTestId: `app-bar-item-${SidebarItem.MCP_CHAT}`,
   },
 ];
 

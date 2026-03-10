@@ -25,7 +25,7 @@ public class McpClientConfiguration {
   @JsonProperty("provider")
   private String provider = "openai";
 
-  @JsonProperty("apiKey")
+  @JsonProperty(value = "apiKey", access = JsonProperty.Access.WRITE_ONLY)
   private String apiKey;
 
   @JsonProperty("model")

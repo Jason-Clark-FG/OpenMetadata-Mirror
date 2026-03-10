@@ -16,15 +16,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.config.McpClientConfiguration;
 
@@ -74,9 +79,11 @@ public class AnthropicLlmClient implements LlmClient {
       }
 
       return parseResponse(response.body());
-    } catch (IOException | InterruptedException e) {
-      Thread.currentThread().interrupt();
+    } catch (IOException e) {
       throw new RuntimeException("Failed to call Anthropic API", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Anthropic API call interrupted", e);
     }
   }
 
@@ -173,6 +180,128 @@ public class AnthropicLlmClient implements LlmClient {
     }
 
     return toolNode;
+  }
+
+  @Override
+  public LlmResponse sendMessagesStreaming(
+      List<LlmMessage> messages, List<Map<String, Object>> tools, Consumer<String> onTextChunk) {
+    try {
+      ObjectNode requestBody = buildRequestBody(messages, tools);
+      requestBody.put("stream", true);
+
+      String json = mapper.writeValueAsString(requestBody);
+
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(apiEndpoint + "/v1/messages"))
+              .header("Content-Type", "application/json")
+              .header("x-api-key", apiKey)
+              .header("anthropic-version", ANTHROPIC_VERSION)
+              .timeout(TIMEOUT)
+              .POST(HttpRequest.BodyPublishers.ofString(json))
+              .build();
+
+      HttpResponse<InputStream> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+      if (response.statusCode() != 200) {
+        String errorBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
+        throw new RuntimeException(
+            "Anthropic API returned status " + response.statusCode() + ": " + errorBody);
+      }
+
+      return parseStreamingResponse(response.body(), onTextChunk);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to call Anthropic streaming API", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Anthropic streaming API call interrupted", e);
+    }
+  }
+
+  private LlmResponse parseStreamingResponse(InputStream body, Consumer<String> onTextChunk)
+      throws IOException {
+    StringBuilder textContent = new StringBuilder();
+    List<LlmToolCall> toolCalls = new ArrayList<>();
+    int inputTokens = 0;
+    int outputTokens = 0;
+    String stopReason = null;
+
+    String currentToolId = null;
+    String currentToolName = null;
+    StringBuilder currentToolArgs = new StringBuilder();
+
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+      String line;
+      String currentEvent = null;
+
+      while ((line = reader.readLine()) != null) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.substring(7).trim();
+          continue;
+        }
+        if (!line.startsWith("data: ")) {
+          continue;
+        }
+        String data = line.substring(6).trim();
+        if (data.isEmpty()) {
+          continue;
+        }
+
+        JsonNode chunk = mapper.readTree(data);
+
+        if (currentEvent == null) {
+          continue;
+        }
+
+        switch (currentEvent) {
+          case "message_start" -> {
+            JsonNode usage = chunk.path("message").path("usage");
+            inputTokens = usage.path("input_tokens").asInt(0);
+          }
+          case "content_block_start" -> {
+            JsonNode contentBlock = chunk.path("content_block");
+            if ("tool_use".equals(contentBlock.path("type").asText())) {
+              currentToolId = contentBlock.path("id").asText();
+              currentToolName = contentBlock.path("name").asText();
+              currentToolArgs = new StringBuilder();
+            }
+          }
+          case "content_block_delta" -> {
+            JsonNode delta = chunk.path("delta");
+            String deltaType = delta.path("type").asText();
+            if ("text_delta".equals(deltaType)) {
+              String text = delta.path("text").asText();
+              textContent.append(text);
+              onTextChunk.accept(text);
+            } else if ("input_json_delta".equals(deltaType)) {
+              currentToolArgs.append(delta.path("partial_json").asText());
+            }
+          }
+          case "content_block_stop" -> {
+            if (currentToolId != null) {
+              toolCalls.add(
+                  new LlmToolCall(currentToolId, currentToolName, currentToolArgs.toString()));
+              currentToolId = null;
+              currentToolName = null;
+              currentToolArgs = new StringBuilder();
+            }
+          }
+          case "message_delta" -> {
+            JsonNode delta = chunk.path("delta");
+            if (delta.has("stop_reason") && !delta.get("stop_reason").isNull()) {
+              stopReason = delta.get("stop_reason").asText();
+            }
+            outputTokens = chunk.path("usage").path("output_tokens").asInt(0);
+          }
+          default -> {}
+        }
+      }
+    }
+
+    String content = textContent.length() > 0 ? textContent.toString() : null;
+    return new LlmResponse(content, toolCalls, inputTokens, outputTokens, stopReason);
   }
 
   private LlmResponse parseResponse(String responseBody) throws IOException {

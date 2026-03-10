@@ -141,6 +141,7 @@ export type ChatStreamEvent =
     }
   | { event: 'tool_call_end'; data: { name: string; result: unknown } }
   | { event: 'message_complete'; data: { message: McpMessage } }
+  | { event: 'title_updated'; data: { title: string } }
   | { event: 'error'; data: { message: string } }
   | { event: 'done'; data: Record<string, never> };
 

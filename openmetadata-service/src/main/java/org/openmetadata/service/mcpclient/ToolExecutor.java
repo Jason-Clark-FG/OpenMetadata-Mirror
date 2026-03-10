@@ -12,16 +12,9 @@
  */
 package org.openmetadata.service.mcpclient;
 
-import org.openmetadata.service.limits.Limits;
-import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 
 @FunctionalInterface
 public interface ToolExecutor {
-  String executeTool(
-      Authorizer authorizer,
-      Limits limits,
-      CatalogSecurityContext securityContext,
-      String toolName,
-      String arguments);
+  String executeTool(CatalogSecurityContext securityContext, String toolName, String arguments);
 }

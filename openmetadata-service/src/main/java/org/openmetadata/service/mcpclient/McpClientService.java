@@ -44,36 +44,31 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.McpConversationRepository;
 import org.openmetadata.service.jdbi3.McpMessageRepository;
-import org.openmetadata.service.limits.Limits;
-import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 
 @Slf4j
 public class McpClientService {
   private static final int MAX_TOOL_ITERATIONS = 10;
-  private static final int CONVERSATION_HISTORY_LIMIT = 20;
+  private static final int LLM_CONTEXT_MESSAGE_LIMIT = 20;
 
   private final McpConversationRepository conversationRepository;
   private final McpMessageRepository messageRepository;
-  private final LlmClient llmClient;
-  private final Authorizer authorizer;
-  private final Limits limits;
   private final McpClientConfiguration config;
+  private volatile LlmClient llmClient;
   private volatile ToolExecutor toolExecutor;
   private volatile List<Map<String, Object>> toolDefinitions = Collections.emptyList();
 
-  public McpClientService(
-      CollectionDAO dao, McpClientConfiguration config, Authorizer authorizer, Limits limits) {
+  public McpClientService(CollectionDAO dao, McpClientConfiguration config) {
     this.conversationRepository = new McpConversationRepository(dao.mcpConversationDAO());
     this.messageRepository = new McpMessageRepository(dao.mcpMessageDAO());
-    this.llmClient = LlmClientFactory.create(config);
-    this.authorizer = authorizer;
-    this.limits = limits;
     this.config = config;
+    if (config.getApiKey() != null && !config.getApiKey().isBlank()) {
+      this.llmClient = LlmClientFactory.create(config);
+    }
   }
 
-  public boolean isEnabled() {
-    return config.isEnabled();
+  public boolean isChatEnabled() {
+    return llmClient != null;
   }
 
   public void setToolExecutor(ToolExecutor toolExecutor) {
@@ -88,6 +83,10 @@ public class McpClientService {
 
   public ChatResponse chat(
       SecurityContext securityContext, UUID conversationId, String userMessage) {
+    if (llmClient == null) {
+      throw new IllegalStateException(
+          "LLM API key is not configured. Update the McpApplication configuration with a valid API key.");
+    }
     User user = getSubjectContext(securityContext).user();
     EntityReference userRef = user.getEntityReference();
 
@@ -164,12 +163,7 @@ public class McpClientService {
 
         for (LlmToolCall toolCall : response.toolCalls()) {
           String resultContent =
-              executor.executeTool(
-                  authorizer,
-                  limits,
-                  catalogSecurityContext,
-                  toolCall.name(),
-                  toolCall.arguments());
+              executor.executeTool(catalogSecurityContext, toolCall.name(), toolCall.arguments());
 
           llmMessages.add(LlmMessage.toolResult(toolCall.id(), resultContent));
 
@@ -220,7 +214,7 @@ public class McpClientService {
     conversation.setMessageCount(currentMessageCount);
     conversation.setUpdatedBy(userRef.getName());
     if (isNewConversation && conversation.getTitle() == null) {
-      conversation.setTitle(truncateTitle(userMessage));
+      conversation.setTitle(generateTitle(userMessage));
     }
     conversationRepository.update(conversation);
 
@@ -232,6 +226,10 @@ public class McpClientService {
       UUID conversationId,
       String userMessage,
       ChatEventEmitter emitter) {
+    if (llmClient == null) {
+      throw new IllegalStateException(
+          "LLM API key is not configured. Update the McpApplication configuration with a valid API key.");
+    }
     User user = getSubjectContext(securityContext).user();
     EntityReference userRef = user.getEntityReference();
 
@@ -281,7 +279,9 @@ public class McpClientService {
       ToolExecutor executor = this.toolExecutor;
       List<Map<String, Object>> tools = this.toolDefinitions;
       for (int i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-        LlmResponse response = llmClient.sendMessages(llmMessages, tools);
+        LlmResponse response =
+            llmClient.sendMessagesStreaming(
+                llmMessages, tools, chunk -> emitter.emit(ChatEvent.text(chunk)));
         totalInputTokens += response.inputTokens();
         totalOutputTokens += response.outputTokens();
 
@@ -290,7 +290,6 @@ public class McpClientService {
             textCollector.append("\n\n");
           }
           textCollector.append(response.content());
-          emitter.emit(ChatEvent.text(response.content()));
         }
 
         if (!response.hasToolCalls()) {
@@ -313,12 +312,7 @@ public class McpClientService {
           emitter.emit(ChatEvent.toolCallStart(toolCall.name(), inputArgs));
 
           String resultContent =
-              executor.executeTool(
-                  authorizer,
-                  limits,
-                  catalogSecurityContext,
-                  toolCall.name(),
-                  toolCall.arguments());
+              executor.executeTool(catalogSecurityContext, toolCall.name(), toolCall.arguments());
 
           llmMessages.add(LlmMessage.toolResult(toolCall.id(), resultContent));
 
@@ -371,7 +365,9 @@ public class McpClientService {
     conversation.setMessageCount(currentMessageCount);
     conversation.setUpdatedBy(userRef.getName());
     if (isNewConversation && conversation.getTitle() == null) {
-      conversation.setTitle(truncateTitle(userMessage));
+      String title = generateTitle(userMessage);
+      conversation.setTitle(title);
+      emitter.emit(ChatEvent.titleUpdated(title));
     }
     conversationRepository.update(conversation);
 
@@ -412,8 +408,9 @@ public class McpClientService {
   public McpConversation getConversationWithMessages(
       SecurityContext securityContext, UUID conversationId) {
     McpConversation conversation = getConversation(securityContext, conversationId);
+    int totalMessages = messageRepository.countByConversation(conversationId);
     List<McpMessage> messages =
-        messageRepository.listByConversation(conversationId, CONVERSATION_HISTORY_LIMIT, 0);
+        messageRepository.listByConversation(conversationId, totalMessages, 0);
     conversation.setMcpMessages(messages);
     return conversation;
   }
@@ -450,7 +447,7 @@ public class McpClientService {
     llmMessages.add(LlmMessage.system(config.getSystemPrompt()));
 
     List<McpMessage> history =
-        messageRepository.listByConversation(conversationId, CONVERSATION_HISTORY_LIMIT, 0);
+        messageRepository.listByConversation(conversationId, LLM_CONTEXT_MESSAGE_LIMIT, 0);
 
     for (McpMessage msg : history) {
       boolean isHuman = msg.getSender() == CreateMcpMessage.Sender.HUMAN;
@@ -532,6 +529,30 @@ public class McpClientService {
     User user = getSubjectContext(securityContext).user();
     if (!conversation.getUser().getId().equals(user.getId())) {
       throw new EntityNotFoundException("Conversation not found: " + conversation.getId());
+    }
+  }
+
+  private String generateTitle(String userMessage) {
+    try {
+      List<LlmMessage> titleMessages =
+          List.of(
+              LlmMessage.system(
+                  "Generate a short title (5-7 words max) for a conversation starting with this"
+                      + " message. Reply with only the title text, no quotes or extra"
+                      + " punctuation."),
+              LlmMessage.user(userMessage));
+      LlmResponse response = llmClient.sendMessages(titleMessages, null);
+      String title = response.content();
+      if (title != null) {
+        title = title.trim().replaceAll("^\"|\"$", "");
+        if (title.length() > 100) {
+          title = title.substring(0, 97) + "...";
+        }
+      }
+      return title;
+    } catch (Exception e) {
+      LOG.warn("Failed to generate conversation title", e);
+      return truncateTitle(userMessage);
     }
   }
 

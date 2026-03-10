@@ -101,14 +101,14 @@ public class McpServer implements McpServerProvider {
       }
 
       mcpClientResource.registerToolExecutor(
-          (auth, lim, secCtx, toolName, arguments) -> {
+          (secCtx, toolName, arguments) -> {
             Map<String, Object> args =
                 (arguments != null && !arguments.isBlank())
                     ? JsonUtils.readValue(arguments, Map.class)
                     : new HashMap<>();
             McpSchema.CallToolRequest request = new McpSchema.CallToolRequest(toolName, args, null);
             McpSchema.CallToolResult callResult =
-                toolContext.callTool(auth, lim, toolName, secCtx, request);
+                toolContext.callTool(authorizer, limits, toolName, secCtx, request);
             return extractToolResultContent(callResult);
           },
           llmToolDefs);

@@ -16,15 +16,21 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.config.McpClientConfiguration;
 
@@ -71,9 +77,11 @@ public class OpenAiLlmClient implements LlmClient {
       }
 
       return parseResponse(response.body());
-    } catch (IOException | InterruptedException e) {
-      Thread.currentThread().interrupt();
+    } catch (IOException e) {
       throw new RuntimeException("Failed to call OpenAI API", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("OpenAI API call interrupted", e);
     }
   }
 
@@ -122,6 +130,126 @@ public class OpenAiLlmClient implements LlmClient {
     }
 
     return node;
+  }
+
+  @Override
+  public LlmResponse sendMessagesStreaming(
+      List<LlmMessage> messages, List<Map<String, Object>> tools, Consumer<String> onTextChunk) {
+    try {
+      ObjectNode requestBody = buildRequestBody(messages, tools);
+      requestBody.put("stream", true);
+      ObjectNode streamOptions = requestBody.putObject("stream_options");
+      streamOptions.put("include_usage", true);
+
+      String json = mapper.writeValueAsString(requestBody);
+
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(apiEndpoint + "/v1/chat/completions"))
+              .header("Content-Type", "application/json")
+              .header("Authorization", "Bearer " + apiKey)
+              .timeout(TIMEOUT)
+              .POST(HttpRequest.BodyPublishers.ofString(json))
+              .build();
+
+      HttpResponse<InputStream> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+      if (response.statusCode() != 200) {
+        String errorBody = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
+        throw new RuntimeException(
+            "OpenAI API returned status " + response.statusCode() + ": " + errorBody);
+      }
+
+      return parseStreamingResponse(response.body(), onTextChunk);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to call OpenAI streaming API", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("OpenAI streaming API call interrupted", e);
+    }
+  }
+
+  private LlmResponse parseStreamingResponse(InputStream body, Consumer<String> onTextChunk)
+      throws IOException {
+    StringBuilder contentBuilder = new StringBuilder();
+    Map<Integer, String> toolCallIds = new HashMap<>();
+    Map<Integer, String> toolCallNames = new HashMap<>();
+    Map<Integer, StringBuilder> toolCallArgs = new HashMap<>();
+    int inputTokens = 0;
+    int outputTokens = 0;
+    String stopReason = null;
+
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        if (!line.startsWith("data: ")) {
+          continue;
+        }
+        String data = line.substring(6).trim();
+        if ("[DONE]".equals(data)) {
+          break;
+        }
+
+        JsonNode chunk = mapper.readTree(data);
+
+        if (chunk.has("usage") && !chunk.get("usage").isNull()) {
+          JsonNode usage = chunk.get("usage");
+          inputTokens = usage.path("prompt_tokens").asInt(0);
+          outputTokens = usage.path("completion_tokens").asInt(0);
+        }
+
+        JsonNode choices = chunk.path("choices");
+        if (!choices.isArray() || choices.isEmpty()) {
+          continue;
+        }
+
+        JsonNode choice = choices.get(0);
+        if (choice.has("finish_reason") && !choice.get("finish_reason").isNull()) {
+          stopReason = choice.get("finish_reason").asText();
+        }
+
+        JsonNode delta = choice.path("delta");
+
+        if (delta.has("content") && !delta.get("content").isNull()) {
+          String text = delta.get("content").asText();
+          contentBuilder.append(text);
+          onTextChunk.accept(text);
+        }
+
+        if (delta.has("tool_calls")) {
+          for (JsonNode tc : delta.get("tool_calls")) {
+            int index = tc.get("index").asInt();
+            if (tc.has("id")) {
+              toolCallIds.put(index, tc.get("id").asText());
+            }
+            JsonNode function = tc.path("function");
+            if (function.has("name")) {
+              toolCallNames.put(index, function.get("name").asText());
+            }
+            if (function.has("arguments")) {
+              toolCallArgs
+                  .computeIfAbsent(index, k -> new StringBuilder())
+                  .append(function.get("arguments").asText());
+            }
+          }
+        }
+      }
+    }
+
+    List<LlmToolCall> toolCalls = new ArrayList<>();
+    for (Map.Entry<Integer, String> entry : toolCallIds.entrySet()) {
+      int idx = entry.getKey();
+      toolCalls.add(
+          new LlmToolCall(
+              entry.getValue(),
+              toolCallNames.getOrDefault(idx, ""),
+              toolCallArgs.containsKey(idx) ? toolCallArgs.get(idx).toString() : "{}"));
+    }
+
+    String content = contentBuilder.length() > 0 ? contentBuilder.toString() : null;
+    return new LlmResponse(content, toolCalls, inputTokens, outputTokens, stopReason);
   }
 
   private LlmResponse parseResponse(String responseBody) throws IOException {

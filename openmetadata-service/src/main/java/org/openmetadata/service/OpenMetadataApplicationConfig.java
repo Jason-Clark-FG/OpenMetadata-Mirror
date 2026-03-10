@@ -38,7 +38,6 @@ import org.openmetadata.schema.security.secrets.SecretsManagerConfiguration;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.config.BulkOperationConfiguration;
-import org.openmetadata.service.config.McpClientConfiguration;
 import org.openmetadata.service.config.OMWebConfiguration;
 import org.openmetadata.service.config.ObjectStorageConfiguration;
 import org.openmetadata.service.jdbi3.HikariCPDataSourceFactory;
@@ -153,9 +152,6 @@ public class OpenMetadataApplicationConfig extends Configuration {
 
   @JsonProperty("aiPlatformConfiguration")
   private AiPlatformConfiguration aiPlatformConfiguration;
-
-  @JsonProperty("mcpClientConfiguration")
-  private McpClientConfiguration mcpClientConfiguration;
 
   @JsonProperty("rdf")
   private RdfConfiguration rdfConfiguration = new RdfConfiguration();

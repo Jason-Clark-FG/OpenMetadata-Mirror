@@ -188,9 +188,7 @@ const McpChatPage = () => {
                     const existingText =
                       m.content?.find((b) => b.textMessage)?.textMessage
                         ?.message ?? '';
-                    const newText = existingText
-                      ? `${existingText}\n\n${event.data.content}`
-                      : event.data.content;
+                    const newText = existingText + event.data.content;
 
                     return {
                       ...m,
@@ -285,6 +283,11 @@ const McpChatPage = () => {
 
               case 'error':
                 showErrorToast(event.data.message);
+
+                break;
+
+              case 'title_updated':
+                fetchConversations();
 
                 break;
 
@@ -490,6 +493,9 @@ const ConversationSidebar = ({
                   primaryTypographyProps={{
                     noWrap: true,
                     variant: 'body2',
+                    color: 'text.primary',
+                    fontWeight:
+                      conversation.id === activeConversationId ? 600 : 400,
                   }}
                 />
                 <IconButton
@@ -609,9 +615,11 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           py: 1.5,
           borderRadius: 2,
           backgroundColor: isHuman
-            ? theme.palette.grey[200]
+            ? theme.palette.primary.main
             : theme.palette.background.paper,
-          color: theme.palette.text.primary,
+          color: isHuman
+            ? theme.palette.primary.contrastText
+            : theme.palette.text.primary,
           border: isHuman ? 'none' : `1px solid ${theme.palette.divider}`,
         }}
       >

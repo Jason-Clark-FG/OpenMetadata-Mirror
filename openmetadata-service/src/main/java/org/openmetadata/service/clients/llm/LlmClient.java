@@ -14,7 +14,17 @@ package org.openmetadata.service.clients.llm;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public interface LlmClient {
   LlmResponse sendMessages(List<LlmMessage> messages, List<Map<String, Object>> tools);
+
+  default LlmResponse sendMessagesStreaming(
+      List<LlmMessage> messages, List<Map<String, Object>> tools, Consumer<String> onTextChunk) {
+    LlmResponse response = sendMessages(messages, tools);
+    if (response.content() != null && !response.content().isEmpty()) {
+      onTextChunk.accept(response.content());
+    }
+    return response;
+  }
 }

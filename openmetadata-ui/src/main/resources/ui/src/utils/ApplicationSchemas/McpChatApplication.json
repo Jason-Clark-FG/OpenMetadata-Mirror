@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Chat",
+  "description": "AI-powered chat assistant for OpenMetadata. Connects to an LLM provider and uses MCP tools to search, explore, and manage metadata through natural language.",
+  "properties": {
+    "llmProvider": {
+      "title": "LLM Provider",
+      "description": "The LLM provider to use for the chat assistant.",
+      "type": "string",
+      "enum": ["openai", "anthropic"],
+      "default": "openai"
+    },
+    "llmApiKey": {
+      "title": "LLM API Key",
+      "description": "API key for the selected LLM provider.",
+      "type": "string",
+      "format": "password"
+    },
+    "llmModel": {
+      "title": "LLM Model",
+      "description": "The model to use. For example: gpt-4o, claude-sonnet-4-20250514.",
+      "type": "string",
+      "default": "gpt-4o"
+    },
+    "llmApiEndpoint": {
+      "title": "LLM API Endpoint (Optional)",
+      "description": "Custom API endpoint URL. Leave empty to use the provider's default endpoint.",
+      "type": "string"
+    },
+    "systemPrompt": {
+      "title": "System Prompt",
+      "description": "The system prompt that guides the assistant's behavior.",
+      "type": "string",
+      "default": "You are a helpful metadata assistant for OpenMetadata. Use the available tools to search, explore, and manage metadata. Be concise and actionable."
+    }
+  },
+  "required": ["llmProvider", "llmApiKey", "llmModel"],
+  "additionalProperties": false
+}
