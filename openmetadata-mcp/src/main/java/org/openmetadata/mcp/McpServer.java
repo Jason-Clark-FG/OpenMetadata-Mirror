@@ -197,6 +197,17 @@ public class McpServer implements McpServerProvider {
                 authProvider, ssoHandler, ssoServiceType, baseUrl);
         ServletHolder ssoCallbackHolder = new ServletHolder(ssoCallbackServlet);
         contextHandler.addServlet(ssoCallbackHolder, "/mcp/callback");
+
+        // Register MCP state checker so AuthCallbackServlet can forward MCP callbacks.
+        // SSO providers redirect to /callback (the registered URI), not /mcp/callback.
+        // This checker lets /callback detect MCP flow and forward to /mcp/callback.
+        org.openmetadata.mcp.server.auth.repository.McpPendingAuthRequestRepository
+            pendingAuthRepo =
+                new org.openmetadata.mcp.server.auth.repository.McpPendingAuthRequestRepository();
+        org.openmetadata.service.security.AuthenticationCodeFlowHandler.setMcpStateChecker(
+            state -> pendingAuthRepo.findByPac4jState(state) != null);
+        LOG.info("Registered MCP state checker for SSO callback forwarding");
+
         LOG.info(
             "Registered SSO callback endpoint at /mcp/callback for provider: {}", ssoServiceType);
       } catch (Exception e) {

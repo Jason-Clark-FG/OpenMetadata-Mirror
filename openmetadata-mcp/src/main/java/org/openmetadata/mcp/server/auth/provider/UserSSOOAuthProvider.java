@@ -300,10 +300,14 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
 
       LOG.debug("Created pending auth request: {}", authRequestId);
 
-      String mcpCallbackUrl = getBaseUrl() + "/mcp/callback";
-      LOG.info(
-          "Starting SSO redirect for MCP OAuth with callback URL: {} (registered with SSO provider)",
-          mcpCallbackUrl);
+      // Use serverUrl + "/mcp/callback" as the redirectUri parameter for MCP flow detection.
+      // AuthenticationCodeFlowHandler.handleLogin() matches this against expectedMcpCallback
+      // to detect MCP flow, then uses the SSO-registered callback URL for the actual redirect_uri
+      // sent to the SSO provider. After auth, AuthCallbackServlet forwards to /mcp/callback.
+      String serverUrl =
+          SecurityConfigurationManager.getCurrentAuthConfig().getOidcConfiguration().getServerUrl();
+      String mcpCallbackUrl = serverUrl + "/mcp/callback";
+      LOG.info("Starting SSO redirect for MCP OAuth (MCP callback: {})", mcpCallbackUrl);
 
       HttpServletRequest wrappedRequest =
           new HttpServletRequestWrapper(currentRequest.get()) {

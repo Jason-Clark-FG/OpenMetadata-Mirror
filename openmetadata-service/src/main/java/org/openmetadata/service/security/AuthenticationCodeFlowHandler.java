@@ -160,6 +160,30 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
   private AuthenticationConfiguration authenticationConfiguration;
   private AuthorizerConfiguration authorizerConfiguration;
 
+  /**
+   * Optional callback to check if a pac4j state parameter belongs to an MCP OAuth flow. Registered
+   * by the MCP module at startup. When set, AuthCallbackServlet uses this to forward MCP callbacks
+   * to /mcp/callback (which has DB-backed state restoration).
+   */
+  private static volatile java.util.function.Predicate<String> mcpStateChecker;
+
+  public static void setMcpStateChecker(java.util.function.Predicate<String> checker) {
+    mcpStateChecker = checker;
+  }
+
+  public static boolean isMcpState(String state) {
+    java.util.function.Predicate<String> checker = mcpStateChecker;
+    if (checker == null || state == null) {
+      return false;
+    }
+    try {
+      return checker.test(state);
+    } catch (Exception e) {
+      LOG.debug("MCP state check failed: {}", e.getMessage());
+      return false;
+    }
+  }
+
   private AuthenticationCodeFlowHandler(
       AuthenticationConfiguration authenticationConfiguration,
       AuthorizerConfiguration authorizerConfiguration) {
@@ -352,9 +376,16 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
       String expectedMcpCallback = serverUrl + "/mcp/callback";
       if (requestedRedirectUri != null && requestedRedirectUri.equals(expectedMcpCallback)) {
-        ssoCallbackUrl = requestedRedirectUri;
+        // MCP OAuth flow: use the SSO-registered callback URL for the redirect_uri sent to the
+        // SSO provider. The MCP callback URL (/mcp/callback) is NOT registered with SSO providers.
+        // After auth, the SSO provider redirects to /callback, and AuthCallbackServlet forwards
+        // to /mcp/callback using the MCP state checker (DB-backed state restoration).
+        ssoCallbackUrl = client.getCallbackUrl();
         finalRedirectUri = requestedRedirectUri;
-        LOG.debug("MCP OAuth flow detected - using provided callback URL");
+        LOG.debug(
+            "MCP OAuth flow detected - using registered callback URL: {}, final redirect: {}",
+            ssoCallbackUrl,
+            finalRedirectUri);
       } else {
         ssoCallbackUrl = client.getCallbackUrl();
         finalRedirectUri = requestedRedirectUri != null ? requestedRedirectUri : ssoCallbackUrl;

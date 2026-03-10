@@ -234,31 +234,39 @@ public class SSOCallbackServlet extends HttpServlet {
       String clientName = ssoHandler.getClient().getName();
       LOG.debug("Restoring pac4j session attributes for client: {}", clientName);
 
-      // Restore pac4j state, nonce, and code verifier with correct object types
-      // pac4j expects State and CodeVerifier objects, not strings
+      // Restore pac4j state, nonce, and code verifier using pac4j's actual session attribute names.
+      // pac4j 5.x uses "$stateSessionParameter", "$nonceSessionParameter",
+      // "$codeVerifierSessionParameter" suffixes — NOT "#state", "#nonce", "#pkceCodeVerifier".
+      org.pac4j.oidc.client.OidcClient oidcClient = ssoHandler.getClient();
       if (pendingRequest.pac4jState() != null) {
         com.nimbusds.oauth2.sdk.id.State stateObj =
             new com.nimbusds.oauth2.sdk.id.State(pendingRequest.pac4jState());
-        session.setAttribute(clientName + "#state", stateObj);
+        session.setAttribute(oidcClient.getStateSessionAttributeName(), stateObj);
         LOG.debug("Restored pac4j state for client {}", clientName);
       }
       if (pendingRequest.pac4jNonce() != null) {
-        session.setAttribute(clientName + "#nonce", pendingRequest.pac4jNonce());
+        session.setAttribute(
+            oidcClient.getNonceSessionAttributeName(), pendingRequest.pac4jNonce());
         LOG.debug("Restored pac4j nonce for client {}", clientName);
       }
       if (pendingRequest.pac4jCodeVerifier() != null) {
         com.nimbusds.oauth2.sdk.pkce.CodeVerifier verifierObj =
             new com.nimbusds.oauth2.sdk.pkce.CodeVerifier(pendingRequest.pac4jCodeVerifier());
-        session.setAttribute(clientName + "#pkceCodeVerifier", verifierObj);
+        session.setAttribute(oidcClient.getCodeVerifierSessionAttributeName(), verifierObj);
         LOG.debug("Restored pac4j code verifier for client {}", clientName);
       }
 
-      // Use the configured base URL (not request.getRequestURL()) for the token exchange.
-      // Behind a TLS-terminating proxy like ngrok, getRequestURL() returns http:// but the
-      // authorize request used https:// from the config. Azure requires these to match exactly.
-      String mcpCallbackUrl = baseUrl + "/mcp/callback";
-      session.setAttribute(AuthenticationCodeFlowHandler.SESSION_SSO_CALLBACK_URL, mcpCallbackUrl);
-      LOG.debug("Set session SSO callback URL to: {}", mcpCallbackUrl);
+      // Use the SSO-registered callback URL for the token exchange redirect_uri.
+      // The redirect_uri in the token exchange MUST match the one sent in the authorize request.
+      // Since we now send client.getCallbackUrl() (the registered URL) to the SSO provider,
+      // we must use the same URL here for the token exchange to succeed.
+      String ssoCallbackUrl = ssoHandler.getClient().getCallbackUrl();
+      session.setAttribute(AuthenticationCodeFlowHandler.SESSION_SSO_CALLBACK_URL, ssoCallbackUrl);
+      // handleCallback() → sendRedirectWithToken() requires SESSION_REDIRECT_URI to be set.
+      // The actual redirect is intercepted by our response wrapper, so the value doesn't matter.
+      session.setAttribute(
+          AuthenticationCodeFlowHandler.SESSION_REDIRECT_URI, baseUrl + "/mcp/callback");
+      LOG.debug("Set session SSO callback URL to: {}", ssoCallbackUrl);
 
       // Wrap response to intercept both redirects and error writes from handleCallback.
       // handleCallback's error handler (getErrorMessage) writes via getOutputStream(),
