@@ -140,12 +140,12 @@ describe('MsalAuthenticator', () => {
       authenticatorRef?.invokeLogout();
     });
 
+    expect(mockHandleSuccessfulLogout).toHaveBeenCalled();
     expect(mockInstance.logoutRedirect).toHaveBeenCalledWith(
       expect.objectContaining({
         postLogoutRedirectUri: expect.stringContaining('/signin'),
       })
     );
-    expect(mockHandleSuccessfulLogout).toHaveBeenCalled();
   });
 
   it('should fallback to local cleanup when logoutRedirect fails', async () => {

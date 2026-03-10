@@ -69,14 +69,13 @@ const MsalAuthenticator = forwardRef<AuthenticatorRef, Props>(
 
     const logout = async () => {
       try {
+        handleSuccessfulLogout();
         await instance.logoutRedirect({
           account: account ?? accounts[0],
           postLogoutRedirectUri: window.location.origin + ROUTES.SIGNIN,
         });
       } catch {
-        // logoutRedirect failed, fall through to cleanup
-      } finally {
-        handleSuccessfulLogout();
+        // logoutRedirect failed; app state already cleaned up above
       }
     };
 
