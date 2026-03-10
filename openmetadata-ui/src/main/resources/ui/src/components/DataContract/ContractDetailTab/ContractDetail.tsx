@@ -10,14 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import Icon from '@ant-design/icons';
-import { Button, Menu, MenuItem } from '@mui/material';
-import { ChevronDown, Plus } from '@untitledui/icons';
+import { Button, Dropdown } from '@openmetadata/ui-core-components';
+import { ChevronDown, Download01, Plus, Settings01 } from '@untitledui/icons';
 import {
+  Dropdown as AntDropdown,
   Card,
   Col,
   Divider,
-  Dropdown,
   MenuProps,
   RadioChangeEvent,
   Row,
@@ -37,15 +36,11 @@ import { ReactComponent as RunIcon } from '../../../assets/svg/ic-circle-pause.s
 import { ReactComponent as ExportIcon } from '../../../assets/svg/ic-export-box.svg';
 import { ReactComponent as ImportIcon } from '../../../assets/svg/ic-import.svg';
 import { ReactComponent as InheritIcon } from '../../../assets/svg/ic-inherit.svg';
-import { ReactComponent as SettingIcon } from '../../../assets/svg/ic-settings-gear.svg';
 import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-trash.svg';
-import { ReactComponent as ImportIconSelected } from '../../../assets/svg/import-icon-selected.svg';
-import { ReactComponent as ImportIconContract } from '../../../assets/svg/import-icon.svg';
-import { PRIMARY_COLOR } from '../../../constants/Color.constants';
 import {
   ContractImportFormat,
-  DataContractMode,
   DATA_CONTRACT_ACTION_DROPDOWN_KEY,
+  DataContractMode,
 } from '../../../constants/DataContract.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { DataContract } from '../../../generated/entity/data/dataContract';
@@ -121,11 +116,6 @@ const ContractDetail: React.FC<{
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [importFormat, setImportFormat] =
     useState<ContractImportFormat>('odcs');
-  const [addContractMenuAnchor, setAddContractMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [hoveredAddContractItem, setHoveredAddContractItem] = useState<
-    string | null
-  >(null);
 
   const fetchLatestContractResults = async () => {
     try {
@@ -162,49 +152,6 @@ const ContractDetail: React.FC<{
   }, [latestContractResults]);
 
   const isInheritedContract = Boolean(contract?.inherited);
-  const addContractActionsItems = useMemo(() => {
-    return [
-      {
-        label: t('label.create-contract-with-ui'),
-        key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.CREATE,
-        icon: (
-          <Plus
-            color={
-              hoveredAddContractItem ===
-              DATA_CONTRACT_ACTION_DROPDOWN_KEY.CREATE
-                ? PRIMARY_COLOR
-                : undefined
-            }
-          />
-        ),
-        testId: 'create-contract-button',
-      },
-      {
-        label: t('label.import-om'),
-        key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_OPENMETADATA,
-        icon:
-          hoveredAddContractItem ===
-          DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_OPENMETADATA ? (
-            <ImportIconSelected />
-          ) : (
-            <ImportIconContract />
-          ),
-        testId: 'import-openmetadata-contract-button',
-      },
-      {
-        label: t('label.import-odcs'),
-        key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS,
-        icon:
-          hoveredAddContractItem ===
-          DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS ? (
-            <ImportIconSelected />
-          ) : (
-            <ImportIconContract />
-          ),
-        testId: 'import-odcs-contract-button',
-      },
-    ];
-  }, [t, hoveredAddContractItem]);
 
   const contractActionsItems: MenuProps['items'] = useMemo(() => {
     return [
@@ -386,17 +333,8 @@ const ContractDetail: React.FC<{
     }
   };
 
-  const handleAddContractMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAddContractMenuAnchor(event.currentTarget);
-  };
-
-  const handleAddContractMenuClose = () => {
-    setAddContractMenuAnchor(null);
-  };
-
   const handleAddContractAction = useCallback(
-    (key: string) => {
-      handleAddContractMenuClose();
+    (key: string | number) => {
       switch (key) {
         case DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS:
           return handleImportContract('odcs');
@@ -498,7 +436,7 @@ const ContractDetail: React.FC<{
                 mode={mode}
               />
 
-              <Dropdown
+              <AntDropdown
                 destroyPopupOnHide
                 getPopupContainer={getPopupContainer}
                 menu={{
@@ -511,12 +449,12 @@ const ContractDetail: React.FC<{
                 trigger={['click']}>
                 <Button
                   className="contract-action-button"
+                  color="secondary"
                   data-testid="manage-contract-actions"
-                  startIcon={<Icon component={SettingIcon} />}
-                  title={t('label.contract')}
-                  variant="text"
+                  iconLeading={Settings01}
+                  size="sm"
                 />
-              </Dropdown>
+              </AntDropdown>
             </div>
           </Col>
           <Col className="d-flex items-center gap-2 flex-wrap" span={24}>
@@ -664,92 +602,40 @@ const ContractDetail: React.FC<{
             {t('message.create-contract-description')}
           </Typography.Paragraph>
 
-          <>
+          <Dropdown.Root>
             <Button
-              aria-controls={
-                addContractMenuAnchor ? 'add-contract-menu' : undefined
-              }
-              aria-expanded={addContractMenuAnchor ? 'true' : 'false'}
-              aria-haspopup="true"
+              color="primary"
               data-testid="add-contract-button"
-              endIcon={<ChevronDown />}
-              id="add-contract-button"
-              sx={{ marginTop: 2 }}
-              variant="contained"
-              onClick={handleAddContractMenuOpen}>
+              iconTrailing={ChevronDown}
+              id="add-contract-button">
               {t('label.add-entity', { entity: t('label.contract') })}
             </Button>
-            <Menu
-              anchorEl={addContractMenuAnchor}
-              aria-labelledby="add-contract-button"
-              data-testid="add-contract-menu"
-              id="add-contract-menu"
-              open={Boolean(addContractMenuAnchor)}
-              sx={{
-                '& .MuiPaper-root': {
-                  borderRadius: '8px',
-                  border: '1px solid var(--grey-15)',
-                  boxShadow: 'var(--button-box-shadow-default)',
-                  whiteSpace: 'nowrap',
-                  width: 'auto',
-                  minWidth: 'auto',
-                },
-
-                '& .MuiMenu-list': {
-                  padding: 0,
-                },
-
-                '& .MuiMenuItem-root': {
-                  padding: '10px 0',
-                  minHeight: 'auto',
-                  margin: 0,
-
-                  '& .contract-action-dropdown-item': {
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: 'var(--grey-700)',
-                    padding: '0 16px',
-
-                    '& svg': {
-                      width: '16px',
-                      height: '16px',
-                      color: 'var(--grey-700)',
-                    },
-                  },
-
-                  '&:hover': {
-                    backgroundColor: '#f5faff',
-
-                    '& .contract-action-dropdown-item': {
-                      color: '#1570ef',
-
-                      '& svg': {
-                        color: '#1570ef',
-                      },
-                    },
-                  },
-                },
-              }}
-              onClose={handleAddContractMenuClose}>
-              {addContractActionsItems.map((item) => (
-                <MenuItem
-                  data-testid={item.testId}
-                  key={item.key}
-                  onClick={() => handleAddContractAction(item.key as string)}
-                  onMouseEnter={() => setHoveredAddContractItem(item.key)}
-                  onMouseLeave={() => setHoveredAddContractItem(null)}>
-                  <span className="contract-action-dropdown-item">
-                    {item.icon}
-                    {item.label}
-                  </span>
-                </MenuItem>
-              ))}
-            </Menu>
-          </>
+            <Dropdown.Popover>
+              <Dropdown.Menu
+                data-testid="add-contract-menu"
+                id="add-contract-menu"
+                onAction={(key) => handleAddContractAction(key)}>
+                <Dropdown.Item
+                  data-testid="create-contract-button"
+                  icon={Plus}
+                  id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.CREATE}
+                  label={t('label.create-contract-with-ui')}
+                />
+                <Dropdown.Item
+                  data-testid="import-openmetadata-contract-button"
+                  icon={Download01}
+                  id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_OPENMETADATA}
+                  label={t('label.import-om')}
+                />
+                <Dropdown.Item
+                  data-testid="import-odcs-contract-button"
+                  icon={Download01}
+                  id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS}
+                  label={t('label.import-odcs')}
+                />
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown.Root>
         </ErrorPlaceHolder>
       </>
     );

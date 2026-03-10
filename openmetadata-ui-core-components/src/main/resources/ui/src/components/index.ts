@@ -68,6 +68,7 @@ export * from "./base/card/card";
 export * from "./base/divider/divider";
 export * from "./base/grid/grid";
 export * from "./base/form/hook-form";
+export * from "./base/loading-indicator/loading-indicator";
 export * from "./base/progress-indicators/progress-circles";
 export * from "./base/progress-indicators/progress-indicators";
 export * from "./base/progress-indicators/simple-circle";
