@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -18,14 +18,16 @@
  * Accepts the same TableComponentProps<T> interface for zero-friction adoption.
  *
  * Unsupported in v1 (accepted but ignored):
- *  - expandable  (React Aria has no built-in expandable rows)
  *  - components  (AntD custom cell/header renderers)
  *
  * Not in props type (compile-time error if passed):
  *  - className   → use containerClassName instead
  *
  * Partially supported:
- *  - onRow       → onClick and onDoubleClick are forwarded to the row element
+ *  - expandable        → tree/nested rows via record.children; expandedRowRender not supported
+ *  - onRow             → onClick and onDoubleClick are forwarded to the row element
+ *  - onCell            → onClick, data-*, colSpan forwarded to the underlying td element
+ *  - filterIcon/filterDropdown/onFilter → filter state managed internally; confirm/close are no-ops
  *
  * Sorting:
  *  - sorter: (a, b) => number  → applied client-side on full dataset before pagination
@@ -37,7 +39,12 @@ import {
   Dropdown,
   Table as UntitledTable,
 } from '@openmetadata/ui-core-components';
-import { ArrowDown, ChevronSelectorVertical } from '@untitledui/icons';
+import {
+  ArrowDown,
+  ChevronDown,
+  ChevronRight,
+  ChevronSelectorVertical,
+} from '@untitledui/icons';
 import type {
   ColumnType,
   FilterValue,
@@ -49,6 +56,12 @@ import type {
 import type { ColumnsType } from 'antd/es/table/interface';
 import type { ResizeCallbackData } from 'react-resizable';
 import 'react-resizable/css/styles.css';
+import type {
+  AriaSortDescriptor,
+  AriaSelection,
+  FlatRow,
+  InlineResizeHandleProps,
+} from './TableV2.interface';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import React, {
@@ -81,11 +94,6 @@ import {
 import './table.less';
 
 type TableV2Props<T extends object> = TableComponentProps<T>;
-
-interface InlineResizeHandleProps {
-  currentWidth: number;
-  onResize: (_: React.SyntheticEvent, data: ResizeCallbackData) => void;
-}
 
 const InlineResizeHandle = ({
   currentWidth,
@@ -122,12 +130,44 @@ const InlineResizeHandle = ({
   );
 };
 
-/** Structural aliases to avoid a direct react-aria-components peer import. */
-type AriaKey = string | number;
-type AriaSelection = 'all' | Set<AriaKey>;
-interface AriaSortDescriptor {
-  column?: AriaKey;
-  direction?: 'ascending' | 'descending';
+// ─── Tree / expandable helpers ────────────────────────────────────────────────
+
+function flattenTreeRows<T>(
+  data: T[],
+  getRowKey: (r: T, i: number) => string,
+  expandedKeys: Set<string>,
+  rowExpandable: ((record: T) => boolean) | undefined,
+  depth = 0,
+  baseIdx = 0
+): FlatRow<T>[] {
+  const rows: FlatRow<T>[] = [];
+  data.forEach((record, localIdx) => {
+    const actualIndex = baseIdx + localIdx;
+    const rowKey = getRowKey(record, actualIndex);
+    const children = (record as Record<string, unknown>).children as
+      | T[]
+      | undefined;
+    const hasChildren = rowExpandable
+      ? rowExpandable(record)
+      : !isEmpty(children);
+
+    rows.push({ record, depth, actualIndex, hasChildren, rowKey });
+
+    if (hasChildren && expandedKeys.has(rowKey) && children?.length) {
+      rows.push(
+        ...flattenTreeRows(
+          children,
+          getRowKey,
+          expandedKeys,
+          rowExpandable,
+          depth + 1,
+          actualIndex + 1
+        )
+      );
+    }
+  });
+
+  return rows;
 }
 
 const TableV2 = <T extends object>(
@@ -157,6 +197,12 @@ const TableV2 = <T extends object>(
   const [columnDropdownSelections, setColumnDropdownSelections] = useState<
     string[]
   >([]);
+  const [internalExpandedKeys, setInternalExpandedKeys] = useState<Set<string>>(
+    new Set()
+  );
+  const [filterState, setFilterState] = useState<Record<string, React.Key[]>>(
+    {}
+  );
   const {
     preferences: { selectedEntityTableColumns },
     setPreference,
@@ -204,14 +250,48 @@ const TableV2 = <T extends object>(
     return sortState.direction === 'descending' ? sorted.reverse() : sorted;
   }, [rest.dataSource, sortState, propsColumns]);
 
+  const filteredDataSource = useMemo((): T[] => {
+    const activeFilters = Object.entries(filterState).filter(
+      ([, keys]) => keys.length > 0
+    );
+    if (!activeFilters.length) {
+      return sortedDataSource;
+    }
+
+    return sortedDataSource.filter((record) =>
+      activeFilters.every(([colKey, selectedKeys]) => {
+        const col = propsColumns.find(
+          (c, idx) =>
+            String(c.key ?? (c as ColumnType<T>).dataIndex ?? idx) === colKey
+        ) as ColumnType<T> | undefined;
+
+        return col?.onFilter
+          ? selectedKeys.some((key) =>
+              col.onFilter!(key as React.Key | boolean, record)
+            )
+          : true;
+      })
+    );
+  }, [sortedDataSource, filterState, propsColumns]);
+
   const pagedDataSource = useMemo((): T[] => {
     if (!clientPagination) {
-      return sortedDataSource;
+      return filteredDataSource;
     }
     const start = (internalCurrentPage - 1) * clientPagination.pageSize;
 
-    return sortedDataSource.slice(start, start + clientPagination.pageSize);
-  }, [sortedDataSource, clientPagination, internalCurrentPage]);
+    return filteredDataSource.slice(start, start + clientPagination.pageSize);
+  }, [filteredDataSource, clientPagination, internalCurrentPage]);
+
+  const expandedKeys = useMemo<Set<string>>(() => {
+    if (!rest.expandable) {
+      return new Set<string>();
+    }
+
+    return rest.expandable.expandedRowKeys
+      ? new Set(rest.expandable.expandedRowKeys.map(String))
+      : internalExpandedKeys;
+  }, [rest.expandable, internalExpandedKeys]);
 
   const isCustomizeColumnEnable = useMemo(
     () =>
@@ -291,6 +371,23 @@ const TableV2 = <T extends object>(
     [rest.rowKey]
   );
 
+  // ─── Expand toggle ────────────────────────────────────────────────────────
+
+  const handleExpandToggle = useCallback(
+    (record: T, rowKey: string) => {
+      const isExpanded = expandedKeys.has(rowKey);
+      const next = isExpanded
+        ? new Set([...expandedKeys].filter((k) => k !== rowKey))
+        : new Set([...expandedKeys, rowKey]);
+
+      if (!rest.expandable?.expandedRowKeys) {
+        setInternalExpandedKeys(next);
+      }
+      rest.expandable?.onExpand?.(!isExpanded, record);
+    },
+    [expandedKeys, rest.expandable]
+  );
+
   // ─── Row selection ────────────────────────────────────────────────────────
 
   // AntD default rowSelection.type is 'checkbox', which maps to 'multiple'.
@@ -368,7 +465,7 @@ const TableV2 = <T extends object>(
         {
           current: internalCurrentPage,
           pageSize: clientPagination?.pageSize ?? 10,
-          total: (rest.dataSource ?? []).length,
+          total: filteredDataSource.length,
         } as TablePaginationConfig,
         {} as Record<string, FilterValue | null>,
         {
@@ -445,7 +542,7 @@ const TableV2 = <T extends object>(
     defaultVisibleColumns,
   ]);
 
-  const dataSourceLength = rest.dataSource?.length ?? 0;
+  const dataSourceLength = filteredDataSource.length;
   useEffect(() => {
     const maxPage = clientPagination
       ? Math.ceil(dataSourceLength / clientPagination.pageSize) || 1
@@ -454,6 +551,47 @@ const TableV2 = <T extends object>(
       setInternalCurrentPage(1);
     }
   }, [dataSourceLength, clientPagination, internalCurrentPage]);
+
+  // ─── Effective columns ────────────────────────────────────────────────────
+
+  const effectiveColumns = useMemo<ColumnsType<T>>(
+    () => propsColumns,
+    [propsColumns]
+  );
+
+  // ─── Flat rows (tree data flattened with depth tracking) ──────────────────
+
+  const flatRows = useMemo<FlatRow<T>[]>(() => {
+    if (!rest.expandable) {
+      return pagedDataSource.map((record, idx) => {
+        const actualIndex = clientPagination
+          ? (internalCurrentPage - 1) * clientPagination.pageSize + idx
+          : idx;
+
+        return {
+          record,
+          depth: 0,
+          actualIndex,
+          hasChildren: false,
+          rowKey: getRowKey(record, actualIndex),
+        };
+      });
+    }
+
+    return flattenTreeRows(
+      pagedDataSource,
+      getRowKey,
+      expandedKeys,
+      rest.expandable.rowExpandable as ((r: T) => boolean) | undefined
+    );
+  }, [
+    pagedDataSource,
+    rest.expandable,
+    expandedKeys,
+    getRowKey,
+    internalCurrentPage,
+    clientPagination,
+  ]);
 
   // ─── Cell value resolver ──────────────────────────────────────────────────
 
@@ -627,13 +765,29 @@ const TableV2 = <T extends object>(
           onSelectionChange={handleSelectionChange}
           onSortChange={handleSortChange}>
           <UntitledTable.Header className="tw:px-2">
-            {propsColumns.map((col, colIdx) => {
+            {effectiveColumns.map((col, colIdx) => {
               const colType = col as ColumnType<T>;
               const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
               const colWidth =
                 columnWidths[colKey] ?? (colType.width as number) ?? 150;
 
               const isSorted = sortState.columnKey === colKey;
+              const stickyStyle: React.CSSProperties =
+                colType.fixed === 'left'
+                  ? {
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 2,
+                      background: 'white',
+                    }
+                  : colType.fixed === 'right'
+                  ? {
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 2,
+                      background: 'white',
+                    }
+                  : {};
 
               return (
                 <UntitledTable.Head
@@ -641,15 +795,12 @@ const TableV2 = <T extends object>(
                   className="tw:py-2 tw:pl-4 tw:pr-2 tw:text-sm tw:text-tertiary"
                   id={colKey}
                   key={colKey}
-                  style={
-                    rest.resizableColumns
-                      ? {
-                          position: 'relative',
-                          width: colWidth,
-                          minWidth: colWidth,
-                        }
-                      : undefined
-                  }>
+                  style={{
+                    width: colWidth,
+                    minWidth: colWidth,
+                    ...(rest.resizableColumns ? { position: 'relative' } : {}),
+                    ...stickyStyle,
+                  }}>
                   <div className="tw:flex tw:items-center tw:gap-1">
                     {resolveColumnTitle(colType)}
                     {!!colType.sorter &&
@@ -668,6 +819,45 @@ const TableV2 = <T extends object>(
                           strokeWidth={3}
                         />
                       ))}
+                    {(colType.filterIcon || colType.filterDropdown) && (
+                      <Dropdown.Root>
+                        <button
+                          aria-label="filter"
+                          className="tw:ml-1 tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex tw:items-center">
+                          {typeof colType.filterIcon === 'function'
+                            ? colType.filterIcon(
+                                Boolean(filterState[colKey]?.length)
+                              )
+                            : colType.filterIcon ?? null}
+                        </button>
+                        <Dropdown.Popover>
+                          <div className="tw:min-w-48">
+                            {typeof colType.filterDropdown === 'function'
+                              ? colType.filterDropdown({
+                                  prefixCls: 'ant-table-filter-dropdown',
+                                  setSelectedKeys: (keys) =>
+                                    setFilterState((prev) => ({
+                                      ...prev,
+                                      [colKey]: keys,
+                                    })),
+                                  selectedKeys: filterState[colKey] ?? [],
+                                  confirm: () => undefined,
+                                  clearFilters: () =>
+                                    setFilterState((prev) => {
+                                      const next = { ...prev };
+                                      delete next[colKey];
+
+                                      return next;
+                                    }),
+                                  filters: colType.filters,
+                                  visible: true,
+                                  close: () => undefined,
+                                })
+                              : colType.filterDropdown}
+                          </div>
+                        </Dropdown.Popover>
+                      </Dropdown.Root>
+                    )}
                   </div>
                   {rest.resizableColumns && (
                     <InlineResizeHandle
@@ -688,13 +878,11 @@ const TableV2 = <T extends object>(
                 </div>
               )
             }>
-            {pagedDataSource.map((record, pageLocalIdx) => {
-              const actualIndex = clientPagination
-                ? (internalCurrentPage - 1) * clientPagination.pageSize +
-                  pageLocalIdx
-                : pageLocalIdx;
-
+            {flatRows.map((flatRow) => {
+              const { record, actualIndex, depth, hasChildren, rowKey } =
+                flatRow;
               const rowHandlers = rest.onRow?.(record, actualIndex) ?? {};
+              const isExpanded = expandedKeys.has(rowKey);
 
               return (
                 <UntitledTable.Row
@@ -704,38 +892,96 @@ const TableV2 = <T extends object>(
                       ? rest.rowClassName(record, actualIndex, 0)
                       : rest.rowClassName
                   )}
-                  data-row-key={getRowKey(record, actualIndex)}
-                  id={getRowKey(record, actualIndex)}
-                  key={getRowKey(record, actualIndex)}
+                  data-row-key={rowKey}
+                  id={rowKey}
+                  key={rowKey}
                   onClick={rowHandlers.onClick}
                   onDoubleClick={rowHandlers.onDoubleClick}>
-                  {propsColumns.map((col, colIdx) => {
+                  {effectiveColumns.map((col, colIdx) => {
+                    const colType = col as ColumnType<T>;
                     const cellKey = String(
-                      col.key ?? (col as ColumnType<T>).dataIndex ?? colIdx
+                      col.key ?? colType.dataIndex ?? colIdx
                     );
+                    const stickyStyle: React.CSSProperties =
+                      colType.fixed === 'left'
+                        ? {
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 1,
+                            background: 'white',
+                          }
+                        : colType.fixed === 'right'
+                        ? {
+                            position: 'sticky',
+                            right: 0,
+                            zIndex: 1,
+                            background: 'white',
+                          }
+                        : {};
+
+                    const isFirstColumn = colIdx === 0;
+                    const showExpandInCell = rest.expandable && isFirstColumn;
+                    const ExpandIcon = rest.expandable?.expandIcon;
+                    const cellHandlerProps =
+                      (colType.onCell?.(
+                        record,
+                        actualIndex
+                      ) as React.TdHTMLAttributes<HTMLTableCellElement>) ?? {};
 
                     return (
                       <UntitledTable.Cell
+                        {...cellHandlerProps}
                         className={
                           rest.cellClassName ??
                           'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
                         }
                         key={cellKey}
-                        style={
-                          rest.resizableColumns
-                            ? {
-                                width:
-                                  columnWidths[cellKey] ??
-                                  ((col as ColumnType<T>).width as number) ??
-                                  150,
-                              }
-                            : undefined
-                        }>
-                        {resolveCellValue(
-                          col as ColumnType<T>,
-                          record,
-                          actualIndex
+                        style={{
+                          width:
+                            columnWidths[cellKey] ??
+                            (colType.width as number) ??
+                            150,
+                          minWidth: (colType.width as number) ?? undefined,
+                          ...stickyStyle,
+                          ...(showExpandInCell
+                            ? { paddingLeft: `${16 + depth * 20}px` }
+                            : {}),
+                          ...cellHandlerProps.style,
+                        }}>
+                        {showExpandInCell && (
+                          <>
+                            {hasChildren ? (
+                              ExpandIcon ? (
+                                <ExpandIcon
+                                  expandable={hasChildren}
+                                  expanded={isExpanded}
+                                  prefixCls=""
+                                  record={record}
+                                  onExpand={(rec, e) => {
+                                    e.stopPropagation();
+                                    handleExpandToggle(rec as T, rowKey);
+                                  }}
+                                />
+                              ) : (
+                                <button
+                                  className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleExpandToggle(record, rowKey);
+                                  }}>
+                                  {isExpanded ? (
+                                    <ChevronDown className="tw:size-4" />
+                                  ) : (
+                                    <ChevronRight className="tw:size-4" />
+                                  )}
+                                </button>
+                              )
+                            ) : (
+                              <span className="tw:inline-block tw:w-4 tw:mr-1" />
+                            )}
+                          </>
                         )}
+                        {resolveCellValue(colType, record, actualIndex)}
                       </UntitledTable.Cell>
                     );
                   })}
