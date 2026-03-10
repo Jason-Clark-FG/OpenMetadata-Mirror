@@ -744,3 +744,10 @@ class BigqueryLineageSourceTest(TestCase):
     def test_get_engine_without_project_id_specified(self):
         for engine in self.bq_query_parser.get_engine():
             assert engine is self.bq_query_parser.engine
+
+
+def test_bigquery_iceberg_table_type_mapping():
+    from metadata.generated.schema.entity.data.table import TableType
+    from metadata.ingestion.source.database.bigquery.metadata import BigquerySource
+
+    assert BigquerySource._bigquery_table_types["ICEBERG"] == TableType.Iceberg
