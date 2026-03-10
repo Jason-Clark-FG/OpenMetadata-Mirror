@@ -13,6 +13,7 @@
 package org.openmetadata.service.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -33,6 +34,9 @@ public class McpClientConfiguration {
 
   @JsonProperty("apiEndpoint")
   private String apiEndpoint;
+
+  @JsonProperty("awsConfig")
+  private Map<String, Object> awsConfig;
 
   @JsonProperty("systemPrompt")
   private String systemPrompt =

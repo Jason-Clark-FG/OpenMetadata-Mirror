@@ -21,7 +21,7 @@ public final class LlmClientFactory {
   public static LlmClient create(McpClientConfiguration config) {
     return switch (config.getProvider()) {
       case "openai" -> new OpenAiLlmClient(config);
-      case "anthropic" -> new AnthropicLlmClient(config);
+      case "anthropic" -> new BedrockLlmClient(config);
       default -> throw new IllegalArgumentException(
           "Unknown LLM provider: " + config.getProvider());
     };

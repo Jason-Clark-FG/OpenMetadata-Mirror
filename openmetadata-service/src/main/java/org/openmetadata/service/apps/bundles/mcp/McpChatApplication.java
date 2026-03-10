@@ -59,6 +59,9 @@ public class McpChatApplication extends AbstractNativeApplication {
     mcpConfig.setApiKey((String) appConfig.get("llmApiKey"));
     mcpConfig.setModel((String) appConfig.getOrDefault("llmModel", "gpt-4o"));
     mcpConfig.setApiEndpoint((String) appConfig.get("llmApiEndpoint"));
+    if (appConfig.containsKey("awsConfig")) {
+      mcpConfig.setAwsConfig(JsonUtils.getMap(appConfig.get("awsConfig")));
+    }
     if (appConfig.containsKey("systemPrompt")) {
       mcpConfig.setSystemPrompt((String) appConfig.get("systemPrompt"));
     }

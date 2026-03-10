@@ -62,7 +62,9 @@ public class McpClientService {
     this.conversationRepository = new McpConversationRepository(dao.mcpConversationDAO());
     this.messageRepository = new McpMessageRepository(dao.mcpMessageDAO());
     this.config = config;
-    if (config.getApiKey() != null && !config.getApiKey().isBlank()) {
+    boolean hasApiKey = config.getApiKey() != null && !config.getApiKey().isBlank();
+    boolean hasAwsConfig = config.getAwsConfig() != null && !config.getAwsConfig().isEmpty();
+    if (hasApiKey || hasAwsConfig) {
       this.llmClient = LlmClientFactory.create(config);
     }
   }
