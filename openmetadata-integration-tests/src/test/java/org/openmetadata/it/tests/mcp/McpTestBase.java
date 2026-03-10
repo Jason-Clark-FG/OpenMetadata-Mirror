@@ -153,11 +153,15 @@ public abstract class McpTestBase {
   }
 
   protected static HttpResponse<String> deleteResponse(String path) throws Exception {
+    return deleteResponse(path, authToken);
+  }
+
+  protected static HttpResponse<String> deleteResponse(String path, String token) throws Exception {
     String baseUrl = TestSuiteBootstrap.getBaseUrl();
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + "/api/v1/" + path))
-            .header("Authorization", authToken)
+            .header("Authorization", token)
             .DELETE()
             .timeout(Duration.ofSeconds(30))
             .build();

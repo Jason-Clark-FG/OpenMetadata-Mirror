@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -139,19 +140,131 @@ public class McpChatResourceIT extends McpTestBase {
     assertThat(getResp.statusCode()).isGreaterThanOrEqualTo(400);
   }
 
-  @Test
-  void testConversationIsolation() throws Exception {
-    McpConversation created = createConversation();
+  @Nested
+  class ConversationIsolation {
 
-    String otherUserToken =
-        "Bearer "
-            + JwtAuthProvider.tokenFor(
-                "test@open-metadata.org", "test@open-metadata.org", new String[] {}, 3600);
+    private static String otherUserToken;
 
-    HttpResponse<String> resp =
-        getResponse(MCP_CLIENT_PATH + "/conversations/" + created.getId(), otherUserToken);
+    @BeforeAll
+    static void setUpOtherUser() {
+      otherUserToken =
+          "Bearer "
+              + JwtAuthProvider.tokenFor(
+                  "test@open-metadata.org", "test@open-metadata.org", new String[] {}, 3600);
+    }
 
-    assertThat(resp.statusCode()).isGreaterThanOrEqualTo(400);
+    @Test
+    void getConversationByIdIsBlockedForOtherUser() throws Exception {
+      McpConversation created = createConversation();
+
+      HttpResponse<String> resp =
+          getResponse(MCP_CLIENT_PATH + "/conversations/" + created.getId(), otherUserToken);
+
+      assertThat(resp.statusCode()).isGreaterThanOrEqualTo(400);
+    }
+
+    @Test
+    void listConversationsDoesNotExposeOtherUsersData() throws Exception {
+      McpConversation adminConversation = createConversation();
+
+      HttpResponse<String> resp =
+          getResponse(MCP_CLIENT_PATH + "/conversations?limit=100", otherUserToken);
+      assertThat(resp.statusCode()).isEqualTo(200);
+
+      JsonNode result = OBJECT_MAPPER.readTree(resp.body());
+      assertThat(result.has("data")).isTrue();
+
+      for (JsonNode conv : result.get("data")) {
+        assertThat(conv.get("id").asText())
+            .as("Other user should never see admin's conversation")
+            .isNotEqualTo(adminConversation.getId().toString());
+      }
+    }
+
+    @Test
+    void getMessagesIsBlockedForOtherUser() throws Exception {
+      McpConversation created = createConversation();
+
+      HttpResponse<String> resp =
+          getResponse(
+              MCP_CLIENT_PATH + "/conversations/" + created.getId() + "/messages", otherUserToken);
+
+      assertThat(resp.statusCode()).isGreaterThanOrEqualTo(400);
+    }
+
+    @Test
+    void deleteConversationIsBlockedForOtherUser() throws Exception {
+      McpConversation created = createConversation();
+
+      HttpResponse<String> deleteResp =
+          deleteResponse(MCP_CLIENT_PATH + "/conversations/" + created.getId(), otherUserToken);
+
+      assertThat(deleteResp.statusCode()).isGreaterThanOrEqualTo(400);
+
+      McpConversation stillExists =
+          get(MCP_CLIENT_PATH + "/conversations/" + created.getId(), McpConversation.class);
+      assertThat(stillExists.getId()).isEqualTo(created.getId());
+    }
+
+    @Test
+    void chatOnExistingConversationIsBlockedForOtherUser() throws Exception {
+      McpConversation created = createConversation();
+
+      Map<String, Object> chatRequest = new HashMap<>();
+      chatRequest.put("conversationId", created.getId().toString());
+      chatRequest.put("message", "Hello from another user");
+
+      HttpResponse<String> resp =
+          postResponse(MCP_CLIENT_PATH + "/chat", chatRequest, otherUserToken);
+
+      assertThat(resp.statusCode()).isGreaterThanOrEqualTo(400);
+    }
+
+    @Test
+    void eachUserSeesOnlyOwnConversations() throws Exception {
+      McpConversation adminConversation = createConversation();
+
+      HttpResponse<String> otherCreateResp =
+          postResponse(MCP_CLIENT_PATH + "/conversations", new HashMap<>(), otherUserToken);
+      assertThat(otherCreateResp.statusCode()).isIn(200, 201);
+      McpConversation otherConversation =
+          OBJECT_MAPPER.readValue(otherCreateResp.body(), McpConversation.class);
+
+      JsonNode adminList = get(MCP_CLIENT_PATH + "/conversations?limit=100", JsonNode.class);
+      boolean adminSeesOwn = false;
+      boolean adminSeesOther = false;
+      for (JsonNode conv : adminList.get("data")) {
+        String id = conv.get("id").asText();
+        if (id.equals(adminConversation.getId().toString())) {
+          adminSeesOwn = true;
+        }
+        if (id.equals(otherConversation.getId().toString())) {
+          adminSeesOther = true;
+        }
+      }
+      assertThat(adminSeesOwn).as("Admin should see own conversation").isTrue();
+      assertThat(adminSeesOther).as("Admin should not see other user's conversation").isFalse();
+
+      HttpResponse<String> otherListResp =
+          getResponse(MCP_CLIENT_PATH + "/conversations?limit=100", otherUserToken);
+      JsonNode otherList = OBJECT_MAPPER.readTree(otherListResp.body());
+      boolean otherSeesOwn = false;
+      boolean otherSeesAdmin = false;
+      for (JsonNode conv : otherList.get("data")) {
+        String id = conv.get("id").asText();
+        if (id.equals(otherConversation.getId().toString())) {
+          otherSeesOwn = true;
+        }
+        if (id.equals(adminConversation.getId().toString())) {
+          otherSeesAdmin = true;
+        }
+      }
+      assertThat(otherSeesOwn).as("Other user should see own conversation").isTrue();
+      assertThat(otherSeesAdmin).as("Other user should not see admin's conversation").isFalse();
+
+      deleteResponse(
+          MCP_CLIENT_PATH + "/conversations/" + otherConversation.getId(), otherUserToken);
+    }
   }
 
   @Test
