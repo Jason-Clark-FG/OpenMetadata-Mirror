@@ -14,6 +14,7 @@
 package org.openmetadata.service.clients.pipeline.k8s;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1CronJob;
@@ -44,6 +46,9 @@ import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1Status;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +60,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.entity.Bot;
+import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.ServiceEntityInterface;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.Parameters;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.PipelineServiceClientConfiguration;
@@ -73,13 +82,18 @@ import org.openmetadata.schema.security.client.OpenMetadataJWTClientConfig;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.services.connections.metadata.OpenMetadataConnection;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.IngestionPipelineDeploymentException;
+import org.openmetadata.service.jdbi3.BotRepository;
+import org.openmetadata.service.jdbi3.UserRepository;
+import org.openmetadata.service.util.EntityUtil;
 
 @ExtendWith(MockitoExtension.class)
 class K8sPipelineClientTest {
 
   @Mock private BatchV1Api batchApi;
   @Mock private CoreV1Api coreApi;
+  @Mock private CustomObjectsApi customObjectsApi;
   @Mock private BatchV1Api.APIcreateNamespacedJobRequest createJobRequest;
   @Mock private BatchV1Api.APIlistNamespacedJobRequest listJobRequest;
   @Mock private BatchV1Api.APIdeleteNamespacedJobRequest deleteJobRequest;
@@ -93,12 +107,18 @@ class K8sPipelineClientTest {
   @Mock private CoreV1Api.APIcreateNamespacedSecretRequest createSecretRequest;
   @Mock private CoreV1Api.APIreadNamespacedSecretRequest readSecretRequest;
   @Mock private CoreV1Api.APIreplaceNamespacedSecretRequest replaceSecretRequest;
+  @Mock private CoreV1Api.APIreadNamespaceRequest readNamespaceRequest;
   @Mock private CoreV1Api.APIdeleteNamespacedConfigMapRequest deleteConfigMapRequest;
   @Mock private CoreV1Api.APIdeleteNamespacedSecretRequest deleteSecretRequest;
   @Mock private CoreV1Api.APIlistNamespacedPodRequest listPodRequest;
   @Mock private CoreV1Api.APIlistNamespacedConfigMapRequest listConfigMapRequest;
   @Mock private CoreV1Api.APIlistNamespacedSecretRequest listSecretRequest;
   @Mock private CoreV1Api.APIreadNamespacedPodLogRequest readPodLogRequest;
+  @Mock private CustomObjectsApi.APIcreateNamespacedCustomObjectRequest createCustomObjectRequest;
+  @Mock private CustomObjectsApi.APIgetNamespacedCustomObjectRequest getCustomObjectRequest;
+  @Mock private CustomObjectsApi.APIreplaceNamespacedCustomObjectRequest replaceCustomObjectRequest;
+  @Mock private CustomObjectsApi.APIlistNamespacedCustomObjectRequest listCustomObjectsRequest;
+  @Mock private CustomObjectsApi.APIdeleteNamespacedCustomObjectRequest deleteCustomObjectRequest;
 
   private K8sPipelineClient client;
   private ServiceEntityInterface testService;
@@ -121,6 +141,7 @@ class K8sPipelineClientTest {
     client = new K8sPipelineClient(config);
     client.setBatchApi(batchApi);
     client.setCoreApi(coreApi);
+    setField(client, "customObjectsApi", customObjectsApi);
 
     // Create test service
     testService = createTestService();
@@ -936,16 +957,545 @@ class K8sPipelineClientTest {
         () -> client.runApplicationFlow(createTestApplication("Query Runner")));
   }
 
+  @Test
+  void testDeployPipelineWithOMJobOperatorCreatesCronOMJob() throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", "0 * * * *");
+
+    when(coreApi.readNamespacedConfigMap(any(), eq(NAMESPACE))).thenReturn(readConfigMapRequest);
+    when(readConfigMapRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(coreApi.createNamespacedConfigMap(eq(NAMESPACE), any()))
+        .thenReturn(createConfigMapRequest);
+    when(createConfigMapRequest.execute()).thenReturn(new V1ConfigMap());
+
+    when(coreApi.readNamespacedSecret(any(), eq(NAMESPACE))).thenReturn(readSecretRequest);
+    when(readSecretRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(coreApi.createNamespacedSecret(eq(NAMESPACE), any())).thenReturn(createSecretRequest);
+    when(createSecretRequest.execute()).thenReturn(new V1Secret());
+
+    when(customObjectsApi.getNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline")))
+        .thenReturn(getCustomObjectRequest);
+    when(getCustomObjectRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(customObjectsApi.createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"), eq("v1"), eq(NAMESPACE), eq("cronomjobs"), any()))
+        .thenReturn(createCustomObjectRequest);
+    when(createCustomObjectRequest.execute()).thenReturn(Map.of("status", "created"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.deployPipeline(pipeline, testService);
+
+    assertEquals(200, response.getCode());
+    assertTrue(Boolean.TRUE.equals(pipeline.getDeployed()));
+    ArgumentCaptor<Object> cronOMJobCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(customObjectsApi)
+        .createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            cronOMJobCaptor.capture());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> cronOMJob = (Map<String, Object>) cronOMJobCaptor.getValue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> metadata = (Map<String, Object>) cronOMJob.get("metadata");
+    assertEquals("om-cronomjob-test-pipeline", metadata.get("name"));
+  }
+
+  @Test
+  void testDeployPipelineWithOMJobOperatorPreservesResourceVersionOnUpdate() throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", "0 * * * *");
+
+    V1ConfigMap existingConfigMap =
+        new V1ConfigMap()
+            .metadata(new V1ObjectMeta().name("om-config-test-pipeline").resourceVersion("12345"));
+    when(coreApi.readNamespacedConfigMap(any(), eq(NAMESPACE))).thenReturn(readConfigMapRequest);
+    when(readConfigMapRequest.execute()).thenReturn(existingConfigMap);
+    when(coreApi.replaceNamespacedConfigMap(any(), eq(NAMESPACE), any()))
+        .thenReturn(replaceConfigMapRequest);
+    when(replaceConfigMapRequest.execute()).thenReturn(new V1ConfigMap());
+
+    V1Secret existingSecret =
+        new V1Secret()
+            .metadata(new V1ObjectMeta().name("om-secret-test-pipeline").resourceVersion("67890"));
+    when(coreApi.readNamespacedSecret(any(), eq(NAMESPACE))).thenReturn(readSecretRequest);
+    when(readSecretRequest.execute()).thenReturn(existingSecret);
+    when(coreApi.replaceNamespacedSecret(any(), eq(NAMESPACE), any()))
+        .thenReturn(replaceSecretRequest);
+    when(replaceSecretRequest.execute()).thenReturn(new V1Secret());
+
+    when(customObjectsApi.getNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline")))
+        .thenReturn(getCustomObjectRequest);
+    when(getCustomObjectRequest.execute())
+        .thenReturn(Map.of("metadata", Map.of("resourceVersion", "99999")));
+    when(customObjectsApi.replaceNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline"),
+            any()))
+        .thenReturn(replaceCustomObjectRequest);
+    when(replaceCustomObjectRequest.execute()).thenReturn(Map.of("status", "updated"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.deployPipeline(pipeline, testService);
+
+    assertEquals(200, response.getCode());
+    ArgumentCaptor<Object> cronOMJobCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(customObjectsApi)
+        .replaceNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline"),
+            cronOMJobCaptor.capture());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> cronOMJob = (Map<String, Object>) cronOMJobCaptor.getValue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> metadata = (Map<String, Object>) cronOMJob.get("metadata");
+    assertEquals("99999", metadata.get("resourceVersion"));
+  }
+
+  @Test
+  void testRunPipelineWithOMJobOperatorCreatesMainAndExitPods() throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+
+    when(customObjectsApi.createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"), eq("v1"), eq(NAMESPACE), eq("omjobs"), any()))
+        .thenReturn(createCustomObjectRequest);
+    when(createCustomObjectRequest.execute()).thenReturn(Map.of("status", "created"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.runPipeline(pipeline, testService);
+
+    assertEquals(200, response.getCode());
+    ArgumentCaptor<Object> omJobCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(customObjectsApi)
+        .createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("omjobs"),
+            omJobCaptor.capture());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> omJob = (Map<String, Object>) omJobCaptor.getValue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> spec = (Map<String, Object>) omJob.get("spec");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> mainPodSpec = (Map<String, Object>) spec.get("mainPodSpec");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> exitHandlerSpec = (Map<String, Object>) spec.get("exitHandlerSpec");
+    assertEquals(List.of("python", "main.py"), mainPodSpec.get("command"));
+    assertEquals(List.of("python", "exit_handler.py"), exitHandlerSpec.get("command"));
+  }
+
+  @Test
+  void testRunApplicationFlowWithOMJobOperatorCreatesApplicationPods() throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    App application = createTestApplication("Query Runner");
+
+    when(customObjectsApi.createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"), eq("v1"), eq(NAMESPACE), eq("omjobs"), any()))
+        .thenReturn(createCustomObjectRequest);
+    when(createCustomObjectRequest.execute()).thenReturn(Map.of("status", "created"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.runApplicationFlow(application);
+
+    assertEquals(200, response.getCode());
+    ArgumentCaptor<Object> omJobCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(customObjectsApi)
+        .createNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("omjobs"),
+            omJobCaptor.capture());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> omJob = (Map<String, Object>) omJobCaptor.getValue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> spec = (Map<String, Object>) omJob.get("spec");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> mainPodSpec = (Map<String, Object>) spec.get("mainPodSpec");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> exitHandlerSpec = (Map<String, Object>) spec.get("exitHandlerSpec");
+    assertEquals(
+        List.of("python", "-m", "metadata.applications.runner"), mainPodSpec.get("command"));
+    assertEquals(List.of("sh", "-c", "exit 0"), exitHandlerSpec.get("command"));
+  }
+
+  @Test
+  void testToggleIngestionWithOMJobOperatorUpdatesSuspendFlagWithoutMutatingSource()
+      throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", "0 * * * *");
+    pipeline.setEnabled(true);
+
+    Map<String, Object> originalSpec = Map.of("suspend", false);
+    Map<String, Object> originalCronOMJob = Map.of("metadata", Map.of("name", "omjob"), "spec", originalSpec);
+
+    when(customObjectsApi.getNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline")))
+        .thenReturn(getCustomObjectRequest);
+    when(getCustomObjectRequest.execute()).thenReturn(originalCronOMJob);
+    when(customObjectsApi.replaceNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline"),
+            any()))
+        .thenReturn(replaceCustomObjectRequest);
+    when(replaceCustomObjectRequest.execute()).thenReturn(Map.of("status", "updated"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.toggleIngestion(pipeline);
+
+    assertEquals(200, response.getCode());
+    assertFalse(Boolean.TRUE.equals(pipeline.getEnabled()));
+    assertEquals(false, originalSpec.get("suspend"));
+
+    ArgumentCaptor<Object> cronOMJobCaptor = ArgumentCaptor.forClass(Object.class);
+    verify(customObjectsApi)
+        .replaceNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("om-cronomjob-test-pipeline"),
+            cronOMJobCaptor.capture());
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> replacedCronOMJob = (Map<String, Object>) cronOMJobCaptor.getValue();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> replacedSpec = (Map<String, Object>) replacedCronOMJob.get("spec");
+    assertEquals(true, replacedSpec.get("suspend"));
+  }
+
+  @Test
+  void testKillIngestionWithOMJobOperatorDeletesValidCustomObjectsOnly() throws Exception {
+    K8sPipelineClient clientWithOMJob = createClientWithUseOMJobOperator(true);
+    IngestionPipeline pipeline = createTestPipeline("test-pipeline", null);
+
+    when(customObjectsApi.listNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"), eq("v1"), eq(NAMESPACE), eq("omjobs")))
+        .thenReturn(listCustomObjectsRequest);
+    when(listCustomObjectsRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
+        .thenReturn(listCustomObjectsRequest);
+    when(listCustomObjectsRequest.execute())
+        .thenReturn(
+            Map.of(
+                "items",
+                List.of(
+                    Map.of(),
+                    Map.of("metadata", Map.of()),
+                    Map.of("metadata", Map.of("name", "om-job-test-pipeline-1")))));
+    when(customObjectsApi.deleteNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("omjobs"),
+            eq("om-job-test-pipeline-1")))
+        .thenReturn(deleteCustomObjectRequest);
+    when(deleteCustomObjectRequest.execute()).thenReturn(Map.of("status", "deleted"));
+
+    PipelineServiceClientResponse response = clientWithOMJob.killIngestion(pipeline);
+
+    assertEquals(200, response.getCode());
+    assertTrue(response.getReason().contains("1 running job"));
+    verify(customObjectsApi)
+        .deleteNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("omjobs"),
+            eq("om-job-test-pipeline-1"));
+  }
+
+  @Test
+  void testGetIngestionBotTokenReturnsJwtFromBotUserAuthentication() throws Exception {
+    BotRepository botRepository = org.mockito.Mockito.mock(BotRepository.class);
+    UserRepository userRepository = org.mockito.Mockito.mock(UserRepository.class);
+    Bot bot = new Bot();
+    bot.setBotUser(new EntityReference().withFullyQualifiedName("ingestion-bot"));
+
+    org.openmetadata.schema.entity.teams.User botUser =
+        new org.openmetadata.schema.entity.teams.User();
+    AuthenticationMechanism authenticationMechanism = new AuthenticationMechanism();
+    authenticationMechanism.setAuthType(AuthenticationMechanism.AuthType.JWT);
+    authenticationMechanism.setConfig(new JWTAuthMechanism().withJWTToken("ingestion-token"));
+    botUser.setAuthenticationMechanism(authenticationMechanism);
+
+    try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
+      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+          .thenReturn(bot);
+      when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
+          .thenReturn(botUser);
+
+      String token =
+          invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
+
+      assertEquals("ingestion-token", token);
+    }
+  }
+
+  @Test
+  void testGetIngestionBotTokenReturnsNullWhenBotUserUsesNonJwtAuth() throws Exception {
+    BotRepository botRepository = org.mockito.Mockito.mock(BotRepository.class);
+    UserRepository userRepository = org.mockito.Mockito.mock(UserRepository.class);
+    Bot bot = new Bot();
+    bot.setBotUser(new EntityReference().withFullyQualifiedName("ingestion-bot"));
+
+    org.openmetadata.schema.entity.teams.User botUser =
+        new org.openmetadata.schema.entity.teams.User();
+    AuthenticationMechanism authenticationMechanism = new AuthenticationMechanism();
+    authenticationMechanism.setAuthType(AuthenticationMechanism.AuthType.BASIC);
+    botUser.setAuthenticationMechanism(authenticationMechanism);
+
+    try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
+      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+          .thenReturn(bot);
+      when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
+          .thenReturn(botUser);
+
+      String token =
+          invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
+
+      assertEquals(null, token);
+    }
+  }
+
+  @Test
+  void testGetIngestionBotTokenReturnsNullWhenBotEntityIsMissing() throws Exception {
+    BotRepository botRepository = org.mockito.Mockito.mock(BotRepository.class);
+    UserRepository userRepository = org.mockito.Mockito.mock(UserRepository.class);
+
+    try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
+      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+          .thenReturn(null);
+
+      String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
+
+      assertEquals(null, token);
+    }
+  }
+
+  @Test
+  void testCreateDefaultServerConnectionUsesBotJwtToken() throws Exception {
+    BotRepository botRepository = org.mockito.Mockito.mock(BotRepository.class);
+    UserRepository userRepository = org.mockito.Mockito.mock(UserRepository.class);
+    Bot bot = new Bot();
+    bot.setBotUser(new EntityReference().withFullyQualifiedName("ingestion-bot"));
+
+    org.openmetadata.schema.entity.teams.User botUser =
+        new org.openmetadata.schema.entity.teams.User();
+    AuthenticationMechanism authenticationMechanism = new AuthenticationMechanism();
+    authenticationMechanism.setAuthType(AuthenticationMechanism.AuthType.JWT);
+    authenticationMechanism.setConfig(new JWTAuthMechanism().withJWTToken("ingestion-token"));
+    botUser.setAuthenticationMechanism(authenticationMechanism);
+
+    try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
+      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+          .thenReturn(bot);
+      when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
+          .thenReturn(botUser);
+
+      OpenMetadataConnection connection =
+          invokePrivate(client, "createDefaultServerConnection", new Class<?>[0]);
+
+      assertEquals("http://localhost:8585/api", connection.getHostPort());
+      assertEquals(AuthProvider.OPENMETADATA, connection.getAuthProvider());
+      assertEquals(
+          "ingestion-token",
+          ((OpenMetadataJWTClientConfig) connection.getSecurityConfig()).getJwtToken());
+    }
+  }
+
+  @Test
+  void testValidateNamespaceExistsAllowsAccessibleNamespace() throws Exception {
+    when(coreApi.readNamespace(eq(NAMESPACE))).thenReturn(readNamespaceRequest);
+
+    assertDoesNotThrow(() -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));
+  }
+
+  @Test
+  void testValidateNamespaceExistsFailsFastForMissingNamespace() throws Exception {
+    when(coreApi.readNamespace(eq(NAMESPACE))).thenReturn(readNamespaceRequest);
+    when(readNamespaceRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+
+    Exception exception =
+        assertThrows(
+            Exception.class, () -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));
+
+    assertTrue(exception.getMessage().contains(NAMESPACE));
+  }
+
+  @Test
+  void testValidateNamespaceExistsIgnoresUnreadableNamespaceChecks() throws Exception {
+    when(coreApi.readNamespace(eq(NAMESPACE))).thenReturn(readNamespaceRequest);
+    when(readNamespaceRequest.execute()).thenThrow(new ApiException(403, "Forbidden"));
+
+    assertDoesNotThrow(() -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));
+  }
+
+  @Test
+  void testBuildDetailedErrorMessageExtractsK8sMessageAndHint() throws Exception {
+    ApiException exception =
+        new ApiException(
+            403,
+            "Forbidden",
+            Map.of(),
+            "{\"kind\":\"Status\",\"message\":\"rbac denied for deployment\"}");
+
+    String detailedMessage =
+        invokePrivate(
+            client,
+            "buildDetailedErrorMessage",
+            new Class<?>[] {String.class, String.class, ApiException.class},
+            "deploy",
+            "test-pipeline",
+            exception);
+
+    assertTrue(detailedMessage.contains("rbac denied for deployment"));
+    assertTrue(detailedMessage.contains("lacks permissions"));
+    assertTrue(detailedMessage.contains(NAMESPACE));
+  }
+
+  @Test
+  void testBuildDetailedErrorMessageFallsBackToExceptionMessageWhenBodyMissing() throws Exception {
+    ApiException exception = new ApiException(500, "Internal Server Error");
+
+    String detailedMessage =
+        invokePrivate(
+            client,
+            "buildDetailedErrorMessage",
+            new Class<?>[] {String.class, String.class, ApiException.class},
+            "deploy",
+            "test-pipeline",
+            exception);
+
+    assertTrue(detailedMessage.contains("Internal Server Error"));
+    assertFalse(detailedMessage.contains("lacks permissions"));
+  }
+
+  @Test
+  void testDeleteResourceHelpersIgnoreNotFoundErrors() throws Exception {
+    when(batchApi.deleteNamespacedCronJob(eq("missing-cron"), eq(NAMESPACE)))
+        .thenReturn(deleteCronJobRequest);
+    when(deleteCronJobRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(customObjectsApi.deleteNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("missing-cron-omjob")))
+        .thenReturn(deleteCustomObjectRequest);
+    when(deleteCustomObjectRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(coreApi.deleteNamespacedSecret(eq("missing-secret"), eq(NAMESPACE)))
+        .thenReturn(deleteSecretRequest);
+    when(deleteSecretRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+    when(coreApi.deleteNamespacedConfigMap(eq("missing-config"), eq(NAMESPACE)))
+        .thenReturn(deleteConfigMapRequest);
+    when(deleteConfigMapRequest.execute()).thenThrow(new ApiException(404, "Not found"));
+
+    assertDoesNotThrow(
+        () -> invokePrivate(client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "missing-cron"));
+    assertDoesNotThrow(
+        () ->
+            invokePrivate(
+                client,
+                "deleteCronOMJobIfExists",
+                new Class<?>[] {String.class},
+                "missing-cron-omjob"));
+    assertDoesNotThrow(
+        () -> invokePrivate(client, "deleteSecretIfExists", new Class<?>[] {String.class}, "missing-secret"));
+    assertDoesNotThrow(
+        () ->
+            invokePrivate(
+                client, "deleteConfigMapIfExists", new Class<?>[] {String.class}, "missing-config"));
+  }
+
+  @Test
+  void testDeleteResourceHelpersRethrowUnexpectedErrors() throws Exception {
+    when(batchApi.deleteNamespacedCronJob(eq("failing-cron"), eq(NAMESPACE)))
+        .thenReturn(deleteCronJobRequest);
+    when(deleteCronJobRequest.execute()).thenThrow(new ApiException(500, "cron failure"));
+    when(customObjectsApi.deleteNamespacedCustomObject(
+            eq("pipelines.openmetadata.org"),
+            eq("v1"),
+            eq(NAMESPACE),
+            eq("cronomjobs"),
+            eq("failing-cron-omjob")))
+        .thenReturn(deleteCustomObjectRequest);
+    when(deleteCustomObjectRequest.execute()).thenThrow(new ApiException(500, "omjob failure"));
+    when(coreApi.deleteNamespacedSecret(eq("failing-secret"), eq(NAMESPACE)))
+        .thenReturn(deleteSecretRequest);
+    when(deleteSecretRequest.execute()).thenThrow(new ApiException(500, "secret failure"));
+    when(coreApi.deleteNamespacedConfigMap(eq("failing-config"), eq(NAMESPACE)))
+        .thenReturn(deleteConfigMapRequest);
+    when(deleteConfigMapRequest.execute()).thenThrow(new ApiException(500, "config failure"));
+
+    assertThrows(
+        ApiException.class,
+        () -> invokePrivate(client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "failing-cron"));
+    assertThrows(
+        ApiException.class,
+        () ->
+            invokePrivate(
+                client,
+                "deleteCronOMJobIfExists",
+                new Class<?>[] {String.class},
+                "failing-cron-omjob"));
+    assertThrows(
+        ApiException.class,
+        () -> invokePrivate(client, "deleteSecretIfExists", new Class<?>[] {String.class}, "failing-secret"));
+    assertThrows(
+        ApiException.class,
+        () ->
+            invokePrivate(
+                client, "deleteConfigMapIfExists", new Class<?>[] {String.class}, "failing-config"));
+  }
+
   private void resetAllMocks() {
     reset(
         batchApi,
         coreApi,
+        customObjectsApi,
         readConfigMapRequest,
         createConfigMapRequest,
         readSecretRequest,
         createSecretRequest,
         readCronJobRequest,
-        createCronJobRequest);
+        createCronJobRequest,
+        getCustomObjectRequest,
+        createCustomObjectRequest,
+        replaceCustomObjectRequest,
+        listCustomObjectsRequest,
+        deleteCustomObjectRequest);
   }
 
   private void setupDeploymentMocks() throws ApiException {
@@ -1039,6 +1589,7 @@ class K8sPipelineClientTest {
     K8sPipelineClient clientWithOMJob = new K8sPipelineClient(config);
     clientWithOMJob.setBatchApi(batchApi);
     clientWithOMJob.setCoreApi(coreApi);
+    setField(clientWithOMJob, "customObjectsApi", customObjectsApi);
     return clientWithOMJob;
   }
 
@@ -1157,5 +1708,33 @@ class K8sPipelineClientTest {
     service.setServiceType(CreateDatabaseService.DatabaseServiceType.Mysql);
 
     return service;
+  }
+
+  private static void setField(Object target, String fieldName, Object value) {
+    try {
+      Field field = K8sPipelineClient.class.getDeclaredField(fieldName);
+      field.setAccessible(true);
+      field.set(target, value);
+    } catch (ReflectiveOperationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <T> T invokePrivate(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
+    Method method = K8sPipelineClient.class.getDeclaredMethod(methodName, parameterTypes);
+    method.setAccessible(true);
+    try {
+      return (T) method.invoke(target, args);
+    } catch (InvocationTargetException e) {
+      if (e.getCause() instanceof Exception exception) {
+        throw exception;
+      }
+      if (e.getCause() instanceof Error error) {
+        throw error;
+      }
+      throw new RuntimeException(e.getCause());
+    }
   }
 }
