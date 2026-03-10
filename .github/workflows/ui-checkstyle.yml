@@ -31,11 +31,13 @@ permissions:
 concurrency:
   group: ui-checkstyle-${{ github.head_ref }}
   cancel-in-progress: true
+
 jobs:
-  ui-checkstyle:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Setup: install dependencies once, cache for all check jobs
+  # ──────────────────────────────────────────────────────────────────────────
+  setup:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
@@ -64,7 +66,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           valid-labels: "safe to test"
           pull-request-number: "${{ github.event.pull_request.number }}"
-          disable-reviews: true # To not auto approve changes
+          disable-reviews: true
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,47 +80,233 @@ jobs:
           node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
           cache: "yarn"
           cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
-      
+
       - name: Install Antlr4 CLI
         run: |
           sudo make install_antlr_cli
-      
-      - name: Install Yarn Packages
-        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
-        run: yarn install
 
-      - name: Install dependencies
+      - name: Install Yarn Packages
         working-directory: openmetadata-ui/src/main/resources/ui
         run: yarn install --frozen-lockfile
 
-      - name: Run UI checkstyle
-        id: checkstyle
+      - name: Cache node_modules
+        uses: actions/cache/save@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Check 1: ESLint
+  # ──────────────────────────────────────────────────────────────────────────
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run ESLint
+        id: lint
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
-        run: yarn run checkstyle
+        run: yarn run lint
 
-      - name: Create a comment in the PR with the instructions
-        if: steps.checkstyle.outcome != 'success'
+      - name: Comment on PR (ESLint failure)
+        if: steps.lint.outcome != 'success'
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            **The UI Checkstyle checks failed.**
+            ### ❌ ESLint Check Failed
 
-            Please run `make lint-fix` in the root of your repository to automatically fix linting issues, or run the following commands manually:
+            Fix ESLint issues by running:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn run lint:fix
-            yarn run organize-imports
-            yarn run license-header-fix
-            yarn run pretty
             ```
-
             Then commit the changes to this PR.
 
-            You can also use [pre-commit](https://pre-commit.com/) to automate the code formatting.
-            You can install the pre-commit hooks with `make install_test precommit_install`.
+            > 💡 Use [pre-commit](https://pre-commit.com/) hooks to automate this: `make install_test precommit_install`
 
-      - name: UI checkstyle failed, check the comment in the PR
-        if: steps.checkstyle.outcome != 'success'
+      - name: Fail job if ESLint failed
+        if: steps.lint.outcome != 'success'
+        run: exit 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Check 2: Prettier
+  # ──────────────────────────────────────────────────────────────────────────
+  prettier:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run Prettier Check
+        id: prettier
+        continue-on-error: true
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: yarn run pretty:check
+
+      - name: Comment on PR (Prettier failure)
+        if: steps.prettier.outcome != 'success'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### ❌ Prettier Check Failed
+
+            Fix Prettier formatting issues by running:
+            ```bash
+            cd openmetadata-ui/src/main/resources/ui
+            yarn run pretty
+            ```
+            Then commit the changes to this PR.
+
+            > 💡 Use [pre-commit](https://pre-commit.com/) hooks to automate this: `make install_test precommit_install`
+
+      - name: Fail job if Prettier failed
+        if: steps.prettier.outcome != 'success'
+        run: exit 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Check 3: License Headers
+  # ──────────────────────────────────────────────────────────────────────────
+  license-header:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run License Header Check
+        id: license-header
+        continue-on-error: true
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: yarn run license-header-check
+
+      - name: Comment on PR (License Header failure)
+        if: steps.license-header.outcome != 'success'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### ❌ License Header Check Failed
+
+            One or more files are missing the required license header. Fix them by running:
+            ```bash
+            cd openmetadata-ui/src/main/resources/ui
+            yarn run license-header-fix
+            ```
+            Then commit the changes to this PR.
+
+            > 💡 Use [pre-commit](https://pre-commit.com/) hooks to automate this: `make install_test precommit_install`
+
+      - name: Fail job if License Header check failed
+        if: steps.license-header.outcome != 'success'
+        run: exit 1
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Check 4: Organize Imports
+  # ──────────────────────────────────────────────────────────────────────────
+  organize-imports:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run Organize Imports Check
+        id: organize-imports
+        continue-on-error: true
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: yarn run organize-imports:check
+
+      - name: Comment on PR (Organize Imports failure)
+        if: steps.organize-imports.outcome != 'success'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### ❌ Organize Imports Check Failed
+
+            Fix import ordering issues by running:
+            ```bash
+            cd openmetadata-ui/src/main/resources/ui
+            yarn run organize-imports
+            ```
+            Then commit the changes to this PR.
+
+            > 💡 Use [pre-commit](https://pre-commit.com/) hooks to automate this: `make install_test precommit_install`
+
+      - name: Fail job if Organize Imports check failed
+        if: steps.organize-imports.outcome != 'success'
         run: exit 1
