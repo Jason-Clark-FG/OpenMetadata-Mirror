@@ -48,7 +48,6 @@
             "name": "PhoneRecognizer",
             "context": [
               "phone",
-              "number",
               "telephone",
               "cell",
               "cellphone",
@@ -463,7 +462,12 @@
             "recognizerConfig": {
               "type": "predefined",
               "name": "NhsRecognizer",
-              "supportedLanguage": "en"
+              "supportedLanguage": "en",
+              "context": [
+                "nhs",
+                "national_health_service",
+                "nhs_number"
+              ]
             },
             "confidenceThreshold": 0.6,
             "target": "content"
