@@ -3941,18 +3941,21 @@ public interface CollectionDAO {
             String fqnhash,
         @Bind("termName") String termName);
 
-    // Search glossary terms by both name and displayName using LIKE queries
+    // Search glossary terms by name and displayName using LIKE queries
     // The displayName column is a generated column added in migration 1.9.3
+    // entityStatus filtering uses generated column added in migration 1.12.2
     @SqlQuery(
         "SELECT json FROM glossary_term_entity WHERE deleted = FALSE "
             + "AND fqnHash LIKE :parentHash "
             + "AND (LOWER(name) LIKE LOWER(:searchTerm) "
             + "OR LOWER(COALESCE(displayName, '')) LIKE LOWER(:searchTerm)) "
+            + "<statusCondition> "
             + "ORDER BY name "
             + "LIMIT :limit OFFSET :offset")
     List<String> searchGlossaryTerms(
         @Bind("parentHash") String parentHash,
         @Bind("searchTerm") String searchTerm,
+        @Define("statusCondition") String statusCondition,
         @Bind("limit") int limit,
         @Bind("offset") int offset);
   }
@@ -7509,6 +7512,27 @@ public interface CollectionDAO {
 
     @ConnectionAwareSqlUpdate(
         value =
+            "UPDATE apps_extension_time_series SET json = JSON_SET(json, '$.status', 'stopped') WHERE appName=:appName AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.status')) = 'running' AND extension = 'status'",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE apps_extension_time_series SET json = jsonb_set(json, '{status}', '\"stopped\"') WHERE appName = :appName AND json->>'status' = 'running' AND extension = 'status'",
+        connectionType = POSTGRES)
+    void markStaleEntriesStoppedByName(@Bind("appName") String appName);
+
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE apps_extension_time_series SET json = JSON_SET(json, '$.status', 'stopped') WHERE appName=:appName AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.status')) = 'running' AND extension = 'status' AND timestamp < :beforeTimestamp",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE apps_extension_time_series SET json = jsonb_set(json, '{status}', '\"stopped\"') WHERE appName = :appName AND json->>'status' = 'running' AND extension = 'status' AND timestamp < :beforeTimestamp",
+        connectionType = POSTGRES)
+    void markStaleEntriesStoppedBefore(
+        @Bind("appName") String appName, @Bind("beforeTimestamp") long beforeTimestamp);
+
+    @ConnectionAwareSqlUpdate(
+        value =
             "UPDATE apps_extension_time_series SET json = JSON_SET(json, '$.status', 'failed') WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.status')) = 'running' AND extension = 'status'",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
@@ -7907,19 +7931,36 @@ public interface CollectionDAO {
         @Bind("json") String json,
         @Bind("incidentStateId") String incidentStateId);
 
-    @SqlQuery(
-        """
-              SELECT dqdts1.json FROM
-              data_quality_data_time_series dqdts1
-              INNER JOIN (
-                  SELECT tc.fqnHash
-                  FROM entity_relationship er
-                  INNER JOIN test_case tc ON er.toId = tc.id
-                  where fromEntity = 'testSuite' AND toEntity = 'testCase' and fromId = :testSuiteId
-              ) ts ON dqdts1.entityFQNHash = ts.fqnHash
-              LEFT JOIN data_quality_data_time_series dqdts2 ON
-                  (dqdts1.entityFQNHash = dqdts2.entityFQNHash and dqdts1.timestamp < dqdts2.timestamp)
-              WHERE dqdts2.entityFQNHash IS NULL""")
+    @ConnectionAwareSqlQuery(
+        value =
+            """
+            SELECT dqdts1.json FROM
+            data_quality_data_time_series dqdts1
+            INNER JOIN (
+                SELECT tc.fqnHash
+                FROM entity_relationship er
+                INNER JOIN test_case tc ON er.toId = tc.id
+                WHERE fromEntity = 'testSuite' AND toEntity = 'testCase' AND fromId = :testSuiteId
+            ) ts ON dqdts1.entityFQNHash = ts.fqnHash
+            LEFT JOIN data_quality_data_time_series dqdts2 FORCE INDEX (idx_entity_timestamp_desc) ON
+                (dqdts1.entityFQNHash = dqdts2.entityFQNHash AND dqdts1.timestamp < dqdts2.timestamp)
+            WHERE dqdts2.entityFQNHash IS NULL""",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            """
+            SELECT dqdts1.json FROM
+            data_quality_data_time_series dqdts1
+            INNER JOIN (
+                SELECT tc.fqnHash
+                FROM entity_relationship er
+                INNER JOIN test_case tc ON er.toId = tc.id
+                WHERE fromEntity = 'testSuite' AND toEntity = 'testCase' AND fromId = :testSuiteId
+            ) ts ON dqdts1.entityFQNHash = ts.fqnHash
+            LEFT JOIN data_quality_data_time_series dqdts2 ON
+                (dqdts1.entityFQNHash = dqdts2.entityFQNHash AND dqdts1.timestamp < dqdts2.timestamp)
+            WHERE dqdts2.entityFQNHash IS NULL""",
+        connectionType = POSTGRES)
     List<String> listLastTestCaseResultsForTestSuite(@BindMap Map<String, String> params);
 
     @SqlQuery(
@@ -9644,10 +9685,13 @@ public interface CollectionDAO {
 
     @SqlQuery(
         "SELECT * FROM search_index_partition WHERE jobId = :jobId AND status = 'PROCESSING' "
-            + "AND assignedServer = :serverId ORDER BY claimedAt DESC LIMIT 1")
+            + "AND assignedServer = :serverId AND claimedAt = :claimedAt "
+            + "ORDER BY priority DESC, entityType, partitionIndex LIMIT 1")
     @RegisterRowMapper(SearchIndexPartitionMapper.class)
     SearchIndexPartitionRecord findLatestClaimedPartition(
-        @Bind("jobId") String jobId, @Bind("serverId") String serverId);
+        @Bind("jobId") String jobId,
+        @Bind("serverId") String serverId,
+        @Bind("claimedAt") long claimedAt);
 
     @SqlQuery(
         "SELECT * FROM search_index_partition WHERE jobId = :jobId AND status = :status "
