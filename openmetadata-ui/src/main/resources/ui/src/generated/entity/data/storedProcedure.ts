@@ -578,7 +578,6 @@ export enum DatabaseServiceType {
     Glue = "Glue",
     Greenplum = "Greenplum",
     Hive = "Hive",
-    Iceberg = "Iceberg",
     Impala = "Impala",
     MariaDB = "MariaDB",
     MicrosoftFabric = "MicrosoftFabric",
