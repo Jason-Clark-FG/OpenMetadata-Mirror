@@ -16,8 +16,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public interface LlmClient {
+public interface LlmClient extends AutoCloseable {
   LlmResponse sendMessages(List<LlmMessage> messages, List<Map<String, Object>> tools);
+
+  @Override
+  default void close() {}
 
   default LlmResponse sendMessagesStreaming(
       List<LlmMessage> messages, List<Map<String, Object>> tools, Consumer<String> onTextChunk) {

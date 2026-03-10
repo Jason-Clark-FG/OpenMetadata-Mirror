@@ -47,9 +47,10 @@ import org.openmetadata.service.jdbi3.McpMessageRepository;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 
 @Slf4j
-public class McpClientService {
+public class McpClientService implements AutoCloseable {
   private static final int MAX_TOOL_ITERATIONS = 10;
   private static final int LLM_CONTEXT_MESSAGE_LIMIT = 20;
+  private static final int CONVERSATION_LOAD_LIMIT = 100;
 
   private final McpConversationRepository conversationRepository;
   private final McpMessageRepository messageRepository;
@@ -57,6 +58,7 @@ public class McpClientService {
   private volatile LlmClient llmClient;
   private volatile ToolExecutor toolExecutor;
   private volatile List<Map<String, Object>> toolDefinitions = Collections.emptyList();
+  private volatile List<Map<String, Object>> lastToolDefinitionsSource;
 
   public McpClientService(CollectionDAO dao, McpChatAppConfig config) {
     this.conversationRepository = new McpConversationRepository(dao.mcpConversationDAO());
@@ -73,12 +75,24 @@ public class McpClientService {
     return llmClient != null;
   }
 
-  public void setToolExecutor(ToolExecutor toolExecutor) {
-    this.toolExecutor = toolExecutor;
+  @Override
+  public void close() {
+    LlmClient client = this.llmClient;
+    if (client != null) {
+      try {
+        client.close();
+      } catch (Exception e) {
+        LOG.warn("Failed to close LLM client", e);
+      }
+    }
   }
 
-  public void setToolDefinitions(List<Map<String, Object>> toolDefinitions) {
-    this.toolDefinitions = Collections.unmodifiableList(new ArrayList<>(toolDefinitions));
+  public void updateTools(ToolExecutor executor, List<Map<String, Object>> definitions) {
+    this.toolExecutor = executor;
+    if (definitions != lastToolDefinitionsSource) {
+      lastToolDefinitionsSource = definitions;
+      this.toolDefinitions = Collections.unmodifiableList(new ArrayList<>(definitions));
+    }
   }
 
   public record ChatResponse(UUID conversationId, McpMessage message) {}
@@ -410,9 +424,8 @@ public class McpClientService {
   public McpConversation getConversationWithMessages(
       SecurityContext securityContext, UUID conversationId) {
     McpConversation conversation = getConversation(securityContext, conversationId);
-    int totalMessages = messageRepository.countByConversation(conversationId);
     List<McpMessage> messages =
-        messageRepository.listByConversation(conversationId, totalMessages, 0);
+        messageRepository.listByConversation(conversationId, CONVERSATION_LOAD_LIMIT, 0);
     conversation.setMcpMessages(messages);
     return conversation;
   }

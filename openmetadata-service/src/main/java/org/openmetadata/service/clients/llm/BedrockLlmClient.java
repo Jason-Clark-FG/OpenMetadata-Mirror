@@ -83,13 +83,20 @@ public class BedrockLlmClient implements LlmClient {
   @Override
   public LlmResponse sendMessagesStreaming(
       List<LlmMessage> messages, List<Map<String, Object>> tools, Consumer<String> onTextChunk) {
-    // Bedrock InvokeModel doesn't support streaming in the same way.
-    // Use the non-streaming path and emit all text at once.
+    LOG.warn(
+        "Bedrock provider does not support true streaming; falling back to non-streaming response");
     LlmResponse response = sendMessages(messages, tools);
     if (response.content() != null) {
       onTextChunk.accept(response.content());
     }
     return response;
+  }
+
+  @Override
+  public void close() {
+    if (bedrockClient != null) {
+      bedrockClient.close();
+    }
   }
 
   private ObjectNode buildRequestBody(List<LlmMessage> messages, List<Map<String, Object>> tools) {

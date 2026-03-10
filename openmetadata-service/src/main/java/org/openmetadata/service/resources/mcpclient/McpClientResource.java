@@ -72,8 +72,9 @@ public class McpClientResource {
 
   private static volatile McpClientResource instance;
 
-  private volatile ToolExecutor toolExecutor;
-  private volatile List<Map<String, Object>> toolDefinitions;
+  private volatile ToolRegistration toolRegistration;
+
+  record ToolRegistration(ToolExecutor executor, List<Map<String, Object>> definitions) {}
 
   public static McpClientResource getInstance() {
     return instance;
@@ -97,8 +98,7 @@ public class McpClientResource {
 
   public void registerToolExecutor(
       ToolExecutor toolExecutor, List<Map<String, Object>> toolDefinitions) {
-    this.toolExecutor = toolExecutor;
-    this.toolDefinitions = toolDefinitions;
+    this.toolRegistration = new ToolRegistration(toolExecutor, toolDefinitions);
   }
 
   @POST
@@ -317,9 +317,9 @@ public class McpClientResource {
               .build());
     }
 
-    if (this.toolExecutor != null) {
-      service.setToolExecutor(this.toolExecutor);
-      service.setToolDefinitions(this.toolDefinitions);
+    ToolRegistration reg = this.toolRegistration;
+    if (reg != null) {
+      service.updateTools(reg.executor(), reg.definitions());
     }
 
     return service;
