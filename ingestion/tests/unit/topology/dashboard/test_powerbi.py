@@ -331,8 +331,196 @@ EXPECTED_BIGQUERY_NATIVE_QUERY_BLOCK_COMMENTS_RESULT = [
     },
     {
         "database": "my-gcp-project",
-        "schema": "my-gcp-project.DW_Main",
+        "schema": "DW_Main",
         "table": "View_Dim_Entities",
+    },
+]
+
+# =============================================================================
+# Dataflow M Document Test Data
+# =============================================================================
+
+# Pattern 1: Sql.Database with inline Query parameter
+MOCK_DATAFLOW_INLINE_QUERY_BLOCK = (
+    "BookToBill_Unite = let\n"
+    '  Source = Sql.Database("dwsql", "dw_integration", '
+    '[Query = "  SELECT [AccountID]#(lf)      ,[ProductID]#(lf)'
+    "  FROM [DW_Integration].[DataWarehouse].[v_FactUnitePurchases]#(lf)"
+    '  where IsDeleted = 0", EnableCrossDatabaseFolding = true]),\n'
+    '  #"Changed column type" = Table.TransformColumnTypes(Source, '
+    '{{"CycleStartDate", type date}})\n'
+    "in\n"
+    '  #"Changed column type";\r\n'
+)
+
+# Pattern 2: Value.NativeQuery with Sql.Database source
+MOCK_DATAFLOW_NATIVE_QUERY_BLOCK = (
+    "AccountSalesForceProperties = let\n"
+    '    Source = Sql.Database("dwsql", "operationaldatastore"),\n'
+    "    AccountSalesForceProperties =\n"
+    "        Value.NativeQuery(\n"
+    "            Source,\n"
+    '            "\n'
+    "            SELECT\n"
+    "                AccountID,\n"
+    "                SalesForceBroadVertical\n"
+    "            FROM Snowflake.AccountSalesForceProperties\n"
+    '            "\n'
+    "        )\n"
+    "in\n"
+    "    AccountSalesForceProperties;\r\n"
+)
+
+# Pattern 3: Sql.Database with Schema/Item catalog access
+MOCK_DATAFLOW_CATALOG_ACCESS_BLOCK = (
+    "Accounts = let\n"
+    '  Source = Sql.Database("dwsql", "dw_datawarehouse"),\n'
+    '  dbo_DimAccounts = Source{[Schema = "dbo", Item = "DimAccounts"]}[Data],\n'
+    '  #"Removed Other Columns" = Table.SelectColumns(dbo_DimAccounts, '
+    '{"AccountKey", "AccountID"})\n'
+    "in\n"
+    '  #"Removed Other Columns";\r\n'
+)
+
+# Non-SQL source (PowerPlatform.Dataflows) - should be skipped
+MOCK_DATAFLOW_NON_SQL_BLOCK = (
+    '#"Channel Group Mapping(Sharepoint)" = let\r\n'
+    "  Source = PowerPlatform.Dataflows([]),\r\n"
+    '  #"Navigation 1" = Source{[Id = "Workspaces"]}[Data]\r\n'
+    "in\r\n"
+    '  #"Navigation 1";\r\n'
+)
+
+# Computed query (no Sql.Database) - should be skipped
+MOCK_DATAFLOW_COMPUTED_BLOCK = (
+    '#"AOP by MRR" = let\n'
+    '  Source = #"AOP by MRR(Sharepoint)",\n'
+    '  #"Changed Type1" = Table.TransformColumnTypes(Source, '
+    '{{"Month", type date}})\n'
+    "in\n"
+    '  #"Changed Type1";\r\n'
+)
+
+# No let block - should be skipped
+MOCK_DATAFLOW_NO_LET_BLOCK = (
+    "UTC_to_PST = let\n"
+    "  Query = (datetimecolumn as datetime) =>\n"
+    "let\n"
+    "  date = DateTime.Date(datetimecolumn)\n"
+    "in\n"
+    "  date;\r\n"
+)
+
+# Full M document combining multiple patterns
+MOCK_DATAFLOW_FULL_DOCUMENT = (
+    "section Section1;\r\n"
+    "shared "
+    + MOCK_DATAFLOW_CATALOG_ACCESS_BLOCK
+    + "shared "
+    + MOCK_DATAFLOW_INLINE_QUERY_BLOCK
+    + "shared "
+    + MOCK_DATAFLOW_NON_SQL_BLOCK
+    + "shared "
+    + MOCK_DATAFLOW_COMPUTED_BLOCK
+    + "shared "
+    + MOCK_DATAFLOW_NATIVE_QUERY_BLOCK
+)
+
+MOCK_DATAFLOW_QUERIES_METADATA = {
+    "Accounts": {"queryId": "q1", "queryName": "Accounts", "loadEnabled": True},
+    "BookToBill_Unite": {
+        "queryId": "q2",
+        "queryName": "BookToBill_Unite",
+        "loadEnabled": True,
+    },
+    "Channel Group Mapping(Sharepoint)": {
+        "queryId": "q3",
+        "queryName": "Channel Group Mapping(Sharepoint)",
+    },
+    "AOP by MRR": {"queryId": "q4", "queryName": "AOP by MRR", "loadEnabled": True},
+    "AccountSalesForceProperties": {
+        "queryId": "q5",
+        "queryName": "AccountSalesForceProperties",
+        "loadEnabled": True,
+    },
+}
+
+MOCK_DATAFLOW_EXPORT = DataflowExportResponse(
+    name="DimensionTables",
+    description="Test dataflow",
+    version="1.0",
+    entities=[
+        DataflowEntity(
+            name="Accounts",
+            description="",
+            attributes=[
+                DataflowEntityAttribute(name="AccountKey", dataType="int64"),
+                DataflowEntityAttribute(name="AccountID", dataType="int64"),
+            ],
+        ),
+        DataflowEntity(
+            name="BookToBill_Unite",
+            description="",
+            attributes=[
+                DataflowEntityAttribute(name="AccountID", dataType="int64"),
+                DataflowEntityAttribute(name="ProductID", dataType="int64"),
+            ],
+        ),
+        DataflowEntity(
+            name="AccountSalesForceProperties",
+            description="",
+            attributes=[
+                DataflowEntityAttribute(name="AccountID", dataType="int64"),
+                DataflowEntityAttribute(
+                    name="SalesForceBroadVertical", dataType="string"
+                ),
+            ],
+        ),
+    ],
+    **{
+        "pbi:mashup": DataflowMashup(
+            document=MOCK_DATAFLOW_FULL_DOCUMENT,
+            queriesMetadata=MOCK_DATAFLOW_QUERIES_METADATA,
+        )
+    },
+)
+
+# Dataflow export with no mashup
+MOCK_DATAFLOW_EXPORT_NO_MASHUP = DataflowExportResponse(
+    name="EmptyDataflow",
+    entities=[],
+)
+
+# Dataflow export with empty document
+MOCK_DATAFLOW_EXPORT_EMPTY_DOC = DataflowExportResponse(
+    name="EmptyDocDataflow",
+    entities=[],
+    **{"pbi:mashup": DataflowMashup(document="", queriesMetadata={})},
+)
+MOCK_BIGQUERY_NATIVE_QUERY_FQN_BACKTICK_EXP = (
+    "let\n"
+    "    Source = Value.NativeQuery(GoogleBigQuery.Database("
+    '[BillingProject="payoneer-prod-eu-svc-data-016f"])'
+    '{[Name="payoneer-prod-eu-svc-data-016f"]}[Data], '
+    '"SELECT e.Master_Account_Holder_ID, e.Entity_ID#(lf)'
+    "FROM `payoneer-prod-eu-svc-data-016f.DW_Main.View_Dim_Entities` e#(lf)"
+    "JOIN `payoneer-prod-eu-svc-data-016f.DW_Main.View_Dim_Master_Accounts` m "
+    'ON e.Master_Account_Holder_ID = m.Master_Account_Holder_ID", '
+    "null, [EnableFolding=true])\n"
+    "in\n"
+    "    Source"
+)
+
+EXPECTED_BIGQUERY_NATIVE_QUERY_FQN_BACKTICK_RESULT = [
+    {
+        "database": "payoneer-prod-eu-svc-data-016f",
+        "schema": "DW_Main",
+        "table": "View_Dim_Entities",
+    },
+    {
+        "database": "payoneer-prod-eu-svc-data-016f",
+        "schema": "DW_Main",
+        "table": "View_Dim_Master_Accounts",
     },
 ]
 
@@ -641,6 +829,16 @@ class PowerBIUnitTest(TestCase):
             table,
         )
         self.assertEqual(result, EXPECTED_BIGQUERY_NATIVE_QUERY_BLOCK_COMMENTS_RESULT)
+
+        # Test with BigQuery NativeQuery using fully-qualified backtick-quoted tables
+        # e.g. `project.dataset.table` — parser returns "project.dataset" as schema,
+        # which must be split into database and schema
+        result = self.powerbi._parse_bigquery_source(
+            MOCK_BIGQUERY_NATIVE_QUERY_FQN_BACKTICK_EXP,
+            MOCK_DASHBOARD_DATA_MODEL,
+            table,
+        )
+        self.assertEqual(result, EXPECTED_BIGQUERY_NATIVE_QUERY_FQN_BACKTICK_RESULT)
 
     @pytest.mark.order(2)
     @patch("metadata.ingestion.ometa.ometa_api.OpenMetadata.get_reference_by_email")
