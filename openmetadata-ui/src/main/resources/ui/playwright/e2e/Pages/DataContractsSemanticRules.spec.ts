@@ -12,6 +12,7 @@
  */
 import { expect } from '@playwright/test';
 import {
+  DATA_CONTRACT_DETAILS,
   DATA_CONTRACT_SEMANTICS1,
   DATA_CONTRACT_SEMANTIC_OPERATIONS,
 } from '../../constant/dataContracts';
@@ -31,8 +32,10 @@ import {
   removeSingleSelectDomain,
 } from '../../utils/common';
 import {
+  navigateToContractTab,
   performInitialStepForRules,
   saveAndTriggerDataContractValidation,
+  triggerContractValidation,
 } from '../../utils/dataContracts';
 import {
   customFormatDateTime,
@@ -1669,45 +1672,43 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
+
+    // Read entity version from the API response at creation time so the rule
+    // value is always accurate regardless of any prior operations. The contract
+    // is created via API (not the UI form) so no UI side-effects can bump the
+    // entity version between rule creation and the first validation run.
+    const entityVersion = table.entityResponseData.version as number;
+    await apiContext.post('/api/v1/dataContracts', {
+      data: {
+        name: DATA_CONTRACT_DETAILS.name,
+        entity: { id: table.entityResponseData.id, type: 'table' },
+        semantics: [
+          {
+            name: DATA_CONTRACT_SEMANTICS1.name,
+            description: DATA_CONTRACT_SEMANTICS1.description,
+            enabled: true,
+            rule: JSON.stringify({
+              and: [{ '==': [{ var: 'version' }, entityVersion] }],
+            }),
+          },
+        ],
+      },
+    });
+
     await afterAction();
 
-    await test.step(
-      'Open contract section and start adding contract',
-      async () => {
-        await redirectToHomePage(page);
-        await table.visitEntityPage(page);
-        await performInitialStepForRules(page);
-      }
-    );
-
     await test.step('Correct entity version should passed', async () => {
-      await page.getByRole('tab', { name: 'Semantics' }).click();
+      await redirectToHomePage(page);
+      await table.visitEntityPage(page);
+      await navigateToContractTab(page);
 
-      await page.fill('#semantics_0_name', DATA_CONTRACT_SEMANTICS1.name);
-      await page.fill(
-        '#semantics_0_description',
-        DATA_CONTRACT_SEMANTICS1.description
-      );
+      await triggerContractValidation(page);
 
-      const ruleLocator = page.locator('.group').nth(0);
-      await selectOption(
-        page,
-        ruleLocator.locator('.group--field .ant-select'),
-        'Version',
-        true
-      );
-      await selectOption(
-        page,
-        ruleLocator.locator('.rule--operator .ant-select'),
-        DATA_CONTRACT_SEMANTIC_OPERATIONS.is
-      );
-
-      await ruleLocator
-        .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input')
-        .fill('0.1');
-
-      // save and trigger contract validation
-      await saveAndTriggerDataContractValidation(page, true);
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      await page.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1718,19 +1719,11 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     });
 
     await test.step('Non-Correct entity version should failed', async () => {
+      // Domain assignment bumps the entity version by 0.1, so the rule
+      // version == entityVersion no longer matches → validation fails.
       await assignSingleSelectDomain(page, domain.responseData);
 
-      await page.getByTestId('manage-contract-actions').click();
-
-      await page.waitForSelector('.contract-action-dropdown', {
-        state: 'visible',
-      });
-
-      const runNowResponse = page.waitForResponse(
-        '/api/v1/dataContracts/*/validate'
-      );
-      await page.getByTestId('contract-run-now-button').click();
-      await runNowResponse;
+      await triggerContractValidation(page);
 
       await page.reload();
 
@@ -1757,47 +1750,48 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
-    await afterAction();
 
-    await test.step(
-      'Open contract section and start adding contract',
-      async () => {
-        await redirectToHomePage(page);
-        await table.visitEntityPage(page);
-        await performInitialStepForRules(page);
-      }
-    );
+    // Domain assignment will bump entity version by exactly 0.1.
+    // The IS NOT rule targets that post-domain version so that:
+    //   - before domain: entity != targetVersion  → Passed
+    //   - after domain:  entity == targetVersion  → Failed
+    // Reading entityVersion from the API response avoids relying on any
+    // hardcoded value that could become stale if version numbering changes.
+    const entityVersion = table.entityResponseData.version as number;
+    const targetVersion = Number.parseFloat((entityVersion + 0.1).toFixed(1));
+    await apiContext.post('/api/v1/dataContracts', {
+      data: {
+        name: DATA_CONTRACT_DETAILS.name,
+        entity: { id: table.entityResponseData.id, type: 'table' },
+        semantics: [
+          {
+            name: DATA_CONTRACT_SEMANTICS1.name,
+            description: DATA_CONTRACT_SEMANTICS1.description,
+            enabled: true,
+            rule: JSON.stringify({
+              and: [{ '!=': [{ var: 'version' }, targetVersion] }],
+            }),
+          },
+        ],
+      },
+    });
+
+    await afterAction();
 
     await test.step(
       'Contract with is_not condition for version should passed',
       async () => {
-        await page.getByRole('tab', { name: 'Semantics' }).click();
+        await redirectToHomePage(page);
+        await table.visitEntityPage(page);
+        await navigateToContractTab(page);
 
-        await page.fill('#semantics_0_name', DATA_CONTRACT_SEMANTICS1.name);
-        await page.fill(
-          '#semantics_0_description',
-          DATA_CONTRACT_SEMANTICS1.description
-        );
+        await triggerContractValidation(page);
 
-        const ruleLocator = page.locator('.group').nth(0);
-        await selectOption(
-          page,
-          ruleLocator.locator('.group--field .ant-select'),
-          'Version',
-          true
-        );
-        await selectOption(
-          page,
-          ruleLocator.locator('.rule--operator .ant-select'),
-          DATA_CONTRACT_SEMANTIC_OPERATIONS.is_not
-        );
-
-        await ruleLocator
-          .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input')
-          .fill('0.2');
-
-        // save and trigger contract validation
-        await saveAndTriggerDataContractValidation(page, true);
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForSelector('[data-testid="loader"]', {
+          state: 'detached',
+        });
 
         await expect(
           page.getByTestId('contract-status-card-item-semantics-status')
@@ -1811,19 +1805,11 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     await test.step(
       'Contract with is_not condition for version should failed',
       async () => {
+        // Domain assignment bumps entity to targetVersion, making
+        // version != targetVersion evaluate to false → validation fails.
         await assignSingleSelectDomain(page, domain.responseData);
 
-        await page.getByTestId('manage-contract-actions').click();
-
-        await page.waitForSelector('.contract-action-dropdown', {
-          state: 'visible',
-        });
-
-        const runNowResponse = page.waitForResponse(
-          '/api/v1/dataContracts/*/validate'
-        );
-        await page.getByTestId('contract-run-now-button').click();
-        await runNowResponse;
+        await triggerContractValidation(page);
 
         await page.reload();
 
