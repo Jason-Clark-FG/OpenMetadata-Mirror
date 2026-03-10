@@ -363,10 +363,13 @@ public class RBACConditionEvaluator {
 
       for (EntityReference domain : user.getDomains()) {
         if (domain.getFullyQualifiedName() != null) {
-          // Prefix query on domain FQN matches both the domain itself and all its subdomains
+          String fqn = domain.getFullyQualifiedName();
+          // Exact match for the domain itself
+          domainQueries.add(queryBuilderFactory.termQuery("domains.fullyQualifiedName", fqn));
+          // Prefix match for subdomains only (e.g., "Engineering." matches "Engineering.Backend")
+          // Using trailing dot prevents matching sibling domains like "EngineeringOps"
           domainQueries.add(
-              queryBuilderFactory.prefixQuery(
-                  "domains.fullyQualifiedName", domain.getFullyQualifiedName()));
+              queryBuilderFactory.prefixQuery("domains.fullyQualifiedName", fqn + "."));
         } else {
           // Fallback to exact domain ID match if FQN is not available
           domainQueries.add(queryBuilderFactory.termQuery("domains.id", domain.getId().toString()));

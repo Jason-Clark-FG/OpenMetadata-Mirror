@@ -1538,10 +1538,16 @@ class ElasticSearchRBACConditionEvaluatorTest {
         generatedQuery.contains("Engineering"),
         "The query should contain 'Engineering' domain prefix.");
 
+    // Should have both term query (exact match) and prefix query (subdomains with trailing dot)
+    assertFieldExists(
+        jsonContext,
+        "$.bool.must[0].bool.should[?(@.term['domains.fullyQualifiedName'])]",
+        "Allow query should have exact domain term match in should clause");
+
     assertFieldExists(
         jsonContext,
         "$.bool.must[0].bool.should[?(@.prefix['domains.fullyQualifiedName'])]",
-        "Allow query should have domain prefix match in should clause");
+        "Allow query should have domain prefix match for subdomains in should clause");
 
     assertFieldExists(
         jsonContext,
@@ -1588,10 +1594,16 @@ class ElasticSearchRBACConditionEvaluatorTest {
 
     DocumentContext jsonContext = JsonPath.parse(generatedQuery);
 
+    // Should have both term query (exact match) and prefix query (subdomains with trailing dot)
+    assertFieldExists(
+        jsonContext,
+        "$.bool.should[?(@.term['domains.fullyQualifiedName'])]",
+        "Should have exact domain term match");
+
     assertFieldExists(
         jsonContext,
         "$.bool.should[?(@.prefix['domains.fullyQualifiedName'])]",
-        "Should match domain prefix");
+        "Should have domain prefix match for subdomains");
 
     assertFieldExists(
         jsonContext,
@@ -1648,13 +1660,19 @@ class ElasticSearchRBACConditionEvaluatorTest {
     DocumentContext jsonContext = JsonPath.parse(generatedQuery);
 
     assertTrue(
-        generatedQuery.contains("Engineering"),
-        "The query should contain 'Engineering' domain prefix.");
+        generatedQuery.contains("Engineering"), "The query should contain 'Engineering' domain.");
 
+    // Should have exact term match for the domain
     assertFieldExists(
         jsonContext,
-        "$.bool.should[?(@.prefix['domains.fullyQualifiedName']['value']=='Engineering')]",
-        "Should have prefix query for Engineering domain");
+        "$.bool.should[?(@.term['domains.fullyQualifiedName']['value']=='Engineering')]",
+        "Should have exact term query for Engineering domain");
+
+    // Should have prefix query with trailing dot for subdomains
+    assertFieldExists(
+        jsonContext,
+        "$.bool.should[?(@.prefix['domains.fullyQualifiedName']['value']=='Engineering.')]",
+        "Should have prefix query for Engineering subdomains with trailing dot");
 
     assertFalse(
         generatedQuery.contains("Finance"),
@@ -1710,22 +1728,24 @@ class ElasticSearchRBACConditionEvaluatorTest {
 
     DocumentContext jsonContext = JsonPath.parse(generatedQuery);
 
-    // Verify prefix query allows both "Engineering" and "Engineering.Backend"
+    // Should have exact term match for "Engineering"
     assertFieldExists(
         jsonContext,
-        "$.bool.should[?(@.prefix['domains.fullyQualifiedName']['value']=='Engineering')]",
-        "Should have prefix query for Engineering domain");
+        "$.bool.should[?(@.term['domains.fullyQualifiedName']['value']=='Engineering')]",
+        "Should have exact term query for Engineering domain");
+
+    // Should have prefix query with trailing dot for subdomains "Engineering."
+    // This matches "Engineering.Backend", "Engineering.Backend.API", etc.
+    // But NOT "EngineeringOps" (sibling domain)
+    assertFieldExists(
+        jsonContext,
+        "$.bool.should[?(@.prefix['domains.fullyQualifiedName']['value']=='Engineering.')]",
+        "Should have prefix query with trailing dot for subdomains");
 
     assertTrue(
         generatedQuery.contains("prefix"),
         "The query should use prefix query for subdomain matching.");
 
-    // The prefix query "Engineering" will match:
-    // - "Engineering" (exact match)
-    // - "Engineering.Backend" (subdomain)
-    // - "Engineering.Backend.API" (nested subdomain)
-    // But NOT:
-    // - "Finance" (different domain)
     assertTrue(
         generatedQuery.contains("domains.fullyQualifiedName"),
         "The query should use fullyQualifiedName for domain and subdomain matching.");
