@@ -11,6 +11,22 @@
  *  limitations under the License.
  */
 
+import {
+  GlossaryTermRelationType,
+  RelationCategory,
+} from '../../generated/configuration/glossaryTermRelationSettings';
+
+export const DEFAULT_GLOSSARY_TERM_RELATION_TYPES_FALLBACK: GlossaryTermRelationType[] =
+  [
+    {
+      name: 'relatedTo',
+      displayName: 'Related To',
+      description: 'General associative relationship',
+      isSymmetric: true,
+      category: RelationCategory.Associative,
+    },
+  ];
+
 export const RELATION_META: Record<
   string,
   { color: string; background: string; labelKey: string }
@@ -265,3 +281,55 @@ export const DATA_MODE_ASSET_CIRCLE_SIZE = 20;
 export const DATA_MODE_ASSET_LABEL_FONT_SIZE = 10;
 export const COMBO_HEADER_HEIGHT = 34;
 export const COMBO_LABEL_PADDING_LEFT = 13;
+
+export enum LayoutType {
+  Hierarchical = 'hierarchical',
+  Radial = 'radial',
+  Circular = 'circular',
+}
+
+export enum LayoutEngine {
+  Dagre = 'dagre',
+  Radial = 'radial',
+  Circular = 'circular',
+}
+
+export type LayoutEngineType = `${LayoutEngine}`;
+
+export function toLayoutEngineType(layout: LayoutType): LayoutEngineType {
+  if (layout === LayoutType.Hierarchical) {
+    return LayoutEngine.Dagre;
+  }
+
+  return layout as LayoutEngineType;
+}
+
+export const COMBO_PADDING = 48;
+export const COMBO_LABEL_PADDING_TOP_BOTTOM = 10;
+export const CROSS_GLOSSARY_EDGE_COLOR = '#CA8504';
+export const DATA_MODE_TERM_NODE_SIZE = 30;
+export const DATA_MODE_TERM_RADIUS = 15;
+export const NODE_BADGE_OFFSET_X = 8;
+export const NODE_BADGE_OFFSET_Y = -8;
+export const HIERARCHY_BADGE_OFFSET_X = 10;
+export const HIERARCHY_BADGE_OFFSET_Y = -18;
+
+export const NODE_LINE_WIDTH = 1;
+export const DATA_MODE_ASSET_LINE_WIDTH = 1.5;
+export const DATA_MODE_LABEL_OFFSET_Y = 10;
+export const DATA_MODE_TERM_LABEL_BG_RADIUS = 6;
+export const DATA_MODE_TERM_LABEL_FONT_WEIGHT = 600;
+export const DATA_MODE_ASSET_LABEL_FONT_WEIGHT = 500;
+export const COMBO_LINE_WIDTH = 0.8;
+export const COMBO_RADIUS = 10;
+export const COMBO_LABEL_FONT_SIZE = 12;
+export const COMBO_LABEL_FONT_WEIGHT = 500;
+export const EDGE_LINE_APPEND_WIDTH = 12;
+export const EDGE_LINE_WIDTH_DEFAULT = 1.5;
+export const EDGE_LINE_WIDTH_CROSS_GLOSSARY = 2;
+export const EDGE_LINE_WIDTH_HIGHLIGHTED = 2.5;
+export const CROSS_GLOSSARY_CURVE_OFFSET = 120;
+export const NODE_LABEL_FILL_FALLBACK = '#1e293b';
+export const NODE_SHADOW_COLOR_FALLBACK = 'rgba(0,0,0,0.12)';
+export const DATA_MODE_ASSET_FILL_OPACITY = '33';
+export const LABEL_TEXT_ALIGN_LEFT = 'left';

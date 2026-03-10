@@ -56,9 +56,11 @@ import GraphSettingsPanel from './GraphSettingsPanel';
 import NodeContextMenu from './NodeContextMenu';
 import OntologyControlButtons from './OntologyControlButtons';
 import {
+  LayoutType,
   NODE_BORDER_COLOR,
   NODE_FILL_DEFAULT,
   RELATION_COLORS,
+  toLayoutEngineType,
 } from './OntologyExplorer.constants';
 import {
   ExplorationMode,
@@ -101,7 +103,7 @@ const ASSET_NODE_TYPE = 'dataAsset';
 const ASSET_RELATION_TYPE = 'hasGlossaryTerm';
 
 const DEFAULT_SETTINGS: GraphSettings = {
-  layout: 'hierarchical',
+  layout: LayoutType.Hierarchical,
   showEdgeLabels: true,
 };
 
@@ -408,14 +410,15 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     if (
       !isHierarchyView ||
       !hierarchyGraphData ||
-      (settings.layout !== 'circular' && settings.layout !== 'radial')
+      (settings.layout !== LayoutType.Circular &&
+        settings.layout !== LayoutType.Radial)
     ) {
       return undefined;
     }
 
     return computeGlossaryGroupPositions(
       hierarchyGraphData.nodes,
-      settings.layout
+      toLayoutEngineType(settings.layout)
     );
   }, [isHierarchyView, hierarchyGraphData, settings.layout]);
 

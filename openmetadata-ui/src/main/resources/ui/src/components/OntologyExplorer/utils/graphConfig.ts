@@ -10,7 +10,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { NODE_PADDING_H, NODE_PADDING_V } from '../OntologyExplorer.constants';
+import {
+  LayoutEngine,
+  NODE_PADDING_H,
+  NODE_PADDING_V,
+  toLayoutEngineType,
+  type LayoutEngineType,
+  type LayoutType,
+} from '../OntologyExplorer.constants';
 import { LayoutConfig, LayoutNodeLike } from '../OntologyExplorer.interface';
 
 export const NODE_WIDTH = 120;
@@ -63,16 +70,22 @@ export const HIERARCHY_DAGRE_RANK_SEP = 200;
 const CROSS_GLOSSARY_LAYOUT_EXTRA = 90;
 
 export function getLayoutConfig(
-  layoutType: string,
+  layoutType: LayoutType | LayoutEngineType,
   nodeCount: number,
   hasHulls = false,
   focusNode?: string,
   isDataMode = false,
   isHierarchyMode = false
 ): LayoutConfig {
+  const engineType: LayoutEngineType =
+    layoutType === LayoutEngine.Dagre ||
+    layoutType === LayoutEngine.Radial ||
+    layoutType === LayoutEngine.Circular
+      ? layoutType
+      : toLayoutEngineType(layoutType as LayoutType);
   const baseNodeSize = (d?: LayoutNodeLike) => getNodeSize(d);
 
-  if (layoutType === 'dagre') {
+  if (engineType === LayoutEngine.Dagre) {
     let nodesep = hasHulls
       ? COMBO_PADDING * 2 + HULL_GAP + CROSS_GLOSSARY_LAYOUT_EXTRA
       : DAGRE_NODE_SEP;
@@ -86,7 +99,7 @@ export function getLayoutConfig(
     }
 
     return {
-      type: 'dagre',
+      type: LayoutEngine.Dagre,
       animation: false,
       rankdir: 'TB',
       nodesep,
@@ -96,9 +109,9 @@ export function getLayoutConfig(
     };
   }
 
-  if (layoutType === 'radial') {
+  if (engineType === LayoutEngine.Radial) {
     return {
-      type: 'radial',
+      type: LayoutEngine.Radial,
       animation: false,
       ...(focusNode && !isDataMode && { focusNode }),
       unitRadius: isDataMode ? 220 : nodeCount <= 2 ? MIN_LINK_DISTANCE : 150,
@@ -112,9 +125,9 @@ export function getLayoutConfig(
     };
   }
 
-  if (layoutType === 'circular') {
+  if (engineType === LayoutEngine.Circular) {
     return {
-      type: 'circular',
+      type: LayoutEngine.Circular,
       animation: false,
       nodeSize: baseNodeSize,
       nodeSpacing: MIN_NODE_SPACING,
@@ -122,6 +135,6 @@ export function getLayoutConfig(
   }
 
   return {
-    type: layoutType as 'dagre' | 'radial' | 'circular',
+    type: engineType,
   };
 }

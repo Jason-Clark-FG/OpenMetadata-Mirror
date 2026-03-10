@@ -16,20 +16,15 @@ import {
   ButtonUtility,
   Dropdown,
   Toggle,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { ChevronDown, Settings01, X } from '@untitledui/icons';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LayoutType } from './OntologyExplorer.constants';
 import {
   GraphSettings,
   GraphSettingsPanelProps,
-  LayoutAlgorithm,
 } from './OntologyExplorer.interface';
 
 const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
@@ -38,25 +33,9 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current?.contains(e.target as Node)) {
-        return;
-      }
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
 
   const handleLayoutChange = useCallback(
-    (value: LayoutAlgorithm) => {
+    (value: LayoutType) => {
       onSettingsChange({ ...settings, layout: value });
     },
     [settings, onSettingsChange]
@@ -71,19 +50,22 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
 
   const layoutItems = useMemo(
     () => [
-      { id: 'hierarchical' as const, label: t('label.hierarchical') },
-      { id: 'radial' as const, label: t('label.radial') },
-      { id: 'circular' as const, label: t('label.circular') },
+      { id: LayoutType.Hierarchical, label: t('label.hierarchical') },
+      { id: LayoutType.Radial, label: t('label.radial') },
+      { id: LayoutType.Circular, label: t('label.circular') },
     ],
     [t]
   );
 
   const popoverContent = (
     <div className="tw:w-72 tw:min-w-0 tw:rounded-lg">
-      <div className="tw:flex tw:items-center tw:justify-between tw:shrink-0  tw:border-b tw:border-gray-200">
-        <span className="tw:text-sm tw:font-semibold tw:text-gray-900 tw:py-4">
+      <div className="tw:flex tw:items-center tw:justify-between tw:shrink-0 tw:border-b tw:border-gray-200">
+        <Typography
+          as="span"
+          className="tw:text-sm tw:font-semibold tw:text-gray-900 tw:py-4"
+        >
           {t('label.graph-settings')}
-        </span>
+        </Typography>
         <ButtonUtility
           color="tertiary"
           data-testid="graph-settings-close"
@@ -95,9 +77,12 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
       </div>
       <div className="tw:space-y-3">
         <div className="tw:space-y-1.5 tw:w-full tw:pt-4">
-          <div className="tw:text-xs tw:font-semibold tw:text-gray-500">
+          <Typography
+            as="span"
+            className="tw:text-xs tw:font-semibold tw:text-gray-500"
+          >
             {t('label.layout')}
-          </div>
+          </Typography>
           <div className="tw:w-full">
             <Dropdown.Root>
               <Button
@@ -141,24 +126,20 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
   );
 
   return (
-    <div className="tw:relative" ref={panelRef}>
+    <Dropdown.Root isOpen={open} onOpenChange={setOpen}>
       <Button
         color="secondary"
         data-testid="ontology-graph-settings"
         iconLeading={<Settings01 height={20} width={20} />}
         size="sm"
-        onClick={() => setOpen((prev) => !prev)}
       />
-      {open && (
-        <dialog
-          open
-          aria-label={t('label.graph-settings')}
-          className="tw:absolute tw:right-0 tw:bottom-full tw:z-50 tw:mb-1 tw:rounded-lg tw:border-0 tw:bg-white tw:py-0 tw:shadow-lg tw:ring-1 tw:ring-gray-200 tw:px-4"
-        >
-          {popoverContent}
-        </dialog>
-      )}
-    </div>
+      <Dropdown.Popover
+        aria-label={t('label.graph-settings')}
+        className="tw:absolute tw:right-0 tw:bottom-full tw:z-50 tw:mb-1 tw:rounded-lg tw:border-0 tw:bg-white tw:py-0 tw:shadow-lg tw:ring-1 tw:ring-gray-200 tw:px-4"
+      >
+        {popoverContent}
+      </Dropdown.Popover>
+    </Dropdown.Root>
   );
 };
 

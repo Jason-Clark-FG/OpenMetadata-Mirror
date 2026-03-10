@@ -13,23 +13,14 @@
 import { ComboData, EdgeData, NodeData } from '@antv/g6';
 import { useCallback, useMemo } from 'react';
 import {
-  COMBO_FILL_DEFAULT,
-  COMBO_LABEL_PADDING_LEFT,
+  CROSS_GLOSSARY_CURVE_OFFSET,
+  CROSS_GLOSSARY_EDGE_COLOR,
   DATA_MODE_ASSET_CIRCLE_SIZE,
-  DATA_MODE_ASSET_LABEL_FONT_SIZE,
+  DATA_MODE_TERM_NODE_SIZE,
+  EDGE_LINE_APPEND_WIDTH,
   EDGE_STROKE_COLOR,
   NODE_BORDER_COLOR,
-  NODE_BORDER_RADIUS,
-  NODE_FILL_DEFAULT,
-  NODE_LABEL_FILL,
-  NODE_LABEL_FONT_SIZE,
-  NODE_LABEL_FONT_WEIGHT,
-  NODE_LABEL_PADDING,
-  NODE_SHADOW_BLUR,
-  NODE_SHADOW_COLOR,
-  NODE_SHADOW_OFFSET_Y,
   RELATION_COLORS,
-  TERM_LABEL_BG_PADDING,
 } from '../OntologyExplorer.constants';
 import {
   BuildGraphDataProps,
@@ -43,21 +34,18 @@ import {
   NODE_HEIGHT,
 } from '../utils/graphConfig';
 import {
+  buildComboStyle,
+  buildDataModeAssetNodeStyle,
+  buildDataModeTermNodeStyle,
+  buildDefaultRectNodeStyle,
   formatRelationLabel,
   getCanvasColor,
   getEdgeRelationLabelStyle,
-  LABEL_PLACEMENT_BOTTOM,
-  LABEL_PLACEMENT_CENTER,
-  LABEL_PLACEMENT_TOP_LEFT,
 } from '../utils/graphStyles';
 import {
   computeDataModePositions,
   computeGlossaryGroupPositions,
 } from '../utils/layoutCalculations';
-
-const COMBO_PADDING = 48;
-const COMBO_LABEL_PADDING_TOP_BOTTOM = 10;
-const CROSS_GLOSSARY_EDGE_COLOR = '#CA8504';
 
 const INVERSE_RELATION_PAIRS: Record<string, string> = {
   broader: 'narrower',
@@ -389,24 +377,12 @@ export function useGraphDataBuilder({
               ? node.glossaryName ?? node.originalGlossary
               : undefined,
           },
-          style: {
-            size: [effectiveWidth, height],
-            fill: NODE_FILL_DEFAULT,
-            stroke: NODE_BORDER_COLOR,
-            lineWidth: 1,
-            radius: NODE_BORDER_RADIUS,
-            icon: false,
-            labelText: label,
-            labelFill: getCanvasColor(NODE_LABEL_FILL, '#1e293b'),
-            labelFontSize: NODE_LABEL_FONT_SIZE,
-            labelFontWeight: NODE_LABEL_FONT_WEIGHT,
-            labelPlacement: LABEL_PLACEMENT_CENTER,
-            labelPadding: NODE_LABEL_PADDING,
-            shadowColor: getCanvasColor(NODE_SHADOW_COLOR, 'rgba(0,0,0,0.12)'),
-            shadowBlur: NODE_SHADOW_BLUR,
-            shadowOffsetY: NODE_SHADOW_OFFSET_Y,
-            ...(pos && { x: pos.x, y: pos.y }),
-          },
+          style: buildDefaultRectNodeStyle(
+            getCanvasColor,
+            label,
+            [effectiveWidth, height],
+            pos
+          ),
           combo: comboId,
         };
       }
@@ -431,29 +407,17 @@ export function useGraphDataBuilder({
             nodeWidth,
             glossaryId: node.glossaryId ?? '',
           },
-          style: {
-            size: [sz, sz],
-            fill: getCanvasColor(assetColor, '#e2e8f0') + '33',
-            stroke: getCanvasColor(assetColor, '#e2e8f0'),
-            lineWidth: 1.5,
-            radius: sz / 2,
-            icon: false,
-            labelText: label,
-            labelFill: getCanvasColor(NODE_LABEL_FILL, '#1e293b'),
-            labelFontSize: DATA_MODE_ASSET_LABEL_FONT_SIZE,
-            labelFontWeight: 500,
-            labelPlacement: LABEL_PLACEMENT_BOTTOM,
-            labelOffsetY: 10,
-            shadowColor: getCanvasColor(NODE_SHADOW_COLOR, 'rgba(0,0,0,0.12)'),
-            shadowBlur: NODE_SHADOW_BLUR,
-            shadowOffsetY: NODE_SHADOW_OFFSET_Y,
-            ...(pos && { x: pos.x, y: pos.y }),
-          },
+          style: buildDataModeAssetNodeStyle(
+            getCanvasColor,
+            label,
+            assetColor,
+            pos
+          ),
         };
       }
 
       if (isInDataMode) {
-        const sz = 30;
+        const sz = DATA_MODE_TERM_NODE_SIZE;
         const assetCount = termAssetCountMap.get(node.id) ?? 0;
 
         return {
@@ -470,29 +434,7 @@ export function useGraphDataBuilder({
             glossaryId: node.glossaryId ?? '',
             assetCount,
           },
-          style: {
-            size: [sz, sz],
-            fill: getCanvasColor(color, '#3b82f6'),
-            stroke: 'none',
-            lineWidth: 0,
-            radius: 15,
-            icon: false,
-            labelText: label,
-            labelFill: getCanvasColor('var(--color-white)', '#ffffff'), // previously #ffffff
-            labelFontSize: NODE_LABEL_FONT_SIZE,
-            labelFontWeight: 600,
-            labelPlacement: LABEL_PLACEMENT_BOTTOM,
-            labelOffsetY: 10,
-            labelBackground: true,
-            labelBackgroundFill: getCanvasColor(color, '#3b82f6'),
-            labelBackgroundStroke: 'none',
-            labelBackgroundRadius: 6,
-            labelPadding: TERM_LABEL_BG_PADDING,
-            shadowColor: getCanvasColor(NODE_SHADOW_COLOR, 'rgba(0,0,0,0.12)'),
-            shadowBlur: NODE_SHADOW_BLUR,
-            shadowOffsetY: NODE_SHADOW_OFFSET_Y,
-            ...(pos && { x: pos.x, y: pos.y }),
-          },
+          style: buildDataModeTermNodeStyle(getCanvasColor, label, color, pos),
         };
       }
 
@@ -509,24 +451,12 @@ export function useGraphDataBuilder({
           nodeWidth,
           glossaryId: node.glossaryId ?? '',
         },
-        style: {
-          size: [nodeWidth, height],
-          fill: NODE_FILL_DEFAULT,
-          stroke: NODE_BORDER_COLOR,
-          lineWidth: 1,
-          radius: NODE_BORDER_RADIUS,
-          icon: false,
-          labelText: label,
-          labelFill: getCanvasColor(NODE_LABEL_FILL, '#1e293b'),
-          labelFontSize: NODE_LABEL_FONT_SIZE,
-          labelFontWeight: NODE_LABEL_FONT_WEIGHT,
-          labelPlacement: LABEL_PLACEMENT_CENTER,
-          labelPadding: NODE_LABEL_PADDING,
-          shadowColor: getCanvasColor(NODE_SHADOW_COLOR, 'rgba(0,0,0,0.12)'),
-          shadowBlur: NODE_SHADOW_BLUR,
-          shadowOffsetY: NODE_SHADOW_OFFSET_Y,
-          ...(pos && { x: pos.x, y: pos.y }),
-        },
+        style: buildDefaultRectNodeStyle(
+          getCanvasColor,
+          label,
+          [nodeWidth, height],
+          pos
+        ),
         ...(node.glossaryId && {
           combo: `glossary-group-${node.glossaryId}`,
         }),
@@ -594,13 +524,15 @@ export function useGraphDataBuilder({
       const baseEdgeStyle = {
         stroke: edgeColor,
         lineWidth: isCrossTeam ? 2 : isHighlighted || isClickedEdge ? 2.5 : 1.5,
-        lineAppendWidth: 12,
+        lineAppendWidth: EDGE_LINE_APPEND_WIDTH,
         opacity: 1,
         endArrow: explorationMode !== 'data',
         ...(labelText &&
           getEdgeRelationLabelStyle(labelText, edge.relationType)),
       };
-      const crossGlossaryStyle = isCrossTeam ? { curveOffset: 120 } : {};
+      const crossGlossaryStyle = isCrossTeam
+        ? { curveOffset: CROSS_GLOSSARY_CURVE_OFFSET }
+        : {};
 
       return {
         id: edgeId,
@@ -631,22 +563,7 @@ export function useGraphDataBuilder({
         combos.push({
           id: combo.id,
           data: { glossaryName: combo.label, color },
-          style: {
-            fill: COMBO_FILL_DEFAULT,
-            stroke: color,
-            lineWidth: 0.8,
-            radius: 10,
-            padding: COMBO_PADDING,
-            label: true,
-            labelText: combo.label,
-            labelFill: color,
-            labelFontSize: 12,
-            labelFontWeight: 500,
-            labelPlacement: LABEL_PLACEMENT_TOP_LEFT,
-            labelOffsetX: COMBO_LABEL_PADDING_LEFT,
-            labelOffsetY: COMBO_LABEL_PADDING_TOP_BOTTOM,
-            labelTextAlign: 'left',
-          },
+          style: buildComboStyle(combo.label, color),
         });
       });
     } else if (explorationMode !== 'data') {
@@ -667,22 +584,7 @@ export function useGraphDataBuilder({
         combos.push({
           id: `glossary-group-${glossaryId}`,
           data: { glossaryName: name, color },
-          style: {
-            fill: COMBO_FILL_DEFAULT,
-            stroke: color,
-            lineWidth: 0.8,
-            radius: 10,
-            padding: COMBO_PADDING,
-            label: true,
-            labelText: name,
-            labelFill: color,
-            labelFontSize: 12,
-            labelFontWeight: 500,
-            labelPlacement: LABEL_PLACEMENT_TOP_LEFT,
-            labelOffsetX: COMBO_LABEL_PADDING_LEFT,
-            labelOffsetY: COMBO_LABEL_PADDING_TOP_BOTTOM,
-            labelTextAlign: 'left',
-          },
+          style: buildComboStyle(name, color),
         });
       });
     }

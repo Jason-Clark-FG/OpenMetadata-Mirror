@@ -20,6 +20,11 @@ import {
 import { useGraphDataBuilder } from './hooks/useGraphData';
 import { useOntologyGraph } from './hooks/useOntologyGraph';
 import {
+  LayoutEngine,
+  toLayoutEngineType,
+  type LayoutEngineType,
+} from './OntologyExplorer.constants';
+import {
   OntologyGraphHandle,
   OntologyGraphProps,
 } from './OntologyExplorer.interface';
@@ -48,21 +53,12 @@ const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(
 
     const [clickedEdgeId, setClickedEdgeId] = useState<string | null>(null);
 
-    const getLayoutType = useCallback((): string => {
+    const getLayoutType = useCallback((): LayoutEngineType => {
       if (explorationMode === 'data') {
-        return 'radial';
+        return LayoutEngine.Radial;
       }
-      switch (settings.layout) {
-        case 'hierarchical':
-          return 'dagre';
-        case 'radial':
-          return 'radial';
-        case 'circular':
-          return 'circular';
-        case 'force':
-        default:
-          return explorationMode === 'hierarchy' ? 'dagre' : 'force';
-      }
+
+      return toLayoutEngineType(settings.layout);
     }, [settings.layout, explorationMode]);
 
     const layoutType = getLayoutType();

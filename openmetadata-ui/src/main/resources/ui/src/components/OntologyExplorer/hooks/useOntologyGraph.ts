@@ -21,30 +21,30 @@ import {
 } from '@antv/g6';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  DATA_MODE_ASSET_CIRCLE_SIZE,
-  DATA_MODE_ASSET_LABEL_FONT_SIZE,
   DEFAULT_ZOOM,
+  EDGE_LINE_APPEND_WIDTH,
+  EDGE_LINE_WIDTH_CROSS_GLOSSARY,
+  EDGE_LINE_WIDTH_DEFAULT,
+  EDGE_LINE_WIDTH_HIGHLIGHTED,
   EDGE_STROKE_COLOR,
+  HIERARCHY_BADGE_OFFSET_X,
+  HIERARCHY_BADGE_OFFSET_Y,
+  LayoutEngine,
   MAX_ZOOM,
   MIN_ZOOM,
+  NODE_BADGE_OFFSET_X,
+  NODE_BADGE_OFFSET_Y,
   NODE_BORDER_COLOR,
-  NODE_BORDER_RADIUS,
-  NODE_FILL_DEFAULT,
-  NODE_LABEL_FILL,
-  NODE_LABEL_FONT_SIZE,
-  NODE_LABEL_FONT_WEIGHT,
-  NODE_LABEL_PADDING,
-  NODE_SHADOW_BLUR,
-  NODE_SHADOW_COLOR,
-  NODE_SHADOW_OFFSET_Y,
-  TERM_LABEL_BG_PADDING,
+  type LayoutEngineType,
 } from '../OntologyExplorer.constants';
 import { GraphSettings, OntologyNode } from '../OntologyExplorer.interface';
 import { getLayoutConfig } from '../utils/graphConfig';
 import {
+  buildComboStyle,
+  buildDataModeAssetNodeStyle,
+  buildDataModeTermNodeStyle,
+  buildDefaultRectNodeStyle,
   getCanvasColor,
-  LABEL_PLACEMENT_BOTTOM,
-  LABEL_PLACEMENT_CENTER,
 } from '../utils/graphStyles';
 
 /** Zoom-out factor applied after fitView so the graph always shows a zoomed-out view in every mode/layout. */
@@ -78,7 +78,7 @@ interface UseOntologyGraphProps {
   mergedEdgesList: Array<{ from: string; to: string; relationType: string }>;
   explorationMode: 'model' | 'data' | 'hierarchy';
   settings: GraphSettings;
-  layoutType: string;
+  layoutType: LayoutEngineType;
   focusNodeId?: string | null;
   selectedNodeId?: string | null;
   dataSignature?: string;
@@ -156,7 +156,8 @@ export function useOntologyGraph({
   const hasBakedPositions = useMemo(() => {
     const hierarchyWithBakedLayout =
       explorationMode === 'hierarchy' &&
-      (layoutType === 'circular' || layoutType === 'radial');
+      (layoutType === LayoutEngine.Circular ||
+        layoutType === LayoutEngine.Radial);
     if (hierarchyWithBakedLayout) {
       return true;
     }
@@ -203,24 +204,11 @@ export function useOntologyGraph({
 
           if (isDataMd && isAsset) {
             const ac = assetColor ?? NODE_BORDER_COLOR;
+            const label = d?.label ?? datum.id;
 
             return {
-              size: [DATA_MODE_ASSET_CIRCLE_SIZE, DATA_MODE_ASSET_CIRCLE_SIZE],
+              ...buildDataModeAssetNodeStyle(getCanvasColor, label, ac),
               zIndex: 2,
-              fill: ac + '33',
-              stroke: ac,
-              lineWidth: 1.5,
-              radius: DATA_MODE_ASSET_CIRCLE_SIZE / 2,
-              icon: false,
-              labelText: d?.label ?? datum.id,
-              labelFill: NODE_LABEL_FILL,
-              labelFontSize: DATA_MODE_ASSET_LABEL_FONT_SIZE,
-              labelFontWeight: 500,
-              labelPlacement: LABEL_PLACEMENT_BOTTOM,
-              labelOffsetY: 10,
-              shadowColor: NODE_SHADOW_COLOR,
-              shadowBlur: NODE_SHADOW_BLUR,
-              shadowOffsetY: NODE_SHADOW_OFFSET_Y,
             };
           }
 
@@ -228,34 +216,19 @@ export function useOntologyGraph({
             const tc = nodeColor ?? NODE_BORDER_COLOR;
             const assetCount = d?.assetCount ?? 0;
             const hasAssetBadge = assetCount > 0;
+            const label = d?.label ?? datum.id;
 
             return {
-              size: [30, 30],
+              ...buildDataModeTermNodeStyle(getCanvasColor, label, tc),
               zIndex: 2,
-              fill: tc,
-              stroke: 'none',
-              lineWidth: 0,
-              radius: 15,
-              icon: false,
-              labelText: d?.label ?? datum.id,
-              labelFill: '#ffffff',
-              labelFontSize: NODE_LABEL_FONT_SIZE,
-              labelFontWeight: 600,
-              labelPlacement: LABEL_PLACEMENT_BOTTOM,
-              labelOffsetY: 10,
-              labelBackground: true,
-              labelBackgroundFill: tc,
-              labelBackgroundStroke: 'none',
-              labelBackgroundRadius: 6,
-              labelPadding: TERM_LABEL_BG_PADDING,
               badge: hasAssetBadge,
               badges: hasAssetBadge
                 ? [
                     {
                       text: String(assetCount),
                       placement: 'top-right',
-                      offsetX: 8,
-                      offsetY: -8,
+                      offsetX: NODE_BADGE_OFFSET_X,
+                      offsetY: NODE_BADGE_OFFSET_Y,
                       textAlign: 'center',
                       fontSize: 10,
                       fontWeight: 600,
@@ -269,9 +242,6 @@ export function useOntologyGraph({
                     },
                   ]
                 : [],
-              shadowColor: NODE_SHADOW_COLOR,
-              shadowBlur: NODE_SHADOW_BLUR,
-              shadowOffsetY: NODE_SHADOW_OFFSET_Y,
             };
           }
 
@@ -285,28 +255,23 @@ export function useOntologyGraph({
           const nodeBorderColor = hasHierarchyBadge
             ? badgeColor
             : NODE_BORDER_COLOR;
+          const size = (datum.style?.size as [number, number] | undefined) ?? [
+            200, 40,
+          ];
+          const label = d?.label ?? datum.id;
 
           return {
+            ...buildDefaultRectNodeStyle(getCanvasColor, label, size),
             zIndex: 2,
-            fill: NODE_FILL_DEFAULT,
             stroke: nodeBorderColor,
-            lineWidth: 1,
-            radius: NODE_BORDER_RADIUS,
-            icon: false,
-            labelText: d?.label ?? datum.id,
-            labelFill: NODE_LABEL_FILL,
-            labelFontSize: NODE_LABEL_FONT_SIZE,
-            labelFontWeight: NODE_LABEL_FONT_WEIGHT,
-            labelPlacement: LABEL_PLACEMENT_CENTER,
-            labelPadding: NODE_LABEL_PADDING,
             badge: hasHierarchyBadge,
             badges: hasHierarchyBadge
               ? [
                   {
                     text: String(d.hierarchyBadge ?? ''),
                     placement: 'top-left',
-                    offsetX: 10,
-                    offsetY: -18,
+                    offsetX: HIERARCHY_BADGE_OFFSET_X,
+                    offsetY: HIERARCHY_BADGE_OFFSET_Y,
                     textAlign: 'left',
                     fontSize: 10,
                     fontWeight: 600,
@@ -320,9 +285,6 @@ export function useOntologyGraph({
                   },
                 ]
               : [],
-            shadowColor: NODE_SHADOW_COLOR,
-            shadowBlur: NODE_SHADOW_BLUR,
-            shadowOffsetY: NODE_SHADOW_OFFSET_Y,
           };
         },
       },
@@ -338,18 +300,18 @@ export function useOntologyGraph({
           const isClickedEdge = d?.isClickedEdge ?? false;
           const edgeColor = d?.edgeColor ?? EDGE_STROKE_COLOR;
 
-          let edgeLineWidth = 1.5;
+          let edgeLineWidth = EDGE_LINE_WIDTH_DEFAULT;
           if (isCrossTeam) {
-            edgeLineWidth = 2;
+            edgeLineWidth = EDGE_LINE_WIDTH_CROSS_GLOSSARY;
           } else if (isHighlighted || isClickedEdge) {
-            edgeLineWidth = 2.5;
+            edgeLineWidth = EDGE_LINE_WIDTH_HIGHLIGHTED;
           }
 
           const base = {
             zIndex: 1,
             stroke: edgeColor,
             lineWidth: edgeLineWidth,
-            lineAppendWidth: 12,
+            lineAppendWidth: EDGE_LINE_APPEND_WIDTH,
             opacity: 1,
             endArrow: explorationMode !== 'data',
           };
@@ -377,21 +339,8 @@ export function useOntologyGraph({
           const glossaryName = d?.glossaryName ?? '';
 
           return {
+            ...buildComboStyle(glossaryName, color),
             zIndex: 0,
-            fill: '#ffffff',
-            stroke: color,
-            lineWidth: 0.8,
-            radius: 10,
-            padding: 48,
-            label: true,
-            labelText: glossaryName,
-            labelFill: color,
-            labelFontSize: 12,
-            labelFontWeight: 500,
-            labelPlacement: 'top-left',
-            labelOffsetX: 13,
-            labelOffsetY: 10,
-            labelTextAlign: 'left',
           };
         },
       },
@@ -399,7 +348,7 @@ export function useOntologyGraph({
         layoutType,
         inputNodes.length,
         true,
-        layoutType === 'radial'
+        layoutType === LayoutEngine.Radial
           ? focusNodeId ?? selectedNodeId ?? undefined
           : undefined,
         explorationMode === 'data',
@@ -535,7 +484,9 @@ export function useOntologyGraph({
         .map((e) => `${e.from}>${e.to}:${e.relationType}`)
         .join(','),
       layoutType,
-      layoutType === 'radial' ? focusNodeId ?? selectedNodeId ?? '' : '',
+      layoutType === LayoutEngine.Radial
+        ? focusNodeId ?? selectedNodeId ?? ''
+        : '',
       explorationMode,
     ].join('||');
 

@@ -18,8 +18,25 @@ import {
   register,
 } from '@antv/g6';
 import {
+  COMBO_FILL_DEFAULT,
   COMBO_HEADER_HEIGHT,
+  COMBO_LABEL_FONT_SIZE,
+  COMBO_LABEL_FONT_WEIGHT,
   COMBO_LABEL_PADDING_LEFT,
+  COMBO_LABEL_PADDING_TOP_BOTTOM,
+  COMBO_LINE_WIDTH,
+  COMBO_PADDING,
+  COMBO_RADIUS,
+  DATA_MODE_ASSET_CIRCLE_SIZE,
+  DATA_MODE_ASSET_FILL_OPACITY,
+  DATA_MODE_ASSET_LABEL_FONT_SIZE,
+  DATA_MODE_ASSET_LABEL_FONT_WEIGHT,
+  DATA_MODE_ASSET_LINE_WIDTH,
+  DATA_MODE_LABEL_OFFSET_Y,
+  DATA_MODE_TERM_LABEL_BG_RADIUS,
+  DATA_MODE_TERM_LABEL_FONT_WEIGHT,
+  DATA_MODE_TERM_NODE_SIZE,
+  DATA_MODE_TERM_RADIUS,
   EDGE_LABEL_BG_FILL,
   EDGE_LABEL_BG_RADIUS,
   EDGE_LABEL_BG_SHADOW_BLUR,
@@ -32,7 +49,22 @@ import {
   EDGE_LABEL_FONT_WEIGHT,
   EDGE_LABEL_LETTER_SPACING,
   EDGE_LABEL_LINE_HEIGHT,
+  LABEL_TEXT_ALIGN_LEFT,
+  NODE_BORDER_COLOR,
+  NODE_BORDER_RADIUS,
+  NODE_FILL_DEFAULT,
+  NODE_LABEL_FILL,
+  NODE_LABEL_FILL_FALLBACK,
+  NODE_LABEL_FONT_SIZE,
+  NODE_LABEL_FONT_WEIGHT,
+  NODE_LABEL_PADDING,
+  NODE_LINE_WIDTH,
+  NODE_SHADOW_BLUR,
+  NODE_SHADOW_COLOR,
+  NODE_SHADOW_COLOR_FALLBACK,
+  NODE_SHADOW_OFFSET_Y,
   RELATION_META,
+  TERM_LABEL_BG_PADDING,
 } from '../OntologyExplorer.constants';
 
 const cssColorCache = new Map<string, string>();
@@ -227,5 +259,124 @@ export function getEdgeRelationLabelStyle(
     labelAutoRotate: false,
     labelOffsetY: EDGE_LABEL_OFFSET_Y,
     labelMaxWidth: 120,
+  };
+}
+
+export interface NodeStylePosition {
+  x: number;
+  y: number;
+}
+
+export function buildDefaultRectNodeStyle(
+  getColor: (cssVar: string, fallback: string) => string,
+  label: string,
+  size: [number, number],
+  pos?: NodeStylePosition
+): Record<string, unknown> {
+  return {
+    size,
+    fill: NODE_FILL_DEFAULT,
+    stroke: NODE_BORDER_COLOR,
+    lineWidth: NODE_LINE_WIDTH,
+    radius: NODE_BORDER_RADIUS,
+    icon: false,
+    labelText: label,
+    labelFill: getColor(NODE_LABEL_FILL, NODE_LABEL_FILL_FALLBACK),
+    labelFontSize: NODE_LABEL_FONT_SIZE,
+    labelFontWeight: NODE_LABEL_FONT_WEIGHT,
+    labelPlacement: LABEL_PLACEMENT_CENTER,
+    labelPadding: NODE_LABEL_PADDING,
+    shadowColor: getColor(NODE_SHADOW_COLOR, NODE_SHADOW_COLOR_FALLBACK),
+    shadowBlur: NODE_SHADOW_BLUR,
+    shadowOffsetY: NODE_SHADOW_OFFSET_Y,
+    ...(pos && { x: pos.x, y: pos.y }),
+  };
+}
+
+export function buildDataModeAssetNodeStyle(
+  getColor: (cssVar: string, fallback: string) => string,
+  label: string,
+  assetColor: string,
+  pos?: NodeStylePosition
+): Record<string, unknown> {
+  const sz = DATA_MODE_ASSET_CIRCLE_SIZE;
+  const resolvedFill =
+    getColor(assetColor, '#e2e8f0') + DATA_MODE_ASSET_FILL_OPACITY;
+  const resolvedStroke = getColor(assetColor, '#e2e8f0');
+
+  return {
+    size: [sz, sz],
+    fill: resolvedFill,
+    stroke: resolvedStroke,
+    lineWidth: DATA_MODE_ASSET_LINE_WIDTH,
+    radius: sz / 2,
+    icon: false,
+    labelText: label,
+    labelFill: getColor(NODE_LABEL_FILL, NODE_LABEL_FILL_FALLBACK),
+    labelFontSize: DATA_MODE_ASSET_LABEL_FONT_SIZE,
+    labelFontWeight: DATA_MODE_ASSET_LABEL_FONT_WEIGHT,
+    labelPlacement: LABEL_PLACEMENT_BOTTOM,
+    labelOffsetY: DATA_MODE_LABEL_OFFSET_Y,
+    shadowColor: getColor(NODE_SHADOW_COLOR, NODE_SHADOW_COLOR_FALLBACK),
+    shadowBlur: NODE_SHADOW_BLUR,
+    shadowOffsetY: NODE_SHADOW_OFFSET_Y,
+    ...(pos && { x: pos.x, y: pos.y }),
+  };
+}
+
+export function buildDataModeTermNodeStyle(
+  getColor: (cssVar: string, fallback: string) => string,
+  label: string,
+  color: string,
+  pos?: NodeStylePosition
+): Record<string, unknown> {
+  const sz = DATA_MODE_TERM_NODE_SIZE;
+  const resolvedColor = getColor(color, '#3b82f6');
+  const resolvedWhite = getColor('var(--color-white)', '#ffffff');
+
+  return {
+    size: [sz, sz],
+    fill: resolvedColor,
+    stroke: 'none',
+    lineWidth: 0,
+    radius: DATA_MODE_TERM_RADIUS,
+    icon: false,
+    labelText: label,
+    labelFill: resolvedWhite,
+    labelFontSize: NODE_LABEL_FONT_SIZE,
+    labelFontWeight: DATA_MODE_TERM_LABEL_FONT_WEIGHT,
+    labelPlacement: LABEL_PLACEMENT_BOTTOM,
+    labelOffsetY: DATA_MODE_LABEL_OFFSET_Y,
+    labelBackground: true,
+    labelBackgroundFill: resolvedColor,
+    labelBackgroundStroke: 'none',
+    labelBackgroundRadius: DATA_MODE_TERM_LABEL_BG_RADIUS,
+    labelPadding: TERM_LABEL_BG_PADDING,
+    shadowColor: getColor(NODE_SHADOW_COLOR, NODE_SHADOW_COLOR_FALLBACK),
+    shadowBlur: NODE_SHADOW_BLUR,
+    shadowOffsetY: NODE_SHADOW_OFFSET_Y,
+    ...(pos && { x: pos.x, y: pos.y }),
+  };
+}
+
+export function buildComboStyle(
+  labelText: string,
+  color: string
+): Record<string, unknown> {
+  return {
+    fill: COMBO_FILL_DEFAULT,
+    stroke: color,
+    lineWidth: COMBO_LINE_WIDTH,
+    radius: COMBO_RADIUS,
+    padding: COMBO_PADDING,
+    label: true,
+    labelText,
+    labelFill: color,
+    labelFontSize: COMBO_LABEL_FONT_SIZE,
+    labelFontWeight: COMBO_LABEL_FONT_WEIGHT,
+    labelPlacement: LABEL_PLACEMENT_TOP_LEFT,
+    labelOffsetX: COMBO_LABEL_PADDING_LEFT,
+    labelOffsetY: COMBO_LABEL_PADDING_TOP_BOTTOM,
+    labelTextAlign: LABEL_TEXT_ALIGN_LEFT,
   };
 }

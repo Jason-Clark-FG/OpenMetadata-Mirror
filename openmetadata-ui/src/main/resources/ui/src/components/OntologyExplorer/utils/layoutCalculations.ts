@@ -14,6 +14,8 @@ import {
   COMBO_HEADER_HEIGHT,
   DATA_MODE_ASSET_CIRCLE_SIZE,
   DATA_MODE_ASSET_LABEL_FONT_SIZE,
+  LayoutEngine,
+  type LayoutEngineType,
 } from '../OntologyExplorer.constants';
 import {
   HierarchyGraphResult,
@@ -51,7 +53,7 @@ const CIRCLE_NODE_SPACING = 80;
 
 export function computeGlossaryGroupPositions(
   inputNodes: OntologyNode[],
-  layoutType: string
+  layoutType: LayoutEngineType
 ): Record<string, { x: number; y: number }> {
   const groupMap = new Map<string, OntologyNode[]>();
   const ungrouped: OntologyNode[] = [];
@@ -67,16 +69,16 @@ export function computeGlossaryGroupPositions(
   });
 
   const nodesPerRow = (count: number): number => {
-    if (layoutType === 'hierarchical') {
+    if (layoutType === LayoutEngine.Dagre) {
       return Math.max(1, Math.ceil(Math.sqrt(count / 2)));
     }
 
     return Math.max(1, Math.ceil(Math.sqrt(count)));
   };
 
-  const isDagre = layoutType === 'dagre';
-  const isCircular = layoutType === 'circular';
-  const isRadial = layoutType === 'radial';
+  const isDagre = layoutType === LayoutEngine.Dagre;
+  const isCircular = layoutType === LayoutEngine.Circular;
+  const isRadial = layoutType === LayoutEngine.Radial;
   const H_STEP = isDagre
     ? NODE_WIDTH + DAGRE_NODE_SEP
     : NODE_WIDTH + MIN_NODE_SPACING;

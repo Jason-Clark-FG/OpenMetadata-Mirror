@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button } from '@openmetadata/ui-core-components';
+import { Button, Divider } from '@openmetadata/ui-core-components';
 import {
   Copy01,
   InfoCircle,
@@ -130,42 +130,21 @@ const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
 
   return (
     <div
+      className="tw:fixed tw:z-1050 tw:min-w-45 tw:rounded-lg tw:bg-white tw:py-1 tw:shadow-[0_3px_6px_-4px_rgba(0,0,0,.12),0_6px_16px_rgba(0,0,0,.08)]"
       ref={menuRef}
-      style={{
-        position: 'fixed',
-        top: position.y,
-        left: position.x,
-        zIndex: 1050,
-        background: 'var(--color-white)', // previously #ffffff
-        borderRadius: 8,
-        boxShadow: '0 3px 6px -4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.08)',
-        minWidth: 180,
-        padding: '4px 0',
-      }}
+      style={{ top: position.y, left: position.x }}
     >
       {menuItems.map((item) => (
         <React.Fragment key={item.key}>
-          {item.isDividerBefore && (
-            <hr
-              style={{
-                margin: '4px 0',
-                border: 'none',
-                borderTop: '1px solid var(--color-gray-100)', // previously #f0f0f0
-              }}
-            />
-          )}
+          {item.isDividerBefore && <Divider className="tw:my-1" />}
           <Button
+            className="tw:w-full tw:justify-start tw:rounded-none"
             color="tertiary"
             isDisabled={item.disabled}
             size="sm"
-            style={{
-              width: '100%',
-              justifyContent: 'flex-start',
-              borderRadius: 0,
-            }}
             onClick={() => !item.disabled && handleMenuClick(item.key)}
           >
-            <span style={{ color: 'rgba(0,0,0,0.45)', lineHeight: 0 }}>
+            <span className="tw:leading-none tw:text-gray-500">
               {item.icon}
             </span>
             {item.label}

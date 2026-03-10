@@ -55,11 +55,17 @@ export interface OntologyGraphData {
   edges: OntologyEdge[];
 }
 
-export type LayoutAlgorithm = 'hierarchical' | 'radial' | 'circular';
+import {
+  LayoutType,
+  type LayoutEngineType,
+} from './OntologyExplorer.constants';
+
+export type LayoutAlgorithm = LayoutType;
+export type { LayoutEngineType } from './OntologyExplorer.constants';
 export type GraphViewMode = 'overview' | 'hierarchy' | 'crossGlossary';
 
 export interface GraphSettings {
-  layout: LayoutAlgorithm;
+  layout: LayoutType;
   showEdgeLabels: boolean;
 }
 
@@ -210,6 +216,6 @@ export interface BuildGraphDataProps {
   clickedEdgeId: string | null;
   nodePositions?: Record<string, { x: number; y: number }>;
   glossaryColorMap: Record<string, string>;
-  layoutType: string;
+  layoutType: LayoutEngineType;
   hierarchyCombos?: HierarchyComboInfo[];
 }
