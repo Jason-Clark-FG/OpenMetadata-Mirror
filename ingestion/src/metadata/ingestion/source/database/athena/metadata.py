@@ -167,7 +167,9 @@ class AthenaSource(ExternalTableLineageMixin, CommonDbSourceService):
         return [
             TableNameAndType(
                 name=name,
-                type_=TableType.Iceberg if name in iceberg_tables else TableType.External,
+                type_=TableType.Iceberg
+                if name in iceberg_tables
+                else TableType.External,
             )
             for name in self.inspector.get_table_names(schema_name)
         ]
