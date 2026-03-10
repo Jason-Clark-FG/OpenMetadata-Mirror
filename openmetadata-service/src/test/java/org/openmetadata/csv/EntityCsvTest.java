@@ -15,6 +15,7 @@ import static org.openmetadata.csv.EntityCsv.ENTITY_CREATED;
 import static org.openmetadata.csv.EntityCsv.ENTITY_UPDATED;
 
 import com.networknt.schema.Schema;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -27,7 +28,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import jakarta.ws.rs.core.Response;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
@@ -37,10 +37,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.EntityInterface;
-import org.openmetadata.schema.entity.data.Database;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
-import org.openmetadata.schema.entity.data.StoredProcedure;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
+import org.openmetadata.schema.entity.data.StoredProcedure;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
@@ -62,15 +61,15 @@ import org.openmetadata.schema.type.csv.CsvHeader;
 import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.TypeRegistry;
-import org.openmetadata.service.jdbi3.DatabaseSchemaRepository;
-import org.openmetadata.service.jdbi3.EntityRepository;
-import org.openmetadata.service.jdbi3.UserRepository;
-import org.openmetadata.service.jdbi3.StoredProcedureRepository;
-import org.openmetadata.service.jdbi3.TableRepository;
 import org.openmetadata.service.formatter.util.FormatterUtil;
 import org.openmetadata.service.jdbi3.CollectionDAO;
-import org.openmetadata.service.search.SearchRepository;
+import org.openmetadata.service.jdbi3.DatabaseSchemaRepository;
+import org.openmetadata.service.jdbi3.EntityRepository;
+import org.openmetadata.service.jdbi3.StoredProcedureRepository;
+import org.openmetadata.service.jdbi3.TableRepository;
+import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.rules.RuleEngine;
+import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.RestUtil.PutResponse;
 import org.openmetadata.service.util.ValidatorUtil;
@@ -991,11 +990,14 @@ public class EntityCsvTest {
 
       Mockito.when(repository.findMatchForImport(successfulEntity)).thenReturn(null);
       Mockito.when(repository.findMatchForImport(failingEntity)).thenReturn(null);
-      Mockito.when(repository.createManyEntitiesForImport(List.of(successfulEntity, failingEntity), "admin"))
+      Mockito.when(
+              repository.createManyEntitiesForImport(
+                  List.of(successfulEntity, failingEntity), "admin"))
           .thenThrow(new IllegalStateException("batch insert failed"));
       Mockito.when(repository.createOrUpdate(null, successfulEntity, "admin"))
           .thenReturn(
-              new PutResponse<>(Response.Status.CREATED, successfulEntity, EventType.ENTITY_CREATED));
+              new PutResponse<>(
+                  Response.Status.CREATED, successfulEntity, EventType.ENTITY_CREATED));
       Mockito.when(repository.createOrUpdate(null, failingEntity, "admin"))
           .thenThrow(new IllegalStateException("individual insert failed"));
 
@@ -1017,10 +1019,13 @@ public class EntityCsvTest {
     testCsv.enableProcessing();
     testCsv.setDryRun(true);
 
-    Table createdEntity = tableEntity("created_table", "service.db.schema.created_table", "Created");
-    Table originalEntity = tableEntity("updated_table", "service.db.schema.updated_table", "Original");
+    Table createdEntity =
+        tableEntity("created_table", "service.db.schema.created_table", "Created");
+    Table originalEntity =
+        tableEntity("updated_table", "service.db.schema.updated_table", "Original");
     originalEntity.setId(UUID.randomUUID());
-    Table updatedEntity = tableEntity("updated_table", "service.db.schema.updated_table", "Updated");
+    Table updatedEntity =
+        tableEntity("updated_table", "service.db.schema.updated_table", "Updated");
     CSVRecord createRecord = singleRecord(testCsv, createdEntity.getFullyQualifiedName(), "", "");
     CSVRecord updateRecord = singleRecord(testCsv, updatedEntity.getFullyQualifiedName(), "", "");
 
@@ -1045,8 +1050,10 @@ public class EntityCsvTest {
       assertTrue(testCsv.pendingEntityOperations.isEmpty());
       assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(createRecord));
       assertEquals(ENTITY_UPDATED, testCsv.pendingCsvResults.get(updateRecord));
-      assertEquals(createdEntity, testCsv.dryRunCreatedEntities.get(createdEntity.getFullyQualifiedName()));
-      assertEquals(updatedEntity, testCsv.dryRunCreatedEntities.get(updatedEntity.getFullyQualifiedName()));
+      assertEquals(
+          createdEntity, testCsv.dryRunCreatedEntities.get(createdEntity.getFullyQualifiedName()));
+      assertEquals(
+          updatedEntity, testCsv.dryRunCreatedEntities.get(updatedEntity.getFullyQualifiedName()));
       Mockito.verify(ruleEngine).evaluate(createdEntity);
       Mockito.verify(ruleEngine).evaluateUpdate(originalEntity, updatedEntity);
     }
@@ -1120,7 +1127,8 @@ public class EntityCsvTest {
     TestCsv validationCsv = new TestCsv();
     validationCsv.enableProcessing();
     validationCsv.setDryRun(true);
-    Table invalidEntity = tableEntity("invalid_table", "service.db.schema.invalid_table", "Invalid");
+    Table invalidEntity =
+        tableEntity("invalid_table", "service.db.schema.invalid_table", "Invalid");
     CSVRecord validationRecord =
         singleRecord(validationCsv, invalidEntity.getFullyQualifiedName(), "", "");
 
@@ -1143,7 +1151,8 @@ public class EntityCsvTest {
     TestCsv failingCsv = new TestCsv();
     failingCsv.enableProcessing();
     failingCsv.setDryRun(false);
-    Table failingEntity = tableEntity("failing_table", "service.db.schema.failing_table", "Failing");
+    Table failingEntity =
+        tableEntity("failing_table", "service.db.schema.failing_table", "Failing");
     CSVRecord failingRecord =
         singleRecord(failingCsv, failingEntity.getFullyQualifiedName(), "", "");
 
@@ -1173,10 +1182,13 @@ public class EntityCsvTest {
     testCsv.enableProcessing();
     testCsv.setDryRun(true);
 
-    Table createdEntity = tableEntity("typed_created", "service.db.schema.typed_created", "Created");
-    Table originalEntity = tableEntity("typed_updated", "service.db.schema.typed_updated", "Original");
+    Table createdEntity =
+        tableEntity("typed_created", "service.db.schema.typed_created", "Created");
+    Table originalEntity =
+        tableEntity("typed_updated", "service.db.schema.typed_updated", "Original");
     originalEntity.setId(UUID.randomUUID());
-    Table updatedEntity = tableEntity("typed_updated", "service.db.schema.typed_updated", "Updated");
+    Table updatedEntity =
+        tableEntity("typed_updated", "service.db.schema.typed_updated", "Updated");
     CSVRecord createRecord = singleRecord(testCsv, createdEntity.getFullyQualifiedName(), "", "");
     CSVRecord updateRecord = singleRecord(testCsv, updatedEntity.getFullyQualifiedName(), "", "");
 
@@ -1201,8 +1213,10 @@ public class EntityCsvTest {
       assertTrue(testCsv.pendingEntityOperations.isEmpty());
       assertEquals(ENTITY_CREATED, testCsv.pendingCsvResults.get(createRecord));
       assertEquals(ENTITY_UPDATED, testCsv.pendingCsvResults.get(updateRecord));
-      assertEquals(createdEntity, testCsv.dryRunCreatedEntities.get(createdEntity.getFullyQualifiedName()));
-      assertEquals(updatedEntity, testCsv.dryRunCreatedEntities.get(updatedEntity.getFullyQualifiedName()));
+      assertEquals(
+          createdEntity, testCsv.dryRunCreatedEntities.get(createdEntity.getFullyQualifiedName()));
+      assertEquals(
+          updatedEntity, testCsv.dryRunCreatedEntities.get(updatedEntity.getFullyQualifiedName()));
       Mockito.verify(ruleEngine).evaluate(createdEntity);
       Mockito.verify(ruleEngine).evaluateUpdate(originalEntity, updatedEntity);
     }
@@ -1405,7 +1419,8 @@ public class EntityCsvTest {
       testCsv.flushPendingTableUpdates(mock(CSVPrinter.class));
 
       Mockito.verify(repository)
-          .patch(Mockito.isNull(), Mockito.eq(original.getId()), Mockito.eq("admin"), Mockito.any());
+          .patch(
+              Mockito.isNull(), Mockito.eq(original.getId()), Mockito.eq("admin"), Mockito.any());
       assertTrue(testCsv.pendingTableUpdates.isEmpty());
       assertEquals(1, testCsv.importResult.getNumberOfRowsPassed());
       assertEquals(0, testCsv.importResult.getNumberOfRowsFailed());
@@ -1439,7 +1454,8 @@ public class EntityCsvTest {
       entity.when(() -> Entity.getEntityRepository(Entity.TABLE)).thenReturn(repository);
       Mockito.doThrow(new IllegalStateException("patch failed"))
           .when(repository)
-          .patch(Mockito.isNull(), Mockito.eq(original.getId()), Mockito.eq("admin"), Mockito.any());
+          .patch(
+              Mockito.isNull(), Mockito.eq(original.getId()), Mockito.eq("admin"), Mockito.any());
       testCsv.queuePendingTableUpdate("service.db.schema.orders", original, updated, record);
 
       testCsv.flushPendingTableUpdates(mock(CSVPrinter.class));
@@ -1522,7 +1538,8 @@ public class EntityCsvTest {
                       "service.db.schema.pending_table",
                       "owners",
                       org.openmetadata.schema.type.Include.NON_DELETED))
-          .thenThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("pending_table"))
+          .thenThrow(
+              org.openmetadata.service.exception.EntityNotFoundException.byName("pending_table"))
           .thenReturn(pendingEntity);
       ruleEngineStatic.when(RuleEngine::getInstance).thenReturn(ruleEngine);
       validatorUtil.when(() -> ValidatorUtil.validate(pendingEntity)).thenReturn(null);
@@ -1573,7 +1590,8 @@ public class EntityCsvTest {
                       "service.db",
                       "owners,tags,domains,extension",
                       org.openmetadata.schema.type.Include.NON_DELETED))
-          .thenThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db"));
+          .thenThrow(
+              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db"));
       entity
           .when(
               () ->
@@ -1583,10 +1601,13 @@ public class EntityCsvTest {
                       "owners,tags,domains,extension",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.sales"));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  "service.db.sales"));
       entity.when(() -> Entity.getEntityRepository(Entity.DATABASE_SCHEMA)).thenReturn(repository);
       ruleEngineStatic.when(RuleEngine::getInstance).thenReturn(ruleEngine);
-      validatorUtil.when(() -> ValidatorUtil.validate(Mockito.any(DatabaseSchema.class))).thenReturn(null);
+      validatorUtil
+          .when(() -> ValidatorUtil.validate(Mockito.any(DatabaseSchema.class)))
+          .thenReturn(null);
 
       DatabaseSchema[] captured = new DatabaseSchema[1];
       Mockito.doAnswer(
@@ -1640,7 +1661,8 @@ public class EntityCsvTest {
                       "service.db",
                       "owners,tags,domains,extension",
                       org.openmetadata.schema.type.Include.NON_DELETED))
-          .thenThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db"));
+          .thenThrow(
+              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db"));
 
       IllegalArgumentException missingDatabase =
           assertThrows(
@@ -1675,7 +1697,8 @@ public class EntityCsvTest {
                       "name,displayName,service,database",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  "service.db.schema"));
       entity
           .when(
               () ->
@@ -1732,7 +1755,8 @@ public class EntityCsvTest {
     missingSchemaCsv.setDryRun(false);
     CSVRecord record = entityRecord(missingSchemaCsv, "orders", "Orders", "Orders table");
 
-    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
+    Mockito.doThrow(
+            org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
         .when(missingSchemaCsv)
         .getEntityWithDependencyResolution(
             Entity.DATABASE_SCHEMA,
@@ -1814,8 +1838,7 @@ public class EntityCsvTest {
   }
 
   @Test
-  void test_createStoredProcedureEntityRejectsMissingFqnAndSchemaOutsideDryRun()
-      throws Exception {
+  void test_createStoredProcedureEntityRejectsMissingFqnAndSchemaOutsideDryRun() throws Exception {
     TestCsv nullFqnCsv = new TestCsv();
     nullFqnCsv.enableProcessing();
     CSVRecord nullFqnRecord =
@@ -1844,7 +1867,8 @@ public class EntityCsvTest {
             "select 1",
             "SQL");
 
-    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
+    Mockito.doThrow(
+            org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"))
         .when(missingSchemaCsv)
         .getEntityWithDependencyResolution(
             Entity.DATABASE_SCHEMA,
@@ -1886,7 +1910,8 @@ public class EntityCsvTest {
                       "name,displayName,service,database",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  "service.db.schema"));
       entity
           .when(
               () ->
@@ -1896,7 +1921,8 @@ public class EntityCsvTest {
                       "name,displayName,fullyQualifiedName",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName(storedProcedureFqn));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  storedProcedureFqn));
       entity.when(() -> Entity.getEntityRepository(Entity.STORED_PROCEDURE)).thenReturn(repository);
       ruleEngineStatic.when(RuleEngine::getInstance).thenReturn(ruleEngine);
       validatorUtil
@@ -1934,8 +1960,7 @@ public class EntityCsvTest {
   }
 
   @Test
-  void test_createStoredProcedureEntityQueuesMissingProcedureWhenSchemaExists()
-      throws Exception {
+  void test_createStoredProcedureEntityQueuesMissingProcedureWhenSchemaExists() throws Exception {
     TestCsv testCsv = Mockito.spy(new TestCsv());
     testCsv.enableProcessing();
     testCsv.setDryRun(false);
@@ -1961,7 +1986,8 @@ public class EntityCsvTest {
             "service.db.schema",
             "name,displayName,service,database",
             org.openmetadata.schema.type.Include.NON_DELETED);
-    Mockito.doThrow(org.openmetadata.service.exception.EntityNotFoundException.byName(storedProcedureFqn))
+    Mockito.doThrow(
+            org.openmetadata.service.exception.EntityNotFoundException.byName(storedProcedureFqn))
         .when(testCsv)
         .getEntityWithDependencyResolution(
             Entity.STORED_PROCEDURE,
@@ -2035,7 +2061,8 @@ public class EntityCsvTest {
                       "name,displayName,service,database",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  "service.db.schema"));
       entity
           .when(
               () ->
@@ -2045,7 +2072,8 @@ public class EntityCsvTest {
                       "name,displayName,fullyQualifiedName",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName(storedProcedureFqn));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  storedProcedureFqn));
 
       IllegalArgumentException exception =
           assertThrows(
@@ -2087,7 +2115,8 @@ public class EntityCsvTest {
                       "name,displayName,service,database",
                       org.openmetadata.schema.type.Include.NON_DELETED))
           .thenThrow(
-              org.openmetadata.service.exception.EntityNotFoundException.byName("service.db.schema"));
+              org.openmetadata.service.exception.EntityNotFoundException.byName(
+                  "service.db.schema"));
       entity
           .when(
               () ->
@@ -2101,7 +2130,8 @@ public class EntityCsvTest {
                   "service.db.schema.orders"));
       entity.when(() -> Entity.getEntityRepository(Entity.TABLE)).thenReturn(repository);
 
-      testCsv.createColumnEntity(mock(CSVPrinter.class), record, "service.db.schema.orders.customer_id");
+      testCsv.createColumnEntity(
+          mock(CSVPrinter.class), record, "service.db.schema.orders.customer_id");
 
       assertEquals(1, testCsv.pendingTableUpdates.size());
       assertEquals(ENTITY_UPDATED, testCsv.pendingCsvResults.get(record));
@@ -2109,8 +2139,7 @@ public class EntityCsvTest {
 
       testCsv.flushPendingTableUpdates(mock(CSVPrinter.class));
 
-      Table cachedTable =
-          (Table) testCsv.dryRunCreatedEntities.get("service.db.schema.orders");
+      Table cachedTable = (Table) testCsv.dryRunCreatedEntities.get("service.db.schema.orders");
       assertNotNull(cachedTable);
       assertEquals(1, cachedTable.getColumns().size());
       assertEquals("customer_id", cachedTable.getColumns().get(0).getName());
@@ -2167,7 +2196,8 @@ public class EntityCsvTest {
 
     AsyncService asyncService = mock(AsyncService.class);
     @SuppressWarnings("unchecked")
-    java.util.concurrent.ExecutorService executor = mock(java.util.concurrent.ExecutorService.class);
+    java.util.concurrent.ExecutorService executor =
+        mock(java.util.concurrent.ExecutorService.class);
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
     CollectionDAO.ChangeEventDAO changeEventDAO = mock(CollectionDAO.ChangeEventDAO.class);
 
@@ -2231,8 +2261,12 @@ public class EntityCsvTest {
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(repository);
       validatorUtil.when(() -> ValidatorUtil.validate(createdUser)).thenReturn(null);
       validatorUtil.when(() -> ValidatorUtil.validate(updatedUser)).thenReturn(null);
-      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(createdRecord)).thenReturn("");
-      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(updatedRecord)).thenReturn("");
+      validatorUtil
+          .when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(createdRecord))
+          .thenReturn("");
+      validatorUtil
+          .when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(updatedRecord))
+          .thenReturn("");
       Mockito.when(repository.isUpdateForImport(createdUser)).thenReturn(false);
       Mockito.when(repository.isUpdateForImport(updatedUser)).thenReturn(true);
 
@@ -2259,7 +2293,8 @@ public class EntityCsvTest {
     UserRepository repository = mock(UserRepository.class);
     AsyncService asyncService = mock(AsyncService.class);
     @SuppressWarnings("unchecked")
-    java.util.concurrent.ExecutorService executor = mock(java.util.concurrent.ExecutorService.class);
+    java.util.concurrent.ExecutorService executor =
+        mock(java.util.concurrent.ExecutorService.class);
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
     CollectionDAO.ChangeEventDAO changeEventDAO = mock(CollectionDAO.ChangeEventDAO.class);
     ChangeEvent changeEvent =
@@ -2283,7 +2318,9 @@ public class EntityCsvTest {
       entity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
       asyncServiceStatic.when(AsyncService::getInstance).thenReturn(asyncService);
       validatorUtil.when(() -> ValidatorUtil.validate(user)).thenReturn(null);
-      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(record)).thenReturn("");
+      validatorUtil
+          .when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(record))
+          .thenReturn("");
       formatterUtil
           .when(
               () ->
@@ -2324,7 +2361,9 @@ public class EntityCsvTest {
     try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
         MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(repository);
-      validatorUtil.when(() -> ValidatorUtil.validate(invalidUser)).thenReturn("[displayName must not be null]");
+      validatorUtil
+          .when(() -> ValidatorUtil.validate(invalidUser))
+          .thenReturn("[displayName must not be null]");
       validatorUtil
           .when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(record))
           .thenReturn(ValidatorUtil.NAME_EMAIL_VOILATION);
@@ -2520,10 +2559,7 @@ public class EntityCsvTest {
 
   private static class UserCsv extends EntityCsv<User> {
     protected UserCsv() {
-      super(
-          Entity.USER,
-          List.of(new CsvHeader().withName("name").withRequired(true)),
-          "admin");
+      super(Entity.USER, List.of(new CsvHeader().withName("name").withRequired(true)), "admin");
     }
 
     private void enableProcessing() {
@@ -2610,11 +2646,7 @@ public class EntityCsvTest {
   }
 
   private static CSVRecord userRecord(
-      UserCsv userCsv,
-      String name,
-      String displayName,
-      String description,
-      String email) {
+      UserCsv userCsv, String name, String displayName, String description, String email) {
     List<String> fields = new ArrayList<>();
     for (int i = 0; i < 6; i++) {
       fields.add("");

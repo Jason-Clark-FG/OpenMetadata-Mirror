@@ -18,7 +18,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
@@ -300,9 +299,10 @@ class AsyncServiceTest {
                 invoke(
                     method,
                     null,
-                    (Supplier<String>) () -> {
-                      throw new RuntimeException("boom");
-                    },
+                    (Supplier<String>)
+                        () -> {
+                          throw new RuntimeException("boom");
+                        },
                     "Read",
                     "asset",
                     1,
@@ -383,7 +383,8 @@ class AsyncServiceTest {
     return constructor.newInstance();
   }
 
-  private static ExecutorService newBoundedExecutorService(ExecutorService delegate) throws Exception {
+  private static ExecutorService newBoundedExecutorService(ExecutorService delegate)
+      throws Exception {
     Class<?> boundedClass =
         Class.forName("org.openmetadata.service.util.AsyncService$BoundedExecutorService");
     Constructor<?> constructor =
@@ -392,7 +393,8 @@ class AsyncServiceTest {
     return (ExecutorService) constructor.newInstance(delegate, new Semaphore(1));
   }
 
-  private static void replaceExecutor(AsyncService service, ExecutorService executor) throws Exception {
+  private static void replaceExecutor(AsyncService service, ExecutorService executor)
+      throws Exception {
     ExecutorService originalExecutor = service.getExecutorService();
     originalExecutor.shutdownNow();
     Field executorField = AsyncService.class.getDeclaredField("executorService");
@@ -412,7 +414,8 @@ class AsyncServiceTest {
     field.set(null, service);
   }
 
-  private static void setConfigHolderInstance(OpenMetadataApplicationConfig config) throws Exception {
+  private static void setConfigHolderInstance(OpenMetadataApplicationConfig config)
+      throws Exception {
     Field field = OpenMetadataApplicationConfigHolder.class.getDeclaredField("instance");
     field.setAccessible(true);
     field.set(null, config);

@@ -79,7 +79,8 @@ class AirflowRESTClientTest {
     try (AirflowTestServer server = new AirflowTestServer()) {
       String basePath = "/airflow";
       server.enqueue("GET", basePath + "/pluginsv2/api/v2/openmetadata/health-auth", 404, "");
-      server.enqueue("GET", basePath + "/api/v2/openmetadata/health-auth", 200, "{\"version\":\"2.9.1\"}");
+      server.enqueue(
+          "GET", basePath + "/api/v2/openmetadata/health-auth", 200, "{\"version\":\"2.9.1\"}");
 
       AirflowRESTClient client = newClient(server, basePath);
 
@@ -97,7 +98,8 @@ class AirflowRESTClientTest {
       String basePath = "/airflow";
       server.enqueue("GET", basePath + "/pluginsv2/api/v2/openmetadata/health-auth", 404, "");
       server.enqueue("GET", basePath + "/api/v2/openmetadata/health-auth", 404, "");
-      server.enqueue("GET", basePath + "/api/v1/openmetadata/health-auth", 200, "{\"version\":\"1.10.15\"}");
+      server.enqueue(
+          "GET", basePath + "/api/v1/openmetadata/health-auth", 200, "{\"version\":\"1.10.15\"}");
 
       AirflowRESTClient client = newClient(server, basePath);
 
@@ -124,7 +126,11 @@ class AirflowRESTClientTest {
       assertTrue(exception.getMessage().contains("Unable to connect to Airflow APIs"));
 
       String version = PipelineServiceClient.getServerVersion();
-      server.enqueue("GET", basePath + "/pluginsv2/api/v2/openmetadata/health-auth", 200, "{\"version\":\"" + version + "\"}");
+      server.enqueue(
+          "GET",
+          basePath + "/pluginsv2/api/v2/openmetadata/health-auth",
+          200,
+          "{\"version\":\"" + version + "\"}");
 
       assertEquals(
           server.url(basePath + "/pluginsv2/api/v2/openmetadata/deploy"),
@@ -286,8 +292,7 @@ class AirflowRESTClientTest {
 
       assertTrue(client.getQueuedPipelineStatusInternal(pipeline).isEmpty());
       assertEquals(Map.of("ip", "127.0.0.1"), client.requestGetHostIp());
-      assertEquals(
-          Map.of("message", "done"), client.getLastIngestionLogs(pipeline, "cursor-1"));
+      assertEquals(Map.of("message", "done"), client.getLastIngestionLogs(pipeline, "cursor-1"));
 
       PipelineServiceClientResponse enableResponse = client.toggleIngestion(pipeline);
       assertEquals(200, enableResponse.getCode());
@@ -301,10 +306,10 @@ class AirflowRESTClientTest {
 
       assertEquals(200, client.killIngestion(pipeline).getCode());
       assertEquals(200, client.runApplicationFlow(new App().withName("quality-app")).getCode());
-      assertEquals(200, client.runAutomationsWorkflow(new Workflow().withName("nightly")).getCode());
       assertEquals(
-          "Success",
-          client.validateAppRegistration(new AppMarketPlaceDefinition()).getReason());
+          200, client.runAutomationsWorkflow(new Workflow().withName("nightly")).getCode());
+      assertEquals(
+          "Success", client.validateAppRegistration(new AppMarketPlaceDefinition()).getReason());
 
       RequestRecord logsRequest = server.requests("GET", prefix + "/last_dag_logs").get(0);
       assertTrue(logsRequest.query().contains("after=cursor-1"));
@@ -342,7 +347,8 @@ class AirflowRESTClientTest {
       IngestionPipeline pipeline = ingestionPipeline("orders_metadata", true);
 
       PipelineServiceClientException deployException =
-          assertThrows(PipelineServiceClientException.class, () -> client.deployPipeline(pipeline, null));
+          assertThrows(
+              PipelineServiceClientException.class, () -> client.deployPipeline(pipeline, null));
       assertTrue(deployException.getMessage().contains("Failed to deploy Ingestion Pipeline"));
 
       PipelineServiceClientResponse deleteResponse = client.deletePipeline(pipeline);
@@ -356,7 +362,8 @@ class AirflowRESTClientTest {
           assertThrows(
               PipelineServiceClientException.class,
               () -> client.toggleIngestion(ingestionPipeline("broken_pipeline", true)));
-      assertTrue(toggleException.getMessage().contains("Failed to toggle ingestion pipeline state"));
+      assertTrue(
+          toggleException.getMessage().contains("Failed to toggle ingestion pipeline state"));
 
       assertTrue(client.getQueuedPipelineStatusInternal(pipeline).isEmpty());
 
@@ -422,7 +429,8 @@ class AirflowRESTClientTest {
 
     IngestionPipelineDeploymentException deployException =
         assertThrows(
-            IngestionPipelineDeploymentException.class, () -> client.deployPipeline(pipeline, null));
+            IngestionPipelineDeploymentException.class,
+            () -> client.deployPipeline(pipeline, null));
     assertTrue(deployException.getMessage().contains("orders_metadata"));
 
     PipelineServiceClientResponse deleteResponse = client.deletePipeline(pipeline);
@@ -439,7 +447,8 @@ class AirflowRESTClientTest {
     assertTrue(toggleException.getMessage().contains("orders_metadata"));
 
     assertThrows(
-        PipelineServiceClientException.class, () -> client.getQueuedPipelineStatusInternal(pipeline));
+        PipelineServiceClientException.class,
+        () -> client.getQueuedPipelineStatusInternal(pipeline));
 
     PipelineServiceClientResponse status = client.getServiceStatusInternal();
     assertEquals(500, status.getCode());
@@ -460,7 +469,8 @@ class AirflowRESTClientTest {
     assertThrows(PipelineServiceClientException.class, () -> client.killIngestion(pipeline));
     assertThrows(PipelineServiceClientException.class, client::requestGetHostIp);
     assertThrows(
-        PipelineServiceClientException.class, () -> client.getLastIngestionLogs(pipeline, "cursor"));
+        PipelineServiceClientException.class,
+        () -> client.getLastIngestionLogs(pipeline, "cursor"));
   }
 
   @Test
@@ -506,7 +516,10 @@ class AirflowRESTClientTest {
   }
 
   private static IngestionPipeline ingestionPipeline(String name, boolean enabled) {
-    return new IngestionPipeline().withName(name).withEnabled(enabled).withPipelineType(PipelineType.METADATA);
+    return new IngestionPipeline()
+        .withName(name)
+        .withEnabled(enabled)
+        .withPipelineType(PipelineType.METADATA);
   }
 
   private static Map<String, List<String>> cookieHeaders(String... values) {
@@ -544,7 +557,11 @@ class AirflowRESTClientTest {
     }
 
     private void enqueue(
-        String method, String path, int statusCode, String body, Map<String, List<String>> headers) {
+        String method,
+        String path,
+        int statusCode,
+        String body,
+        Map<String, List<String>> headers) {
       responses
           .computeIfAbsent(method + " " + path, ignored -> new ArrayDeque<>())
           .addLast(new ResponseSpec(statusCode, body, headers));
@@ -567,7 +584,8 @@ class AirflowRESTClientTest {
       Map<String, List<String>> normalizedHeaders = new HashMap<>();
       exchange
           .getRequestHeaders()
-          .forEach((name, values) -> normalizedHeaders.put(name.toLowerCase(), new ArrayList<>(values)));
+          .forEach(
+              (name, values) -> normalizedHeaders.put(name.toLowerCase(), new ArrayList<>(values)));
       String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
       requests.add(
           new RequestRecord(
@@ -578,15 +596,15 @@ class AirflowRESTClientTest {
               body));
 
       ResponseSpec response =
-          responses
-              .getOrDefault(method + " " + path, new ArrayDeque<>())
-              .pollFirst();
+          responses.getOrDefault(method + " " + path, new ArrayDeque<>()).pollFirst();
       if (response == null) {
         response = new ResponseSpec(404, "", Map.of());
       }
 
       Headers responseHeaders = exchange.getResponseHeaders();
-      response.headers().forEach((name, values) -> responseHeaders.put(name, new ArrayList<>(values)));
+      response
+          .headers()
+          .forEach((name, values) -> responseHeaders.put(name, new ArrayList<>(values)));
 
       byte[] payload = response.body().getBytes(StandardCharsets.UTF_8);
       exchange.sendResponseHeaders(response.statusCode(), payload.length);

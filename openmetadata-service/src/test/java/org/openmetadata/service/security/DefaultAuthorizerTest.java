@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.ws.rs.core.SecurityContext;
@@ -57,7 +56,8 @@ class DefaultAuthorizerTest {
     SubjectContext adminContext = subjectContext("admin", true, false, null);
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getResource()).thenReturn(Entity.TABLE);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
     List<ResourcePermission> permissions = List.of(resourcePermission(Entity.TABLE));
     ResourcePermission resourcePermission = resourcePermission(Entity.TABLE);
     OpenMetadataApplicationConfig config = mock(OpenMetadataApplicationConfig.class);
@@ -77,7 +77,8 @@ class DefaultAuthorizerTest {
       assertDoesNotThrow(() -> authorizer.init(config));
       assertSame(permissions, authorizer.listPermissions(securityContext, null));
       assertSame(resourcePermission, authorizer.getPermission(securityContext, null, Entity.TABLE));
-      assertSame(resourcePermission, authorizer.getPermission(securityContext, null, resourceContext));
+      assertSame(
+          resourcePermission, authorizer.getPermission(securityContext, null, resourceContext));
       assertDoesNotThrow(
           () -> authorizer.authorize(securityContext, operationContext, resourceContext));
       assertDoesNotThrow(
@@ -140,7 +141,9 @@ class DefaultAuthorizerTest {
       mockedSubjectContext
           .when(() -> SubjectContext.getSubjectContext("analyst"))
           .thenReturn(analystContext);
-      mockedPolicyEvaluator.when(() -> PolicyEvaluator.listPermission(analystContext)).thenReturn(permissions);
+      mockedPolicyEvaluator
+          .when(() -> PolicyEvaluator.listPermission(analystContext))
+          .thenReturn(permissions);
       mockedPolicyEvaluator
           .when(() -> PolicyEvaluator.getPermission(analystContext, Entity.TABLE))
           .thenReturn(tablePermission);
@@ -149,7 +152,8 @@ class DefaultAuthorizerTest {
           .thenReturn(tablePermission);
 
       assertSame(permissions, authorizer.listPermissions(securityContext, "analyst"));
-      assertSame(tablePermission, authorizer.getPermission(securityContext, "analyst", Entity.TABLE));
+      assertSame(
+          tablePermission, authorizer.getPermission(securityContext, "analyst", Entity.TABLE));
       assertSame(
           tablePermission, authorizer.getPermission(securityContext, "analyst", resourceContext));
     }
@@ -163,7 +167,8 @@ class DefaultAuthorizerTest {
     when(entity.getReviewers()).thenReturn(List.of(entityReference(Entity.USER, "reviewer")));
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getEntity()).thenReturn(entity);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.EDIT_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.EDIT_ALL);
 
     try (MockedStatic<DefaultAuthorizer> mockedAuthorizer = mockStatic(DefaultAuthorizer.class);
         MockedStatic<PolicyEvaluator> mockedPolicyEvaluator = mockStatic(PolicyEvaluator.class)) {
@@ -186,7 +191,8 @@ class DefaultAuthorizerTest {
     when(entity.getReviewers()).thenReturn(null);
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getEntity()).thenReturn(entity);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
 
     try (MockedStatic<DefaultAuthorizer> mockedAuthorizer = mockStatic(DefaultAuthorizer.class);
         MockedStatic<PolicyEvaluator> mockedPolicyEvaluator = mockStatic(PolicyEvaluator.class)) {
@@ -208,7 +214,8 @@ class DefaultAuthorizerTest {
         new SubjectContext(new User().withName("target-user"), "missing-bot");
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getEntity()).thenReturn(null);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
 
     try (MockedStatic<DefaultAuthorizer> mockedAuthorizer = mockStatic(DefaultAuthorizer.class);
         MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
@@ -216,7 +223,10 @@ class DefaultAuthorizerTest {
           .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
           .thenReturn(impersonatedContext);
       mockedEntity
-          .when(() -> Entity.getEntityByName(Entity.USER, "missing-bot", "*", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "missing-bot", "*", org.openmetadata.schema.type.Include.ALL))
           .thenThrow(new IllegalArgumentException("missing"));
 
       AuthorizationException missingBot =
@@ -226,7 +236,8 @@ class DefaultAuthorizerTest {
       assertTrue(missingBot.getMessage().contains("Bot user not found"));
     }
 
-    SubjectContext flaggedContext = new SubjectContext(new User().withName("target-user"), "bot-user");
+    SubjectContext flaggedContext =
+        new SubjectContext(new User().withName("target-user"), "bot-user");
     User bot = new User().withName("bot-user").withIsBot(true);
     bot.setAllowImpersonation(false);
 
@@ -236,7 +247,10 @@ class DefaultAuthorizerTest {
           .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
           .thenReturn(flaggedContext);
       mockedEntity
-          .when(() -> Entity.getEntityByName(Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
 
       AuthorizationException disabledImpersonation =
@@ -250,16 +264,21 @@ class DefaultAuthorizerTest {
   @Test
   void authorizeRejectsBotsWithoutImpersonatePermission() {
     SecurityContext securityContext = securityContext("target-user");
-    SubjectContext impersonatedContext = new SubjectContext(new User().withName("target-user"), "bot-user");
+    SubjectContext impersonatedContext =
+        new SubjectContext(new User().withName("target-user"), "bot-user");
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getEntity()).thenReturn(null);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
 
     User bot = new User().withName("bot-user").withIsBot(true);
     bot.setAllowImpersonation(true);
     EntityReference roleRef = entityReference(Entity.ROLE, "bot-role");
     bot.setRoles(List.of(roleRef));
-    Role role = new Role().withName("bot-role").withPolicies(List.of(entityReference(Entity.POLICY, "view-only")));
+    Role role =
+        new Role()
+            .withName("bot-role")
+            .withPolicies(List.of(entityReference(Entity.POLICY, "view-only")));
     Rule rule = new Rule().withName("viewOnly").withOperations(List.of(MetadataOperation.VIEW_ALL));
     Policy policy = new Policy().withName("view-only").withRules(List.of(rule));
 
@@ -269,11 +288,20 @@ class DefaultAuthorizerTest {
           .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
           .thenReturn(impersonatedContext);
       mockedEntity
-          .when(() -> Entity.getEntityByName(Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
-      mockedEntity.when(() -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL)).thenReturn(role);
       mockedEntity
-          .when(() -> Entity.getEntity(role.getPolicies().get(0), "rules", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(role);
+      mockedEntity
+          .when(
+              () ->
+                  Entity.getEntity(
+                      role.getPolicies().get(0), "rules", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(policy);
 
       AuthorizationException exception =
@@ -287,10 +315,12 @@ class DefaultAuthorizerTest {
   @Test
   void authorizeAllowsValidImpersonationBots() {
     SecurityContext securityContext = securityContext("target-user");
-    SubjectContext impersonatedContext = new SubjectContext(new User().withName("target-user"), "bot-user");
+    SubjectContext impersonatedContext =
+        new SubjectContext(new User().withName("target-user"), "bot-user");
     ResourceContextInterface resourceContext = mock(ResourceContextInterface.class);
     when(resourceContext.getEntity()).thenReturn(null);
-    OperationContext operationContext = new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
+    OperationContext operationContext =
+        new OperationContext(Entity.TABLE, MetadataOperation.VIEW_ALL);
 
     User bot = new User().withName("bot-user").withIsBot(true);
     bot.setAllowImpersonation(true);
@@ -309,18 +339,27 @@ class DefaultAuthorizerTest {
           .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
           .thenReturn(impersonatedContext);
       mockedEntity
-          .when(() -> Entity.getEntityByName(Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
-      mockedEntity.when(() -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL)).thenReturn(role);
       mockedEntity
-          .when(() -> Entity.getEntity(policyRef, "rules", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(role);
+      mockedEntity
+          .when(
+              () -> Entity.getEntity(policyRef, "rules", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(policy);
 
       assertDoesNotThrow(
           () -> authorizer.authorize(securityContext, operationContext, resourceContext));
 
       mockedPolicyEvaluator.verify(
-          () -> PolicyEvaluator.hasPermission(impersonatedContext, resourceContext, operationContext));
+          () ->
+              PolicyEvaluator.hasPermission(
+                  impersonatedContext, resourceContext, operationContext));
     }
   }
 
@@ -346,7 +385,9 @@ class DefaultAuthorizerTest {
           .when(
               () ->
                   PolicyEvaluator.hasPermission(
-                      analystContext, firstRequest.resourceContext(), firstRequest.operationContext()))
+                      analystContext,
+                      firstRequest.resourceContext(),
+                      firstRequest.operationContext()))
           .thenThrow(new AuthorizationException("denied"));
 
       assertDoesNotThrow(
@@ -357,7 +398,9 @@ class DefaultAuthorizerTest {
       mockedPolicyEvaluator.verify(
           () ->
               PolicyEvaluator.hasPermission(
-                  analystContext, secondRequest.resourceContext(), secondRequest.operationContext()));
+                  analystContext,
+                  secondRequest.resourceContext(),
+                  secondRequest.operationContext()));
     }
 
     try (MockedStatic<DefaultAuthorizer> mockedAuthorizer = mockStatic(DefaultAuthorizer.class);
@@ -432,9 +475,12 @@ class DefaultAuthorizerTest {
       mockedSubjectContext
           .when(() -> SubjectContext.getSubjectContext("ingestion-bot"))
           .thenReturn(botContext);
-      mockedSubjectContext.when(() -> SubjectContext.getSubjectContext("owner")).thenReturn(ownerContext);
+      mockedSubjectContext
+          .when(() -> SubjectContext.getSubjectContext("owner"))
+          .thenReturn(ownerContext);
 
-      assertThrows(AuthorizationException.class, () -> authorizer.authorizeAdmin(userSecurityContext));
+      assertThrows(
+          AuthorizationException.class, () -> authorizer.authorizeAdmin(userSecurityContext));
       assertDoesNotThrow(() -> authorizer.authorizeAdmin("admin"));
       assertThrows(AuthorizationException.class, () -> authorizer.authorizeAdmin("analyst"));
       assertThrows(
@@ -461,7 +507,9 @@ class DefaultAuthorizerTest {
     try (MockedStatic<SubjectContext> mockedSubjectContext = mockStatic(SubjectContext.class);
         MockedStatic<Entity> mockedEntity = mockStatic(Entity.class);
         MockedStatic<PolicyEvaluator> mockedPolicyEvaluator = mockStatic(PolicyEvaluator.class)) {
-      mockedSubjectContext.when(() -> SubjectContext.getSubjectContext("analyst")).thenReturn(userContext);
+      mockedSubjectContext
+          .when(() -> SubjectContext.getSubjectContext("analyst"))
+          .thenReturn(userContext);
       mockedSubjectContext
           .when(() -> SubjectContext.getSubjectContext("ingestion-bot"))
           .thenReturn(botContext);
@@ -502,7 +550,9 @@ class DefaultAuthorizerTest {
     when(securityContext.getUserPrincipal()).thenReturn(null);
 
     AuthenticationException exception =
-        assertThrows(AuthenticationException.class, () -> DefaultAuthorizer.getSubjectContext(securityContext));
+        assertThrows(
+            AuthenticationException.class,
+            () -> DefaultAuthorizer.getSubjectContext(securityContext));
 
     assertEquals("No principal in security context", exception.getMessage());
   }
@@ -513,7 +563,12 @@ class DefaultAuthorizerTest {
     SubjectContext threadLocalContext = subjectContext("bob", false, false, null);
     CatalogSecurityContext catalogSecurityContext =
         new CatalogSecurityContext(
-            principal("alice"), "https", CatalogSecurityContext.OPENID_AUTH, Set.of(), false, "bot-user");
+            principal("alice"),
+            "https",
+            CatalogSecurityContext.OPENID_AUTH,
+            Set.of(),
+            false,
+            "bot-user");
     SecurityContext wrappedSecurityContext = securityContext("bob");
     ImpersonationContext.setImpersonatedBy("job-bot");
 

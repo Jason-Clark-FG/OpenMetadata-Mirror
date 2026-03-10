@@ -1,15 +1,11 @@
 package org.openmetadata.service.security.mask;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.ws.rs.core.SecurityContext;
@@ -54,7 +50,8 @@ class PIIMaskerTest {
                     List.of(
                         new ArrayList<>(List.of("alice@example.com", "New York")),
                         new ArrayList<>(List.of("bob@example.com", "San Francisco")))));
-    List<Column> columns = List.of(column(tableFqn, "email", true), column(tableFqn, "city", false));
+    List<Column> columns =
+        List.of(column(tableFqn, "email", true), column(tableFqn, "city", false));
     Table table = table(tableFqn, columns, false, List.of());
 
     assertNull(PIIMasker.maskSampleData(null, table, columns));
@@ -108,8 +105,7 @@ class PIIMaskerTest {
 
     SearchIndex maskedSearchIndex = PIIMasker.getSampleData(searchIndex);
 
-    assertEquals(
-        List.of(PIIMasker.MASKED_VALUE), maskedSearchIndex.getSampleData().getMessages());
+    assertEquals(List.of(PIIMasker.MASKED_VALUE), maskedSearchIndex.getSampleData().getMessages());
 
     Topic plainTopic = new Topic().withSampleData(null);
     assertSame(plainTopic, PIIMasker.getSampleData(plainTopic));
@@ -140,10 +136,7 @@ class PIIMaskerTest {
           .when(
               () ->
                   Entity.getEntityByName(
-                      Entity.TABLE,
-                      tableFqn,
-                      "columns,tags,owners",
-                      Include.ALL))
+                      Entity.TABLE, tableFqn, "columns,tags,owners", Include.ALL))
           .thenReturn(table);
 
       List<Column> maskedColumns =
@@ -170,7 +163,11 @@ class PIIMaskerTest {
   void maskColumnProfileReturnsOnlyTheColumnNameForSensitiveColumns() {
     String tableFqn = "service.db.schema.orders";
     Table table =
-        table(tableFqn, List.of(column(tableFqn, "email", true), column(tableFqn, "city", false)), false, List.of());
+        table(
+            tableFqn,
+            List.of(column(tableFqn, "email", true), column(tableFqn, "city", false)),
+            false,
+            List.of());
     ColumnProfile sensitiveProfile = new ColumnProfile().withName("email").withNullCount(2.0);
     ColumnProfile plainProfile = new ColumnProfile().withName("city").withNullCount(1.0);
 
@@ -211,7 +208,8 @@ class PIIMaskerTest {
         new TestCase()
             .withName("row_count")
             .withEntityLink(new MessageParser.EntityLink(Entity.TABLE, tableFqn).getLinkString());
-    ResultList<TestCase> testCases = new ResultList<>(new ArrayList<>(List.of(columnTestCase, tableTestCase)));
+    ResultList<TestCase> testCases =
+        new ResultList<>(new ArrayList<>(List.of(columnTestCase, tableTestCase)));
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity
@@ -251,12 +249,14 @@ class PIIMaskerTest {
             .withQuery("select city from customer")
             .withTags(List.of())
             .withOwners(List.of(owner));
-    ResultList<Query> queries = new ResultList<>(new ArrayList<>(List.of(sensitiveQuery, plainQuery)));
+    ResultList<Query> queries =
+        new ResultList<>(new ArrayList<>(List.of(sensitiveQuery, plainQuery)));
 
     when(authorizer.authorizePII(securityContext, List.of(owner))).thenReturn(false, false, false);
 
     ResultList<Query> maskedQueries = PIIMasker.getQueries(queries, authorizer, securityContext);
-    User maskedUser = PIIMasker.maskUser(authorizer, securityContext, new User().withEmail("user@example.com"));
+    User maskedUser =
+        PIIMasker.maskUser(authorizer, securityContext, new User().withEmail("user@example.com"));
 
     assertEquals(PIIMasker.MASKED_VALUE, maskedQueries.getData().get(0).getQuery());
     assertEquals("select city from customer", maskedQueries.getData().get(1).getQuery());

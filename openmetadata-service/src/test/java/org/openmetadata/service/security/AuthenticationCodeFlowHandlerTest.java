@@ -866,7 +866,8 @@ class AuthenticationCodeFlowHandlerTest {
   }
 
   @Test
-  void refreshTokenRequestThrowsTechnicalExceptionWhenProviderReturnsErrorStatus() throws Exception {
+  void refreshTokenRequestThrowsTechnicalExceptionWhenProviderReturnsErrorStatus()
+      throws Exception {
     try (TokenServer tokenServer = startTokenServer(500, "{\"error\":\"server_error\"}")) {
       AuthenticationCodeFlowHandler handler = newHandler();
       setField(
@@ -1043,7 +1044,8 @@ class AuthenticationCodeFlowHandlerTest {
             oidcDiscoveryMetadata(
                 "https://issuer.example.com/authorize", "https://issuer.example.com/token"))) {
       AuthenticationCodeFlowHandler handler =
-          newInitializedHandler(oidcAuthConfig(server.discoveryUri()), authorizerConfiguration(Set.of("admin")));
+          newInitializedHandler(
+              oidcAuthConfig(server.discoveryUri()), authorizerConfiguration(Set.of("admin")));
 
       assertNotNull(handler);
       assertNotNull(readField(handler, "client"));
@@ -1071,8 +1073,7 @@ class AuthenticationCodeFlowHandlerTest {
   @Test
   void validateConfigRejectsDiscoveryDocumentWithoutTokenEndpoint() throws Exception {
     try (OidcDiscoveryServer server =
-        startDiscoveryServer(
-            oidcDiscoveryMetadata("https://issuer.example.com/authorize", null))) {
+        startDiscoveryServer(oidcDiscoveryMetadata("https://issuer.example.com/authorize", null))) {
       IllegalArgumentException exception =
           assertThrows(
               IllegalArgumentException.class,
@@ -1238,13 +1239,15 @@ class AuthenticationCodeFlowHandlerTest {
     setField(handler, "client", client);
     when(request.getSession(false)).thenReturn(session);
     when(request.getParameterMap())
-        .thenReturn(Map.of("error", new String[] {"access_denied"}, "state", new String[] {"csrf"}));
+        .thenReturn(
+            Map.of("error", new String[] {"access_denied"}, "state", new String[] {"csrf"}));
     when(response.getOutputStream()).thenReturn(outputStream);
 
     handler.handleCallback(request, response);
 
     verify(response).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-    verify(outputStream).println(org.mockito.ArgumentMatchers.contains("Bad authentication response"));
+    verify(outputStream)
+        .println(org.mockito.ArgumentMatchers.contains("Bad authentication response"));
   }
 
   @Test
@@ -1266,8 +1269,7 @@ class AuthenticationCodeFlowHandlerTest {
     try (OidcDiscoveryServer firstServer =
             startDiscoveryServer(
                 oidcDiscoveryMetadata(
-                    "https://issuer.example.com/authorize",
-                    "https://issuer.example.com/token"));
+                    "https://issuer.example.com/authorize", "https://issuer.example.com/token"));
         OidcDiscoveryServer secondServer =
             startDiscoveryServer(
                 oidcDiscoveryMetadata(
@@ -1453,7 +1455,8 @@ class AuthenticationCodeFlowHandlerTest {
     metadata.put("response_types_supported", List.of("code"));
     metadata.put("id_token_signing_alg_values_supported", List.of("RS256"));
     metadata.put(
-        "token_endpoint_auth_methods_supported", List.of("client_secret_basic", "client_secret_post"));
+        "token_endpoint_auth_methods_supported",
+        List.of("client_secret_basic", "client_secret_post"));
     if (authorizationEndpoint != null) {
       metadata.put("authorization_endpoint", authorizationEndpoint);
     }
@@ -1489,7 +1492,9 @@ class AuthenticationCodeFlowHandlerTest {
 
     private URI discoveryUri() {
       return URI.create(
-          "http://localhost:" + server.getAddress().getPort() + "/.well-known/openid-configuration");
+          "http://localhost:"
+              + server.getAddress().getPort()
+              + "/.well-known/openid-configuration");
     }
 
     @Override
@@ -1504,10 +1509,9 @@ class AuthenticationCodeFlowHandlerTest {
     field.set(target, value);
   }
 
-  private static AuthenticationCodeFlowHandler setHolderInstance(AuthenticationCodeFlowHandler value)
-      throws Exception {
-    Class<?> holderClass =
-        Class.forName(AuthenticationCodeFlowHandler.class.getName() + "$Holder");
+  private static AuthenticationCodeFlowHandler setHolderInstance(
+      AuthenticationCodeFlowHandler value) throws Exception {
+    Class<?> holderClass = Class.forName(AuthenticationCodeFlowHandler.class.getName() + "$Holder");
     Field instanceField = holderClass.getDeclaredField("instance");
     instanceField.setAccessible(true);
     AuthenticationCodeFlowHandler previous =

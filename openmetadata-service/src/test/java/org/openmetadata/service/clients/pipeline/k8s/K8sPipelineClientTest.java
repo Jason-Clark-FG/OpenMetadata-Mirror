@@ -13,8 +13,8 @@
 
 package org.openmetadata.service.clients.pipeline.k8s;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -62,13 +62,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openmetadata.schema.auth.JWTAuthMechanism;
-import org.openmetadata.schema.entity.Bot;
-import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.ServiceEntityInterface;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.Parameters;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.PipelineServiceClientConfiguration;
 import org.openmetadata.schema.api.services.CreateDatabaseService;
+import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.entity.Bot;
 import org.openmetadata.schema.entity.app.App;
 import org.openmetadata.schema.entity.automations.Workflow;
 import org.openmetadata.schema.entity.services.DatabaseService;
@@ -78,6 +77,7 @@ import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServic
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatusType;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
+import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.security.client.OpenMetadataJWTClientConfig;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.services.connections.metadata.OpenMetadataConnection;
@@ -1145,7 +1145,8 @@ class K8sPipelineClientTest {
     pipeline.setEnabled(true);
 
     Map<String, Object> originalSpec = Map.of("suspend", false);
-    Map<String, Object> originalCronOMJob = Map.of("metadata", Map.of("name", "omjob"), "spec", originalSpec);
+    Map<String, Object> originalCronOMJob =
+        Map.of("metadata", Map.of("name", "omjob"), "spec", originalSpec);
 
     when(customObjectsApi.getNamespacedCustomObject(
             eq("pipelines.openmetadata.org"),
@@ -1245,13 +1246,13 @@ class K8sPipelineClientTest {
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
-      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+      when(botRepository.getByName(
+              eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
           .thenReturn(bot);
       when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
           .thenReturn(botUser);
 
-      String token =
-          invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
+      String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
 
       assertEquals("ingestion-token", token);
     }
@@ -1273,13 +1274,13 @@ class K8sPipelineClientTest {
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
-      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+      when(botRepository.getByName(
+              eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
           .thenReturn(bot);
       when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
           .thenReturn(botUser);
 
-      String token =
-          invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
+      String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
 
       assertEquals(null, token);
     }
@@ -1293,7 +1294,8 @@ class K8sPipelineClientTest {
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
-      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+      when(botRepository.getByName(
+              eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
           .thenReturn(null);
 
       String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
@@ -1319,7 +1321,8 @@ class K8sPipelineClientTest {
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.BOT)).thenReturn(botRepository);
       entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
-      when(botRepository.getByName(eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
+      when(botRepository.getByName(
+              eq(null), eq(Entity.INGESTION_BOT_NAME), any(EntityUtil.Fields.class)))
           .thenReturn(bot);
       when(userRepository.getByName(eq(null), eq("ingestion-bot"), any(EntityUtil.Fields.class)))
           .thenReturn(botUser);
@@ -1349,7 +1352,8 @@ class K8sPipelineClientTest {
 
     Exception exception =
         assertThrows(
-            Exception.class, () -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));
+            Exception.class,
+            () -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));
 
     assertTrue(exception.getMessage().contains(NAMESPACE));
   }
@@ -1423,7 +1427,9 @@ class K8sPipelineClientTest {
     when(deleteConfigMapRequest.execute()).thenThrow(new ApiException(404, "Not found"));
 
     assertDoesNotThrow(
-        () -> invokePrivate(client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "missing-cron"));
+        () ->
+            invokePrivate(
+                client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "missing-cron"));
     assertDoesNotThrow(
         () ->
             invokePrivate(
@@ -1432,11 +1438,16 @@ class K8sPipelineClientTest {
                 new Class<?>[] {String.class},
                 "missing-cron-omjob"));
     assertDoesNotThrow(
-        () -> invokePrivate(client, "deleteSecretIfExists", new Class<?>[] {String.class}, "missing-secret"));
+        () ->
+            invokePrivate(
+                client, "deleteSecretIfExists", new Class<?>[] {String.class}, "missing-secret"));
     assertDoesNotThrow(
         () ->
             invokePrivate(
-                client, "deleteConfigMapIfExists", new Class<?>[] {String.class}, "missing-config"));
+                client,
+                "deleteConfigMapIfExists",
+                new Class<?>[] {String.class},
+                "missing-config"));
   }
 
   @Test
@@ -1461,7 +1472,9 @@ class K8sPipelineClientTest {
 
     assertThrows(
         ApiException.class,
-        () -> invokePrivate(client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "failing-cron"));
+        () ->
+            invokePrivate(
+                client, "deleteCronJobIfExists", new Class<?>[] {String.class}, "failing-cron"));
     assertThrows(
         ApiException.class,
         () ->
@@ -1472,12 +1485,17 @@ class K8sPipelineClientTest {
                 "failing-cron-omjob"));
     assertThrows(
         ApiException.class,
-        () -> invokePrivate(client, "deleteSecretIfExists", new Class<?>[] {String.class}, "failing-secret"));
+        () ->
+            invokePrivate(
+                client, "deleteSecretIfExists", new Class<?>[] {String.class}, "failing-secret"));
     assertThrows(
         ApiException.class,
         () ->
             invokePrivate(
-                client, "deleteConfigMapIfExists", new Class<?>[] {String.class}, "failing-config"));
+                client,
+                "deleteConfigMapIfExists",
+                new Class<?>[] {String.class},
+                "failing-config"));
   }
 
   private void resetAllMocks() {
@@ -1721,7 +1739,8 @@ class K8sPipelineClientTest {
   }
 
   @SuppressWarnings("unchecked")
-  private static <T> T invokePrivate(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+  private static <T> T invokePrivate(
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
     Method method = K8sPipelineClient.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);

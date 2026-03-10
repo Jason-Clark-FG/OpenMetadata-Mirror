@@ -1,8 +1,8 @@
 package org.openmetadata.service.security;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -273,13 +273,11 @@ class SecurityUtilTest {
 
   @Test
   void testFindUserNameFromClaimsUsesMappingAndBotFallback() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
     List<String> order = List.of("preferred_username", "email_claim");
     Map<String, Object> mappedClaims = Map.of("preferred_username", "Alice@Example.com");
 
-    assertEquals(
-        "alice", SecurityUtil.findUserNameFromClaims(mapping, order, mappedClaims));
+    assertEquals("alice", SecurityUtil.findUserNameFromClaims(mapping, order, mappedClaims));
 
     Map<String, Object> botClaims = new HashMap<>();
     botClaims.put("isBot", booleanClaim(true));
@@ -290,8 +288,7 @@ class SecurityUtilTest {
 
   @Test
   void testFindUserNameFromClaimsRejectsMissingMappedUsername() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
 
     AuthenticationException exception =
         assertThrows(
@@ -305,8 +302,7 @@ class SecurityUtilTest {
 
   @Test
   void testFindEmailFromClaimsUsesMappingAndDefaultDomainFallback() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
 
     assertEquals(
         "alice@example.com",
@@ -327,8 +323,7 @@ class SecurityUtilTest {
 
   @Test
   void testFindEmailFromClaimsRejectsInvalidMappedEmail() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
 
     AuthenticationException exception =
         assertThrows(
@@ -356,11 +351,11 @@ class SecurityUtilTest {
     assertEquals("claimed", SecurityUtil.getClaimOrObject(stringClaim("claimed")));
     assertEquals("", SecurityUtil.getClaimOrObject(42));
 
-    assertEquals(
-        List.of("Engineering", "Platform"), SecurityUtil.getClaimAsList(teamClaim));
+    assertEquals(List.of("Engineering", "Platform"), SecurityUtil.getClaimAsList(teamClaim));
     assertEquals(List.of("Data"), SecurityUtil.getClaimAsList(fallbackClaim));
     assertEquals(
-        List.of("ops", "analytics"), SecurityUtil.getClaimAsList(new Object[] {"ops", "analytics"}));
+        List.of("ops", "analytics"),
+        SecurityUtil.getClaimAsList(new Object[] {"ops", "analytics"}));
 
     assertEquals(
         List.of("Engineering", "Platform"),
@@ -388,8 +383,7 @@ class SecurityUtilTest {
 
   @Test
   void testValidateDomainEnforcementCoversPrincipalDomainAllowedDomainsAndBotBypass() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
 
     assertDoesNotThrow(
         () ->
@@ -424,8 +418,7 @@ class SecurityUtilTest {
 
   @Test
   void testValidateDomainEnforcementRejectsInvalidClaimsAndDomains() {
-    Map<String, String> mapping =
-        Map.of("username", "preferred_username", "email", "email_claim");
+    Map<String, String> mapping = Map.of("username", "preferred_username", "email", "email_claim");
 
     AuthenticationException missingEmailException =
         assertThrows(
