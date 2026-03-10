@@ -15,7 +15,8 @@ logging:
   appenders:
     - type: console
       layout:
-        type: json
+        type: om-event-layout
+        format: ${LOG_FORMAT:-text}
         appendLineSeparator: true
 database:
   driverClass: org.postgresql.Driver

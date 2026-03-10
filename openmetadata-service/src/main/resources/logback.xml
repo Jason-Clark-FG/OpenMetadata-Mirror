@@ -2,13 +2,17 @@
 <configuration>
     <variable name="ROOT_LOG_LEVEL" value="${BOOTSTRAP_LOG_LEVEL:-INFO}" />
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="ch.qos.logback.classic.encoder.JsonEncoder" />
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
     </appender>
     <appender name="file" class="ch.qos.logback.core.FileAppender">
         <file>./logs/openmetadata-operation.log</file>
         <append>true</append>
         <immediateFlush>true</immediateFlush>
-        <encoder class="ch.qos.logback.classic.encoder.JsonEncoder" />
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
     </appender>
     <logger name="org.apache" level="ERROR" />
     <logger name="httpclient" level="ERROR" />

@@ -73,12 +73,14 @@ server:
   # Note: maxQueuedRequests removed in Dropwizard 5.0/Jetty 12
 
   # Request/Response logging (disable in production for performance)
+  # Set LOG_FORMAT=json for structured logs. The default text format preserves legacy output.
   requestLog:
     appenders:
       - type: console
         threshold: ${REQUEST_LOG_LEVEL:-ERROR}  # Only log errors by default
         layout:
-          type: access-json
+          type: om-access-layout
+          format: ${LOG_FORMAT:-text}
           appendLineSeparator: true
           additionalFields:
             server: server-1
@@ -147,13 +149,15 @@ server:
 
 # Logging settings.
 # https://logback.qos.ch/manual/layouts.html#conversionWord
+# Set LOG_FORMAT=json for structured logs. The default text format preserves legacy output.
 logging:
   level: ${LOG_LEVEL:-INFO}
   appenders:
     - type: console
       threshold: INFO
       layout:
-        type: json
+        type: om-event-layout
+        format: ${LOG_FORMAT:-text}
         appendLineSeparator: true
         additionalFields:
           server: server-1
