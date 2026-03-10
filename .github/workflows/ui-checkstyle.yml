@@ -78,6 +78,14 @@ jobs:
           node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
           cache: "yarn"
           cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+      
+      - name: Install Antlr4 CLI
+        run: |
+          sudo make install_antlr_cli
+      
+      - name: Install Yarn Packages
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        run: yarn install
 
       - name: Install dependencies
         working-directory: openmetadata-ui/src/main/resources/ui
