@@ -1,7 +1,6 @@
 package org.openmetadata.service.formatter.entity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 
 import java.text.SimpleDateFormat;
@@ -152,8 +151,7 @@ class IngestionPipelineFormatterTest {
       entityMock
           .when(
               () ->
-                  Entity.getEntity(
-                      unresolvedPipeline.getEntityReference(), "service", Include.ALL))
+                  Entity.getEntity(unresolvedPipeline.getEntityReference(), "service", Include.ALL))
           .thenReturn(resolvedPipeline);
       entityMock
           .when(
@@ -192,21 +190,18 @@ class IngestionPipelineFormatterTest {
 
       assertEquals(
           "table|service.sales.orders|contract",
-          IngestionPipelineFormatter.getDataContractUrl(
-              decorator, Entity.DATA_CONTRACT, contract));
+          IngestionPipelineFormatter.getDataContractUrl(decorator, Entity.DATA_CONTRACT, contract));
 
       entityMock
           .when(() -> Entity.getEntityReferenceById(Entity.TABLE, tableId, Include.ALL))
           .thenReturn(null);
       assertEquals(
           "",
-          IngestionPipelineFormatter.getDataContractUrl(
-              decorator, Entity.DATA_CONTRACT, contract));
+          IngestionPipelineFormatter.getDataContractUrl(decorator, Entity.DATA_CONTRACT, contract));
     }
 
     assertEquals(
-        "",
-        IngestionPipelineFormatter.getDataContractUrl(decorator, Entity.TABLE, contract));
+        "", IngestionPipelineFormatter.getDataContractUrl(decorator, Entity.TABLE, contract));
   }
 
   private static Thread pipelineThread() {

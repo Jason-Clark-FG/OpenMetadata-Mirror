@@ -52,9 +52,13 @@ class FeedUtilsTest {
             .isEmpty());
 
     ChangeEvent threadEvent =
-        new ChangeEvent().withEntityType(Entity.THREAD).withEntity(new Thread().withType(ThreadType.Conversation));
+        new ChangeEvent()
+            .withEntityType(Entity.THREAD)
+            .withEntity(new Thread().withType(ThreadType.Conversation));
     ChangeEvent unsupportedEvent =
-        new ChangeEvent().withEntityType("custom").withEntity(new Table().withId(UUID.randomUUID()));
+        new ChangeEvent()
+            .withEntityType("custom")
+            .withEntity(new Table().withId(UUID.randomUUID()));
 
     try (MockedStatic<Entity> entity = mockStatic(Entity.class)) {
       entity.when(Entity::getEntityList).thenReturn(Set.of(Entity.TABLE));
@@ -93,8 +97,7 @@ class FeedUtilsTest {
       assertEquals(List.of(domainId), createdThread.getDomains());
       assertEquals("table|service.sales.orders|", createdThread.getEntityUrlLink());
       assertSame(
-          table,
-          ((EntityInfo) createdThread.getFeedInfo().getEntitySpecificInfo()).getEntity());
+          table, ((EntityInfo) createdThread.getFeedInfo().getEntitySpecificInfo()).getEntity());
 
       Thread softDeletedThread = FeedUtils.getThreadWithMessage(decorator, softDeleted).getFirst();
       assertEquals(Thread.CardStyle.ENTITY_SOFT_DELETED, softDeletedThread.getCardStyle());
@@ -108,8 +111,7 @@ class FeedUtilsTest {
 
       Thread logicalTestCaseThread =
           FeedUtils.getThreadWithMessage(decorator, logicalTestCaseAdded).getFirst();
-      assertEquals(
-          Thread.CardStyle.LOGICAL_TEST_CASE_ADDED, logicalTestCaseThread.getCardStyle());
+      assertEquals(Thread.CardStyle.LOGICAL_TEST_CASE_ADDED, logicalTestCaseThread.getCardStyle());
       assertEquals(
           "Added Logical Test Cases to **table**: `service.sales.orders`",
           logicalTestCaseThread.getMessage());

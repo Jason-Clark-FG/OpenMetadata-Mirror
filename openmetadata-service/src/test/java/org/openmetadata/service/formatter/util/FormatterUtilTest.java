@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -105,7 +104,9 @@ class FormatterUtilTest {
 
     try (MockedStatic<ParserFactory> parserFactory = mockStatic(ParserFactory.class)) {
       parserFactory
-          .when(() -> ParserFactory.getFieldParserObject(decorator, thread, nestedField, "description"))
+          .when(
+              () ->
+                  ParserFactory.getFieldParserObject(decorator, thread, nestedField, "description"))
           .thenReturn(nestedFormatter);
       parserFactory
           .when(() -> ParserFactory.getFieldParserObject(decorator, thread, simpleField, "owners"))
@@ -150,9 +151,12 @@ class FormatterUtilTest {
                 List.of(new FieldChange().withName("description").withOldValue("old")));
 
     try (MockedStatic<ParserFactory> parserFactory = mockStatic(ParserFactory.class)) {
-      parserFactory.when(() -> ParserFactory.getEntityParser(Entity.TABLE)).thenReturn(entityFormatter);
+      parserFactory
+          .when(() -> ParserFactory.getEntityParser(Entity.TABLE))
+          .thenReturn(entityFormatter);
 
-      List<Thread> mixedMessages = FormatterUtil.getFormattedMessages(decorator, thread, mixedChanges);
+      List<Thread> mixedMessages =
+          FormatterUtil.getFormattedMessages(decorator, thread, mixedChanges);
       assertEquals(2, mixedMessages.size());
       assertEquals("UPDATE:owners", mixedMessages.get(0).getMessage());
       assertEquals("ADD:tags", mixedMessages.get(1).getMessage());
@@ -198,7 +202,8 @@ class FormatterUtilTest {
     when(entity.getImpersonatedBy()).thenReturn("proxy");
     when(entity.getUpdatedAt()).thenReturn(123L);
     when(entity.getVersion()).thenReturn(2.0);
-    when(entity.getChangeDescription()).thenReturn(new ChangeDescription().withPreviousVersion(1.0));
+    when(entity.getChangeDescription())
+        .thenReturn(new ChangeDescription().withPreviousVersion(1.0));
 
     ContainerResponseContext entityResponse = mock(ContainerResponseContext.class);
     when(entityResponse.getHeaderString(RestUtil.CHANGE_CUSTOM_HEADER))
@@ -274,10 +279,19 @@ class FormatterUtilTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(() -> Entity.getEntityByName(Entity.DATA_CONTRACT, contractFqn, "*", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.DATA_CONTRACT,
+                      contractFqn,
+                      "*",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenReturn(contractSpy);
       entityMock
-          .when(() -> Entity.getEntityReferenceById(Entity.TABLE, tableId, org.openmetadata.schema.type.Include.NON_DELETED))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(
+                      Entity.TABLE, tableId, org.openmetadata.schema.type.Include.NON_DELETED))
           .thenReturn(fullEntityReference);
 
       ChangeEvent changeEvent =
@@ -297,7 +311,10 @@ class FormatterUtilTest {
     return new Thread()
         .withId(UUID.randomUUID())
         .withAbout("<#E::table::service.sales.orders>")
-        .withEntityRef(new EntityReference().withType(Entity.TABLE).withFullyQualifiedName("service.sales.orders"));
+        .withEntityRef(
+            new EntityReference()
+                .withType(Entity.TABLE)
+                .withFullyQualifiedName("service.sales.orders"));
   }
 
   private static final class TestDecorator implements MessageDecorator<String> {

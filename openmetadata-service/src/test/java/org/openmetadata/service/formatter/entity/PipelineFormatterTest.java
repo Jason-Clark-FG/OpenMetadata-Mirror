@@ -55,7 +55,8 @@ class PipelineFormatterTest {
               FormatterUtil.CHANGE_TYPE.UPDATE);
 
       assertEquals(
-          String.format("Pipeline <b>%s</b> <b>%s</b> at %s", "etl_daily", "Successful", expectedDate),
+          String.format(
+              "Pipeline <b>%s</b> <b>%s</b> at %s", "etl_daily", "Successful", expectedDate),
           statusMessage);
 
       String updatedMessage =

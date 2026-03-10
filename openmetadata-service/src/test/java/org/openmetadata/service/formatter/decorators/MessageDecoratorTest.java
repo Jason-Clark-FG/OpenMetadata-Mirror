@@ -41,13 +41,12 @@ import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestCaseParameterValue;
 import org.openmetadata.schema.tests.type.TestCaseResult;
 import org.openmetadata.schema.tests.type.TestCaseStatus;
+import org.openmetadata.schema.type.AnnouncementDetails;
 import org.openmetadata.schema.type.ChangeEvent;
-import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Post;
-import org.openmetadata.schema.type.AnnouncementDetails;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskDetails;
 import org.openmetadata.schema.type.TaskStatus;
@@ -118,11 +117,15 @@ class MessageDecoratorTest {
     assertEquals(
         "glossary|Business.Term|activity_feed/all",
         decorator.buildThreadUrl(
-            ThreadType.Conversation, Entity.GLOSSARY_TERM, new Table().withFullyQualifiedName("Business.Term")));
+            ThreadType.Conversation,
+            Entity.GLOSSARY_TERM,
+            new Table().withFullyQualifiedName("Business.Term")));
     assertEquals(
         "tags|PII|",
         decorator.buildThreadUrl(
-            ThreadType.Conversation, Entity.TAG, new Table().withFullyQualifiedName("PII.Sensitive")));
+            ThreadType.Conversation,
+            Entity.TAG,
+            new Table().withFullyQualifiedName("PII.Sensitive")));
   }
 
   @Test
@@ -186,10 +189,7 @@ class MessageDecoratorTest {
   void createEntityMessageBuildsHeadersForStandardQueryAndTestCaseEvents() {
     Table table = new Table().withFullyQualifiedName("service.sales.orders");
     ChangeEvent tableEvent =
-        new ChangeEvent()
-            .withEntityType(Entity.TABLE)
-            .withEntity(table)
-            .withUserName("alice");
+        new ChangeEvent().withEntityType(Entity.TABLE).withEntity(table).withUserName("alice");
 
     ChangeEvent queryEvent =
         new ChangeEvent()
@@ -199,10 +199,7 @@ class MessageDecoratorTest {
 
     TestCase testCase = new TestCase().withFullyQualifiedName("quality.row_count");
     ChangeEvent testCaseEvent =
-        new ChangeEvent()
-            .withEntityType(Entity.TEST_CASE)
-            .withEntity(testCase)
-            .withUserName("bob");
+        new ChangeEvent().withEntityType(Entity.TEST_CASE).withEntity(testCase).withUserName("bob");
 
     Thread first = new Thread().withMessage("First message");
     Thread second = new Thread().withMessage("Second message");
@@ -212,9 +209,15 @@ class MessageDecoratorTest {
       alerts.when(() -> AlertsRuleEvaluator.getEntity(tableEvent)).thenReturn(table);
       alerts.when(() -> AlertsRuleEvaluator.getEntity(queryEvent)).thenReturn(table);
       alerts.when(() -> AlertsRuleEvaluator.getEntity(testCaseEvent)).thenReturn(testCase);
-      feedUtils.when(() -> FeedUtils.getThreadWithMessage(decorator, tableEvent)).thenReturn(List.of(first, second));
-      feedUtils.when(() -> FeedUtils.getThreadWithMessage(decorator, queryEvent)).thenReturn(List.of(first));
-      feedUtils.when(() -> FeedUtils.getThreadWithMessage(decorator, testCaseEvent)).thenReturn(List.of(first));
+      feedUtils
+          .when(() -> FeedUtils.getThreadWithMessage(decorator, tableEvent))
+          .thenReturn(List.of(first, second));
+      feedUtils
+          .when(() -> FeedUtils.getThreadWithMessage(decorator, queryEvent))
+          .thenReturn(List.of(first));
+      feedUtils
+          .when(() -> FeedUtils.getThreadWithMessage(decorator, testCaseEvent))
+          .thenReturn(List.of(first));
 
       OutgoingMessage tableMessage = decorator.createEntityMessage("publisher", tableEvent);
       assertEquals(
@@ -270,13 +273,24 @@ class MessageDecoratorTest {
       alerts.when(() -> AlertsRuleEvaluator.getThread(conversationEvent)).thenReturn(conversation);
       alerts.when(() -> AlertsRuleEvaluator.getThread(taskEvent)).thenReturn(task);
       entity
-          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq(""), eq(Include.ALL)))
+          .when(
+              () ->
+                  Entity.getEntity(
+                      any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class),
+                      eq(""),
+                      eq(Include.ALL)))
           .thenReturn(table);
       entity
-          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq("id"), eq(Include.ALL)))
+          .when(
+              () ->
+                  Entity.getEntity(
+                      any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class),
+                      eq("id"),
+                      eq(Include.ALL)))
           .thenReturn(table);
 
-      OutgoingMessage conversationMessage = decorator.createThreadMessage("publisher", conversationEvent);
+      OutgoingMessage conversationMessage =
+          decorator.createThreadMessage("publisher", conversationEvent);
       assertEquals(
           "[publisher] @alice posted a message on asset table|service.sales.orders|activity_feed/all",
           conversationMessage.getHeader());
@@ -336,14 +350,28 @@ class MessageDecoratorTest {
 
     try (MockedStatic<AlertsRuleEvaluator> alerts = mockStatic(AlertsRuleEvaluator.class);
         MockedStatic<Entity> entity = mockStatic(Entity.class)) {
-      alerts.when(() -> AlertsRuleEvaluator.getThread(announcementCreated)).thenReturn(announcement);
-      alerts.when(() -> AlertsRuleEvaluator.getThread(announcementDeleted)).thenReturn(announcement);
+      alerts
+          .when(() -> AlertsRuleEvaluator.getThread(announcementCreated))
+          .thenReturn(announcement);
+      alerts
+          .when(() -> AlertsRuleEvaluator.getThread(announcementDeleted))
+          .thenReturn(announcement);
       alerts.when(() -> AlertsRuleEvaluator.getThread(taskClosed)).thenReturn(closedTask);
       entity
-          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq(""), eq(Include.ALL)))
+          .when(
+              () ->
+                  Entity.getEntity(
+                      any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class),
+                      eq(""),
+                      eq(Include.ALL)))
           .thenReturn(table);
       entity
-          .when(() -> Entity.getEntity(any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class), eq("id"), eq(Include.ALL)))
+          .when(
+              () ->
+                  Entity.getEntity(
+                      any(org.openmetadata.service.resources.feeds.MessageParser.EntityLink.class),
+                      eq("id"),
+                      eq(Include.ALL)))
           .thenReturn(table);
 
       OutgoingMessage announcementMessage =

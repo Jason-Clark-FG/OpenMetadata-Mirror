@@ -73,7 +73,8 @@ class ColumnMetadataCacheTest {
     AtomicInteger fetches = new AtomicInteger();
 
     cache.loadColumnMetadata(
-        Set.of("malformed", "service.db.schema.orders.customer_id", "service.db.schema.missing.value"),
+        Set.of(
+            "malformed", "service.db.schema.orders.customer_id", "service.db.schema.missing.value"),
         parentFqn -> {
           fetches.incrementAndGet();
           if ("service.db.schema.orders".equals(parentFqn)) {
@@ -91,8 +92,7 @@ class ColumnMetadataCacheTest {
     assertNull(cache.getColumnMetadata("service.db.schema.missing.value"));
   }
 
-  private static Map<String, Object> column(
-      String name, String fullyQualifiedName, String tagFqn) {
+  private static Map<String, Object> column(String name, String fullyQualifiedName, String tagFqn) {
     Map<String, Object> column = new HashMap<>();
     column.put("name", name);
     if (fullyQualifiedName != null) {

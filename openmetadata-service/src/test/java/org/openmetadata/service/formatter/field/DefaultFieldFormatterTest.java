@@ -31,8 +31,7 @@ class DefaultFieldFormatterTest {
     assertEquals(
         "Data Steward",
         DefaultFieldFormatter.getFieldValue(
-            JsonUtils.pojoToJson(
-                List.of(new EntityReference().withDisplayName("Data Steward")))));
+            JsonUtils.pojoToJson(List.of(new EntityReference().withDisplayName("Data Steward")))));
     assertEquals(
         "Glossary.Term",
         DefaultFieldFormatter.getFieldValue(
@@ -85,11 +84,7 @@ class DefaultFieldFormatterTest {
 
     FeedInfo feedInfo = new FeedInfo().withHeaderMessage("header");
     DefaultFieldFormatter.populateThreadFeedInfo(
-        thread,
-        "message",
-        Thread.CardStyle.DESCRIPTION,
-        Thread.FieldOperation.UPDATED,
-        feedInfo);
+        thread, "message", Thread.CardStyle.DESCRIPTION, Thread.FieldOperation.UPDATED, feedInfo);
 
     assertEquals("message", thread.getMessage());
     assertEquals(Thread.CardStyle.DESCRIPTION, thread.getCardStyle());

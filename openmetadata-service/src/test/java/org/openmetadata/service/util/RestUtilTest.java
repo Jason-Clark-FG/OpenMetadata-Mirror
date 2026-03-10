@@ -111,7 +111,9 @@ class RestUtilTest {
 
     assertNull(RestUtil.encodeCursor(null));
     assertNull(RestUtil.decodeCursor(""));
-    assertEquals("service.sales.orders", RestUtil.decodeCursor(RestUtil.encodeCursor("service.sales.orders")));
+    assertEquals(
+        "service.sales.orders",
+        RestUtil.decodeCursor(RestUtil.encodeCursor("service.sales.orders")));
   }
 
   @Test
@@ -141,8 +143,11 @@ class RestUtilTest {
     Response patchResponse =
         new RestUtil.PatchResponse<>(Response.Status.OK, table, EventType.ENTITY_UPDATED)
             .toResponse();
-    assertEquals(EventType.ENTITY_UPDATED.value(), patchResponse.getHeaderString(RestUtil.CHANGE_CUSTOM_HEADER));
-    assertEquals(EntityETag.generateETag(table), patchResponse.getHeaderString(EntityETag.ETAG_HEADER));
+    assertEquals(
+        EventType.ENTITY_UPDATED.value(),
+        patchResponse.getHeaderString(RestUtil.CHANGE_CUSTOM_HEADER));
+    assertEquals(
+        EntityETag.generateETag(table), patchResponse.getHeaderString(EntityETag.ETAG_HEADER));
 
     Response patchWithoutEntity =
         new RestUtil.PatchResponse<>(Response.Status.OK, "payload", EventType.ENTITY_UPDATED)
@@ -160,7 +165,8 @@ class RestUtilTest {
 
   @Test
   void timestampQuoteAndJsonHelpersHandleNestedStructuresAndInvalidInput() {
-    assertThrows(IllegalArgumentException.class, () -> RestUtil.validateTimestampMilliseconds(null));
+    assertThrows(
+        IllegalArgumentException.class, () -> RestUtil.validateTimestampMilliseconds(null));
     assertThrows(
         BadRequestException.class, () -> RestUtil.validateTimestampMilliseconds(1_234_567_8901L));
     assertDoesNotThrow(() -> RestUtil.validateTimestampMilliseconds(1_234_567_890_123L));
@@ -175,7 +181,8 @@ class RestUtilTest {
     assertEquals(2, jsonObjects.size());
     assertEquals("{\"a\":\"{literal}\",\"b\":{\"c\":1}}", jsonObjects.get(0));
     assertEquals("{\"d\":\"escaped quote \\\"}\\\" stays in string\",\"e\":2}", jsonObjects.get(1));
-    assertEquals(jsonObjects.get(0).length() - 1, RestUtil.findMatchingBrace(jsonObjects.get(0), 0));
+    assertEquals(
+        jsonObjects.get(0).length() - 1, RestUtil.findMatchingBrace(jsonObjects.get(0), 0));
     assertEquals(-1, RestUtil.findMatchingBrace("{\"broken\":true", 0));
   }
 }

@@ -92,7 +92,9 @@ class EntityFieldUtilsTest {
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity.when(() -> Entity.getEntityRepository("table")).thenReturn(repository);
-      mockedEntity.when(Entity::getCollectionDAO).thenThrow(new AssertionError("Should not be called"));
+      mockedEntity
+          .when(Entity::getCollectionDAO)
+          .thenThrow(new AssertionError("Should not be called"));
 
       EntityFieldUtils.setEntityField(
           entity, "table", "alice", "description", "same description", true);
@@ -147,11 +149,16 @@ class EntityFieldUtilsTest {
 
       assertTrue(
           entity.getTags().stream()
-              .anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN()) && tag.getSource() == TagSource.CLASSIFICATION));
+              .anyMatch(
+                  tag ->
+                      "PII.Sensitive".equals(tag.getTagFQN())
+                          && tag.getSource() == TagSource.CLASSIFICATION));
       assertTrue(
           entity.getTags().stream()
               .anyMatch(
-                  tag -> "Business.Critical".equals(tag.getTagFQN()) && tag.getSource() == TagSource.GLOSSARY));
+                  tag ->
+                      "Business.Critical".equals(tag.getTagFQN())
+                          && tag.getSource() == TagSource.GLOSSARY));
       assertEquals("Certification.Gold", entity.getCertification().getTagLabel().getTagFQN());
       assertEquals(2, entity.getOwners().size());
       assertEquals(2, entity.getReviewers().size());
@@ -232,9 +239,14 @@ class EntityFieldUtilsTest {
       assertEquals(2, entity.getTags().size());
       assertTrue(
           entity.getTags().stream()
-              .anyMatch(tag -> "Business.Legacy".equals(tag.getTagFQN()) && tag.getSource() == TagSource.GLOSSARY));
-      assertTrue(entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
-      assertFalse(entity.getTags().stream().anyMatch(tag -> "PII.Restricted".equals(tag.getTagFQN())));
+              .anyMatch(
+                  tag ->
+                      "Business.Legacy".equals(tag.getTagFQN())
+                          && tag.getSource() == TagSource.GLOSSARY));
+      assertTrue(
+          entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
+      assertFalse(
+          entity.getTags().stream().anyMatch(tag -> "PII.Restricted".equals(tag.getTagFQN())));
     }
   }
 
@@ -255,7 +267,9 @@ class EntityFieldUtilsTest {
       assertTrue(
           entity.getTags().stream()
               .anyMatch(
-                  tag -> "Business.Critical".equals(tag.getTagFQN()) && tag.getSource() == TagSource.GLOSSARY));
+                  tag ->
+                      "Business.Critical".equals(tag.getTagFQN())
+                          && tag.getSource() == TagSource.GLOSSARY));
     }
   }
 
@@ -290,9 +304,12 @@ class EntityFieldUtilsTest {
       EntityFieldUtils.appendGlossaryTerms(entity, "Business.Critical");
 
       assertEquals(2, entity.getTags().size());
-      assertTrue(entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
-      assertTrue(entity.getTags().stream().anyMatch(tag -> "Business.Critical".equals(tag.getTagFQN())));
-      assertFalse(entity.getTags().stream().anyMatch(tag -> "Business.Legacy".equals(tag.getTagFQN())));
+      assertTrue(
+          entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
+      assertTrue(
+          entity.getTags().stream().anyMatch(tag -> "Business.Critical".equals(tag.getTagFQN())));
+      assertFalse(
+          entity.getTags().stream().anyMatch(tag -> "Business.Legacy".equals(tag.getTagFQN())));
     }
   }
 
@@ -332,7 +349,8 @@ class EntityFieldUtilsTest {
       assertDoesNotThrow(() -> EntityFieldUtils.setTier(entity, "Tier.Tier1"));
 
       assertEquals(2, entity.getTags().size());
-      assertTrue(entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
+      assertTrue(
+          entity.getTags().stream().anyMatch(tag -> "PII.Sensitive".equals(tag.getTagFQN())));
       assertTrue(entity.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN())));
       assertFalse(entity.getTags().stream().anyMatch(tag -> "Tier.Tier2".equals(tag.getTagFQN())));
     }
@@ -357,7 +375,8 @@ class EntityFieldUtilsTest {
           .when(() -> Entity.getEntityByName(Entity.USER, "missing", "", NON_DELETED))
           .thenThrow(new IllegalArgumentException("missing"));
 
-      EntityFieldUtils.setOwners(entity, "user:alice, team:data, invalid, bot:daemon, user:missing");
+      EntityFieldUtils.setOwners(
+          entity, "user:alice, team:data, invalid, bot:daemon, user:missing");
 
       assertEquals(2, entity.getOwners().size());
       assertTrue(entity.getOwners().stream().anyMatch(ref -> "alice".equals(ref.getName())));
@@ -389,7 +408,8 @@ class EntityFieldUtilsTest {
 
       assertEquals(2, entity.getReviewers().size());
       assertTrue(entity.getReviewers().stream().anyMatch(ref -> "alice".equals(ref.getName())));
-      assertTrue(entity.getReviewers().stream().anyMatch(ref -> "governance".equals(ref.getName())));
+      assertTrue(
+          entity.getReviewers().stream().anyMatch(ref -> "governance".equals(ref.getName())));
     }
   }
 

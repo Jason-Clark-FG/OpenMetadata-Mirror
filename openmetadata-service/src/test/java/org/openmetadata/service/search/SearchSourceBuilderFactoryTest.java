@@ -24,8 +24,8 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.api.search.Aggregation;
-import org.openmetadata.schema.api.search.Condition;
 import org.openmetadata.schema.api.search.AssetTypeConfiguration;
+import org.openmetadata.schema.api.search.Condition;
 import org.openmetadata.schema.api.search.FieldBoost;
 import org.openmetadata.schema.api.search.FieldValueBoost;
 import org.openmetadata.schema.api.search.GlobalSettings;
@@ -352,10 +352,12 @@ public class SearchSourceBuilderFactoryTest {
   public void testDataAssetBuildersUseGlobalHighlightFallbackAndScriptAggregations() {
     searchSettings
         .getGlobalSettings()
-        .setAggregations(List.of(createScriptAggregation("entityTypeScript", "doc['entityType'].value")));
+        .setAggregations(
+            List.of(createScriptAggregation("entityTypeScript", "doc['entityType'].value")));
     searchSettings.getGlobalSettings().setHighlightFields(List.of("name"));
     tableConfig.setHighlightFields(null);
-    tableConfig.setAggregations(List.of(createScriptAggregation("serviceScript", "doc['service.name'].value")));
+    tableConfig.setAggregations(
+        List.of(createScriptAggregation("serviceScript", "doc['service.name'].value")));
 
     OpenSearchSourceBuilderFactory osFactory = new OpenSearchSourceBuilderFactory(searchSettings);
     ElasticSearchSourceBuilderFactory esFactory =
@@ -498,11 +500,7 @@ public class SearchSourceBuilderFactoryTest {
   }
 
   private FieldValueBoost createFieldValueBoost(
-      String field,
-      Double factor,
-      FieldValueBoost.Modifier modifier,
-      Double missing,
-      Range range) {
+      String field, Double factor, FieldValueBoost.Modifier modifier, Double missing, Range range) {
     return new FieldValueBoost()
         .withField(field)
         .withFactor(factor)
@@ -516,7 +514,8 @@ public class SearchSourceBuilderFactoryTest {
     assertEquals(Set.copyOf(List.of(expectedFields)), builder.highlighter().fields().keySet());
   }
 
-  private void assertHighlightFields(ElasticSearchRequestBuilder builder, String... expectedFields) {
+  private void assertHighlightFields(
+      ElasticSearchRequestBuilder builder, String... expectedFields) {
     assertNotNull(builder.highlighter());
     assertEquals(
         Set.copyOf(List.of(expectedFields)),

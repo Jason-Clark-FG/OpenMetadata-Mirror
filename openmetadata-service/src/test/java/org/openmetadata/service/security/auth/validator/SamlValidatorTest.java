@@ -261,9 +261,7 @@ class SamlValidatorTest {
       SamlSSOClientConfig samlConfig = baseConfig(server.url());
       samlConfig.getIdp().setEntityId("https://sts.windows.net/" + tenantId + "/");
       samlConfig.getIdp().setIdpX509Certificate(AZURE_CERT);
-      samlConfig
-          .getIdp()
-          .setNameId("urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress");
+      samlConfig.getIdp().setNameId("urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress");
 
       FieldError error =
           validator.validateSamlConfiguration(new AuthenticationConfiguration(), samlConfig);
@@ -328,7 +326,9 @@ class SamlValidatorTest {
   void validateCertificatesRejectsInvalidSpCertificateWhenSigningIsEnabled() throws Exception {
     SamlSSOClientConfig samlConfig = baseConfig("http://localhost/unused");
     samlConfig.setSecurity(new SamlSecurityConfig().withSendSignedAuthRequest(true));
-    samlConfig.getSp().setSpX509Certificate("-----BEGIN CERTIFICATE-----broken-----END CERTIFICATE-----");
+    samlConfig
+        .getSp()
+        .setSpX509Certificate("-----BEGIN CERTIFICATE-----broken-----END CERTIFICATE-----");
 
     FieldError error = invokePrivate("validateCertificates", SamlSSOClientConfig.class, samlConfig);
 
@@ -346,7 +346,8 @@ class SamlValidatorTest {
   }
 
   @Test
-  void validateSecurityConfigurationRequiresIdpCertificateForAssertionValidation() throws Exception {
+  void validateSecurityConfigurationRequiresIdpCertificateForAssertionValidation()
+      throws Exception {
     SamlSSOClientConfig samlConfig = baseConfig("http://localhost/unused");
     samlConfig.getIdp().setIdpX509Certificate(null);
     samlConfig.setSecurity(new SamlSecurityConfig().withWantAssertionsSigned(true));
@@ -590,10 +591,7 @@ class SamlValidatorTest {
   void validateAzureAdTenantReturnsFieldErrorsWhenEntityIdIsNull() throws Exception {
     FieldError error =
         invokePrivate(
-            "validateAzureAdTenant",
-            new Class<?>[] {String.class, String.class},
-            null,
-            null);
+            "validateAzureAdTenant", new Class<?>[] {String.class, String.class}, null, null);
 
     assertNotNull(error);
     assertEquals(ValidationErrorBuilder.FieldPaths.SAML_IDP_ENTITY_ID, error.getField());
@@ -678,7 +676,8 @@ class SamlValidatorTest {
       http.when(() -> ValidationHttpUtil.safeGet(metadataUrl))
           .thenReturn(
               new ValidationHttpUtil.HttpResponseData(
-                  200, "<EntityDescriptor>urn:oasis:names:tc:SAML:2.0:protocol</EntityDescriptor>"));
+                  200,
+                  "<EntityDescriptor>urn:oasis:names:tc:SAML:2.0:protocol</EntityDescriptor>"));
 
       FieldError persistentError =
           invokePrivate(
@@ -738,8 +737,7 @@ class SamlValidatorTest {
             .withSsoLoginUrl("http://localhost/unused");
 
     try (MockedStatic<ValidationHttpUtil> http = mockStatic(ValidationHttpUtil.class)) {
-      http.when(() -> ValidationHttpUtil.safeGet(metadataUrl))
-          .thenThrow(new IOException("boom"));
+      http.when(() -> ValidationHttpUtil.safeGet(metadataUrl)).thenThrow(new IOException("boom"));
 
       FieldError error =
           invokePrivate(
@@ -768,7 +766,8 @@ class SamlValidatorTest {
       http.when(() -> ValidationHttpUtil.safeGet(metadataUrl))
           .thenReturn(
               new ValidationHttpUtil.HttpResponseData(
-                  200, "<EntityDescriptor>urn:oasis:names:tc:SAML:2.0:protocol</EntityDescriptor>"));
+                  200,
+                  "<EntityDescriptor>urn:oasis:names:tc:SAML:2.0:protocol</EntityDescriptor>"));
 
       FieldError error =
           invokePrivate(
@@ -824,7 +823,8 @@ class SamlValidatorTest {
   void validateIdpConnectivityMaps404ToFieldError() throws Exception {
     try (TestSsoServer server = TestSsoServer.start(404, "missing")) {
       FieldError error =
-          invokePrivate("validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
+          invokePrivate(
+              "validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
 
       assertNotNull(error);
       assertEquals(ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL, error.getField());
@@ -836,7 +836,8 @@ class SamlValidatorTest {
   void validateIdpConnectivityTreatsSamlClientErrorsAsWarnings() throws Exception {
     try (TestSsoServer server = TestSsoServer.start(400, "invalid saml request")) {
       FieldError error =
-          invokePrivate("validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
+          invokePrivate(
+              "validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
 
       assertNull(error);
     }
@@ -848,7 +849,9 @@ class SamlValidatorTest {
         TestSsoServer serverError = TestSsoServer.start(503, "unavailable")) {
       FieldError methodError =
           invokePrivate(
-              "validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(methodNotAllowed.url()));
+              "validateIdpConnectivity",
+              SamlSSOClientConfig.class,
+              baseConfig(methodNotAllowed.url()));
       FieldError serverErrorField =
           invokePrivate(
               "validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(serverError.url()));
@@ -856,8 +859,7 @@ class SamlValidatorTest {
       assertNotNull(methodError);
       assertEquals(ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL, methodError.getField());
       assertNotNull(serverErrorField);
-      assertEquals(
-          ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL, serverErrorField.getField());
+      assertEquals(ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL, serverErrorField.getField());
     }
   }
 
@@ -865,7 +867,8 @@ class SamlValidatorTest {
   void validateIdpConnectivityMapsClientErrorsWithoutSamlHints() throws Exception {
     try (TestSsoServer server = TestSsoServer.start(400, "plain client error")) {
       FieldError error =
-          invokePrivate("validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
+          invokePrivate(
+              "validateIdpConnectivity", SamlSSOClientConfig.class, baseConfig(server.url()));
 
       assertNotNull(error);
       assertEquals(ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL, error.getField());
@@ -896,7 +899,8 @@ class SamlValidatorTest {
   void readResponseSnippetFallsBackToInputStreams() throws Exception {
     HttpURLConnection connection = mock(HttpURLConnection.class);
     when(connection.getErrorStream()).thenReturn(null);
-    when(connection.getInputStream()).thenReturn(new java.io.ByteArrayInputStream("from-input".getBytes()));
+    when(connection.getInputStream())
+        .thenReturn(new java.io.ByteArrayInputStream("from-input".getBytes()));
 
     String snippet = invokePrivate("readResponseSnippet", HttpURLConnection.class, connection);
 
@@ -906,7 +910,8 @@ class SamlValidatorTest {
   @Test
   void createTestSamlRequestFallsBackWhenConfigIsIncomplete() throws Exception {
     String request =
-        invokePrivate("createTestSamlRequest", SamlSSOClientConfig.class, new SamlSSOClientConfig());
+        invokePrivate(
+            "createTestSamlRequest", SamlSSOClientConfig.class, new SamlSSOClientConfig());
 
     assertEquals("dGVzdA==", request);
   }
@@ -995,7 +1000,9 @@ class SamlValidatorTest {
     when(cert.getSubjectDN()).thenReturn(new X500Principal("CN=generic.example.com"));
 
     SamlSSOClientConfig samlConfig = baseConfig("http://localhost/unused");
-    samlConfig.getIdp().setEntityId("https://sts.windows.net/11111111-2222-3333-4444-555555555555/");
+    samlConfig
+        .getIdp()
+        .setEntityId("https://sts.windows.net/11111111-2222-3333-4444-555555555555/");
 
     InvocationTargetException exception =
         assertThrows(
@@ -1015,7 +1022,8 @@ class SamlValidatorTest {
     X509Certificate cert = mock(X509Certificate.class);
     when(cert.getSubjectDN()).thenReturn(new X500Principal("CN=other.example.com"));
     when(cert.getSubjectAlternativeNames())
-        .thenReturn(List.of(List.of(2, "login.sso.example.com"), List.of(6, "urn:sso.example.com")));
+        .thenReturn(
+            List.of(List.of(2, "login.sso.example.com"), List.of(6, "urn:sso.example.com")));
 
     invokePrivate(
         "validateIdpCertificateAgainstConfig",

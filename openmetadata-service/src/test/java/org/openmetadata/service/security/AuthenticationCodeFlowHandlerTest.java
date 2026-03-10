@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -22,7 +21,6 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.RefreshTokenGrant;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
@@ -30,13 +28,14 @@ import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
 import com.nimbusds.oauth2.sdk.auth.ClientSecretPost;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
-import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
@@ -153,7 +152,8 @@ class AuthenticationCodeFlowHandlerTest {
     assertTrue(configuration.isDisablePkce());
     assertEquals("graph", configuration.getCustomParams().get("resource"));
     assertEquals(
-        ClientAuthenticationMethod.CLIENT_SECRET_POST, configuration.getClientAuthenticationMethod());
+        ClientAuthenticationMethod.CLIENT_SECRET_POST,
+        configuration.getClientAuthenticationMethod());
   }
 
   @Test
@@ -190,7 +190,10 @@ class AuthenticationCodeFlowHandlerTest {
 
     ClientAuthentication authentication =
         invokePrivate(
-            handler, "getClientAuthentication", new Class<?>[] {OidcConfiguration.class}, configuration);
+            handler,
+            "getClientAuthentication",
+            new Class<?>[] {OidcConfiguration.class},
+            configuration);
 
     assertInstanceOf(ClientSecretPost.class, authentication);
   }
@@ -204,7 +207,10 @@ class AuthenticationCodeFlowHandlerTest {
 
     ClientAuthentication authentication =
         invokePrivate(
-            handler, "getClientAuthentication", new Class<?>[] {OidcConfiguration.class}, configuration);
+            handler,
+            "getClientAuthentication",
+            new Class<?>[] {OidcConfiguration.class},
+            configuration);
 
     assertInstanceOf(ClientSecretBasic.class, authentication);
   }
@@ -225,7 +231,10 @@ class AuthenticationCodeFlowHandlerTest {
 
     ClientAuthentication authentication =
         invokePrivate(
-            handler, "getClientAuthentication", new Class<?>[] {OidcConfiguration.class}, configuration);
+            handler,
+            "getClientAuthentication",
+            new Class<?>[] {OidcConfiguration.class},
+            configuration);
 
     assertInstanceOf(PrivateKeyJWT.class, authentication);
   }
@@ -235,9 +244,7 @@ class AuthenticationCodeFlowHandlerTest {
     AuthenticationCodeFlowHandler handler = newHandler();
     OidcConfiguration configuration =
         configuredOidcConfiguration(
-            "client-id",
-            "client-secret",
-            List.of(ClientAuthenticationMethod.CLIENT_SECRET_JWT));
+            "client-id", "client-secret", List.of(ClientAuthenticationMethod.CLIENT_SECRET_JWT));
     configuration.setClientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_JWT);
 
     TechnicalException exception =
@@ -258,9 +265,7 @@ class AuthenticationCodeFlowHandlerTest {
     AuthenticationCodeFlowHandler handler = newHandler();
     OidcConfiguration configuration =
         configuredOidcConfiguration(
-            "client-id",
-            "client-secret",
-            List.of(ClientAuthenticationMethod.CLIENT_SECRET_JWT));
+            "client-id", "client-secret", List.of(ClientAuthenticationMethod.CLIENT_SECRET_JWT));
 
     TechnicalException exception =
         assertThrows(
@@ -361,7 +366,8 @@ class AuthenticationCodeFlowHandlerTest {
     ArgumentCaptor<State> stateCaptor = ArgumentCaptor.forClass(State.class);
     verify(session).setAttribute(eq(client.getStateSessionAttributeName()), stateCaptor.capture());
     assertEquals(params.get(OidcConfiguration.STATE), stateCaptor.getValue().getValue());
-    verify(session).setAttribute(client.getNonceSessionAttributeName(), params.get(OidcConfiguration.NONCE));
+    verify(session)
+        .setAttribute(client.getNonceSessionAttributeName(), params.get(OidcConfiguration.NONCE));
     verify(session).setAttribute(eq(client.getCodeVerifierSessionAttributeName()), any());
   }
 
@@ -426,7 +432,9 @@ class AuthenticationCodeFlowHandlerTest {
                     handler,
                     "validateStateIfRequired",
                     new Class<?>[] {
-                      HttpSession.class, HttpServletResponse.class, AuthenticationSuccessResponse.class
+                      HttpSession.class,
+                      HttpServletResponse.class,
+                      AuthenticationSuccessResponse.class
                     },
                     session,
                     response,
@@ -514,8 +522,7 @@ class AuthenticationCodeFlowHandlerTest {
     AuthenticationCodeFlowHandler handler = newHandler();
     SignedJWT idToken =
         new SignedJWT(
-            new JWSHeader(JWSAlgorithm.HS256),
-            new JWTClaimsSet.Builder().subject("user").build());
+            new JWSHeader(JWSAlgorithm.HS256), new JWTClaimsSet.Builder().subject("user").build());
     AccessToken accessToken = new BearerAccessToken("access-token");
     AuthenticationSuccessResponse successResponse =
         new AuthenticationSuccessResponse(
@@ -558,7 +565,8 @@ class AuthenticationCodeFlowHandlerTest {
     when(request.getSession(true)).thenReturn(session);
     when(request.getParameter(AuthenticationCodeFlowHandler.REDIRECT_URI_KEY))
         .thenReturn("https://app.example.com/post-login");
-    when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE)).thenReturn(null);
+    when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE))
+        .thenReturn(null);
     when(session.getId()).thenReturn("session-id");
 
     handler.handleLogin(request, response);
@@ -583,7 +591,8 @@ class AuthenticationCodeFlowHandlerTest {
 
   @Test
   void handleCallbackWithoutSessionReturnsErrorResponse() {
-    AuthenticationCodeFlowHandler handler = assertDoesNotThrow(AuthenticationCodeFlowHandlerTest::newHandler);
+    AuthenticationCodeFlowHandler handler =
+        assertDoesNotThrow(AuthenticationCodeFlowHandlerTest::newHandler);
     assertDoesNotThrow(() -> when(response.getOutputStream()).thenReturn(outputStream));
     when(request.getSession(false)).thenReturn(null);
 
@@ -635,16 +644,15 @@ class AuthenticationCodeFlowHandlerTest {
       setField(handler, "client", client);
       setField(handler, "claimsOrder", List.of("preferred_username", "email"));
       setField(
-          handler,
-          "claimsMapping",
-          Map.of("username", "preferred_username", "email", "email"));
+          handler, "claimsMapping", Map.of("username", "preferred_username", "email", "email"));
       setField(handler, "principalDomain", "example.com");
       setField(handler, "authorizerConfiguration", authorizerConfiguration(Set.of()));
 
       when(request.getSession(false)).thenReturn(session);
       when(request.getParameterMap())
           .thenReturn(Map.of("code", new String[] {"auth-code"}, "state", new String[] {"csrf"}));
-      when(session.getAttribute(client.getStateSessionAttributeName())).thenReturn(new State("csrf"));
+      when(session.getAttribute(client.getStateSessionAttributeName()))
+          .thenReturn(new State("csrf"));
       when(session.getAttribute(client.getNonceSessionAttributeName())).thenReturn(nonce);
       when(session.getAttribute(client.getCodeVerifierSessionAttributeName()))
           .thenReturn(new CodeVerifier("0123456789abcdef0123456789abcdef0123456789a"));
@@ -661,15 +669,22 @@ class AuthenticationCodeFlowHandlerTest {
       UserRepository userRepository = mock(UserRepository.class);
       AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
       entity
-          .when(() -> Entity.getEntityByName(Entity.USER, "oidc-user", "id,roles,teams", Include.NON_DELETED))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "oidc-user", "id,roles,teams", Include.NON_DELETED))
           .thenReturn(user);
       entity.when(Entity::getUserRepository).thenReturn(userRepository);
       entity.when(Entity::getAuditLogRepository).thenReturn(auditLogRepository);
 
       handler.handleCallback(request, response);
 
-      verify(session).setAttribute(eq(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE), any(OidcCredentials.class));
-      verify(session).setAttribute(AuthenticationCodeFlowHandler.SESSION_USER_ID, user.getId().toString());
+      verify(session)
+          .setAttribute(
+              eq(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE),
+              any(OidcCredentials.class));
+      verify(session)
+          .setAttribute(AuthenticationCodeFlowHandler.SESSION_USER_ID, user.getId().toString());
       verify(session).setAttribute(AuthenticationCodeFlowHandler.SESSION_USERNAME, "oidc-user");
       verify(userRepository).updateUserLastLoginTime(eq(user), anyLong());
       verify(auditLogRepository)
@@ -691,7 +706,8 @@ class AuthenticationCodeFlowHandlerTest {
     when(request.getSession(false)).thenReturn(session);
     when(session.getAttribute(AuthenticationCodeFlowHandler.SESSION_USER_ID))
         .thenReturn("0f1d4b1f-b436-4d9e-a78b-7c3dd7ff60b0");
-    when(session.getAttribute(AuthenticationCodeFlowHandler.SESSION_USERNAME)).thenReturn("oidc-user");
+    when(session.getAttribute(AuthenticationCodeFlowHandler.SESSION_USERNAME))
+        .thenReturn("oidc-user");
 
     AuditLogRepository originalRepository = Entity.getAuditLogRepository();
     AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
@@ -780,7 +796,8 @@ class AuthenticationCodeFlowHandlerTest {
                         "token_type", "Bearer",
                         "expires_in", 3600)));
         MockedStatic<Entity> entity = mockStatic(Entity.class);
-        MockedStatic<JWTTokenGenerator> tokenGeneratorStatic = mockStatic(JWTTokenGenerator.class)) {
+        MockedStatic<JWTTokenGenerator> tokenGeneratorStatic =
+            mockStatic(JWTTokenGenerator.class)) {
       AuthenticationCodeFlowHandler handler = newHandler();
       setField(
           handler,
@@ -794,9 +811,7 @@ class AuthenticationCodeFlowHandlerTest {
               "RefreshClient"));
       setField(handler, "claimsOrder", List.of("preferred_username", "email"));
       setField(
-          handler,
-          "claimsMapping",
-          Map.of("username", "preferred_username", "email", "email"));
+          handler, "claimsMapping", Map.of("username", "preferred_username", "email", "email"));
       setField(handler, "tokenValidity", 600);
 
       OidcCredentials sessionCredentials = new OidcCredentials();
@@ -817,15 +832,14 @@ class AuthenticationCodeFlowHandlerTest {
       tokenGeneratorStatic.when(JWTTokenGenerator::getInstance).thenReturn(tokenGenerator);
       JWTAuthMechanism jwtAuthMechanism = new JWTAuthMechanism();
       jwtAuthMechanism.setJWTToken(generatedOmJwt);
-      when(
-              tokenGenerator.generateJWTToken(
-                  eq("oidc-user"),
-                  eq(Set.of()),
-                  eq(false),
-                  eq("oidc-user@example.com"),
-                  eq(600L),
-                  eq(false),
-                  eq(org.openmetadata.schema.auth.ServiceTokenType.OM_USER)))
+      when(tokenGenerator.generateJWTToken(
+              eq("oidc-user"),
+              eq(Set.of()),
+              eq(false),
+              eq("oidc-user@example.com"),
+              eq(600L),
+              eq(false),
+              eq(org.openmetadata.schema.auth.ServiceTokenType.OM_USER)))
           .thenReturn(jwtAuthMechanism);
 
       OidcCredentials credentials = new OidcCredentials();
@@ -844,7 +858,9 @@ class AuthenticationCodeFlowHandlerTest {
     AuthenticationCodeFlowHandler handler = newHandler();
     OidcCredentials credentials = new OidcCredentials();
 
-    assertThrows(jakarta.ws.rs.BadRequestException.class, () -> handler.refreshTokenRequest(session, credentials));
+    assertThrows(
+        jakarta.ws.rs.BadRequestException.class,
+        () -> handler.refreshTokenRequest(session, credentials));
   }
 
   @Test
@@ -890,7 +906,8 @@ class AuthenticationCodeFlowHandlerTest {
       assertEquals("fresh-access-token", credentials.getAccessToken().getValue());
       assertEquals("fresh-refresh-token", credentials.getRefreshToken().getValue());
       assertEquals(refreshedIdToken, credentials.getIdToken().getParsedString());
-      verify(session).setAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE, credentials);
+      verify(session)
+          .setAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE, credentials);
       verify(outputStream).print(org.mockito.ArgumentMatchers.contains(refreshedIdToken));
       verify(response).setStatus(HttpServletResponse.SC_OK);
     }
@@ -898,10 +915,12 @@ class AuthenticationCodeFlowHandlerTest {
 
   @Test
   void handleRefreshWithoutCredentialsFallsBackToLogout() throws Exception {
-    AuthenticationCodeFlowHandler handler = assertDoesNotThrow(AuthenticationCodeFlowHandlerTest::newHandler);
+    AuthenticationCodeFlowHandler handler =
+        assertDoesNotThrow(AuthenticationCodeFlowHandlerTest::newHandler);
     assertDoesNotThrow(() -> setField(handler, "serverUrl", "https://openmetadata.example.com"));
     when(request.getSession(false)).thenReturn(session);
-    when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE)).thenReturn(null);
+    when(session.getAttribute(AuthenticationCodeFlowHandler.OIDC_CREDENTIAL_PROFILE))
+        .thenReturn(null);
     when(session.getId()).thenReturn("missing-credentials-session");
 
     handler.handleRefresh(request, response);
@@ -989,10 +1008,15 @@ class AuthenticationCodeFlowHandlerTest {
     try (MockedStatic<Entity> entity = mockStatic(Entity.class);
         MockedStatic<UserUtil> userUtil = mockStatic(UserUtil.class)) {
       entity
-          .when(() -> Entity.getEntityByName(Entity.USER, "new-user", "id,roles,teams", Include.NON_DELETED))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "new-user", "id,roles,teams", Include.NON_DELETED))
           .thenThrow(EntityNotFoundException.byName("new-user"));
       User draftUser = new User();
-      userUtil.when(() -> UserUtil.user("new-user", "example.com", "new-user")).thenReturn(draftUser);
+      userUtil
+          .when(() -> UserUtil.user("new-user", "example.com", "new-user"))
+          .thenReturn(draftUser);
       userUtil.when(() -> UserUtil.assignTeamsFromClaim(draftUser, List.of())).thenReturn(false);
       User persistedUser = new User();
       persistedUser.setName("new-user");
@@ -1028,7 +1052,10 @@ class AuthenticationCodeFlowHandlerTest {
 
     try (MockedStatic<Entity> entity = mockStatic(Entity.class)) {
       entity
-          .when(() -> Entity.getEntityByName(Entity.USER, "missing-user", "id,roles,teams", Include.NON_DELETED))
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER, "missing-user", "id,roles,teams", Include.NON_DELETED))
           .thenThrow(EntityNotFoundException.byName("missing-user"));
 
       AuthenticationException exception =
@@ -1052,13 +1079,12 @@ class AuthenticationCodeFlowHandlerTest {
     Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
     unsafeField.setAccessible(true);
     Unsafe unsafe = (Unsafe) unsafeField.get(null);
-    return (AuthenticationCodeFlowHandler) unsafe.allocateInstance(AuthenticationCodeFlowHandler.class);
+    return (AuthenticationCodeFlowHandler)
+        unsafe.allocateInstance(AuthenticationCodeFlowHandler.class);
   }
 
   private static OidcConfiguration configuredOidcConfiguration(
-      String clientId,
-      String secret,
-      List<ClientAuthenticationMethod> supportedMethods) {
+      String clientId, String secret, List<ClientAuthenticationMethod> supportedMethods) {
     return configuredOidcConfiguration(
         clientId, secret, supportedMethods, URI.create("https://issuer.example.com/token"));
   }
@@ -1124,7 +1150,8 @@ class AuthenticationCodeFlowHandlerTest {
     return jwt.serialize();
   }
 
-  private static TokenServer startTokenServer(int statusCode, String responseBody) throws Exception {
+  private static TokenServer startTokenServer(int statusCode, String responseBody)
+      throws Exception {
     HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
     server.createContext(
         "/token",
@@ -1165,8 +1192,10 @@ class AuthenticationCodeFlowHandlerTest {
 
   @SuppressWarnings("unchecked")
   private static <T> T invokePrivate(
-      Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
-    Method method = AuthenticationCodeFlowHandler.class.getDeclaredMethod(methodName, parameterTypes);
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
+    Method method =
+        AuthenticationCodeFlowHandler.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     try {
       return (T) method.invoke(target, args);

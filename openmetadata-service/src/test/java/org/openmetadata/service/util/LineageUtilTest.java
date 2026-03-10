@@ -38,10 +38,12 @@ class LineageUtilTest {
   void addDomainLineageCreatesSearchableRelationshipsForUpstreamAndDownstreamDomains() {
     UUID entityId = UUID.randomUUID();
     EntityReference updatedDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.updated");
-    EntityReference downstreamDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
+    EntityReference downstreamDomain =
+        entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
     EntityReference upstreamDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.upstream");
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
     SearchRepository searchRepository = mock(SearchRepository.class);
     SearchClient searchClient = mock(SearchClient.class);
 
@@ -63,10 +65,15 @@ class LineageUtilTest {
       mockedEntity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
       mockedEntity.when(Entity::getSearchRepository).thenReturn(searchRepository);
       mockedEntity
-          .when(() -> Entity.getEntityReferenceById(Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(
+                      Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
           .thenReturn(downstreamDomain);
       mockedEntity
-          .when(() -> Entity.getEntityReferenceById(Entity.DOMAIN, upstreamDomain.getId(), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(Entity.DOMAIN, upstreamDomain.getId(), Include.ALL))
           .thenReturn(upstreamDomain);
 
       LineageUtil.addDomainLineage(entityId, Entity.TABLE, updatedDomain);
@@ -105,14 +112,16 @@ class LineageUtilTest {
     EntityReference downstreamProduct =
         entityRef(Entity.DATA_PRODUCT, UUID.randomUUID(), "dp.downstream");
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
     SearchRepository searchRepository = mock(SearchRepository.class);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(relationshipDAO.findDownstreamDataProducts(entityId, Entity.TABLE))
         .thenReturn(List.of(relationshipObject(downstreamProduct)));
     when(relationshipDAO.findUpstreamDataProducts(entityId, Entity.TABLE)).thenReturn(List.of());
-    when(relationshipDAO.countDataProductsChildAssets(dataProduct.getId(), downstreamProduct.getId()))
+    when(relationshipDAO.countDataProductsChildAssets(
+            dataProduct.getId(), downstreamProduct.getId()))
         .thenReturn(0);
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
@@ -137,18 +146,22 @@ class LineageUtilTest {
   void removeDomainLineageDecrementsAssetEdgesWhenRelationshipStillExists() {
     UUID entityId = UUID.randomUUID();
     EntityReference updatedDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.updated");
-    EntityReference downstreamDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
+    EntityReference downstreamDomain =
+        entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
     SearchRepository searchRepository = mock(SearchRepository.class);
     SearchClient searchClient = mock(SearchClient.class);
-    LineageDetails lineageDetails = new LineageDetails().withAssetEdges(2).withSource(LineageDetails.Source.CHILD_ASSETS);
+    LineageDetails lineageDetails =
+        new LineageDetails().withAssetEdges(2).withSource(LineageDetails.Source.CHILD_ASSETS);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(relationshipDAO.findDownstreamDomains(entityId, Entity.TABLE))
         .thenReturn(List.of(relationshipObject(downstreamDomain)));
     when(relationshipDAO.findUpstreamDomains(entityId, Entity.TABLE)).thenReturn(List.of());
-    when(relationshipDAO.getRecord(updatedDomain.getId(), downstreamDomain.getId(), Relationship.UPSTREAM.ordinal()))
+    when(relationshipDAO.getRecord(
+            updatedDomain.getId(), downstreamDomain.getId(), Relationship.UPSTREAM.ordinal()))
         .thenReturn(
             CollectionDAO.EntityRelationshipObject.builder()
                 .json(JsonUtils.pojoToJson(lineageDetails))
@@ -162,7 +175,10 @@ class LineageUtilTest {
       mockedEntity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
       mockedEntity.when(Entity::getSearchRepository).thenReturn(searchRepository);
       mockedEntity
-          .when(() -> Entity.getEntityReferenceById(Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(
+                      Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
           .thenReturn(downstreamDomain);
 
       LineageUtil.removeDomainLineage(entityId, Entity.TABLE, updatedDomain);
@@ -176,8 +192,10 @@ class LineageUtilTest {
               eq(Entity.DOMAIN),
               eq(Relationship.UPSTREAM.ordinal()),
               jsonCaptor.capture());
-      assertEquals(1, JsonUtils.readValue(jsonCaptor.getValue(), LineageDetails.class).getAssetEdges());
-      verify(searchClient).updateLineage(eq("cluster_domain_search"), any(), any(EsLineageData.class));
+      assertEquals(
+          1, JsonUtils.readValue(jsonCaptor.getValue(), LineageDetails.class).getAssetEdges());
+      verify(searchClient)
+          .updateLineage(eq("cluster_domain_search"), any(), any(EsLineageData.class));
       verify(relationshipDAO, never())
           .delete(
               eq(updatedDomain.getId()),
@@ -195,16 +213,19 @@ class LineageUtilTest {
     EntityReference downstreamProduct =
         entityRef(Entity.DATA_PRODUCT, UUID.randomUUID(), "dp.downstream");
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
     SearchRepository searchRepository = mock(SearchRepository.class);
     SearchClient searchClient = mock(SearchClient.class);
-    LineageDetails lineageDetails = new LineageDetails().withAssetEdges(1).withSource(LineageDetails.Source.CHILD_ASSETS);
+    LineageDetails lineageDetails =
+        new LineageDetails().withAssetEdges(1).withSource(LineageDetails.Source.CHILD_ASSETS);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(relationshipDAO.findDownstreamDataProducts(entityId, Entity.TABLE))
         .thenReturn(List.of(relationshipObject(downstreamProduct)));
     when(relationshipDAO.findUpstreamDataProducts(entityId, Entity.TABLE)).thenReturn(List.of());
-    when(relationshipDAO.getRecord(dataProduct.getId(), downstreamProduct.getId(), Relationship.UPSTREAM.ordinal()))
+    when(relationshipDAO.getRecord(
+            dataProduct.getId(), downstreamProduct.getId(), Relationship.UPSTREAM.ordinal()))
         .thenReturn(
             CollectionDAO.EntityRelationshipObject.builder()
                 .json(JsonUtils.pojoToJson(lineageDetails))
@@ -235,11 +256,12 @@ class LineageUtilTest {
       ArgumentCaptor<Pair<String, Map<String, Object>>> updateCaptor =
           ArgumentCaptor.forClass(Pair.class);
       verify(searchClient)
-          .updateChildren(eq(SearchClient.GLOBAL_SEARCH_ALIAS), fieldCaptor.capture(), updateCaptor.capture());
+          .updateChildren(
+              eq(SearchClient.GLOBAL_SEARCH_ALIAS), fieldCaptor.capture(), updateCaptor.capture());
+      assertEquals("upstreamLineage.docUniqueId.keyword", fieldCaptor.getValue().getLeft());
       assertEquals(
-          "upstreamLineage.docUniqueId.keyword", fieldCaptor.getValue().getLeft());
-      assertEquals(
-          dataProduct.getId() + "--->" + downstreamProduct.getId(), fieldCaptor.getValue().getRight());
+          dataProduct.getId() + "--->" + downstreamProduct.getId(),
+          fieldCaptor.getValue().getRight());
       assertEquals(SearchClient.REMOVE_LINEAGE_SCRIPT, updateCaptor.getValue().getLeft());
       assertEquals(
           dataProduct.getId() + "--->" + downstreamProduct.getId(),
@@ -251,31 +273,36 @@ class LineageUtilTest {
   void removeDomainLineageSkipsMissingRelationshipRecord() {
     UUID entityId = UUID.randomUUID();
     EntityReference updatedDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.updated");
-    EntityReference downstreamDomain = entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
+    EntityReference downstreamDomain =
+        entityRef(Entity.DOMAIN, UUID.randomUUID(), "domain.downstream");
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
     SearchRepository searchRepository = mock(SearchRepository.class);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(relationshipDAO.findDownstreamDomains(entityId, Entity.TABLE))
         .thenReturn(List.of(relationshipObject(downstreamDomain)));
     when(relationshipDAO.findUpstreamDomains(entityId, Entity.TABLE)).thenReturn(List.of());
-    when(relationshipDAO.getRecord(updatedDomain.getId(), downstreamDomain.getId(), Relationship.UPSTREAM.ordinal()))
+    when(relationshipDAO.getRecord(
+            updatedDomain.getId(), downstreamDomain.getId(), Relationship.UPSTREAM.ordinal()))
         .thenReturn(null);
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
       mockedEntity.when(Entity::getSearchRepository).thenReturn(searchRepository);
       mockedEntity
-          .when(() -> Entity.getEntityReferenceById(Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(
+                      Entity.DOMAIN, downstreamDomain.getId(), Include.ALL))
           .thenReturn(downstreamDomain);
 
       LineageUtil.removeDomainLineage(entityId, Entity.TABLE, updatedDomain);
 
       verify(relationshipDAO, never())
           .insert(any(), any(), any(), any(), any(Integer.class), any(String.class));
-      verify(relationshipDAO, never())
-          .delete(any(), any(), any(), any(), any(Integer.class));
+      verify(relationshipDAO, never()).delete(any(), any(), any(), any(), any(Integer.class));
       verifyNoInteractions(searchRepository);
     }
   }
@@ -298,7 +325,11 @@ class LineageUtilTest {
   }
 
   private static EntityReference entityRef(String type, UUID id, String fqn) {
-    return new EntityReference().withType(type).withId(id).withName(fqn).withFullyQualifiedName(fqn);
+    return new EntityReference()
+        .withType(type)
+        .withId(id)
+        .withName(fqn)
+        .withFullyQualifiedName(fqn);
   }
 
   private static CollectionDAO.EntityRelationshipObject relationshipObject(EntityReference ref) {

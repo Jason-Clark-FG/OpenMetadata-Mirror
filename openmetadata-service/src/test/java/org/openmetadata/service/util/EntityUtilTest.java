@@ -35,8 +35,8 @@ import org.openmetadata.schema.type.Field;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.SearchIndexField;
-import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TableConstraint;
+import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.Task;
 import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.type.UsageDetails;
@@ -259,7 +259,8 @@ class EntityUtilTest {
     assertFalse(excluded.contains("tags"));
 
     assertThrows(
-        IllegalArgumentException.class, () -> new EntityUtil.Fields(allowedFields, "owners,missing"));
+        IllegalArgumentException.class,
+        () -> new EntityUtil.Fields(allowedFields, "owners,missing"));
 
     EntityUtil.RelationIncludes relationIncludes =
         new EntityUtil.RelationIncludes(
@@ -271,7 +272,8 @@ class EntityUtilTest {
     assertTrue(relationIncludes.hasFieldSpecificInclude("owners"));
     assertFalse(relationIncludes.hasFieldSpecificInclude("unknown"));
     assertEquals(
-        Include.DELETED, EntityUtil.RelationIncludes.fromInclude(Include.DELETED).getDefaultInclude());
+        Include.DELETED,
+        EntityUtil.RelationIncludes.fromInclude(Include.DELETED).getDefaultInclude());
 
     IllegalArgumentException exception =
         assertThrows(
@@ -388,10 +390,8 @@ class EntityUtilTest {
         new EntityReference().withId(id2).withType("table").withFullyQualifiedName("service.b");
     EntityReference duplicateRef1 =
         new EntityReference().withId(id1).withType("table").withFullyQualifiedName("service.a");
-    Table tableA =
-        new Table().withId(id1).withName("a").withFullyQualifiedName("service.a");
-    Table tableB =
-        new Table().withId(id2).withName("b").withFullyQualifiedName("service.b");
+    Table tableA = new Table().withId(id1).withName("a").withFullyQualifiedName("service.a");
+    Table tableB = new Table().withId(id2).withName("b").withFullyQualifiedName("service.b");
     List<Table> tables = new ArrayList<>(List.of(tableB, tableA));
 
     assertEquals(id1, EntityUtil.getId(ref1));
@@ -419,9 +419,14 @@ class EntityUtilTest {
         EntityUtil.mergedInheritedEntityRefs(List.of(ref1), List.of(duplicateRef1, ref2));
     assertEquals(2, merged.size());
     assertTrue(
-        merged.stream().filter(ref -> id2.equals(ref.getId())).findFirst().orElseThrow().getInherited());
+        merged.stream()
+            .filter(ref -> id2.equals(ref.getId()))
+            .findFirst()
+            .orElseThrow()
+            .getInherited());
     assertEquals(
-        "'" + id1 + "','" + id2 + "'", EntityUtil.getCommaSeparatedIdsFromRefs(List.of(ref1, ref2)));
+        "'" + id1 + "','" + id2 + "'",
+        EntityUtil.getCommaSeparatedIdsFromRefs(List.of(ref1, ref2)));
   }
 
   @Test
@@ -454,9 +459,11 @@ class EntityUtilTest {
     assertFalse(EntityUtil.entityReferenceMatch.test(ref1, differentRef));
     assertTrue(EntityUtil.entityReferenceListMatch.test(null, null));
     assertTrue(EntityUtil.entityReferenceListMatch.test(List.of(ref1), List.of(ref2)));
-    assertFalse(EntityUtil.entityReferenceListMatch.test(List.of(ref1), List.of(ref2, differentRef)));
+    assertFalse(
+        EntityUtil.entityReferenceListMatch.test(List.of(ref1), List.of(ref2, differentRef)));
     assertFalse(EntityUtil.entityReferenceListMatch.test(refsWithNull, List.of(ref2, ref1)));
-    assertTrue(EntityUtil.taskMatch.test(new Task().withName("approve"), new Task().withName("approve")));
+    assertTrue(
+        EntityUtil.taskMatch.test(new Task().withName("approve"), new Task().withName("approve")));
     assertTrue(EntityUtil.columnMatch.test(column, sameColumn));
     assertFalse(EntityUtil.columnMatch.test(column, differentColumn));
     assertTrue(EntityUtil.columnNameMatch.test(column, sameColumn));
@@ -473,8 +480,10 @@ class EntityUtilTest {
             new TermReference().withName("PII").withEndpoint(URI.create("https://example.com"))));
     assertTrue(
         EntityUtil.customFieldMatch.test(
-            customProperty, new CustomProperty().withName("retention").withPropertyType(propertyType)));
-    assertTrue(EntityUtil.ruleMatch.test(new Rule().withName("maskPII"), new Rule().withName("maskPII")));
+            customProperty,
+            new CustomProperty().withName("retention").withPropertyType(propertyType)));
+    assertTrue(
+        EntityUtil.ruleMatch.test(new Rule().withName("maskPII"), new Rule().withName("maskPII")));
     assertTrue(EntityUtil.schemaFieldMatch.test(schemaField, new Field().withName("USER.ID")));
     assertTrue(
         EntityUtil.searchIndexFieldMatch.test(
@@ -501,7 +510,8 @@ class EntityUtilTest {
             .withType("team")
             .withName("analytics")
             .withFullyQualifiedName("analytics");
-    MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse("<#E::table::service.orders>");
+    MessageParser.EntityLink entityLink =
+        MessageParser.EntityLink.parse("<#E::table::service.orders>");
 
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity
@@ -525,14 +535,20 @@ class EntityUtilTest {
 
       List<EntityReference> populated =
           EntityUtil.populateEntityReferences(List.of(unresolvedByName, unresolvedById));
-      assertEquals(List.of("analytics", "orders"), populated.stream().map(EntityReference::getName).toList());
+      assertEquals(
+          List.of("analytics", "orders"),
+          populated.stream().map(EntityReference::getName).toList());
 
       List<EntityReference> validated =
           EntityUtil.validateAndPopulateEntityReferences(new ArrayList<>(List.of(validationRef)));
       assertEquals("orders", validated.get(0).getName());
-      assertEquals("orders", EntityUtil.populateEntityReferencesById(List.of(tableId), "table").get(0).getName());
+      assertEquals(
+          "orders",
+          EntityUtil.populateEntityReferencesById(List.of(tableId), "table").get(0).getName());
       assertEquals("orders", EntityUtil.validateEntityLink(entityLink).getName());
-      assertEquals("orders", EntityUtil.validateToEntityReferences(List.of(tableId), "table").get(0).getName());
+      assertEquals(
+          "orders",
+          EntityUtil.validateToEntityReferences(List.of(tableId), "table").get(0).getName());
     }
   }
 
@@ -570,12 +586,20 @@ class EntityUtilTest {
 
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
       entity
-          .when(() -> Entity.getEntityReferencesByIds("table", List.of(validId, missingId), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferencesByIds(
+                      "table", List.of(validId, missingId), Include.ALL))
           .thenThrow(new RuntimeException("batch failed"));
       entity
-          .when(() -> Entity.getEntityReferencesByIds("table", List.of(missingId, validId), Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntityReferencesByIds(
+                      "table", List.of(missingId, validId), Include.ALL))
           .thenThrow(new RuntimeException("batch failed"));
-      entity.when(() -> Entity.getEntityReference(validRef, Include.ALL)).thenReturn(resolvedValidRef);
+      entity
+          .when(() -> Entity.getEntityReference(validRef, Include.ALL))
+          .thenReturn(resolvedValidRef);
       entity
           .when(() -> Entity.getEntityReference(missingRef, Include.ALL))
           .thenThrow(EntityNotFoundException.byMessage("missing"));
@@ -593,7 +617,8 @@ class EntityUtilTest {
 
       List<EntityReference> relationshipRefs =
           EntityUtil.getEntityReferences(List.of(validRecord, missingRecord));
-      assertEquals(List.of("orders"), relationshipRefs.stream().map(EntityReference::getName).toList());
+      assertEquals(
+          List.of("orders"), relationshipRefs.stream().map(EntityReference::getName).toList());
 
       UsageDetails latestUsage = EntityUtil.getLatestUsage(usageDAO, validId);
       assertSame(storedUsage, latestUsage);
@@ -614,12 +639,8 @@ class EntityUtilTest {
       EntityUtil.mergeTags(
           tags,
           List.of(
-              new TagLabel()
-                  .withTagFQN("Tier.Tier1")
-                  .withSource(TagLabel.TagSource.CLASSIFICATION),
-              new TagLabel()
-                  .withTagFQN("PII.Sensitive")
-                  .withSource(TagLabel.TagSource.GLOSSARY)));
+              new TagLabel().withTagFQN("Tier.Tier1").withSource(TagLabel.TagSource.CLASSIFICATION),
+              new TagLabel().withTagFQN("PII.Sensitive").withSource(TagLabel.TagSource.GLOSSARY)));
       assertEquals(2, tags.size());
 
       assertEquals(
@@ -636,7 +657,8 @@ class EntityUtilTest {
     List<EntityReference> refs = List.of(new EntityReference().withId(id).withType("table"));
 
     EntityReference validated =
-        EntityUtil.validate(id, "{\"id\":\"" + id + "\",\"type\":\"table\"}", EntityReference.class);
+        EntityUtil.validate(
+            id, "{\"id\":\"" + id + "\",\"type\":\"table\"}", EntityReference.class);
     assertEquals(id, validated.getId());
     assertThrows(
         EntityNotFoundException.class, () -> EntityUtil.validate(id, null, EntityReference.class));
@@ -658,19 +680,29 @@ class EntityUtilTest {
     assertTrue(EntityUtil.isNullOrEmptyChangeDescription(null));
 
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
-      entity.when(() -> Entity.getEntityReferenceByName("table", "service.orders", Include.ALL))
+      entity
+          .when(() -> Entity.getEntityReferenceByName("table", "service.orders", Include.ALL))
           .thenReturn(resolved);
       entity
-          .when(() -> Entity.getEntityReferenceByName("table", "service.orders", Include.NON_DELETED))
+          .when(
+              () -> Entity.getEntityReferenceByName("table", "service.orders", Include.NON_DELETED))
           .thenReturn(resolved);
-      entity.when(() -> Entity.getEntityReferenceById("table", id, Include.NON_DELETED))
+      entity
+          .when(() -> Entity.getEntityReferenceById("table", id, Include.NON_DELETED))
           .thenReturn(resolved);
-      entity.when(() -> Entity.getEntityReference(refs.get(0), Include.NON_DELETED)).thenReturn(resolved);
+      entity
+          .when(() -> Entity.getEntityReference(refs.get(0), Include.NON_DELETED))
+          .thenReturn(resolved);
 
-      assertEquals("orders", EntityUtil.getEntityReferenceByName("table", "service.orders").getName());
-      assertEquals("orders", EntityUtil.getEntityReferences("table", List.of("service.orders")).get(0).getName());
-      assertEquals("orders", EntityUtil.getEntityReferencesById("table", List.of(id)).get(0).getName());
-      assertEquals("orders", EntityUtil.getEntityReferences(refs, Include.NON_DELETED).get(0).getName());
+      assertEquals(
+          "orders", EntityUtil.getEntityReferenceByName("table", "service.orders").getName());
+      assertEquals(
+          "orders",
+          EntityUtil.getEntityReferences("table", List.of("service.orders")).get(0).getName());
+      assertEquals(
+          "orders", EntityUtil.getEntityReferencesById("table", List.of(id)).get(0).getName());
+      assertEquals(
+          "orders", EntityUtil.getEntityReferences(refs, Include.NON_DELETED).get(0).getName());
       assertEquals(List.of(), EntityUtil.getEntityReferences(List.of(), Include.ALL));
     }
   }
@@ -685,7 +717,8 @@ class EntityUtilTest {
         new EntityReference().withId(id).withType("table").withName("orders-duplicate");
 
     try (MockedStatic<Entity> entity = org.mockito.Mockito.mockStatic(Entity.class)) {
-      entity.when(() -> Entity.getEntityReferencesByIds("table", List.of(id), Include.ALL))
+      entity
+          .when(() -> Entity.getEntityReferencesByIds("table", List.of(id), Include.ALL))
           .thenReturn(List.of(firstResolved, duplicateResolved));
 
       List<EntityReference> populated = EntityUtil.populateEntityReferences(List.of(unresolved));
@@ -696,9 +729,7 @@ class EntityUtilTest {
   @Test
   void testColumnFlattenHashAndTaskHelpers() {
     Column nestedColumn =
-        new Column()
-            .withName("city")
-            .withFullyQualifiedName("service.db.table.address.city");
+        new Column().withName("city").withFullyQualifiedName("service.db.table.address.city");
     Column parentColumn =
         new Column()
             .withName("address")
@@ -729,7 +760,8 @@ class EntityUtilTest {
     assertDoesNotThrow(() -> EntityUtil.validateProfileSample("ROWS", 1000.0));
     assertDoesNotThrow(() -> EntityUtil.validateProfileSample("PERCENTAGE", 50.0));
     assertThrows(
-        IllegalArgumentException.class, () -> EntityUtil.validateProfileSample("PERCENTAGE", 150.0));
+        IllegalArgumentException.class,
+        () -> EntityUtil.validateProfileSample("PERCENTAGE", 150.0));
     assertEquals("900150983cd24fb0d6963f7d28e17f72", EntityUtil.hash("abc"));
     assertNull(EntityUtil.hash(null));
     assertEquals("service.db.table", EntityUtil.getEntityField(table, "fullyQualifiedName"));
@@ -777,8 +809,10 @@ class EntityUtilTest {
 
     assertEquals("columns.amount", EntityUtil.getColumnField(column, null));
     assertEquals("schemaFields.\"user.id\"", EntityUtil.getSchemaField(topic, schemaField, null));
-    assertEquals("schemaFields.\"request.body\"", EntityUtil.getSchemaField(apiEndpoint, apiField, null));
-    assertEquals("fields.\"keyword.raw\"", EntityUtil.getSearchIndexField(searchIndex, searchField, null));
+    assertEquals(
+        "schemaFields.\"request.body\"", EntityUtil.getSchemaField(apiEndpoint, apiField, null));
+    assertEquals(
+        "fields.\"keyword.raw\"", EntityUtil.getSearchIndexField(searchIndex, searchField, null));
     assertEquals("rules.maskPII", EntityUtil.getRuleField(rule, null));
     assertEquals("customProperties.retention.value", EntityUtil.getCustomField(property, "value"));
 
@@ -788,8 +822,14 @@ class EntityUtilTest {
       ListFilter domainFilter = new ListFilter();
       ListFilter noDomainFilter = new ListFilter();
 
-      authorizer.when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
-          .thenReturn(new SubjectContext(new org.openmetadata.schema.entity.teams.User().withName("admin").withIsAdmin(true), null))
+      authorizer
+          .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
+          .thenReturn(
+              new SubjectContext(
+                  new org.openmetadata.schema.entity.teams.User()
+                      .withName("admin")
+                      .withIsAdmin(true),
+                  null))
           .thenReturn(
               new SubjectContext(
                   new org.openmetadata.schema.entity.teams.User()

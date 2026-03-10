@@ -7,13 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.csv.CsvUtil.LINE_SEPARATOR;
 import static org.openmetadata.csv.CsvUtil.recordToString;
 import static org.openmetadata.csv.EntityCsv.ENTITY_CREATED;
 import static org.openmetadata.csv.EntityCsv.ENTITY_UPDATED;
-import static org.mockito.Mockito.mock;
 
+import com.networknt.schema.Schema;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.EntityInterface;
-import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
@@ -40,6 +40,7 @@ import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.ApiStatus;
 import org.openmetadata.schema.type.AssetCertification;
+import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.TagLabel;
@@ -51,7 +52,6 @@ import org.openmetadata.schema.type.csv.CsvImportResult;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.TypeRegistry;
 import org.openmetadata.service.jdbi3.TableRepository;
-import com.networknt.schema.Schema;
 
 public class EntityCsvTest {
   private static final List<CsvHeader> CSV_HEADERS;
@@ -287,8 +287,10 @@ public class EntityCsvTest {
     List<EntityReference> domains = testCsv.parseDomains(csvRecord, 1);
     EntityReference owner = testCsv.parseOwnerAsUser(csvRecord, 2);
 
-    assertEquals(List.of("alice", "engineering"), owners.stream().map(EntityReference::getName).toList());
-    assertEquals(List.of("finance", "marketing"), domains.stream().map(EntityReference::getName).toList());
+    assertEquals(
+        List.of("alice", "engineering"), owners.stream().map(EntityReference::getName).toList());
+    assertEquals(
+        List.of("finance", "marketing"), domains.stream().map(EntityReference::getName).toList());
     assertEquals("bob", owner.getName());
     assertTrue(testCsv.isProcessRecord());
   }
@@ -324,14 +326,17 @@ public class EntityCsvTest {
     referenceCsv.addEntity(Entity.DOMAIN, "alpha", domain("alpha"));
 
     List<EntityReference> refs =
-        referenceCsv.parseEntityReferences(singleRecord(referenceCsv, "zeta;alpha", "", ""), 0, Entity.DOMAIN);
+        referenceCsv.parseEntityReferences(
+            singleRecord(referenceCsv, "zeta;alpha", "", ""), 0, Entity.DOMAIN);
 
     assertEquals(List.of("alpha", "zeta"), refs.stream().map(EntityReference::getName).toList());
 
     TestCsv glossaryCsv = new TestCsv();
     glossaryCsv.enableProcessing();
     glossaryCsv.addEntity(
-        Entity.GLOSSARY_TERM, "Glossary.Approved", glossaryTerm("Glossary.Approved", EntityStatus.APPROVED));
+        Entity.GLOSSARY_TERM,
+        "Glossary.Approved",
+        glossaryTerm("Glossary.Approved", EntityStatus.APPROVED));
     glossaryCsv.addEntity(
         Entity.GLOSSARY_TERM, "Glossary.Draft", glossaryTerm("Glossary.Draft", EntityStatus.DRAFT));
 
@@ -415,7 +420,8 @@ public class EntityCsvTest {
 
     assertEquals(
         "2026-03-09",
-        testCsv.parseFormattedDateTime(csvRecord, 0, "startDate", "2026-03-09", "date-cp", "yyyy-MM-dd"));
+        testCsv.parseFormattedDateTime(
+            csvRecord, 0, "startDate", "2026-03-09", "date-cp", "yyyy-MM-dd"));
     assertEquals(
         "2026-03-09 10:15",
         testCsv.parseFormattedDateTime(
@@ -428,7 +434,12 @@ public class EntityCsvTest {
     invalidCsv.enableProcessing();
     String invalid =
         invalidCsv.parseFormattedDateTime(
-            singleRecord(invalidCsv, "", "", ""), 0, "startDate", "03/09/2026", "date-cp", "yyyy-MM-dd");
+            singleRecord(invalidCsv, "", "", ""),
+            0,
+            "startDate",
+            "03/09/2026",
+            "date-cp",
+            "yyyy-MM-dd");
 
     assertNull(invalid);
     assertFalse(invalidCsv.isProcessRecord());
@@ -484,7 +495,8 @@ public class EntityCsvTest {
 
     assertEquals(
         List.of("A", "B"),
-        invokePrivate(enumCsv, "parseEnumType", csvRecord, 0, "priority", "enum", "A|B", enumConfig));
+        invokePrivate(
+            enumCsv, "parseEnumType", csvRecord, 0, "priority", "enum", "A|B", enumConfig));
 
     TestCsv invalidEnumCsv = new TestCsv();
     invalidEnumCsv.enableProcessing();
@@ -507,7 +519,14 @@ public class EntityCsvTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> tableValue =
         (Map<String, Object>)
-            invokePrivate(tableCsv, "parseTableType", csvRecord, 0, "matrix", "alpha,beta|gamma,delta", tableConfig);
+            invokePrivate(
+                tableCsv,
+                "parseTableType",
+                csvRecord,
+                0,
+                "matrix",
+                "alpha,beta|gamma,delta",
+                tableConfig);
     assertEquals(Set.of("name", "value"), tableValue.get("columns"));
     @SuppressWarnings("unchecked")
     List<Map<String, String>> rows = (List<Map<String, String>>) tableValue.get("rows");
@@ -576,8 +595,10 @@ public class EntityCsvTest {
               messages.add(message);
             });
 
-    assertEquals(List.of(EntityCsv.DEFAULT_BATCH_SIZE, EntityCsv.DEFAULT_BATCH_SIZE + 1), exportedCounts);
-    assertEquals(List.of(EntityCsv.DEFAULT_BATCH_SIZE + 1, EntityCsv.DEFAULT_BATCH_SIZE + 1), totalCounts);
+    assertEquals(
+        List.of(EntityCsv.DEFAULT_BATCH_SIZE, EntityCsv.DEFAULT_BATCH_SIZE + 1), exportedCounts);
+    assertEquals(
+        List.of(EntityCsv.DEFAULT_BATCH_SIZE + 1, EntityCsv.DEFAULT_BATCH_SIZE + 1), totalCounts);
     assertTrue(messages.get(0).contains("batch 1"));
     assertTrue(messages.get(1).contains("batch 2"));
     assertTrue(csv.contains("table0,service.db.schema.table0,description-0"));
@@ -629,29 +650,28 @@ public class EntityCsvTest {
 
       Map<String, Object> extension =
           testCsv.parseExtension(
-              singleRecord(
-                  testCsv,
-                  "",
-                  "owner:user:alice;reviewers:user:bob|team:engineering",
-                  ""),
+              singleRecord(testCsv, "", "owner:user:alice;reviewers:user:bob|team:engineering", ""),
               1);
 
       EntityReference owner = assertInstanceOf(EntityReference.class, extension.get("owner"));
       assertEquals("alice", owner.getName());
       @SuppressWarnings("unchecked")
       List<EntityReference> reviewers = (List<EntityReference>) extension.get("reviewers");
-      assertEquals(List.of("bob", "engineering"), reviewers.stream().map(EntityReference::getName).toList());
+      assertEquals(
+          List.of("bob", "engineering"), reviewers.stream().map(EntityReference::getName).toList());
       assertTrue(testCsv.isProcessRecord());
     }
   }
 
   @Test
-  void test_updateColumnsFromCsvRecursiveCreatesMissingParentHierarchyInDryRun()
-      throws Exception {
+  void test_updateColumnsFromCsvRecursiveCreatesMissingParentHierarchyInDryRun() throws Exception {
     TestCsv testCsv = new TestCsv();
     testCsv.enableProcessing();
     testCsv.setDryRun(true);
-    Table table = new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+    Table table =
+        new Table()
+            .withFullyQualifiedName("service.db.schema.orders")
+            .withColumns(new ArrayList<>());
 
     testCsv.updateColumns(
         table,
@@ -680,7 +700,8 @@ public class EntityCsvTest {
     assertEquals("Street", street.getDisplayName());
     assertEquals("Street column", street.getDescription());
     assertEquals("VARCHAR(64)", street.getDataTypeDisplay());
-    assertEquals("service.db.schema.orders.address.location.street", street.getFullyQualifiedName());
+    assertEquals(
+        "service.db.schema.orders.address.location.street", street.getFullyQualifiedName());
     assertEquals(64, street.getDataLength());
     assertEquals(0, street.getOrdinalPosition());
   }
@@ -690,7 +711,10 @@ public class EntityCsvTest {
     TestCsv testCsv = new TestCsv();
     testCsv.enableProcessing();
     testCsv.setDryRun(false);
-    Table table = new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+    Table table =
+        new Table()
+            .withFullyQualifiedName("service.db.schema.orders")
+            .withColumns(new ArrayList<>());
 
     testCsv.updateColumns(
         table,
@@ -714,7 +738,9 @@ public class EntityCsvTest {
   @Test
   void test_updateColumnsFromCsvRecursiveValidatesDataTypeRequirements() throws Exception {
     Table invalidTypeTable =
-        new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+        new Table()
+            .withFullyQualifiedName("service.db.schema.orders")
+            .withColumns(new ArrayList<>());
     TestCsv missingTypeCsv = new TestCsv();
     missingTypeCsv.enableProcessing();
     missingTypeCsv.setDryRun(true);
@@ -809,7 +835,9 @@ public class EntityCsvTest {
     tolerantLengthCsv.enableProcessing();
     tolerantLengthCsv.setDryRun(true);
     Table table =
-        new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(new ArrayList<>());
+        new Table()
+            .withFullyQualifiedName("service.db.schema.orders")
+            .withColumns(new ArrayList<>());
 
     tolerantLengthCsv.updateColumns(
         table,
@@ -959,7 +987,8 @@ public class EntityCsvTest {
     }
   }
 
-  private static CSVRecord singleRecord(TestCsv testCsv, String first, String second, String third) {
+  private static CSVRecord singleRecord(
+      TestCsv testCsv, String first, String second, String third) {
     List<String> records = new ArrayList<>();
     records.add(recordToString(List.of(first, second, third)));
     return testCsv.parse(createCsv(CSV_HEADERS, records), true).get(1);
@@ -1036,19 +1065,28 @@ public class EntityCsvTest {
   private static <T> T invokePrivate(
       TestCsv testCsv, String methodName, CSVRecord csvRecord, int fieldNumber, Object... extraArgs)
       throws Exception {
-    Class<?>[] parameterTypes = switch (methodName) {
-      case "parseLongField" ->
-          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, String.class, Object.class};
-      case "parseTimeInterval" ->
-          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class};
-      case "parseEnumType" ->
-          new Class<?>[] {
-            CSVPrinter.class, CSVRecord.class, int.class, String.class, String.class, Object.class, String.class
+    Class<?>[] parameterTypes =
+        switch (methodName) {
+          case "parseLongField" -> new Class<?>[] {
+            CSVPrinter.class, CSVRecord.class, int.class, String.class, String.class, Object.class
           };
-      case "parseTableType" ->
-          new Class<?>[] {CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class, String.class};
-      default -> throw new IllegalArgumentException("Unsupported method " + methodName);
-    };
+          case "parseTimeInterval" -> new Class<?>[] {
+            CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class
+          };
+          case "parseEnumType" -> new Class<?>[] {
+            CSVPrinter.class,
+            CSVRecord.class,
+            int.class,
+            String.class,
+            String.class,
+            Object.class,
+            String.class
+          };
+          case "parseTableType" -> new Class<?>[] {
+            CSVPrinter.class, CSVRecord.class, int.class, String.class, Object.class, String.class
+          };
+          default -> throw new IllegalArgumentException("Unsupported method " + methodName);
+        };
 
     Method method = EntityCsv.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);

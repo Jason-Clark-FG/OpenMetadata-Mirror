@@ -52,35 +52,46 @@ class NotificationTemplateHelperAdvancedTest {
             {{{buildEntityUrl queryType queryEntity}}}
             """,
             Map.of(
-                "tableType", Entity.TABLE,
-                "tableFqn", "service.sales.orders",
-                "tagType", Entity.TAG,
-                "tagFqn", "PII.Sensitive",
-                "pipelineType", Entity.INGESTION_PIPELINE,
+                "tableType",
+                Entity.TABLE,
+                "tableFqn",
+                "service.sales.orders",
+                "tagType",
+                Entity.TAG,
+                "tagFqn",
+                "PII.Sensitive",
+                "pipelineType",
+                Entity.INGESTION_PIPELINE,
                 "profilerPipeline",
                 Map.of(
                     "fullyQualifiedName", "service.metadata.profiler",
                     "pipelineType", PipelineType.METADATA.value(),
                     "service",
                         Map.of(
-                            "fullyQualifiedName", "service.sales",
-                            "type", Entity.DATABASE_SERVICE)),
+                            "fullyQualifiedName",
+                            "service.sales",
+                            "type",
+                            Entity.DATABASE_SERVICE)),
                 "qualityPipeline",
                 Map.of(
                     "fullyQualifiedName", "service.sales.orders.daily_test",
                     "pipelineType", PipelineType.TEST_SUITE.value(),
                     "service",
                         Map.of(
-                            "fullyQualifiedName", "service.sales.orders.testSuite",
-                            "type", Entity.TABLE)),
-                "queryType", Entity.QUERY,
+                            "fullyQualifiedName",
+                            "service.sales.orders.testSuite",
+                            "type",
+                            Entity.TABLE)),
+                "queryType",
+                Entity.QUERY,
                 "queryEntity",
                 Map.of(
                     "fullyQualifiedName", "service.sales.orders.top_queries",
                     "id", "query-id",
                     "queryUsedIn",
                         List.of(
-                            Map.of("id", "table-id", "fullyQualifiedName", "service.sales.orders")))),
+                            Map.of(
+                                "id", "table-id", "fullyQualifiedName", "service.sales.orders")))),
             buildEntityUrlHelper("https://openmetadata.example"));
 
     assertEquals(
@@ -98,9 +109,12 @@ class NotificationTemplateHelperAdvancedTest {
         render(
             "{{buildEntityUrl entityType entity}}|{{buildEntityUrl entityType emptyFqn}}",
             Map.of(
-                "entityType", Entity.TABLE,
-                "entity", Map.of("fullyQualifiedName", "service.sales.orders"),
-                "emptyFqn", ""),
+                "entityType",
+                Entity.TABLE,
+                "entity",
+                Map.of("fullyQualifiedName", "service.sales.orders"),
+                "emptyFqn",
+                ""),
             buildEntityUrlHelper(""));
 
     assertEquals("|", rendered);
@@ -168,8 +182,10 @@ class NotificationTemplateHelperAdvancedTest {
                   "<#E::table::service.sales.orders::columns::order_id::description>",
                   "displayDomain",
                   Map.of("displayName", "Customer Success"),
-                  "lookupDomain", domainId.toString(),
-                  "invalidDomain", "not-a-domain-id"),
+                  "lookupDomain",
+                  domainId.toString(),
+                  "invalidDomain",
+                  "not-a-domain-id"),
               new ParseEntityLinkHelper(),
               new ResolveDomainHelper());
 
@@ -194,10 +210,14 @@ class NotificationTemplateHelperAdvancedTest {
                 "Hello <#E::team::Legal Admin|[@Legal Admin](https://openmetadata.example/settings/members/teams/Legal%20Admin)>",
                 "duplicatedAnchor",
                 "<a href=\"https://openmetadata.example/users/alice\"></a><a href=\"https://openmetadata.example/users/alice\">@Alice</a>",
-                "oldText", "alpha beta",
-                "newText", "alpha gamma",
-                "oldHtml", "<p>old</p>",
-                "newHtml", "<p>new</p>"),
+                "oldText",
+                "alpha beta",
+                "newText",
+                "alpha gamma",
+                "oldHtml",
+                "<p>old</p>",
+                "newHtml",
+                "<p>new</p>"),
             new ProcessMentionsHelper(),
             new TextDiffHelper());
 
@@ -216,16 +236,17 @@ class NotificationTemplateHelperAdvancedTest {
         render(
             "{{{renderTableSample sample targetColumn 3 2}}}",
             Map.of(
-                "targetColumn", "status",
+                "targetColumn",
+                "status",
                 "sample",
-                    Map.of(
-                        "columns", List.of("id", "name", "description", "status"),
-                        "rows",
-                            List.of(
-                                List.of("1", "<unsafe>", "orders table", longCell),
-                                List.of("2", "beta", "customers table", "FAILED"),
-                                List.of("3", "gamma", "payments table", "SUCCESS"),
-                                List.of("4", "delta", "returns table", "SUCCESS")))),
+                Map.of(
+                    "columns", List.of("id", "name", "description", "status"),
+                    "rows",
+                        List.of(
+                            List.of("1", "<unsafe>", "orders table", longCell),
+                            List.of("2", "beta", "customers table", "FAILED"),
+                            List.of("3", "gamma", "payments table", "SUCCESS"),
+                            List.of("4", "delta", "returns table", "SUCCESS")))),
             new RenderTableSampleHelper());
 
     assertTrue(rendered.contains("<strong>status</strong>"));

@@ -40,7 +40,8 @@ class NotificationChannelUtilitiesTest {
     assertNull(parsed.getFirstChild());
 
     IllegalArgumentException exception =
-        assertThrows(IllegalArgumentException.class, () -> MarkdownParser.parse("a".repeat(50_001)));
+        assertThrows(
+            IllegalArgumentException.class, () -> MarkdownParser.parse("a".repeat(50_001)));
 
     assertTrue(exception.getMessage().contains("50000"));
   }
@@ -83,9 +84,9 @@ class NotificationChannelUtilitiesTest {
 
     TestMessage message =
         (TestMessage)
-        renderer.render(
-            "See [docs](https://example.com) and ![](https://img \"Diagram\") using `sql`.",
-            "Subject **bold**");
+            renderer.render(
+                "See [docs](https://example.com) and ![](https://img \"Diagram\") using `sql`.",
+                "Subject **bold**");
 
     assertEquals("See docs and Diagram using sql.", message.body());
     assertEquals("Subject bold", message.subject());

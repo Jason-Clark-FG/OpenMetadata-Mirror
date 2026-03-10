@@ -37,14 +37,13 @@ import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestCaseParameterValue;
 import org.openmetadata.schema.tests.type.TestCaseResult;
 import org.openmetadata.schema.tests.type.TestCaseStatus;
-import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.ContractExecutionStatus;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
-import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.changeEvent.gchat.GChatMessage;
 import org.openmetadata.service.apps.bundles.changeEvent.msteams.TeamsMessage;
@@ -53,12 +52,11 @@ import org.openmetadata.service.events.subscription.AlertsRuleEvaluator;
 import org.openmetadata.service.jdbi3.TestCaseRepository;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FeedUtils;
-import org.openmetadata.service.util.email.EmailUtil;
-import org.openmetadata.schema.utils.JsonUtils;
 
 class RichPlatformMessageDecoratorTest {
 
   private static final long FIXED_TIME = 1_735_689_600_000L;
+
   @Test
   void slackBuildEntityMessageHandlesQueryEventsWithoutEntityLink() throws Exception {
     SlackMessageDecorator decorator = new SlackMessageDecorator();
@@ -78,7 +76,8 @@ class RichPlatformMessageDecoratorTest {
           .when(() -> FeedUtils.getThreadWithMessage(decorator, event))
           .thenReturn(List.of(new Thread().withMessage("Query text changed")));
 
-      SlackMessage message = assertDoesNotThrow(() -> decorator.buildEntityMessage("publisher", event));
+      SlackMessage message =
+          assertDoesNotThrow(() -> decorator.buildEntityMessage("publisher", event));
       String json = JsonUtils.pojoToJson(message);
 
       assertTrue(json.contains("Query text changed"));
@@ -105,7 +104,8 @@ class RichPlatformMessageDecoratorTest {
           .when(() -> FeedUtils.getThreadWithMessage(decorator, event))
           .thenReturn(List.of(new Thread().withMessage("Query text changed")));
 
-      TeamsMessage message = assertDoesNotThrow(() -> decorator.buildEntityMessage("publisher", event));
+      TeamsMessage message =
+          assertDoesNotThrow(() -> decorator.buildEntityMessage("publisher", event));
       String json = JsonUtils.pojoToJson(message);
 
       assertEquals("message", message.getType());
@@ -151,7 +151,8 @@ class RichPlatformMessageDecoratorTest {
             .withTimestamp(FIXED_TIME);
     OutgoingMessage outgoingMessage = new OutgoingMessage();
     outgoingMessage.setMessages(List.of("Contract execution failed"));
-    outgoingMessage.setEntityUrl("<https://openmetadata.example/table/service.sales.orders/contract|service.sales.orders>");
+    outgoingMessage.setEntityUrl(
+        "<https://openmetadata.example/table/service.sales.orders/contract|service.sales.orders>");
 
     DataContract contract =
         new DataContract()
@@ -159,7 +160,8 @@ class RichPlatformMessageDecoratorTest {
             .withName("orders_contract")
             .withDescription("Ensures order schema stays stable")
             .withFullyQualifiedName("service.sales.orders.contract")
-            .withOwners(List.of(new EntityReference().withType(Entity.USER).withName("dataSteward")))
+            .withOwners(
+                List.of(new EntityReference().withType(Entity.USER).withName("dataSteward")))
             .withEntity(
                 new EntityReference()
                     .withType(Entity.TABLE)
@@ -272,8 +274,7 @@ class RichPlatformMessageDecoratorTest {
                 .withName("rowCountToEqual")
                 .withDescription("Checks the row count"))
         .withInspectionQuery("select count(*) from orders")
-        .withParameterValues(
-            List.of(new TestCaseParameterValue().withName("min").withValue("10")))
+        .withParameterValues(List.of(new TestCaseParameterValue().withName("min").withValue("10")))
         .withTestCaseResult(
             new TestCaseResult().withResult("Threshold exceeded").withSampleData("sample rows"))
         .withTestCaseStatus(TestCaseStatus.Failed);
@@ -282,13 +283,12 @@ class RichPlatformMessageDecoratorTest {
   private static TestCaseRepository mockTestCaseRepository(TestCase testCase) {
     TestCaseRepository repository = mock(TestCaseRepository.class);
     when(repository.getFields("*")).thenReturn((EntityUtil.Fields) null);
-    when(
-            repository.getByName(
-                isNull(),
-                eq(testCase.getFullyQualifiedName()),
-                any(),
-                eq(Include.NON_DELETED),
-                eq(false)))
+    when(repository.getByName(
+            isNull(),
+            eq(testCase.getFullyQualifiedName()),
+            any(),
+            eq(Include.NON_DELETED),
+            eq(false)))
         .thenReturn(testCase);
     return repository;
   }

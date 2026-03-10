@@ -45,7 +45,8 @@ class PlatformMessageDecoratorTest {
 
     GChatMessage testMessage = decorator.buildTestMessage();
     assertEquals(1, testMessage.getCards().size());
-    assertEquals("Connection Successful ✅", testMessage.getCards().getFirst().getHeader().getTitle());
+    assertEquals(
+        "Connection Successful ✅", testMessage.getCards().getFirst().getHeader().getTitle());
 
     OutgoingMessage outgoingMessage = new OutgoingMessage();
     outgoingMessage.setMessages(List.of("Owner changed", "Tag added"));
@@ -61,13 +62,16 @@ class PlatformMessageDecoratorTest {
     GChatMessage changeMessage =
         decorator.createGeneralChangeEventMessage("publisher", event, outgoingMessage);
 
-    assertEquals("Change Event Details", changeMessage.getCards().getFirst().getHeader().getTitle());
+    assertEquals(
+        "Change Event Details", changeMessage.getCards().getFirst().getHeader().getTitle());
     assertEquals(4, changeMessage.getCards().getFirst().getSections().size());
     assertTrue(
         changeMessage.getCards().getFirst().getSections().stream()
             .flatMap(section -> section.getWidgets().stream())
-            .anyMatch(widget -> widget.getTextParagraph() != null
-                && "Owner changed".equals(widget.getTextParagraph().getText())));
+            .anyMatch(
+                widget ->
+                    widget.getTextParagraph() != null
+                        && "Owner changed".equals(widget.getTextParagraph().getText())));
   }
 
   @Test

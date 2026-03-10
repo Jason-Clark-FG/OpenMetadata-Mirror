@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
 import org.commonmark.ext.gfm.tables.TableBlock;
 import org.commonmark.ext.gfm.tables.TableBody;
 import org.commonmark.ext.gfm.tables.TableCell;
@@ -17,8 +16,8 @@ import org.commonmark.node.CustomBlock;
 import org.commonmark.node.CustomNode;
 import org.commonmark.node.Document;
 import org.commonmark.node.FencedCodeBlock;
-import org.commonmark.node.Heading;
 import org.commonmark.node.HardLineBreak;
+import org.commonmark.node.Heading;
 import org.commonmark.node.Image;
 import org.commonmark.node.IndentedCodeBlock;
 import org.commonmark.node.ListItem;
@@ -119,7 +118,8 @@ class GChatCardAssemblerTest {
   void visitDocumentFormatsTablesAndNestedLists() {
     GChatCardAssembler assembler = new GChatCardAssembler();
     Document document = new Document();
-    document.appendChild(createTable(new String[] {"Name", "Value"}, new String[] {"alpha", "beta"}));
+    document.appendChild(
+        createTable(new String[] {"Name", "Value"}, new String[] {"alpha", "beta"}));
 
     BulletList bulletList = new BulletList();
     ListItem item = new ListItem();

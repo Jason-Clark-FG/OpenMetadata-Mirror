@@ -54,9 +54,12 @@ class UserUtilTest {
     UserUtil.updateUserWithHashedPwd(user, "Sup3rSecret!");
 
     assertNotNull(user.getAuthenticationMechanism());
-    assertEquals(AuthenticationMechanism.AuthType.BASIC, user.getAuthenticationMechanism().getAuthType());
+    assertEquals(
+        AuthenticationMechanism.AuthType.BASIC, user.getAuthenticationMechanism().getAuthType());
     String hashedPassword =
-        JsonUtils.convertValue(user.getAuthenticationMechanism().getConfig(), org.openmetadata.schema.auth.BasicAuthMechanism.class)
+        JsonUtils.convertValue(
+                user.getAuthenticationMechanism().getConfig(),
+                org.openmetadata.schema.auth.BasicAuthMechanism.class)
             .getPassword();
     assertTrue(BCrypt.verifyer().verify("Sup3rSecret!".toCharArray(), hashedPassword).verified);
   }
@@ -68,12 +71,23 @@ class UserUtilTest {
     User user =
         new User()
             .withName("alice")
-            .withTeams(List.of(new EntityReference().withId(existingTeamId).withType(Entity.TEAM).withName("existing")));
+            .withTeams(
+                List.of(
+                    new EntityReference()
+                        .withId(existingTeamId)
+                        .withType(Entity.TEAM)
+                        .withName("existing")));
 
     Team analyticsTeam =
-        new Team().withId(analyticsTeamId).withName("analytics").withTeamType(CreateTeam.TeamType.GROUP);
+        new Team()
+            .withId(analyticsTeamId)
+            .withName("analytics")
+            .withTeamType(CreateTeam.TeamType.GROUP);
     Team orgTeam =
-        new Team().withId(UUID.randomUUID()).withName("platform").withTeamType(CreateTeam.TeamType.ORGANIZATION);
+        new Team()
+            .withId(UUID.randomUUID())
+            .withName("platform")
+            .withTeamType(CreateTeam.TeamType.ORGANIZATION);
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity
@@ -131,20 +145,17 @@ class UserUtilTest {
   @Test
   void validateAndGetRolesRefSkipsAdminAndMissingRoles() {
     Role dataConsumerRole =
-        new Role().withId(UUID.randomUUID()).withName("DataConsumer").withFullyQualifiedName("DataConsumer");
+        new Role()
+            .withId(UUID.randomUUID())
+            .withName("DataConsumer")
+            .withFullyQualifiedName("DataConsumer");
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity
-          .when(
-              () ->
-                  Entity.getEntityByName(
-                      Entity.ROLE, "DataConsumer", "id", NON_DELETED, true))
+          .when(() -> Entity.getEntityByName(Entity.ROLE, "DataConsumer", "id", NON_DELETED, true))
           .thenReturn(dataConsumerRole);
       mockedEntity
-          .when(
-              () ->
-                  Entity.getEntityByName(
-                      Entity.ROLE, "MissingRole", "id", NON_DELETED, true))
+          .when(() -> Entity.getEntityByName(Entity.ROLE, "MissingRole", "id", NON_DELETED, true))
           .thenThrow(new EntityNotFoundException("role"));
 
       List<EntityReference> references =
@@ -167,7 +178,10 @@ class UserUtilTest {
   void reSyncUserRolesFromTokenHandlesImmutableRoleSetsAndUpdatesUserState() {
     UUID userId = UUID.randomUUID();
     Role dataConsumerRole =
-        new Role().withId(UUID.randomUUID()).withName("DataConsumer").withFullyQualifiedName("DataConsumer");
+        new Role()
+            .withId(UUID.randomUUID())
+            .withName("DataConsumer")
+            .withFullyQualifiedName("DataConsumer");
     UserRepository userRepository = mock(UserRepository.class);
     UriInfo uriInfo = mock(UriInfo.class);
     User user =
@@ -181,10 +195,7 @@ class UserUtilTest {
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
       mockedEntity
-          .when(
-              () ->
-                  Entity.getEntityByName(
-                      Entity.ROLE, "DataConsumer", "id", NON_DELETED, true))
+          .when(() -> Entity.getEntityByName(Entity.ROLE, "DataConsumer", "id", NON_DELETED, true))
           .thenReturn(dataConsumerRole);
 
       boolean changed =
@@ -222,7 +233,10 @@ class UserUtilTest {
   @Test
   void getUserOrBotFallsBackToBotWhenUserDoesNotExist() {
     EntityReference botReference =
-        new EntityReference().withId(UUID.randomUUID()).withType(Entity.BOT).withName("ingestion-bot");
+        new EntityReference()
+            .withId(UUID.randomUUID())
+            .withType(Entity.BOT)
+            .withName("ingestion-bot");
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedEntity
@@ -273,7 +287,8 @@ class UserUtilTest {
 
   @Test
   void validateUserPersonaPreferencesImageAcceptsHttpsAndRejectsInvalidUrls() {
-    LandingPageSettings valid = new LandingPageSettings().withHeaderImage("https://cdn.example.com/banner.png");
+    LandingPageSettings valid =
+        new LandingPageSettings().withHeaderImage("https://cdn.example.com/banner.png");
     UserUtil.validateUserPersonaPreferencesImage(valid);
 
     BadRequestException schemeError =

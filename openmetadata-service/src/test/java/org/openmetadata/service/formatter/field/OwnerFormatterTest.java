@@ -40,7 +40,8 @@ class OwnerFormatterTest {
     assertEquals(Thread.CardStyle.OWNER, thread.getCardStyle());
     assertEquals(Thread.FieldOperation.DELETED, thread.getFieldOperation());
     assertEquals("owners", thread.getFeedInfo().getFieldName());
-    assertTrue(thread.getFeedInfo().getHeaderMessage().contains("alice deleted the owner for table"));
+    assertTrue(
+        thread.getFeedInfo().getHeaderMessage().contains("alice deleted the owner for table"));
     assertInstanceOf(OwnerFeedInfo.class, thread.getFeedInfo().getEntitySpecificInfo());
   }
 

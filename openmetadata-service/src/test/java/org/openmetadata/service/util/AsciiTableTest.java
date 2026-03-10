@@ -28,8 +28,7 @@ class AsciiTableTest {
 
   @Test
   void renderUsesEmptyTextAndCanOmitHeader() {
-    AsciiTable table =
-        new AsciiTable(List.of("Only"), List.of(), false, "(null)", "none");
+    AsciiTable table = new AsciiTable(List.of("Only"), List.of(), false, "(null)", "none");
 
     String rendered = table.render();
 

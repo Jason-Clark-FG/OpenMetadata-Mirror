@@ -129,7 +129,8 @@ class TeamsCardAssemblerTest {
     assertEquals("soft", assertTextBlock(body.get(5)).getText());
     assertEquals("hard", assertTextBlock(body.get(6)).getText());
 
-    TeamsMessage.Container quoteContainer = assertInstanceOf(TeamsMessage.Container.class, body.get(7));
+    TeamsMessage.Container quoteContainer =
+        assertInstanceOf(TeamsMessage.Container.class, body.get(7));
     TeamsMessage.TextBlock quoteText = assertTextBlock(quoteContainer.getItems().get(0));
     assertTrue(quoteText.getText().contains("> quoted"));
     assertTrue(quoteText.getText().contains("> quoted code"));
@@ -199,7 +200,8 @@ class TeamsCardAssemblerTest {
     assertEquals("indented", getContainerText(body.get(5)));
     assertTrue(getContainerText(body.get(6)).contains("> quoted"));
 
-    TeamsMessage.Container tableContainer = assertInstanceOf(TeamsMessage.Container.class, body.get(7));
+    TeamsMessage.Container tableContainer =
+        assertInstanceOf(TeamsMessage.Container.class, body.get(7));
     TeamsMessage.Table table =
         assertInstanceOf(TeamsMessage.Table.class, tableContainer.getItems().get(0));
     assertFalse(table.getFirstRowAsHeader());
@@ -217,7 +219,8 @@ class TeamsCardAssemblerTest {
     TeamsCardAssembler assembler = new TeamsCardAssembler();
     Document document = new Document();
     document.appendChild(createEmptyTable());
-    document.appendChild(createTable(new String[] {"Col1", "Col2"}, new String[] {"left", "right"}));
+    document.appendChild(
+        createTable(new String[] {"Col1", "Col2"}, new String[] {"left", "right"}));
     document.appendChild(
         createBodyOnlyTable(new String[] {"first"}, new String[] {"second", "value"}));
 
@@ -226,7 +229,8 @@ class TeamsCardAssemblerTest {
     List<TeamsMessage.BodyItem> body = assembler.getBodyItems();
     assertEquals(2, body.size());
 
-    TeamsMessage.Container firstContainer = assertInstanceOf(TeamsMessage.Container.class, body.get(0));
+    TeamsMessage.Container firstContainer =
+        assertInstanceOf(TeamsMessage.Container.class, body.get(0));
     TeamsMessage.Table firstRecord =
         assertInstanceOf(TeamsMessage.Table.class, firstContainer.getItems().get(0));
     assertFalse(firstRecord.getFirstRowAsHeader());
@@ -240,18 +244,20 @@ class TeamsCardAssemblerTest {
     TeamsMessage.Table generatedHeaderRecord =
         assertInstanceOf(TeamsMessage.Table.class, secondContainer.getItems().get(0));
     assertTrue(generatedHeaderRecord.getFirstRowAsHeader());
-    assertEquals("Record 1", getCellText(generatedHeaderRecord.getRows().get(0).getCells().get(0), 0));
-    assertEquals("Column 1", getCellText(generatedHeaderRecord.getRows().get(1).getCells().get(0), 0));
+    assertEquals(
+        "Record 1", getCellText(generatedHeaderRecord.getRows().get(0).getCells().get(0), 0));
+    assertEquals(
+        "Column 1", getCellText(generatedHeaderRecord.getRows().get(1).getCells().get(0), 0));
     assertEquals("first", getCellText(generatedHeaderRecord.getRows().get(1).getCells().get(1), 0));
-    assertEquals("Column 2", getCellText(generatedHeaderRecord.getRows().get(2).getCells().get(0), 0));
+    assertEquals(
+        "Column 2", getCellText(generatedHeaderRecord.getRows().get(2).getCells().get(0), 0));
     assertEquals("—", getCellText(generatedHeaderRecord.getRows().get(2).getCells().get(1), 0));
 
     TeamsMessage.Table secondGeneratedRecord =
         assertInstanceOf(TeamsMessage.Table.class, secondContainer.getItems().get(1));
     assertEquals("Medium", secondGeneratedRecord.getSpacing());
     assertTrue(secondGeneratedRecord.getSeparator());
-    assertEquals(
-        "value", getCellText(secondGeneratedRecord.getRows().get(2).getCells().get(1), 0));
+    assertEquals("value", getCellText(secondGeneratedRecord.getRows().get(2).getCells().get(1), 0));
   }
 
   private static Heading createHeading(int level, String text) {

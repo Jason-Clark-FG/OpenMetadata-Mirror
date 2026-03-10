@@ -42,9 +42,12 @@ class SearchUtilsTest {
     UUID id = UUID.randomUUID();
     Map<String, Object> entityMap =
         Map.of(
-            "id", id.toString(),
-            "entityType", Entity.TABLE,
-            "fullyQualifiedName", "service.db.schema.orders");
+            "id",
+            id.toString(),
+            "entityType",
+            Entity.TABLE,
+            "fullyQualifiedName",
+            "service.db.schema.orders");
 
     var relationshipRef = SearchUtils.getRelationshipRef(entityMap);
     assertEquals(id, relationshipRef.getId());
@@ -78,7 +81,8 @@ class SearchUtilsTest {
   void aggregationAndFieldHelpersHandleExpectedInputs() {
     JsonObject root =
         Json.createReader(
-                new StringReader("{\"graph\":{\"buckets\":[{\"key\":\"orders\"}]},\"key\":\"root\"}"))
+                new StringReader(
+                    "{\"graph\":{\"buckets\":[{\"key\":\"orders\"}]},\"key\":\"root\"}"))
             .readObject();
     JsonObject graph = SearchUtils.getAggregationObject(root, "graph");
     JsonArray buckets = SearchUtils.getAggregationBuckets(graph);
@@ -108,9 +112,15 @@ class SearchUtilsTest {
     assertTrue(SearchUtils.paginateList(null, 0, 1).isEmpty());
     assertTrue(SearchUtils.getRequiredLineageFields("*").isEmpty());
     assertTrue(SearchUtils.getRequiredEntityRelationshipFields("*").isEmpty());
-    assertTrue(SearchUtils.getRequiredLineageFields("description, schemaDefinition").contains("description"));
-    assertFalse(SearchUtils.getRequiredLineageFields("description, schemaDefinition").contains("schemaDefinition"));
-    assertFalse(SearchUtils.getRequiredEntityRelationshipFields("description, embedding").contains("embedding"));
+    assertTrue(
+        SearchUtils.getRequiredLineageFields("description, schemaDefinition")
+            .contains("description"));
+    assertFalse(
+        SearchUtils.getRequiredLineageFields("description, schemaDefinition")
+            .contains("schemaDefinition"));
+    assertFalse(
+        SearchUtils.getRequiredEntityRelationshipFields("description, embedding")
+            .contains("embedding"));
     assertEquals(List.of("cursorA", "cursorB"), SearchUtils.searchAfter("cursorA,cursorB"));
     assertNull(SearchUtils.searchAfter(null));
     assertEquals(List.of("name", "owners"), SearchUtils.sourceFields(" name, , owners "));
@@ -123,7 +133,8 @@ class SearchUtilsTest {
   @Test
   void searchUtilsConvertsStoredLineageAndEntityRelationshipData() {
     EsLineageData lineageData = new EsLineageData().withDocId("edge-1");
-    Map<String, Object> lineageDoc = Map.of(SearchClient.UPSTREAM_LINEAGE_FIELD, List.of(lineageData));
+    Map<String, Object> lineageDoc =
+        Map.of(SearchClient.UPSTREAM_LINEAGE_FIELD, List.of(lineageData));
 
     List<EsLineageData> lineage = SearchUtils.getUpstreamLineageListIfExist(lineageDoc);
     assertEquals(1, lineage.size());
@@ -210,10 +221,7 @@ class SearchUtilsTest {
 
     try (MockedStatic<SSLUtil> sslUtil = mockStatic(SSLUtil.class)) {
       sslUtil
-          .when(
-              () ->
-                  SSLUtil.createSSLContext(
-                      "/tmp/truststore.jks", "secret", "ElasticSearch"))
+          .when(() -> SSLUtil.createSSLContext("/tmp/truststore.jks", "secret", "ElasticSearch"))
           .thenReturn(sslContext);
 
       assertSame(sslContext, SearchUtils.createElasticSearchSSLContext(httpsConfig));
@@ -227,8 +235,7 @@ class SearchUtilsTest {
     config.setPort(9200);
     config.setScheme("https");
 
-    org.apache.hc.core5.http.HttpHost[] hosts =
-        SearchUtils.buildHttpHostsForHc5(config, "Test");
+    org.apache.hc.core5.http.HttpHost[] hosts = SearchUtils.buildHttpHostsForHc5(config, "Test");
 
     assertEquals(2, hosts.length);
     assertEquals("es-node-1", hosts[0].getHostName());

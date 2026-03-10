@@ -36,7 +36,8 @@ class SearchIndexUtilsTest {
     List<EntityReference> refs =
         List.of(new EntityReference().withId(followerId), new EntityReference().withId(ownerId));
     List<TagLabel> tags = List.of(new TagLabel().withTagFQN("PII.Sensitive"));
-    Map<String, Object> owner = new HashMap<>(Map.of("name", "alice", "email", "alice@example.com"));
+    Map<String, Object> owner =
+        new HashMap<>(Map.of("name", "alice", "email", "alice@example.com"));
     Map<String, Object> column1 = new HashMap<>(Map.of("name", "id", "description", "identifier"));
     Map<String, Object> column2 = new HashMap<>(Map.of("name", "amount", "description", "metric"));
     Map<String, Object> doc = new HashMap<>();
@@ -44,14 +45,17 @@ class SearchIndexUtilsTest {
     doc.put("columns", new ArrayList<>(List.of(column1, column2)));
     doc.put("simple", "value");
 
-    assertEquals(List.of(followerId.toString(), ownerId.toString()), SearchIndexUtils.parseFollowers(refs));
-    assertEquals(List.of(followerId.toString(), ownerId.toString()), SearchIndexUtils.parseOwners(refs));
+    assertEquals(
+        List.of(followerId.toString(), ownerId.toString()), SearchIndexUtils.parseFollowers(refs));
+    assertEquals(
+        List.of(followerId.toString(), ownerId.toString()), SearchIndexUtils.parseOwners(refs));
     assertEquals(List.of(), SearchIndexUtils.parseFollowers(null));
     assertEquals(List.of(), SearchIndexUtils.parseOwners(null));
     assertSame(tags, SearchIndexUtils.parseTags(tags));
     assertEquals(List.of(), SearchIndexUtils.parseTags(null));
 
-    SearchIndexUtils.removeNonIndexableFields(doc, Set.of("owner.email", "columns.description", "simple"));
+    SearchIndexUtils.removeNonIndexableFields(
+        doc, Set.of("owner.email", "columns.description", "simple"));
 
     assertFalse(owner.containsKey("email"));
     assertFalse(column1.containsKey("description"));
@@ -86,7 +90,9 @@ class SearchIndexUtilsTest {
     assertEquals(List.of("owner.name"), metadata.getDimensions());
     assertEquals(List.of("timestamp"), metadata.getMetrics());
     assertEquals("team", aggregation.getAggregationTree().getChildren().get(0).getName());
-    assertEquals("max_ts", aggregation.getAggregationTree().getChildren().get(0).getChildren().get(0).getName());
+    assertEquals(
+        "max_ts",
+        aggregation.getAggregationTree().getChildren().get(0).getChildren().get(0).getName());
 
     DataQualityReport report =
         SearchIndexUtils.parseAggregationResults(Optional.of(aggregationResults), metadata);
@@ -125,13 +131,14 @@ class SearchIndexUtilsTest {
   @Test
   void testDescriptionAndTagSourceProcessing() {
     TagLabel manualTag =
-        new TagLabel()
-            .withTagFQN("PII.Sensitive")
-            .withLabelType(TagLabel.LabelType.MANUAL);
+        new TagLabel().withTagFQN("PII.Sensitive").withLabelType(TagLabel.LabelType.MANUAL);
     TagLabel manualTier =
         new TagLabel().withTagFQN("Tier.Tier1").withLabelType(TagLabel.LabelType.MANUAL);
     Column column =
-        new Column().withName("amount").withDescription("column description").withTags(List.of(manualTier));
+        new Column()
+            .withName("amount")
+            .withDescription("column description")
+            .withTags(List.of(manualTier));
     ChangeSummaryMap changeSummaryMap =
         new ChangeSummaryMap()
             .withAdditionalProperty(
@@ -141,7 +148,9 @@ class SearchIndexUtilsTest {
                     .withChangeSource(ChangeSource.MANUAL))
             .withAdditionalProperty(
                 "columns.amount.description",
-                new ChangeSummary().withChangedBy("analyst").withChangeSource(ChangeSource.SUGGESTED));
+                new ChangeSummary()
+                    .withChangedBy("analyst")
+                    .withChangeSource(ChangeSource.SUGGESTED));
     Table table =
         new Table()
             .withDescription("table description")
@@ -152,7 +161,8 @@ class SearchIndexUtilsTest {
     SearchIndexUtils.TagAndTierSources tagAndTierSources =
         SearchIndexUtils.processTagAndTierSources(table);
     Map<String, Integer> descriptionSources =
-        SearchIndexUtils.processDescriptionSources(table, changeSummaryMap.getAdditionalProperties());
+        SearchIndexUtils.processDescriptionSources(
+            table, changeSummaryMap.getAdditionalProperties());
 
     assertTrue(SearchIndexUtils.hasColumns(table));
     assertFalse(SearchIndexUtils.hasColumns(new Topic()));
@@ -163,7 +173,8 @@ class SearchIndexUtilsTest {
     assertNull(
         SearchIndexUtils.getDescriptionSource(
             null, changeSummaryMap.getAdditionalProperties(), "description"));
-    assertEquals(changeSummaryMap.getAdditionalProperties(), SearchIndexUtils.getChangeSummaryMap(table));
+    assertEquals(
+        changeSummaryMap.getAdditionalProperties(), SearchIndexUtils.getChangeSummaryMap(table));
     assertEquals(1, tagAndTierSources.getTagSources().get(TagLabel.LabelType.MANUAL.value()));
     assertEquals(1, tagAndTierSources.getTierSources().get(TagLabel.LabelType.MANUAL.value()));
     assertEquals(2, descriptionSources.get(ChangeSource.SUGGESTED.value()));
@@ -204,9 +215,11 @@ class SearchIndexUtilsTest {
     assertEquals("10", sortNode.getValue().get("size"));
     assertEquals("team>count", statsNode.getValue().get("buckets_path"));
     assertEquals(1, emptyNode.getChildren().size());
-    assertEquals(List.of("sterms#team", "max#max_ts"), aggregation.getAggregationMetadata().getKeys());
+    assertEquals(
+        List.of("sterms#team", "max#max_ts"), aggregation.getAggregationMetadata().getKeys());
     assertEquals(2, parsedWithSiblings.getAggregationTree().getChildren().size());
-    assertEquals("top_hits", parsedWithSiblings.getAggregationTree().getChildren().get(1).getType());
+    assertEquals(
+        "top_hits", parsedWithSiblings.getAggregationTree().getChildren().get(1).getType());
     assertEquals(
         "timestamp",
         parsedWithSiblings.getAggregationTree().getChildren().get(1).getValue().get("sort_field"));
@@ -233,10 +246,10 @@ class SearchIndexUtilsTest {
     extension.put("reviewers", List.of(ownerRef));
     extension.put("status", List.of("READY", "FAILED"));
     extension.put("markdownBody", "hello");
-    extension.put("tableData", new HashMap<>(Map.of("rows", List.of(Map.of("c1", "foo", "c2", 2)))));
     extension.put(
-        "link",
-        new HashMap<>(Map.of("url", "https://example.com", "displayText", "Docs")));
+        "tableData", new HashMap<>(Map.of("rows", List.of(Map.of("c1", "foo", "c2", 2)))));
+    extension.put(
+        "link", new HashMap<>(Map.of("url", "https://example.com", "displayText", "Docs")));
     extension.put("genericList", List.of("alpha", 2, true));
     extension.put(
         "genericEntityMap",
@@ -258,28 +271,41 @@ class SearchIndexUtilsTest {
     extension.put("badNumber", "not-a-number");
     extension.put("badTimestamp", "not-a-long");
 
-    try (MockedStatic<TypeRegistry> typeRegistry = org.mockito.Mockito.mockStatic(TypeRegistry.class)) {
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "age")).thenReturn("integer");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "score")).thenReturn("number");
+    try (MockedStatic<TypeRegistry> typeRegistry =
+        org.mockito.Mockito.mockStatic(TypeRegistry.class)) {
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "age"))
+          .thenReturn("integer");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "score"))
+          .thenReturn("number");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "observedAt"))
           .thenReturn("timestamp");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "interval")).thenReturn("timeInterval");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "releaseDate")).thenReturn("date-cp");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "interval"))
+          .thenReturn("timeInterval");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "releaseDate"))
+          .thenReturn("date-cp");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "owner"))
           .thenReturn("entityReference");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "reviewers"))
           .thenReturn("entityReferenceList");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "status")).thenReturn("enum");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "status"))
+          .thenReturn("enum");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "markdownBody"))
           .thenReturn("markdown");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "tableData"))
           .thenReturn("table-cp");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("table", "link")).thenReturn("hyperlink-cp");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("table", "link"))
+          .thenReturn("hyperlink-cp");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("table", "genericList"))
           .thenThrow(new IllegalStateException("missing"));
@@ -322,15 +348,15 @@ class SearchIndexUtilsTest {
       assertEquals("foo", entryByName(typedProperties, "tableData.rows.c1").get("stringValue"));
       assertEquals("2", entryByName(typedProperties, "tableData.rows.c2").get("textValue"));
       assertEquals("Docs", entryByName(typedProperties, "link.displayText").get("stringValue"));
-      assertEquals("https://example.com", entryByName(typedProperties, "link.url").get("textValue"));
+      assertEquals(
+          "https://example.com", entryByName(typedProperties, "link.url").get("textValue"));
       assertEquals("unknown", entryByName(typedProperties, "genericList").get("propertyType"));
       assertEquals("alpha 2 true", entryByName(typedProperties, "genericList").get("stringValue"));
       assertEquals(
           "Alice alice user.alice",
           entryByName(typedProperties, "genericEntityMap").get("stringValue"));
       assertEquals(
-          "2024 2025",
-          entryByName(typedProperties, "genericIntervalMap").get("stringValue"));
+          "2024 2025", entryByName(typedProperties, "genericIntervalMap").get("stringValue"));
       assertEquals(
           "Reference https://docs.example.com",
           entryByName(typedProperties, "genericLinkMap").get("stringValue"));
@@ -370,26 +396,31 @@ class SearchIndexUtilsTest {
     doc.put("columns", new ArrayList<>(List.of(topLevelColumn)));
     doc.put("dataModel", nestedDataModel);
 
-    try (MockedStatic<TypeRegistry> typeRegistry = org.mockito.Mockito.mockStatic(TypeRegistry.class)) {
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("tableColumn", "age")).thenReturn("integer");
-      typeRegistry.when(() -> TypeRegistry.getCustomPropertyType("tableColumn", "status")).thenReturn("enum");
+    try (MockedStatic<TypeRegistry> typeRegistry =
+        org.mockito.Mockito.mockStatic(TypeRegistry.class)) {
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("tableColumn", "age"))
+          .thenReturn("integer");
+      typeRegistry
+          .when(() -> TypeRegistry.getCustomPropertyType("tableColumn", "status"))
+          .thenReturn("enum");
       typeRegistry
           .when(() -> TypeRegistry.getCustomPropertyType("nestedColumn", "link"))
           .thenReturn("hyperlink-cp");
 
       SearchIndexUtils.transformColumnExtensions(doc, "tableColumn");
       SearchIndexUtils.transformColumnExtensionsAtPath(doc, "dataModel.columns", "nestedColumn");
-      SearchIndexUtils.transformColumnExtensionsAtPath(new HashMap<>(), "missing.columns", "tableColumn");
+      SearchIndexUtils.transformColumnExtensionsAtPath(
+          new HashMap<>(), "missing.columns", "tableColumn");
 
       assertTrue(topLevelColumn.containsKey("customPropertiesTyped"));
       assertTrue(childColumn.containsKey("customPropertiesTyped"));
       assertTrue(nestedColumn.containsKey("customPropertiesTyped"));
-      assertEquals(
-          1,
-          ((List<?>) topLevelColumn.get("customPropertiesTyped")).size());
+      assertEquals(1, ((List<?>) topLevelColumn.get("customPropertiesTyped")).size());
       assertEquals(
           "READY",
-          entryByName(castEntries(childColumn.get("customPropertiesTyped")), "status").get("stringValue"));
+          entryByName(castEntries(childColumn.get("customPropertiesTyped")), "status")
+              .get("stringValue"));
       assertEquals(
           "https://example.com",
           entryByName(castEntries(nestedColumn.get("customPropertiesTyped")), "link.url")
@@ -402,8 +433,7 @@ class SearchIndexUtilsTest {
     return (List<Map<String, Object>>) entries;
   }
 
-  private static Map<String, Object> entryByName(
-      List<Map<String, Object>> entries, String name) {
+  private static Map<String, Object> entryByName(List<Map<String, Object>> entries, String name) {
     return entries.stream()
         .filter(entry -> name.equals(entry.get("name")))
         .findFirst()

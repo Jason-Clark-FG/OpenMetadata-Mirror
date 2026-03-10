@@ -41,7 +41,8 @@ class TagFormatterTest {
     assertEquals(Thread.CardStyle.TAGS, thread.getCardStyle());
     assertEquals(Thread.FieldOperation.DELETED, thread.getFieldOperation());
     assertEquals("tags", thread.getFeedInfo().getFieldName());
-    assertTrue(thread.getFeedInfo().getHeaderMessage().contains("alice deleted the tags for table"));
+    assertTrue(
+        thread.getFeedInfo().getHeaderMessage().contains("alice deleted the tags for table"));
     assertInstanceOf(TagFeedInfo.class, thread.getFeedInfo().getEntitySpecificInfo());
   }
 

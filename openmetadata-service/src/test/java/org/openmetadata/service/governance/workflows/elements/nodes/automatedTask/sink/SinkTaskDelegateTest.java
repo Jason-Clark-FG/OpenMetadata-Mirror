@@ -118,7 +118,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(() -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
+          .when(
+              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
           .thenReturn(batchEntity);
 
       delegate.execute(execution);
@@ -150,7 +151,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(() -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
+          .when(
+              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
           .thenReturn(batchEntity);
 
       delegate.execute(execution);

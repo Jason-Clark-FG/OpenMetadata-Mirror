@@ -341,7 +341,8 @@ class SearchIndexStatsTest {
         ElasticSearchBulkSink.CustomBulkProcessor.class.getDeclaredMethod(
             "shouldRetry", int.class, Throwable.class);
     method.setAccessible(true);
-    Throwable error = errorMessage == null ? new RuntimeException() : new RuntimeException(errorMessage);
+    Throwable error =
+        errorMessage == null ? new RuntimeException() : new RuntimeException(errorMessage);
     return (boolean) method.invoke(processor, attemptNumber, error);
   }
 
@@ -351,7 +352,8 @@ class SearchIndexStatsTest {
         ElasticSearchBulkSink.CustomBulkProcessor.class.getDeclaredMethod(
             "isPayloadTooLargeError", Throwable.class);
     method.setAccessible(true);
-    Throwable error = errorMessage == null ? new RuntimeException() : new RuntimeException(errorMessage);
+    Throwable error =
+        errorMessage == null ? new RuntimeException() : new RuntimeException(errorMessage);
     return (boolean) method.invoke(processor, error);
   }
 }

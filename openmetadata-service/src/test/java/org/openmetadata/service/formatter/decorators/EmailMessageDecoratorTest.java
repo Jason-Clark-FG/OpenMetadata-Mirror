@@ -173,7 +173,8 @@ class EmailMessageDecoratorTest {
   }
 
   @Test
-  @DisplayName("Should delegate entity and thread payload construction through email message mapping")
+  @DisplayName(
+      "Should delegate entity and thread payload construction through email message mapping")
   void testBuildEntityAndThreadMessageDelegateToOutgoingMessages() {
     OutgoingMessage entityOutgoing = new OutgoingMessage();
     entityOutgoing.setUserName("entity-user");

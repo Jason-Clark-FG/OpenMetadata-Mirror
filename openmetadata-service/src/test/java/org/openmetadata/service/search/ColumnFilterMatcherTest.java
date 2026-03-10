@@ -45,19 +45,19 @@ class ColumnFilterMatcherTest {
 
     assertTrue(
         cache.matchesFilter(
-            "service.db.schema.customers.customer_id",
-            new ColumnMetadataCache.ColumnFilterCriteria(
-                ColumnMetadataCache.ColumnFilterCriteria.FilterType.TAG, "Sensitive"))
+                "service.db.schema.customers.customer_id",
+                new ColumnMetadataCache.ColumnFilterCriteria(
+                    ColumnMetadataCache.ColumnFilterCriteria.FilterType.TAG, "Sensitive"))
             == false);
 
     cache.loadColumnMetadata(
         Set.of("service.db.schema.customers.customer_id", "service.db.schema.orders.customer_id"),
         parentFqn ->
             switch (parentFqn) {
-              case "service.db.schema.customers" ->
-                  doc("service.db.schema.customers", column("customer_id", "PII.Sensitive"));
-              case "service.db.schema.orders" ->
-                  doc("service.db.schema.orders", column("customer_id", "Glossary.Location"));
+              case "service.db.schema.customers" -> doc(
+                  "service.db.schema.customers", column("customer_id", "PII.Sensitive"));
+              case "service.db.schema.orders" -> doc(
+                  "service.db.schema.orders", column("customer_id", "Glossary.Location"));
               default -> throw new IllegalArgumentException(parentFqn);
             });
 
@@ -84,11 +84,11 @@ class ColumnFilterMatcherTest {
     assertFalse(ColumnFilterMatcher.matchesColumnFilter(edge, ":customer_id"));
     assertFalse(ColumnFilterMatcher.matchesColumnFilter(edgeWithoutColumns, "customer_id"));
     assertTrue(ColumnFilterMatcher.matchesColumnFilter(null, "tag:"));
-    assertTrue(ColumnFilterMatcher.matchesColumnFilter(null, "customer_id", new ColumnMetadataCache()));
+    assertTrue(
+        ColumnFilterMatcher.matchesColumnFilter(null, "customer_id", new ColumnMetadataCache()));
     assertTrue(ColumnFilterMatcher.extractColumnFqns(null).isEmpty());
     assertEquals(
-        Set.of(
-            "service.db.schema.customers.customer_id", "service.db.schema.orders.customer_id"),
+        Set.of("service.db.schema.customers.customer_id", "service.db.schema.orders.customer_id"),
         ColumnFilterMatcher.extractColumnFqns(edge));
   }
 

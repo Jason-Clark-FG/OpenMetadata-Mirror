@@ -71,8 +71,7 @@ class NotificationTemplateHelperCoreTest {
             new EndsWithHelper());
 
     assertEquals(
-        "and-true|or-true|not-true|eq-true|gt-true|starts-true|ends-true",
-        compact(rendered));
+        "and-true|or-true|not-true|eq-true|gt-true|starts-true|ends-true", compact(rendered));
   }
 
   @Test
@@ -140,8 +139,7 @@ class NotificationTemplateHelperCoreTest {
             new PluckHelper());
 
     assertEquals(
-        "freshness|null-check|;Tier.Tier1|PII.Sensitive|;alpha|beta|;Gold",
-        compact(rendered));
+        "freshness|null-check|;Tier.Tier1|PII.Sensitive|;alpha|beta|;Gold", compact(rendered));
   }
 
   @Test
@@ -156,9 +154,12 @@ class NotificationTemplateHelperCoreTest {
         render(
             "{{formatDate longTimestamp}}|{{formatDate stringTimestamp}}|{{formatDate invalidValue}}",
             Map.of(
-                "longTimestamp", timestamp,
-                "stringTimestamp", Long.toString(timestamp),
-                "invalidValue", "not-a-timestamp"),
+                "longTimestamp",
+                timestamp,
+                "stringTimestamp",
+                Long.toString(timestamp),
+                "invalidValue",
+                "not-a-timestamp"),
             new FormatDateHelper());
 
     assertEquals(expected + "|" + expected + "|not-a-timestamp", rendered);

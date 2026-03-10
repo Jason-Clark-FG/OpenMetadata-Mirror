@@ -25,7 +25,8 @@ class TableUtilTest {
 
   @Test
   void getColumnNameForProfilerReturnsNullWhenColumnIsMissing() {
-    Column parent = new Column().withName("customer").withChildren(List.of(new Column().withName("name")));
+    Column parent =
+        new Column().withName("customer").withChildren(List.of(new Column().withName("name")));
 
     Column result =
         TableUtil.getColumnNameForProfiler(

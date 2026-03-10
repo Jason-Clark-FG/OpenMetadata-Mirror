@@ -13,7 +13,8 @@ class UtilitiesTest {
   @Test
   void getLastSevenDaysReturnsCalendarDaySequence() {
     LocalDate currentDate = LocalDate.of(2026, 1, 15);
-    long epochMillis = currentDate.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    long epochMillis =
+        currentDate.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
     List<String> days = Utilities.getLastSevenDays(epochMillis);
 
@@ -25,7 +26,9 @@ class UtilitiesTest {
     LocalDate date = LocalDate.of(2026, 2, 3);
     long epochMillis = date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
-    assertEquals(date.format(DateTimeFormatter.ofPattern("MMM d")), Utilities.getMonthAndDateFromEpoch(epochMillis));
+    assertEquals(
+        date.format(DateTimeFormatter.ofPattern("MMM d")),
+        Utilities.getMonthAndDateFromEpoch(epochMillis));
     assertEquals("3", Utilities.getDateFromEpoch(epochMillis));
   }
 

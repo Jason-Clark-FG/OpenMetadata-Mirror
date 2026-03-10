@@ -65,8 +65,8 @@ import org.openmetadata.schema.entity.automations.Workflow;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.ingestionPipelines.AirflowConfig;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
-import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServiceClientResponse;
+import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatusType;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
 import org.openmetadata.schema.security.client.OpenMetadataJWTClientConfig;
@@ -728,7 +728,9 @@ class K8sPipelineClientTest {
     when(listJobRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
         .thenReturn(listJobRequest);
     when(listJobRequest.execute())
-        .thenReturn(new V1JobList().items(List.of(queuedWithRunId, queuedWithoutRunId, activeJob, deletingJob)));
+        .thenReturn(
+            new V1JobList()
+                .items(List.of(queuedWithRunId, queuedWithoutRunId, activeJob, deletingJob)));
 
     List<PipelineStatus> queuedStatuses = client.getQueuedPipelineStatus(pipeline);
 
@@ -773,8 +775,10 @@ class K8sPipelineClientTest {
     when(coreApi.listNamespacedPod(eq(NAMESPACE))).thenReturn(listPodRequest);
     when(listPodRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
         .thenReturn(listPodRequest);
-    when(listPodRequest.execute()).thenReturn(new V1PodList().items(List.of(newerSidecarPod, olderMainPod)));
-    when(coreApi.readNamespacedPodLog(eq("older-main"), eq(NAMESPACE))).thenReturn(readPodLogRequest);
+    when(listPodRequest.execute())
+        .thenReturn(new V1PodList().items(List.of(newerSidecarPod, olderMainPod)));
+    when(coreApi.readNamespacedPodLog(eq("older-main"), eq(NAMESPACE)))
+        .thenReturn(readPodLogRequest);
     when(readPodLogRequest.container(eq("main"))).thenReturn(readPodLogRequest);
     when(readPodLogRequest.execute()).thenReturn("hello from ingestion");
 
@@ -798,7 +802,8 @@ class K8sPipelineClientTest {
     when(listPodRequest.labelSelector(eq("app.kubernetes.io/pipeline=test-pipeline")))
         .thenReturn(listPodRequest);
     when(listPodRequest.execute()).thenReturn(new V1PodList().items(List.of(workerPod)));
-    when(coreApi.readNamespacedPodLog(eq("worker-pod"), eq(NAMESPACE))).thenReturn(readPodLogRequest);
+    when(coreApi.readNamespacedPodLog(eq("worker-pod"), eq(NAMESPACE)))
+        .thenReturn(readPodLogRequest);
     when(readPodLogRequest.container(eq("worker"))).thenReturn(readPodLogRequest);
     when(readPodLogRequest.execute()).thenReturn("");
 
@@ -910,8 +915,7 @@ class K8sPipelineClientTest {
         List.of("python", "-m", "metadata.applications.runner"),
         applicationJob.getSpec().getTemplate().getSpec().getContainers().get(0).getCommand());
     assertEquals(
-        "query-runner",
-        applicationJob.getMetadata().getLabels().get("app.kubernetes.io/app-name"));
+        "query-runner", applicationJob.getMetadata().getLabels().get("app.kubernetes.io/app-name"));
   }
 
   @Test
@@ -1118,9 +1122,14 @@ class K8sPipelineClientTest {
   }
 
   private static V1Pod pod(
-      String name, OffsetDateTime createdAt, Map<String, String> labels, List<String> containerNames) {
+      String name,
+      OffsetDateTime createdAt,
+      Map<String, String> labels,
+      List<String> containerNames) {
     List<V1Container> containers =
-        containerNames.stream().map(containerName -> new V1Container().name(containerName)).toList();
+        containerNames.stream()
+            .map(containerName -> new V1Container().name(containerName))
+            .toList();
     return new V1Pod()
         .metadata(new V1ObjectMeta().name(name).labels(labels).creationTimestamp(createdAt))
         .spec(new V1PodSpec().containers(containers));

@@ -21,7 +21,6 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.everit.json.schema.ArraySchema;
 import org.everit.json.schema.BooleanSchema;
@@ -92,13 +91,15 @@ class SchemaFieldExtractorTest {
   @Test
   void extractFieldsAddsCustomPropertiesWithReferenceTypesAndConfig() {
     SchemaFieldExtractor extractor = new SchemaFieldExtractor();
-    CustomPropertyConfig notesConfig = new CustomPropertyConfig().withConfig(Map.of("format", "md"));
+    CustomPropertyConfig notesConfig =
+        new CustomPropertyConfig().withConfig(Map.of("format", "md"));
     Type type =
         new Type()
             .withCustomProperties(
                 List.of(
                     customProperty("ownerCustom", "Owner Custom", "entityReference", null),
-                    customProperty("reviewersCustom", "Reviewers Custom", "entityReferenceList", null),
+                    customProperty(
+                        "reviewersCustom", "Reviewers Custom", "entityReferenceList", null),
                     customProperty("notesCustom", "Notes Custom", "markdown", notesConfig)));
 
     Map<String, SchemaFieldExtractor.FieldDefinition> fields =
@@ -116,10 +117,14 @@ class SchemaFieldExtractorTest {
     SchemaFieldExtractor extractor = new SchemaFieldExtractor();
     TypeRepository repository = mock(TypeRepository.class);
     UriInfo uriInfo = mock(UriInfo.class);
-    Type entityType = new Type().withCustomProperties(List.of(customProperty("extraField", "Extra Field", "string", null)));
+    Type entityType =
+        new Type()
+            .withCustomProperties(
+                List.of(customProperty("extraField", "Extra Field", "string", null)));
 
     when(repository.getByName(eq(uriInfo), anyString(), any(), eq(Include.ALL), eq(false)))
-        .thenAnswer(invocation -> "table".equals(invocation.getArgument(1)) ? entityType : new Type());
+        .thenAnswer(
+            invocation -> "table".equals(invocation.getArgument(1)) ? entityType : new Type());
 
     Map<String, List<SchemaFieldExtractor.FieldDefinition>> customProperties =
         extractor.extractAllCustomProperties(uriInfo, repository);
@@ -150,11 +155,13 @@ class SchemaFieldExtractorTest {
             Map.entry("../../type/basic.json#/definitions/dateTime-cp", "dateTime-cp"),
             Map.entry("../../type/basic.json#/definitions/time-cp", "time-cp"),
             Map.entry("../../type/basic.json#/definitions/enum", "enum"),
-            Map.entry("../../type/basic.json#/definitions/enumWithDescriptions", "enumWithDescriptions"),
+            Map.entry(
+                "../../type/basic.json#/definitions/enumWithDescriptions", "enumWithDescriptions"),
             Map.entry("../../type/basic.json#/definitions/timezone", "timezone"),
             Map.entry("../../type/basic.json#/definitions/entityLink", "entityLink"),
             Map.entry("../../type/basic.json#/definitions/entityName", "entityName"),
-            Map.entry("../../type/basic.json#/definitions/testCaseEntityName", "testCaseEntityName"),
+            Map.entry(
+                "../../type/basic.json#/definitions/testCaseEntityName", "testCaseEntityName"),
             Map.entry(
                 "../../type/basic.json#/definitions/fullyQualifiedEntityName",
                 "fullyQualifiedEntityName"),
@@ -178,22 +185,19 @@ class SchemaFieldExtractorTest {
       assertEquals(
           expectedMapping.getValue(),
           invokePrivateStatic(
-              "determineReferenceType",
-              new Class<?>[] {String.class},
-              expectedMapping.getKey()));
+              "determineReferenceType", new Class<?>[] {String.class}, expectedMapping.getKey()));
     }
 
     assertNull(
         invokePrivateStatic(
-            "determineReferenceType",
-            new Class<?>[] {String.class},
-            "../../type/notMapped.json"));
+            "determineReferenceType", new Class<?>[] {String.class}, "../../type/notMapped.json"));
   }
 
   @Test
   void resolveSchemaByTypeReturnsSchemaForKnownTypes() throws Throwable {
     SchemaFieldExtractor extractor = new SchemaFieldExtractor();
-    SchemaClient schemaClient = customSchemaClient("classpath:///json/schema/type/entityReference.json");
+    SchemaClient schemaClient =
+        customSchemaClient("classpath:///json/schema/type/entityReference.json");
 
     assertNotNull(
         invokePrivate(
@@ -222,60 +226,46 @@ class SchemaFieldExtractorTest {
 
     assertEquals(
         "object",
-        invokePrivateStatic("mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, new Object[] {null}));
+        invokePrivateStatic(
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, new Object[] {null}));
     assertEquals(
         "string",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(StringSchema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(StringSchema.class)));
     assertEquals(
         "integer",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            integerSchema));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, integerSchema));
     assertEquals(
         "number",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            numberSchema));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, numberSchema));
     assertEquals(
         "boolean",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(BooleanSchema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(BooleanSchema.class)));
     assertEquals(
         "object",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(ObjectSchema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(ObjectSchema.class)));
     assertEquals(
         "array",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(ArraySchema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(ArraySchema.class)));
     assertEquals(
         "null",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(NullSchema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(NullSchema.class)));
     assertEquals(
         "string",
         invokePrivateStatic(
-            "mapSchemaTypeToSimpleType",
-            new Class<?>[] {Schema.class},
-            mock(Schema.class)));
+            "mapSchemaTypeToSimpleType", new Class<?>[] {Schema.class}, mock(Schema.class)));
   }
 
   @Test
   void customSchemaClientLoadsOpenMetadataResourcesAndRejectsUnsupportedUrls() throws Throwable {
-    SchemaClient schemaClient = customSchemaClient("classpath:///json/schema/entity/data/table.json");
+    SchemaClient schemaClient =
+        customSchemaClient("classpath:///json/schema/entity/data/table.json");
 
     try (InputStream inputStream =
         schemaClient.get("https://open-metadata.org/schema/type/entityReference.json")) {
@@ -283,13 +273,15 @@ class SchemaFieldExtractorTest {
       assertTrue(inputStream.readAllBytes().length > 0);
     }
 
-    assertThrows(RuntimeException.class, () -> schemaClient.get("https://example.com/entityReference.json"));
+    assertThrows(
+        RuntimeException.class, () -> schemaClient.get("https://example.com/entityReference.json"));
   }
 
   @Test
   void loadSchemaThrowsForMissingResources() throws Throwable {
     SchemaFieldExtractor extractor = new SchemaFieldExtractor();
-    SchemaClient schemaClient = customSchemaClient("classpath:///json/schema/entity/data/table.json");
+    SchemaClient schemaClient =
+        customSchemaClient("classpath:///json/schema/entity/data/table.json");
 
     assertThrows(
         SchemaProcessingException.class,
@@ -305,7 +297,8 @@ class SchemaFieldExtractorTest {
 
   @Test
   void loadMainSchemaLoadsKnownEntities() throws Throwable {
-    SchemaClient schemaClient = customSchemaClient("classpath:///json/schema/entity/data/table.json");
+    SchemaClient schemaClient =
+        customSchemaClient("classpath:///json/schema/entity/data/table.json");
 
     assertNotNull(
         invokePrivateStatic(
@@ -345,8 +338,8 @@ class SchemaFieldExtractorTest {
     return (Map<String, Map<String, SchemaFieldExtractor.FieldDefinition>>) cacheField.get(null);
   }
 
-  private static Object invokePrivateStatic(String methodName, Class<?>[] parameterTypes, Object... args)
-      throws Throwable {
+  private static Object invokePrivateStatic(
+      String methodName, Class<?>[] parameterTypes, Object... args) throws Throwable {
     Method method = SchemaFieldExtractor.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     try {
@@ -357,7 +350,8 @@ class SchemaFieldExtractorTest {
   }
 
   private static Object invokePrivate(
-      Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Throwable {
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Throwable {
     Method method = SchemaFieldExtractor.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     try {

@@ -1649,7 +1649,8 @@ public class K8sPipelineClient extends PipelineServiceClient {
     envVars.add(
         new V1EnvVar()
             .name(ENV_JOB_NAME)
-            .value(buildKubernetesName(JOB_PREFIX, pipeline.getName(), "-" + runId.substring(0, 8))));
+            .value(
+                buildKubernetesName(JOB_PREFIX, pipeline.getName(), "-" + runId.substring(0, 8))));
     envVars.add(new V1EnvVar().name(ENV_NAMESPACE).value(k8sConfig.getNamespace()));
 
     addExtraEnvVars(envVars);

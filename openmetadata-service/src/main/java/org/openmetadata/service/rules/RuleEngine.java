@@ -175,8 +175,7 @@ public class RuleEngine {
       return settings.getEntitySemantics().stream().filter(SemanticsRule::getEnabled).toList();
     } catch (Exception e) {
       LOG.debug(
-          "Entity rules settings unavailable, skipping platform semantics: {}",
-          e.getMessage());
+          "Entity rules settings unavailable, skipping platform semantics: {}", e.getMessage());
       return List.of();
     }
   }

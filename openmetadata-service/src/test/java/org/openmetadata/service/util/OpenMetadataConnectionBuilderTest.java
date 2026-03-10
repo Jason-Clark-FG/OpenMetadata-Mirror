@@ -16,9 +16,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.openmetadata.schema.auth.SSOAuthMechanism;
 import org.openmetadata.schema.api.configuration.pipelineServiceClient.PipelineServiceClientConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.auth.SSOAuthMechanism;
 import org.openmetadata.schema.entity.Bot;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
@@ -79,8 +79,7 @@ class OpenMetadataConnectionBuilderTest {
           ((OpenMetadataJWTClientConfig) connection.getSecurityConfig()).getJwtToken());
       assertInstanceOf(ValidateSSLClientConfig.class, connection.getSslConfig());
       assertEquals(
-          "/tmp/ca.pem",
-          ((ValidateSSLClientConfig) connection.getSslConfig()).getCaCertificate());
+          "/tmp/ca.pem", ((ValidateSSLClientConfig) connection.getSslConfig()).getCaCertificate());
       verify(secretsManager).decryptJWTAuthMechanism(any(JWTAuthMechanism.class));
     }
   }
@@ -91,7 +90,8 @@ class OpenMetadataConnectionBuilderTest {
     UserRepository userRepository = mock(UserRepository.class);
     SecretsManager secretsManager = mock(SecretsManager.class);
     OpenMetadataApplicationConfig appConfig = createApplicationConfig(VerifySSL.NO_SSL, null);
-    IngestionPipeline pipeline = new IngestionPipeline().withPipelineType(PipelineType.AUTO_CLASSIFICATION);
+    IngestionPipeline pipeline =
+        new IngestionPipeline().withPipelineType(PipelineType.AUTO_CLASSIFICATION);
 
     when(secretsManager.getSecretsManagerProvider()).thenReturn(SecretsManagerProvider.IN_MEMORY);
     when(botRepository.getByName(isNull(), eq("autoClassification-bot"), any()))
@@ -250,7 +250,8 @@ class OpenMetadataConnectionBuilderTest {
     }
   }
 
-  private OpenMetadataApplicationConfig createApplicationConfig(VerifySSL verifySSL, Object sslConfig) {
+  private OpenMetadataApplicationConfig createApplicationConfig(
+      VerifySSL verifySSL, Object sslConfig) {
     PipelineServiceClientConfiguration pipelineConfig = new PipelineServiceClientConfiguration();
     pipelineConfig.setMetadataApiEndpoint("https://metadata.example/api");
     pipelineConfig.setVerifySSL(verifySSL);

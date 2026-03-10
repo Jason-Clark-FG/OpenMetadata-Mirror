@@ -479,7 +479,9 @@ class RdfPropertyMapperTest {
           "Updated timestamp should be exported");
       assertEquals(
           1.2,
-          model.getProperty(entityResource, model.createProperty("http://www.w3.org/ns/dcat#", "version"))
+          model
+              .getProperty(
+                  entityResource, model.createProperty("http://www.w3.org/ns/dcat#", "version"))
               .getDouble(),
           0.0001);
     }
@@ -506,13 +508,15 @@ class RdfPropertyMapperTest {
       propertyMapper.mapEntityToRdf(entity, entityResource, model);
 
       assertEquals(
-          7, model.getProperty(entityResource, model.createProperty(OM_NS, "qualityScore")).getInt());
+          7,
+          model.getProperty(entityResource, model.createProperty(OM_NS, "qualityScore")).getInt());
       assertEquals(
           1234567890123L,
           model.getProperty(entityResource, model.createProperty(OM_NS, "rowCount")).getLong());
       assertEquals(
           98.5,
-          model.getProperty(entityResource, model.createProperty(OM_NS, "qualityRating"))
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "qualityRating"))
               .getDouble(),
           0.0001);
       assertTrue(
@@ -595,7 +599,8 @@ class RdfPropertyMapperTest {
       Property tagProperty = model.createProperty(OM_NS, "hasTag");
       Resource tagResource = model.createResource(BASE_URI + "tag/Glossary/PII");
       assertTrue(model.contains(entityResource, tagProperty, tagResource));
-      assertTrue(model.contains(tagResource, model.createProperty(OM_NS, "tagFQN"), "Glossary.PII"));
+      assertTrue(
+          model.contains(tagResource, model.createProperty(OM_NS, "tagFQN"), "Glossary.PII"));
       assertTrue(model.contains(tagResource, SKOS.prefLabel, "Personal Data"));
       assertTrue(model.contains(tagResource, model.createProperty(OM_NS, "tagSource"), "Glossary"));
       assertTrue(
@@ -616,7 +621,8 @@ class RdfPropertyMapperTest {
 
       assertEquals(
           2,
-          model.listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "reviewer"))
+          model
+              .listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "reviewer"))
               .toList()
               .size());
     }
@@ -654,17 +660,20 @@ class RdfPropertyMapperTest {
           model);
 
       assertEquals(
-          7, model.getProperty(entityResource, model.createProperty(OM_NS, "qualityScore")).getInt());
+          7,
+          model.getProperty(entityResource, model.createProperty(OM_NS, "qualityScore")).getInt());
       assertEquals(
           1234567890123L,
           model.getProperty(entityResource, model.createProperty(OM_NS, "rowCount")).getLong());
       assertEquals(
           98.5,
-          model.getProperty(entityResource, model.createProperty(OM_NS, "qualityRating"))
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "qualityRating"))
               .getDouble(),
           0.0001);
       assertTrue(
-          model.getProperty(entityResource, model.createProperty(OM_NS, "isCritical"))
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "isCritical"))
               .getBoolean());
     }
 
@@ -697,11 +706,15 @@ class RdfPropertyMapperTest {
           entityResource,
           model);
       RDFList aliasList =
-          model.getProperty(entityResource, model.createProperty(OM_NS, "alias")).getObject().as(
-              RDFList.class);
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "alias"))
+              .getObject()
+              .as(RDFList.class);
       assertEquals(
           List.of("orders", "sales_orders"),
-          aliasList.iterator().toList().stream().map(node -> node.asLiteral().getString()).toList());
+          aliasList.iterator().toList().stream()
+              .map(node -> node.asLiteral().getString())
+              .toList());
 
       UUID watcherId = UUID.randomUUID();
       ArrayNode watchers = objectMapper.createArrayNode();
@@ -733,7 +746,8 @@ class RdfPropertyMapperTest {
           model);
       assertEquals(
           XSDDatatype.XSDinteger.getURI(),
-          model.getProperty(entityResource, model.createProperty(OM_NS, "priority"))
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "priority"))
               .getLiteral()
               .getDatatypeURI());
 
@@ -747,7 +761,8 @@ class RdfPropertyMapperTest {
           model);
       assertEquals(
           XSDDatatype.XSDstring.getURI(),
-          model.getProperty(entityResource, model.createProperty("https://example.org/customType"))
+          model
+              .getProperty(entityResource, model.createProperty("https://example.org/customType"))
               .getLiteral()
               .getDatatypeURI());
 
@@ -781,7 +796,8 @@ class RdfPropertyMapperTest {
           "@list",
           model);
       RDFList linkedEntities =
-          model.getProperty(entityResource, model.createProperty(OM_NS, "linkedEntity"))
+          model
+              .getProperty(entityResource, model.createProperty(OM_NS, "linkedEntity"))
               .getObject()
               .as(RDFList.class);
       assertEquals(
@@ -803,7 +819,8 @@ class RdfPropertyMapperTest {
           entityResource,
           model);
       Resource votesResource =
-          model.listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "hasVotes"))
+          model
+              .listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "hasVotes"))
               .next()
               .asResource();
       assertTrue(
@@ -822,17 +839,20 @@ class RdfPropertyMapperTest {
           entityResource,
           model);
       Resource extensionResource =
-          model.listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "hasExtension"))
+          model
+              .listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "hasExtension"))
               .next()
               .asResource();
       assertEquals(
           2.5,
-          model.getProperty(extensionResource, model.createProperty(OM_NS, "ext_threshold"))
+          model
+              .getProperty(extensionResource, model.createProperty(OM_NS, "ext_threshold"))
               .getDouble(),
           0.0001);
       assertEquals(
           "{\"env\":\"prod\"}",
-          model.getProperty(extensionResource, model.createProperty(OM_NS, "ext_settings"))
+          model
+              .getProperty(extensionResource, model.createProperty(OM_NS, "ext_settings"))
               .getString());
     }
 
@@ -848,7 +868,8 @@ class RdfPropertyMapperTest {
           changeDescription,
           entityResource,
           model);
-      assertTrue(model.contains(entityResource, model.createProperty(OM_NS, "hasChangeDescription")));
+      assertTrue(
+          model.contains(entityResource, model.createProperty(OM_NS, "hasChangeDescription")));
 
       ObjectNode votes = objectMapper.createObjectNode();
       votes.put("upVotes", 2);
@@ -862,7 +883,8 @@ class RdfPropertyMapperTest {
       assertTrue(model.contains(entityResource, model.createProperty(OM_NS, "hasVotes")));
 
       ObjectNode lifeCycle = objectMapper.createObjectNode();
-      lifeCycle.set("created", objectMapper.createObjectNode().put("timestamp", "2024-01-15T10:30:00Z"));
+      lifeCycle.set(
+          "created", objectMapper.createObjectNode().put("timestamp", "2024-01-15T10:30:00Z"));
       invokePrivate(
           "addStructuredProperty",
           new Class[] {String.class, JsonNode.class, Resource.class, Model.class},
@@ -892,11 +914,14 @@ class RdfPropertyMapperTest {
       Resource customPropertyResource =
           model.listObjectsOfProperty(entityResource, customPropertyLink).next().asResource();
       assertTrue(
-          model.contains(customPropertyResource, model.createProperty(OM_NS, "propertyName"), "costCenter"));
+          model.contains(
+              customPropertyResource, model.createProperty(OM_NS, "propertyName"), "costCenter"));
       assertTrue(
-          model.contains(customPropertyResource, model.createProperty(OM_NS, "propertyValue"), "Finance"));
+          model.contains(
+              customPropertyResource, model.createProperty(OM_NS, "propertyValue"), "Finance"));
       assertTrue(
-          model.contains(customPropertyResource, model.createProperty(OM_NS, "propertyType"), "string"));
+          model.contains(
+              customPropertyResource, model.createProperty(OM_NS, "propertyType"), "string"));
     }
 
     @Test
@@ -943,7 +968,8 @@ class RdfPropertyMapperTest {
 
       Resource upstreamResource = model.createResource(BASE_URI + "entity/unknown/" + upstreamId);
       assertTrue(
-          model.contains(entityResource, model.createProperty(PROV_NS, "wasDerivedFrom"), upstreamResource));
+          model.contains(
+              entityResource, model.createProperty(PROV_NS, "wasDerivedFrom"), upstreamResource));
       assertTrue(
           model.contains(entityResource, model.createProperty(OM_NS, "downstream")),
           "Downstream edges should be materialized");
@@ -952,16 +978,26 @@ class RdfPropertyMapperTest {
           "Lineage nodes should be linked");
 
       Resource detailsResource =
-          model.listObjectsOfProperty(entityResource, model.createProperty(OM_NS, "hasLineageDetails"))
+          model
+              .listObjectsOfProperty(
+                  entityResource, model.createProperty(OM_NS, "hasLineageDetails"))
               .next()
               .asResource();
       Resource pipelineResource = model.createResource(BASE_URI + "entity/pipeline/" + pipelineId);
-      assertTrue(model.contains(detailsResource, model.createProperty(DCT_NS, "description"), "Nightly ETL"));
-      assertTrue(model.contains(detailsResource, model.createProperty(PROV_NS, "wasGeneratedBy"), pipelineResource));
+      assertTrue(
+          model.contains(
+              detailsResource, model.createProperty(DCT_NS, "description"), "Nightly ETL"));
+      assertTrue(
+          model.contains(
+              detailsResource, model.createProperty(PROV_NS, "wasGeneratedBy"), pipelineResource));
       assertTrue(model.contains(detailsResource, model.createProperty(DCT_NS, "created")));
       assertTrue(model.contains(detailsResource, model.createProperty(DCT_NS, "modified")));
-      assertTrue(model.contains(detailsResource, model.createProperty(OM_NS, "lineageCreatedBy"), "etl-user"));
-      assertTrue(model.contains(detailsResource, model.createProperty(OM_NS, "lineageUpdatedBy"), "data-eng"));
+      assertTrue(
+          model.contains(
+              detailsResource, model.createProperty(OM_NS, "lineageCreatedBy"), "etl-user"));
+      assertTrue(
+          model.contains(
+              detailsResource, model.createProperty(OM_NS, "lineageUpdatedBy"), "data-eng"));
     }
 
     @Test
@@ -985,7 +1021,9 @@ class RdfPropertyMapperTest {
           model);
 
       Resource accessResource =
-          model.listObjectsOfProperty(lifecycleResource, model.createProperty(OM_NS, "lifecycleAccessed"))
+          model
+              .listObjectsOfProperty(
+                  lifecycleResource, model.createProperty(OM_NS, "lifecycleAccessed"))
               .next()
               .asResource();
       assertTrue(
@@ -1085,8 +1123,7 @@ class RdfPropertyMapperTest {
               .getURI());
 
       assertEquals(
-          "governance",
-          invokePrivate("getContextName", new Class[] {String.class}, "glossary"));
+          "governance", invokePrivate("getContextName", new Class[] {String.class}, "glossary"));
       assertEquals("team", invokePrivate("getContextName", new Class[] {String.class}, "user"));
       assertEquals("base", invokePrivate("getContextName", new Class[] {String.class}, "custom"));
       assertEquals(
@@ -1099,8 +1136,7 @@ class RdfPropertyMapperTest {
           XSDDatatype.XSDinteger,
           invokePrivate("getXSDDatatype", new Class[] {String.class}, "integer"));
       assertEquals(
-          XSDDatatype.XSDlong,
-          invokePrivate("getXSDDatatype", new Class[] {String.class}, "long"));
+          XSDDatatype.XSDlong, invokePrivate("getXSDDatatype", new Class[] {String.class}, "long"));
       assertEquals(
           XSDDatatype.XSDdouble,
           invokePrivate("getXSDDatatype", new Class[] {String.class}, "double"));
@@ -1111,8 +1147,7 @@ class RdfPropertyMapperTest {
           XSDDatatype.XSDdateTime,
           invokePrivate("getXSDDatatype", new Class[] {String.class}, "dateTime"));
       assertEquals(
-          XSDDatatype.XSDdate,
-          invokePrivate("getXSDDatatype", new Class[] {String.class}, "date"));
+          XSDDatatype.XSDdate, invokePrivate("getXSDDatatype", new Class[] {String.class}, "date"));
       assertEquals(
           XSDDatatype.XSDdecimal,
           invokePrivate("getXSDDatatype", new Class[] {String.class}, "decimal"));

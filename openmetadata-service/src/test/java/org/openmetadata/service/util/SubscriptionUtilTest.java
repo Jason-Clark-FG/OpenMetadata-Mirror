@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -36,15 +35,15 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.openmetadata.schema.SubscriptionAction;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.SubscriptionAction;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.entity.events.SubscriptionStatus;
 import org.openmetadata.schema.entity.events.TestDestinationStatus;
 import org.openmetadata.schema.entity.feed.Thread;
-import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Paging;
 import org.openmetadata.schema.type.Post;
@@ -61,8 +60,8 @@ import org.openmetadata.service.events.errors.EventPublisherException;
 import org.openmetadata.service.events.subscription.AlertsRuleEvaluator;
 import org.openmetadata.service.fernet.Fernet;
 import org.openmetadata.service.jdbi3.CollectionDAO;
-import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.jdbi3.UserRepository;
+import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.security.SecurityUtil;
 
 class SubscriptionUtilTest {
@@ -145,9 +144,12 @@ class SubscriptionUtilTest {
     UUID userId = UUID.randomUUID();
     UUID teamId = UUID.randomUUID();
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
-    CollectionDAO.EntityRelationshipRecord userRecord = mock(CollectionDAO.EntityRelationshipRecord.class);
-    CollectionDAO.EntityRelationshipRecord teamRecord = mock(CollectionDAO.EntityRelationshipRecord.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.EntityRelationshipRecord userRecord =
+        mock(CollectionDAO.EntityRelationshipRecord.class);
+    CollectionDAO.EntityRelationshipRecord teamRecord =
+        mock(CollectionDAO.EntityRelationshipRecord.class);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(relationshipDAO.findFrom(entityId, "table", Relationship.OWNS.ordinal()))
@@ -574,8 +576,12 @@ class SubscriptionUtilTest {
         MockedStatic<MessageParser> mockedParser = mockStatic(MessageParser.class);
         MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedAlerts.when(() -> AlertsRuleEvaluator.getThread(event)).thenReturn(thread);
-      mockedParser.when(() -> MessageParser.getEntityLinks("thread-message")).thenReturn(List.of(threadMention));
-      mockedParser.when(() -> MessageParser.getEntityLinks("post-message")).thenReturn(List.of(postMention));
+      mockedParser
+          .when(() -> MessageParser.getEntityLinks("thread-message"))
+          .thenReturn(List.of(threadMention));
+      mockedParser
+          .when(() -> MessageParser.getEntityLinks("post-message"))
+          .thenReturn(List.of(postMention));
 
       mockedEntity
           .when(() -> Entity.getEntity(USER, assigneeId, "profile", NON_DELETED))
@@ -634,8 +640,12 @@ class SubscriptionUtilTest {
         MockedStatic<MessageParser> mockedParser = mockStatic(MessageParser.class);
         MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
       mockedAlerts.when(() -> AlertsRuleEvaluator.getThread(event)).thenReturn(thread);
-      mockedParser.when(() -> MessageParser.getEntityLinks("thread-message")).thenReturn(List.of(threadMention));
-      mockedParser.when(() -> MessageParser.getEntityLinks("post-message")).thenReturn(List.of(postMention));
+      mockedParser
+          .when(() -> MessageParser.getEntityLinks("thread-message"))
+          .thenReturn(List.of(threadMention));
+      mockedParser
+          .when(() -> MessageParser.getEntityLinks("post-message"))
+          .thenReturn(List.of(postMention));
       mockedEntity
           .when(() -> Entity.getEntity(threadMention, "profile", NON_DELETED))
           .thenReturn(user("charlie", "charlie@example.com"));
@@ -708,8 +718,12 @@ class SubscriptionUtilTest {
 
     try (MockedStatic<AlertsRuleEvaluator> mockedAlerts = mockStatic(AlertsRuleEvaluator.class);
         MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
-      mockedAlerts.when(() -> AlertsRuleEvaluator.getThread(conversationEvent)).thenReturn(conversationThread);
-      mockedAlerts.when(() -> AlertsRuleEvaluator.getThread(announcementEvent)).thenReturn(announcementThread);
+      mockedAlerts
+          .when(() -> AlertsRuleEvaluator.getThread(conversationEvent))
+          .thenReturn(conversationThread);
+      mockedAlerts
+          .when(() -> AlertsRuleEvaluator.getThread(announcementEvent))
+          .thenReturn(announcementThread);
       mockedAlerts.when(() -> AlertsRuleEvaluator.getEntity(entityEvent)).thenReturn(entity);
       mockedEntity.when(Entity::getCollectionDAO).thenReturn(dao);
 
@@ -756,14 +770,21 @@ class SubscriptionUtilTest {
           .when(() -> SecurityUtil.authHeaders("admin@open-metadata.org"))
           .thenReturn(Map.of("X-Auth-Params-Email", "admin@open-metadata.org"));
       mockedSecurity
-          .when(() -> SecurityUtil.addHeaders(targetA, Map.of("X-Auth-Params-Email", "admin@open-metadata.org")))
+          .when(
+              () ->
+                  SecurityUtil.addHeaders(
+                      targetA, Map.of("X-Auth-Params-Email", "admin@open-metadata.org")))
           .thenReturn(builderA);
       mockedSecurity
-          .when(() -> SecurityUtil.addHeaders(targetB, Map.of("X-Auth-Params-Email", "admin@open-metadata.org")))
+          .when(
+              () ->
+                  SecurityUtil.addHeaders(
+                      targetB, Map.of("X-Auth-Params-Email", "admin@open-metadata.org")))
           .thenReturn(builderB);
 
       List<Invocation.Builder> builders =
-          SubscriptionUtil.getTargetsForWebhookAlert(webhook, destination, client, event, "{\"ok\":true}");
+          SubscriptionUtil.getTargetsForWebhookAlert(
+              webhook, destination, client, event, "{\"ok\":true}");
 
       assertEquals(2, builders.size());
       assertEquals(Set.of(builderA, builderB), Set.copyOf(builders));

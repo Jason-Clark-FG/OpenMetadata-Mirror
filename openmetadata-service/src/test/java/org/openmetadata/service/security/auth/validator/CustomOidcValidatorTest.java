@@ -555,7 +555,8 @@ class CustomOidcValidatorTest {
           .thenReturn(new ValidationHttpUtil.HttpResponseData(200, "{\"access_token\":\"token\"}"));
 
       FieldError error =
-          (FieldError) method.invoke(validator, TOKEN_ENDPOINT, "client-id", "client-secret", oidcConfig);
+          (FieldError)
+              method.invoke(validator, TOKEN_ENDPOINT, "client-id", "client-secret", oidcConfig);
 
       assertNull(error);
     }
@@ -578,8 +579,7 @@ class CustomOidcValidatorTest {
                       TOKEN_ENDPOINT, scopedTokenRequestBody(), formHeaders()))
           .thenReturn(
               new ValidationHttpUtil.HttpResponseData(
-                  401,
-                  "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
+                  401, "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
 
       FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
 
@@ -822,8 +822,7 @@ class CustomOidcValidatorTest {
                       TOKEN_ENDPOINT, tokenRequestBodyWithoutScope(), formHeaders()))
           .thenReturn(
               new ValidationHttpUtil.HttpResponseData(
-                  403,
-                  "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
+                  403, "{\"error\":\"invalid_client\",\"error_description\":\"bad secret\"}"));
 
       FieldError error = validator.validateCustomOidcConfiguration(authConfig, oidcConfig);
 

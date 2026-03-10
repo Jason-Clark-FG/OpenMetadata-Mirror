@@ -78,8 +78,7 @@ class QueryFilterParserTest {
 
     assertFalse(QueryFilterParser.matchesFilter(entityMap, Map.of("owners", List.of("finance"))));
     assertFalse(
-        QueryFilterParser.matchesFilter(
-            entityMap, Map.of("missing.field", List.of("anything"))));
+        QueryFilterParser.matchesFilter(entityMap, Map.of("missing.field", List.of("anything"))));
     assertFalse(QueryFilterParser.matchesFilter(entityMap, Map.of()));
     assertFalse(QueryFilterParser.matchesFilter(null, Map.of("description", List.of("sales"))));
     assertFalse(QueryFilterParser.matchesFilter(entityMap, null));
