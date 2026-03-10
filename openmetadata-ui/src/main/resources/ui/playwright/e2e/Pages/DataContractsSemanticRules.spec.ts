@@ -1732,10 +1732,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
       await clickEditContractButton(page);
       await page.getByRole('tab', { name: 'Semantics' }).click();
 
-      const versionInput = page
-        .locator('.group')
-        .nth(0)
-        .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
+        const versionInput = page
+          .locator('.group')
+          .first()
+          .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
       await versionInput.clear();
       await versionInput.fill(actualVersion);
 
