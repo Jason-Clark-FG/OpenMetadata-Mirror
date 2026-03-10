@@ -44,7 +44,15 @@ public class McpChatApplication extends AbstractNativeApplication {
     initializeService();
   }
 
+  @Override
+  public void cleanup() {
+    closeService();
+    super.cleanup();
+  }
+
   private void initializeService() {
+    closeService();
+
     Object appConfigObj = getApp().getAppConfiguration();
     if (appConfigObj == null) {
       LOG.warn("McpChatApplication has no configuration.");
@@ -56,5 +64,12 @@ public class McpChatApplication extends AbstractNativeApplication {
     LOG.info(
         "McpChatApplication service initialized (chat enabled: {})",
         mcpClientService.isChatEnabled());
+  }
+
+  private void closeService() {
+    McpClientService old = this.mcpClientService;
+    if (old != null) {
+      old.close();
+    }
   }
 }
