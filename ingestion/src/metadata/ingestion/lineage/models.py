@@ -55,6 +55,9 @@ from metadata.generated.schema.entity.services.connections.database.impalaConnec
 from metadata.generated.schema.entity.services.connections.database.mariaDBConnection import (
     MariaDBType,
 )
+from metadata.generated.schema.entity.services.connections.database.microsoftFabricConnection import (
+    MicrosoftFabricType,
+)
 from metadata.generated.schema.entity.services.connections.database.mssqlConnection import (
     MssqlType,
 )
@@ -155,6 +158,8 @@ MAP_CONNECTION_TYPE_DIALECT: Dict[str, Dialect] = {
     str(GreenplumType.Greenplum.value): Dialect.POSTGRES,
     str(DorisType.Doris.value): Dialect.MYSQL,
     str(StarrocksType.StarRocks.value): Dialect.MYSQL,
+    str(MicrosoftFabricType.MicrosoftFabric.value): Dialect.TSQL,
+
 }
 
 
