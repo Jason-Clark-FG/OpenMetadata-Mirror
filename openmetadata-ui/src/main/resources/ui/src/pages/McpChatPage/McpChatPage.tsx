@@ -61,6 +61,7 @@ const McpChatPage = () => {
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     requestAnimationFrame(() => {
@@ -98,14 +99,15 @@ const McpChatPage = () => {
 
   const handleConversationSelect = useCallback(
     (conversationId: string) => {
+      abortControllerRef.current?.abort();
       setActiveConversationId(conversationId);
       navigate(`/mcp-chat/${conversationId}`, { replace: true });
-      fetchMessages(conversationId);
     },
-    [fetchMessages, navigate]
+    [navigate]
   );
 
   const handleNewChat = useCallback(() => {
+    abortControllerRef.current?.abort();
     setActiveConversationId(undefined);
     setMessages([]);
     setInputValue('');
@@ -160,6 +162,10 @@ const McpChatPage = () => {
     setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInputValue('');
     setIsSending(true);
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       await streamChatMessage(
@@ -298,9 +304,13 @@ const McpChatPage = () => {
           onError: (error: Error) => {
             showErrorToast(error.message);
           },
-        }
+        },
+        controller.signal
       );
     } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
       showErrorToast(error as AxiosError);
       setMessages((prev) =>
         prev.filter((m) => m.id !== userMessage.id && m.id !== assistantTempId)
@@ -331,6 +341,12 @@ const McpChatPage = () => {
   useEffect(() => {
     fetchConversations();
   }, [fetchConversations]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (conversationIdFromUrl && !isSending) {

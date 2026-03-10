@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.chat.CreateMcpConversation;
 import org.openmetadata.schema.api.chat.CreateMcpMessage;
@@ -230,9 +231,21 @@ public class McpClientService implements AutoCloseable {
     conversation.setMessageCount(currentMessageCount);
     conversation.setUpdatedBy(userRef.getName());
     if (isNewConversation && conversation.getTitle() == null) {
-      conversation.setTitle(generateTitle(userMessage));
+      conversation.setTitle(truncateTitle(userMessage));
+      conversationRepository.update(conversation);
+      UUID convId = conversation.getId();
+      CompletableFuture.runAsync(
+          () -> {
+            String title = generateTitle(userMessage);
+            if (title != null) {
+              McpConversation conv = conversationRepository.getById(convId);
+              conv.setTitle(title);
+              conversationRepository.update(conv);
+            }
+          });
+    } else {
+      conversationRepository.update(conversation);
     }
-    conversationRepository.update(conversation);
 
     return new ChatResponse(conversation.getId(), assistantMsg);
   }
@@ -381,14 +394,27 @@ public class McpClientService implements AutoCloseable {
     conversation.setMessageCount(currentMessageCount);
     conversation.setUpdatedBy(userRef.getName());
     if (isNewConversation && conversation.getTitle() == null) {
-      String title = generateTitle(userMessage);
-      conversation.setTitle(title);
-      emitter.emit(ChatEvent.titleUpdated(title));
+      String quickTitle = truncateTitle(userMessage);
+      conversation.setTitle(quickTitle);
+      emitter.emit(ChatEvent.titleUpdated(quickTitle));
     }
     conversationRepository.update(conversation);
 
     emitter.emit(ChatEvent.messageComplete(assistantMsg));
     emitter.emit(ChatEvent.done());
+
+    if (isNewConversation) {
+      UUID convId = conversation.getId();
+      CompletableFuture.runAsync(
+          () -> {
+            String title = generateTitle(userMessage);
+            if (title != null) {
+              McpConversation conv = conversationRepository.getById(convId);
+              conv.setTitle(title);
+              conversationRepository.update(conv);
+            }
+          });
+    }
   }
 
   public McpConversation createConversation(

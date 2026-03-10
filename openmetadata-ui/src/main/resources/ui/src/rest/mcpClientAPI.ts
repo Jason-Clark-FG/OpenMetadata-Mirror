@@ -152,7 +152,8 @@ export interface ChatStreamCallbacks {
 
 export const streamChatMessage = async (
   request: ChatRequest,
-  callbacks: ChatStreamCallbacks
+  callbacks: ChatStreamCallbacks,
+  signal?: AbortSignal
 ): Promise<void> => {
   const { getOidcToken } = await import('../utils/SwTokenStorageUtils');
   const { getBasePath } = await import('../utils/HistoryUtils');
@@ -167,6 +168,7 @@ export const streamChatMessage = async (
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(request),
+    signal,
   });
 
   if (!response.ok) {
