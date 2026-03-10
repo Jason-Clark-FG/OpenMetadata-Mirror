@@ -70,6 +70,7 @@ export const AddTestCaseList = ({
   selectedTest,
   onChange,
   showButton = true,
+  showSelectAll = false,
   testCaseParams,
 }: AddTestCaseModalProps) => {
   const { t } = useTranslation();
@@ -334,6 +335,23 @@ export const AddTestCaseList = ({
     [searchTerm, totalCount, items, isLoading, fetchTestCases, pageNumber]
   );
 
+  const handleSelectAll = useCallback(() => {
+    if (items.length === 0) {
+      return;
+    }
+    const allCurrentlySelected = items.every((item) =>
+      selectedItems?.has(item.id ?? '')
+    );
+    if (allCurrentlySelected) {
+      setSelectedItems(new Map());
+      onChange?.([]);
+    } else {
+      const allSelected = new Map(items.map((test) => [test.id ?? '', test]));
+      setSelectedItems(allSelected);
+      onChange?.([...allSelected.values()]);
+    }
+  }, [items, selectedItems, onChange]);
+
   const handleCardClick = (details: TestCase) => {
     const id = details.id;
     if (!id) {
@@ -410,8 +428,7 @@ export const AddTestCaseList = ({
             align="center"
             className="w-full"
             direction="vertical"
-            prefixCls="w-full"
-          >
+            prefixCls="w-full">
             <ErrorPlaceHolder
               className="mt-0-important p-b-sm"
               type={ERROR_PLACEHOLDER_TYPE.FILTER}
@@ -586,6 +603,18 @@ export const AddTestCaseList = ({
           onSearch={handleFilterSearch}
         />
       </Col>
+      {showSelectAll && items.length > 0 && (
+        <Col className="d-flex justify-end" span={24}>
+          <Button
+            className="p-0 h-auto font-normal"
+            data-testid="select-all-test-cases"
+            type="link"
+            onClick={handleSelectAll}>
+            {t('label.select-all')}
+            {(selectedItems?.size ?? 0) > 0 && ` (${selectedItems?.size ?? 0})`}
+          </Button>
+        </Col>
+      )}
       {renderList}
       {showButton && (
         <Col
