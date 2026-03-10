@@ -141,13 +141,34 @@ class AthenaSource(ExternalTableLineageMixin, CommonDbSourceService):
     def get_schema_description(self, schema_name: str) -> Optional[str]:
         return self.schema_description_map.get(schema_name)
 
+    def _get_iceberg_table_names(self, schema_name: str) -> set:
+        """Fetch Iceberg table names from Glue for the given schema"""
+        iceberg_tables = set()
+        if self.glue_client:
+            try:
+                paginator = self.glue_client.get_paginator("get_tables")
+                for page in paginator.paginate(DatabaseName=schema_name):
+                    for table in page.get("TableList", []):
+                        params = table.get("Parameters", {})
+                        if params.get("table_type") == "ICEBERG":
+                            iceberg_tables.add(table["Name"])
+            except Exception as exc:
+                logger.debug(traceback.format_exc())
+                logger.warning(
+                    f"Failed to fetch Glue table metadata for schema [{schema_name}]: {exc}"
+                )
+        return iceberg_tables
+
     def query_table_names_and_types(
         self, schema_name: str
     ) -> Iterable[TableNameAndType]:
-        """Return tables as external"""
-
+        """Return tables with proper type detection for Iceberg tables"""
+        iceberg_tables = self._get_iceberg_table_names(schema_name)
         return [
-            TableNameAndType(name=name, type_=TableType.External)
+            TableNameAndType(
+                name=name,
+                type_=TableType.Iceberg if name in iceberg_tables else TableType.External,
+            )
             for name in self.inspector.get_table_names(schema_name)
         ]
 
