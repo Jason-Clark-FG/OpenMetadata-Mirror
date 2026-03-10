@@ -874,19 +874,6 @@
       "fingerprint": {
         "type": "keyword"
       },
-      "embedding": {
-        "type": "knn_vector",
-        "dimension": 512,
-        "method": {
-          "name": "hnsw",
-          "engine": "lucene",
-          "space_type": "cosinesimil",
-          "parameters": {
-            "m": 48,
-            "ef_construction": 256
-          }
-        }
-      },
       "textToEmbed": {
         "type": "text"
       },
