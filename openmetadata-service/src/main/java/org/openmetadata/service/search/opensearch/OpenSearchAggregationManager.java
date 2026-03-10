@@ -26,6 +26,7 @@ import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.AggregationManagementClient;
 import org.openmetadata.service.search.SearchAggregation;
 import org.openmetadata.service.search.SearchIndexUtils;
+import org.openmetadata.service.search.SearchSourceBuilderFactory;
 import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.search.opensearch.aggregations.OpenAggregationsBuilder;
 import org.openmetadata.service.search.opensearch.queries.OpenSearchQueryBuilder;
@@ -60,11 +61,6 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
     this.isClientAvailable = client != null;
     this.rbacConditionEvaluator = rbacConditionEvaluator;
     mapper = new ObjectMapper();
-  }
-
-  private SearchResponse<JsonData> searchWithLenientDeserialization(SearchRequest request)
-      throws IOException {
-    return OsUtils.searchWithLenientDeserialization(client, request);
   }
 
   private String praseJsonQuery(String jsonQuery) throws JsonProcessingException {
@@ -126,7 +122,8 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
         searchRequestBuilder.query(query);
       }
 
-      String aggregationField = request.getFieldName();
+      String aggregationField =
+          SearchSourceBuilderFactory.remapAggregationField(request.getFieldName());
       if (aggregationField == null || aggregationField.isBlank()) {
         throw new IllegalArgumentException("Aggregation field (fieldName) cannot be null or empty");
       }
@@ -184,7 +181,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {
-        searchResponse = searchWithLenientDeserialization(searchRequestBuilder.build());
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
       } finally {
         if (searchTimerSample != null) {
           RequestLatencyContext.endSearchOperation(searchTimerSample);
@@ -234,7 +231,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {
-        searchResponse = searchWithLenientDeserialization(searchRequestBuilder.build());
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
       } finally {
         if (searchTimerSample != null) {
           RequestLatencyContext.endSearchOperation(searchTimerSample);
@@ -320,7 +317,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {
-        searchResponse = searchWithLenientDeserialization(searchRequestBuilder.build());
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
       } finally {
         if (searchTimerSample != null) {
           RequestLatencyContext.endSearchOperation(searchTimerSample);
@@ -404,7 +401,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {
-        searchResponse = searchWithLenientDeserialization(searchRequestBuilder.build());
+        searchResponse = client.search(searchRequestBuilder.build(), JsonData.class);
       } finally {
         if (searchTimerSample != null) {
           RequestLatencyContext.endSearchOperation(searchTimerSample);
@@ -498,7 +495,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {
-        searchResponse = searchWithLenientDeserialization(searchRequest);
+        searchResponse = client.search(searchRequest, JsonData.class);
       } finally {
         if (searchTimerSample != null) {
           RequestLatencyContext.endSearchOperation(searchTimerSample);

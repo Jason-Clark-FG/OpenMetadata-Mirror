@@ -35,7 +35,9 @@ export class ApiEndpointClass extends EntityClass {
     connection: {
       config: {
         type: string;
-        openAPISchemaURL: string;
+        openAPISchemaConnection: {
+          openAPISchemaURL: string;
+        };
       };
     };
   };
@@ -84,8 +86,10 @@ export class ApiEndpointClass extends EntityClass {
       connection: {
         config: {
           type: 'Rest',
-          openAPISchemaURL:
-            'https://sandbox-beta.open-metadata.org/swagger.json',
+          openAPISchemaConnection: {
+            openAPISchemaURL:
+              'https://sandbox-beta.open-metadata.org/swagger.json',
+          },
         },
       },
     };

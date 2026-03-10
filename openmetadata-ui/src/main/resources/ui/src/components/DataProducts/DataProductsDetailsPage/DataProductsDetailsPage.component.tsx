@@ -54,6 +54,7 @@ import { Operation } from '../../../generated/entity/policies/policy';
 import { PageType } from '../../../generated/system/ui/page';
 import { ContractExecutionStatus } from '../../../generated/type/contractExecutionStatus';
 import { Style } from '../../../generated/type/tagLabel';
+import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useFqn } from '../../../hooks/useFqn';
 import { FeedCounts } from '../../../interface/feed.interface';
@@ -76,7 +77,11 @@ import dataProductClassBase from '../../../utils/DataProduct/DataProductClassBas
 import { getDomainContainerStyles } from '../../../utils/DomainPageStyles';
 import { getQueryFilterToIncludeDomain } from '../../../utils/DomainUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
-import { getEntityFeedLink, getEntityName } from '../../../utils/EntityUtils';
+import {
+  getEntityFeedLink,
+  getEntityName,
+  getEntityVoteStatus,
+} from '../../../utils/EntityUtils';
 import { getEntityVersionByField } from '../../../utils/EntityVersionUtils';
 import { showNotistackError } from '../../../utils/NotistackUtils';
 import {
@@ -104,6 +109,8 @@ import { AssetSelectionDrawer } from '../../DataAssets/AssetsSelectionModal/Asse
 import { DomainTabs } from '../../Domain/DomainPage.interface';
 import { EntityHeader } from '../../Entity/EntityHeader/EntityHeader.component';
 import { EntityStatusBadge } from '../../Entity/EntityStatusBadge/EntityStatusBadge.component';
+import Voting from '../../Entity/Voting/Voting.component';
+import { VotingDataProps } from '../../Entity/Voting/voting.interface';
 import { EntityDetailsObjectInterface } from '../../Explore/ExplorePage.interface';
 import { AssetsTabRef } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
@@ -123,6 +130,7 @@ const DataProductsDetailsPage = ({
   isFollowing,
   isFollowingLoading,
   handleFollowingClick,
+  onUpdateVote,
 }: DataProductsDetailsPageProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -296,6 +304,20 @@ const DataProductsDetailsPage = ({
       deleteDataProductPermission: dataProductPermission.Delete,
     };
   }, [dataProductPermission, isVersionsView]);
+
+  const { currentUser } = useApplicationStore();
+
+  const voteStatus = useMemo(
+    () => getEntityVoteStatus(currentUser?.id ?? '', dataProduct.votes),
+    [dataProduct.votes, currentUser?.id]
+  );
+
+  const handleVoteChange = useCallback(
+    async (data: VotingDataProps) => {
+      await onUpdateVote?.(data, dataProduct.id);
+    },
+    [onUpdateVote, dataProduct.id]
+  );
 
   const fetchDataProductAssets = async () => {
     if (dataProduct) {
@@ -658,7 +680,8 @@ const DataProductsDetailsPage = ({
           icon={icon ? <Icon component={icon} /> : null}
           onClick={() => {
             handleTabChange(EntityTabs.CONTRACT);
-          }}>
+          }}
+        >
           {t(`label.entity-${toLower(dataContract.latestResult.status)}`, {
             entity: t('label.contract'),
           })}
@@ -696,7 +719,8 @@ const DataProductsDetailsPage = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}>
+        }}
+      >
         <CoverImage
           imageUrl={
             (dataProduct.style as Style & { coverImage?: { url?: string } })
@@ -743,12 +767,14 @@ const DataProductsDetailsPage = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}>
+              }}
+            >
               {!isVersionsView && dataProductPermission.Create && (
                 <Button
                   data-testid="data-product-details-add-button"
                   type="primary"
-                  onClick={openAssetDrawer}>
+                  onClick={openAssetDrawer}
+                >
                   {t('label.add-entity', {
                     entity: t('label.asset-plural'),
                   })}
@@ -758,6 +784,14 @@ const DataProductsDetailsPage = ({
               <ButtonGroup className="spaced" size="small">
                 {dataContractLatestResultButton}
 
+                {onUpdateVote && (
+                  <Voting
+                    voteStatus={voteStatus}
+                    votes={dataProduct.votes}
+                    onUpdateVote={handleVoteChange}
+                  />
+                )}
+
                 {dataProduct?.version && (
                   <Tooltip
                     title={t(
@@ -766,18 +800,21 @@ const DataProductsDetailsPage = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}>
+                    )}
+                  >
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}>
+                      onClick={handleVersionClick}
+                    >
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}>
+                        })}
+                      >
                         {toString(dataProduct.version)}
                       </Typography.Text>
                     </Button>
@@ -796,12 +833,14 @@ const DataProductsDetailsPage = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}>
+                    onOpenChange={setShowActions}
+                  >
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.data-product'),
-                      })}>
+                      })}
+                    >
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -834,10 +873,12 @@ const DataProductsDetailsPage = ({
           isVersionView={isVersionsView}
           permissions={dataProductPermission}
           type={EntityType.DATA_PRODUCT}
-          onUpdate={onUpdate}>
+          onUpdate={onUpdate}
+        >
           <Box
             className="data-product-details-page-tabs"
-            sx={{ width: '100%' }}>
+            sx={{ width: '100%' }}
+          >
             <Box sx={{ padding: 5 }}>
               <Tabs
                 destroyInactiveTabPane

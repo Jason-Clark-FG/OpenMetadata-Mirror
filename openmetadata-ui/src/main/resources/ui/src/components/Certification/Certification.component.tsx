@@ -150,7 +150,8 @@ const Certification = ({
     return (
       <div
         className="h-max-100 overflow-y-auto overflow-x-hidden"
-        onScroll={handleScroll}>
+        onScroll={handleScroll}
+      >
         <Radio.Group className="w-full" value={selectedCertification}>
           {certifications.map((certificate) => {
             const tagSrc = getTagImageSrc(certificate.style?.iconURL ?? '');
@@ -164,7 +165,8 @@ const Certification = ({
                 style={{ cursor: 'pointer' }}
                 onClick={() => {
                   setSelectedCertification(fullyQualifiedName ?? '');
-                }}>
+                }}
+              >
                 <Radio
                   className="certification-radio-top-right"
                   data-testid={`radio-btn-${fullyQualifiedName}`}
@@ -225,8 +227,14 @@ const Certification = ({
   };
 
   useEffect(() => {
-    if (popoverProps?.open && certifications.length === 0) {
+    if (popoverProps?.open) {
+      setSelectedCertification(currentCertificate);
+      setCurrentPage(1);
+      setPaging({} as Paging);
       getCertificationData(1);
+    } else if (popoverProps?.open === false) {
+      setCertifications([]);
+      setSelectedCertification('');
     }
   }, [popoverProps?.open]);
 
@@ -258,28 +266,31 @@ const Certification = ({
                       e.preventDefault();
                       updateCertificationData();
                     }
-                  }}>
+                  }}
+                >
                   {t('label.clear')}
                 </Typography.Text>
               </Space>
-            }>
+            }
+          >
             <Spin
               indicator={<Loader size="small" />}
-              spinning={isLoadingCertificationData}>
+              spinning={isLoadingCertificationData}
+            >
               {certificationCardData}
               <div className="flex justify-end text-lg gap-2 mt-4">
                 <Button
                   data-testid="close-certification"
                   type="default"
-                  onClick={handleCloseCertification}>
+                  onClick={handleCloseCertification}
+                >
                   <CloseOutlined />
                 </Button>
                 <Button
                   data-testid="update-certification"
                   type="primary"
-                  onClick={() =>
-                    updateCertificationData(selectedCertification)
-                  }>
+                  onClick={() => updateCertificationData(selectedCertification)}
+                >
                   <CheckOutlined />
                 </Button>
               </div>
@@ -293,7 +304,8 @@ const Certification = ({
       showArrow={false}
       trigger="click"
       onOpenChange={onOpenChange}
-      {...popoverProps}>
+      {...popoverProps}
+    >
       {children}
     </Popover>
   );
