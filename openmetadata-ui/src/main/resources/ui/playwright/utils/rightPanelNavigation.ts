@@ -89,8 +89,8 @@ export async function navigateToTagAssetsAndOpenPanel(
   const url = `/tag/${encodeURIComponent(tag.responseData.fullyQualifiedName)}/assets`;
   const tagCardTestId = `table-data-card_${entityFqn}`;
   const loadAssetsPage = async () => {
-    await page.goto(url);
-    await page.waitForLoadState('networkidle');
+    await page.goto(url, { waitUntil: 'commit' });
+    await expect(page).toHaveURL(new RegExp(`/tag/.+/assets$`));
     await waitForAllLoadersToDisappear(page);
   };
 

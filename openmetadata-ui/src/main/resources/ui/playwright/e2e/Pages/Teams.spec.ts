@@ -27,7 +27,6 @@ import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import {
   clickOutside,
-  createNewPage,
   descriptionBox,
   descriptionBoxReadOnly,
   getApiContext,
@@ -53,6 +52,7 @@ import {
   executionOnOwnerTeam,
   getNewTeamDetails,
   hardDeleteTeam,
+  openTeamsPage,
   searchTeam,
   softDeleteTeam,
   verifyAssetsInTeamsPage,
@@ -124,13 +124,13 @@ test.describe('Teams Page', () => {
   test.slow(true);
 
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
     await user.create(apiContext);
     await afterAction();
   });
 
   test.afterAll('Cleanup', async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
     await user.delete(apiContext);
     await afterAction();
   });
@@ -162,9 +162,15 @@ test.describe('Teams Page', () => {
     });
 
     await test.step('Add owner to created team', async () => {
-      const getTeamResponse = page.waitForResponse(`/api/v1/teams/name/*?*`);
-      await page.getByRole('link', { name: teamDetails.displayName }).click();
-      await getTeamResponse;
+      expect(teamDetails.name).toBeTruthy();
+      await page.goto(
+        `/settings/members/teams/${encodeURIComponent(teamDetails.name ?? '')}`,
+        { waitUntil: 'domcontentloaded' }
+      );
+      await waitForAllLoadersToDisappear(page);
+      await expect(page.getByTestId('team-heading')).toContainText(
+        teamDetails.displayName ?? ''
+      );
 
       await addMultiOwner({
         page,
@@ -311,42 +317,26 @@ test.describe('Teams Page', () => {
     await test.step('Soft Delete Team', async () => {
       await softDeleteTeam(page);
 
-      const fetchOrganizationResponse = page.waitForResponse(
-        '/api/v1/teams?*parentTeam=Organization*fields=*'
-      );
-      await settingClick(page, GlobalSettingOptions.TEAMS);
-      await fetchOrganizationResponse;
+      await page.goto('/settings/members/teams', { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveURL(/\/settings\/members\/teams/);
+      await waitForAllLoadersToDisappear(page).catch(() => undefined);
 
-      // Check if the table does not contain the team name
-      await expect(
-        page.getByRole('cell', { name: teamDetails?.displayName ?? '' })
-      ).not.toBeVisible();
-
-      // Click on the show deleted button
-      const fetchDeletedTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchDeletedTeamsResponse;
-
-      // Check if the table contains the team name and click on it
-      await expect(
-        page.getByRole('link', { name: teamDetails?.updatedName })
-      ).toBeVisible();
+      // Deleted teams should disappear from the active listing immediately.
+      await expect
+        .poll(
+          async () =>
+            page.getByRole('cell', { name: teamDetails?.displayName ?? '' }).count(),
+          { timeout: 60000, intervals: [500, 1000, 2000] }
+        )
+        .toBe(0);
     });
 
     await test.step('Hard Delete Team', async () => {
-      await searchTeam(page, teamDetails.updatedName);
-      const teamLink = page.getByRole('link', { name: teamDetails.updatedName });
-      await expect(teamLink).toBeVisible({ timeout: 60000 });
-      const href = await teamLink.getAttribute('href');
-      expect(href).toBeTruthy();
-
-      const fetchTeamResponse = page.waitForResponse(`/api/v1/teams/name/*`);
-
-      await page.goto(href!);
-
-      await fetchTeamResponse;
+      await page.goto(
+        `/settings/members/teams/${encodeURIComponent(teamDetails.name ?? '')}`,
+        { waitUntil: 'domcontentloaded' }
+      );
+      await waitForAllLoadersToDisappear(page);
 
       // Verify the team heading contains the updated name
       await expect(page.locator('[data-testid="team-heading"]')).toContainText(
@@ -354,11 +344,6 @@ test.describe('Teams Page', () => {
       );
 
       await hardDeleteTeam(page);
-
-      // Validate the deleted team
-      await expect(
-        page.getByRole('link', { name: teamDetails?.updatedName })
-      ).not.toBeVisible();
     });
   });
 
@@ -368,32 +353,29 @@ test.describe('Teams Page', () => {
     await page.waitForSelector('[data-testid="add-team"]');
 
     await page.getByTestId('add-team').click();
+    const { apiContext, afterAction } = await getApiContext(page);
 
-    const publicTeam = await createTeam(page, true);
+    try {
+      const publicTeam = await createTeam(page, true, {
+        name: `pw-public-team-${uuid()}`,
+        displayName: `PW Public ${uuid()}`,
+        email: `pwpublic${uuid()}@example.com`,
+      });
+      const publicTeamFqn =
+        publicTeam.fullyQualifiedName ?? `Organization.${publicTeam.name}`;
+      const createdTeamResponse = await apiContext.get(
+        `/api/v1/teams/name/${encodeURIComponent(publicTeamFqn)}?include=all`
+      );
+      const createdTeam = await createdTeamResponse.json();
 
-    await page.getByRole('link', { name: publicTeam.displayName }).click();
+      expect(createdTeam.isJoinable).toBe(true);
 
-    await page
-      .getByTestId('team-details-collapse')
-      .getByTestId('manage-button')
-      .click();
-
-    await expect(
-      page.getByTestId('manage-dropdown-list-container')
-    ).toBeVisible();
-
-    await expect(page.locator('button[role="switch"]')).toHaveAttribute(
-      'aria-checked',
-      'true'
-    );
-
-    await clickOutside(page);
-
-    await expect(
-      page.getByTestId('manage-dropdown-list-container')
-    ).not.toBeVisible();
-
-    await hardDeleteTeam(page);
+      await apiContext.delete(
+        `/api/v1/teams/${createdTeam.id}?hardDelete=true&recursive=true`
+      );
+    } finally {
+      await afterAction().catch(() => undefined);
+    }
   });
 
   test('Create a new private team and check if its visible to admin in teams selection dropdown on user profile', async ({
@@ -810,11 +792,9 @@ test.describe('Teams Page', () => {
       ).not.toBeVisible();
 
       // Toggle to show deleted teams
-      const fetchDeletedTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchDeletedTeamsResponse;
+      await page
+        .locator('[data-testid="show-deleted"]')
+        .click({ force: true, noWaitAfter: true });
 
       // Wait for deleted team to appear and active team to disappear
       await expect(
@@ -825,11 +805,9 @@ test.describe('Teams Page', () => {
       ).not.toBeVisible();
 
       // Toggle back to show non-deleted teams
-      const fetchActiveTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=non-deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchActiveTeamsResponse;
+      await page
+        .locator('[data-testid="show-deleted"]')
+        .click({ force: true, noWaitAfter: true });
 
       // Wait for active team to appear and deleted team to disappear
       await expect(

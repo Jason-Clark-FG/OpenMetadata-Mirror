@@ -19,6 +19,17 @@ import dotenv from 'dotenv';
  */
 dotenv.config();
 
+const STATEFUL_TEST_FILES = [
+  '**/Pages/LoginConfiguration.spec.ts',
+  '**/Pages/Tag.spec.ts',
+  '**/Pages/TagPageRightPanel.spec.ts',
+  '**/Pages/TeamAssetsRightPanel.spec.ts',
+  '**/Pages/Teams.spec.ts',
+  '**/Pages/UserDetails.spec.ts',
+  '**/Pages/Users.spec.ts',
+  '**/VersionPages/*.spec.ts',
+];
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -87,7 +98,17 @@ export default defineConfig({
         '**/DataAssetRulesEnabled.spec.ts',
         '**/DataAssetRulesDisabled.spec.ts',
         '**/SystemCertificationTags.spec.ts',
+        ...STATEFUL_TEST_FILES,
       ],
+    },
+    {
+      name: 'stateful',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup', 'entity-data-setup'],
+      testMatch: STATEFUL_TEST_FILES,
+      grepInvert: [/@sample-data/],
+      fullyParallel: false,
+      teardown: 'entity-data-teardown',
     },
     {
       name: 'entity-data-teardown',

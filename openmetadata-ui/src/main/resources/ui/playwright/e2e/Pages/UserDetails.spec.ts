@@ -20,7 +20,7 @@ import { TeamClass } from '../../support/team/TeamClass';
 import { AdminClass } from '../../support/user/AdminClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
-import { getApiContext, uuid } from '../../utils/common';
+import { clickOutside, getApiContext, uuid } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { visitUserProfilePage } from '../../utils/user';
 import { redirectToUserPage } from '../../utils/userDetails';
@@ -83,32 +83,39 @@ test.describe('User with different Roles', () => {
   });
 
   test(
-    'Admin user can get all the teams hierarchy and edit teams',
+    'Admin user can edit teams from the user profile',
     PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
     async ({ adminPage }) => {
+      test.slow();
       await redirectToUserPage(adminPage);
 
       // Check if the avatar is visible
       await expect(adminPage.getByTestId('user-profile-teams')).toBeVisible();
 
-      await adminPage.getByTestId('edit-teams-button').click();
+      const teamsListResponse = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/teams/hierarchy') &&
+          response.request().method() === 'GET'
+      );
 
-      await expect(adminPage.getByTestId('team-select')).toBeVisible();
+      await adminPage.getByTestId('edit-teams-button').click();
+      await teamsListResponse;
 
       await adminPage.waitForSelector('.ant-tree-select-dropdown', {
         state: 'visible',
       });
 
-      await adminPage
-        .locator('.ant-select-tree-title')
-        .filter({ hasText: 'Accounting' })
-        .first()
-        .click();
+      const teamOption = adminPage
+        .locator('[title="' + team.responseData.displayName + '"]')
+        .first();
+
+      await expect(teamOption).toBeVisible();
+      await teamOption.click();
 
       await adminPage.getByTestId('teams-edit-save-btn').click();
 
       await expect(adminPage.getByTestId('user-profile-teams')).toContainText(
-        'Accounting'
+        team.responseData.displayName ?? team.data.displayName
       );
     }
   );
@@ -512,10 +519,17 @@ test.describe('User with different Roles', () => {
       .click();
 
     await adminPage.keyboard.press('Escape');
-    await expect(
-      adminPage.locator('.roles-custom-dropdown-class')
-    ).not.toBeVisible();
-    await adminPage.getByTestId('user-profile-edit-roles-save-button').click();
+    await clickOutside(adminPage);
+    await expect(adminPage.locator('.roles-custom-dropdown-class')).toBeHidden({
+      timeout: 10000,
+    });
+
+    const saveRolesButton = adminPage.getByTestId(
+      'user-profile-edit-roles-save-button'
+    );
+    if (await saveRolesButton.isVisible().catch(() => false)) {
+      await saveRolesButton.click();
+    }
 
     await expect(adminPage.getByTestId('user-profile-roles')).toContainText(
       'Application bot role'

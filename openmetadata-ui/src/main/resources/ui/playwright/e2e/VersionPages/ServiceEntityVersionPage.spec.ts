@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page, test as base } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { BIG_ENTITY_DELETE_TIMEOUT } from '../../constant/delete';
 import { ApiCollectionClass } from '../../support/entity/ApiCollectionClass';
 import { DatabaseClass } from '../../support/entity/DatabaseClass';
@@ -33,9 +33,10 @@ import {
   toastNotification,
 } from '../../utils/common';
 import { addMultiOwner, assignTier } from '../../utils/entity';
+import { performUserLogin } from '../../utils/user';
 import { openEntityVersion, visitVersionedEntityPage } from '../../utils/version';
 
-base.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial' });
 
 const entities = {
   'Api Service': new ApiServiceClass(),
@@ -53,25 +54,21 @@ const entities = {
 };
 
 // use the admin user to login
-
+test.use({ storageState: 'playwright/.auth/admin.json' });
 const adminUser = new UserClass();
-
-const test = base.extend<{ page: Page }>({
-  page: async ({ browser }, use) => {
-    const adminPage = await browser.newPage();
-    await adminUser.login(adminPage);
-    await use(adminPage);
-    await adminPage.close();
-  },
-});
 
 test.describe('Service Version pages', () => {
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
     test.slow();
 
-    const { apiContext, afterAction } = await performAdminLogin(browser);
-    await adminUser.create(apiContext);
-    await adminUser.setAdminRole(apiContext);
+    const {
+      apiContext: setupApiContext,
+      afterAction: setupAfterAction,
+    } = await performAdminLogin(browser);
+    await adminUser.create(setupApiContext);
+    await adminUser.setAdminRole(setupApiContext);
+
+    const { apiContext, afterAction } = await performUserLogin(browser, adminUser);
 
     for (const entity of Object.values(entities)) {
       await entity.create(apiContext);
@@ -118,6 +115,7 @@ test.describe('Service Version pages', () => {
     }
 
     await afterAction();
+    await setupAfterAction();
   });
 
   test.afterAll('Cleanup', async ({ browser }) => {
@@ -125,7 +123,6 @@ test.describe('Service Version pages', () => {
 
     const { apiContext, afterAction } = await performAdminLogin(browser);
     await adminUser.delete(apiContext);
-
     await afterAction();
   });
 

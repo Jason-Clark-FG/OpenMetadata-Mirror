@@ -45,13 +45,20 @@ export const visitUserListPage = async (page: Page) => {
 };
 
 export const performUserLogin = async (browser: Browser, user: UserClass) => {
-  const page = await browser.newPage();
+  const context = await browser.newContext({
+    storageState: {
+      cookies: [],
+      origins: [],
+    },
+  });
+  const page = await context.newPage();
   await user.login(page);
   const token = await getToken(page);
   const apiContext = await getAuthContext(token);
   const afterAction = async () => {
     await apiContext.dispose();
     await page.close();
+    await context.close();
   };
 
   return { page, apiContext, afterAction };

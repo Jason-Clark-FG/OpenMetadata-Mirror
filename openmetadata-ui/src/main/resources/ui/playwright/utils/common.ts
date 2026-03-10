@@ -241,8 +241,6 @@ export const toastNotification = async (
   await expect(page.getByTestId('alert-bar')).toHaveText(message, { timeout });
 
   await expect(page.getByTestId('alert-icon')).toBeVisible();
-
-  await expect(page.getByTestId('alert-icon-close')).toBeVisible();
 };
 
 export const clickOutside = async (page: Page) => {

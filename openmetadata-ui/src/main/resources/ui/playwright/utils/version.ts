@@ -83,9 +83,30 @@ export const visitVersionedEntityPage = async (
 };
 
 export const openEntityVersion = async (page: Page, version: string) => {
-  await expect(page.getByTestId('version-button')).toContainText(version, {
-    timeout: 30000,
-  });
+  await expect
+    .poll(
+      async () => {
+        const versionButton = page.getByTestId('version-button');
+        const buttonText = (await versionButton.textContent().catch(() => '')) ?? '';
+
+        if (buttonText.includes(version)) {
+          return buttonText;
+        }
+
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+        await page.waitForSelector('[data-testid="loader"]', {
+          state: 'detached',
+        });
+
+        return (await versionButton.textContent().catch(() => '')) ?? '';
+      },
+      {
+        timeout: 30000,
+        intervals: [1000, 2000, 5000],
+      }
+    )
+    .toContain(version);
 
   const versionDetailResponse = page.waitForResponse(
     (response) =>

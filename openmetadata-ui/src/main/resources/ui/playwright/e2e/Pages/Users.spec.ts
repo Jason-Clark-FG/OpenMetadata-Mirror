@@ -469,29 +469,78 @@ test.describe('User with Data Consumer Roles', () => {
 
   test('Permissions for table details page for Data Consumer', async ({
     adminPage,
-    dataConsumerPage,
+    browser,
   }) => {
     await redirectToHomePage(adminPage);
-
+    const isolatedTable = new TableClass();
     const { apiContext, afterAction } = await getApiContext(adminPage);
-    await tableEntity.patch({
-      apiContext,
-      patchData: [
-        {
-          op: 'add',
-          path: '/owners/0',
-          value: {
-            id: user.responseData.id,
-            type: 'user',
+    const {
+      page: dataConsumerPage,
+      afterAction: afterDataConsumerAction,
+    } = await performUserLogin(browser, dataConsumerUser);
+    try {
+      await redirectToHomePage(dataConsumerPage);
+
+      await isolatedTable.create(apiContext);
+      await isolatedTable.patch({
+        apiContext,
+        patchData: [
+          {
+            op: 'add',
+            path: '/owners',
+            value: [
+              {
+                id: user2.responseData.id,
+                type: 'user',
+              },
+            ],
           },
-        },
-      ],
-    });
-    await afterAction();
+        ],
+      });
+      const expectedTablePath = `/table/${encodeURIComponent(
+        isolatedTable.entityResponseData.fullyQualifiedName ?? ''
+      )}`;
 
-    await tableEntity.visitEntityPage(dataConsumerPage);
+      await expect
+        .poll(
+          async () => {
+            await dataConsumerPage.goto(expectedTablePath, {
+              waitUntil: 'domcontentloaded',
+            });
+            await waitForAllLoadersToDisappear(dataConsumerPage).catch(
+              () => undefined
+            );
+            const entityHeader =
+              dataConsumerPage.getByTestId('entity-header-name');
 
-    await checkDataConsumerPermissions(dataConsumerPage);
+            const isOnExpectedTable =
+              new URL(dataConsumerPage.url()).pathname === expectedTablePath;
+
+            if (
+              !isOnExpectedTable ||
+              !(await entityHeader.isVisible().catch(() => false))
+            ) {
+              await dataConsumerPage.reload({ waitUntil: 'domcontentloaded' });
+              await waitForAllLoadersToDisappear(dataConsumerPage).catch(
+                () => undefined
+              );
+            }
+
+            return (
+              new URL(dataConsumerPage.url()).pathname === expectedTablePath &&
+              (await entityHeader.isVisible().catch(() => false))
+            );
+          },
+          { timeout: 60000, intervals: [1000, 2000, 5000] }
+        )
+        .toBe(true);
+
+      await checkDataConsumerPermissions(dataConsumerPage);
+    } finally {
+      await afterDataConsumerAction().catch(() => undefined);
+      await isolatedTable.delete(apiContext).catch(() => undefined);
+      await afterAction().catch(() => undefined);
+    }
   });
 
   test('Update user details for Data Consumer', async ({

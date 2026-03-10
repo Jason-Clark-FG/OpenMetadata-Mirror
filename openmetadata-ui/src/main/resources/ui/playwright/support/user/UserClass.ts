@@ -210,7 +210,13 @@ export class UserClass {
     password = this.data.password
   ) {
     await page.goto('/');
-    await page.waitForURL('**/signin');
+    try {
+      await page.waitForURL('**/signin', { timeout: 5000 });
+    } catch {
+      await page.context().clearCookies();
+      await page.goto('/signin');
+      await page.waitForURL('**/signin');
+    }
     await page.waitForLoadState('networkidle');
     const emailInput = page.locator('input[id="email"]');
     await emailInput.waitFor({ state: 'visible' });

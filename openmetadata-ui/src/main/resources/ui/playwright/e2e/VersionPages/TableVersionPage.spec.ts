@@ -21,14 +21,27 @@ test.use({ storageState: 'playwright/.auth/admin.json' });
 test.describe('Table Version Page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
   test('Pagination and Search should works for columns', async ({ page }) => {
     await redirectToHomePage(page);
+    const versionResponse = page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .includes(
+            '/api/v1/tables/name/sample_data.ecommerce_db.shopify.performance_test_table/versions/0.1'
+          ) && response.ok()
+    );
     await page.goto(
       '/table/sample_data.ecommerce_db.shopify.performance_test_table/versions/0.1'
     );
-
+    await versionResponse;
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await expect(page.locator('.version-data')).toBeVisible({ timeout: 30000 });
+    await page.waitForSelector(
+      '#KnowledgePanel\\.TableSchema [data-testid="loader"]',
+      {
+        state: 'detached',
+      }
+    );
+    await expect(page.getByTestId('entity-table')).toBeVisible();
 
     await test.step('Pagination Should Work', async () => {
       await columnPaginationTable(page);
@@ -41,13 +54,18 @@ test.describe('Table Version Page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       await page.getByTestId('searchbar').fill('test_col_0250');
       await searchResponse;
 
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await page.waitForSelector(
+        '#KnowledgePanel\\.TableSchema [data-testid="loader"]',
+        {
+          state: 'detached',
+        }
+      );
 
-      expect(page.getByTestId('entity-table').getByRole('row')).toHaveCount(2);
+      await expect(page.getByTestId('entity-table').getByRole('row')).toHaveCount(
+        2
+      );
 
-      expect(
+      await expect(
         page.getByTestId('entity-table').getByText('test_col_0250')
       ).toBeVisible();
     });
