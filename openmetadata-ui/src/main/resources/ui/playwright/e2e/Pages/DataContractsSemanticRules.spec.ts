@@ -1717,22 +1717,28 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await saveAndTriggerDataContractValidation(page, true);
 
-      // After the reload inside saveAndTriggerDataContractValidation, the
-      // version button in the header reflects the entity's current version.
-      // Read it from the UI so the rule always matches regardless of how many
-      // bumps session consolidation produced.
-      const actualVersion =
-        (await page.getByTestId('version-button').textContent()) ?? '';
+        // After the reload inside saveAndTriggerDataContractValidation, the
+        // version button in the header reflects the entity's current version.
+        // Read it from the UI so the rule always matches regardless of how many
+        // bumps session consolidation produced.
+        const actualVersionText = await page
+          .getByTestId('version-button')
+          .textContent();
+        expect(
+          actualVersionText,
+          'Could not read current entity version from version-button'
+        ).toBeTruthy();
+        const actualVersion = actualVersionText!.trim();
 
-      // Edit the contract to set the rule to the actual entity version, then
-      // re-validate to confirm the IS check now passes.
-      await clickEditContractButton(page);
-      await page.getByRole('tab', { name: 'Semantics' }).click();
+        // Edit the contract to set the rule to the actual entity version, then
+        // re-validate to confirm the IS check now passes.
+        await clickEditContractButton(page);
+        await page.getByRole('tab', { name: 'Semantics' }).click();
 
-      const versionInput = page
-        .locator('.group')
-        .nth(0)
-        .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
+        const versionInput = page
+          .locator('.group')
+          .first()
+          .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
       await versionInput.clear();
       await versionInput.fill(actualVersion);
 
@@ -1841,11 +1847,17 @@ test.describe('Data Contracts Semantics Rule Version', () => {
         // set the IS NOT rule to that future version — when the domain is
         // assigned the entity version will equal the rule value, causing the
         // IS NOT check to fail as expected.
-        const currentVersion =
-          (await page.getByTestId('version-button').textContent()) ?? '';
-        const domainBumpedVersion = (
-          Math.round((Number.parseFloat(currentVersion) + 0.1) * 10) / 10
-        ).toFixed(1);
+          const currentVersionText = await page
+            .getByTestId('version-button')
+            .textContent();
+          expect(
+            currentVersionText,
+            'Could not read current entity version from version-button'
+          ).toBeTruthy();
+          const currentVersion = currentVersionText!;
+          const domainBumpedVersion = (
+            Math.round((Number.parseFloat(currentVersion) + 0.1) * 10) / 10
+          ).toFixed(1);
 
         // Edit the contract to target the post-domain version, then re-validate
         // to confirm the IS NOT check still passes at the current version.
@@ -1854,7 +1866,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
         const versionInput = page
           .locator('.group')
-          .nth(0)
+          .first()
           .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
         await versionInput.clear();
         await versionInput.fill(domainBumpedVersion);
