@@ -13,7 +13,7 @@ Test athena source
 """
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from uuid import UUID
 
 from pydantic import AnyUrl
@@ -299,13 +299,19 @@ class TestAthenaService(unittest.TestCase):
         assert list(self.athena_source.get_database_names()) == EXPECTED_DATABASE_NAMES
 
     def test_query_table_names_and_types(self):
-        with patch.object(Inspector, "get_table_names", return_value=[MOCK_TABLE_NAME]):
-            assert (
-                self.athena_source.query_table_names_and_types(
-                    MOCK_DATABASE_SCHEMA.name.root
-                )
-                == EXPECTED_QUERY_TABLE_NAMES_TYPES
+        mock_glue_client = MagicMock()
+        mock_paginator = MagicMock()
+        mock_paginator.paginate.return_value = [
+            {"TableList": [{"Name": MOCK_TABLE_NAME, "Parameters": {}}]}
+        ]
+        mock_glue_client.get_paginator.return_value = mock_paginator
+        self.athena_source.glue_client = mock_glue_client
+        assert (
+            self.athena_source.query_table_names_and_types(
+                MOCK_DATABASE_SCHEMA.name.root
             )
+            == EXPECTED_QUERY_TABLE_NAMES_TYPES
+        )
 
     def test_yield_database(self):
         assert (
