@@ -1860,7 +1860,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
         const versionInput = page
           .locator('.group')
-          .nth(0)
+          .first()
           .locator('.rule--value .rule--widget--NUMBER .ant-input-number-input');
         await versionInput.clear();
         await versionInput.fill(domainBumpedVersion);
