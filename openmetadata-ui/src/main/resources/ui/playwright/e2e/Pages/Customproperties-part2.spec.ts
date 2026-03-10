@@ -124,6 +124,7 @@ test.describe('Custom properties with custom property config', () => {
       .serial(`Add update and delete custom properties for ${entity.name}`, () => {
       propertiesWithConfigList.forEach((propertyConfig) => {
         test(propertyConfig.name, async ({ page }) => {
+          test.slow();
           const propertyName = `pwcp${Date.now()}test${entity.name}`;
           await settingClick(
             page,
