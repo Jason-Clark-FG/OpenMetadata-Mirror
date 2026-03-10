@@ -28,6 +28,7 @@ from sqlalchemy import (
     literal,
     select,
 )
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql.expression import ColumnOperators, and_, cte
 from sqlalchemy.types import String
 
@@ -550,7 +551,7 @@ class MSSQLTableMetricComputer(BaseTableMetricComputer):
         # happens we fall back to sys.partitions. Regular MSSQL always succeeds here.
         try:
             res = self.runner._session.execute(query).first()
-        except Exception as err:
+        except ProgrammingError as err:
             logger.debug(
                 "sys.dm_db_partition_stats not available, falling back to sys.partitions: %s",
                 err,
