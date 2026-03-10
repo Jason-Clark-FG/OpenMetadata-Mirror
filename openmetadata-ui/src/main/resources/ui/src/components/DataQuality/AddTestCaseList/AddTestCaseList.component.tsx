@@ -428,7 +428,8 @@ export const AddTestCaseList = ({
             align="center"
             className="w-full"
             direction="vertical"
-            prefixCls="w-full">
+            prefixCls="w-full"
+          >
             <ErrorPlaceHolder
               className="mt-0-important p-b-sm"
               type={ERROR_PLACEHOLDER_TYPE.FILTER}
@@ -595,26 +596,28 @@ export const AddTestCaseList = ({
         />
       </Col>
       <Col span={24}>
-        <AddTestCaseListFilters
-          filterLoading={filterLoading}
-          filterOptions={filterOptions}
-          filterSelectedKeys={filterSelectedKeys}
-          onChange={handleFilterChange}
-          onSearch={handleFilterSearch}
-        />
+        <Row wrap align="middle" justify="space-between">
+          <AddTestCaseListFilters
+            filterLoading={filterLoading}
+            filterOptions={filterOptions}
+            filterSelectedKeys={filterSelectedKeys}
+            onChange={handleFilterChange}
+            onSearch={handleFilterSearch}
+          />
+          {showSelectAll && items.length > 0 && (
+            <Button
+              className="p-0 h-auto font-normal"
+              data-testid="select-all-test-cases"
+              type="link"
+              onClick={handleSelectAll}
+            >
+              {t('label.select-all')}
+              {(selectedItems?.size ?? 0) > 0 &&
+                ` (${selectedItems?.size ?? 0})`}
+            </Button>
+          )}
+        </Row>
       </Col>
-      {showSelectAll && items.length > 0 && (
-        <Col className="d-flex justify-end" span={24}>
-          <Button
-            className="p-0 h-auto font-normal"
-            data-testid="select-all-test-cases"
-            type="link"
-            onClick={handleSelectAll}>
-            {t('label.select-all')}
-            {(selectedItems?.size ?? 0) > 0 && ` (${selectedItems?.size ?? 0})`}
-          </Button>
-        </Col>
-      )}
       {renderList}
       {showButton && (
         <Col
