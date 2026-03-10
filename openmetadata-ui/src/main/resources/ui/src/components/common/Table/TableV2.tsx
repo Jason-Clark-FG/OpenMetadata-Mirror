@@ -47,12 +47,11 @@ import type {
   TablePaginationConfig,
 } from 'antd/lib/table/interface';
 import type { ColumnsType } from 'antd/es/table/interface';
-import { Resizable } from 'react-resizable';
 import type { ResizeCallbackData } from 'react-resizable';
 import 'react-resizable/css/styles.css';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
-import {
+import React, {
   forwardRef,
   ReactElement,
   ReactNode,
@@ -82,6 +81,46 @@ import {
 import './table.less';
 
 type TableV2Props<T extends object> = TableComponentProps<T>;
+
+interface InlineResizeHandleProps {
+  currentWidth: number;
+  onResize: (_: React.SyntheticEvent, data: ResizeCallbackData) => void;
+}
+
+const InlineResizeHandle = ({
+  currentWidth,
+  onResize,
+}: InlineResizeHandleProps) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = currentWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(80, startWidth + (moveEvent.clientX - startX));
+      onResize(moveEvent as unknown as React.SyntheticEvent, {
+        node: null as unknown as HTMLElement,
+        size: { width: newWidth, height: 0 },
+        handle: 'e',
+      });
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  return (
+    <span
+      aria-hidden="true"
+      className="react-resizable-handle react-resizable-handle-e"
+      onMouseDown={handleMouseDown}
+    />
+  );
+};
 
 /** Structural aliases to avoid a direct react-aria-components peer import. */
 type AriaKey = string | number;
@@ -326,7 +365,11 @@ const TableV2 = <T extends object>(
       }) as ColumnType<T> | undefined;
 
       rest.onChange(
-        {} as TablePaginationConfig,
+        {
+          current: internalCurrentPage,
+          pageSize: clientPagination?.pageSize ?? 10,
+          total: (rest.dataSource ?? []).length,
+        } as TablePaginationConfig,
         {} as Record<string, FilterValue | null>,
         {
           column: matchedCol,
@@ -345,7 +388,13 @@ const TableV2 = <T extends object>(
         } as TableCurrentDataSource<T>
       );
     },
-    [rest.onChange, propsColumns, rest.dataSource]
+    [
+      rest.onChange,
+      propsColumns,
+      rest.dataSource,
+      internalCurrentPage,
+      clientPagination,
+    ]
   );
 
   // ─── Search ───────────────────────────────────────────────────────────────
@@ -398,8 +447,13 @@ const TableV2 = <T extends object>(
 
   const dataSourceLength = rest.dataSource?.length ?? 0;
   useEffect(() => {
-    setInternalCurrentPage(1);
-  }, [dataSourceLength]);
+    const maxPage = clientPagination
+      ? Math.ceil(dataSourceLength / clientPagination.pageSize) || 1
+      : 1;
+    if (internalCurrentPage > maxPage) {
+      setInternalCurrentPage(1);
+    }
+  }, [dataSourceLength, clientPagination, internalCurrentPage]);
 
   // ─── Cell value resolver ──────────────────────────────────────────────────
 
@@ -434,7 +488,7 @@ const TableV2 = <T extends object>(
         ? String(rawValue)
         : null;
     },
-    []
+    [] // intentional: all state is received via parameters, no external closures
   );
 
   // ─── Column title resolver ────────────────────────────────────────────────
@@ -580,7 +634,8 @@ const TableV2 = <T extends object>(
                 columnWidths[colKey] ?? (colType.width as number) ?? 150;
 
               const isSorted = sortState.columnKey === colKey;
-              const headNode = (
+
+              return (
                 <UntitledTable.Head
                   allowsSorting={!!colType.sorter}
                   className="tw:py-2 tw:pl-4 tw:pr-2 tw:text-sm tw:text-tertiary"
@@ -588,7 +643,11 @@ const TableV2 = <T extends object>(
                   key={colKey}
                   style={
                     rest.resizableColumns
-                      ? { width: colWidth, minWidth: colWidth }
+                      ? {
+                          position: 'relative',
+                          width: colWidth,
+                          minWidth: colWidth,
+                        }
                       : undefined
                   }>
                   <div className="tw:flex tw:items-center tw:gap-1">
@@ -610,21 +669,13 @@ const TableV2 = <T extends object>(
                         />
                       ))}
                   </div>
+                  {rest.resizableColumns && (
+                    <InlineResizeHandle
+                      currentWidth={colWidth}
+                      onResize={resizeHandlers[colKey]}
+                    />
+                  )}
                 </UntitledTable.Head>
-              );
-
-              return rest.resizableColumns ? (
-                <Resizable
-                  draggableOpts={{ enableUserSelectHack: false }}
-                  height={0}
-                  key={colKey}
-                  minConstraints={[80, 0]}
-                  width={colWidth}
-                  onResize={resizeHandlers[colKey]}>
-                  {headNode}
-                </Resizable>
-              ) : (
-                headNode
               );
             })}
           </UntitledTable.Header>
