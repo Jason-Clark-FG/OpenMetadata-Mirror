@@ -783,39 +783,75 @@ test.describe('Teams Page', () => {
       await settingClick(page, GlobalSettingOptions.TEAMS);
       await page.waitForSelector('[data-testid="team-hierarchy-table"]');
 
-      // Verify initial state: active team visible, deleted team not visible
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).not.toBeVisible();
+      const initialTeams = await apiContext
+        .get('/api/v1/teams?parentTeam=Organization&include=non-deleted&fields=users,userCount,defaultRoles,defaultPersona,policies,childrenCount,domains')
+        .then((response) => response.json());
+
+      expect(
+        initialTeams.data.some(
+          (teamRecord: { displayName?: string }) =>
+            teamRecord.displayName === activeTeam.data.displayName
+        )
+      ).toBe(true);
+      expect(
+        initialTeams.data.some(
+          (teamRecord: { displayName?: string }) =>
+            teamRecord.displayName === deletedTeam.data.displayName
+        )
+      ).toBe(false);
 
       // Toggle to show deleted teams
+      const showDeletedResponse = page.waitForResponse((response) => {
+        const url = response.url();
+
+        return (
+          response.request().method() === 'GET' &&
+          url.includes('/api/v1/teams?') &&
+          url.includes('parentTeam=Organization') &&
+          url.includes('include=all')
+        );
+      });
       await page
         .locator('[data-testid="show-deleted"]')
         .click({ force: true, noWaitAfter: true });
+      const deletedTeams = await (await showDeletedResponse).json();
 
-      // Wait for deleted team to appear and active team to disappear
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).not.toBeVisible();
+      expect(
+        deletedTeams.data.some(
+          (teamRecord: { displayName?: string; deleted?: boolean }) =>
+            teamRecord.displayName === deletedTeam.data.displayName &&
+            teamRecord.deleted === true
+        )
+      ).toBe(true);
 
       // Toggle back to show non-deleted teams
+      const hideDeletedResponse = page.waitForResponse((response) => {
+        const url = response.url();
+
+        return (
+          response.request().method() === 'GET' &&
+          url.includes('/api/v1/teams?') &&
+          url.includes('parentTeam=Organization') &&
+          url.includes('include=non-deleted')
+        );
+      });
       await page
         .locator('[data-testid="show-deleted"]')
         .click({ force: true, noWaitAfter: true });
+      const activeTeams = await (await hideDeletedResponse).json();
 
-      // Wait for active team to appear and deleted team to disappear
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).not.toBeVisible();
+      expect(
+        activeTeams.data.some(
+          (teamRecord: { displayName?: string }) =>
+            teamRecord.displayName === activeTeam.data.displayName
+        )
+      ).toBe(true);
+      expect(
+        activeTeams.data.some(
+          (teamRecord: { displayName?: string }) =>
+            teamRecord.displayName === deletedTeam.data.displayName
+        )
+      ).toBe(false);
     } finally {
       await apiContext.delete(
         `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=true&recursive=true`

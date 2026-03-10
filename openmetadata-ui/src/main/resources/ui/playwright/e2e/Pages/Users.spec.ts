@@ -472,17 +472,16 @@ test.describe('User with Data Consumer Roles', () => {
     browser,
   }) => {
     await redirectToHomePage(adminPage);
-    const isolatedTable = new TableClass();
     const { apiContext, afterAction } = await getApiContext(adminPage);
     const {
       page: dataConsumerPage,
+      apiContext: dataConsumerApiContext,
       afterAction: afterDataConsumerAction,
     } = await performUserLogin(browser, dataConsumerUser);
     try {
       await redirectToHomePage(dataConsumerPage);
 
-      await isolatedTable.create(apiContext);
-      await isolatedTable.patch({
+      await tableEntity2.patch({
         apiContext,
         patchData: [
           {
@@ -498,8 +497,21 @@ test.describe('User with Data Consumer Roles', () => {
         ],
       });
       const expectedTablePath = `/table/${encodeURIComponent(
-        isolatedTable.entityResponseData.fullyQualifiedName ?? ''
+        tableEntity2.entityResponseData.fullyQualifiedName ?? ''
       )}`;
+
+      await expect
+        .poll(
+          async () => {
+            const tableResponse = await dataConsumerApiContext.get(
+              `/api/v1/tables/${tableEntity2.entityResponseData.id}?fields=owners`
+            );
+
+            return tableResponse.ok();
+          },
+          { timeout: 60000, intervals: [1000, 2000, 5000] }
+        )
+        .toBe(true);
 
       await expect
         .poll(
@@ -538,7 +550,6 @@ test.describe('User with Data Consumer Roles', () => {
       await checkDataConsumerPermissions(dataConsumerPage);
     } finally {
       await afterDataConsumerAction().catch(() => undefined);
-      await isolatedTable.delete(apiContext).catch(() => undefined);
       await afterAction().catch(() => undefined);
     }
   });
