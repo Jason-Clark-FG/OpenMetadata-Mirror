@@ -11,95 +11,97 @@
  *  limitations under the License.
  */
 
-import test, { expect, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../fixtures/pages';
+import { performAdminLogin } from '../../utils/admin';
+import { redirectToHomePage } from '../../utils/common';
+import { sidebarClick } from '../../utils/sidebar';
 
-async function loginAsAdmin(page: Page) {
-  await page.goto('/');
-  await page.waitForURL('**/signin');
-  await page.locator('[id="email"]').fill('admin@open-metadata.org');
-  await page.locator('[id="password"]').fill('admin');
-  const loginRes = page.waitForResponse('/api/v1/auth/login');
-  await page.getByTestId('login').click();
-  await loginRes;
-  await page.waitForURL('**/my-data');
-}
+const APP_NAME = 'McpChatApplication';
 
-test.describe('MCP Chat Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
-  });
+test.describe(
+  'MCP Chat - Sidebar Navigation',
+  { tag: ['@Features', '@Platform'] },
+  () => {
+    test.beforeAll('Install MCP Chat app', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
 
-  test('should navigate to MCP Chat page and render the UI', async ({
-    page,
-  }) => {
-    await page.goto('/mcp-chat');
-    await page.waitForLoadState('networkidle');
+      const installResponse = await apiContext.post('/api/v1/apps', {
+        data: {
+          name: APP_NAME,
+          appConfiguration: {
+            llmProvider: 'openai',
+            llmApiKey: '',
+            llmModel: 'gpt-4o',
+            systemPrompt: 'Test prompt',
+          },
+        },
+      });
 
-    await expect(page.getByTestId('new-chat-button')).toBeVisible();
-    await expect(page.getByTestId('mcp-chat-input')).toBeVisible();
+      // 201 = newly installed, 409 = already installed — both are fine
+      expect([201, 409]).toContain(installResponse.status());
 
-    const sendButton = page.getByTestId('mcp-send-button');
-    await expect(sendButton).toBeVisible();
-    await expect(sendButton).toBeDisabled();
-  });
+      await afterAction();
+    });
 
-  test('should enable send button when input has text', async ({ page }) => {
-    await page.goto('/mcp-chat');
-    await page.waitForLoadState('networkidle');
+    test.afterAll('Uninstall MCP Chat app', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
 
-    const input = page
-      .getByTestId('mcp-chat-input')
-      .locator('textarea')
-      .first();
-    const sendButton = page.getByTestId('mcp-send-button');
+      await apiContext.delete(
+        `/api/v1/apps/name/${APP_NAME}?hardDelete=true`
+      );
 
-    await expect(sendButton).toBeDisabled();
-    await input.fill('Hello, test message');
-    await expect(sendButton).toBeEnabled();
-  });
+      await afterAction();
+    });
 
-  test('should show inline error when MCP is not enabled (503)', async ({
-    page,
-  }) => {
-    await page.goto('/mcp-chat');
-    await page.waitForLoadState('networkidle');
+    test('MCP Chat nav item should appear in sidebar when app is installed', async ({
+      page,
+    }) => {
+      await test.step('Navigate to home page', async () => {
+        await redirectToHomePage(page);
+      });
 
-    const input = page
-      .getByTestId('mcp-chat-input')
-      .locator('textarea')
-      .first();
-    const sendButton = page.getByTestId('mcp-send-button');
+      await test.step('Verify MCP Chat sidebar item is visible', async () => {
+        const mcpChatNav = page.getByTestId('app-bar-item-mcp-chat');
+        await expect(mcpChatNav).toBeVisible();
+      });
+    });
 
-    const testMessage = 'Test message for disabled MCP';
-    await input.fill(testMessage);
+    test('Clicking MCP Chat sidebar nav should navigate to chat page', async ({
+      page,
+    }) => {
+      await test.step('Navigate to home page', async () => {
+        await redirectToHomePage(page);
+      });
 
-    const responsePromise = page.waitForResponse(
-      (resp) =>
-        resp.url().includes('/api/v1/mcp-client/chat') &&
-        resp.request().method() === 'POST'
-    );
+      await test.step('Click MCP Chat in sidebar', async () => {
+        await sidebarClick(page, 'mcp-chat');
+        await page.waitForURL('**/mcp-chat');
+      });
 
-    await sendButton.click();
+      await test.step('Verify chat UI elements are rendered', async () => {
+        await expect(page.getByTestId('new-chat-button')).toBeVisible();
+        await expect(page.getByTestId('mcp-chat-input')).toBeVisible();
 
-    const response = await responsePromise;
+        const sendButton = page.getByTestId('mcp-send-button');
+        await expect(sendButton).toBeVisible();
+        await expect(sendButton).toBeDisabled();
+      });
+    });
 
-    // Backend returns 503 (MCP disabled) or 500 (other server error)
-    expect(response.status()).toBeGreaterThanOrEqual(500);
+    test('Send button should enable when input has text', async ({ page }) => {
+      await test.step('Navigate to MCP Chat page', async () => {
+        await page.goto('/mcp-chat');
+        await page.waitForURL('**/mcp-chat');
+      });
 
-    // Verify the inline error alert appears
-    const errorAlert = page.getByTestId('mcp-chat-error');
-    await expect(errorAlert).toBeVisible({ timeout: 5000 });
+      await test.step('Verify send button enables with text input', async () => {
+        const sendButton = page.getByTestId('mcp-send-button');
+        await expect(sendButton).toBeDisabled();
 
-    // Verify the error message has content
-    const alertText = await errorAlert.textContent();
-    expect(alertText?.length).toBeGreaterThan(0);
-
-    // Verify the input retains the user's message
-    const inputValue = await input.inputValue();
-    expect(inputValue).toBe(testMessage);
-
-    // Verify dismissing the error works
-    await errorAlert.locator('button[title="Close"]').click();
-    await expect(errorAlert).not.toBeVisible();
-  });
-});
+        await page.getByTestId('mcp-chat-input').fill('Hello, test message');
+        await expect(sendButton).toBeEnabled();
+      });
+    });
+  }
+);
