@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import test, { expect } from '@playwright/test';
+import test, { expect, Page } from '@playwright/test';
 import { KPI_DATA } from '../../constant/dataInsight';
 import { SidebarItem } from '../../constant/sidebar';
 import { MetricClass } from '../../support/entity/MetricClass';
@@ -27,6 +27,26 @@ const DESCRIPTION_WITH_PERCENTAGE =
   'playwright-description-with-percentage-percentage';
 
 const DESCRIPTION_WITH_OWNER = 'playwright-owner-with-percentage-percentage';
+
+const navigateToDataInsightPage = async (
+  page: Page,
+  waitOnLatestKPI = false
+) => {
+  const promises = [
+    page.waitForResponse(
+      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
+    ),
+  ];
+  if (waitOnLatestKPI) {
+    promises.push(
+      page.waitForResponse(
+        '/api/v1/kpi/playwright-owner-with-percentage-percentage/latestKpiResult'
+      )
+    );
+  }
+  await sidebarClick(page, SidebarItem.DATA_INSIGHT);
+  await Promise.all(promises);
+};
 
 test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
   test.beforeAll(async ({ browser }) => {
@@ -53,11 +73,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
   });
 
   test('Create description and owner KPI', async ({ page }) => {
-    const percentageOfDataAssetWithDescriptionResponse = page.waitForResponse(
-      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
-    );
-    await sidebarClick(page, SidebarItem.DATA_INSIGHT);
-    await percentageOfDataAssetWithDescriptionResponse;
+    await navigateToDataInsightPage(page);
 
     await page.getByRole('menuitem', { name: 'KPIs' }).click();
 
@@ -69,11 +85,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
   });
 
   test('Verifying Data assets tab', async ({ page }) => {
-    const percentageOfDataAssetWithDescriptionResponse = page.waitForResponse(
-      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
-    );
-    await sidebarClick(page, SidebarItem.DATA_INSIGHT);
-    await percentageOfDataAssetWithDescriptionResponse;
+    await navigateToDataInsightPage(page);
     await page.getByTestId('date-picker-menu').click();
     await page.getByRole('menuitem', { name: 'Last 60 days' }).click();
 
@@ -102,11 +114,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
 
   test('Verify metrics appear in description chart', async ({ page }) => {
     test.slow();
-    const percentageOfDataAssetWithDescriptionResponse = page.waitForResponse(
-      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
-    );
-    await sidebarClick(page, SidebarItem.DATA_INSIGHT);
-    await percentageOfDataAssetWithDescriptionResponse;
+    await navigateToDataInsightPage(page);
 
     await test.step('Verify metric entity type is visible', async () => {
       const chartCard = page.getByTestId(
@@ -161,11 +169,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
   test('Verify No owner and description redirection to explore page', async ({
     page,
   }) => {
-    const percentageOfDataAssetWithDescriptionResponse = page.waitForResponse(
-      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
-    );
-    await sidebarClick(page, SidebarItem.DATA_INSIGHT);
-    await percentageOfDataAssetWithDescriptionResponse;
+    await navigateToDataInsightPage(page);
 
     await page.getByTestId('explore-asset-with-no-description').click();
 
@@ -189,11 +193,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
   });
 
   test('Verifying App analytics tab', async ({ page }) => {
-    const percentageOfDataAssetWithDescriptionResponse = page.waitForResponse(
-      '/api/v1/analytics/dataInsights/system/charts/name/percentage_of_service_with_description/data?**'
-    );
-    await sidebarClick(page, SidebarItem.DATA_INSIGHT);
-    await percentageOfDataAssetWithDescriptionResponse;
+    await navigateToDataInsightPage(page);
     await page.getByTestId('date-picker-menu').click();
     await page.getByRole('menuitem', { name: 'Last 60 days' }).click();
 
