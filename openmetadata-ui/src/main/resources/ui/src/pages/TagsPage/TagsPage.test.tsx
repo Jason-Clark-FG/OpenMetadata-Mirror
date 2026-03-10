@@ -41,8 +41,6 @@ import {
 } from './TagsPage.mock';
 
 jest.mock('@openmetadata/ui-core-components', () => {
-  const { createTheme } = jest.requireActual('@mui/material/styles');
-
   return {
     Toggle: ({
       children,
@@ -62,7 +60,8 @@ jest.mock('@openmetadata/ui-core-components', () => {
         disabled={isDisabled}
         role="switch"
         onClick={() => onChange?.(!isSelected)}
-        {...props}>
+        {...props}
+      >
         {children}
       </button>
     ),
@@ -87,94 +86,6 @@ jest.mock('@openmetadata/ui-core-components', () => {
       children: React.ReactNode;
       'data-testid'?: string;
     }) => <span data-testid={testId}>{children}</span>,
-    createMuiTheme: jest.fn().mockImplementation(() =>
-      createTheme({
-        palette: {
-          allShades: {
-            white: '#ffffff',
-            black: '#000000',
-            brand: {
-              50: '#e8eaf6',
-              100: '#c5cae9',
-              200: '#9fa8da',
-              300: '#7986cb',
-              400: '#5c6bc0',
-              500: '#3f51b5',
-              600: '#3949ab',
-              700: '#303f9f',
-              800: '#283593',
-              900: '#1a237e',
-            },
-            blue: {
-              50: '#e3f2fd',
-              100: '#bbdefb',
-              400: '#42a5f5',
-              500: '#1890ff',
-              600: '#1976d2',
-              700: '#1565c0',
-            },
-            blueGray: {
-              50: '#eceff1',
-              100: '#cfd8dc',
-              200: '#b0bec5',
-              300: '#90a4ae',
-              400: '#78909c',
-              500: '#607d8b',
-              600: '#546e7a',
-              700: '#455a64',
-            },
-            gray: {
-              50: '#fafafa',
-              100: '#f5f5f5',
-              200: '#eeeeee',
-              300: '#d1d1d1',
-              400: '#bdbdbd',
-              500: '#9e9e9e',
-              600: '#757575',
-              700: '#616161',
-              800: '#424242',
-              900: '#212121',
-            },
-            green: { 50: '#e8f5e9', 500: '#4caf50', 700: '#388e3c' },
-            red: { 50: '#ffebee', 500: '#f44336', 700: '#d32f2f' },
-            orange: { 50: '#fff3e0', 500: '#ff9800', 700: '#f57c00' },
-            success: {
-              50: '#e8f5e9',
-              100: '#c8e6c9',
-              400: '#66bb6a',
-              500: '#4caf50',
-              600: '#43a047',
-              700: '#388e3c',
-              900: '#1b5e20',
-            },
-            error: {
-              50: '#ffebee',
-              100: '#ffcdd2',
-              400: '#ef5350',
-              500: '#f44336',
-              600: '#e53935',
-              700: '#d32f2f',
-              900: '#b71c1c',
-            },
-            warning: {
-              50: '#fff8e1',
-              100: '#ffecb3',
-              400: '#ffa726',
-              500: '#ff9800',
-              600: '#fb8c00',
-              700: '#f57c00',
-            },
-            info: {
-              50: '#e3f2fd',
-              400: '#42a5f5',
-              500: '#2196f3',
-              600: '#1e88e5',
-              700: '#1976d2',
-            },
-          },
-        },
-      })
-    ),
   };
 });
 
@@ -423,7 +334,8 @@ jest.mock('@openmetadata/ui-core-components', () => ({
       className={className}
       data-testid={testId}
       disabled={isDisabled}
-      onClick={onClick}>
+      onClick={onClick}
+    >
       {children}
     </button>
   ),
@@ -461,7 +373,8 @@ jest.mock('@openmetadata/ui-core-components', () => ({
       aria-disabled={isDisabled}
       data-testid={testId}
       role="switch"
-      onClick={() => onChange?.(!isSelected)}>
+      onClick={() => onChange?.(!isSelected)}
+    >
       toggle
     </button>
   ),
