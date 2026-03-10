@@ -71,57 +71,6 @@
     }
   },
   "mappings": {
-    "dynamic_templates": [
-      {
-        "extension_text_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "string",
-          "mapping": {
-            "type": "text",
-            "analyzer": "ik_max_word",
-            "search_analyzer": "ik_smart",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "normalizer": "lowercase_normalizer",
-                "ignore_above": 512
-              },
-              "ngram": {
-                "type": "text",
-                "analyzer": "om_ngram"
-              }
-            }
-          }
-        }
-      },
-      {
-        "extension_numeric_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "long",
-          "mapping": {
-            "type": "long"
-          }
-        }
-      },
-      {
-        "extension_double_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "double",
-          "mapping": {
-            "type": "double"
-          }
-        }
-      },
-      {
-        "extension_boolean_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "boolean",
-          "mapping": {
-            "type": "boolean"
-          }
-        }
-      }
-    ],
     "properties": {
       "id": {
         "type": "text"
@@ -145,7 +94,13 @@
         }
       },
       "fullyQualifiedName": {
-        "type": "text"
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "normalizer": "lowercase_normalizer"
+          }
+        }
       },
       "fqnParts": {
         "type": "keyword"
@@ -369,6 +324,63 @@
       "totalVotes": {
         "type": "long",
         "null_value": 0
+      },
+      "owners": {
+        "type": "nested",
+        "properties": {
+          "id": {
+            "type": "keyword",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 36
+              }
+            }
+          },
+          "type": {
+            "type": "keyword"
+          },
+          "name": {
+            "type": "keyword",
+            "normalizer": "lowercase_normalizer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "displayName": {
+            "type": "keyword",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "lowercase_normalizer",
+                "ignore_above": 256
+              }
+            }
+          },
+          "fullyQualifiedName": {
+            "type": "text"
+          },
+          "description": {
+            "type": "text"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "href": {
+            "type": "text"
+          }
+        }
+      },
+      "ownerDisplayName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
+      "ownerName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       },
       "descriptionStatus": {
         "type": "keyword"

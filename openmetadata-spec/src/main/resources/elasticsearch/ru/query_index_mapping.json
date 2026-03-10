@@ -93,56 +93,6 @@
     }
   },
   "mappings": {
-    "dynamic_templates": [
-      {
-        "extension_text_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "string",
-          "mapping": {
-            "type": "text",
-            "analyzer": "om_analyzer",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "normalizer": "lowercase_normalizer",
-                "ignore_above": 512
-              },
-              "ngram": {
-                "type": "text",
-                "analyzer": "om_ngram"
-              }
-            }
-          }
-        }
-      },
-      {
-        "extension_numeric_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "long",
-          "mapping": {
-            "type": "long"
-          }
-        }
-      },
-      {
-        "extension_double_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "double",
-          "mapping": {
-            "type": "double"
-          }
-        }
-      },
-      {
-        "extension_boolean_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "boolean",
-          "mapping": {
-            "type": "boolean"
-          }
-        }
-      }
-    ],
     "properties": {
       "id": {
         "type": "keyword"
@@ -305,6 +255,7 @@
         "type": "long"
       },
       "owners": {
+        "type": "nested",
         "properties": {
           "id": {
             "type": "keyword",
@@ -565,6 +516,14 @@
             "type": "integer"
           }
         }
+      },
+      "ownerDisplayName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
+      "ownerName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       }
     }
   }

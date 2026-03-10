@@ -74,56 +74,6 @@
     }
   },
   "mappings": {
-    "dynamic_templates": [
-      {
-        "extension_text_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "string",
-          "mapping": {
-            "type": "text",
-            "analyzer": "om_analyzer",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "normalizer": "lowercase_normalizer",
-                "ignore_above": 512
-              },
-              "ngram": {
-                "type": "text",
-                "analyzer": "om_ngram"
-              }
-            }
-          }
-        }
-      },
-      {
-        "extension_numeric_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "long",
-          "mapping": {
-            "type": "long"
-          }
-        }
-      },
-      {
-        "extension_double_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "double",
-          "mapping": {
-            "type": "double"
-          }
-        }
-      },
-      {
-        "extension_boolean_fields": {
-          "path_match": "extension.*",
-          "match_mapping_type": "boolean",
-          "mapping": {
-            "type": "boolean"
-          }
-        }
-      }
-    ],
     "properties": {
       "id": {
         "type": "text",
@@ -219,6 +169,7 @@
         "type": "text"
       },
       "owners": {
+        "type": "nested",
         "properties": {
           "id": {
             "type": "keyword",
@@ -393,6 +344,10 @@
       "descriptionStatus": {
         "type": "keyword"
       },
+      "entityStatus": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
       "descriptionSources": {
         "type": "object",
         "dynamic": false
@@ -407,6 +362,46 @@
       },
       "extension": {
         "type": "flattened"
+      },
+      "certification": {
+        "type": "object",
+        "properties": {
+          "tagLabel": {
+            "type": "object",
+            "properties": {
+              "tagFQN": {
+                "type": "keyword",
+                "normalizer": "lowercase_normalizer",
+                "fields": {
+                  "text": {
+                    "type": "text",
+                    "analyzer": "om_analyzer"
+                  }
+                }
+              },
+              "labelType": {
+                "type": "keyword"
+              },
+              "description": {
+                "type": "text"
+              },
+              "source": {
+                "type": "keyword"
+              },
+              "state": {
+                "type": "keyword"
+              }
+            }
+          },
+          "appliedDate": {
+            "type": "date",
+            "format": "strict_date_optional_time||epoch_millis"
+          },
+          "expiryDate": {
+            "type": "date",
+            "format": "strict_date_optional_time||epoch_millis"
+          }
+        }
       },
       "customPropertiesTyped": {
         "type": "nested",
@@ -449,6 +444,14 @@
             "type": "keyword"
           }
         }
+      },
+      "ownerDisplayName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
+      "ownerName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       }
     }
   }
