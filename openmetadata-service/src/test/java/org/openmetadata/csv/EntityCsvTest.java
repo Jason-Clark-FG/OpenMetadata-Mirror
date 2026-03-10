@@ -16,6 +16,7 @@ import static org.openmetadata.csv.EntityCsv.ENTITY_UPDATED;
 
 import com.networknt.schema.Schema;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -24,8 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -40,6 +43,7 @@ import org.openmetadata.schema.entity.data.StoredProcedure;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.ApiStatus;
@@ -60,10 +64,14 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.TypeRegistry;
 import org.openmetadata.service.jdbi3.DatabaseSchemaRepository;
 import org.openmetadata.service.jdbi3.EntityRepository;
+import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.jdbi3.StoredProcedureRepository;
 import org.openmetadata.service.jdbi3.TableRepository;
 import org.openmetadata.service.formatter.util.FormatterUtil;
+import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.rules.RuleEngine;
+import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.RestUtil.PutResponse;
 import org.openmetadata.service.util.ValidatorUtil;
 
@@ -1480,6 +1488,223 @@ public class EntityCsvTest {
     }
   }
 
+  @Test
+  void test_flushPendingSearchIndexUpdatesClearsQueueOnSuccessAndFailure() {
+    SearchRepository searchRepository = mock(SearchRepository.class);
+    Table successEntity = tableEntity("orders", "service.db.schema.orders", "Orders");
+    Table failedEntity = tableEntity("payments", "service.db.schema.payments", "Payments");
+    List<List<EntityInterface>> capturedBatches = new ArrayList<>();
+
+    TestCsv successfulCsv = new TestCsv();
+    successfulCsv.pendingSearchIndexUpdates.add(successEntity);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class)) {
+      entity.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      Mockito.doAnswer(
+              invocation -> {
+                capturedBatches.add(new ArrayList<>(invocation.getArgument(0)));
+                return null;
+              })
+          .when(searchRepository)
+          .updateEntitiesBulk(Mockito.anyList());
+      successfulCsv.flushPendingSearchIndexUpdates();
+      assertEquals(List.of(successEntity), capturedBatches.get(0));
+      assertTrue(successfulCsv.pendingSearchIndexUpdates.isEmpty());
+    }
+
+    TestCsv failingCsv = new TestCsv();
+    failingCsv.pendingSearchIndexUpdates.add(failedEntity);
+    SearchRepository failingRepository = mock(SearchRepository.class);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class)) {
+      entity.when(Entity::getSearchRepository).thenReturn(failingRepository);
+      Mockito.doThrow(new IllegalStateException("search bulk failed"))
+          .when(failingRepository)
+          .updateEntitiesBulk(List.of(failedEntity));
+
+      failingCsv.flushPendingSearchIndexUpdates();
+
+      assertTrue(failingCsv.pendingSearchIndexUpdates.isEmpty());
+    }
+  }
+
+  @Test
+  void test_flushPendingChangeEventsSubmitsBatchInsertAndClearsQueue() {
+    TestCsv testCsv = new TestCsv();
+    testCsv.pendingChangeEvents.add("event-1");
+    testCsv.pendingChangeEvents.add("event-2");
+
+    AsyncService asyncService = mock(AsyncService.class);
+    @SuppressWarnings("unchecked")
+    java.util.concurrent.ExecutorService executor = mock(java.util.concurrent.ExecutorService.class);
+    CollectionDAO collectionDAO = mock(CollectionDAO.class);
+    CollectionDAO.ChangeEventDAO changeEventDAO = mock(CollectionDAO.ChangeEventDAO.class);
+
+    Mockito.when(asyncService.getExecutorService()).thenReturn(executor);
+    Mockito.when(collectionDAO.changeEventDAO()).thenReturn(changeEventDAO);
+    Mockito.when(executor.submit(Mockito.any(Runnable.class)))
+        .thenAnswer(
+            invocation -> {
+              ((Runnable) invocation.getArgument(0)).run();
+              return CompletableFuture.completedFuture(null);
+            });
+
+    try (MockedStatic<AsyncService> asyncServiceStatic = Mockito.mockStatic(AsyncService.class);
+        MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class)) {
+      asyncServiceStatic.when(AsyncService::getInstance).thenReturn(asyncService);
+      entity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
+
+      testCsv.flushPendingChangeEvents();
+
+      Mockito.verify(changeEventDAO).insertBatch(List.of("event-1", "event-2"));
+      assertTrue(testCsv.pendingChangeEvents.isEmpty());
+    }
+  }
+
+  @Test
+  void test_flushPendingCsvResultsWritesSuccessAndFailureRows() throws Exception {
+    TestCsv testCsv = new TestCsv();
+    CSVRecord successRecord = singleRecord(testCsv, "success", "value", "details");
+    CSVRecord failedRecord = singleRecord(testCsv, "failure", "value", "details");
+    testCsv.pendingCsvResults.put(successRecord, ENTITY_CREATED);
+    testCsv.pendingCsvResults.put(failedRecord, "boom");
+
+    StringWriter writer = new StringWriter();
+    try (CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT)) {
+      testCsv.flushPendingCsvResults(printer);
+    }
+
+    String output = writer.toString();
+    assertTrue(output.contains(EntityCsv.IMPORT_SUCCESS));
+    assertTrue(output.contains(ENTITY_CREATED));
+    assertTrue(output.contains(EntityCsv.IMPORT_FAILED));
+    assertTrue(output.contains("boom"));
+    assertTrue(testCsv.pendingCsvResults.isEmpty());
+  }
+
+  @Test
+  void test_createUserEntityDryRunValidatesAndTracksCreateVsUpdate() throws Exception {
+    UserCsv userCsv = new UserCsv();
+    userCsv.enableProcessing();
+    userCsv.setDryRun(true);
+
+    UserRepository repository = mock(UserRepository.class);
+    User createdUser = user("alice");
+    User updatedUser = user("bob");
+    CSVRecord createdRecord = userRecord(userCsv, "alice", "", "", "alice@example.com");
+    CSVRecord updatedRecord = userRecord(userCsv, "bob", "", "", "bob@example.com");
+    CSVPrinter printer = mock(CSVPrinter.class);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
+        MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(repository);
+      validatorUtil.when(() -> ValidatorUtil.validate(createdUser)).thenReturn(null);
+      validatorUtil.when(() -> ValidatorUtil.validate(updatedUser)).thenReturn(null);
+      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(createdRecord)).thenReturn("");
+      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(updatedRecord)).thenReturn("");
+      Mockito.when(repository.isUpdateForImport(createdUser)).thenReturn(false);
+      Mockito.when(repository.isUpdateForImport(updatedUser)).thenReturn(true);
+
+      userCsv.createUserEntity(printer, createdRecord, createdUser);
+      userCsv.createUserEntity(printer, updatedRecord, updatedUser);
+
+      assertEquals(2, userCsv.importResult.getNumberOfRowsPassed());
+      assertEquals(createdUser, userCsv.dryRunCreatedEntities.get("alice"));
+      assertEquals(updatedUser, userCsv.dryRunCreatedEntities.get("bob"));
+    }
+  }
+
+  @Test
+  void test_createUserEntityNonDryRunPublishesChangeEventWithoutAuthMechanism() throws Exception {
+    UserCsv userCsv = new UserCsv();
+    userCsv.enableProcessing();
+    userCsv.setDryRun(false);
+
+    User user =
+        user("charlie")
+            .withAuthenticationMechanism(new AuthenticationMechanism())
+            .withDisplayName("Charlie");
+    CSVRecord record = userRecord(userCsv, "charlie", "Charlie", "", "charlie@example.com");
+    UserRepository repository = mock(UserRepository.class);
+    AsyncService asyncService = mock(AsyncService.class);
+    @SuppressWarnings("unchecked")
+    java.util.concurrent.ExecutorService executor = mock(java.util.concurrent.ExecutorService.class);
+    CollectionDAO collectionDAO = mock(CollectionDAO.class);
+    CollectionDAO.ChangeEventDAO changeEventDAO = mock(CollectionDAO.ChangeEventDAO.class);
+    ChangeEvent changeEvent =
+        new ChangeEvent().withEntityType(Entity.USER).withEventType(EventType.ENTITY_CREATED);
+    EntityInterface[] eventEntity = new EntityInterface[1];
+
+    Mockito.when(asyncService.getExecutorService()).thenReturn(executor);
+    Mockito.when(collectionDAO.changeEventDAO()).thenReturn(changeEventDAO);
+    Mockito.when(executor.submit(Mockito.any(Runnable.class)))
+        .thenAnswer(
+            invocation -> {
+              ((Runnable) invocation.getArgument(0)).run();
+              return CompletableFuture.completedFuture(null);
+            });
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
+        MockedStatic<AsyncService> asyncServiceStatic = Mockito.mockStatic(AsyncService.class);
+        MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class);
+        MockedStatic<FormatterUtil> formatterUtil = Mockito.mockStatic(FormatterUtil.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(repository);
+      entity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
+      asyncServiceStatic.when(AsyncService::getInstance).thenReturn(asyncService);
+      validatorUtil.when(() -> ValidatorUtil.validate(user)).thenReturn(null);
+      validatorUtil.when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(record)).thenReturn("");
+      formatterUtil
+          .when(
+              () ->
+                  FormatterUtil.createChangeEventForEntity(
+                      Mockito.eq("admin"),
+                      Mockito.eq(EventType.ENTITY_CREATED),
+                      Mockito.any(EntityInterface.class)))
+          .thenAnswer(
+              invocation -> {
+                eventEntity[0] = invocation.getArgument(2);
+                changeEvent.setEntity(eventEntity[0]);
+                return changeEvent;
+              });
+      Mockito.when(repository.isUpdateForImport(user)).thenReturn(false);
+      Mockito.when(repository.createOrUpdate(null, user, "admin"))
+          .thenReturn(new PutResponse<>(Response.Status.CREATED, user, EventType.ENTITY_CREATED));
+
+      userCsv.createUserEntity(mock(CSVPrinter.class), record, user);
+
+      User redactedUser = assertInstanceOf(User.class, eventEntity[0]);
+      assertNull(redactedUser.getAuthenticationMechanism());
+      assertEquals(List.of(user), userCsv.pendingSearchIndexUpdates);
+      Mockito.verify(changeEventDAO).insert(Mockito.anyString());
+      assertEquals(1, userCsv.importResult.getNumberOfRowsPassed());
+    }
+  }
+
+  @Test
+  void test_createUserEntityValidationFailureRecordsImportError() throws Exception {
+    UserCsv userCsv = new UserCsv();
+    userCsv.enableProcessing();
+    userCsv.setDryRun(true);
+
+    User invalidUser = user("dave");
+    CSVRecord record = userRecord(userCsv, "dave", "", "", "wrong@example.com");
+    UserRepository repository = mock(UserRepository.class);
+
+    try (MockedStatic<Entity> entity = Mockito.mockStatic(Entity.class);
+        MockedStatic<ValidatorUtil> validatorUtil = Mockito.mockStatic(ValidatorUtil.class)) {
+      entity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(repository);
+      validatorUtil.when(() -> ValidatorUtil.validate(invalidUser)).thenReturn("[displayName must not be null]");
+      validatorUtil
+          .when(() -> ValidatorUtil.validateUserNameWithEmailPrefix(record))
+          .thenReturn(ValidatorUtil.NAME_EMAIL_VOILATION);
+
+      userCsv.createUserEntity(mock(CSVPrinter.class), record, invalidUser);
+
+      assertEquals(1, userCsv.importResult.getNumberOfRowsFailed());
+      assertEquals(0, userCsv.importResult.getNumberOfRowsPassed());
+    }
+  }
+
   private static class TestCsv extends EntityCsv<EntityInterface> {
     private final Map<String, EntityInterface> entitiesByTypeAndName = new HashMap<>();
 
@@ -1625,6 +1850,34 @@ public class EntityCsvTest {
     }
   }
 
+  private static class UserCsv extends EntityCsv<User> {
+    protected UserCsv() {
+      super(
+          Entity.USER,
+          List.of(new CsvHeader().withName("name").withRequired(true)),
+          "admin");
+    }
+
+    private void enableProcessing() {
+      this.processRecord = true;
+      this.recordIndex = 0;
+    }
+
+    private void setDryRun(boolean dryRun) {
+      importResult.withDryRun(dryRun);
+    }
+
+    @Override
+    protected void createEntity(CSVPrinter resultsPrinter, List<CSVRecord> records) {
+      throw new UnsupportedOperationException("Not used in UserCsv tests");
+    }
+
+    @Override
+    protected void addRecord(CsvFile csvFile, User entity) {
+      addRecord(csvFile, List.of(entity.getName(), entity.getEmail()));
+    }
+  }
+
   private static CSVRecord singleRecord(
       TestCsv testCsv, String first, String second, String third) {
     List<String> records = new ArrayList<>();
@@ -1686,6 +1939,23 @@ public class EntityCsvTest {
     fields.set(18, code);
     fields.set(19, language);
     return testCsv.parse(recordToString(fields)).get(0);
+  }
+
+  private static CSVRecord userRecord(
+      UserCsv userCsv,
+      String name,
+      String displayName,
+      String description,
+      String email) {
+    List<String> fields = new ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      fields.add("");
+    }
+    fields.set(0, name);
+    fields.set(1, displayName);
+    fields.set(2, description);
+    fields.set(3, email);
+    return userCsv.parse(recordToString(fields)).get(0);
   }
 
   private static User user(String name) {
