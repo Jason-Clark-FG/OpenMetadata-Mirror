@@ -138,7 +138,7 @@ export const getServiceSearchIndexMappings = (
   (
     Object.entries(SERVICE_SEARCH_INDEX_MAP) as [
       ServiceSearchIndexKey,
-      string,
+      string
     ][]
   ).map(([settingOption, expectedIndex]) => ({
     settingOption,
