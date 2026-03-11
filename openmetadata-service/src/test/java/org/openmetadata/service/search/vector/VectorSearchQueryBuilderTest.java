@@ -196,23 +196,16 @@ class VectorSearchQueryBuilderTest {
     // Should have 2 filters: deleted=false + tags
     assertEquals(2, mustFilters.size());
 
-    // Second filter should be nested tags query
+    // Second filter should be a flat terms query over tag FQNs
     JsonNode tagsFilter = mustFilters.get(1);
-    assertTrue(tagsFilter.has("nested"));
+    assertTrue(tagsFilter.has("terms"));
 
-    JsonNode nested = tagsFilter.get("nested");
-    assertEquals("tags", nested.get("path").asText());
-
-    // Multiple tags use bool.should with term queries
-    JsonNode boolQuery = nested.get("query").get("bool");
-    assertNotNull(boolQuery);
-
-    JsonNode shouldClauses = boolQuery.get("should");
-    assertNotNull(shouldClauses);
-    assertEquals(2, shouldClauses.size());
+    JsonNode tagValues = tagsFilter.get("terms").get("tags.tagFQN");
+    assertNotNull(tagValues);
+    assertEquals(2, tagValues.size());
 
     // Verify both tag values are present
-    String tagsJson = shouldClauses.toString();
+    String tagsJson = tagValues.toString();
     assertTrue(tagsJson.contains("PII.Sensitive"));
     assertTrue(tagsJson.contains("Classification.Public"));
   }
