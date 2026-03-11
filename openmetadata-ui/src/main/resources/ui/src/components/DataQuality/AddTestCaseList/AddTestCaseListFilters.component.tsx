@@ -14,6 +14,7 @@
 import { Space } from 'antd';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { TestCaseType } from '../../../enums/TestSuite.enum';
 import SearchDropdown from '../../SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
 import {
@@ -39,6 +40,13 @@ const AddTestCaseListFilters = ({
     [onChange]
   );
 
+  const handleSearch = useCallback(
+    (searchText: string, searchKey: string) => {
+      onSearch(searchText, searchKey as TestCaseType);
+    },
+    [onSearch]
+  );
+
   return (
     <Space className="tw-flex-wrap" size="middle">
       {ADD_TEST_CASE_LIST_FILTERS.map((filter) => (
@@ -55,7 +63,7 @@ const AddTestCaseListFilters = ({
           showSelectedCounts={filter.showSelectedCounts}
           singleSelect={filter.singleSelect}
           onChange={handleChange}
-          onSearch={onSearch}
+          onSearch={handleSearch}
         />
       ))}
     </Space>

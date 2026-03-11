@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { TestCaseType } from '../../../enums/TestSuite.enum';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
 import { AddTestCaseListFilterKey } from './AddTestCaseListFilters.constants';
 
@@ -22,5 +23,5 @@ export interface AddTestCaseListFiltersProps {
     values: SearchDropdownOption[],
     searchKey: AddTestCaseListFilterKey
   ) => void;
-  onSearch: (searchText: string, searchKey: string) => void;
+  onSearch: (searchText: string, searchKey: TestCaseType) => void;
 }

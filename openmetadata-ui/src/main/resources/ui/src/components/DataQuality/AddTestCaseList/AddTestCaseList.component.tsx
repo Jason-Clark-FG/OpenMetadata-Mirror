@@ -401,10 +401,10 @@ export const AddTestCaseList = ({
   }, [fetchColumnOptions]);
 
   const handleFilterSearch = useCallback(
-    (searchText: string, searchKey: string) => {
-      if (searchKey === 'table') {
+    (searchText: string, searchKey: TestCaseType) => {
+      if (searchKey === TestCaseType.table) {
         debounceFetchTableData(searchText);
-      } else if (searchKey === 'column') {
+      } else if (searchKey === TestCaseType.column) {
         debounceFetchColumnData(searchText);
       }
     },
