@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { ServiceCategory } from '../enums/service.enum';
 import { SearchIndex } from '../enums/search.enum';
+import { ServiceCategory } from '../enums/service.enum';
 import {
   getActiveFieldNameForAppDocs,
   getSearchIndexFromService,
