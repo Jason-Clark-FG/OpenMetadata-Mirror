@@ -1536,7 +1536,7 @@ export enum ToolCategory {
 export enum TransportType {
     SSE = "SSE",
     Stdio = "Stdio",
-    Streamable = "Streamable",
+    StreamableHTTP = "StreamableHTTP",
 }
 
 /**
