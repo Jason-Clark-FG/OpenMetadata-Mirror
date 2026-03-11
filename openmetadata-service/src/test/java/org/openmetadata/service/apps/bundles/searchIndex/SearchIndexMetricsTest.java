@@ -66,8 +66,7 @@ class SearchIndexMetricsTest {
       assertEquals(1.0, registry.get("search_index_orphaned_count").gauge().value(), 0.0001);
       assertEquals(45.0, registry.get("search_index_shard_current").gauge().value(), 0.0001);
       assertEquals(100.0, registry.get("search_index_shard_max").gauge().value(), 0.0001);
-      assertEquals(
-          45.0, registry.get("search_index_shard_usage_percent").gauge().value(), 0.0001);
+      assertEquals(45.0, registry.get("search_index_shard_usage_percent").gauge().value(), 0.0001);
       assertEquals(1.0, registry.get("search_index_missing_count").gauge().value(), 0.0001);
       assertEquals(2.0, registry.get("search_index_expected_count").gauge().value(), 0.0001);
     }

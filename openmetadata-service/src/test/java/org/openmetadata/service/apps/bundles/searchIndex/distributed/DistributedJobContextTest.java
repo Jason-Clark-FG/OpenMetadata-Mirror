@@ -12,15 +12,15 @@ class DistributedJobContextTest {
   @Test
   void distributedContextExposesJobMetadataAndCustomSource() {
     UUID jobId = UUID.randomUUID();
-    SearchIndexJob job =
-        SearchIndexJob.builder().id(jobId).createdAt(100L).startedAt(200L).build();
+    SearchIndexJob job = SearchIndexJob.builder().id(jobId).createdAt(100L).startedAt(200L).build();
 
     DistributedJobContext context = new DistributedJobContext(job, "REDIS");
     context.setDistributedMetadata("participants", 3);
     context.setDistributedMetadata("ignored", null);
 
     assertEquals(jobId, context.getJobId());
-    assertEquals("DistributedSearchIndex-" + jobId.toString().substring(0, 8), context.getJobName());
+    assertEquals(
+        "DistributedSearchIndex-" + jobId.toString().substring(0, 8), context.getJobName());
     assertEquals(200L, context.getStartTime());
     assertEquals(jobId, context.getAppId());
     assertTrue(context.isDistributed());

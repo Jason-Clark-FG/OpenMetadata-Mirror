@@ -1,7 +1,6 @@
 package org.openmetadata.service.apps.bundles.searchIndex;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
@@ -50,11 +49,13 @@ class ReindexingJobLoggerTest {
     ReindexingJobLogger logger = new ReindexingJobLogger(job(Set.of("table")), false);
 
     Stats stats = new Stats();
-    stats.setJobStats(new StepStats().withTotalRecords(10).withSuccessRecords(5).withFailedRecords(1));
+    stats.setJobStats(
+        new StepStats().withTotalRecords(10).withSuccessRecords(5).withFailedRecords(1));
     stats.setEntityStats(
         new org.openmetadata.schema.system.EntityStats()
             .withAdditionalProperty(
-                "table", new StepStats().withTotalRecords(10).withSuccessRecords(5).withFailedRecords(1)));
+                "table",
+                new StepStats().withTotalRecords(10).withSuccessRecords(5).withFailedRecords(1)));
 
     logger.markEntityStarted("table");
     logger.logProgress(stats);
@@ -82,7 +83,8 @@ class ReindexingJobLoggerTest {
     assertEquals(0L, ((AtomicLong) getField(logger, "lastProcessedCount")).get());
 
     setField(logger, "lastProgressLog", System.currentTimeMillis());
-    logger.logProgress(new Stats().withJobStats(new StepStats().withTotalRecords(9).withSuccessRecords(9)));
+    logger.logProgress(
+        new Stats().withJobStats(new StepStats().withTotalRecords(9).withSuccessRecords(9)));
 
     assertEquals(0L, ((AtomicLong) getField(logger, "lastProcessedCount")).get());
   }
@@ -91,18 +93,22 @@ class ReindexingJobLoggerTest {
   void formattingHelpersCoverSecondsMinutesAndHours() throws Exception {
     ReindexingJobLogger logger = new ReindexingJobLogger(job(Set.of("table")), false);
 
-    assertEquals("12,345", invokePrivate(logger, "formatNumber", new Class<?>[] {long.class}, 12_345L));
+    assertEquals(
+        "12,345", invokePrivate(logger, "formatNumber", new Class<?>[] {long.class}, 12_345L));
     assertEquals(
         "37.5%", invokePrivate(logger, "formatPercentage", new Class<?>[] {double.class}, 37.5d));
     assertEquals(
         "45s",
-        invokePrivate(logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofSeconds(45)));
+        invokePrivate(
+            logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofSeconds(45)));
     assertEquals(
         "2m 5s",
-        invokePrivate(logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofSeconds(125)));
+        invokePrivate(
+            logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofSeconds(125)));
     assertEquals(
         "1h 5m",
-        invokePrivate(logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofMinutes(65)));
+        invokePrivate(
+            logger, "formatDuration", new Class<?>[] {Duration.class}, Duration.ofMinutes(65)));
 
     logger.logError("testing", new IllegalStateException("boom"));
     logger.logWarning("warning {}", "value");
@@ -130,7 +136,8 @@ class ReindexingJobLoggerTest {
     return field.get(target);
   }
 
-  private Object invokePrivate(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+  private Object invokePrivate(
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
     Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);

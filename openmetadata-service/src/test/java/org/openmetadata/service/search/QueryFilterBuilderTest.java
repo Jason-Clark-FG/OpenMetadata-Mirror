@@ -33,8 +33,7 @@ class QueryFilterBuilderTest {
         filter.at("/query/bool/must/0/bool/should/1/prefix/domains.fullyQualifiedName").asText());
     assertFalse(filter.at("/query/bool/must/1/term/deleted").asBoolean());
     assertEquals(Entity.TABLE, filter.at("/query/bool/must/2/term/entityType").asText());
-    assertEquals(
-        Entity.DATA_PRODUCT, filter.at("/query/bool/must_not/0/term/entityType").asText());
+    assertEquals(Entity.DATA_PRODUCT, filter.at("/query/bool/must_not/0/term/entityType").asText());
   }
 
   @Test
@@ -42,9 +41,9 @@ class QueryFilterBuilderTest {
     JsonNode filter =
         parse(QueryFilterBuilder.buildDomainAssetsCountFilter("domains.fullyQualifiedName"));
 
-    assertEquals("domains.fullyQualifiedName", filter.at("/query/bool/must/0/exists/field").asText());
     assertEquals(
-        Entity.DATA_PRODUCT, filter.at("/query/bool/must_not/0/term/entityType").asText());
+        "domains.fullyQualifiedName", filter.at("/query/bool/must/0/exists/field").asText());
+    assertEquals(Entity.DATA_PRODUCT, filter.at("/query/bool/must_not/0/term/entityType").asText());
   }
 
   @Test

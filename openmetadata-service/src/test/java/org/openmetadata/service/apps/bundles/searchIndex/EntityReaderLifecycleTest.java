@@ -55,11 +55,7 @@ class EntityReaderLifecycleTest {
 
     int submitted =
         reader.readEntity(
-            "table",
-            0,
-            50,
-            phaser,
-            (entityType, batch, offset) -> fail("callback should not run"));
+            "table", 0, 50, phaser, (entityType, batch, offset) -> fail("callback should not run"));
 
     assertEquals(0, submitted);
     assertEquals(1, phaser.getRegisteredParties());
@@ -75,15 +71,12 @@ class EntityReaderLifecycleTest {
     try (MockedConstruction<PaginatedEntitiesSource> construction =
         mockConstruction(
             PaginatedEntitiesSource.class,
-            (mock, context) -> when(mock.readNextKeyset(isNull())).thenReturn((ResultList) batch))) {
+            (mock, context) ->
+                when(mock.readNextKeyset(isNull())).thenReturn((ResultList) batch))) {
 
       int submitted =
           reader.readEntity(
-              "table",
-              2,
-              10,
-              phaser,
-              (entityType, result, offset) -> offsets.add(offset));
+              "table", 2, 10, phaser, (entityType, result, offset) -> offsets.add(offset));
 
       assertEquals(1, submitted);
       assertEquals(List.of(0), offsets);
@@ -146,7 +139,8 @@ class EntityReaderLifecycleTest {
               if (constructionCount.getAndIncrement() == 0) {
                 when(mock.findBoundaryCursors(anyInt(), anyInt())).thenReturn(List.of());
               } else {
-                when(mock.readNextKeyset(any())).thenReturn((ResultList) mockResult(List.of(), null, 0));
+                when(mock.readNextKeyset(any()))
+                    .thenReturn((ResultList) mockResult(List.of(), null, 0));
               }
             })) {
 
@@ -168,7 +162,8 @@ class EntityReaderLifecycleTest {
   @Test
   void readEntityRestoresPhaserStateWhenSubmissionFails() {
     Phaser phaser = new Phaser(1);
-    when(producerExecutor.submit(any(Runnable.class))).thenThrow(new IllegalStateException("submit failed"));
+    when(producerExecutor.submit(any(Runnable.class)))
+        .thenThrow(new IllegalStateException("submit failed"));
 
     IllegalStateException exception =
         assertThrows(
@@ -216,7 +211,9 @@ class EntityReaderLifecycleTest {
 
   @Test
   void helperMethodsRespectTimeSeriesAndMinimumReaderRules() {
-    assertEquals(List.of(), EntityReader.getSearchIndexFields(ReportData.ReportDataType.ENTITY_REPORT_DATA.value()));
+    assertEquals(
+        List.of(),
+        EntityReader.getSearchIndexFields(ReportData.ReportDataType.ENTITY_REPORT_DATA.value()));
     assertEquals(List.of("*"), EntityReader.getSearchIndexFields("table"));
     assertEquals(1, EntityReader.calculateNumberOfReaders(10, 0));
     assertEquals(3, EntityReader.calculateNumberOfReaders(11, 5));

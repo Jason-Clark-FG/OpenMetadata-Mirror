@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,14 +63,14 @@ class SearchIndexAppTest {
     app.validateConfig(Map.of("entities", Set.of("table"), "batchSize", 100));
 
     AppException exception =
-        assertThrows(AppException.class, () -> app.validateConfig(Map.of("batchSize", Map.of("bad", true))));
+        assertThrows(
+            AppException.class, () -> app.validateConfig(Map.of("batchSize", Map.of("bad", true))));
     assertNotNull(exception.getMessage());
   }
 
   @Test
   void reindexingExceptionConstructorsPreserveMessageAndCause() {
-    SearchIndexApp.ReindexingException simple =
-        new SearchIndexApp.ReindexingException("message");
+    SearchIndexApp.ReindexingException simple = new SearchIndexApp.ReindexingException("message");
     RuntimeException cause = new RuntimeException("boom");
     SearchIndexApp.ReindexingException wrapped =
         new SearchIndexApp.ReindexingException("wrapped", cause);

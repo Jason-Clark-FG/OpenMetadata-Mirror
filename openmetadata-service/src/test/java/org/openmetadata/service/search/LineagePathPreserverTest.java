@@ -2,7 +2,6 @@ package org.openmetadata.service.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +30,8 @@ class LineagePathPreserverTest {
         LineagePathPreserver.preservePathsWithEdges(result, ROOT, Set.of(LEAF));
 
     assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), preserved.getNodes().keySet());
-    assertEquals(Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), preserved.getUpstreamEdges().keySet());
+    assertEquals(
+        Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), preserved.getUpstreamEdges().keySet());
   }
 
   @Test
@@ -42,7 +42,8 @@ class LineagePathPreserverTest {
         LineagePathPreserver.filterByColumns(result, "toColumn:ssn", ROOT);
 
     assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), filtered.getNodes().keySet());
-    assertEquals(Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), filtered.getUpstreamEdges().keySet());
+    assertEquals(
+        Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), filtered.getUpstreamEdges().keySet());
   }
 
   @Test
@@ -57,17 +58,15 @@ class LineagePathPreserverTest {
                 LEAF,
                 "columns",
                 List.of(
-                    Map.of(
-                        "name",
-                        "ssn",
-                        "tags",
-                        List.of(Map.of("tagFQN", "PII.Sensitive"))))));
+                    Map.of("name", "ssn", "tags", List.of(Map.of("tagFQN", "PII.Sensitive"))))));
 
     SearchLineageResult filtered =
-        LineagePathPreserver.filterByColumnsWithMetadata(result, "tag:Sensitive", ROOT, metadataCache);
+        LineagePathPreserver.filterByColumnsWithMetadata(
+            result, "tag:Sensitive", ROOT, metadataCache);
 
     assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), filtered.getNodes().keySet());
-    assertEquals(Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), filtered.getUpstreamEdges().keySet());
+    assertEquals(
+        Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), filtered.getUpstreamEdges().keySet());
   }
 
   @Test
@@ -88,7 +87,8 @@ class LineagePathPreserverTest {
             "mid2-leaf", edge(MID_TWO, LEAF, leafColumn())));
 
     SearchLineageResult preserved =
-        LineagePathPreserver.preservePaths(filteredResult, ROOT, lineageResultWithChain().getNodes());
+        LineagePathPreserver.preservePaths(
+            filteredResult, ROOT, lineageResultWithChain().getNodes());
 
     assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), preserved.getNodes().keySet());
   }
@@ -107,7 +107,8 @@ class LineagePathPreserverTest {
         LineagePathPreserver.preservePathsWithEdges(result, ROOT, Set.of(LEAF));
 
     assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), preserved.getNodes().keySet());
-    assertEquals(Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), preserved.getDownstreamEdges().keySet());
+    assertEquals(
+        Set.of("root-mid1", "mid1-mid2", "mid2-leaf"), preserved.getDownstreamEdges().keySet());
   }
 
   @Test
@@ -115,7 +116,9 @@ class LineagePathPreserverTest {
     SearchLineageResult result = lineageResultWithChain();
 
     assertSame(
-        result, LineagePathPreserver.filterByColumnsWithMetadata(result, " ", ROOT, new ColumnMetadataCache()));
+        result,
+        LineagePathPreserver.filterByColumnsWithMetadata(
+            result, " ", ROOT, new ColumnMetadataCache()));
   }
 
   private SearchLineageResult lineageResultWithChain() {
@@ -143,7 +146,8 @@ class LineagePathPreserverTest {
 
   private EsLineageData edge(String fromFqn, String toFqn, ColumnLineage columnLineage) {
     EsLineageData edge = new EsLineageData();
-    edge.setFromEntity(new RelationshipRef().withId(UUID.randomUUID()).withFullyQualifiedName(fromFqn));
+    edge.setFromEntity(
+        new RelationshipRef().withId(UUID.randomUUID()).withFullyQualifiedName(fromFqn));
     edge.setToEntity(new RelationshipRef().withId(UUID.randomUUID()).withFullyQualifiedName(toFqn));
     if (columnLineage != null) {
       edge.setColumns(List.of(columnLineage));
@@ -152,6 +156,8 @@ class LineagePathPreserverTest {
   }
 
   private ColumnLineage leafColumn() {
-    return new ColumnLineage().withFromColumns(List.of(MID_TWO + ".source_ssn")).withToColumn(LEAF + ".ssn");
+    return new ColumnLineage()
+        .withFromColumns(List.of(MID_TWO + ".source_ssn"))
+        .withToColumn(LEAF + ".ssn");
   }
 }

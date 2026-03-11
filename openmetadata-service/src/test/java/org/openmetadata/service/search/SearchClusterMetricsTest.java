@@ -1,7 +1,7 @@
 package org.openmetadata.service.search;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -240,10 +240,8 @@ public class SearchClusterMetricsTest {
             "transient", Map.of("http.compression", false),
             "persistent", Map.of("http.compression", true),
             "defaults", Map.of("http.compression", true));
-    Map<String, Object> persistentFallback =
-        Map.of("persistent", Map.of("http.compression", true));
-    Map<String, Object> defaultFallback =
-        Map.of("defaults", Map.of("http.compression", true));
+    Map<String, Object> persistentFallback = Map.of("persistent", Map.of("http.compression", true));
+    Map<String, Object> defaultFallback = Map.of("defaults", Map.of("http.compression", true));
 
     assertFalse(SearchClusterMetrics.isCompressionEnabled(transientFirst));
     assertTrue(SearchClusterMetrics.isCompressionEnabled(persistentFallback));
@@ -272,12 +270,8 @@ public class SearchClusterMetricsTest {
     assertEquals(3L * 1024 * 1024, invokeParseByteSize("3mb"));
     assertEquals(4L * 1024 * 1024 * 1024, invokeParseByteSize("4gb"));
     assertEquals(128L, invokeParseByteSize("128"));
-    assertEquals(
-        SearchClusterMetrics.DEFAULT_MAX_CONTENT_LENGTH,
-        invokeParseByteSize(" "));
-    assertEquals(
-        SearchClusterMetrics.DEFAULT_MAX_CONTENT_LENGTH,
-        invokeParseByteSize("bad-input"));
+    assertEquals(SearchClusterMetrics.DEFAULT_MAX_CONTENT_LENGTH, invokeParseByteSize(" "));
+    assertEquals(SearchClusterMetrics.DEFAULT_MAX_CONTENT_LENGTH, invokeParseByteSize("bad-input"));
   }
 
   @Test
@@ -365,8 +359,8 @@ public class SearchClusterMetricsTest {
     return clusterStats;
   }
 
-  private es.co.elastic.clients.elasticsearch.cluster.ClusterStatsResponse createMockElasticClusterStats(
-      int totalNodes, Integer totalShards) {
+  private es.co.elastic.clients.elasticsearch.cluster.ClusterStatsResponse
+      createMockElasticClusterStats(int totalNodes, Integer totalShards) {
     es.co.elastic.clients.elasticsearch.cluster.ClusterStatsResponse clusterStats =
         mock(es.co.elastic.clients.elasticsearch.cluster.ClusterStatsResponse.class);
     es.co.elastic.clients.elasticsearch.cluster.stats.ClusterNodes nodes =

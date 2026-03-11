@@ -50,8 +50,8 @@ import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.DriveService;
 import org.openmetadata.schema.entity.services.LLMService;
-import org.openmetadata.schema.entity.services.MetadataService;
 import org.openmetadata.schema.entity.services.MessagingService;
+import org.openmetadata.schema.entity.services.MetadataService;
 import org.openmetadata.schema.entity.services.MlModelService;
 import org.openmetadata.schema.entity.services.PipelineService;
 import org.openmetadata.schema.entity.services.SearchService;
@@ -207,10 +207,9 @@ class SearchIndexFactoryTest {
             (Supplier<Object>) DashboardDataModel::new,
             DashboardDataModelIndex.class),
         Arguments.of(
-            Entity.API_COLLECTION,
-            (Supplier<Object>) APICollection::new,
-            APICollectionIndex.class),
-        Arguments.of(Entity.API_ENDPOINT, (Supplier<Object>) APIEndpoint::new, APIEndpointIndex.class),
+            Entity.API_COLLECTION, (Supplier<Object>) APICollection::new, APICollectionIndex.class),
+        Arguments.of(
+            Entity.API_ENDPOINT, (Supplier<Object>) APIEndpoint::new, APIEndpointIndex.class),
         Arguments.of(
             Entity.DASHBOARD_SERVICE,
             (Supplier<Object>) DashboardService::new,
@@ -229,9 +228,7 @@ class SearchIndexFactoryTest {
             MlModelServiceIndex.class),
         Arguments.of(Entity.LLM_SERVICE, (Supplier<Object>) LLMService::new, LlmServiceIndex.class),
         Arguments.of(
-            Entity.SEARCH_SERVICE,
-            (Supplier<Object>) SearchService::new,
-            SearchServiceIndex.class),
+            Entity.SEARCH_SERVICE, (Supplier<Object>) SearchService::new, SearchServiceIndex.class),
         Arguments.of(
             Entity.SECURITY_SERVICE,
             (Supplier<Object>) SecurityService::new,
@@ -298,7 +295,9 @@ class SearchIndexFactoryTest {
         Arguments.of(
             Entity.PIPELINE_EXECUTION,
             (Supplier<Object>)
-                () -> new PipelineExecutionIndex.PipelineExecutionData(new Pipeline(), new PipelineStatus()),
+                () ->
+                    new PipelineExecutionIndex.PipelineExecutionData(
+                        new Pipeline(), new PipelineStatus()),
             PipelineExecutionIndex.class));
   }
 

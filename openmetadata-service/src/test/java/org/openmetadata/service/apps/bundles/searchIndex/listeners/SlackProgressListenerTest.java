@@ -1,7 +1,6 @@
 package org.openmetadata.service.apps.bundles.searchIndex.listeners;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -24,7 +23,8 @@ class SlackProgressListenerTest {
 
   @Test
   void jobConfiguredFormatsAllEntitiesAndPublishesConfiguration() throws Exception {
-    SlackProgressListener listener = new SlackProgressListener("token", "channel", "http://om.local");
+    SlackProgressListener listener =
+        new SlackProgressListener("token", "channel", "http://om.local");
     SlackWebApiClient slackClient = mock(SlackWebApiClient.class);
     setField(listener, "slackClient", slackClient);
     ReindexingConfiguration config =
@@ -60,7 +60,8 @@ class SlackProgressListenerTest {
 
   @Test
   void delegatesProgressCompletionAndErrorNotifications() throws Exception {
-    SlackProgressListener listener = new SlackProgressListener("token", "channel", "http://om.local");
+    SlackProgressListener listener =
+        new SlackProgressListener("token", "channel", "http://om.local");
     SlackWebApiClient slackClient = mock(SlackWebApiClient.class);
     setField(listener, "slackClient", slackClient);
 
@@ -75,14 +76,18 @@ class SlackProgressListenerTest {
             .payloadSize(2L * 1024 * 1024)
             .recreateIndex(true)
             .build();
-    Stats stats = new Stats().withJobStats(new StepStats().withTotalRecords(10).withSuccessRecords(8).withFailedRecords(2));
+    Stats stats =
+        new Stats()
+            .withJobStats(
+                new StepStats().withTotalRecords(10).withSuccessRecords(8).withFailedRecords(2));
 
     listener.onJobConfigured(mock(ReindexingJobContext.class), config);
     listener.onJobStarted(mock(ReindexingJobContext.class));
     listener.onIndexRecreationStarted(Set.of("table", "user"));
     listener.onEntityTypeStarted("table", 10);
     listener.onProgressUpdate(stats, mock(ReindexingJobContext.class));
-    listener.onEntityTypeCompleted("table", new StepStats().withSuccessRecords(8).withFailedRecords(2));
+    listener.onEntityTypeCompleted(
+        "table", new StepStats().withSuccessRecords(8).withFailedRecords(2));
     listener.onError(
         "table",
         new IndexingError().withMessage("sink").withErrorSource(IndexingError.ErrorSource.SINK),
@@ -104,11 +109,17 @@ class SlackProgressListenerTest {
 
   @Test
   void privateHelpersHandleNullEmptyAndExplicitEntitySets() throws Exception {
-    SlackProgressListener listener = new SlackProgressListener("token", "channel", "http://om.local");
+    SlackProgressListener listener =
+        new SlackProgressListener("token", "channel", "http://om.local");
 
-    assertEquals("None", invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, new Object[] {null}));
-    assertEquals("None", invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, Set.of()));
-    assertEquals("All", invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, Set.of("all")));
+    assertEquals(
+        "None",
+        invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, new Object[] {null}));
+    assertEquals(
+        "None", invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, Set.of()));
+    assertEquals(
+        "All",
+        invokePrivate(listener, "formatEntities", new Class<?>[] {Set.class}, Set.of("all")));
     assertEquals(
         "table, topic",
         invokePrivate(
@@ -124,7 +135,8 @@ class SlackProgressListenerTest {
     field.set(target, value);
   }
 
-  private String invokePrivate(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+  private String invokePrivate(
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
     Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);

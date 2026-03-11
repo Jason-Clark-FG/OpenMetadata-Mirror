@@ -59,8 +59,7 @@ class SearchIndexClusterValidatorTest {
     when(searchRepository.getSearchClient()).thenReturn(client);
     when(client.clusterStats().nodes().count().total()).thenReturn(2);
     when(client.clusterStats().indices().shards().total()).thenReturn(120.0);
-    when(client.clusterSettings().persistent().get("cluster.max_shards_per_node"))
-        .thenReturn(null);
+    when(client.clusterSettings().persistent().get("cluster.max_shards_per_node")).thenReturn(null);
     when(client.clusterSettings().defaults().get("cluster.max_shards_per_node"))
         .thenReturn(es.co.elastic.clients.json.JsonData.of(150));
 
@@ -185,7 +184,8 @@ class SearchIndexClusterValidatorTest {
     InsufficientClusterCapacityException exception =
         assertThrows(
             InsufficientClusterCapacityException.class,
-            () -> validator.validateCapacityForRecreate(searchRepository, java.util.Set.of("table")));
+            () ->
+                validator.validateCapacityForRecreate(searchRepository, java.util.Set.of("table")));
 
     assertEquals(0, exception.getRequestedShards());
     assertEquals(900, exception.getCurrentShards());

@@ -39,7 +39,8 @@ class RedisJobNotifierTest {
     CacheConfig config = cacheConfig("redis://cache:6380");
     RedisJobNotifier notifier = new RedisJobNotifier(config, "server-123");
     RedisClient redisClient = mock(RedisClient.class);
-    StatefulRedisPubSubConnection<String, String> subConnection = mock(StatefulRedisPubSubConnection.class);
+    StatefulRedisPubSubConnection<String, String> subConnection =
+        mock(StatefulRedisPubSubConnection.class);
     StatefulRedisConnection<String, String> pubConnection = mock(StatefulRedisConnection.class);
     RedisPubSubCommands<String, String> pubSubCommands = mock(RedisPubSubCommands.class);
     RedisCommands<String, String> redisCommands = mock(RedisCommands.class);
@@ -55,13 +56,15 @@ class RedisJobNotifierTest {
       notifier.start();
 
       assertTrue(notifier.isRunning());
-      verify(subConnection).addListener(org.mockito.ArgumentMatchers.<RedisPubSubListener<String, String>>any());
+      verify(subConnection)
+          .addListener(org.mockito.ArgumentMatchers.<RedisPubSubListener<String, String>>any());
       verify(pubSubCommands).subscribe("om:distributed-jobs:start", "om:distributed-jobs:complete");
 
       notifier.stop();
 
       assertFalse(notifier.isRunning());
-      verify(pubSubCommands).unsubscribe("om:distributed-jobs:start", "om:distributed-jobs:complete");
+      verify(pubSubCommands)
+          .unsubscribe("om:distributed-jobs:start", "om:distributed-jobs:complete");
       verify(subConnection).close();
       verify(pubConnection).close();
       verify(redisClient).shutdown();
@@ -73,7 +76,8 @@ class RedisJobNotifierTest {
     CacheConfig config = cacheConfig("redis://cache:6380");
     RedisJobNotifier notifier = new RedisJobNotifier(config, "server-123");
     RedisClient redisClient = mock(RedisClient.class);
-    StatefulRedisPubSubConnection<String, String> subConnection = mock(StatefulRedisPubSubConnection.class);
+    StatefulRedisPubSubConnection<String, String> subConnection =
+        mock(StatefulRedisPubSubConnection.class);
     StatefulRedisConnection<String, String> pubConnection = mock(StatefulRedisConnection.class);
     RedisPubSubCommands<String, String> pubSubCommands = mock(RedisPubSubCommands.class);
     when(redisClient.connectPubSub()).thenReturn(subConnection);
@@ -101,7 +105,8 @@ class RedisJobNotifierTest {
 
   @Test
   void startFailureResetsRunningState() {
-    RedisJobNotifier notifier = new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
+    RedisJobNotifier notifier =
+        new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
 
     try (MockedStatic<RedisClient> redisClientStatic = Mockito.mockStatic(RedisClient.class)) {
       redisClientStatic
@@ -115,7 +120,8 @@ class RedisJobNotifierTest {
 
   @Test
   void stopReturnsWhenNotifierWasNeverStarted() {
-    RedisJobNotifier notifier = new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
+    RedisJobNotifier notifier =
+        new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
 
     notifier.stop();
 
@@ -124,8 +130,10 @@ class RedisJobNotifierTest {
 
   @Test
   void stopSwallowsShutdownExceptions() throws Exception {
-    RedisJobNotifier notifier = new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
-    StatefulRedisPubSubConnection<String, String> subConnection = mock(StatefulRedisPubSubConnection.class);
+    RedisJobNotifier notifier =
+        new RedisJobNotifier(cacheConfig("redis://cache:6379"), "server-123");
+    StatefulRedisPubSubConnection<String, String> subConnection =
+        mock(StatefulRedisPubSubConnection.class);
     RedisPubSubCommands<String, String> pubSubCommands = mock(RedisPubSubCommands.class);
     when(subConnection.sync()).thenReturn(pubSubCommands);
     Mockito.doThrow(new IllegalStateException("unsubscribe failed"))
@@ -155,10 +163,8 @@ class RedisJobNotifierTest {
     notifier.notifyJobStarted(jobId, "SEARCH_INDEX");
     notifier.notifyJobCompleted(jobId);
 
-    verify(redisCommands)
-        .publish("om:distributed-jobs:start", jobId + "|SEARCH_INDEX|server-123");
-    verify(redisCommands)
-        .publish("om:distributed-jobs:complete", jobId + "|COMPLETED|server-123");
+    verify(redisCommands).publish("om:distributed-jobs:start", jobId + "|SEARCH_INDEX|server-123");
+    verify(redisCommands).publish("om:distributed-jobs:complete", jobId + "|COMPLETED|server-123");
 
     AtomicReference<UUID> callbackJob = new AtomicReference<>();
     notifier.onJobStarted(callbackJob::set);
@@ -167,8 +173,7 @@ class RedisJobNotifierTest {
     assertEquals(jobId, callbackJob.get());
 
     callbackJob.set(null);
-    invokeHandleMessage(
-        notifier, "om:distributed-jobs:start", jobId + "|SEARCH_INDEX|server-123");
+    invokeHandleMessage(notifier, "om:distributed-jobs:start", jobId + "|SEARCH_INDEX|server-123");
     assertNull(callbackJob.get());
 
     invokeHandleMessage(notifier, "om:distributed-jobs:start", "invalid");
@@ -226,13 +231,15 @@ class RedisJobNotifierTest {
 
     CacheConfig hostOnlyConfig = cacheConfig("redis-host");
     RedisURI hostOnlyUri =
-        (RedisURI) invokePrivate(new RedisJobNotifier(hostOnlyConfig, "server-123"), "buildRedisURI");
+        (RedisURI)
+            invokePrivate(new RedisJobNotifier(hostOnlyConfig, "server-123"), "buildRedisURI");
     assertEquals("redis-host", hostOnlyUri.getHost());
     assertEquals(6379, hostOnlyUri.getPort());
 
     CacheConfig hostPortConfig = cacheConfig("cache.example.com:6381");
     RedisURI hostPortUri =
-        (RedisURI) invokePrivate(new RedisJobNotifier(hostPortConfig, "server-123"), "buildRedisURI");
+        (RedisURI)
+            invokePrivate(new RedisJobNotifier(hostPortConfig, "server-123"), "buildRedisURI");
     assertEquals("cache.example.com", hostPortUri.getHost());
     assertEquals(6381, hostPortUri.getPort());
 
@@ -255,7 +262,8 @@ class RedisJobNotifierTest {
 
   private void invokeHandleMessage(RedisJobNotifier notifier, String channel, String message)
       throws Exception {
-    Method method = notifier.getClass().getDeclaredMethod("handleMessage", String.class, String.class);
+    Method method =
+        notifier.getClass().getDeclaredMethod("handleMessage", String.class, String.class);
     method.setAccessible(true);
     method.invoke(notifier, channel, message);
   }

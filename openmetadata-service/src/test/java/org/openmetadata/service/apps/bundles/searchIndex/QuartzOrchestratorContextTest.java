@@ -66,7 +66,8 @@ class QuartzOrchestratorContextTest {
 
     assertInstanceOf(
         QuartzProgressListener.class,
-        context.createProgressListener(new EventPublisherJob().withEntities(java.util.Set.of("table"))));
+        context.createProgressListener(
+            new EventPublisherJob().withEntities(java.util.Set.of("table"))));
     assertInstanceOf(QuartzJobContext.class, context.createReindexingContext(true));
   }
 
@@ -74,7 +75,10 @@ class QuartzOrchestratorContextTest {
   void orchestratorContextHandlesMissingApp() {
     QuartzOrchestratorContext context =
         new QuartzOrchestratorContext(
-            mock(JobExecutionContext.class), null, ctx -> new AppRunRecord(), (ctx, record, force) -> {});
+            mock(JobExecutionContext.class),
+            null,
+            ctx -> new AppRunRecord(),
+            (ctx, record, force) -> {});
 
     assertNull(context.getAppId());
     assertNull(context.getAppConfiguration());

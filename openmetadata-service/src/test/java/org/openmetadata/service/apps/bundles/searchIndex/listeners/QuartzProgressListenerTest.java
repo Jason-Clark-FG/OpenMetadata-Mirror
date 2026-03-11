@@ -11,12 +11,11 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.openmetadata.schema.entity.app.App;
@@ -67,7 +66,8 @@ class QuartzProgressListenerTest {
     AppRunRecord existingRecord = new AppRunRecord();
     existingRecord.setAppId(appId);
     existingRecord.setStartTime(123L);
-    existingRecord.setSuccessContext(new SuccessContext().withAdditionalProperty("existing", "yes"));
+    existingRecord.setSuccessContext(
+        new SuccessContext().withAdditionalProperty("existing", "yes"));
     Function<JobExecutionContext, AppRunRecord> provider = ctx -> existingRecord;
     QuartzOrchestratorContext.StatusPusher statusPusher =
         mock(QuartzOrchestratorContext.StatusPusher.class);
@@ -85,7 +85,8 @@ class QuartzProgressListenerTest {
 
     Stats stats =
         new Stats()
-            .withJobStats(new StepStats().withTotalRecords(10).withSuccessRecords(7).withFailedRecords(1));
+            .withJobStats(
+                new StepStats().withTotalRecords(10).withSuccessRecords(7).withFailedRecords(1));
     SearchIndexJob job =
         SearchIndexJob.builder().id(UUID.randomUUID()).createdAt(10L).startedAt(20L).build();
     DistributedJobContext distributedContext = new DistributedJobContext(job);
@@ -143,7 +144,8 @@ class QuartzProgressListenerTest {
 
     Stats stats =
         new Stats()
-            .withJobStats(new StepStats().withTotalRecords(5).withSuccessRecords(3).withFailedRecords(2));
+            .withJobStats(
+                new StepStats().withTotalRecords(5).withSuccessRecords(3).withFailedRecords(2));
     IndexingError error =
         new IndexingError()
             .withMessage("sink failed")
@@ -167,14 +169,16 @@ class QuartzProgressListenerTest {
 
     ArgumentCaptor<AppRunRecord> recordCaptor = ArgumentCaptor.forClass(AppRunRecord.class);
     verify(statusPusher, atLeastOnce()).push(eq(quartzContext), recordCaptor.capture(), eq(true));
-    AppRunRecord failureRecord = recordWithStatus(recordCaptor.getAllValues(), AppRunRecord.Status.FAILED);
+    AppRunRecord failureRecord =
+        recordWithStatus(recordCaptor.getAllValues(), AppRunRecord.Status.FAILED);
 
     assertEquals(appId, failureRecord.getAppId());
     assertEquals(456L, failureRecord.getStartTime());
     assertNotNull(failureRecord.getFailureContext());
     assertEquals("boom", failureRecord.getFailureContext().getFailure().getMessage());
     assertEquals(
-        IndexingError.ErrorSource.JOB, failureRecord.getFailureContext().getFailure().getErrorSource());
+        IndexingError.ErrorSource.JOB,
+        failureRecord.getFailureContext().getFailure().getErrorSource());
     assertEquals(EventPublisherJob.Status.STOPPED, listener.getJobData().getStatus());
   }
 
@@ -185,21 +189,48 @@ class QuartzProgressListenerTest {
 
     QuartzProgressListener listener =
         new QuartzProgressListener(
-            quartzContext, new EventPublisherJob(), null, ctx -> null, mock(QuartzOrchestratorContext.StatusPusher.class));
+            quartzContext,
+            new EventPublisherJob(),
+            null,
+            ctx -> null,
+            mock(QuartzOrchestratorContext.StatusPusher.class));
     Stats stats =
         new Stats()
-            .withJobStats(new StepStats().withTotalRecords(8).withSuccessRecords(6).withFailedRecords(2));
+            .withJobStats(
+                new StepStats().withTotalRecords(8).withSuccessRecords(6).withFailedRecords(2));
 
     listener.onIndexRecreationStarted(java.util.Set.of("table", "user"));
     listener.onEntityTypeStarted("table", 8);
-    listener.onEntityTypeCompleted("table", new StepStats().withSuccessRecords(6).withFailedRecords(2));
+    listener.onEntityTypeCompleted(
+        "table", new StepStats().withSuccessRecords(6).withFailedRecords(2));
     listener.onReaderFailure(
-        "table", "id-1", "missing", org.openmetadata.service.apps.bundles.searchIndex.ReindexingProgressListener.FailureType.ENTITY_NOT_FOUND);
+        "table",
+        "id-1",
+        "missing",
+        org.openmetadata
+            .service
+            .apps
+            .bundles
+            .searchIndex
+            .ReindexingProgressListener
+            .FailureType
+            .ENTITY_NOT_FOUND);
     listener.onReaderFailure(
-        "table", "id-2", "broken", org.openmetadata.service.apps.bundles.searchIndex.ReindexingProgressListener.FailureType.DB_ERROR);
+        "table",
+        "id-2",
+        "broken",
+        org.openmetadata
+            .service
+            .apps
+            .bundles
+            .searchIndex
+            .ReindexingProgressListener
+            .FailureType
+            .DB_ERROR);
     listener.onProcessFailure("table", "id-3", "process");
     listener.onSinkFailure("table", "id-4", "sink");
-    listener.onSubIndexingCompleted("table", "columns", new StepStats().withSuccessRecords(2).withFailedRecords(1));
+    listener.onSubIndexingCompleted(
+        "table", "columns", new StepStats().withSuccessRecords(2).withFailedRecords(1));
     listener.onJobCompleted(stats, 2_000L);
     listener.onJobCompletedWithErrors(stats, 2_000L);
 
@@ -220,7 +251,8 @@ class QuartzProgressListenerTest {
             null,
             ctx -> new AppRunRecord(),
             mock(QuartzOrchestratorContext.StatusPusher.class));
-    Stats initialStats = new Stats().withJobStats(new StepStats().withTotalRecords(3).withSuccessRecords(1));
+    Stats initialStats =
+        new Stats().withJobStats(new StepStats().withTotalRecords(3).withSuccessRecords(1));
     jobData.setStats(initialStats);
     getPendingErrors(listener).set(2);
     setField(listener, "lastWebSocketUpdate", System.currentTimeMillis());
@@ -278,7 +310,10 @@ class QuartzProgressListenerTest {
   }
 
   private AppRunRecord recordWithStatus(List<AppRunRecord> records, AppRunRecord.Status status) {
-    return records.stream().filter(record -> record.getStatus() == status).findFirst().orElseThrow();
+    return records.stream()
+        .filter(record -> record.getStatus() == status)
+        .findFirst()
+        .orElseThrow();
   }
 
   private JobDetail newJobDetail() {

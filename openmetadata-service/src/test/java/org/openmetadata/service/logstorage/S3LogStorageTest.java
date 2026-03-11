@@ -539,8 +539,7 @@ public class S3LogStorageTest {
     when(mockS3Client.getObject(any(GetObjectRequest.class)))
         .thenReturn(createResponseInputStream(logContent));
 
-    Map<String, Object> result =
-        s3LogStorage.getLogs(testPipelineFQN, testRunId, "bad-cursor", 2);
+    Map<String, Object> result = s3LogStorage.getLogs(testPipelineFQN, testRunId, "bad-cursor", 2);
 
     assertEquals("Line 1\nLine 2", result.get("logs"));
     assertEquals("2", result.get("after"));

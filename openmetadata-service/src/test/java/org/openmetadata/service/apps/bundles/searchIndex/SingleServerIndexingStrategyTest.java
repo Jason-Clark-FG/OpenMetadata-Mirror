@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,7 +63,8 @@ class SingleServerIndexingStrategyTest {
     try (MockedConstruction<SearchIndexExecutor> mocked =
         Mockito.mockConstruction(
             SearchIndexExecutor.class,
-            (executor, mockContext) -> when(executor.getStats()).thenReturn(new AtomicReference<>()))) {
+            (executor, mockContext) ->
+                when(executor.getStats()).thenReturn(new AtomicReference<>()))) {
       SingleServerIndexingStrategy strategy =
           new SingleServerIndexingStrategy(mock(CollectionDAO.class), mock(SearchRepository.class));
 

@@ -79,9 +79,12 @@ class JobStatsManagerTest {
     when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(statsDAO);
 
     CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats aggregated =
-        new CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+        new CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats(
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
     List<CollectionDAO.SearchIndexServerStatsDAO.EntityStats> entityStats =
-        List.of(new CollectionDAO.SearchIndexServerStatsDAO.EntityStats("table", 1, 2, 3, 4, 5, 6, 7, 8, 9));
+        List.of(
+            new CollectionDAO.SearchIndexServerStatsDAO.EntityStats(
+                "table", 1, 2, 3, 4, 5, 6, 7, 8, 9));
     when(statsDAO.getAggregatedStats("job")).thenReturn(aggregated);
     when(statsDAO.getStatsByEntityType("job")).thenReturn(entityStats);
 

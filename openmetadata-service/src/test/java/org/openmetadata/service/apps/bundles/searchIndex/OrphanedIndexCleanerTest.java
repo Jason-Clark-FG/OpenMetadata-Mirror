@@ -35,12 +35,14 @@ class OrphanedIndexCleanerTest {
     String brokenIndex = "pipeline_rebuild_" + oldTimestamp;
 
     when(searchClient.listIndicesByPrefix(""))
-        .thenReturn(Set.of(oldOrphan, oldAliased, recentOrphan, invalidTimestamp, brokenIndex, "table"));
+        .thenReturn(
+            Set.of(oldOrphan, oldAliased, recentOrphan, invalidTimestamp, brokenIndex, "table"));
     when(searchClient.getAliases(oldOrphan)).thenReturn(Set.of());
     when(searchClient.getAliases(oldAliased)).thenReturn(Set.of("user"));
     when(searchClient.getAliases(invalidTimestamp)).thenReturn(null);
     when(searchClient.getAliases(recentOrphan)).thenReturn(Set.of());
-    when(searchClient.getAliases(brokenIndex)).thenThrow(new RuntimeException("alias lookup failed"));
+    when(searchClient.getAliases(brokenIndex))
+        .thenThrow(new RuntimeException("alias lookup failed"));
 
     List<OrphanedIndexCleaner.OrphanedIndex> orphaned =
         cleaner.findOrphanedRebuildIndices(searchClient);
@@ -73,7 +75,8 @@ class OrphanedIndexCleanerTest {
 
   @Test
   void countMethodsReturnZeroWhenListingIndicesFails() {
-    when(searchClient.listIndicesByPrefix("")).thenThrow(new RuntimeException("search unavailable"));
+    when(searchClient.listIndicesByPrefix(""))
+        .thenThrow(new RuntimeException("search unavailable"));
 
     assertEquals(0, cleaner.countRebuildIndices(searchClient));
     assertEquals(0, cleaner.countOrphanedIndices(searchClient));

@@ -109,7 +109,8 @@ class DefaultRecreateHandlerTest {
     }
 
     @Test
-    @DisplayName("Should promote partial data and record success metrics when failed reindex has documents")
+    @DisplayName(
+        "Should promote partial data and record success metrics when failed reindex has documents")
     void testPromoteEntityIndexPromotesPartialData() {
       AliasState aliasState = new AliasState();
       aliasState.put("table_search_index", Set.of("table_search_index"));
@@ -411,13 +412,15 @@ class DefaultRecreateHandlerTest {
     @DisplayName("Should record promotion failure metrics when promotion throws")
     void testPromoteEntityIndexRecordsPromotionFailure() {
       SearchClient client = mock(SearchClient.class);
-      when(client.listIndicesByPrefix("table_search_index")).thenThrow(new IllegalStateException("boom"));
+      when(client.listIndicesByPrefix("table_search_index"))
+          .thenThrow(new IllegalStateException("boom"));
 
       SearchRepository repo = mock(SearchRepository.class);
       when(repo.getSearchClient()).thenReturn(client);
       when(repo.getClusterAlias()).thenReturn("");
       when(repo.getIndexMapping("table"))
-          .thenReturn(IndexMapping.builder().indexName("table_search_index").alias("table").build());
+          .thenReturn(
+              IndexMapping.builder().indexName("table_search_index").alias("table").build());
 
       ReindexingMetrics metrics = mock(ReindexingMetrics.class);
       try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
@@ -638,7 +641,8 @@ class DefaultRecreateHandlerTest {
     @DisplayName("Should record promotion failure when finalize promotion throws")
     void testFinalizeReindexRecordsPromotionFailureOnException() {
       SearchClient client = mock(SearchClient.class);
-      when(client.listIndicesByPrefix("table_search_index")).thenThrow(new IllegalStateException("boom"));
+      when(client.listIndicesByPrefix("table_search_index"))
+          .thenThrow(new IllegalStateException("boom"));
 
       SearchRepository repo = mock(SearchRepository.class);
       when(repo.getSearchClient()).thenReturn(client);
@@ -703,7 +707,8 @@ class DefaultRecreateHandlerTest {
       assertTrue(context.getExistingAliases("table").contains("table"));
       assertTrue(context.getExistingAliases("table").contains("table_search_index"));
       assertTrue(context.getParentAliases("table").contains("all"));
-      assertTrue(context.getStagedIndex("table").orElseThrow().startsWith("table_search_index_rebuild_"));
+      assertTrue(
+          context.getStagedIndex("table").orElseThrow().startsWith("table_search_index_rebuild_"));
     }
 
     @Test

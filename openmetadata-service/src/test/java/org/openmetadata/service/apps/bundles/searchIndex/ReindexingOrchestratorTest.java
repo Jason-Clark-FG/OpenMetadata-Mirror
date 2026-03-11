@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -179,7 +178,9 @@ class ReindexingOrchestratorTest {
   @Test
   void runMarksJobFailedAndCapturesStrategyStatsOnExecutionException() {
     EventPublisherJob jobData =
-        new EventPublisherJob().withEntities(Set.of(Entity.TABLE)).withUseDistributedIndexing(false);
+        new EventPublisherJob()
+            .withEntities(Set.of(Entity.TABLE))
+            .withUseDistributedIndexing(false);
     ReindexingProgressListener progressListener = mock(ReindexingProgressListener.class);
     ReindexingJobContext jobContext = mock(ReindexingJobContext.class);
     EntityRepository entityRepository = mock(EntityRepository.class);
@@ -212,7 +213,8 @@ class ReindexingOrchestratorTest {
 
       assertEquals(EventPublisherJob.Status.FAILED, orchestrator.getJobData().getStatus());
       assertSame(stats, orchestrator.getJobData().getStats());
-      assertEquals(IndexingError.ErrorSource.JOB, orchestrator.getJobData().getFailure().getErrorSource());
+      assertEquals(
+          IndexingError.ErrorSource.JOB, orchestrator.getJobData().getFailure().getErrorSource());
       assertEquals(
           "Reindexing Job Exception: boom", orchestrator.getJobData().getFailure().getMessage());
       assertNotNull(appRunRecord.getFailureContext());
@@ -245,10 +247,12 @@ class ReindexingOrchestratorTest {
     EventPublisherJob jobData = new EventPublisherJob().withEntities(Set.of("all", Entity.TABLE));
     EntityRepository entityRepository = mock(EntityRepository.class);
     EntityDAO entityDao = mock(EntityDAO.class);
-    String reportType = org.openmetadata.schema.analytics.ReportData.ReportDataType.ENTITY_REPORT_DATA.value();
+    String reportType =
+        org.openmetadata.schema.analytics.ReportData.ReportDataType.ENTITY_REPORT_DATA.value();
 
     when(searchRepository.getEntityIndexMap())
-        .thenReturn(Map.of(Entity.TABLE, mock(IndexMapping.class), reportType, mock(IndexMapping.class)));
+        .thenReturn(
+            Map.of(Entity.TABLE, mock(IndexMapping.class), reportType, mock(IndexMapping.class)));
     when(entityRepository.getDao()).thenReturn(entityDao);
     when(entityDao.listCount(any())).thenReturn(7);
 
@@ -336,8 +340,7 @@ class ReindexingOrchestratorTest {
     when(context.getAppConfigJson()).thenReturn(null);
     when(context.getAppConfiguration()).thenReturn(JsonUtils.convertValue(jobData, Map.class));
 
-    EventPublisherJob loaded =
-        (EventPublisherJob) invokePrivate("loadJobData", new Class<?>[0]);
+    EventPublisherJob loaded = (EventPublisherJob) invokePrivate("loadJobData", new Class<?>[0]);
 
     assertEquals(Set.of(Entity.TABLE), loaded.getEntities());
     assertEquals(11, loaded.getBatchSize());
@@ -346,8 +349,7 @@ class ReindexingOrchestratorTest {
 
     InvocationTargetException thrown =
         assertThrows(
-            InvocationTargetException.class,
-            () -> invokePrivate("loadJobData", new Class<?>[0]));
+            InvocationTargetException.class, () -> invokePrivate("loadJobData", new Class<?>[0]));
     assertTrue(thrown.getCause() instanceof SearchIndexApp.ReindexingException);
   }
 
@@ -368,13 +370,7 @@ class ReindexingOrchestratorTest {
     setField(
         "resultMetadata",
         new HashMap<>(
-            Map.of(
-                "distributedJobId",
-                "job-123",
-                "serverStats",
-                serverStats,
-                "serverCount",
-                1)));
+            Map.of("distributedJobId", "job-123", "serverStats", serverStats, "serverCount", 1)));
 
     try (MockedStatic<WebSocketManager> websocketMock = mockStatic(WebSocketManager.class)) {
       websocketMock.when(WebSocketManager::getInstance).thenReturn(webSocketManager);
@@ -382,11 +378,19 @@ class ReindexingOrchestratorTest {
       invokePrivate("updateRecordToDbAndNotify", new Class<?>[0]);
 
       assertEquals(AppRunRecord.Status.FAILED, appRunRecord.getStatus());
-      assertEquals("keep", appRunRecord.getSuccessContext().getAdditionalProperties().get("existing"));
-      assertSame(jobData.getStats(), appRunRecord.getSuccessContext().getAdditionalProperties().get("stats"));
-      assertEquals(4, appRunRecord.getSuccessContext().getAdditionalProperties().get("failureRecordCount"));
-      assertSame(serverStats, appRunRecord.getSuccessContext().getAdditionalProperties().get("serverStats"));
-      assertEquals("job-123", appRunRecord.getSuccessContext().getAdditionalProperties().get("distributedJobId"));
+      assertEquals(
+          "keep", appRunRecord.getSuccessContext().getAdditionalProperties().get("existing"));
+      assertSame(
+          jobData.getStats(),
+          appRunRecord.getSuccessContext().getAdditionalProperties().get("stats"));
+      assertEquals(
+          4, appRunRecord.getSuccessContext().getAdditionalProperties().get("failureRecordCount"));
+      assertSame(
+          serverStats,
+          appRunRecord.getSuccessContext().getAdditionalProperties().get("serverStats"));
+      assertEquals(
+          "job-123",
+          appRunRecord.getSuccessContext().getAdditionalProperties().get("distributedJobId"));
       assertNotNull(appRunRecord.getFailureContext());
       verify(webSocketManager).broadCastMessageToAll(anyString(), anyString());
     }
@@ -396,7 +400,9 @@ class ReindexingOrchestratorTest {
   void finalizeJobExecutionStoresStoppedRecordAndCleanupHelpersHandlePositiveResults()
       throws Exception {
     EventPublisherJob jobData =
-        new EventPublisherJob().withEntities(Set.of(Entity.TABLE)).withStatus(EventPublisherJob.Status.STOPPED);
+        new EventPublisherJob()
+            .withEntities(Set.of(Entity.TABLE))
+            .withStatus(EventPublisherJob.Status.STOPPED);
     setField("jobData", jobData);
     setField("stopped", true);
 
@@ -425,10 +431,10 @@ class ReindexingOrchestratorTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock.when(Entity::getSystemRepository).thenReturn(systemRepository);
-      when(systemRepository.getOMBaseUrlConfigInternal()).thenThrow(new RuntimeException("missing"));
+      when(systemRepository.getOMBaseUrlConfigInternal())
+          .thenThrow(new RuntimeException("missing"));
 
-      assertEquals(
-          "http://localhost:8585", invokePrivate("getInstanceUrl", new Class<?>[0]));
+      assertEquals("http://localhost:8585", invokePrivate("getInstanceUrl", new Class<?>[0]));
     }
   }
 
@@ -442,9 +448,12 @@ class ReindexingOrchestratorTest {
 
   private Stats createStats(int totalRecords) {
     Stats stats = new Stats();
-    stats.setJobStats(new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
-    stats.setReaderStats(new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
-    stats.setSinkStats(new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
+    stats.setJobStats(
+        new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
+    stats.setReaderStats(
+        new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
+    stats.setSinkStats(
+        new StepStats().withTotalRecords(totalRecords).withSuccessRecords(totalRecords));
     return stats;
   }
 

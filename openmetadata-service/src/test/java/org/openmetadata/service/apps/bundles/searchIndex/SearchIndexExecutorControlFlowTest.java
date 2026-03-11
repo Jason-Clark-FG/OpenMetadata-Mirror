@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -96,15 +95,11 @@ class SearchIndexExecutorControlFlowTest {
     assertTrue(
         (Boolean)
             invokePrivateMethod(
-                "isTransientReadError",
-                new Class<?>[] {SearchIndexException.class},
-                timeout));
+                "isTransientReadError", new Class<?>[] {SearchIndexException.class}, timeout));
     assertFalse(
         (Boolean)
             invokePrivateMethod(
-                "isTransientReadError",
-                new Class<?>[] {SearchIndexException.class},
-                nonTransient));
+                "isTransientReadError", new Class<?>[] {SearchIndexException.class}, nonTransient));
   }
 
   @Test
@@ -159,7 +154,8 @@ class SearchIndexExecutorControlFlowTest {
   @Test
   void syncSinkStatsFromBulkSinkCopiesSinkVectorAndProcessStats() throws Exception {
     BulkSink sink = mock(BulkSink.class);
-    StepStats sinkStats = new StepStats().withTotalRecords(20).withSuccessRecords(18).withFailedRecords(2);
+    StepStats sinkStats =
+        new StepStats().withTotalRecords(20).withSuccessRecords(18).withFailedRecords(2);
     StepStats vectorStats =
         new StepStats().withTotalRecords(10).withSuccessRecords(9).withFailedRecords(1);
     StepStats processStats =
@@ -185,10 +181,13 @@ class SearchIndexExecutorControlFlowTest {
   void closeSinkIfNeededFlushesVectorTasksAndClosesOnlyOnce() throws Exception {
     BulkSink sink = mock(BulkSink.class);
     when(sink.getPendingVectorTaskCount()).thenReturn(2);
-    when(sink.awaitVectorCompletionWithDetails(300)).thenReturn(VectorCompletionResult.success(150));
+    when(sink.awaitVectorCompletionWithDetails(300))
+        .thenReturn(VectorCompletionResult.success(150));
     when(sink.getStats()).thenReturn(new StepStats().withTotalRecords(5).withSuccessRecords(5));
-    when(sink.getVectorStats()).thenReturn(new StepStats().withTotalRecords(2).withSuccessRecords(2));
-    when(sink.getProcessStats()).thenReturn(new StepStats().withTotalRecords(5).withSuccessRecords(5));
+    when(sink.getVectorStats())
+        .thenReturn(new StepStats().withTotalRecords(2).withSuccessRecords(2));
+    when(sink.getProcessStats())
+        .thenReturn(new StepStats().withTotalRecords(5).withSuccessRecords(5));
 
     setField("searchIndexSink", sink);
     executor.getStats().set(initializeStats(Set.of("table")));
@@ -202,19 +201,12 @@ class SearchIndexExecutorControlFlowTest {
 
   @Test
   void adjustThreadsForLimitReducesRequestedCountsWhenTheyExceedGlobalCap() throws Exception {
-    setField(
-        "config",
-        ReindexingConfiguration.builder()
-            .entities(Set.of("table"))
-            .build());
+    setField("config", ReindexingConfiguration.builder().entities(Set.of("table")).build());
 
     SearchIndexExecutor.ThreadConfiguration configuration =
         (SearchIndexExecutor.ThreadConfiguration)
             invokePrivateMethod(
-                "adjustThreadsForLimit",
-                new Class<?>[] {int.class, int.class},
-                40,
-                40);
+                "adjustThreadsForLimit", new Class<?>[] {int.class, int.class}, 40, 40);
 
     assertTrue(configuration.numProducers() < 40);
     assertTrue(configuration.numConsumers() < 40);
@@ -224,7 +216,10 @@ class SearchIndexExecutorControlFlowTest {
   void initializeQueueAndExecutorsBuildsBoundedInfrastructure() throws Exception {
     setField(
         "config",
-        ReindexingConfiguration.builder().entities(Set.of("table", "dashboard")).queueSize(200).build());
+        ReindexingConfiguration.builder()
+            .entities(Set.of("table", "dashboard"))
+            .queueSize(200)
+            .build());
     setField("batchSize", new java.util.concurrent.atomic.AtomicReference<>(50));
 
     int effectiveQueueSize =
@@ -252,8 +247,7 @@ class SearchIndexExecutorControlFlowTest {
     executor.getStats().set(completed);
     setField("startTime", System.currentTimeMillis() - 5000L);
 
-    ExecutionResult success =
-        (ExecutionResult) invokePrivateMethod("buildResult", new Class<?>[0]);
+    ExecutionResult success = (ExecutionResult) invokePrivateMethod("buildResult", new Class<?>[0]);
     assertEquals(ExecutionResult.Status.COMPLETED, success.status());
 
     Stats withErrors = initializeStats(Set.of("table"));

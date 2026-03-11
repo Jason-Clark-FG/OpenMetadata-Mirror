@@ -1,7 +1,6 @@
 package org.openmetadata.service.apps.bundles.searchIndex;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -69,8 +68,11 @@ class SlackWebApiClientTest {
     ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
     verifyHttpSend(requestCaptor);
     Map<String, String> formData = readFormData(requestCaptor.getValue());
-    assertEquals("https://slack.com/api/chat.postMessage", requestCaptor.getValue().uri().toString());
-    assertEquals("Bearer xoxb-token", requestCaptor.getValue().headers().firstValue("Authorization").orElseThrow());
+    assertEquals(
+        "https://slack.com/api/chat.postMessage", requestCaptor.getValue().uri().toString());
+    assertEquals(
+        "Bearer xoxb-token",
+        requestCaptor.getValue().headers().firstValue("Authorization").orElseThrow());
     assertEquals("C123", formData.get("channel"));
     assertEquals("Reindexing started", formData.get("text"));
     assertTrue(formData.get("blocks").contains("Smart Reindexing"));
@@ -94,7 +96,8 @@ class SlackWebApiClientTest {
   }
 
   @Test
-  void sendStartNotificationLeavesSlackIdentifiersUnsetWhenApiDoesNotAcknowledge() throws Exception {
+  void sendStartNotificationLeavesSlackIdentifiersUnsetWhenApiDoesNotAcknowledge()
+      throws Exception {
     whenSendReturns(jsonResponse(200, "{\"ok\":false}"));
 
     client.sendStartNotification("All", false, 3);
@@ -213,7 +216,8 @@ class SlackWebApiClientTest {
 
     ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
     verifyHttpSend(requestCaptor);
-    assertTrue(readFormData(requestCaptor.getValue()).get("blocks").contains("Completed Successfully"));
+    assertTrue(
+        readFormData(requestCaptor.getValue()).get("blocks").contains("Completed Successfully"));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new InterruptedException("interrupted"));
@@ -356,7 +360,8 @@ class SlackWebApiClientTest {
   void privateFormattingHelpersBuildExpectedSlackContent() throws Exception {
     seedMessageState();
 
-    ArrayNode initial = (ArrayNode) invokePrivateMethod(client, "createInitialMessage", new Class<?>[0]);
+    ArrayNode initial =
+        (ArrayNode) invokePrivateMethod(client, "createInitialMessage", new Class<?>[0]);
     ArrayNode progress =
         (ArrayNode)
             invokePrivateMethod(
@@ -372,10 +377,7 @@ class SlackWebApiClientTest {
     ObjectNode error =
         (ObjectNode)
             invokePrivateMethod(
-                client,
-                "createErrorMessage",
-                new Class<?>[] {String.class},
-                "fatal failure");
+                client, "createErrorMessage", new Class<?>[] {String.class}, "fatal failure");
 
     assertTrue(initial.toString().contains("Reindexing Started"));
     assertTrue(initial.toString().contains("Settings"));
@@ -395,10 +397,15 @@ class SlackWebApiClientTest {
             client, "createVisualProgressBar", new Class<?>[] {double.class}, 50.0));
     assertEquals(
         "✅ Reindexing Completed",
-        invokePrivateMethod(client, "getHeaderText", new Class<?>[] {String.class}, "Completed Successfully"));
-    assertEquals("59s", invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 59L));
-    assertEquals("2m 5s", invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 125L));
-    assertEquals("1h 1m 1s", invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 3661L));
+        invokePrivateMethod(
+            client, "getHeaderText", new Class<?>[] {String.class}, "Completed Successfully"));
+    assertEquals(
+        "59s", invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 59L));
+    assertEquals(
+        "2m 5s", invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 125L));
+    assertEquals(
+        "1h 1m 1s",
+        invokePrivateMethod(client, "formatDuration", new Class<?>[] {long.class}, 3661L));
     assertEquals(
         "*Instance:* <http://localhost:8585|http://localhost:8585>",
         invokePrivateMethod(client, "formatInstanceUrl", new Class<?>[0]));
@@ -415,10 +422,7 @@ class SlackWebApiClientTest {
     ObjectNode instanceStatus =
         (ObjectNode)
             invokePrivateMethod(
-                client,
-                "createInstanceStatusSection",
-                new Class<?>[] {String.class},
-                "Processing");
+                client, "createInstanceStatusSection", new Class<?>[] {String.class}, "Processing");
     ObjectNode divider =
         (ObjectNode) invokePrivateMethod(client, "createDividerBlock", new Class<?>[0]);
     ObjectNode header =
@@ -468,7 +472,8 @@ class SlackWebApiClientTest {
 
   @SuppressWarnings("unchecked")
   private void whenSendReturns(HttpResponse<String> response) throws Exception {
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(response);
+    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
   }
 
   @SuppressWarnings("unchecked")
@@ -527,7 +532,8 @@ class SlackWebApiClientTest {
   }
 
   private Object invokePrivateMethod(
-      Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
     Method method = SlackWebApiClient.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     return method.invoke(target, args);

@@ -70,9 +70,7 @@ class OrphanJobMonitorTest {
   void testShutdownPreservesInterruptWhenAwaitTerminationIsInterrupted() throws Exception {
     ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
     when(scheduler.isShutdown()).thenReturn(false);
-    doThrow(new InterruptedException("stop"))
-        .when(scheduler)
-        .awaitTermination(5, TimeUnit.SECONDS);
+    doThrow(new InterruptedException("stop")).when(scheduler).awaitTermination(5, TimeUnit.SECONDS);
     setScheduler(scheduler);
 
     monitor.shutdown();

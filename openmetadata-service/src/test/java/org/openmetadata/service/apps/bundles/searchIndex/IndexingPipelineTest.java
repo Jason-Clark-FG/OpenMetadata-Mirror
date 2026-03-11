@@ -14,7 +14,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -163,7 +162,8 @@ class IndexingPipelineTest {
     when(entityDao.listCount(any(ListFilter.class))).thenReturn(1);
     when(sink.getPendingVectorTaskCount()).thenReturn(0);
     when(sink.getStats()).thenReturn(new StepStats().withTotalRecords(0).withSuccessRecords(0));
-    when(sink.getProcessStats()).thenReturn(new StepStats().withTotalRecords(0).withSuccessRecords(0));
+    when(sink.getProcessStats())
+        .thenReturn(new StepStats().withTotalRecords(0).withSuccessRecords(0));
     pipeline.addListener(listener);
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
@@ -247,17 +247,20 @@ class IndexingPipelineTest {
               invokePrivate(
                   "initializeStats",
                   new Class<?>[] {ReindexingConfiguration.class, Set.class},
-                  ReindexingConfiguration.builder().timeSeriesEntityDays(Map.of(reportType, 1)).build(),
+                  ReindexingConfiguration.builder()
+                      .timeSeriesEntityDays(Map.of(reportType, 1))
+                      .build(),
                   Set.of(Entity.TABLE, reportType));
 
       assertEquals(10, stats.getJobStats().getTotalRecords());
       assertEquals(10, stats.getReaderStats().getTotalRecords());
-      assertEquals(7, stats.getEntityStats().getAdditionalProperties().get(Entity.TABLE).getTotalRecords());
-      assertEquals(3, stats.getEntityStats().getAdditionalProperties().get(reportType).getTotalRecords());
+      assertEquals(
+          7, stats.getEntityStats().getAdditionalProperties().get(Entity.TABLE).getTotalRecords());
+      assertEquals(
+          3, stats.getEntityStats().getAdditionalProperties().get(reportType).getTotalRecords());
 
       ArgumentCaptor<ListFilter> filterCaptor = ArgumentCaptor.forClass(ListFilter.class);
-      verify(timeSeriesDao)
-          .listCount(filterCaptor.capture(), anyLong(), anyLong(), eq(false));
+      verify(timeSeriesDao).listCount(filterCaptor.capture(), anyLong(), anyLong(), eq(false));
       assertEquals(
           FullyQualifiedName.buildHash(reportType),
           filterCaptor.getValue().getQueryParams().get("entityFQNHash"));
@@ -322,7 +325,8 @@ class IndexingPipelineTest {
 
     ExecutionResult result =
         (ExecutionResult)
-            invokePrivate("buildResult", new Class<?>[] {long.class}, System.currentTimeMillis() - 1000);
+            invokePrivate(
+                "buildResult", new Class<?>[] {long.class}, System.currentTimeMillis() - 1000);
 
     assertEquals(ExecutionResult.Status.STOPPED, result.status());
     verify(listener).onJobStopped(any(Stats.class));

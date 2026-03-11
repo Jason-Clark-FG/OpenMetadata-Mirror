@@ -61,13 +61,15 @@ class LoggingProgressListenerTest {
   void delegatesToLoggerWhenPresent() throws Exception {
     LoggingProgressListener listener = new LoggingProgressListener();
     ReindexingJobLogger logger = mock(ReindexingJobLogger.class);
-    Stats stats = new Stats().withJobStats(new StepStats().withTotalRecords(5).withSuccessRecords(4));
+    Stats stats =
+        new Stats().withJobStats(new StepStats().withTotalRecords(5).withSuccessRecords(4));
 
     setField(listener, "logger", logger);
 
     listener.onEntityTypeStarted("table", 5);
     listener.onProgressUpdate(stats, mock(ReindexingJobContext.class));
-    listener.onEntityTypeCompleted("table", new StepStats().withSuccessRecords(4).withFailedRecords(1));
+    listener.onEntityTypeCompleted(
+        "table", new StepStats().withSuccessRecords(4).withFailedRecords(1));
     listener.onError(
         "table",
         new IndexingError().withMessage("boom").withErrorSource(IndexingError.ErrorSource.SINK),
@@ -87,14 +89,18 @@ class LoggingProgressListenerTest {
   @Test
   void fallbackBranchesAndPriorityRemainStable() throws Exception {
     LoggingProgressListener listener = new LoggingProgressListener();
-    Stats stats = new Stats().withJobStats(new StepStats().withTotalRecords(5).withSuccessRecords(3).withFailedRecords(2));
+    Stats stats =
+        new Stats()
+            .withJobStats(
+                new StepStats().withTotalRecords(5).withSuccessRecords(3).withFailedRecords(2));
     ReindexingJobContext context = mock(ReindexingJobContext.class);
 
     listener.onJobStarted(context);
     listener.onIndexRecreationStarted(Set.of("table", "user"));
     listener.onEntityTypeStarted("table", 5);
     listener.onProgressUpdate(stats, context);
-    listener.onEntityTypeCompleted("table", new StepStats().withSuccessRecords(3).withFailedRecords(2));
+    listener.onEntityTypeCompleted(
+        "table", new StepStats().withSuccessRecords(3).withFailedRecords(2));
     listener.onError(
         "table",
         new IndexingError().withMessage("reader").withErrorSource(IndexingError.ErrorSource.READER),
@@ -104,19 +110,26 @@ class LoggingProgressListenerTest {
     listener.onJobFailed(stats, new IllegalStateException("failure"));
     listener.onReaderFailure(
         "table", "id-1", "missing", ReindexingProgressListener.FailureType.ENTITY_NOT_FOUND);
-    listener.onReaderFailure("table", "id-2", "broken", ReindexingProgressListener.FailureType.DB_ERROR);
+    listener.onReaderFailure(
+        "table", "id-2", "broken", ReindexingProgressListener.FailureType.DB_ERROR);
     listener.onProcessFailure("table", "id-3", "process");
     listener.onSinkFailure("table", "id-4", "sink");
-    listener.onSubIndexingCompleted("table", "columns", new StepStats().withSuccessRecords(2).withFailedRecords(1));
+    listener.onSubIndexingCompleted(
+        "table", "columns", new StepStats().withSuccessRecords(2).withFailedRecords(1));
     listener.onJobStopped(stats);
 
     assertEquals(30, listener.getPriority());
-    assertEquals("999 B", invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 999L));
-    assertEquals("2.0 KB", invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 2048L));
-    assertEquals("3.0 MB", invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 3L * 1024 * 1024));
+    assertEquals(
+        "999 B", invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 999L));
+    assertEquals(
+        "2.0 KB", invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 2048L));
+    assertEquals(
+        "3.0 MB",
+        invokePrivate(listener, "formatBytes", new Class<?>[] {long.class}, 3L * 1024 * 1024));
   }
 
-  private Object invokePrivate(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+  private Object invokePrivate(
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
     Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);

@@ -63,7 +63,8 @@ class IndexMappingVersionTrackerTest {
     try (var entityMock = mockStatic(Entity.class)) {
       entityMock.when(Entity::getEntityList).thenReturn(Set.of("table", "missing_entity"));
       when(indexMappingVersionDAO.getAllMappingVersions())
-          .thenReturn(List.of(new IndexMappingVersionDAO.IndexMappingVersion("table", "stale-hash")));
+          .thenReturn(
+              List.of(new IndexMappingVersionDAO.IndexMappingVersion("table", "stale-hash")));
 
       List<String> changedMappings =
           new IndexMappingVersionTracker(collectionDAO, "1.2.3", "tester").getChangedMappings();
@@ -85,7 +86,9 @@ class IndexMappingVersionTrackerTest {
               eq("table"), hashCaptor.capture(), anyString(), eq("1.2.3"), anyLong(), eq("tester"));
 
       when(indexMappingVersionDAO.getAllMappingVersions())
-          .thenReturn(List.of(new IndexMappingVersionDAO.IndexMappingVersion("table", hashCaptor.getValue())));
+          .thenReturn(
+              List.of(
+                  new IndexMappingVersionDAO.IndexMappingVersion("table", hashCaptor.getValue())));
 
       assertTrue(tracker.getChangedMappings().isEmpty());
     }
@@ -96,7 +99,10 @@ class IndexMappingVersionTrackerTest {
     try (var entityMock = mockStatic(Entity.class)) {
       entityMock.when(Entity::getEntityList).thenReturn(Set.of("missing_entity"));
 
-      assertTrue(new IndexMappingVersionTracker(collectionDAO, "1.2.3", "tester").getChangedMappings().isEmpty());
+      assertTrue(
+          new IndexMappingVersionTracker(collectionDAO, "1.2.3", "tester")
+              .getChangedMappings()
+              .isEmpty());
     }
   }
 }

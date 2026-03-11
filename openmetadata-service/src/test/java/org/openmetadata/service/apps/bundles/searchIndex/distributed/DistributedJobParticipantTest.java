@@ -49,10 +49,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
-import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -651,10 +651,8 @@ class DistributedJobParticipantTest {
       assertNull(participant.getCurrentJobId());
 
       DistributedSearchIndexCoordinator coordinator = coordinatorMocked.constructed().get(0);
-      verify(coordinator, never())
-          .getPartitions(eq(coordinatedJobId), eq(PartitionStatus.PENDING));
-      verify(coordinator)
-          .getPartitions(eq(noPendingJobId), eq(PartitionStatus.PENDING));
+      verify(coordinator, never()).getPartitions(eq(coordinatedJobId), eq(PartitionStatus.PENDING));
+      verify(coordinator).getPartitions(eq(noPendingJobId), eq(PartitionStatus.PENDING));
     }
   }
 
@@ -698,7 +696,8 @@ class DistributedJobParticipantTest {
             DistributedSearchIndexCoordinator.class,
             (mock, context) -> {
               when(mock.getJob(eq(jobId)))
-                  .thenReturn(Optional.of(runningJob), Optional.of(runningJob), Optional.of(runningJob));
+                  .thenReturn(
+                      Optional.of(runningJob), Optional.of(runningJob), Optional.of(runningJob));
               when(mock.getPartitions(eq(jobId), eq(PartitionStatus.PENDING)))
                   .thenReturn(List.of(pendingPartition), List.of());
               when(mock.getPartitions(eq(jobId), eq(PartitionStatus.PROCESSING)))
@@ -775,10 +774,7 @@ class DistributedJobParticipantTest {
             collectionDAO, searchRepository, "test-server-1", testNotifier);
 
     invokeParticipantMethod(
-        "restoreAppRunRecordToRunning",
-        new Class<?>[] {UUID.class, long.class},
-        appId,
-        42L);
+        "restoreAppRunRecordToRunning", new Class<?>[] {UUID.class, long.class}, appId, 42L);
 
     verify(appExtensionDao).markEntryRunning(appId.toString(), 42L);
   }
@@ -888,8 +884,7 @@ class DistributedJobParticipantTest {
         mock(CollectionDAO.AppExtensionTimeSeries.class);
     AtomicReference<BulkSink.FailureCallback> callbackRef = new AtomicReference<>();
     AtomicReference<Object> recreateContextRef = new AtomicReference<>();
-    SuccessContext successContext =
-        new SuccessContext().withAdditionalProperty("recovered", "yes");
+    SuccessContext successContext = new SuccessContext().withAdditionalProperty("recovered", "yes");
 
     when(appRepository.getDao()).thenReturn(appDao);
     when(appDao.findEntityByName("SearchIndexingApplication")).thenReturn(app);
@@ -940,7 +935,9 @@ class DistributedJobParticipantTest {
                 });
         MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
 
-      entityMock.when(() -> Entity.getEntityRepository(Entity.APPLICATION)).thenReturn(appRepository);
+      entityMock
+          .when(() -> Entity.getEntityRepository(Entity.APPLICATION))
+          .thenReturn(appRepository);
 
       participant =
           new DistributedJobParticipant(
@@ -959,7 +956,13 @@ class DistributedJobParticipantTest {
               "1",
               "table.fqn",
               "process failed",
-              org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder.FailureStage
+              org.openmetadata
+                  .service
+                  .apps
+                  .bundles
+                  .searchIndex
+                  .IndexingFailureRecorder
+                  .FailureStage
                   .PROCESS);
       callbackRef
           .get()
@@ -968,7 +971,13 @@ class DistributedJobParticipantTest {
               "2",
               "table.fqn",
               "sink failed",
-              org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder.FailureStage
+              org.openmetadata
+                  .service
+                  .apps
+                  .bundles
+                  .searchIndex
+                  .IndexingFailureRecorder
+                  .FailureStage
                   .SINK);
 
       DistributedJobStatsAggregator statsAggregator = aggregatorConstruction.constructed().get(0);
@@ -978,8 +987,7 @@ class DistributedJobParticipantTest {
       verify(statsAggregator).start();
       verify(statsAggregator).forceUpdate();
       verify(statsAggregator).stop();
-      verify(failureRecorder)
-          .recordProcessFailure("table", "1", "table.fqn", "process failed");
+      verify(failureRecorder).recordProcessFailure("table", "1", "table.fqn", "process failed");
       verify(failureRecorder).recordSinkFailure("table", "2", "table.fqn", "sink failed");
       verify(failureRecorder).close();
       verify(appExtensionDao).markEntryRunning(appId.toString(), startTime);
@@ -989,7 +997,8 @@ class DistributedJobParticipantTest {
 
       AppRunRecord updatedRecord = JsonUtils.readValue(updatedJson.getValue(), AppRunRecord.class);
       assertEquals(AppRunRecord.Status.FAILED, updatedRecord.getStatus());
-      assertEquals("yes", updatedRecord.getSuccessContext().getAdditionalProperties().get("recovered"));
+      assertEquals(
+          "yes", updatedRecord.getSuccessContext().getAdditionalProperties().get("recovered"));
       assertNotNull(updatedRecord.getEndTime());
 
       DistributedSearchIndexCoordinator coordinator = coordinatorMocked.constructed().get(0);
@@ -1018,7 +1027,8 @@ class DistributedJobParticipantTest {
             .status(PartitionStatus.PENDING)
             .build();
 
-    CollectionDAO.SearchIndexFailureDAO failureDao = mock(CollectionDAO.SearchIndexFailureDAO.class);
+    CollectionDAO.SearchIndexFailureDAO failureDao =
+        mock(CollectionDAO.SearchIndexFailureDAO.class);
     when(collectionDAO.searchIndexFailureDAO()).thenReturn(failureDao);
     when(searchRepository.createBulkSink(100, 100, 104857600L)).thenReturn(bulkSink);
     when(bulkSink.flushAndAwait(60)).thenReturn(false);
@@ -1084,7 +1094,8 @@ class DistributedJobParticipantTest {
   }
 
   private Object newAppRunRecordContext(UUID appId, long startTime) throws Exception {
-    Constructor<?> constructor = appRunRecordContextType().getDeclaredConstructor(UUID.class, long.class);
+    Constructor<?> constructor =
+        appRunRecordContextType().getDeclaredConstructor(UUID.class, long.class);
     constructor.setAccessible(true);
     return constructor.newInstance(appId, startTime);
   }

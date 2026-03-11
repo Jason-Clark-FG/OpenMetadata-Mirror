@@ -160,7 +160,8 @@ class CompositeProgressListenerTest {
     }
 
     @Override
-    public void onReaderFailure(String entityType, String entityId, String error, FailureType type) {
+    public void onReaderFailure(
+        String entityType, String entityId, String error, FailureType type) {
       record("onReaderFailure");
     }
 
@@ -175,7 +176,8 @@ class CompositeProgressListenerTest {
     }
 
     @Override
-    public void onSubIndexingCompleted(String entityType, String subIndex, StepStats subIndexStats) {
+    public void onSubIndexingCompleted(
+        String entityType, String subIndex, StepStats subIndexStats) {
       record("onSubIndexingCompleted");
     }
 
@@ -252,7 +254,8 @@ class CompositeProgressListenerTest {
     }
 
     @Override
-    public void onReaderFailure(String entityType, String entityId, String error, FailureType type) {
+    public void onReaderFailure(
+        String entityType, String entityId, String error, FailureType type) {
       fail();
     }
 
@@ -267,7 +270,8 @@ class CompositeProgressListenerTest {
     }
 
     @Override
-    public void onSubIndexingCompleted(String entityType, String subIndex, StepStats subIndexStats) {
+    public void onSubIndexingCompleted(
+        String entityType, String subIndex, StepStats subIndexStats) {
       fail();
     }
 

@@ -2,14 +2,13 @@ package org.openmetadata.service.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -143,7 +142,8 @@ class DefaultInheritedFieldEntitySearchTest {
             InheritedFieldQuery.forDomain("fallback", 0, 10),
             () ->
                 new InheritedFieldResult(
-                    List.of(new org.openmetadata.schema.type.EntityReference().withName("fallback")),
+                    List.of(
+                        new org.openmetadata.schema.type.EntityReference().withName("fallback")),
                     1));
 
     assertEquals(1, result.total());
@@ -210,7 +210,8 @@ class DefaultInheritedFieldEntitySearchTest {
   void shouldUseFallbackCountWhenIndexAliasIsMissing() {
     when(searchRepository.getIndexOrAliasName(any())).thenReturn("");
 
-    Integer count = inheritedFieldSearch.getCountForField(InheritedFieldQuery.forTeam("team", 0, 10), () -> 42);
+    Integer count =
+        inheritedFieldSearch.getCountForField(InheritedFieldQuery.forTeam("team", 0, 10), () -> 42);
 
     assertEquals(42, count);
   }
@@ -267,7 +268,8 @@ class DefaultInheritedFieldEntitySearchTest {
         .search(
             org.mockito.ArgumentMatchers.argThat(
                 req ->
-                    req.getQueryFilter().contains("\"dataProducts.fullyQualifiedName\":\"finance.product\"")
+                    req.getQueryFilter()
+                            .contains("\"dataProducts.fullyQualifiedName\":\"finance.product\"")
                         && req.getSortFieldParam().equals("name.keyword")
                         && req.getSortOrder().equals("asc")),
             isNull());
@@ -332,7 +334,8 @@ class DefaultInheritedFieldEntitySearchTest {
         .thenReturn(jsonObject("{\"field_aggregation\": {}}"));
 
     assertTrue(
-        inheritedFieldSearch.getAggregatedCountsByField("owners.name", "{\"query\":{}}", 5)
+        inheritedFieldSearch
+            .getAggregatedCountsByField("owners.name", "{\"query\":{}}", 5)
             .isEmpty());
   }
 

@@ -385,7 +385,8 @@ class PartitionWorkerTest {
 
   @Test
   void processBatchWrapsSinkFailuresAsSearchIndexException() throws Exception {
-    PartitionWorker batchWorker = new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
+    PartitionWorker batchWorker =
+        new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
     ResultList<EntityInterface> resultList = new ResultList<>();
     resultList.setData(List.of(mock(EntityInterface.class)));
 
@@ -393,7 +394,9 @@ class PartitionWorkerTest {
         mockConstruction(
             PaginatedEntitiesSource.class,
             (mock, context) -> doReturn(resultList).when(mock).readNextKeyset(null))) {
-      doThrow(new IllegalStateException("sink unavailable")).when(bulkSink).write(anyList(), anyMap());
+      doThrow(new IllegalStateException("sink unavailable"))
+          .when(bulkSink)
+          .write(anyList(), anyMap());
 
       SearchIndexException exception =
           assertThrows(
@@ -412,13 +415,7 @@ class PartitionWorkerTest {
   void readEntitiesKeysetUsesTimeSeriesSourceWithConfiguredWindow() throws Exception {
     PartitionWorker timeSeriesWorker =
         new PartitionWorker(
-            coordinator,
-            bulkSink,
-            BATCH_SIZE,
-            null,
-            false,
-            null,
-            reindexingConfiguration);
+            coordinator, bulkSink, BATCH_SIZE, null, false, null, reindexingConfiguration);
     when(reindexingConfiguration.getTimeSeriesStartTs(Entity.QUERY_COST_RECORD)).thenReturn(100L);
 
     ResultList<EntityTimeSeriesInterface> resultList = new ResultList<>();
@@ -481,10 +478,7 @@ class PartitionWorkerTest {
     when(bulkSink.awaitVectorCompletion(120)).thenReturn(false);
 
     invokePrivate(
-        worker,
-        "waitForSinkOperations",
-        new Class<?>[] {StageStatsTracker.class},
-        statsTracker);
+        worker, "waitForSinkOperations", new Class<?>[] {StageStatsTracker.class}, statsTracker);
 
     verify(bulkSink, times(4)).flushAndAwait(30);
     verify(bulkSink).awaitVectorCompletion(120);
@@ -509,7 +503,8 @@ class PartitionWorkerTest {
     ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
     when(resolver.getServerId()).thenReturn("server-a");
 
-    try (MockedStatic<ServerIdentityResolver> resolverMock = mockStatic(ServerIdentityResolver.class);
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
         MockedConstruction<PaginatedEntitiesSource> ignored =
             mockConstruction(
                 PaginatedEntitiesSource.class,
@@ -526,8 +521,7 @@ class PartitionWorkerTest {
     ArgumentCaptor<SearchIndexPartition> progressCaptor =
         ArgumentCaptor.forClass(SearchIndexPartition.class);
     verify(coordinator, atLeastOnce()).updatePartitionProgress(progressCaptor.capture());
-    assertEquals(
-        PartitionStatus.PROCESSING, progressCaptor.getAllValues().get(0).getStatus());
+    assertEquals(PartitionStatus.PROCESSING, progressCaptor.getAllValues().get(0).getStatus());
     assertEquals(
         PartitionStatus.PROCESSING,
         progressCaptor.getAllValues().get(progressCaptor.getAllValues().size() - 1).getStatus());
@@ -555,7 +549,8 @@ class PartitionWorkerTest {
     ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
     when(resolver.getServerId()).thenReturn("server-a");
 
-    try (MockedStatic<ServerIdentityResolver> resolverMock = mockStatic(ServerIdentityResolver.class);
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
         MockedConstruction<PaginatedEntitiesSource> ignored =
             mockConstruction(
                 PaginatedEntitiesSource.class,

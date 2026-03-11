@@ -135,8 +135,11 @@ public class SearchListFilterTest {
 
     String actual = searchListFilter.getCondition(Entity.TABLE);
 
-    assertTrue(actual.contains("{\"term\": {\"domains.fullyQualifiedName\": \"finance.\\\"raw\\\"\"}}"));
-    assertTrue(actual.contains("{\"nested\":{\"path\":\"owners\",\"query\":{\"terms\":{\"owners.id\":[\"owner1\", \"owner2\"]}}}}"));
+    assertTrue(
+        actual.contains("{\"term\": {\"domains.fullyQualifiedName\": \"finance.\\\"raw\\\"\"}}"));
+    assertTrue(
+        actual.contains(
+            "{\"nested\":{\"path\":\"owners\",\"query\":{\"terms\":{\"owners.id\":[\"owner1\", \"owner2\"]}}}}"));
     assertTrue(actual.contains("{\"term\": {\"createdBy\": \"user\\\"name\"}}"));
   }
 
@@ -167,7 +170,8 @@ public class SearchListFilterTest {
         actual.contains(
             "{\"nested\":{\"path\":\"testSuites\",\"query\":{\"term\":{\"testSuites.id\":\"suite-id\"}}}}"));
     assertTrue(actual.contains("{\"regexp\": {\"entityLink\": \".*::columns::.*\"}}"));
-    assertTrue(actual.contains("{\"terms\": {\"testPlatforms\": [\"great_expectations\", \"dbt\"]}}"));
+    assertTrue(
+        actual.contains("{\"terms\": {\"testPlatforms\": [\"great_expectations\", \"dbt\"]}}"));
     assertTrue(actual.contains("{\"range\": {\"testCaseResult.timestamp\": {\"gte\": 10}}}"));
     assertTrue(actual.contains("{\"range\": {\"testCaseResult.timestamp\": {\"lte\": 20}}}"));
     assertTrue(actual.contains("{\"terms\":{\"tags.tagFQN\":[\"PII\", \"Sensitive\"]}}"));
@@ -208,8 +212,7 @@ public class SearchListFilterTest {
         actual.contains(
             "{\"nested\":{\"path\":\"testSuites\",\"query\":{\"term\":{\"testSuites.id\":\"suite-id\"}}}}"));
     assertTrue(
-        actual.contains(
-            "{\"term\": {\"testDefinition.dataQualityDimension\": \"Completeness\"}}"));
+        actual.contains("{\"term\": {\"testDefinition.dataQualityDimension\": \"Completeness\"}}"));
   }
 
   @Test
@@ -247,9 +250,7 @@ public class SearchListFilterTest {
 
     assertTrue(actual.contains("{\"range\": {\"@timestamp\": {\"gte\": 1}}}"));
     assertTrue(actual.contains("{\"range\": {\"@timestamp\": {\"lte\": 2}}}"));
-    assertTrue(
-        actual.contains(
-            "{\"term\": {\"testCaseResolutionStatusType\": \"Acknowledged\"}}"));
+    assertTrue(actual.contains("{\"term\": {\"testCaseResolutionStatusType\": \"Acknowledged\"}}"));
     assertTrue(
         actual.contains(
             "{\"term\": {\"testCaseResolutionStatusDetails.assignee.name\": \"qa-user\"}}"));
