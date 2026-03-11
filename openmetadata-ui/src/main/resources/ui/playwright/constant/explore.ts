@@ -12,6 +12,7 @@
  */
 export const EXPECTED_BUCKETS = [
   'table',
+  'tableColumn',
   'glossaryTerm',
   'databaseSchema',
   'chart',
@@ -134,6 +135,7 @@ export const DATA_ASSETS = [
 
 export const DATA_ASSETS_SORT = [
   { name: 'Table', filter: 'table' },
+  { name: 'Column', filter: 'tableColumn' },
   { name: 'Database', filter: 'database' },
   { name: 'Database Schema', filter: 'databaseSchema' },
   { name: 'Dashboard', filter: 'dashboard' },

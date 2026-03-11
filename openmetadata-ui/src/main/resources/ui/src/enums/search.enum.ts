@@ -15,6 +15,7 @@ export enum SearchIndex {
   ALL = 'all',
   DATA_ASSET = 'dataAsset',
   TABLE = 'table',
+  COLUMN = 'column_search_index',
   TOPIC = 'topic',
   CHART = 'chart',
   DASHBOARD = 'dashboard',
