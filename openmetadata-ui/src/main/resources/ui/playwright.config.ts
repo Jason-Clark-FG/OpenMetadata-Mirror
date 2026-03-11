@@ -80,14 +80,21 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       // Added admin setup as a dependency. This will authorize the page with an admin user before running the test. doc: https://playwright.dev/docs/auth#multiple-signed-in-roles
       dependencies: ['setup', 'entity-data-setup'],
-      grepInvert: /data-insight/,
-      teardown: 'entity-data-teardown',
+      grepInvert: [/@data-insight/, /@ingestion/, /@sample-data/, /@basic/],
+      teardown: 'SearchRBAC',
       testIgnore: [
         '**/nightly/**',
         '**/DataAssetRulesEnabled.spec.ts',
         '**/DataAssetRulesDisabled.spec.ts',
         '**/SystemCertificationTags.spec.ts',
+        '**/SearchRBAC.spec.ts',
       ],
+    },
+    {
+      name: 'SearchRBAC',
+      testMatch: '**/SearchRBAC.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+      teardown: 'entity-data-teardown',
     },
     {
       name: 'entity-data-teardown',
@@ -118,6 +125,26 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['DataAssetRulesEnabled'],
       fullyParallel: true,
+    },
+    {
+      name: 'Basic',
+      grep: [/@basic/],
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      fullyParallel: true,
+    },
+    {
+      name: 'ingestion',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup', 'entity-data-setup'],
+      grep: /@ingestion|@sample-data/,
+      teardown: 'entity-data-teardown',
+      testIgnore: [
+        '**/nightly/**',
+        '**/DataAssetRulesEnabled.spec.ts',
+        '**/DataAssetRulesDisabled.spec.ts',
+        '**/SystemCertificationTags.spec.ts',
+      ],
     },
     // System Certification Tags tests modify global shared state (system tags like Gold, Silver, Bronze)
     // They must run in isolation after the main chromium project to avoid flakiness

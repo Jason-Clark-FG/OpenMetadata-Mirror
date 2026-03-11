@@ -38,6 +38,7 @@ import EntityNameModal from '../../../components/Modals/EntityNameModal/EntityNa
 import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
 import { DE_ACTIVE_COLOR } from '../../../constants/constants';
 import { ExportTypes } from '../../../constants/Export.constants';
+import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { EntityType } from '../../../enums/entity.enum';
@@ -73,6 +74,7 @@ import { TitleBreadcrumbProps } from '../../common/TitleBreadcrumb/TitleBreadcru
 import { useGenericContext } from '../../Customization/GenericProvider/GenericProvider';
 import { EntityStatusBadge } from '../../Entity/EntityStatusBadge/EntityStatusBadge.component';
 import Voting from '../../Entity/Voting/Voting.component';
+import { LearningIcon } from '../../Learning/LearningIcon/LearningIcon.component';
 import ChangeParentHierarchy from '../../Modals/ChangeParentHierarchy/ChangeParentHierarchy.component';
 import StyleModal from '../../Modals/StyleModal/StyleModal.component';
 import { GlossaryHeaderProps } from './GlossaryHeader.interface';
@@ -429,14 +431,10 @@ const GlossaryHeader = ({
   ];
 
   const statusBadge = useMemo(() => {
-    if (!isGlossary) {
-      const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
+    const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
 
-      return <EntityStatusBadge showDivider status={entityStatus} />;
-    }
-
-    return null;
-  }, [isGlossary, selectedData]);
+    return <EntityStatusBadge showDivider status={entityStatus} />;
+  }, [selectedData]);
 
   const createButtons = useMemo(() => {
     if (permissions.Create || createGlossaryTermPermission) {
@@ -451,24 +449,25 @@ const GlossaryHeader = ({
         </Button>
       ) : (
         <>
-          {glossaryTermStatus && glossaryTermStatus === EntityStatus.Approved && (
-            <Dropdown
-              className="m-l-xs"
-              menu={{
-                items: addButtonContent,
-              }}
-              placement="bottomRight"
-              trigger={['click']}>
-              <Button
-                data-testid="glossary-term-add-button-menu"
-                type="primary">
-                <Space>
-                  {t('label.add')}
-                  <DownOutlined />
-                </Space>
-              </Button>
-            </Dropdown>
-          )}
+          {glossaryTermStatus &&
+            glossaryTermStatus === EntityStatus.Approved && (
+              <Dropdown
+                className="m-l-xs"
+                menu={{
+                  items: addButtonContent,
+                }}
+                placement="bottomRight"
+                trigger={['click']}>
+                <Button
+                  data-testid="glossary-term-add-button-menu"
+                  type="primary">
+                  <Space>
+                    {t('label.add')}
+                    <DownOutlined />
+                  </Space>
+                </Button>
+              </Dropdown>
+            )}
         </>
       );
     }
@@ -535,6 +534,11 @@ const GlossaryHeader = ({
             entityType={EntityType.GLOSSARY_TERM}
             icon={icon}
             serviceName=""
+            suffix={
+              !isGlossary && (
+                <LearningIcon pageId={LEARNING_PAGE_IDS.GLOSSARY_TERM} />
+              )
+            }
             titleColor={isGlossary ? undefined : selectedData.style?.color}
           />
         </div>

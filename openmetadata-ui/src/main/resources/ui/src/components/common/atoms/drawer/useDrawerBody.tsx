@@ -11,14 +11,16 @@
  *  limitations under the License.
  */
 
-import { Box, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
 import { ReactNode, useMemo } from 'react';
+import Loader from '../../Loader/Loader';
 
 export interface DrawerBodyConfig {
   children?: ReactNode;
   loading?: boolean;
   loadingMessage?: string;
   padding?: number | string;
+  className?: string;
   sx?: any;
 }
 
@@ -53,7 +55,14 @@ export interface DrawerBodyConfig {
  * ```
  */
 export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
-  const { children, loading, loadingMessage, padding = 6, sx = {} } = config;
+  const {
+    children,
+    loading,
+    loadingMessage,
+    padding = 6,
+    className,
+    sx = {},
+  } = config;
 
   const drawerBody = useMemo(
     () => (
@@ -79,7 +88,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               zIndex: 1000,
             }}>
-            <CircularProgress />
+            <Loader />
             {loadingMessage && (
               <Box sx={{ mt: 2, color: 'text.secondary' }}>
                 {loadingMessage}
@@ -88,6 +97,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
           </Box>
         )}
         <Box
+          className={className}
           sx={{
             overflow: 'auto',
             height: '100%',
@@ -97,7 +107,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
         </Box>
       </Box>
     ),
-    [children, loading, loadingMessage, padding, sx]
+    [children, loading, loadingMessage, padding, className, sx]
   );
 
   return {

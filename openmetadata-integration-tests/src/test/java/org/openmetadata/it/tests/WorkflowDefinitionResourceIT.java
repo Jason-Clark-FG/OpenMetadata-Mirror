@@ -1,17 +1,24 @@
 package org.openmetadata.it.tests;
 
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.openmetadata.service.util.TestUtils.simulateWork;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysql.cj.jdbc.exceptions.MySQLTransactionRollbackException;
+import io.github.resilience4j.core.IntervalFunction;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.github.resilience4j.retry.RetryRegistry;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -20,14 +27,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.openmetadata.it.factories.MlModelServiceTestFactory;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
@@ -54,9 +69,11 @@ import org.openmetadata.schema.api.services.CreateDashboardService;
 import org.openmetadata.schema.api.services.CreateDatabaseService;
 import org.openmetadata.schema.api.services.CreateDatabaseService.DatabaseServiceType;
 import org.openmetadata.schema.api.services.DatabaseConnection;
+import org.openmetadata.schema.api.teams.CreateTeam;
 import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.api.tests.CreateTestCase;
 import org.openmetadata.schema.api.tests.CreateTestDefinition;
+import org.openmetadata.schema.configuration.AssetCertificationSettings;
 import org.openmetadata.schema.entity.classification.Classification;
 import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.data.APICollection;
@@ -76,12 +93,16 @@ import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.MlModelService;
+import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.services.connections.api.OpenAPISchemaURL;
 import org.openmetadata.schema.services.connections.api.RestConnection;
 import org.openmetadata.schema.services.connections.database.MysqlConnection;
 import org.openmetadata.schema.services.connections.database.PostgresConnection;
 import org.openmetadata.schema.services.connections.database.common.basicAuth;
+import org.openmetadata.schema.settings.Settings;
+import org.openmetadata.schema.settings.SettingsType;
 import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestPlatform;
 import org.openmetadata.schema.type.APIRequestMethod;
@@ -93,11 +114,11 @@ import org.openmetadata.schema.type.MetricType;
 import org.openmetadata.schema.type.MetricUnitOfMeasurement;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskStatus;
+import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.ApiException;
-import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.sdk.exceptions.OpenMetadataException;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
@@ -116,6 +137,8 @@ import org.slf4j.LoggerFactory;
  * <p>Migrated from: org.openmetadata.service.resources.governance.WorkflowDefinitionResourceTest
  */
 @Execution(ExecutionMode.SAME_THREAD)
+@Isolated
+@TestMethodOrder(OrderAnnotation.class)
 @ExtendWith(TestNamespaceExtension.class)
 public class WorkflowDefinitionResourceIT {
 
@@ -124,11 +147,103 @@ public class WorkflowDefinitionResourceIT {
   private static final String BASE_PATH = "/v1/governance/workflowDefinitions";
   private static final Logger LOG = LoggerFactory.getLogger(WorkflowDefinitionResourceIT.class);
 
-  // Test entities to track for cleanup and verification
-  private DatabaseService databaseService;
-  private Database database;
-  private DatabaseSchema databaseSchema;
-  private final List<Table> testTables = new ArrayList<>();
+  // Retry configuration for handling MySQL deadlocks
+  private static final RetryConfig DEADLOCK_RETRY_CONFIG =
+      RetryConfig.custom()
+          .maxAttempts(3)
+          .intervalFunction(
+              IntervalFunction.ofExponentialBackoff(1000, 2)) // Start at 1s, multiply by 2
+          .retryOnException(
+              e -> {
+                String message = e.getMessage();
+                Throwable cause = e.getCause();
+
+                // Check for MySQL deadlock in the exception or its cause
+                if (message != null && message.contains("Deadlock found when trying to get lock")) {
+                  return true;
+                }
+
+                while (cause != null) {
+                  if (cause instanceof MySQLTransactionRollbackException) {
+                    return true;
+                  }
+                  if (cause.getMessage() != null
+                      && cause.getMessage().contains("Deadlock found when trying to get lock")) {
+                    return true;
+                  }
+                  cause = cause.getCause();
+                }
+                return false;
+              })
+          .failAfterMaxAttempts(true)
+          .build();
+
+  private static final RetryRegistry RETRY_REGISTRY = RetryRegistry.of(DEADLOCK_RETRY_CONFIG);
+
+  // Track workflows created in each test for targeted cleanup
+  private final ConcurrentHashMap<String, String> createdWorkflows = new ConcurrentHashMap<>();
+
+  // Inner class to hold test entities for each test
+  private static class TestEntities {
+    final DatabaseService databaseService;
+    final Database database;
+    final DatabaseSchema databaseSchema;
+    final List<Table> testTables;
+
+    TestEntities(DatabaseService service, Database db, DatabaseSchema schema, List<Table> tables) {
+      this.databaseService = service;
+      this.database = db;
+      this.databaseSchema = schema;
+      this.testTables = tables;
+    }
+  }
+
+  @BeforeEach
+  void resetWorkflowTracking() {
+    // Clear the tracking map for each test
+    createdWorkflows.clear();
+    LOG.debug("Workflow tracking reset for new test");
+  }
+
+  @AfterEach
+  void cleanupCreatedWorkflows() {
+    if (!createdWorkflows.isEmpty()) {
+      OpenMetadataClient client = SdkClients.adminClient();
+      LOG.debug("Cleaning up {} workflows created in this test", createdWorkflows.size());
+
+      createdWorkflows.forEach(
+          (name, id) -> {
+            try {
+              // Try to delete by ID first (more reliable)
+              String deletePath = BASE_PATH + "/" + id + "?hardDelete=true&recursive=true";
+              executeWithDeadlockRetryVoid(
+                  () -> {
+                    try {
+                      client
+                          .getHttpClient()
+                          .executeForString(
+                              HttpMethod.DELETE,
+                              deletePath,
+                              null,
+                              RequestOptions.builder().build());
+                      LOG.debug("Successfully deleted workflow: {} ({})", name, id);
+                    } catch (Exception e) {
+                      // If 404, workflow was already deleted, which is fine
+                      if (!e.getMessage().contains("404")) {
+                        LOG.warn("Failed to delete workflow {} ({}): {}", name, id, e.getMessage());
+                      }
+                    }
+                  },
+                  "delete-workflow-" + name);
+            } catch (Exception e) {
+              LOG.debug("Workflow {} already deleted or not found", name);
+            }
+          });
+
+      // Clear the map after cleanup
+      createdWorkflows.clear();
+    }
+  }
 
   @Test
   @Order(1)
@@ -150,7 +265,7 @@ public class WorkflowDefinitionResourceIT {
   void test_createAndGetWorkflowDefinition(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    Map<String, Object> createRequest = buildMinimalWorkflowRequest(ns.prefix("testWorkflow"));
+    Map<String, Object> createRequest = buildMinimalWorkflowRequest("testWorkflow");
     String createResponse =
         client
             .getHttpClient()
@@ -161,7 +276,10 @@ public class WorkflowDefinitionResourceIT {
     JsonNode created = MAPPER.readTree(createResponse);
     assertTrue(created.has("id"));
     assertTrue(created.has("name"));
-    assertEquals(ns.prefix("testWorkflow"), created.get("name").asText());
+    assertEquals("testWorkflow", created.get("name").asText());
+
+    // Track the created workflow for cleanup
+    trackWorkflowFromJson(created);
 
     String workflowId = created.get("id").asText();
     String getResponse =
@@ -183,7 +301,7 @@ public class WorkflowDefinitionResourceIT {
   void test_getWorkflowDefinitionByName(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    String workflowName = ns.prefix("getByNameWorkflow");
+    String workflowName = "getByNameWorkflow";
     Map<String, Object> createRequest = buildMinimalWorkflowRequest(workflowName);
     String createResponse =
         client
@@ -193,6 +311,9 @@ public class WorkflowDefinitionResourceIT {
 
     JsonNode created = MAPPER.readTree(createResponse);
     String workflowId = created.get("id").asText();
+
+    // Track the created workflow for cleanup
+    trackWorkflowFromJson(created);
 
     String getResponse =
         client
@@ -1038,7 +1159,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(request.get("name").toString(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1094,7 +1223,6 @@ public class WorkflowDefinitionResourceIT {
     request.put("nodes", List.of(startNode, setFieldNode, endNode));
     request.put("edges", List.of(edge1, edge2));
 
-    java.lang.Thread.sleep(2000);
     String response =
         client
             .getHttpClient()
@@ -1109,7 +1237,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted test_CreateEventBasedWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting test_CreateEventBasedWorkflow: {}", e.getMessage());
@@ -1188,7 +1324,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted test_CreateWorkflowWithCheckEntityAttributesTask");
     } catch (Exception e) {
       LOG.warn(
@@ -1263,7 +1407,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1326,7 +1478,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1399,7 +1559,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1450,7 +1618,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1507,7 +1683,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -1652,10 +1836,132 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(created.get("name").asText(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
+    }
+  }
+
+  // Helper methods for retry mechanism
+  private <T> T executeWithDeadlockRetry(Supplier<T> operation, String operationName) {
+    Retry retry = RETRY_REGISTRY.retry(operationName, DEADLOCK_RETRY_CONFIG);
+
+    retry
+        .getEventPublisher()
+        .onRetry(
+            event ->
+                LOG.warn(
+                    "Deadlock detected in {} - attempt {}/{}. Waiting {}ms before retry",
+                    operationName,
+                    event.getNumberOfRetryAttempts(),
+                    DEADLOCK_RETRY_CONFIG.getMaxAttempts(),
+                    event.getWaitInterval().toMillis()))
+        .onSuccess(
+            event -> {
+              if (event.getNumberOfRetryAttempts() > 0) {
+                LOG.info(
+                    "Operation {} succeeded after {} retries",
+                    operationName,
+                    event.getNumberOfRetryAttempts());
+              }
+            })
+        .onError(
+            event ->
+                LOG.error(
+                    "Operation {} failed after {} attempts",
+                    operationName,
+                    DEADLOCK_RETRY_CONFIG.getMaxAttempts(),
+                    event.getLastThrowable()));
+
+    return Retry.decorateSupplier(retry, operation).get();
+  }
+
+  private void executeWithDeadlockRetryVoid(Runnable operation, String operationName) {
+    executeWithDeadlockRetry(
+        () -> {
+          operation.run();
+          return null;
+        },
+        operationName);
+  }
+
+  private void safeDeleteWorkflow(OpenMetadataClient client, String workflowName) {
+    try {
+      WorkflowDefinition wd = client.workflowDefinitions().getByName(workflowName, null);
+
+      // Force delete with hardDelete=true and recursive=true to clean up properly
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              String deletePath =
+                  BASE_PATH + "/name/" + workflowName + "?hardDelete=true&recursive=true";
+              client
+                  .getHttpClient()
+                  .executeForString(
+                      HttpMethod.DELETE, deletePath, null, RequestOptions.builder().build());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to force delete workflow", e);
+            }
+          },
+          "force-delete-workflow-" + workflowName);
+
+      // Wait for deletion to complete using retry mechanism
+      await()
+          .atMost(Duration.ofSeconds(10))
+          .pollInterval(Duration.ofSeconds(1))
+          .ignoreExceptions()
+          .until(
+              () -> {
+                try {
+                  client.workflowDefinitions().getByName(workflowName, null);
+                  return false; // Still exists
+                } catch (Exception e) {
+                  return true; // Deleted successfully
+                }
+              });
+
+      LOG.debug("Successfully force deleted workflow: {}", workflowName);
+    } catch (Exception e) {
+      LOG.warn("Error while force deleting workflow {}: {}", workflowName, e.getMessage());
+      // Try alternative cleanup with retry
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              String deletePath =
+                  BASE_PATH + "/name/" + workflowName + "?hardDelete=true&recursive=true";
+              client
+                  .getHttpClient()
+                  .executeForString(
+                      HttpMethod.DELETE, deletePath, null, RequestOptions.builder().build());
+            } catch (Exception fallbackError) {
+              throw new RuntimeException("Failed fallback cleanup for workflow", fallbackError);
+            }
+          },
+          "fallback-delete-workflow-" + workflowName);
+    }
+  }
+
+  // Helper method to register a workflow for cleanup
+  private void trackWorkflow(String name, String id) {
+    if (name != null && id != null) {
+      createdWorkflows.put(name, id);
+      LOG.debug("Tracked workflow for cleanup: {} ({})", name, id);
+    }
+  }
+
+  // Helper method to register a workflow from JsonNode
+  private void trackWorkflowFromJson(JsonNode workflow) {
+    if (workflow != null && workflow.has("name") && workflow.has("id")) {
+      trackWorkflow(workflow.get("name").asText(), workflow.get("id").asText());
     }
   }
 
@@ -1720,17 +2026,20 @@ public class WorkflowDefinitionResourceIT {
     // Step 1: Setup Brass certification tag
     setupCertificationTags_SDK();
 
-    // Step 2: Create test entities using SDK clients
-    createTestEntities_SDK(ns, test);
+    // Step 2: Create test entities using SDK clients - LOCAL VARIABLES
+    TestEntities entities = createTestEntities_SDK(ns, test);
 
     // Step 3: Create DataCompleteness workflow using SDK
     createDataCompletenessWorkflow_SDK(ns);
 
     // Step 4: Trigger the workflow using SDK
-    triggerWorkflow_SDK(ns);
+    triggerWorkflow_SDK(ns, entities.testTables);
 
     // Step 5: Wait for workflow to process and verify results
-    verifyTableCertifications_SDK();
+    verifyTableCertifications_SDK(entities.testTables);
+
+    // Step 6: Delete the workflow safely
+    safeDeleteWorkflow(SdkClients.adminClient(), "DataCompletenessWorkflow");
 
     LOG.info("test_DataCompletenessWorkflow_SDK completed successfully");
   }
@@ -1863,7 +2172,7 @@ public class WorkflowDefinitionResourceIT {
                 }
               ],
               "config": {
-                "storeStageStatus": true
+                "storeStageStatus": false
               }
             }
             """;
@@ -1884,6 +2193,9 @@ public class WorkflowDefinitionResourceIT {
     LOG.debug("setTierTask workflow created successfully, response: {}", response);
 
     String workflowName = created.get("fullyQualifiedName").asText();
+    waitForWorkflowDeployment(client, workflowName);
+    waitForEntityIndexedInSearch(client, "mlmodel_search_index", mlModel.getFullyQualifiedName());
+
     // Trigger the workflow
     String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
     String triggerResponse =
@@ -1894,17 +2206,23 @@ public class WorkflowDefinitionResourceIT {
     assertNotNull(triggerResponse);
     LOG.debug("Workflow triggered successfully, response: {}", triggerResponse);
 
-    // Wait for workflow to process (use Thread.sleep for consistency with original test)
-    java.lang.Thread.sleep(30000);
-
-    // Verify ML Model tier is set to Tier1
+    await()
+        .atMost(Duration.ofSeconds(180))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              MlModel updatedModel =
+                  SdkClients.adminClient().mlModels().get(mlModel.getId().toString(), "tags");
+              assertNotNull(updatedModel);
+              assertNotNull(updatedModel.getTags());
+              boolean hasTier1 =
+                  updatedModel.getTags().stream()
+                      .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(hasTier1, "ML Model should have Tier.Tier1 tag");
+            });
     MlModel updatedModel =
         SdkClients.adminClient().mlModels().get(mlModel.getId().toString(), "tags");
-    assertNotNull(updatedModel);
-    assertNotNull(updatedModel.getTags());
-    boolean hasTier1 =
-        updatedModel.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(hasTier1, "ML Model should have Tier.Tier1 tag");
     LOG.debug("ML Model {} tier successfully updated to Tier1", updatedModel.getName());
 
     LOG.info("test_SetTierForMLModels completed successfully");
@@ -1912,6 +2230,321 @@ public class WorkflowDefinitionResourceIT {
 
   @Test
   @Order(27)
+  void test_PeriodicBatchWorkflowEntityFiltering(TestNamespace ns, TestInfo test) throws Exception {
+    LOG.info("Starting test to verify periodic batch workflow entity filtering behavior");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+    String workflowName = "EntityFilterWF";
+
+    // Defensive pre-cleanup: delete any leftover workflow from a prior failed run
+    // Use hardDelete to ensure complete removal
+    try {
+      WorkflowDefinition existing = client.workflowDefinitions().getByName(workflowName, null);
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      client.workflowDefinitions().delete(existing.getId().toString(), params);
+      LOG.info("Hard-deleted leftover workflow '{}' from prior run", workflowName);
+    } catch (Exception e) {
+      // Expected if no leftover exists
+    }
+
+    DatabaseService service1 = null;
+    DatabaseService service2 = null;
+    Glossary glossary = null;
+    String workflowId = null;
+
+    try {
+      // Create test entities - using simpler entities that are already used in the test file
+      CreateDatabaseService createService1 =
+          createDatabaseServiceRequest(ns.prefix("entityfilter_service1"));
+      service1 = client.databaseServices().create(createService1);
+
+      CreateDatabase createDatabase1 =
+          new CreateDatabase()
+              .withName(ns.prefix("entityfilter_db1"))
+              .withDescription("Initial description for first database")
+              .withService(service1.getFullyQualifiedName());
+      final Database database1 = client.databases().create(createDatabase1);
+
+      CreateDatabaseService createService2 =
+          createDatabaseServiceRequest(ns.prefix("entityfilter_service2"));
+      service2 = client.databaseServices().create(createService2);
+
+      CreateDatabase createDatabase2 =
+          new CreateDatabase()
+              .withName(ns.prefix("entityfilter_db2"))
+              .withDescription("Initial description for second database")
+              .withService(service2.getFullyQualifiedName());
+      final Database database2 = client.databases().create(createDatabase2);
+
+      CreateGlossary createGlossary =
+          new CreateGlossary()
+              .withName(ns.prefix("entityfilter_glossary"))
+              .withDescription("Initial description for test glossary");
+      glossary = client.glossaries().create(createGlossary);
+      final Glossary finalGlossary = glossary;
+
+      // Create workflow with multiple entity types
+      Map<String, Object> startNode = new HashMap<>();
+      startNode.put("name", "start");
+      startNode.put("type", "startEvent");
+      startNode.put("subType", "startEvent");
+
+      Map<String, Object> setFieldNode = new HashMap<>();
+      setFieldNode.put("name", "updateDescription");
+      setFieldNode.put("displayName", "Update Description");
+      setFieldNode.put("type", "automatedTask");
+      setFieldNode.put("subType", "setEntityAttributeTask");
+      Map<String, Object> setFieldConfig = new HashMap<>();
+      setFieldConfig.put("fieldName", "description");
+      setFieldConfig.put("fieldValue", "Updated by multi-entity workflow");
+      setFieldNode.put("config", setFieldConfig);
+      setFieldNode.put("input", List.of("relatedEntity", "updatedBy"));
+      Map<String, Object> inputNamespaceMap = new HashMap<>();
+      inputNamespaceMap.put("relatedEntity", "global");
+      inputNamespaceMap.put("updatedBy", "global");
+      setFieldNode.put("inputNamespaceMap", inputNamespaceMap);
+      setFieldNode.put("output", List.of());
+
+      Map<String, Object> endNode = new HashMap<>();
+      endNode.put("name", "end");
+      endNode.put("type", "endEvent");
+      endNode.put("subType", "endEvent");
+
+      Map<String, Object> edge1 = new HashMap<>();
+      edge1.put("from", "start");
+      edge1.put("to", "updateDescription");
+
+      Map<String, Object> edge2 = new HashMap<>();
+      edge2.put("from", "updateDescription");
+      edge2.put("to", "end");
+
+      Map<String, Object> triggerConfig = new HashMap<>();
+      triggerConfig.put("entityTypes", List.of("database", "glossary"));
+      triggerConfig.put("batchSize", 100);
+      Map<String, Object> schedule = new HashMap<>();
+      schedule.put("scheduleTimeline", "None");
+      triggerConfig.put("schedule", schedule);
+
+      Map<String, Object> trigger = new HashMap<>();
+      trigger.put("type", "periodicBatchEntity");
+      trigger.put("config", triggerConfig);
+      trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+      Map<String, Object> multiEntityRequest = new HashMap<>();
+      multiEntityRequest.put("name", "EntityFilterWF");
+      multiEntityRequest.put("displayName", "Entity Filter Workflow");
+      multiEntityRequest.put("description", "Test workflow for entity filtering");
+      multiEntityRequest.put("trigger", trigger);
+      multiEntityRequest.put("nodes", List.of(startNode, setFieldNode, endNode));
+      multiEntityRequest.put("edges", List.of(edge1, edge2));
+
+      String createResponse =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.POST, BASE_PATH, multiEntityRequest, RequestOptions.builder().build());
+
+      assertNotNull(createResponse);
+      JsonNode created = MAPPER.readTree(createResponse);
+      workflowId = created.get("id").asText();
+      String workflowNameFromResponse = created.get("name").asText();
+      LOG.info("Created multi-entity workflow: {}", workflowNameFromResponse);
+
+      // Wait for workflow deployment
+      waitForWorkflowDeployment(client, workflowName);
+
+      // Wait for entities to be indexed
+      waitForEntityIndexedInSearch(
+          client, "database_search_index", database1.getFullyQualifiedName());
+      waitForEntityIndexedInSearch(
+          client, "database_search_index", database2.getFullyQualifiedName());
+      waitForEntityIndexedInSearch(
+          client, "glossary_search_index", glossary.getFullyQualifiedName());
+
+      // Trigger the multi-entity workflow
+      String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
+      String triggerResponse =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
+      assertNotNull(triggerResponse);
+      LOG.info("Triggered multi-entity workflow");
+
+      // Wait for workflow to process all entities
+      await()
+          .atMost(Duration.ofSeconds(60))
+          .pollInterval(Duration.ofSeconds(2))
+          .pollDelay(Duration.ofSeconds(1))
+          .ignoreExceptions()
+          .until(
+              () -> {
+                try {
+                  Database updatedDb1 = client.databases().get(database1.getId().toString(), null);
+                  Database updatedDb2 = client.databases().get(database2.getId().toString(), null);
+                  Glossary updatedGlossary =
+                      client.glossaries().get(finalGlossary.getId().toString(), null);
+
+                  boolean allUpdated =
+                      "Updated by multi-entity workflow".equals(updatedDb1.getDescription())
+                          && "Updated by multi-entity workflow".equals(updatedDb2.getDescription())
+                          && "Updated by multi-entity workflow"
+                              .equals(updatedGlossary.getDescription());
+
+                  if (allUpdated) {
+                    LOG.debug("All entities have been processed by workflow");
+                    return true;
+                  }
+                  LOG.debug("Workflow still processing entities...");
+                  return false;
+                } catch (Exception e) {
+                  LOG.debug("Error checking entities: {}", e.getMessage());
+                  return false;
+                }
+              });
+
+      LOG.info("Multi-entity workflow processed all entities successfully");
+
+      // Now modify workflow to only process database entities
+      Map<String, Object> singleEntityTriggerConfig = new HashMap<>();
+      singleEntityTriggerConfig.put("entityTypes", List.of("database"));
+      singleEntityTriggerConfig.put("batchSize", 100);
+      singleEntityTriggerConfig.put("schedule", schedule);
+
+      Map<String, Object> singleEntityTrigger = new HashMap<>();
+      singleEntityTrigger.put("type", "periodicBatchEntity");
+      singleEntityTrigger.put("config", singleEntityTriggerConfig);
+      singleEntityTrigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+      Map<String, Object> updateSetFieldConfig = new HashMap<>();
+      updateSetFieldConfig.put("fieldName", "description");
+      updateSetFieldConfig.put("fieldValue", "Updated by single-entity workflow - database only");
+
+      Map<String, Object> updateSetFieldNode = new HashMap<>();
+      updateSetFieldNode.put("name", "updateDescription");
+      updateSetFieldNode.put("displayName", "Update Description");
+      updateSetFieldNode.put("type", "automatedTask");
+      updateSetFieldNode.put("subType", "setEntityAttributeTask");
+      updateSetFieldNode.put("config", updateSetFieldConfig);
+      updateSetFieldNode.put("input", List.of("relatedEntity", "updatedBy"));
+      Map<String, Object> updateInputNamespaceMap = new HashMap<>();
+      updateInputNamespaceMap.put("relatedEntity", "global");
+      updateInputNamespaceMap.put("updatedBy", "global");
+      updateSetFieldNode.put("inputNamespaceMap", updateInputNamespaceMap);
+      updateSetFieldNode.put("output", List.of());
+
+      Map<String, Object> singleEntityRequest = new HashMap<>();
+      singleEntityRequest.put("name", workflowName);
+      singleEntityRequest.put("displayName", "Single Entity Filter Workflow");
+      singleEntityRequest.put("description", "Modified workflow to only process database entities");
+      singleEntityRequest.put("trigger", singleEntityTrigger);
+      singleEntityRequest.put("nodes", List.of(startNode, updateSetFieldNode, endNode));
+      singleEntityRequest.put("edges", List.of(edge1, edge2));
+
+      String updateResponse =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.PUT, BASE_PATH, singleEntityRequest, RequestOptions.builder().build());
+      assertNotNull(updateResponse);
+      LOG.info("Updated workflow to only process database entities");
+
+      // Trigger the modified workflow
+      String modifiedTriggerResponse =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
+      assertNotNull(modifiedTriggerResponse);
+      LOG.info("Triggered modified single-entity workflow");
+
+      // Verify only database entities were updated, glossary remains unchanged
+      await()
+          .atMost(Duration.ofSeconds(60))
+          .pollInterval(Duration.ofSeconds(2))
+          .pollDelay(Duration.ofSeconds(1))
+          .ignoreExceptions()
+          .until(
+              () -> {
+                try {
+                  Database updatedDb1 = client.databases().get(database1.getId().toString(), null);
+                  Database updatedDb2 = client.databases().get(database2.getId().toString(), null);
+                  Glossary unchangedGlossary =
+                      client.glossaries().get(finalGlossary.getId().toString(), null);
+
+                  boolean databasesUpdated =
+                      "Updated by single-entity workflow - database only"
+                              .equals(updatedDb1.getDescription())
+                          && "Updated by single-entity workflow - database only"
+                              .equals(updatedDb2.getDescription());
+                  boolean glossaryUnchanged =
+                      "Updated by multi-entity workflow".equals(unchangedGlossary.getDescription());
+
+                  if (databasesUpdated && glossaryUnchanged) {
+                    LOG.debug("Single-entity workflow correctly processed only database entities");
+                    return true;
+                  }
+                  LOG.debug("Workflow still processing entities...");
+                  return false;
+                } catch (Exception e) {
+                  LOG.debug("Error checking entities: {}", e.getMessage());
+                  return false;
+                }
+              });
+
+      LOG.info("Verified that only database entities were processed in the modified workflow");
+      LOG.info("test_PeriodicBatchWorkflowEntityFiltering completed successfully");
+
+    } finally {
+      // Cleanup - Use hardDelete to prevent duplicate key violations on retries
+      if (workflowId != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          client.workflowDefinitions().delete(workflowId, params);
+          LOG.info("Successfully hard-deleted test workflow");
+        } catch (Exception e) {
+          LOG.warn("Error deleting test workflow: {}", e.getMessage());
+        }
+      }
+
+      // Cleanup entities
+      if (service1 != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          params.put("recursive", "true");
+          client.databaseServices().delete(service1.getId().toString(), params);
+        } catch (Exception e) {
+          LOG.warn("Error cleaning up service1: {}", e.getMessage());
+        }
+      }
+      if (service2 != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          params.put("recursive", "true");
+          client.databaseServices().delete(service2.getId().toString(), params);
+        } catch (Exception e) {
+          LOG.warn("Error cleaning up service2: {}", e.getMessage());
+        }
+      }
+      if (glossary != null) {
+        try {
+          Map<String, String> params = new HashMap<>();
+          params.put("hardDelete", "true");
+          params.put("recursive", "true");
+          client.glossaries().delete(glossary.getId().toString(), params);
+        } catch (Exception e) {
+          LOG.warn("Error cleaning up glossary: {}", e.getMessage());
+        }
+      }
+    }
+  }
+
+  @Test
+  @Order(28)
   void test_WorkflowFieldUpdateDoesNotCreateRedundantChangeEvents(TestNamespace ns, TestInfo test)
       throws Exception {
     LOG.info("Starting test to verify workflow field updates don't create redundant change events");
@@ -2008,8 +2641,7 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     LOG.debug("testRedundantChangeEvents workflow created successfully, response: {}", response);
 
-    // Wait a moment for workflow setup
-    java.lang.Thread.sleep(2000);
+    waitForWorkflowDeployment(client, "testRedundantChangeEvents");
 
     // Trigger the workflow FIRST time
     workflowName = "testRedundantChangeEvents";
@@ -2021,16 +2653,20 @@ public class WorkflowDefinitionResourceIT {
                 HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
     assertNotNull(triggerResponse);
 
-    // Wait for workflow to complete (increased from original 15s to 30s for IT environment)
-    java.lang.Thread.sleep(30000);
-
-    // Verify the tag was actually added (meaningful change)
-    Table updatedTable = SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
-    boolean hasTag =
-        updatedTable.getTags() != null
-            && updatedTable.getTags().stream()
-                .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(hasTag, "Table should have Tier.Tier1 tag after first workflow run");
+    await()
+        .atMost(Duration.ofSeconds(120))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              Table updatedTable =
+                  SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
+              boolean hasTag =
+                  updatedTable.getTags() != null
+                      && updatedTable.getTags().stream()
+                          .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(hasTag, "Table should have Tier.Tier1 tag after first workflow run");
+            });
     LOG.info("First workflow run completed successfully - tag applied");
 
     // Trigger the workflow SECOND time (should be idempotent)
@@ -2041,15 +2677,20 @@ public class WorkflowDefinitionResourceIT {
                 HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
     assertNotNull(secondTriggerResponse);
 
-    // Wait for second workflow to complete (increased from original 15s to 30s for IT environment)
-    java.lang.Thread.sleep(30000);
-
-    // Verify the tag is still there and workflow is idempotent
-    Table finalTable = SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
-    boolean stillHasTag =
-        finalTable.getTags() != null
-            && finalTable.getTags().stream().anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
-    assertTrue(stillHasTag, "Table should still have the tag after second workflow run");
+    await()
+        .atMost(Duration.ofSeconds(120))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              Table finalTable =
+                  SdkClients.adminClient().tables().get(table.getId().toString(), "tags");
+              boolean stillHasTag =
+                  finalTable.getTags() != null
+                      && finalTable.getTags().stream()
+                          .anyMatch(tag -> "Tier.Tier1".equals(tag.getTagFQN()));
+              assertTrue(stillHasTag, "Table should still have the tag after second workflow run");
+            });
 
     LOG.info("✓ PASSED: Workflow demonstrates idempotent behavior");
 
@@ -2165,9 +2806,6 @@ public class WorkflowDefinitionResourceIT {
     Dashboard dashboard2 = SdkClients.adminClient().dashboards().create(createDashboard2);
     LOG.debug("Created dashboard2 without chart_1: {}", dashboard2.getName());
 
-    // Wait a bit for entities to be indexed
-    java.lang.Thread.sleep(10000);
-
     // Create periodic batch workflow with specific filters
     // IMPORTANT: Filters ensure only specific entities are updated
     // Create workflow using SDK client - Constructing object directly to avoid JSON parsing issues
@@ -2246,7 +2884,7 @@ public class WorkflowDefinitionResourceIT {
             }
           ],
           "config": {
-            "storeStageStatus": true
+            "storeStageStatus": false
           }
         }
         """
@@ -2270,12 +2908,9 @@ public class WorkflowDefinitionResourceIT {
 
     // Trigger the workflow manually using SDK
     String workflowName = "MultiEntityPeriodicQuery";
+    waitForWorkflowDeployment(client, workflowName);
     client.workflowDefinitions().trigger(workflowName);
     LOG.debug("Workflow triggered successfully");
-
-    // Wait for workflow execution (use Thread.sleep for consistency with original test)
-    LOG.debug("Waiting for workflow to process entities...");
-    java.lang.Thread.sleep(30000);
 
     // Store IDs for verification
     final UUID table1Id = table1.getId();
@@ -2283,29 +2918,40 @@ public class WorkflowDefinitionResourceIT {
     final UUID dashboard1Id = dashboard1.getId();
     final UUID dashboard2Id = dashboard2.getId();
 
-    // Verify only filtered entities were updated
-    Table updatedTable1 = SdkClients.adminClient().tables().get(table1Id.toString());
-    assertEquals("Multi Periodic Entity", updatedTable1.getDescription());
-    LOG.debug("Table1 updated successfully: {}", updatedTable1.getDescription());
+    await()
+        .atMost(Duration.ofSeconds(120))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              Table updatedTable1 = SdkClients.adminClient().tables().get(table1Id.toString());
+              assertEquals("Multi Periodic Entity", updatedTable1.getDescription());
 
-    Table updatedTable2 = SdkClients.adminClient().tables().get(table2Id.toString());
-    assertEquals("Initial description for table2", updatedTable2.getDescription());
-    LOG.debug("Table2 NOT updated (as expected): {}", updatedTable2.getDescription());
+              Table updatedTable2 = SdkClients.adminClient().tables().get(table2Id.toString());
+              assertEquals("Initial description for table2", updatedTable2.getDescription());
 
-    Dashboard updatedDashboard1 =
-        SdkClients.adminClient().dashboards().get(dashboard1Id.toString());
-    assertEquals("Multi Periodic Entity", updatedDashboard1.getDescription());
-    LOG.debug("Dashboard1 updated successfully: {}", updatedDashboard1.getDescription());
+              Dashboard updatedDashboard1 =
+                  SdkClients.adminClient().dashboards().get(dashboard1Id.toString());
+              assertEquals("Multi Periodic Entity", updatedDashboard1.getDescription());
 
-    Dashboard updatedDashboard2 =
-        SdkClients.adminClient().dashboards().get(dashboard2Id.toString());
-    assertEquals("Initial description for dashboard2", updatedDashboard2.getDescription());
-    LOG.debug("Dashboard2 NOT updated (as expected): {}", updatedDashboard2.getDescription());
+              Dashboard updatedDashboard2 =
+                  SdkClients.adminClient().dashboards().get(dashboard2Id.toString());
+              assertEquals(
+                  "Initial description for dashboard2", updatedDashboard2.getDescription());
+            });
 
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName("MultiEntityPeriodicQuery", null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -2410,8 +3056,6 @@ public class WorkflowDefinitionResourceIT {
     Table devTable = client.tables().create(createDevTable);
     LOG.debug("Created dev table that should NOT match filter: {}", devTable.getName());
 
-    java.lang.Thread.sleep(5000);
-
     // Create workflow with entity-specific filters - using raw JSON like reference test
     String workflowJson =
         """
@@ -2473,7 +3117,7 @@ public class WorkflowDefinitionResourceIT {
                 }
               ],
               "config": {
-                "storeStageStatus": true
+                "storeStageStatus": false
               }
             }
             """;
@@ -2492,8 +3136,11 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     LOG.info("{} created successfully", workflowName);
 
-    // Wait a bit for workflow to be deployed
-    java.lang.Thread.sleep(5000);
+    // Track the created workflow for cleanup
+    trackWorkflowFromJson(created);
+
+    waitForWorkflowDeployment(client, workflowName);
+    ensureWorkflowEventConsumerIsActive(client);
 
     // Store IDs for lambda expressions
     final UUID termToMatchId = termToMatch.getId();
@@ -2526,12 +3173,10 @@ public class WorkflowDefinitionResourceIT {
     JsonNode devTablePatch = MAPPER.readTree(devTablePatchStr);
     client.tables().patch(devTableId, devTablePatch);
 
-    java.lang.Thread.sleep(5000);
-
     // Wait for workflow processing using Awaitility
     LOG.info("Waiting for workflow to process entities...");
     await()
-        .atMost(Duration.ofSeconds(60))
+        .atMost(Duration.ofSeconds(180))
         .pollDelay(Duration.ofMillis(500))
         .pollInterval(Duration.ofSeconds(1))
         .until(
@@ -2599,7 +3244,15 @@ public class WorkflowDefinitionResourceIT {
 
     try {
       WorkflowDefinition wd = client.workflowDefinitions().getByName(workflowName, null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted {}", workflowName);
     } catch (Exception e) {
       LOG.warn("Error while deleting {}: {}", workflowName, e.getMessage());
@@ -2698,14 +3351,14 @@ public class WorkflowDefinitionResourceIT {
     OpenMetadataClient client = SdkClients.adminClient();
 
     // Create a workflow with user approval task for multiple entity types using eventBasedEntity
-    // trigger
-    // None of these entities (table, database, dashboard) support reviewers
-    String invalidWorkflowJson =
+    // trigger. Approval workflows are now enabled for all entities; owners are used as assignees
+    // for entities without reviewer support.
+    String workflowJson =
         """
             {
               "name": "multiEntityEventBasedApprovalWorkflow",
               "displayName": "Multi-Entity Event Based Approval Workflow",
-              "description": "Invalid workflow with user approval task for multiple entities without reviewer support",
+              "description": "Workflow with user approval task for multiple entities",
               "trigger": {
                 "type": "eventBasedEntity",
                 "config": {
@@ -2727,15 +3380,23 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -2747,7 +3408,13 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "ApproveEntity",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "ApproveEntity",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ],
               "config": {
@@ -2757,37 +3424,30 @@ public class WorkflowDefinitionResourceIT {
             """;
 
     try {
-      CreateWorkflowDefinition invalidWorkflow =
-          MAPPER.readValue(invalidWorkflowJson, CreateWorkflowDefinition.class);
+      CreateWorkflowDefinition workflow =
+          MAPPER.readValue(workflowJson, CreateWorkflowDefinition.class);
 
       // Use unique name
-      invalidWorkflow.withName(invalidWorkflow.getName() + "_" + UUID.randomUUID());
+      workflow.withName(workflow.getName() + "_" + UUID.randomUUID());
 
-      // Try to create the workflow
-      InvalidRequestException exception =
-          assertThrows(
-              InvalidRequestException.class,
-              () -> client.workflowDefinitions().create(invalidWorkflow));
-
-      // Should return error status (400 Bad Request or similar)
-      assertTrue(
-          exception.getStatusCode() >= 400,
-          "Expected error status code >= 400, got: " + exception.getStatusCode());
+      // Workflow creation should succeed for any entity type now
+      WorkflowDefinition created = client.workflowDefinitions().create(workflow);
+      assertNotNull(created);
 
       LOG.debug(
-          "Workflow with user approval task for multiple non-reviewer entities failed as expected with status: {}",
-          exception.getStatusCode());
+          "Workflow with user approval task for multiple non-reviewer entities created successfully");
 
-      // Verify error message
-      String errorResponse = exception.getMessage();
-      if (errorResponse == null) errorResponse = exception.getMessage();
-      if (errorResponse == null) errorResponse = "";
-
-      assertTrue(
-          errorResponse.contains("does not support reviewers")
-              || errorResponse.contains("User approval tasks"),
-          "Error message should mention reviewer support issue. Got: " + errorResponse);
-      LOG.debug("Error message: {}", errorResponse);
+      // Clean up - delete the created workflow
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(created.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + created.getName());
+      LOG.debug("Test workflow deleted successfully");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -2802,14 +3462,15 @@ public class WorkflowDefinitionResourceIT {
     LOG.info("Starting test_MixedEntityTypesWithReviewerSupport");
     OpenMetadataClient client = SdkClients.adminClient();
 
-    // Create a workflow with user approval task mixing entities with and without reviewer support
-    // glossaryTerm supports reviewers, but table doesn't
-    String invalidWorkflowJson =
+    // Create a workflow with user approval task mixing entities with and without reviewer support.
+    // Approval workflows are now enabled for all entities; owners are used as assignees
+    // for entities without reviewer support.
+    String workflowJson =
         """
             {
               "name": "mixedEntityApprovalWorkflow",
               "displayName": "Mixed Entity Approval Workflow",
-              "description": "Invalid workflow with user approval task for mixed entities",
+              "description": "Workflow with user approval task for mixed entities",
               "trigger": {
                 "type": "eventBasedEntity",
                 "config": {
@@ -2831,15 +3492,23 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -2851,7 +3520,13 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "ApproveEntity",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "ApproveEntity",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ],
               "config": {
@@ -2861,35 +3536,29 @@ public class WorkflowDefinitionResourceIT {
             """;
 
     try {
-      CreateWorkflowDefinition invalidWorkflow =
-          MAPPER.readValue(invalidWorkflowJson, CreateWorkflowDefinition.class);
+      CreateWorkflowDefinition workflow =
+          MAPPER.readValue(workflowJson, CreateWorkflowDefinition.class);
 
       // Use unique name
-      invalidWorkflow.withName(invalidWorkflow.getName() + "_" + UUID.randomUUID());
+      workflow.withName(workflow.getName() + "_" + UUID.randomUUID());
 
-      // Try to create the workflow
-      OpenMetadataException exception =
-          assertThrows(
-              OpenMetadataException.class,
-              () -> client.workflowDefinitions().create(invalidWorkflow));
+      // Workflow creation should succeed for any entity type now
+      WorkflowDefinition created = client.workflowDefinitions().create(workflow);
+      assertNotNull(created);
 
-      assertTrue(
-          exception.getStatusCode() >= 400,
-          "Expected error status code >= 400, got: " + exception.getStatusCode());
+      LOG.debug("Workflow with user approval task for mixed entity types created successfully");
 
-      LOG.debug(
-          "Workflow with user approval task for mixed entities failed as expected with status: {}",
-          exception.getStatusCode());
-
-      // Verify error message
-      String errorResponse = exception.getMessage();
-      if (errorResponse == null) errorResponse = "";
-
-      assertTrue(
-          errorResponse.contains("does not support reviewers")
-              || errorResponse.contains("User approval tasks"),
-          "Error message should mention reviewer support issue. Got: " + errorResponse);
-      LOG.debug("Error message: {}", errorResponse);
+      // Clean up - delete the created workflow
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(created.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + created.getName());
+      LOG.debug("Test workflow deleted successfully");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -3194,13 +3863,13 @@ public class WorkflowDefinitionResourceIT {
         LOG.debug("Node clashing with workflow name correctly rejected");
       }
 
-      // Test 5: User approval task on entity without reviewer support should fail
-      String invalidUserTaskWorkflowJson =
+      // Test 5: User approval task on any entity type should now be allowed
+      String validUserTaskWorkflowJson =
           """
             {
-              "name": "invalidUserTaskWorkflow",
-              "displayName": "Invalid User Task Workflow",
-              "description": "Workflow with user approval on non-reviewer entity",
+              "name": "validUserTaskWorkflow",
+              "displayName": "Valid User Task Workflow",
+              "description": "Workflow with user approval on any entity type",
               "trigger": {
                 "type": "eventBasedEntity",
                 "config": {
@@ -3222,13 +3891,21 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   }
                 },
                 {
-                  "name": "end",
-                  "displayName": "End",
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
                   "type": "endEvent",
                   "subType": "endEvent"
                 }
@@ -3240,21 +3917,24 @@ public class WorkflowDefinitionResourceIT {
                 },
                 {
                   "from": "approval",
-                  "to": "end"
+                  "to": "endApproved",
+                  "condition": "true"
+                },
+                {
+                  "from": "approval",
+                  "to": "endRejected",
+                  "condition": "false"
                 }
               ]
             }
             """;
-      CreateWorkflowDefinition invalidUserTaskWorkflow =
-          MAPPER.readValue(invalidUserTaskWorkflowJson, CreateWorkflowDefinition.class);
-      invalidUserTaskWorkflow.withName(invalidUserTaskWorkflow.getName() + "_" + UUID.randomUUID());
+      CreateWorkflowDefinition validUserTaskWorkflow =
+          MAPPER.readValue(validUserTaskWorkflowJson, CreateWorkflowDefinition.class);
+      validUserTaskWorkflow.withName(validUserTaskWorkflow.getName() + "_" + UUID.randomUUID());
 
-      OpenMetadataException userTaskEx =
-          assertThrows(
-              OpenMetadataException.class,
-              () -> client.workflowDefinitions().validate(invalidUserTaskWorkflow));
-      assertTrue(userTaskEx.getMessage().contains("does not support reviewers"));
-      LOG.debug("Invalid user task workflow correctly rejected");
+      // Validation should pass for any entity type now
+      assertDoesNotThrow(() -> client.workflowDefinitions().validate(validUserTaskWorkflow));
+      LOG.debug("User approval task workflow for table entity correctly accepted");
       // Test 6: Correct updatedBy namespace with user task should pass
       String correctNamespaceWorkflowJson =
           """
@@ -3284,7 +3964,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   },
                   "output": ["updatedBy"]
@@ -3936,7 +4618,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     }
                   },
                   "input": ["relatedEntity"],
@@ -4409,12 +5093,24 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     LOG.debug("MutualExclusivityWorkflow created successfully");
 
+    // Track the created workflow for cleanup
+    trackWorkflowFromJson(created);
+
     // Step 5: Trigger the workflow
     String workflowName = ns.prefix("MutualExclusivityWorkflow");
     String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
-    client
-        .getHttpClient()
-        .executeForString(HttpMethod.POST, triggerPath, "{}", RequestOptions.builder().build());
+    executeWithDeadlockRetry(
+        () -> {
+          try {
+            return client
+                .getHttpClient()
+                .executeForString(
+                    HttpMethod.POST, triggerPath, "{}", RequestOptions.builder().build());
+          } catch (Exception e) {
+            throw new RuntimeException("Failed to trigger workflow", e);
+          }
+        },
+        "trigger-" + workflowName);
     LOG.debug("Workflow triggered successfully");
 
     final UUID tableId = table.getId();
@@ -4555,7 +5251,9 @@ public class WorkflowDefinitionResourceIT {
                           "displayName": "User Approval",
                           "config": {
                             "assignees": {
-                              "addReviewers": true
+                              "addReviewers": true,
+                              "addOwners": false,
+                              "candidates": []
                             },
                             "approvalThreshold": 1,
                             "rejectionThreshold": 1
@@ -4645,7 +5343,7 @@ public class WorkflowDefinitionResourceIT {
             .withDomains(List.of(domain.getEntityReference()));
     LOG.debug("Created database schema: {}", schema.getName());
 
-    databaseSchema = schema;
+    DatabaseSchema databaseSchema = schema;
 
     // Create a table for dataContract
     List<Column> columns =
@@ -4680,7 +5378,6 @@ public class WorkflowDefinitionResourceIT {
     org.openmetadata.schema.entity.data.DataContract dataContract =
         client.dataContracts().create(createDataContract);
     LOG.debug("Created data contract: {} with initial description", dataContract.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 4: Create classification and tag with reviewers (USER1 as reviewer)
     CreateClassification createClassification =
@@ -4697,7 +5394,6 @@ public class WorkflowDefinitionResourceIT {
             .withReviewers(List.of(reviewerRef));
     Tag tag = client.tags().create(createTag);
     LOG.debug("Created tag: {} with initial description", tag.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 5: Create dataProduct with reviewers (dedicated reviewer)
     org.openmetadata.schema.api.domains.CreateDataProduct createDataProduct =
@@ -4710,7 +5406,6 @@ public class WorkflowDefinitionResourceIT {
     org.openmetadata.schema.entity.domains.DataProduct dataProduct =
         client.dataProducts().create(createDataProduct);
     LOG.debug("Created data product: {} with initial description", dataProduct.getName());
-    java.lang.Thread.sleep(2000);
 
     // Add asset using bulk API
     org.openmetadata.schema.type.api.BulkAssets bulkAssets =
@@ -4728,7 +5423,6 @@ public class WorkflowDefinitionResourceIT {
             .withReviewers(List.of(reviewerRef));
     Metric metric = client.metrics().create(createMetric);
     LOG.debug("Created metric: {} with initial description", metric.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 5.6: Create testCase with reviewers
     CreateTestDefinition createTestDef =
@@ -4753,7 +5447,6 @@ public class WorkflowDefinitionResourceIT {
 
     TestCase testCase = client.testCases().create(createTestCase);
     LOG.debug("Created test case: {} with initial description", testCase.getName());
-    java.lang.Thread.sleep(2000);
 
     // Step 6: Find and resolve approval tasks for each entity
     LOG.debug("Finding and resolving approval tasks");
@@ -4840,7 +5533,6 @@ public class WorkflowDefinitionResourceIT {
                 dataContract.getId(),
                 JsonUtils.readTree(
                     JsonUtils.getJsonPatch(dataContract, updatedContract).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update tag description
     Tag updatedTagObj = JsonUtils.deepCopy(tag, Tag.class);
@@ -4851,7 +5543,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 tag.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(tag, updatedTagObj).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update dataProduct description
     org.openmetadata.schema.entity.domains.DataProduct updatedDataProduct =
@@ -4864,7 +5555,6 @@ public class WorkflowDefinitionResourceIT {
                 dataProduct.getId(),
                 JsonUtils.readTree(
                     JsonUtils.getJsonPatch(dataProduct, updatedDataProduct).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update metric description
     Metric updatedMetric = JsonUtils.deepCopy(metric, Metric.class);
@@ -4875,7 +5565,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 metric.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(metric, updatedMetric).toString()));
-    java.lang.Thread.sleep(2000);
 
     // Update testCase description
     TestCase updatedTestCase = JsonUtils.deepCopy(testCase, TestCase.class);
@@ -4886,9 +5575,6 @@ public class WorkflowDefinitionResourceIT {
             .patch(
                 testCase.getId(),
                 JsonUtils.readTree(JsonUtils.getJsonPatch(testCase, updatedTestCase).toString()));
-
-    // Wait for new tasks to be created
-    java.lang.Thread.sleep(10000);
 
     // Step 9: Find and resolve new approval tasks
     LOG.debug("Finding and resolving new approval tasks after updates");
@@ -4908,9 +5594,6 @@ public class WorkflowDefinitionResourceIT {
     // Resolve new TestCase approval task
     waitAndResolveTask.accept(testCaseEntityLink, "TestCase");
 
-    // Wait for workflows to complete after approval
-    java.lang.Thread.sleep(5000);
-
     // Step 10: Verify descriptions were updated back by workflows
     verifyEntityDescriptionsUpdated(
         client,
@@ -4924,7 +5607,15 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName(unifiedWorkflow.getName(), null);
-      client.workflowDefinitions().delete(wd.getId());
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
       LOG.debug("Successfully deleted UnifiedApprovalWorkflow");
     } catch (Exception e) {
       LOG.warn("Error while deleting UnifiedApprovalWorkflow: {}", e.getMessage());
@@ -5078,7 +5769,9 @@ public class WorkflowDefinitionResourceIT {
                   "displayName": "User Approval",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
@@ -5113,14 +5806,13 @@ public class WorkflowDefinitionResourceIT {
                 {"from": "SetStatusApproved", "to": "EndNode"},
                 {"from": "UserApproval", "to": "EndNode", "condition": "false"}
               ],
-              "config": {"storeStageStatus": true}
+              "config": {"storeStageStatus": false}
             }
             """
             .formatted(workflowName);
 
     CreateWorkflowDefinition autoApprovalWorkflow =
         JsonUtils.readValue(autoApprovalWorkflowJson, CreateWorkflowDefinition.class);
-    java.lang.Thread.sleep(2000);
     String response =
         client
             .getHttpClient()
@@ -5138,6 +5830,8 @@ public class WorkflowDefinitionResourceIT {
     } catch (Exception e) {
       LOG.warn("Failed to parse created workflow id for {}: {}", workflowName, e.getMessage());
     }
+
+    waitForWorkflowDeployment(client, workflowName);
 
     // Create database infrastructure for dataProduct
     CreateDatabaseService createDbService =
@@ -5199,6 +5893,7 @@ public class WorkflowDefinitionResourceIT {
         client.dataProducts().create(createDataProduct);
     LOG.debug("Created data product without reviewers: {}", dataProduct.getName());
 
+    simulateWork(1000);
     // Add asset using bulk API - simulating client behavior
 
     org.openmetadata.schema.type.api.BulkAssets bulkAssets =
@@ -5206,29 +5901,10 @@ public class WorkflowDefinitionResourceIT {
             .withAssets(List.of(table.getEntityReference()));
     client.dataProducts().bulkAddAssets(dataProduct.getFullyQualifiedName(), bulkAssets);
 
-    // Wait for workflow to process and auto-approve
-    // Adding extra time to handle potential duplicate workflow executions
-    java.lang.Thread.sleep(15000);
-
-    // Verify no user tasks were created (since there are no reviewers, it should auto-approve)
-    // Using client.feed().listTasks()
-    String dataProductEntityLink =
-        String.format(
-            "<#E::%s::%s>",
-            org.openmetadata.service.Entity.DATA_PRODUCT, dataProduct.getFullyQualifiedName());
-    ResultList<org.openmetadata.schema.entity.feed.Thread> tasks =
-        client.feed().listTasks(dataProductEntityLink, TaskStatus.Open, null);
-
-    // Should have no tasks since auto-approval happened
-    assertTrue(
-        tasks.getData().isEmpty(),
-        "Expected no user tasks since dataProduct has no reviewers (should auto-approve)");
-    LOG.debug("✓ Confirmed no user tasks were created for dataProduct without reviewers");
-
     // Verify that the dataProduct status was set to "Approved" by the workflow
     LOG.info("Verifying dataProduct status was auto-approved...");
     await()
-        .atMost(Duration.ofSeconds(120))
+        .atMost(Duration.ofSeconds(180))
         .pollInterval(Duration.ofSeconds(2))
         .pollDelay(Duration.ofSeconds(2))
         .ignoreExceptions() // Ignore transient errors during polling
@@ -5236,7 +5912,9 @@ public class WorkflowDefinitionResourceIT {
             () -> {
               try {
                 org.openmetadata.schema.entity.domains.DataProduct updatedProduct =
-                    client.dataProducts().getByName(dataProduct.getFullyQualifiedName());
+                    client
+                        .dataProducts()
+                        .getByName(dataProduct.getFullyQualifiedName(), "entityStatus");
                 LOG.debug("DataProduct status: {}", updatedProduct.getEntityStatus());
                 return updatedProduct.getEntityStatus() != null
                     && "Approved".equals(updatedProduct.getEntityStatus().toString());
@@ -5245,6 +5923,25 @@ public class WorkflowDefinitionResourceIT {
                 return false;
               }
             });
+
+    // Verify no user tasks were created (since there are no reviewers, it should auto-approve)
+    String dataProductEntityLink =
+        String.format(
+            "<#E::%s::%s>",
+            org.openmetadata.service.Entity.DATA_PRODUCT, dataProduct.getFullyQualifiedName());
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              ResultList<org.openmetadata.schema.entity.feed.Thread> tasks =
+                  client.feed().listTasks(dataProductEntityLink, TaskStatus.Open, null);
+              assertTrue(
+                  tasks.getData().isEmpty(),
+                  "Expected no user tasks since dataProduct has no reviewers (should auto-approve)");
+            });
+    LOG.debug("✓ Confirmed no user tasks were created for dataProduct without reviewers");
 
     LOG.info("✓ DataProduct status successfully auto-approved to 'Approved'");
     LOG.info("test_AutoApprovalForEntitiesWithoutReviewers completed successfully");
@@ -5325,6 +6022,10 @@ public class WorkflowDefinitionResourceIT {
     assertEquals("updated string", updatedWorkflowDef.getDescription());
     LOG.debug("Updated workflow without entityTypes: {}", updatedWorkflowDef.getName());
 
+    // Clean up - delete the created workflow
+    client.workflowDefinitions().delete(updatedWorkflowDef.getId());
+    LOG.debug("Test workflow deleted successfully");
+
     LOG.info("test_CreateWorkflowWithoutEntityTypes completed successfully");
   }
 
@@ -5386,7 +6087,9 @@ public class WorkflowDefinitionResourceIT {
                   "subType": "userApprovalTask",
                   "config": {
                     "assignees": {
-                      "addReviewers": true
+                      "addReviewers": true,
+                      "addOwners": false,
+                      "candidates": []
                     },
                     "approvalThreshold": 1,
                     "rejectionThreshold": 1
@@ -5436,9 +6139,7 @@ public class WorkflowDefinitionResourceIT {
     WorkflowDefinition createdWorkflow = client.workflowDefinitions().create(approvalWorkflow);
     assertNotNull(createdWorkflow);
     LOG.debug("Created tag approval workflow: {}", createdWorkflow.getName());
-
-    // Wait for workflow to be ready
-    java.lang.Thread.sleep(2000);
+    waitForWorkflowDeployment(client, createdWorkflow.getName());
 
     // Create a classification for our test tags
     // Classification CreateClassification doesn't follow usual pattern? Checking Service...
@@ -5468,9 +6169,6 @@ public class WorkflowDefinitionResourceIT {
         tag.getReviewers().getFirst().getId(),
         "reviewer1 should be the reviewer");
     LOG.debug("Created tag with reviewer1: {}, Status: {}", tag.getName(), tag.getEntityStatus());
-
-    // Wait for workflow to process the create event
-    java.lang.Thread.sleep(5000);
 
     // Verify that an approval task was created and assigned to the reviewers
     String entityLink =
@@ -5656,7 +6354,10 @@ public class WorkflowDefinitionResourceIT {
                 new ApiConnection()
                     .withConfig(
                         new RestConnection()
-                            .withOpenAPISchemaURL(java.net.URI.create("http://localhost:8585"))));
+                            .withOpenAPISchemaConnection(
+                                new OpenAPISchemaURL()
+                                    .withOpenAPISchemaURL(
+                                        java.net.URI.create("http://localhost:8585")))));
 
     ApiService apiService = client.apiServices().create(createApiService);
     LOG.debug("Created API service: {}", apiService.getName());
@@ -5781,12 +6482,25 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     LOG.debug("ApiEndpointProcessingWorkflow created successfully");
 
+    // Track the created workflow for cleanup
+    trackWorkflowFromJson(created);
+
     // Step 5: Trigger the workflow
     String workflowName = "ApiEndpointProcessingWorkflow";
     String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
-    client
-        .getHttpClient()
-        .executeForString(HttpMethod.POST, triggerPath, "{}", RequestOptions.builder().build());
+    OpenMetadataClient finalClient1 = client;
+    executeWithDeadlockRetry(
+        () -> {
+          try {
+            return finalClient1
+                .getHttpClient()
+                .executeForString(
+                    HttpMethod.POST, triggerPath, "{}", RequestOptions.builder().build());
+          } catch (Exception e) {
+            throw new RuntimeException("Failed to trigger workflow", e);
+          }
+        },
+        "trigger-" + workflowName);
     LOG.debug("Workflow triggered successfully");
 
     // Store IDs for lambda expressions
@@ -5867,6 +6581,24 @@ public class WorkflowDefinitionResourceIT {
       }
     }
 
+    // Ensure Gold tag exists (bootstrapped at startup, but ensure defensively)
+    try {
+      Tag goldTag = SdkClients.adminClient().tags().getByName("Certification.Gold");
+      LOG.debug("Gold tag already exists: {}", goldTag.getFullyQualifiedName());
+    } catch (ApiException e) {
+      if (e.getStatusCode() == 404) {
+        CreateTag createGoldTag =
+            new CreateTag()
+                .withName("Gold")
+                .withDescription("Gold certified Data Asset.")
+                .withClassification("Certification");
+        Tag goldTag = SdkClients.adminClient().tags().create(createGoldTag);
+        LOG.debug("Gold tag created: {}", goldTag.getFullyQualifiedName());
+      } else {
+        throw e;
+      }
+    }
+
     // Check if Brass tag already exists
     try {
       Tag brassTag = SdkClients.adminClient().tags().getByName("Certification.Brass");
@@ -5885,42 +6617,75 @@ public class WorkflowDefinitionResourceIT {
         throw e;
       }
     }
+
+    // Defensively ensure AssetCertificationSettings has correct allowedClassification.
+    // This guards against cross-test pollution (e.g., SystemResourceIT changing it).
+    try {
+      OpenMetadataClient client = SdkClients.adminClient();
+      AssetCertificationSettings certSettings =
+          new AssetCertificationSettings()
+              .withAllowedClassification("Certification")
+              .withValidityPeriod("P30D");
+      Settings settings =
+          new Settings()
+              .withConfigType(SettingsType.ASSET_CERTIFICATION_SETTINGS)
+              .withConfigValue(certSettings);
+      String settingsJson = MAPPER.writeValueAsString(settings);
+      client
+          .getHttpClient()
+          .executeForString(
+              HttpMethod.PUT,
+              "/v1/system/settings",
+              settingsJson,
+              RequestOptions.builder().build());
+      LOG.debug("AssetCertificationSettings reset to allowedClassification=Certification");
+    } catch (Exception e) {
+      LOG.warn("Failed to reset AssetCertificationSettings: {}", e.getMessage());
+    }
   }
 
-  private void createTestEntities_SDK(TestNamespace ns, TestInfo test) {
+  private TestEntities createTestEntities_SDK(TestNamespace ns, TestInfo test) {
     // Create database service using namespaced name
     String serviceBaseName =
         "test_db_service_" + test.getDisplayName().replaceAll("[^a-zA-Z0-9_]", "");
     CreateDatabaseService createService = createDatabaseServiceRequest(ns.prefix(serviceBaseName));
-    databaseService = SdkClients.adminClient().databaseServices().create(createService);
-    LOG.debug("Created database service: {}", databaseService.getName());
+    DatabaseService localDatabaseService =
+        SdkClients.adminClient().databaseServices().create(createService);
+    LOG.debug("Created database service: {}", localDatabaseService.getName());
 
     // Create database using namespaced name
     String dbBaseName = "test_db_" + test.getDisplayName().replaceAll("[^a-zA-Z0-9_]", "");
     CreateDatabase createDatabase =
         new CreateDatabase()
             .withName(ns.prefix(dbBaseName))
-            .withService(databaseService.getFullyQualifiedName())
+            .withService(localDatabaseService.getFullyQualifiedName())
             .withDescription("Test database for workflow");
-    database = SdkClients.adminClient().databases().create(createDatabase);
-    LOG.debug("Created database: {}", database.getName());
+    Database localDatabase = SdkClients.adminClient().databases().create(createDatabase);
+    LOG.debug("Created database: {}", localDatabase.getName());
 
     // Create database schema using namespaced name
     String schemaBaseName = "test_schema_" + test.getDisplayName().replaceAll("[^a-zA-Z0-9_]", "");
     CreateDatabaseSchema createSchema =
         new CreateDatabaseSchema()
             .withName(ns.prefix(schemaBaseName))
-            .withDatabase(database.getFullyQualifiedName())
+            .withDatabase(localDatabase.getFullyQualifiedName())
             .withDescription("Test schema for workflow");
-    databaseSchema = SdkClients.adminClient().databaseSchemas().create(createSchema);
-    LOG.debug("Created database schema: {}", databaseSchema.getName());
+    DatabaseSchema localDatabaseSchema =
+        SdkClients.adminClient().databaseSchemas().create(createSchema);
+    LOG.debug("Created database schema: {}", localDatabaseSchema.getName());
 
     // Create tables with varying column descriptions
-    createTablesWithVaryingDescriptions_SDK(ns, test);
+    List<Table> localTestTables =
+        createTablesWithVaryingDescriptions_SDK(ns, localDatabaseSchema, test);
+
+    return new TestEntities(
+        localDatabaseService, localDatabase, localDatabaseSchema, localTestTables);
   }
 
-  private void createTablesWithVaryingDescriptions_SDK(TestNamespace ns, TestInfo test) {
+  private List<Table> createTablesWithVaryingDescriptions_SDK(
+      TestNamespace ns, DatabaseSchema schema, TestInfo test) {
     String testName = test.getDisplayName().replaceAll("[^a-zA-Z0-9_]", "");
+    List<Table> localTestTables = new ArrayList<>();
 
     // Table 1: All 4 columns with descriptions (should get Gold - 100%)
     List<Column> table1Columns =
@@ -5945,11 +6710,11 @@ public class WorkflowDefinitionResourceIT {
     CreateTable createTable1 =
         new CreateTable()
             .withName(ns.prefix(testName + "_table1_gold"))
-            .withDatabaseSchema(databaseSchema.getFullyQualifiedName())
+            .withDatabaseSchema(schema.getFullyQualifiedName())
             .withDescription("Table with all column descriptions")
             .withColumns(table1Columns);
     Table table1 = SdkClients.adminClient().tables().create(createTable1);
-    testTables.add(table1);
+    localTestTables.add(table1);
     LOG.debug("Created table1 (gold): {}", table1.getName());
 
     // Table 2: 3 columns with descriptions (should get Silver - 75%)
@@ -5973,11 +6738,11 @@ public class WorkflowDefinitionResourceIT {
     CreateTable createTable2 =
         new CreateTable()
             .withName(ns.prefix(testName + "_table2_silver"))
-            .withDatabaseSchema(databaseSchema.getFullyQualifiedName())
+            .withDatabaseSchema(schema.getFullyQualifiedName())
             .withDescription("Table with 3 column descriptions")
             .withColumns(table2Columns);
     Table table2 = SdkClients.adminClient().tables().create(createTable2);
-    testTables.add(table2);
+    localTestTables.add(table2);
     LOG.debug("Created table2 (silver): {}", table2.getName());
 
     // Table 3: 2 columns with descriptions (should get Bronze - 50%)
@@ -5998,11 +6763,11 @@ public class WorkflowDefinitionResourceIT {
     CreateTable createTable3 =
         new CreateTable()
             .withName(ns.prefix(testName + "_table3_bronze"))
-            .withDatabaseSchema(databaseSchema.getFullyQualifiedName())
+            .withDatabaseSchema(schema.getFullyQualifiedName())
             .withDescription("Table with 2 column descriptions")
             .withColumns(table3Columns);
     Table table3 = SdkClients.adminClient().tables().create(createTable3);
-    testTables.add(table3);
+    localTestTables.add(table3);
     LOG.debug("Created table3 (bronze): {}", table3.getName());
 
     // Table 4: No columns with descriptions (should get Brass - 0%)
@@ -6016,14 +6781,15 @@ public class WorkflowDefinitionResourceIT {
     CreateTable createTable4 =
         new CreateTable()
             .withName(ns.prefix(testName + "_table4_brass"))
-            .withDatabaseSchema(databaseSchema.getFullyQualifiedName())
+            .withDatabaseSchema(schema.getFullyQualifiedName())
             .withDescription("Table with no column descriptions")
             .withColumns(table4Columns);
     Table table4 = SdkClients.adminClient().tables().create(createTable4);
-    testTables.add(table4);
+    localTestTables.add(table4);
     LOG.debug("Created table4 (brass): {}", table4.getName());
 
-    LOG.debug("Created {} test tables", testTables.size());
+    LOG.debug("Created {} test tables", localTestTables.size());
+    return localTestTables;
   }
 
   private void createDataCompletenessWorkflow_SDK(TestNamespace ns) throws Exception {
@@ -6046,6 +6812,8 @@ public class WorkflowDefinitionResourceIT {
     assertTrue(created.has("id"));
     assertEquals(workflowName, created.get("name").asText());
     LOG.debug("DataCompleteness workflow created: {}", workflowName);
+
+    waitForWorkflowDeployment(client, workflowName);
   }
 
   private String buildDataCompletenessWorkflowJson(String workflowName) {
@@ -6099,23 +6867,39 @@ public class WorkflowDefinitionResourceIT {
             {"from": "start", "to": "SetCertification"},
             {"from": "SetCertification", "to": "end"}
           ],
-          "config": {"storeStageStatus": true}
+          "config": {"storeStageStatus": false}
         }
         """
         .formatted(workflowName, workflowName);
   }
 
-  private void triggerWorkflow_SDK(TestNamespace ns) throws Exception {
+  private void triggerWorkflow_SDK(TestNamespace ns, List<Table> localTestTables) throws Exception {
     String workflowName = "DataCompletenessWorkflow";
     OpenMetadataClient client = SdkClients.adminClient();
 
-    // Trigger the workflow using SDK
+    waitForWorkflowDeployment(client, workflowName);
+    for (Table table : localTestTables) {
+      waitForEntityIndexedInSearch(client, "table_search_index", table.getFullyQualifiedName());
+    }
+
+    // Trigger the workflow using SDK with retry
     String triggerPath = BASE_PATH + "/name/" + workflowName + "/trigger";
     String response =
-        client
-            .getHttpClient()
-            .executeForString(
-                HttpMethod.POST, triggerPath, new HashMap<>(), RequestOptions.builder().build());
+        executeWithDeadlockRetry(
+            () -> {
+              try {
+                return client
+                    .getHttpClient()
+                    .executeForString(
+                        HttpMethod.POST,
+                        triggerPath,
+                        new HashMap<>(),
+                        RequestOptions.builder().build());
+              } catch (Exception e) {
+                throw new RuntimeException("Failed to trigger workflow", e);
+              }
+            },
+            "trigger-" + workflowName);
 
     if (response != null && !response.trim().isEmpty()) {
       LOG.debug("Workflow triggered successfully: {}", workflowName);
@@ -6163,30 +6947,35 @@ public class WorkflowDefinitionResourceIT {
     }
   }
 
-  private void verifyTableCertifications_SDK() throws Exception {
-    // Wait for workflow to process (use Thread.sleep for consistency with original test)
-    java.lang.Thread.sleep(30000);
+  private void verifyTableCertifications_SDK(List<Table> localTestTables) throws Exception {
+    await()
+        .atMost(Duration.ofSeconds(180))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              for (Table table : localTestTables) {
+                Table updatedTable =
+                    SdkClients.adminClient()
+                        .tables()
+                        .get(table.getId().toString(), "certification");
 
-    // Final verification - check all tables have the expected Gold certification
-    for (Table table : testTables) {
-      Table updatedTable =
-          SdkClients.adminClient().tables().get(table.getId().toString(), "certification");
+                if (updatedTable.getCertification() != null) {
+                  LOG.debug(
+                      "Table {} has certification: {}",
+                      updatedTable.getName(),
+                      updatedTable.getCertification().getTagLabel().getTagFQN());
 
-      if (updatedTable.getCertification() != null) {
-        LOG.debug(
-            "Table {} has certification: {}",
-            updatedTable.getName(),
-            updatedTable.getCertification().getTagLabel().getTagFQN());
-
-        // For this simplified test, all tables should get Gold certification
-        assertEquals(
-            "Certification.Gold",
-            updatedTable.getCertification().getTagLabel().getTagFQN(),
-            "Table " + updatedTable.getName() + " should have Gold certification");
-      } else {
-        LOG.warn("Table {} has no certification", updatedTable.getName());
-      }
-    }
+                  assertEquals(
+                      "Certification.Gold",
+                      updatedTable.getCertification().getTagLabel().getTagFQN(),
+                      "Table " + updatedTable.getName() + " should have Gold certification");
+                } else {
+                  LOG.warn("Table {} has no certification", updatedTable.getName());
+                  fail("Table " + updatedTable.getName() + " has no certification");
+                }
+              }
+            });
 
     LOG.info("Certification verification completed successfully");
   }
@@ -6203,6 +6992,81 @@ public class WorkflowDefinitionResourceIT {
               .withDomainType(CreateDomain.DomainType.AGGREGATE);
       return SdkClients.adminClient().domains().create(createDomain);
     }
+  }
+
+  private void waitForWorkflowDeployment(OpenMetadataClient client, String workflowName) {
+    await()
+        .atMost(Duration.ofSeconds(120))
+        .pollDelay(Duration.ofSeconds(1))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () -> {
+              WorkflowDefinition workflow =
+                  client.workflowDefinitions().getByName(workflowName, "deployed");
+              return Boolean.TRUE.equals(workflow.getDeployed());
+            });
+  }
+
+  private void waitForEntityIndexedInSearch(
+      OpenMetadataClient client, String indexName, String entityFqn) {
+    await()
+        .atMost(Duration.ofSeconds(120))
+        .pollDelay(Duration.ofSeconds(1))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(() -> hasEntityInSearchIndex(client, indexName, entityFqn));
+  }
+
+  private boolean hasEntityInSearchIndex(
+      OpenMetadataClient client, String indexName, String entityFqn) throws IOException {
+    String escapedFqn = entityFqn.replace("\\", "\\\\").replace("\"", "\\\"");
+    String queryFilter =
+        """
+        {
+          "query": {
+            "bool": {
+              "should": [
+                { "term": { "fullyQualifiedName.keyword": "%s" } },
+                { "term": { "fullyQualifiedName": "%s" } },
+                { "match_phrase": { "fullyQualifiedName": "%s" } }
+              ],
+              "minimum_should_match": 1
+            }
+          }
+        }
+        """
+            .formatted(escapedFqn, escapedFqn, escapedFqn);
+    String response =
+        client.search().query("*").index(indexName).queryFilter(queryFilter).size(5).execute();
+    JsonNode searchJson = MAPPER.readTree(response);
+    if (getTotalHits(searchJson) == 0) {
+      return false;
+    }
+
+    JsonNode hits = searchJson.path("hits").path("hits");
+    if (!hits.isArray()) {
+      return false;
+    }
+
+    for (JsonNode hit : hits) {
+      String hitFqn = hit.path("_source").path("fullyQualifiedName").asText(null);
+      if (entityFqn.equals(hitFqn)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private long getTotalHits(JsonNode searchJson) {
+    if (!searchJson.has("hits") || !searchJson.get("hits").has("total")) {
+      return 0;
+    }
+    JsonNode total = searchJson.get("hits").get("total");
+    if (total.isObject() && total.has("value")) {
+      return total.get("value").asLong();
+    }
+    return total.asLong();
   }
 
   /**
@@ -6251,14 +7115,2431 @@ public class WorkflowDefinitionResourceIT {
 
       client.eventSubscriptions().create(createSubscription);
       LOG.info("Created WorkflowEventConsumer subscription");
-      java.lang.Thread.sleep(2000); // Give it time to initialize
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(1))
+          .pollDelay(Duration.ofMillis(500))
+          .ignoreExceptions()
+          .until(
+              () ->
+                  Boolean.TRUE.equals(
+                      client.eventSubscriptions().getByName("WorkflowEventConsumer").getEnabled()));
     } else if (!existing.getEnabled()) {
       // Enable if disabled using patch
       String patchStr = "[{\"op\":\"replace\",\"path\":\"/enabled\",\"value\":true}]";
       JsonNode patch = MAPPER.readTree(patchStr);
       client.eventSubscriptions().patch(existing.getId(), patch);
       LOG.info("Enabled WorkflowEventConsumer subscription");
-      java.lang.Thread.sleep(1000);
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(1))
+          .pollDelay(Duration.ofMillis(500))
+          .ignoreExceptions()
+          .until(
+              () ->
+                  Boolean.TRUE.equals(
+                      client.eventSubscriptions().getByName("WorkflowEventConsumer").getEnabled()));
+    }
+  }
+
+  @Test
+  @Order(40)
+  void test_WorkflowWithReviewersOwnersCandidates(TestNamespace ns) throws IOException {
+    LOG.info("Starting test_WorkflowWithReviewersOwnersCandidates");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Step 1: Create test users (2 candidates + 1 owner)
+    LOG.debug("Creating test users for comprehensive assignment testing");
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    CreateUser createCandidate1 =
+        new CreateUser()
+            .withName("candidate1_" + uniqueSuffix)
+            .withEmail("candidate1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Candidate 1");
+    User candidate1 = client.users().create(createCandidate1);
+    LOG.debug("Created candidate user 1: {}", candidate1.getName());
+
+    CreateUser createCandidate2 =
+        new CreateUser()
+            .withName("candidate2_" + uniqueSuffix)
+            .withEmail("candidate2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Candidate 2");
+    User candidate2 = client.users().create(createCandidate2);
+    LOG.debug("Created candidate user 2: {}", candidate2.getName());
+
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("tableowner_" + uniqueSuffix)
+            .withEmail("tableowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Table Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created owner user: {}", ownerUser.getName());
+
+    // Step 2: Create database infrastructure
+    LOG.debug("Creating database infrastructure");
+
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("test-db-service"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+    LOG.debug("Created database service: {}", dbService.getName());
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("test-database"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Test database for workflow assignment testing");
+    Database database = client.databases().create(createDb);
+    LOG.debug("Created database: {}", database.getName());
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema for workflow assignment testing");
+    DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
+    LOG.debug("Created database schema: {}", dbSchema.getName());
+
+    // Step 3: Create test table with owner
+    LOG.debug("Creating test table with owner assignment");
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName(ns.prefix("test_approval_table"))
+            .withDatabaseSchema(dbSchema.getFullyQualifiedName())
+            .withDescription("Test table for comprehensive workflow assignment testing")
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("name").withDataType(ColumnDataType.STRING),
+                    new Column().withName("created_date").withDataType(ColumnDataType.DATETIME)));
+
+    Table testTable = client.tables().create(createTable);
+    LOG.debug("Created test table: {} with owner: {}", testTable.getName(), ownerUser.getName());
+    String tableEntityLink = String.format("<#E::table::%s>", testTable.getFullyQualifiedName());
+
+    // Step 4: Create comprehensive workflow with all assignment types
+    LOG.debug("Creating workflow with reviewers, owners, and candidates assignment");
+
+    String workflowJson =
+        """
+            {
+              "name": "%s",
+              "displayName": "Comprehensive Assignment Test Workflow",
+              "description": "Workflow testing reviewers, owners, and candidates assignment",
+              "trigger": {
+                "type": "eventBasedEntity",
+                "config": {
+                  "entityTypes": ["table"],
+                  "events": ["Created", "Updated"],
+                  "exclude": ["reviewers"],
+                  "filter": {}
+                },
+                "output": ["relatedEntity", "updatedBy"]
+              },
+              "nodes": [
+                {
+                  "name": "start",
+                  "displayName": "Start",
+                  "type": "startEvent",
+                  "subType": "startEvent"
+                },
+                {
+                  "name": "ApproveTable",
+                  "displayName": "Approve Table",
+                  "type": "userTask",
+                  "subType": "userApprovalTask",
+                  "config": {
+                    "assignees": {
+                      "addReviewers": true,
+                      "addOwners": true,
+                      "candidates": [
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        },
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        }
+                      ]
+                    },
+                    "approvalThreshold": 1,
+                    "rejectionThreshold": 1
+                  },
+                  "input": ["relatedEntity"],
+                  "inputNamespaceMap": {
+                    "relatedEntity": "global"
+                  },
+                  "output": ["result"],
+                  "branches": ["true", "false"]
+                },
+                {
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                }
+              ],
+              "edges": [
+                {"from": "start", "to": "ApproveTable"},
+                {"from": "ApproveTable", "to": "endApproved", "condition": "true"},
+                {"from": "ApproveTable", "to": "endRejected", "condition": "false"}
+              ],
+              "config": {"storeStageStatus": false}
+            }
+            """
+            .formatted(
+                "TableApprovalWorkflow",
+                candidate1.getId(),
+                candidate1.getFullyQualifiedName(),
+                candidate1.getName(),
+                candidate2.getId(),
+                candidate2.getFullyQualifiedName(),
+                candidate2.getName());
+
+    CreateWorkflowDefinition comprehensiveWorkflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+
+    String workflowResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST,
+                BASE_PATH,
+                comprehensiveWorkflow,
+                RequestOptions.builder().build());
+
+    JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
+    String workflowId = workflowCreated.get("id").asText();
+    LOG.debug("Created comprehensive workflow: {}", workflowId);
+
+    // Step 5: Wait for initial workflow processing (table creation event)
+    LOG.info("Waiting for workflow to process table creation...");
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              boolean hasExpectedTasks = !threads.getData().isEmpty();
+              if (hasExpectedTasks) {
+                LOG.debug("Found {} tasks for table creation", threads.getData().size());
+              }
+              return hasExpectedTasks;
+            });
+
+    // Step 6: Verify initial task creation and assignees
+    LOG.info("Verifying initial task creation and assignees");
+    ResultList<Thread> initialThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    assertFalse(initialThreads.getData().isEmpty(), "Should have tasks created for table");
+
+    // Should have 1 task with 3 assignees: owner + 2 candidates (reviewers ignored for tables)
+    List<Thread> approvalTasks =
+        initialThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
+                            t.getTask().getType()))
+            .toList();
+
+    assertEquals(1, approvalTasks.size(), "Should have exactly 1 approval task");
+    LOG.debug("✓ Found exactly 1 approval task");
+
+    // Verify the single task has 3 assignees
+    Thread approvalTask = approvalTasks.get(0);
+    List<String> assigneeNames =
+        approvalTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    List<String> expectedAssignees =
+        Stream.of(ownerUser.getName(), candidate1.getName(), candidate2.getName())
+            .sorted()
+            .toList();
+
+    assertEquals(3, assigneeNames.size(), "Task should have exactly 3 assignees");
+    assertEquals(expectedAssignees, assigneeNames, "Task assignees should be owner + 2 candidates");
+    LOG.debug("✓ Verified task has 3 assignees: {}", assigneeNames);
+
+    // Verify the task has correct entity reference
+    assertTrue(
+        approvalTask.getAbout().contains(testTable.getFullyQualifiedName()),
+        "Task should reference the test table");
+    LOG.debug("✓ Task correctly references the test table");
+
+    // Step 7: Update table to trigger workflow again
+    LOG.info("Updating table to trigger workflow on update event");
+
+    String tablePatchJson =
+        "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Updated description for workflow testing\"}]";
+    JsonNode tablePatch = MAPPER.readTree(tablePatchJson);
+    client.tables().patch(testTable.getId(), tablePatch);
+
+    LOG.debug("Applied patch to table: {}", testTable.getName());
+
+    // Step 8: Wait for update event processing - should NOT create duplicate tasks
+    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    await()
+        .atMost(Duration.ofMinutes(1))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              // Should still have exactly 1 task (no duplicates)
+              boolean hasCorrectTaskCount = threads.getData().size() == 1;
+              if (hasCorrectTaskCount) {
+                LOG.debug("Confirmed 1 task exists after update (no duplicates)");
+              }
+              return hasCorrectTaskCount;
+            });
+
+    // Step 9: Verify no duplicate tasks created for update event
+    LOG.info("Verifying no duplicate tasks created for update event");
+    ResultList<Thread> updatedThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    List<Thread> allApprovalTasks =
+        updatedThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
+                            t.getTask().getType()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasks.size(),
+        "Should still have exactly 1 approval task (no duplicates after update)");
+    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
+
+    // Verify the task still has the same 3 assignees
+    Thread updatedTask = allApprovalTasks.getFirst();
+    List<String> updatedAssignees =
+        updatedTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    assertEquals(
+        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
+    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
+
+    // Step 10: Resolve the approval task to test workflow progression
+    LOG.info("Resolving the approval task");
+    ResolveTask resolveTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+
+    // Use owner client to resolve since they are an assignee
+    OpenMetadataClient ownerClient =
+        SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
+    ownerClient.feed().resolveTask(updatedTask.getTask().getId().toString(), resolveTask);
+    LOG.debug("✓ Resolved task: {}", updatedTask.getTask().getId());
+
+    // Verify task status changed
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              try {
+                ResultList<Thread> closedThreads =
+                    client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+                return !closedThreads.getData().isEmpty();
+              } catch (Exception e) {
+                return false;
+              }
+            });
+
+    ResultList<Thread> closedTasks =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+    assertFalse(closedTasks.getData().isEmpty(), "Should have at least one closed task");
+    LOG.debug("✓ Verified task resolution - found {} closed tasks", closedTasks.getData().size());
+
+    // Step 11: Cleanup
+    LOG.info("Cleaning up test resources");
+
+    // Delete workflow
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.DELETE,
+            BASE_PATH + "/" + workflowId,
+            null,
+            RequestOptions.builder().build());
+    LOG.debug("✓ Deleted workflow");
+
+    // Delete test entities
+    Map<String, String> params = new HashMap<>();
+    params.put("hardDelete", "true");
+    params.put("recursive", "true");
+    client.tables().delete(testTable.getId().toString(), params);
+    client.databaseSchemas().delete(dbSchema.getId().toString(), params);
+    client.databases().delete(database.getId().toString(), params);
+    client.databaseServices().delete(dbService.getId().toString(), params);
+    LOG.debug("✓ Deleted database infrastructure");
+
+    // Delete test users
+    client.users().delete(candidate1.getId().toString(), params);
+    client.users().delete(candidate2.getId().toString(), params);
+    client.users().delete(ownerUser.getId().toString(), params);
+    LOG.debug("✓ Deleted test users");
+
+    LOG.info("test_WorkflowWithReviewersOwnersCandidates completed successfully");
+  }
+
+  @Test
+  @Order(41)
+  void test_WorkflowWithTeamCandidates(TestNamespace ns) throws IOException {
+    LOG.info("Starting test_WorkflowWithTeamCandidates");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Step 1: Create test users (2 candidates + 1 owner)
+    LOG.debug("Creating test users for team-based assignment testing");
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    CreateUser createCandidate1 =
+        new CreateUser()
+            .withName("teamcandidate1_" + uniqueSuffix)
+            .withEmail("teamcandidate1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Candidate 1");
+    User candidate1 = client.users().create(createCandidate1);
+    LOG.debug("Created team candidate user 1: {}", candidate1.getName());
+
+    CreateUser createCandidate2 =
+        new CreateUser()
+            .withName("teamcandidate2_" + uniqueSuffix)
+            .withEmail("teamcandidate2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Candidate 2");
+    User candidate2 = client.users().create(createCandidate2);
+    LOG.debug("Created team candidate user 2: {}", candidate2.getName());
+
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("teamowner_" + uniqueSuffix)
+            .withEmail("teamowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Test Team Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created team owner user: {}", ownerUser.getName());
+
+    // Step 2: Create team with the 2 candidate users
+    LOG.debug("Creating team with candidate users");
+
+    CreateTeam createTeam =
+        new CreateTeam()
+            .withName("approval_team_" + uniqueSuffix)
+            .withDisplayName("Approval Team")
+            .withTeamType(CreateTeam.TeamType.GROUP)
+            .withUsers(List.of(candidate1.getId(), candidate2.getId()))
+            .withDescription("Team for workflow approval testing");
+    Team approvalTeam = client.teams().create(createTeam);
+    LOG.debug("Created approval team: {}", approvalTeam.getName());
+
+    // Step 3: Create database infrastructure
+    LOG.debug("Creating database infrastructure");
+
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("test-db-service"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+    LOG.debug("Created database service: {}", dbService.getName());
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("test-database"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Test database for team workflow assignment testing");
+    Database database = client.databases().create(createDb);
+    LOG.debug("Created database: {}", database.getName());
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema for team workflow assignment testing");
+    DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
+    LOG.debug("Created database schema: {}", dbSchema.getName());
+
+    // Step 4: Create test table with owner
+    LOG.debug("Creating test table with owner assignment");
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName(ns.prefix("test_team_approval_table"))
+            .withDatabaseSchema(dbSchema.getFullyQualifiedName())
+            .withDescription("Test table for team-based workflow assignment testing")
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("name").withDataType(ColumnDataType.STRING),
+                    new Column().withName("created_date").withDataType(ColumnDataType.DATETIME)));
+
+    Table testTable = client.tables().create(createTable);
+    LOG.debug("Created test table: {} with owner: {}", testTable.getName(), ownerUser.getName());
+    String tableEntityLink = String.format("<#E::table::%s>", testTable.getFullyQualifiedName());
+
+    // Step 5: Create team-based workflow
+    LOG.debug("Creating workflow with team candidates assignment");
+
+    String workflowJson =
+        """
+            {
+              "name": "%s",
+              "displayName": "Team Assignment Test Workflow",
+              "description": "Workflow testing team candidates assignment",
+              "trigger": {
+                "type": "eventBasedEntity",
+                "config": {
+                  "entityTypes": ["table"],
+                  "events": ["Created", "Updated"],
+                  "exclude": ["reviewers"],
+                  "filter": {}
+                },
+                "output": ["relatedEntity", "updatedBy"]
+              },
+              "nodes": [
+                {
+                  "name": "start",
+                  "displayName": "Start",
+                  "type": "startEvent",
+                  "subType": "startEvent"
+                },
+                {
+                  "name": "ApproveTable",
+                  "displayName": "Approve Table",
+                  "type": "userTask",
+                  "subType": "userApprovalTask",
+                  "config": {
+                    "assignees": {
+                      "addReviewers": true,
+                      "addOwners": true,
+                      "candidates": [
+                        {
+                          "id": "%s",
+                          "type": "team",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        }
+                      ]
+                    },
+                    "approvalThreshold": 1,
+                    "rejectionThreshold": 1
+                  },
+                  "input": ["relatedEntity"],
+                  "inputNamespaceMap": {
+                    "relatedEntity": "global"
+                  },
+                  "output": ["result"],
+                  "branches": ["true", "false"]
+                },
+                {
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                }
+              ],
+              "edges": [
+                {"from": "start", "to": "ApproveTable"},
+                {"from": "ApproveTable", "to": "endApproved", "condition": "true"},
+                {"from": "ApproveTable", "to": "endRejected", "condition": "false"}
+              ]
+            }
+            """
+            .formatted(
+                "TeamApprovalWorkflow",
+                approvalTeam.getId(),
+                approvalTeam.getFullyQualifiedName(),
+                approvalTeam.getName());
+
+    CreateWorkflowDefinition teamWorkflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+
+    String workflowResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, teamWorkflow, RequestOptions.builder().build());
+
+    JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
+    String workflowId = workflowCreated.get("id").asText();
+    LOG.debug("Created team workflow: {}", workflowId);
+
+    // Step 6: Wait for initial workflow processing (table creation event)
+    LOG.info("Waiting for workflow to process table creation...");
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              boolean hasExpectedTasks = !threads.getData().isEmpty();
+              if (hasExpectedTasks) {
+                LOG.debug("Found {} tasks for table creation", threads.getData().size());
+              }
+              return hasExpectedTasks;
+            });
+
+    // Step 7: Verify task creation and assignees (should have 3: owner + 2 team members)
+    LOG.info("Verifying initial task creation and assignees");
+    ResultList<Thread> initialThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+
+    assertFalse(initialThreads.getData().isEmpty(), "Should have tasks created for table");
+
+    List<Thread> allApprovalTasks =
+        initialThreads.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && TaskType.RequestApproval.equals(t.getTask().getType())
+                        && TaskStatus.Open.equals(t.getTask().getStatus()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasks.size(),
+        "Should have exactly 1 approval task (team expands to individual users)");
+    LOG.debug("✓ Confirmed exactly 1 approval task created");
+
+    Thread initialTask = allApprovalTasks.getFirst();
+    List<String> assigneeNames =
+        initialTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    List<String> expectedAssignees =
+        List.of(ownerUser.getName(), candidate1.getName(), candidate2.getName()).stream()
+            .sorted()
+            .toList();
+
+    assertEquals(
+        3, assigneeNames.size(), "Task should have exactly 3 assignees (owner + 2 team members)");
+    assertEquals(
+        expectedAssignees,
+        assigneeNames,
+        "Task assignees should include owner and both team members");
+    LOG.debug(
+        "✓ Verified task has 3 assignees: {} (team expanded to individual users)", assigneeNames);
+
+    // Step 8: Update the table to trigger workflow on update event
+    LOG.info("Updating table to trigger workflow on update event");
+    String tablePatchJson =
+        "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Updated description for team workflow testing\"}]";
+    JsonNode tablePatch = MAPPER.readTree(tablePatchJson);
+    client.tables().patch(testTable.getId(), tablePatch);
+    LOG.debug("Applied patch to table: {}", testTable.getName());
+
+    // Step 9: Wait and verify no duplicate tasks created
+    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () ->
+                client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10).getData().size()
+                    >= 1);
+
+    LOG.info("Verifying no duplicate tasks created for update event");
+    ResultList<Thread> threadsAfterUpdate =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+    List<Thread> allApprovalTasksAfterUpdate =
+        threadsAfterUpdate.getData().stream()
+            .filter(
+                t ->
+                    t.getTask() != null
+                        && TaskType.RequestApproval.equals(t.getTask().getType())
+                        && TaskStatus.Open.equals(t.getTask().getStatus()))
+            .toList();
+
+    assertEquals(
+        1,
+        allApprovalTasksAfterUpdate.size(),
+        "Should still have exactly 1 approval task (no duplicates after update)");
+    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
+
+    // Verify the task still has the same 3 assignees
+    Thread updatedTask = allApprovalTasksAfterUpdate.getFirst();
+    List<String> updatedAssignees =
+        updatedTask.getTask().getAssignees().stream()
+            .map(EntityReference::getName)
+            .sorted()
+            .toList();
+
+    assertEquals(
+        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
+    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
+
+    // Step 10: Resolve the approval task to test workflow progression
+    LOG.info("Resolving the approval task");
+    ResolveTask resolveTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+
+    // Use owner client to resolve since they are an assignee
+    OpenMetadataClient ownerClient =
+        SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
+    ownerClient.feed().resolveTask(updatedTask.getTask().getId().toString(), resolveTask);
+    LOG.debug("✓ Resolved task: {}", updatedTask.getTask().getId());
+
+    // Verify task status changed
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () ->
+                client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10).getData().size()
+                    >= 1);
+
+    ResultList<Thread> closedThreads =
+        client.feed().listTasks(tableEntityLink, TaskStatus.Closed, 10);
+    List<Thread> closedTasks = closedThreads.getData();
+    assertEquals(1, closedTasks.size(), "Should have exactly 1 closed task");
+    LOG.debug("✓ Task successfully resolved and closed");
+
+    // Step 11: Cleanup test resources
+    LOG.info("Cleaning up test resources");
+
+    // Delete workflow
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.DELETE,
+            BASE_PATH + "/" + workflowId,
+            null,
+            RequestOptions.builder().build());
+    LOG.debug("✓ Deleted workflow");
+
+    // Delete test entities
+    Map<String, String> params = new HashMap<>();
+    params.put("hardDelete", "true");
+    params.put("recursive", "true");
+    client.tables().delete(testTable.getId().toString(), params);
+    client.databaseSchemas().delete(dbSchema.getId().toString(), params);
+    client.databases().delete(database.getId().toString(), params);
+    client.databaseServices().delete(dbService.getId().toString(), params);
+    LOG.debug("✓ Deleted database infrastructure");
+
+    // Delete team
+    client.teams().delete(approvalTeam.getId().toString(), params);
+    LOG.debug("✓ Deleted approval team");
+
+    // Delete test users
+    client.users().delete(candidate1.getId().toString(), params);
+    client.users().delete(candidate2.getId().toString(), params);
+    client.users().delete(ownerUser.getId().toString(), params);
+    LOG.debug("✓ Deleted test users");
+
+    LOG.info("test_WorkflowWithTeamCandidates completed successfully");
+  }
+
+  @Test
+  @Order(30)
+  void test_TagChangeApprovalWithIncludeFields(TestNamespace ns) throws Exception {
+    LOG.info("Testing Tag change approval workflow with include fields feature");
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    // Create test user (owner)
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("tagowner_" + uniqueSuffix)
+            .withEmail("tagowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Tag Test Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created owner user: {}", ownerUser.getName());
+
+    // Setup: Create test entities
+    CreateDatabaseService createService = createDatabaseServiceRequest("tag_approval_service");
+    DatabaseService service = client.databaseServices().create(createService);
+
+    CreateDatabase createDatabase =
+        new CreateDatabase()
+            .withName("tag_approval_db")
+            .withService(service.getFullyQualifiedName());
+    Database database = client.databases().create(createDatabase);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName("tag_approval_schema")
+            .withDatabase(database.getFullyQualifiedName());
+    DatabaseSchema schema = client.databaseSchemas().create(createSchema);
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName("tag_approval_table")
+            .withDatabaseSchema(schema.getFullyQualifiedName())
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("data").withDataType(ColumnDataType.STRING)));
+    Table table = client.tables().create(createTable);
+    LOG.debug("Created table: {} with owner: {}", table.getName(), ownerUser.getName());
+
+    // Create confidentiality tags
+    CreateClassification createClassification =
+        new CreateClassification()
+            .withName("ConfidentialityTags")
+            .withDisplayName("Confidentiality Tags")
+            .withDescription("Classification for confidentiality levels");
+    Classification classification = client.classifications().create(createClassification);
+
+    CreateTag createPrivateTag =
+        new CreateTag()
+            .withName("Private")
+            .withClassification(classification.getFullyQualifiedName())
+            .withDescription("Private data tag");
+    Tag privateTag = client.tags().create(createPrivateTag);
+
+    CreateTag createPublicTag =
+        new CreateTag()
+            .withName("Public")
+            .withClassification(classification.getFullyQualifiedName())
+            .withDescription("Public data tag");
+    Tag publicTag = client.tags().create(createPublicTag);
+
+    // Create workflow with include fields for specific confidentiality tags
+    Map<String, Object> triggerConfig = new HashMap<>();
+    triggerConfig.put("entityTypes", List.of("table"));
+    triggerConfig.put("events", List.of("Updated"));
+    triggerConfig.put("exclude", List.of());
+
+    List<String> includeFields = List.of("tags");
+    triggerConfig.put("include", includeFields);
+    triggerConfig.put("filter", new HashMap<>());
+
+    Map<String, Object> trigger = new HashMap<>();
+    trigger.put("type", "eventBasedEntity");
+    trigger.put("config", triggerConfig);
+    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+    Map<String, Object> startNode = new HashMap<>();
+    startNode.put("name", "start");
+    startNode.put("type", "startEvent");
+    startNode.put("subType", "startEvent");
+
+    Map<String, Object> approvalNode = new HashMap<>();
+    approvalNode.put("name", "ApprovePrivateTagChange");
+    approvalNode.put("displayName", "Approve Private Tag Change");
+    approvalNode.put("type", "userTask");
+    approvalNode.put("subType", "userApprovalTask");
+    Map<String, Object> approvalConfig = new HashMap<>();
+    Map<String, Object> assignees = new HashMap<>();
+    assignees.put("addReviewers", false);
+    assignees.put("addOwners", true);
+    assignees.put("candidates", List.of());
+    approvalConfig.put("assignees", assignees);
+    approvalConfig.put("approvalThreshold", 1);
+    approvalConfig.put("rejectionThreshold", 1);
+    approvalNode.put("config", approvalConfig);
+    approvalNode.put("input", List.of("relatedEntity"));
+    Map<String, Object> inputNamespace = new HashMap<>();
+    inputNamespace.put("relatedEntity", "global");
+    approvalNode.put("inputNamespaceMap", inputNamespace);
+
+    Map<String, Object> endNode = new HashMap<>();
+    endNode.put("name", "end");
+    endNode.put("type", "endEvent");
+    endNode.put("subType", "endEvent");
+
+    Map<String, Object> edge1 = new HashMap<>();
+    edge1.put("from", "start");
+    edge1.put("to", "ApprovePrivateTagChange");
+
+    Map<String, Object> approvedNode = new HashMap<>();
+    approvedNode.put("name", "ApprovedEnd");
+    approvedNode.put("type", "endEvent");
+    approvedNode.put("subType", "endEvent");
+
+    Map<String, Object> rejectedNode = new HashMap<>();
+    rejectedNode.put("name", "RejectedEnd");
+    rejectedNode.put("type", "endEvent");
+    rejectedNode.put("subType", "endEvent");
+
+    Map<String, Object> edge2 = new HashMap<>();
+    edge2.put("from", "ApprovePrivateTagChange");
+    edge2.put("to", "ApprovedEnd");
+    edge2.put("condition", "true");
+
+    Map<String, Object> edge3 = new HashMap<>();
+    edge3.put("from", "ApprovePrivateTagChange");
+    edge3.put("to", "RejectedEnd");
+    edge3.put("condition", "false");
+
+    Map<String, Object> workflowRequest = new HashMap<>();
+    workflowRequest.put("name", "TagApprovalWorkflow");
+    workflowRequest.put("displayName", "Tag Change Approval");
+    workflowRequest.put("description", "Workflow to approve private tag changes");
+    workflowRequest.put("trigger", trigger);
+    workflowRequest.put("nodes", List.of(startNode, approvalNode, approvedNode, rejectedNode));
+    workflowRequest.put("edges", List.of(edge1, edge2, edge3));
+
+    String createResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, workflowRequest, RequestOptions.builder().build());
+    assertNotNull(createResponse);
+    JsonNode created = MAPPER.readTree(createResponse);
+    assertTrue(created.has("id"));
+    String workflowId = created.get("id").asText();
+
+    // Verify include fields are properly set in the created workflow
+    String getResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                BASE_PATH + "/" + workflowId,
+                null,
+                RequestOptions.builder().build());
+    JsonNode workflow = MAPPER.readTree(getResponse);
+
+    assertTrue(workflow.get("trigger").get("config").has("include"));
+    JsonNode includeArray = workflow.get("trigger").get("config").get("include");
+    assertTrue(includeArray.isArray());
+    assertEquals("tags", includeArray.get(0).asText());
+
+    LOG.info("✓ Tag approval workflow with include fields created and verified successfully");
+
+    // Test workflow triggering: Update table with Private tag - should trigger workflow
+    String tableEntityLink = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+    LOG.info("Testing positive case: updating tags to Private (should trigger approval)");
+
+    String privatePatchJson =
+        String.format(
+            "[{\"op\":\"add\",\"path\":\"/tags\",\"value\":[{\"tagFQN\":\"%s\",\"source\":\"Classification\",\"labelType\":\"Manual\",\"state\":\"Confirmed\"}]}]",
+            privateTag.getFullyQualifiedName());
+    JsonNode privatePatch = MAPPER.readTree(privatePatchJson);
+    client.tables().patch(table.getId(), privatePatch);
+
+    // Wait for workflow to process Private tag change
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              return !threads.getData().isEmpty();
+            });
+
+    ResultList<Thread> privateTasks = client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+    assertFalse(privateTasks.getData().isEmpty(), "Should have approval task for Private tag");
+    assertEquals(1, privateTasks.getData().size(), "Should have exactly 1 approval task");
+    LOG.debug("✓ Private tag change triggered approval task");
+
+    LOG.info("Testing negative case: updating tags to Public (should NOT trigger approval)");
+    String publicPatchJson =
+        String.format(
+            "[{\"op\":\"replace\",\"path\":\"/tags\",\"value\":[{\"tagFQN\":\"%s\",\"source\":\"Classification\",\"labelType\":\"Manual\",\"state\":\"Confirmed\"}]}]",
+            publicTag.getFullyQualifiedName());
+    JsonNode publicPatch = MAPPER.readTree(publicPatchJson);
+    client.tables().patch(table.getId(), publicPatch);
+
+    // Wait a bit and verify no new tasks created
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofSeconds(1))
+        .pollDelay(Duration.ofSeconds(3))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> publicTasks =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              assertEquals(
+                  1,
+                  publicTasks.getData().size(),
+                  "Should still have only 1 approval task (no new task for Public tag)");
+            });
+    LOG.debug("✓ Public tag change did NOT trigger approval task");
+
+    // Cleanup using safe deletion method
+    safeDeleteWorkflow(client, "TagApprovalWorkflow");
+
+    // Cleanup test entities
+    try {
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      params.put("recursive", "true");
+      client.databaseServices().delete(service.getId().toString(), params);
+      client.classifications().delete(classification.getId().toString(), params);
+      client.users().delete(ownerUser.getId().toString(), params);
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
+    }
+  }
+
+  @Test
+  @Order(31)
+  void test_DomainChangeApprovalWithIncludeFields(TestNamespace ns) throws Exception {
+    LOG.info("Testing Domain change approval workflow with include fields feature");
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    // Create test user (owner)
+    CreateUser createOwner =
+        new CreateUser()
+            .withName("domainowner_" + uniqueSuffix)
+            .withEmail("domainowner_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Domain Test Owner");
+    User ownerUser = client.users().create(createOwner);
+    LOG.debug("Created owner user: {}", ownerUser.getName());
+
+    // Setup: Create test domain
+    CreateDomain createDomain =
+        new CreateDomain()
+            .withName(ns.prefix("FinanceDomain"))
+            .withDisplayName("Finance Domain")
+            .withDescription("Domain for financial data")
+            .withDomainType(CreateDomain.DomainType.CONSUMER_ALIGNED);
+    Domain domain = client.domains().create(createDomain);
+
+    // Create test table
+    CreateDatabaseService createService = createDatabaseServiceRequest("domain_approval_service");
+    DatabaseService service = client.databaseServices().create(createService);
+
+    CreateDatabase createDatabase =
+        new CreateDatabase()
+            .withName("domain_approval_db")
+            .withService(service.getFullyQualifiedName());
+    Database database = client.databases().create(createDatabase);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName("domain_approval_schema")
+            .withDatabase(database.getFullyQualifiedName());
+    DatabaseSchema schema = client.databaseSchemas().create(createSchema);
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName("domain_approval_table")
+            .withDatabaseSchema(schema.getFullyQualifiedName())
+            .withOwners(List.of(ownerUser.getEntityReference()))
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("amount").withDataType(ColumnDataType.DECIMAL)));
+    Table table = client.tables().create(createTable);
+    LOG.debug("Created table: {} with owner: {}", table.getName(), ownerUser.getName());
+
+    // Create workflow with include fields for specific domain
+    Map<String, Object> triggerConfig = new HashMap<>();
+    triggerConfig.put("entityTypes", List.of("table"));
+    triggerConfig.put("events", List.of("Updated"));
+    triggerConfig.put("exclude", List.of());
+
+    List<String> includeFields = List.of("domains");
+    triggerConfig.put("include", includeFields);
+    triggerConfig.put("filter", new HashMap<>());
+
+    Map<String, Object> trigger = new HashMap<>();
+    trigger.put("type", "eventBasedEntity");
+    trigger.put("config", triggerConfig);
+    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+    Map<String, Object> startNode = new HashMap<>();
+    startNode.put("name", "start");
+    startNode.put("type", "startEvent");
+    startNode.put("subType", "startEvent");
+
+    Map<String, Object> approvalNode = new HashMap<>();
+    approvalNode.put("name", "ApproveDomainChange");
+    approvalNode.put("displayName", "Approve Domain Assignment");
+    approvalNode.put("type", "userTask");
+    approvalNode.put("subType", "userApprovalTask");
+    Map<String, Object> approvalConfig = new HashMap<>();
+    Map<String, Object> assignees = new HashMap<>();
+    assignees.put("addReviewers", false);
+    assignees.put("addOwners", true);
+    assignees.put("candidates", List.of());
+    approvalConfig.put("assignees", assignees);
+    approvalConfig.put("approvalThreshold", 1);
+    approvalConfig.put("rejectionThreshold", 1);
+    approvalNode.put("config", approvalConfig);
+    approvalNode.put("input", List.of("relatedEntity"));
+    Map<String, Object> inputNamespace = new HashMap<>();
+    inputNamespace.put("relatedEntity", "global");
+    approvalNode.put("inputNamespaceMap", inputNamespace);
+
+    Map<String, Object> endNode = new HashMap<>();
+    endNode.put("name", "end");
+    endNode.put("type", "endEvent");
+    endNode.put("subType", "endEvent");
+
+    Map<String, Object> approvedNode = new HashMap<>();
+    approvedNode.put("name", "ApprovedEnd");
+    approvedNode.put("type", "endEvent");
+    approvedNode.put("subType", "endEvent");
+
+    Map<String, Object> rejectedNode = new HashMap<>();
+    rejectedNode.put("name", "RejectedEnd");
+    rejectedNode.put("type", "endEvent");
+    rejectedNode.put("subType", "endEvent");
+
+    Map<String, Object> edge1 = new HashMap<>();
+    edge1.put("from", "start");
+    edge1.put("to", "ApproveDomainChange");
+
+    Map<String, Object> edge2 = new HashMap<>();
+    edge2.put("from", "ApproveDomainChange");
+    edge2.put("to", "ApprovedEnd");
+    edge2.put("condition", "true");
+
+    Map<String, Object> edge3 = new HashMap<>();
+    edge3.put("from", "ApproveDomainChange");
+    edge3.put("to", "RejectedEnd");
+    edge3.put("condition", "false");
+
+    Map<String, Object> workflowRequest = new HashMap<>();
+    workflowRequest.put("name", "DomainApprovalWorkflow");
+    workflowRequest.put("displayName", "Domain Change Approval");
+    workflowRequest.put("description", "Workflow to approve domain assignments");
+    workflowRequest.put("trigger", trigger);
+    workflowRequest.put("nodes", List.of(startNode, approvalNode, approvedNode, rejectedNode));
+    workflowRequest.put("edges", List.of(edge1, edge2, edge3));
+
+    String createResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, workflowRequest, RequestOptions.builder().build());
+    assertNotNull(createResponse);
+    JsonNode created = MAPPER.readTree(createResponse);
+    assertTrue(created.has("id"));
+    String workflowId = created.get("id").asText();
+
+    // Verify workflow structure with include fields
+    String getResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                BASE_PATH + "/" + workflowId,
+                null,
+                RequestOptions.builder().build());
+    JsonNode workflow = MAPPER.readTree(getResponse);
+
+    assertTrue(workflow.get("trigger").get("config").has("include"));
+    JsonNode includeArray = workflow.get("trigger").get("config").get("include");
+    assertTrue(includeArray.isArray());
+    assertEquals("domains", includeArray.get(0).asText());
+
+    LOG.info("✓ Domain approval workflow with include fields created and verified successfully");
+
+    // Test workflow triggering: Update table domain to Finance - should trigger workflow
+    String tableEntityLink = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+    LOG.info("Testing positive case: updating domain to Finance (should trigger approval)");
+
+    String financePatchJson =
+        String.format(
+            "[{\"op\":\"add\",\"path\":\"/domains\",\"value\":[{\"id\":\"%s\",\"type\":\"domain\",\"name\":\"%s\",\"fullyQualifiedName\":\"%s\"}]}]",
+            domain.getId(), domain.getName(), domain.getFullyQualifiedName());
+    JsonNode financePatch = MAPPER.readTree(financePatchJson);
+    client.tables().patch(table.getId(), financePatch);
+
+    // Wait for workflow to process Finance domain change
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              return !threads.getData().isEmpty();
+            });
+
+    ResultList<Thread> domainTasks = client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+    assertFalse(domainTasks.getData().isEmpty(), "Should have approval task for Finance domain");
+    assertEquals(1, domainTasks.getData().size(), "Should have exactly 1 approval task");
+    LOG.debug("✓ Finance domain change triggered approval task");
+
+    // Test negative case: Create Marketing domain and update - should NOT trigger workflow
+    CreateDomain createMarketingDomain =
+        new CreateDomain()
+            .withName(ns.prefix("MarketingDomain"))
+            .withDisplayName("Marketing Domain")
+            .withDescription("Domain for marketing data")
+            .withDomainType(CreateDomain.DomainType.CONSUMER_ALIGNED);
+    Domain marketingDomain = client.domains().create(createMarketingDomain);
+
+    LOG.info("Testing negative case: updating domain to Marketing (should NOT trigger approval)");
+    String marketingPatchJson =
+        String.format(
+            "[{\"op\":\"replace\",\"path\":\"/domains\",\"value\":[{\"id\":\"%s\",\"type\":\"domain\",\"name\":\"%s\",\"fullyQualifiedName\":\"%s\"}]}]",
+            marketingDomain.getId(),
+            marketingDomain.getName(),
+            marketingDomain.getFullyQualifiedName());
+    JsonNode marketingPatch = MAPPER.readTree(marketingPatchJson);
+    client.tables().patch(table.getId(), marketingPatch);
+
+    // Wait a bit and verify no new tasks created
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .pollInterval(Duration.ofSeconds(1))
+        .pollDelay(Duration.ofSeconds(3))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> marketingTasks =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 10);
+              assertEquals(
+                  1,
+                  marketingTasks.getData().size(),
+                  "Should still have only 1 approval task (no new task for Marketing domain)");
+            });
+    LOG.debug("✓ Marketing domain change did NOT trigger approval task");
+
+    // Cleanup using safe deletion method
+    safeDeleteWorkflow(client, "DomainApprovalWorkflow");
+
+    // Cleanup test entities
+    try {
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      params.put("recursive", "true");
+      client.databaseServices().delete(service.getId().toString(), params);
+      client.domains().delete(domain.getId().toString(), params);
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
+    }
+  }
+
+  @Test
+  @Order(32)
+  void test_IncludeFieldsPriorityOverExclude(TestNamespace ns) throws Exception {
+    LOG.info("Testing include fields have priority over exclude fields");
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Create test user for task ownership
+    CreateUser createUser =
+        new CreateUser().withName("priority_user").withEmail("priority.user@example.com");
+    User testUser = client.users().create(createUser);
+
+    // Setup test entities
+    CreateDatabaseService createService = createDatabaseServiceRequest("priority_service");
+    DatabaseService service = client.databaseServices().create(createService);
+
+    CreateDatabase createDatabase =
+        new CreateDatabase().withName("priority_db").withService(service.getFullyQualifiedName());
+    Database database = client.databases().create(createDatabase);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName("priority_schema")
+            .withDatabase(database.getFullyQualifiedName());
+    DatabaseSchema schema = client.databaseSchemas().create(createSchema);
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName("priority_table")
+            .withDatabaseSchema(schema.getFullyQualifiedName())
+            .withColumns(List.of(new Column().withName("id").withDataType(ColumnDataType.INT)))
+            .withOwners(List.of(new EntityReference().withType("user").withId(testUser.getId())));
+    Table table = client.tables().create(createTable);
+
+    // Create tag for testing
+    CreateClassification createClassification =
+        new CreateClassification()
+            .withName("TestTags")
+            .withDisplayName("Test Tags")
+            .withDescription("Test classification for priority testing");
+    Classification classification = client.classifications().create(createClassification);
+
+    CreateTag createTag =
+        new CreateTag()
+            .withName("ImportantTag")
+            .withDescription("Important tag for testing priority logic")
+            .withClassification(classification.getFullyQualifiedName());
+    Tag tag = client.tags().create(createTag);
+
+    // Create workflow with both include and exclude fields
+    // tags field is in both include and exclude - include should have priority
+    Map<String, Object> triggerConfig = new HashMap<>();
+    triggerConfig.put("entityTypes", List.of("table"));
+    triggerConfig.put("events", List.of("Updated"));
+    triggerConfig.put("exclude", List.of("tags")); // Exclude tags field
+
+    List<String> includeFields = List.of("tags"); // But include tags field (should have priority)
+    triggerConfig.put("include", includeFields);
+    triggerConfig.put("filter", new HashMap<>());
+
+    Map<String, Object> trigger = new HashMap<>();
+    trigger.put("type", "eventBasedEntity");
+    trigger.put("config", triggerConfig);
+    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+    // Create approval workflow
+    Map<String, Object> startNode = new HashMap<>();
+    startNode.put("name", "start");
+    startNode.put("type", "startEvent");
+    startNode.put("subType", "startEvent");
+
+    Map<String, Object> approvalNode = new HashMap<>();
+    approvalNode.put("name", "ApproveTagChange");
+    approvalNode.put("displayName", "Approve Tag Change");
+    approvalNode.put("type", "userTask");
+    approvalNode.put("subType", "userApprovalTask");
+    Map<String, Object> approvalConfig = new HashMap<>();
+    Map<String, Object> assignees = new HashMap<>();
+    assignees.put("addReviewers", false);
+    assignees.put("addOwners", true);
+    assignees.put("candidates", List.of());
+    approvalConfig.put("assignees", assignees);
+    approvalConfig.put("approvalThreshold", 1);
+    approvalConfig.put("rejectionThreshold", 1);
+    approvalNode.put("config", approvalConfig);
+    approvalNode.put("input", List.of("relatedEntity"));
+    Map<String, Object> approvalInputNamespace = new HashMap<>();
+    approvalInputNamespace.put("relatedEntity", "global");
+    approvalNode.put("inputNamespaceMap", approvalInputNamespace);
+    approvalNode.put("output", List.of("updatedBy"));
+    approvalNode.put("branches", List.of("true", "false"));
+
+    Map<String, Object> approvedEndNode = new HashMap<>();
+    approvedEndNode.put("name", "ApprovedEnd");
+    approvedEndNode.put("type", "endEvent");
+    approvedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> rejectedEndNode = new HashMap<>();
+    rejectedEndNode.put("name", "RejectedEnd");
+    rejectedEndNode.put("type", "endEvent");
+    rejectedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> edge1 = new HashMap<>();
+    edge1.put("from", "start");
+    edge1.put("to", "ApproveTagChange");
+
+    Map<String, Object> edge2 = new HashMap<>();
+    edge2.put("from", "ApproveTagChange");
+    edge2.put("to", "ApprovedEnd");
+    edge2.put("condition", "true");
+
+    Map<String, Object> edge3 = new HashMap<>();
+    edge3.put("from", "ApproveTagChange");
+    edge3.put("to", "RejectedEnd");
+    edge3.put("condition", "false");
+
+    Map<String, Object> workflowRequest = new HashMap<>();
+    workflowRequest.put("name", "includePriorityWorkflow");
+    workflowRequest.put("displayName", "Include Priority Test Workflow");
+    workflowRequest.put("description", "Test that include fields have priority over exclude");
+    workflowRequest.put("trigger", trigger);
+    workflowRequest.put(
+        "nodes", List.of(startNode, approvalNode, approvedEndNode, rejectedEndNode));
+    workflowRequest.put("edges", List.of(edge1, edge2, edge3));
+
+    String createResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, workflowRequest, RequestOptions.builder().build());
+    assertNotNull(createResponse);
+    JsonNode created = MAPPER.readTree(createResponse);
+    assertTrue(created.has("id"));
+    String workflowId = created.get("id").asText();
+
+    // Verify workflow has both include and exclude properly configured
+    String getResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                BASE_PATH + "/" + workflowId,
+                null,
+                RequestOptions.builder().build());
+    JsonNode workflow = MAPPER.readTree(getResponse);
+
+    JsonNode triggerConfigNode = workflow.get("trigger").get("config");
+    assertTrue(triggerConfigNode.has("include"));
+    assertTrue(triggerConfigNode.has("exclude"));
+    assertTrue(triggerConfigNode.get("exclude").isArray());
+    assertTrue(triggerConfigNode.get("exclude").size() > 0);
+    assertEquals("tags", triggerConfigNode.get("exclude").get(0).asText());
+    JsonNode includeArray = triggerConfigNode.get("include");
+    assertTrue(includeArray.isArray());
+    assertEquals("tags", includeArray.get(0).asText());
+
+    LOG.info("✓ Include priority workflow created with both include and exclude fields verified");
+
+    // Test: Update table with the specific tag - should trigger workflow despite exclude
+    String tagPatchJson =
+        String.format(
+            "[{\"op\":\"add\",\"path\":\"/tags\",\"value\":[{\"tagFQN\":\"%s\",\"source\":\"Classification\",\"labelType\":\"Manual\",\"state\":\"Confirmed\"}]}]",
+            tag.getFullyQualifiedName());
+    JsonNode tagPatch = MAPPER.readTree(tagPatchJson);
+    Table updatedTable = client.tables().patch(table.getId(), tagPatch);
+    assertNotNull(updatedTable.getTags());
+    assertTrue(
+        updatedTable.getTags().stream()
+            .anyMatch(tagLabel -> tagLabel.getTagFQN().equals(tag.getFullyQualifiedName())));
+
+    LOG.info("✓ Table updated with included tag: {}", tag.getFullyQualifiedName());
+
+    // Wait for workflow to process and check if approval task was created
+    String tableEntityLink = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 100);
+              boolean approvalTaskFound =
+                  !threads.getData().isEmpty()
+                      && threads.getData().stream()
+                          .anyMatch(
+                              thread ->
+                                  thread.getTask() != null
+                                      && TaskType.RequestApproval.equals(
+                                          thread.getTask().getType()));
+              assertTrue(
+                  approvalTaskFound,
+                  "Approval task should be created when include field matches, even with exclude field present");
+            });
+    LOG.info("✓ Approval task created successfully - include field priority verified");
+
+    // Cleanup workflow
+    safeDeleteWorkflow(client, "includePriorityWorkflow");
+
+    // Cleanup test entities
+    try {
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      params.put("recursive", "true");
+      client.tables().delete(table.getId().toString(), params);
+      client.databaseSchemas().delete(schema.getId().toString(), params);
+      client.databases().delete(database.getId().toString(), params);
+      client.databaseServices().delete(service.getId().toString(), params);
+      client.classifications().delete(classification.getId().toString(), params);
+      client.users().delete(testUser.getId().toString(), params);
+      LOG.debug("✓ Deleted all test entities");
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
+    }
+  }
+
+  @Test
+  @Order(33)
+  void test_EmptyIncludeFieldsBehavior(TestNamespace ns) throws Exception {
+    LOG.info("Testing empty include fields maintains backward compatibility");
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Create test user for task ownership
+    String randomSuffix = UUID.randomUUID().toString().substring(0, 8);
+    CreateUser createUser =
+        new CreateUser().withName("user_" + randomSuffix).withEmail("empty.include@example.com");
+    User testUser = client.users().create(createUser);
+
+    // Setup test entities
+    CreateDatabaseService createService = createDatabaseServiceRequest("svc_" + randomSuffix);
+    DatabaseService service = client.databaseServices().create(createService);
+
+    CreateDatabase createDatabase =
+        new CreateDatabase()
+            .withName("db_" + randomSuffix)
+            .withService(service.getFullyQualifiedName());
+    Database database = client.databases().create(createDatabase);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName("schema_" + randomSuffix)
+            .withDatabase(database.getFullyQualifiedName());
+    DatabaseSchema schema = client.databaseSchemas().create(createSchema);
+
+    // Create workflow with empty include fields (should behave like before)
+    Map<String, Object> triggerConfig = new HashMap<>();
+    triggerConfig.put("entityTypes", List.of("table"));
+    triggerConfig.put("events", List.of("Created"));
+    triggerConfig.put("exclude", List.of());
+    triggerConfig.put("include", List.of()); // Empty include fields
+    triggerConfig.put("filter", new HashMap<>());
+
+    Map<String, Object> trigger = new HashMap<>();
+    trigger.put("type", "eventBasedEntity");
+    trigger.put("config", triggerConfig);
+    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+    // Create approval workflow that should trigger for all table creations
+    Map<String, Object> startNode = new HashMap<>();
+    startNode.put("name", "start");
+    startNode.put("type", "startEvent");
+    startNode.put("subType", "startEvent");
+
+    Map<String, Object> approvalNode = new HashMap<>();
+    approvalNode.put("name", "ApproveTableCreation");
+    approvalNode.put("displayName", "Approve Table Creation");
+    approvalNode.put("type", "userTask");
+    approvalNode.put("subType", "userApprovalTask");
+    Map<String, Object> approvalConfig = new HashMap<>();
+    Map<String, Object> assignees = new HashMap<>();
+    assignees.put("addReviewers", false);
+    assignees.put("addOwners", true);
+    assignees.put("candidates", List.of());
+    approvalConfig.put("assignees", assignees);
+    approvalConfig.put("approvalThreshold", 1);
+    approvalConfig.put("rejectionThreshold", 1);
+    approvalNode.put("config", approvalConfig);
+    approvalNode.put("input", List.of("relatedEntity"));
+    Map<String, Object> approvalInputNamespace = new HashMap<>();
+    approvalInputNamespace.put("relatedEntity", "global");
+    approvalNode.put("inputNamespaceMap", approvalInputNamespace);
+    approvalNode.put("output", List.of("updatedBy"));
+    approvalNode.put("branches", List.of("true", "false"));
+
+    Map<String, Object> approvedEndNode = new HashMap<>();
+    approvedEndNode.put("name", "ApprovedEnd");
+    approvedEndNode.put("type", "endEvent");
+    approvedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> rejectedEndNode = new HashMap<>();
+    rejectedEndNode.put("name", "RejectedEnd");
+    rejectedEndNode.put("type", "endEvent");
+    rejectedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> edge1 = new HashMap<>();
+    edge1.put("from", "start");
+    edge1.put("to", "ApproveTableCreation");
+
+    Map<String, Object> edge2 = new HashMap<>();
+    edge2.put("from", "ApproveTableCreation");
+    edge2.put("to", "ApprovedEnd");
+    edge2.put("condition", "true");
+
+    Map<String, Object> edge3 = new HashMap<>();
+    edge3.put("from", "ApproveTableCreation");
+    edge3.put("to", "RejectedEnd");
+    edge3.put("condition", "false");
+
+    Map<String, Object> workflowRequest = new HashMap<>();
+    workflowRequest.put("name", "workflow_" + randomSuffix);
+    workflowRequest.put("displayName", "Empty Include Fields Test");
+    workflowRequest.put("description", "Test empty include fields backward compatibility");
+    workflowRequest.put("trigger", trigger);
+    workflowRequest.put(
+        "nodes", List.of(startNode, approvalNode, approvedEndNode, rejectedEndNode));
+    workflowRequest.put("edges", List.of(edge1, edge2, edge3));
+
+    String createResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, workflowRequest, RequestOptions.builder().build());
+    assertNotNull(createResponse);
+    JsonNode created = MAPPER.readTree(createResponse);
+    assertTrue(created.has("id"));
+    String workflowId = created.get("id").asText();
+
+    // Verify empty include fields are properly handled
+    String getResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                BASE_PATH + "/" + workflowId,
+                null,
+                RequestOptions.builder().build());
+    JsonNode workflow = MAPPER.readTree(getResponse);
+
+    JsonNode includeNode = workflow.get("trigger").get("config").get("include");
+    assertTrue(includeNode.isArray());
+    assertEquals(0, includeNode.size()); // Should be empty array
+
+    LOG.info(
+        "✓ Empty include fields workflow created successfully - backward compatibility verified");
+
+    // Test: Create a table - should trigger workflow (backward compatibility)
+    CreateTable createTable =
+        new CreateTable()
+            .withName("tbl_" + randomSuffix)
+            .withDatabaseSchema(schema.getFullyQualifiedName())
+            .withColumns(List.of(new Column().withName("id").withDataType(ColumnDataType.INT)))
+            .withOwners(List.of(new EntityReference().withType("user").withId(testUser.getId())));
+
+    Table table = client.tables().create(createTable);
+    assertNotNull(table);
+    LOG.info("✓ Table created: {}", table.getFullyQualifiedName());
+
+    // Wait for workflow to process and check if approval task was created (empty include should
+    // trigger for all)
+    String tableEntityLink = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(tableEntityLink, TaskStatus.Open, 100);
+              boolean approvalTaskFound =
+                  !threads.getData().isEmpty()
+                      && threads.getData().stream()
+                          .anyMatch(
+                              thread ->
+                                  thread.getTask() != null
+                                      && TaskType.RequestApproval.equals(
+                                          thread.getTask().getType()));
+              assertTrue(
+                  approvalTaskFound, "Empty include fields should behave like normal workflow");
+            });
+    LOG.info("✓ Approval task created successfully - backward compatibility maintained");
+
+    // Cleanup workflow
+    try {
+      WorkflowDefinition wd =
+          client.workflowDefinitions().getByName("workflow_" + randomSuffix, null);
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
+      LOG.debug("Successfully deleted EmptyIncludeWorkflow");
+    } catch (Exception e) {
+      LOG.warn("Error while deleting EmptyIncludeWorkflow: {}", e.getMessage());
+    }
+
+    // Cleanup test entities
+    try {
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      params.put("recursive", "true");
+      client.tables().delete(table.getId().toString(), params);
+      client.databaseSchemas().delete(schema.getId().toString(), params);
+      client.databases().delete(database.getId().toString(), params);
+      client.databaseServices().delete(service.getId().toString(), params);
+      client.users().delete(testUser.getId().toString(), params);
+      LOG.debug("✓ Deleted all test entities");
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
+    }
+  }
+
+  @Test
+  @Order(34)
+  void test_MultipleFieldChangesWithIncludeFields(TestNamespace ns) throws Exception {
+    LOG.info("Testing workflow with include fields for multiple different field types");
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Create test user for task ownership
+    String randomSuffix = UUID.randomUUID().toString().substring(0, 8);
+    CreateUser createUser =
+        new CreateUser().withName("user_" + randomSuffix).withEmail("multi.field@example.com");
+    User testUser = client.users().create(createUser);
+
+    // Create test entities
+    CreateDatabaseService createService = createDatabaseServiceRequest("svc_" + randomSuffix);
+    DatabaseService service = client.databaseServices().create(createService);
+
+    CreateDatabase createDatabase =
+        new CreateDatabase()
+            .withName("db_" + randomSuffix)
+            .withService(service.getFullyQualifiedName());
+    Database database = client.databases().create(createDatabase);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName("schema_" + randomSuffix)
+            .withDatabase(database.getFullyQualifiedName());
+    DatabaseSchema schema = client.databaseSchemas().create(createSchema);
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName("tbl_" + randomSuffix)
+            .withDatabaseSchema(schema.getFullyQualifiedName())
+            .withColumns(List.of(new Column().withName("id").withDataType(ColumnDataType.INT)))
+            .withOwners(List.of(new EntityReference().withType("user").withId(testUser.getId())));
+    Table table = client.tables().create(createTable);
+
+    // Create domain and tag for testing
+    CreateDomain createDomain =
+        new CreateDomain()
+            .withName("domain_" + randomSuffix)
+            .withDescription("Domain for multi field testing")
+            .withDomainType(CreateDomain.DomainType.CONSUMER_ALIGNED);
+    Domain domain = client.domains().create(createDomain);
+
+    CreateClassification createClassification =
+        new CreateClassification()
+            .withName("TestTags_" + randomSuffix)
+            .withDescription("Classification for multi-field testing");
+    Classification classification = client.classifications().create(createClassification);
+
+    CreateTag createTag =
+        new CreateTag()
+            .withName("CriticalTag")
+            .withDescription("Critical tag for multi-field testing")
+            .withClassification(classification.getFullyQualifiedName());
+    Tag tag = client.tags().create(createTag);
+
+    // Create workflow with multiple include fields
+    Map<String, Object> triggerConfig = new HashMap<>();
+    triggerConfig.put("entityTypes", List.of("table"));
+    triggerConfig.put("events", List.of("Updated"));
+    triggerConfig.put("exclude", List.of());
+
+    List<String> includeFields = List.of("tags", "domains");
+    triggerConfig.put("include", includeFields);
+    triggerConfig.put("filter", new HashMap<>());
+
+    Map<String, Object> trigger = new HashMap<>();
+    trigger.put("type", "eventBasedEntity");
+    trigger.put("config", triggerConfig);
+    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+
+    // Create approval workflow
+    Map<String, Object> startNode = new HashMap<>();
+    startNode.put("name", "start");
+    startNode.put("type", "startEvent");
+    startNode.put("subType", "startEvent");
+
+    Map<String, Object> approvalNode = new HashMap<>();
+    approvalNode.put("name", "ApproveMultiFieldChange");
+    approvalNode.put("displayName", "Approve Multi-Field Change");
+    approvalNode.put("type", "userTask");
+    approvalNode.put("subType", "userApprovalTask");
+    Map<String, Object> approvalConfig = new HashMap<>();
+    Map<String, Object> assignees = new HashMap<>();
+    assignees.put("addReviewers", false);
+    assignees.put("addOwners", true);
+    assignees.put("candidates", List.of());
+    approvalConfig.put("assignees", assignees);
+    approvalConfig.put("approvalThreshold", 1);
+    approvalConfig.put("rejectionThreshold", 1);
+    approvalNode.put("config", approvalConfig);
+    approvalNode.put("input", List.of("relatedEntity"));
+    Map<String, Object> approvalInputNamespace = new HashMap<>();
+    approvalInputNamespace.put("relatedEntity", "global");
+    approvalNode.put("inputNamespaceMap", approvalInputNamespace);
+    approvalNode.put("output", List.of("updatedBy"));
+    approvalNode.put("branches", List.of("true", "false"));
+
+    Map<String, Object> approvedEndNode = new HashMap<>();
+    approvedEndNode.put("name", "ApprovedEnd");
+    approvedEndNode.put("type", "endEvent");
+    approvedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> rejectedEndNode = new HashMap<>();
+    rejectedEndNode.put("name", "RejectedEnd");
+    rejectedEndNode.put("type", "endEvent");
+    rejectedEndNode.put("subType", "endEvent");
+
+    Map<String, Object> edge1 = new HashMap<>();
+    edge1.put("from", "start");
+    edge1.put("to", "ApproveMultiFieldChange");
+
+    Map<String, Object> edge2 = new HashMap<>();
+    edge2.put("from", "ApproveMultiFieldChange");
+    edge2.put("to", "ApprovedEnd");
+    edge2.put("condition", "true");
+
+    Map<String, Object> edge3 = new HashMap<>();
+    edge3.put("from", "ApproveMultiFieldChange");
+    edge3.put("to", "RejectedEnd");
+    edge3.put("condition", "false");
+
+    Map<String, Object> workflowRequest = new HashMap<>();
+    workflowRequest.put("name", "workflow_" + randomSuffix);
+    workflowRequest.put("displayName", "Multi Field Include Workflow");
+    workflowRequest.put("description", "Test workflow with multiple include fields");
+    workflowRequest.put("trigger", trigger);
+    workflowRequest.put(
+        "nodes", List.of(startNode, approvalNode, approvedEndNode, rejectedEndNode));
+    workflowRequest.put("edges", List.of(edge1, edge2, edge3));
+
+    String createResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST, BASE_PATH, workflowRequest, RequestOptions.builder().build());
+    assertNotNull(createResponse);
+    JsonNode created = MAPPER.readTree(createResponse);
+    assertTrue(created.has("id"));
+    String workflowId = created.get("id").asText();
+
+    // Verify multiple include fields are properly set
+    String getResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                BASE_PATH + "/" + workflowId,
+                null,
+                RequestOptions.builder().build());
+    JsonNode workflow = MAPPER.readTree(getResponse);
+
+    JsonNode includeNode = workflow.get("trigger").get("config").get("include");
+    assertTrue(includeNode.isArray());
+    assertEquals(2, includeNode.size());
+    assertTrue(includeNode.toString().contains("tags"));
+    assertTrue(includeNode.toString().contains("domains"));
+
+    LOG.info("✓ Multi-field include workflow created with both tag and domain includes verified");
+
+    // Test 1: Update table with tag - should trigger workflow
+    String tagPatchJson =
+        String.format(
+            "[{\"op\":\"add\",\"path\":\"/tags\",\"value\":[{\"tagFQN\":\"%s\",\"source\":\"Classification\",\"labelType\":\"Manual\",\"state\":\"Confirmed\"}]}]",
+            tag.getFullyQualifiedName());
+    JsonNode tagPatch = MAPPER.readTree(tagPatchJson);
+    Table updatedTableWithTag = client.tables().patch(table.getId(), tagPatch);
+    assertNotNull(updatedTableWithTag.getTags());
+    assertTrue(
+        updatedTableWithTag.getTags().stream()
+            .anyMatch(tagLabel -> tagLabel.getTagFQN().equals(tag.getFullyQualifiedName())));
+
+    LOG.info("✓ Table updated with tag: {}", tag.getFullyQualifiedName());
+
+    // Wait for workflow to process and check if approval task was created for tag change
+    String secondTableEntityLink = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(secondTableEntityLink, TaskStatus.Open, 100);
+              boolean tagTaskFound =
+                  !threads.getData().isEmpty()
+                      && threads.getData().stream()
+                          .anyMatch(
+                              thread ->
+                                  thread.getTask() != null
+                                      && TaskType.RequestApproval.equals(
+                                          thread.getTask().getType()));
+              assertTrue(tagTaskFound, "Approval task should be created for tag field change");
+            });
+    LOG.info("✓ Approval task created for tag change");
+
+    // Test 2: Update table with domain - should also trigger workflow
+    String domainPatchJson =
+        String.format(
+            "[{\"op\":\"add\",\"path\":\"/domains\",\"value\":[{\"id\":\"%s\",\"type\":\"domain\",\"name\":\"%s\",\"fullyQualifiedName\":\"%s\"}]}]",
+            domain.getId(), domain.getName(), domain.getFullyQualifiedName());
+    JsonNode domainPatch = MAPPER.readTree(domainPatchJson);
+    Table updatedTableWithDomain = client.tables().patch(table.getId(), domainPatch);
+    // Refresh table to get domain information
+    updatedTableWithDomain = client.tables().get(table.getId().toString(), "domains");
+    assertNotNull(updatedTableWithDomain.getDomains());
+    assertFalse(updatedTableWithDomain.getDomains().isEmpty());
+
+    LOG.info("✓ Table updated with domain: {}", domain.getFullyQualifiedName());
+
+    // Wait for workflow to process and check if approval task was created for domain change
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .pollDelay(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> threads =
+                  client.feed().listTasks(secondTableEntityLink, TaskStatus.Open, 100);
+              boolean domainTaskFound =
+                  !threads.getData().isEmpty()
+                      && threads.getData().stream()
+                          .anyMatch(
+                              thread ->
+                                  thread.getTask() != null
+                                      && TaskType.RequestApproval.equals(
+                                          thread.getTask().getType()));
+              assertTrue(
+                  domainTaskFound, "Approval task should be created for domain field change");
+            });
+    LOG.info(
+        "✓ Approval task created for domain change - OR logic verified for multiple include fields");
+
+    // Cleanup workflow
+    try {
+      WorkflowDefinition wd =
+          client.workflowDefinitions().getByName("workflow_" + randomSuffix, null);
+      executeWithDeadlockRetryVoid(
+          () -> {
+            try {
+              client.workflowDefinitions().delete(wd.getId());
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to delete workflow", e);
+            }
+          },
+          "delete-workflow-" + wd.getName());
+      LOG.debug("Successfully deleted MultiFieldIncludeWorkflow");
+    } catch (Exception e) {
+      LOG.warn("Error while deleting MultiFieldIncludeWorkflow: {}", e.getMessage());
+    }
+
+    // Cleanup test entities
+    try {
+      Map<String, String> params = new HashMap<>();
+      params.put("hardDelete", "true");
+      params.put("recursive", "true");
+      client.tables().delete(table.getId().toString(), params);
+      client.databaseSchemas().delete(schema.getId().toString(), params);
+      client.databases().delete(database.getId().toString(), params);
+      client.databaseServices().delete(service.getId().toString(), params);
+      client.domains().delete(domain.getId().toString(), params);
+      client.classifications().delete(classification.getId().toString(), params);
+      client.users().delete(testUser.getId().toString(), params);
+      LOG.debug("✓ Deleted all test entities");
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
+    }
+  }
+
+  @Test
+  @Order(42)
+  void test_CheckChangeDescriptionTask(TestNamespace ns) throws IOException {
+    LOG.info("Starting test_CheckChangeDescriptionTask");
+    OpenMetadataClient client = SdkClients.adminClient();
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+
+    // Step 1: Create 2 user clients as owners
+    LOG.debug("Creating test users for database schema ownership");
+    CreateUser createOwner1 =
+        new CreateUser()
+            .withName("schema_owner1_" + uniqueSuffix)
+            .withEmail("schema_owner1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Schema Owner 1");
+    User owner1 = client.users().create(createOwner1);
+    LOG.debug("Created owner user 1: {}", owner1.getName());
+
+    CreateUser createOwner2 =
+        new CreateUser()
+            .withName("schema_owner2_" + uniqueSuffix)
+            .withEmail("schema_owner2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Schema Owner 2");
+    User owner2 = client.users().create(createOwner2);
+    LOG.debug("Created owner user 2: {}", owner2.getName());
+
+    // Step 2: Create database service, database, and 2 database schemas
+    LOG.debug("Creating database infrastructure");
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("test-db-service-change-desc"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+    LOG.debug("Created database service: {}", dbService.getName());
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("test-database-change-desc"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Test database for checkChangeDescriptionTask testing");
+    Database database = client.databases().create(createDb);
+    LOG.debug("Created database: {}", database.getName());
+
+    CreateDatabaseSchema createSchema1 =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema1"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema 1 for change description testing")
+            .withOwners(List.of(owner1.getEntityReference()));
+    DatabaseSchema dbSchema1 = client.databaseSchemas().create(createSchema1);
+    LOG.debug(
+        "Created database schema 1: {} with owner: {}", dbSchema1.getName(), owner1.getName());
+
+    CreateDatabaseSchema createSchema2 =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("test-schema2"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Test schema 2 for change description testing")
+            .withOwners(List.of(owner2.getEntityReference()));
+    DatabaseSchema dbSchema2 = client.databaseSchemas().create(createSchema2);
+    LOG.debug(
+        "Created database schema 2: {} with owner: {}", dbSchema2.getName(), owner2.getName());
+
+    // Step 3: Create Finance and Business domains
+    LOG.debug("Creating test domains");
+    CreateDomain createFinanceDomain =
+        new CreateDomain()
+            .withName(ns.prefix("Finance"))
+            .withDescription("Finance domain for testing")
+            .withDomainType(CreateDomain.DomainType.CONSUMER_ALIGNED);
+    Domain financeDomain = client.domains().create(createFinanceDomain);
+    LOG.debug("Created Finance domain: {}", financeDomain.getName());
+
+    CreateDomain createBusinessDomain =
+        new CreateDomain()
+            .withName(ns.prefix("Business"))
+            .withDescription("Business domain for testing")
+            .withDomainType(CreateDomain.DomainType.CONSUMER_ALIGNED);
+    Domain businessDomain = client.domains().create(createBusinessDomain);
+    LOG.debug("Created Business domain: {}", businessDomain.getName());
+
+    // Step 4: Get existing PII tags (PII.Sensitive and PII.None should already exist)
+    Tag piiSensitiveTag;
+    Tag piiNoneTag;
+    try {
+      piiSensitiveTag = client.tags().getByName("PII.Sensitive");
+      piiNoneTag = client.tags().getByName("PII.None");
+      LOG.debug("Found existing PII tags: PII.Sensitive and PII.None");
+    } catch (Exception e) {
+      LOG.error("Failed to find existing PII tags. They should exist in the system.", e);
+      throw new RuntimeException("PII tags not found", e);
+    }
+
+    // Step 5: Create workflow with checkChangeDescriptionTask and static name
+    String workflowName = "CheckChangeDescriptionWorkflow";
+    LOG.debug("Creating workflow: {}", workflowName);
+    String workflowJson =
+        """
+        {
+          "name": "%s",
+          "displayName": "Check Change Description Workflow",
+          "description": "Workflow that checks change description for tags or domains changes",
+          "type": "eventBasedEntity",
+          "trigger": {
+            "type": "eventBasedEntity",
+            "config": {
+              "events": ["Updated"],
+              "entityTypes": ["databaseSchema"]
+            },
+            "output": ["relatedEntity", "updatedBy"]
+          },
+          "nodes": [
+            {
+              "name": "start",
+              "type": "startEvent",
+              "subType": "startEvent"
+            },
+            {
+              "name": "checkChangeDesc",
+              "type": "automatedTask",
+              "subType": "checkChangeDescriptionTask",
+              "displayName": "Check Tags or Domains Changed",
+              "config": {
+                "condition": "OR",
+                "rules": {
+                  "tags": ["PII.Sensitive", "PII.None"],
+                  "domains": ["Finance"]
+                }
+              },
+              "input": ["relatedEntity"],
+              "inputNamespaceMap": {
+                "relatedEntity": "global"
+              },
+              "branches": ["true", "false"]
+            },
+            {
+              "name": "userApproval",
+              "type": "userTask",
+              "subType": "userApprovalTask",
+              "displayName": "Approve Changes",
+              "input": ["relatedEntity"],
+              "output": ["updatedBy"],
+              "branches": ["true", "false"],
+              "config": {
+                "assignees": {
+                  "addReviewers": true,
+                  "addOwners": true,
+                  "candidates": []
+                },
+                "approvalThreshold": 1,
+                "rejectionThreshold": 1
+              },
+              "inputNamespaceMap": {
+                "relatedEntity": "global"
+              }
+            },
+            {
+              "name": "setApproved",
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "displayName": "Set Status to Approved",
+              "config": {
+                "fieldName": "status",
+                "fieldValue": "Approved"
+              },
+              "input": ["relatedEntity", "updatedBy"],
+              "inputNamespaceMap": {
+                "relatedEntity": "global",
+                "updatedBy": "userApproval"
+              }
+            },
+            {
+              "name": "setRejected",
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "displayName": "Set Status to Rejected",
+              "config": {
+                "fieldName": "status",
+                "fieldValue": "Rejected"
+              },
+              "input": ["relatedEntity", "updatedBy"],
+              "inputNamespaceMap": {
+                "relatedEntity": "global",
+                "updatedBy": "userApproval"
+              }
+            },
+            {
+              "name": "setDraft",
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "displayName": "Set Status to Draft",
+              "config": {
+                "fieldName": "status",
+                "fieldValue": "Draft"
+              },
+              "input": ["relatedEntity", "updatedBy"],
+              "inputNamespaceMap": {
+                "relatedEntity": "global",
+                "updatedBy": "global"
+              }
+            },
+            {
+              "name": "end",
+              "type": "endEvent",
+              "subType": "endEvent"
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "checkChangeDesc"
+            },
+            {
+              "from": "checkChangeDesc",
+              "to": "userApproval",
+              "condition": "true"
+            },
+            {
+              "from": "checkChangeDesc",
+              "to": "setDraft",
+              "condition": "false"
+            },
+            {
+              "from": "userApproval",
+              "to": "setApproved",
+              "condition": "true"
+            },
+            {
+              "from": "userApproval",
+              "to": "setRejected",
+              "condition": "false"
+            },
+            {
+              "from": "setApproved",
+              "to": "end"
+            },
+            {
+              "from": "setRejected",
+              "to": "end"
+            },
+            {
+              "from": "setDraft",
+              "to": "end"
+            }
+          ]
+        }
+        """
+            .formatted(workflowName);
+
+    CreateWorkflowDefinition workflowRequest =
+        MAPPER.readValue(workflowJson, CreateWorkflowDefinition.class);
+    WorkflowDefinition workflow = client.workflowDefinitions().create(workflowRequest);
+    LOG.debug("Created workflow: {}", workflow.getName());
+
+    // Wait for workflow to be deployed
+    waitForWorkflowDeployment(client, workflowName);
+    LOG.debug("✓ Workflow deployed successfully");
+
+    // Step 6: Update dbSchema1 with Finance domain and verify task creation
+    LOG.info("Testing Finance domain update on dbSchema1");
+    String schema1EntityLink =
+        String.format("<#E::databaseSchema::%s>", dbSchema1.getFullyQualifiedName());
+
+    String domainPatchJson =
+        String.format(
+            """
+        [
+          {
+            "op": "add",
+            "path": "/domains",
+            "value": [
+              {
+                "id": "%s",
+                "type": "domain",
+                "name": "%s",
+                "fullyQualifiedName": "%s"
+              }
+            ]
+          }
+        ]
+        """,
+            financeDomain.getId(), financeDomain.getName(), financeDomain.getFullyQualifiedName());
+
+    JsonNode domainPatch = MAPPER.readTree(domainPatchJson);
+    client.databaseSchemas().patch(dbSchema1.getId(), domainPatch);
+    LOG.debug("Updated dbSchema1 with Finance domain");
+
+    // Verify task creation for Finance domain
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              try {
+                ResultList<Thread> tasks =
+                    client.feed().listTasks(schema1EntityLink, TaskStatus.Open, 10);
+                boolean hasTask = !tasks.getData().isEmpty();
+                if (hasTask) {
+                  LOG.debug("✓ Found task for Finance domain change");
+                }
+                return hasTask;
+              } catch (Exception e) {
+                LOG.debug("Waiting for task creation: {}", e.getMessage());
+                return false;
+              }
+            });
+
+    ResultList<Thread> financeTasks =
+        client.feed().listTasks(schema1EntityLink, TaskStatus.Open, 10);
+    assertFalse(financeTasks.getData().isEmpty(), "Should have approval task for Finance domain");
+    Thread financeTask = financeTasks.getData().get(0);
+    LOG.debug("Found Finance domain task: {}", financeTask.getId());
+
+    // Step 7: Approve the Finance domain task
+    LOG.info("Approving Finance domain task");
+    OpenMetadataClient owner1Client =
+        SdkClients.createClient(owner1.getName(), owner1.getEmail(), new String[] {});
+    ResolveTask resolveFinanceTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+    owner1Client.feed().resolveTask(financeTask.getTask().getId().toString(), resolveFinanceTask);
+    LOG.debug("✓ Resolved Finance domain task");
+
+    // Step 8: Update dbSchema1 with PII.Sensitive tag and verify task creation
+    LOG.info("Testing PII.Sensitive tag update on dbSchema1");
+    String tagPatchJson =
+        String.format(
+            """
+        [
+          {
+            "op": "add",
+            "path": "/tags",
+            "value": [
+              {
+                "tagFQN": "%s",
+                "source": "Classification",
+                "labelType": "Manual",
+                "state": "Confirmed"
+              }
+            ]
+          }
+        ]
+        """,
+            piiSensitiveTag.getFullyQualifiedName());
+
+    JsonNode tagPatch = MAPPER.readTree(tagPatchJson);
+    client.databaseSchemas().patch(dbSchema1.getId(), tagPatch);
+    LOG.debug("Updated dbSchema1 with PII.Sensitive tag");
+
+    // Verify task creation for PII.Sensitive tag
+    await()
+        .atMost(Duration.ofSeconds(60))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              try {
+                ResultList<Thread> tasks =
+                    client.feed().listTasks(schema1EntityLink, TaskStatus.Open, 10);
+                boolean hasNewTask = tasks.getData().size() > 0; // Should have new task
+                if (hasNewTask) {
+                  LOG.debug("✓ Found task for PII.Sensitive tag change");
+                }
+                return hasNewTask;
+              } catch (Exception e) {
+                LOG.debug("Waiting for PII tag task creation: {}", e.getMessage());
+                return false;
+              }
+            });
+
+    ResultList<Thread> piiTasks = client.feed().listTasks(schema1EntityLink, TaskStatus.Open, 10);
+    assertFalse(piiTasks.getData().isEmpty(), "Should have approval task for PII.Sensitive tag");
+    Thread piiTask = piiTasks.getData().get(0);
+    LOG.debug("Found PII.Sensitive tag task: {}", piiTask.getId());
+
+    // Step 9: Resolve the PII.Sensitive tag task
+    LOG.info("Resolving PII.Sensitive tag task");
+    ResolveTask resolvePiiTask =
+        new ResolveTask().withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
+    owner1Client.feed().resolveTask(piiTask.getTask().getId().toString(), resolvePiiTask);
+    LOG.debug("✓ Resolved PII.Sensitive tag task");
+
+    // Step 10: Update dbSchema2 with PII.NonSensitive tag, verify NO tasks created
+    LOG.info("Testing PII.NonSensitive tag update on dbSchema2 - should NOT create task");
+    String schema2EntityLink =
+        String.format("<#E::databaseSchema::%s>", dbSchema2.getFullyQualifiedName());
+
+    // Create a tag that's not in the include list
+    CreateClassification createTestClassification =
+        new CreateClassification()
+            .withName(ns.prefix("TestClassification"))
+            .withDescription("Test classification for negative testing");
+    Classification testClassification = client.classifications().create(createTestClassification);
+
+    CreateTag createNonSensitiveTag =
+        new CreateTag()
+            .withName("NonSensitive")
+            .withClassification(testClassification.getFullyQualifiedName())
+            .withDescription("Non-sensitive tag for negative testing");
+    Tag nonSensitiveTag = client.tags().create(createNonSensitiveTag);
+
+    String nonSensitiveTagPatchJson =
+        String.format(
+            """
+        [
+          {
+            "op": "add",
+            "path": "/tags",
+            "value": [
+              {
+                "tagFQN": "%s",
+                "source": "Classification",
+                "labelType": "Manual",
+                "state": "Confirmed"
+              }
+            ]
+          }
+        ]
+        """,
+            nonSensitiveTag.getFullyQualifiedName());
+
+    JsonNode nonSensitiveTagPatch = MAPPER.readTree(nonSensitiveTagPatchJson);
+    client.databaseSchemas().patch(dbSchema2.getId(), nonSensitiveTagPatch);
+    LOG.debug("Updated dbSchema2 with non-included tag");
+
+    // Wait and verify NO task is created for non-included tag
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> tasks =
+                  client.feed().listTasks(schema2EntityLink, TaskStatus.Open, 10);
+              assertTrue(tasks.getData().isEmpty(), "Should NOT have task for non-included tag");
+            });
+    LOG.debug("✓ Confirmed no task created for non-included tag");
+
+    // Step 11: Update dbSchema2 with Business domain, verify NO tasks created
+    LOG.info("Testing Business domain update on dbSchema2 - should NOT create task");
+    String businessDomainPatchJson =
+        String.format(
+            """
+        [
+          {
+            "op": "add",
+            "path": "/domains",
+            "value": [
+              {
+                "id": "%s",
+                "type": "domain",
+                "name": "%s",
+                "fullyQualifiedName": "%s"
+              }
+            ]
+          }
+        ]
+        """,
+            businessDomain.getId(),
+            businessDomain.getName(),
+            businessDomain.getFullyQualifiedName());
+
+    JsonNode businessDomainPatch = MAPPER.readTree(businessDomainPatchJson);
+    client.databaseSchemas().patch(dbSchema2.getId(), businessDomainPatch);
+    LOG.debug("Updated dbSchema2 with Business domain (not in include list)");
+
+    // Wait and verify NO task is created for non-included domain
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              ResultList<Thread> tasks =
+                  client.feed().listTasks(schema2EntityLink, TaskStatus.Open, 10);
+              assertTrue(tasks.getData().isEmpty(), "Should NOT have task for non-included domain");
+            });
+    LOG.debug("✓ Confirmed no task created for non-included domain");
+
+    LOG.info("test_CheckChangeDescriptionTask completed successfully");
+
+    // Cleanup
+    try {
+      client.workflowDefinitions().delete(workflow.getId().toString());
+      client.databaseSchemas().delete(dbSchema1.getId().toString());
+      client.databaseSchemas().delete(dbSchema2.getId().toString());
+      client.databases().delete(database.getId().toString());
+      client.databaseServices().delete(dbService.getId().toString());
+      client.domains().delete(financeDomain.getId().toString());
+      client.domains().delete(businessDomain.getId().toString());
+      client.tags().delete(nonSensitiveTag.getId().toString());
+      client.classifications().delete(testClassification.getId().toString());
+      client.users().delete(owner1.getId().toString());
+      client.users().delete(owner2.getId().toString());
+      LOG.debug("✓ Cleaned up test entities");
+    } catch (Exception e) {
+      LOG.warn("Cleanup error: {}", e.getMessage());
     }
   }
 }

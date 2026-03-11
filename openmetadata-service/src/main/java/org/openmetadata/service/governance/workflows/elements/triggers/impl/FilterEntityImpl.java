@@ -2,12 +2,14 @@ package org.openmetadata.service.governance.workflows.elements.triggers.impl;
 
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.TRIGGERING_OBJECT_ID_VARIABLE;
 import static org.openmetadata.service.governance.workflows.elements.triggers.EventBasedEntityTrigger.PASSES_FILTER_VARIABLE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.flowable.common.engine.api.delegate.Expression;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
@@ -15,12 +17,15 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.RecognizerFeedback;
 import org.openmetadata.schema.type.WorkflowTriggerFields;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.governance.workflows.elements.TriggerFactory;
+import org.openmetadata.service.jdbi3.RecognizerFeedbackRepository;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.rules.RuleEngine;
 import org.slf4j.Logger;
@@ -29,6 +34,7 @@ import org.slf4j.LoggerFactory;
 public class FilterEntityImpl implements JavaDelegate {
   private static final Logger log = LoggerFactory.getLogger(FilterEntityImpl.class);
   private Expression excludedFieldsExpr;
+  private Expression includeFieldsExpr;
   private Expression filterExpr;
 
   @Override
@@ -38,6 +44,12 @@ public class FilterEntityImpl implements JavaDelegate {
     if (excludedFieldsExpr != null && excludedFieldsExpr.getValue(execution) != null) {
       excludedFilter =
           JsonUtils.readOrConvertValue(excludedFieldsExpr.getValue(execution), List.class);
+    }
+
+    List<String> includeFields = null;
+    if (includeFieldsExpr != null && includeFieldsExpr.getValue(execution) != null) {
+      includeFields =
+          JsonUtils.readOrConvertValue(includeFieldsExpr.getValue(execution), List.class);
     }
 
     String entityLinkStr =
@@ -52,7 +64,14 @@ public class FilterEntityImpl implements JavaDelegate {
         extractEntitySpecificFilter(
             filterExpr != null ? filterExpr.getValue(execution) : null, entityType);
 
-    boolean passesFilter = passesExcludedFilter(entityLinkStr, excludedFilter, filterLogic);
+    boolean passesFilter;
+    if (isTagFeedbackCreation(varHandler)) {
+      // We skip the entity filtering for this special case
+      passesFilter = true;
+    } else {
+      passesFilter =
+          passesExcludedFilter(entityLinkStr, excludedFilter, includeFields, filterLogic);
+    }
 
     if (passesFilter) {
       String triggerWorkflowDefinitionKey =
@@ -131,8 +150,46 @@ public class FilterEntityImpl implements JavaDelegate {
     return null;
   }
 
+  private boolean isTagFeedbackCreation(WorkflowVariableHandler varHandler) {
+    // If the triggering object is a recognizer and points to the workflow's related entity
+    // then this is a feedback creation workflow, and we should let it through
+
+    String entityLinkStr =
+        (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE);
+    // Parse entity type from entity link to determine which filter to use
+    MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
+
+    if (!Entity.TAG.equals(entityLink.getEntityType())) return false;
+
+    Optional<String> feedbackId =
+        Optional.ofNullable(
+            (String)
+                varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, TRIGGERING_OBJECT_ID_VARIABLE));
+
+    if (feedbackId.isEmpty()) return false;
+
+    RecognizerFeedbackRepository repository =
+        new RecognizerFeedbackRepository(Entity.getCollectionDAO());
+
+    RecognizerFeedback feedback;
+    try {
+      feedback = repository.get(UUID.fromString(feedbackId.get()));
+    } catch (EntityNotFoundException ignored) {
+      log.info(
+          "Triggering object with id {} not found. Related entity link: {}",
+          feedbackId.get(),
+          entityLinkStr);
+      return false;
+    }
+
+    return feedback.getTagFQN().equals(entityLink.getEntityFQN());
+  }
+
   private boolean passesExcludedFilter(
-      String entityLinkStr, List<String> excludedFilter, String filterLogic) {
+      String entityLinkStr,
+      List<String> excludedFilter,
+      List<String> includeFields,
+      String filterLogic) {
     MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
     EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
 
@@ -147,21 +204,9 @@ public class FilterEntityImpl implements JavaDelegate {
       ChangeDescription changeDescription = oChangeDescription.get();
       List<FieldChange> changedFields = getAllChangedFields(changeDescription);
 
-      // Check if ANY field is trigger-worthy AND not excluded
       fieldBasedFilter =
           changedFields.isEmpty()
-              || changedFields.stream()
-                  .anyMatch(
-                      field -> {
-                        String fieldName = field.getName();
-                        boolean isTriggerField =
-                            Arrays.stream(WorkflowTriggerFields.values())
-                                .map(WorkflowTriggerFields::value)
-                                .anyMatch(fieldName::equals);
-                        boolean isNotExcluded =
-                            excludedFilter == null || !excludedFilter.contains(fieldName);
-                        return isTriggerField && isNotExcluded;
-                      });
+              || passesFieldBasedFilter(changedFields, includeFields, excludedFilter);
     }
 
     // Apply JSON filter
@@ -180,5 +225,30 @@ public class FilterEntityImpl implements JavaDelegate {
     allChanges.addAll(changeDescription.getFieldsDeleted());
     allChanges.addAll(changeDescription.getFieldsUpdated());
     return allChanges;
+  }
+
+  private boolean passesFieldBasedFilter(
+      List<FieldChange> changedFields, List<String> includeFields, List<String> excludedFilter) {
+    return changedFields.stream()
+        .anyMatch(
+            field -> {
+              String fieldName = field.getName();
+              boolean isTriggerField =
+                  Arrays.stream(WorkflowTriggerFields.values())
+                      .map(WorkflowTriggerFields::value)
+                      .anyMatch(fieldName::equals);
+              if (!isTriggerField) {
+                return false;
+              }
+
+              // Check include filter first (higher priority)
+              if (includeFields != null && !includeFields.isEmpty()) {
+                // If include fields are specified, ONLY those fields should trigger
+                return includeFields.contains(fieldName);
+              }
+
+              // If no include filter specified, check exclude filter
+              return excludedFilter == null || !excludedFilter.contains(fieldName);
+            });
   }
 }

@@ -37,7 +37,10 @@ import {
   getToken,
   redirectToHomePage,
 } from '../../utils/common';
-import { CustomPropertyTypeByName } from '../../utils/customProperty';
+import {
+  CustomPropertyTypeByName,
+  updateCustomPropertyInRightPanel,
+} from '../../utils/customProperty';
 
 const entities = {
   'Api Service': ApiServiceClass,
@@ -232,6 +235,22 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               entity.customPropertyValue[type].property,
               entity.customPropertyValue[type].newValue
             );
+          }
+        });
+
+        await test.step(`Update ${titleText} Custom Property in Right Panel`, async () => {
+          test.slow();
+          for (const [index, type] of properties.entries()) {
+            await updateCustomPropertyInRightPanel({
+              page,
+              entityName:
+                entity.entityResponseData['displayName'] ??
+                entity.entityResponseData['name'],
+              propertyDetails: entity.customPropertyValue[type].property,
+              value: entity.customPropertyValue[type].value,
+              endpoint: entity.endpoint,
+              skipNavigation: index > 0,
+            });
           }
         });
 

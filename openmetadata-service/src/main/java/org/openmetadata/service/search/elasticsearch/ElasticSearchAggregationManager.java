@@ -35,6 +35,7 @@ import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.AggregationManagementClient;
 import org.openmetadata.service.search.SearchAggregation;
 import org.openmetadata.service.search.SearchIndexUtils;
+import org.openmetadata.service.search.SearchSourceBuilderFactory;
 import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.search.elasticsearch.aggregations.ElasticAggregationsBuilder;
 import org.openmetadata.service.search.elasticsearch.queries.ElasticQueryBuilder;
@@ -121,7 +122,8 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
         searchRequestBuilder.query(query);
       }
 
-      String aggregationField = request.getFieldName();
+      String aggregationField =
+          SearchSourceBuilderFactory.remapAggregationField(request.getFieldName());
       if (aggregationField == null || aggregationField.isBlank()) {
         throw new IllegalArgumentException("Aggregation field (fieldName) cannot be null or empty");
       }
@@ -460,22 +462,73 @@ public class ElasticSearchAggregationManager implements AggregationManagementCli
     }
   }
 
-  /**
-   * Serializes a SearchResponse to JSON string.
-   *
-   * @param searchResponse the SearchResponse to serialize
-   * @return JSON string representation of the response
-   */
   private String serializeSearchResponse(SearchResponse<JsonData> searchResponse) {
     JsonpMapper jsonpMapper = client._transport().jsonpMapper();
     jakarta.json.spi.JsonProvider provider = jsonpMapper.jsonProvider();
     java.io.StringWriter stringWriter = new java.io.StringWriter();
     jakarta.json.stream.JsonGenerator generator = provider.createGenerator(stringWriter);
 
-    searchResponse.serialize(generator, jsonpMapper);
-    generator.close();
+    try {
+      searchResponse.serialize(generator, jsonpMapper);
+      generator.close();
+      return stringWriter.toString();
+    } catch (Exception e) {
+      LOG.warn("Search response serialization failed, using fallback: {}", e.getMessage());
+      try {
+        generator.close();
+      } catch (Exception ignored) {
+        // Generator may be in a bad state
+      }
+    }
 
-    return stringWriter.toString();
+    return serializeSearchResponseFallback(searchResponse, jsonpMapper);
+  }
+
+  private String serializeSearchResponseFallback(
+      SearchResponse<JsonData> searchResponse, JsonpMapper jsonpMapper) {
+    jakarta.json.spi.JsonProvider provider = jsonpMapper.jsonProvider();
+    java.io.StringWriter sw = new java.io.StringWriter();
+    jakarta.json.stream.JsonGenerator gen = provider.createGenerator(sw);
+
+    gen.writeStartObject();
+    gen.write("took", searchResponse.took());
+    gen.write("timed_out", searchResponse.timedOut());
+
+    gen.writeStartObject("_shards");
+    gen.write("total", searchResponse.shards().total().intValue());
+    gen.write("successful", searchResponse.shards().successful().intValue());
+    gen.write(
+        "skipped",
+        searchResponse.shards().skipped() != null
+            ? searchResponse.shards().skipped().intValue()
+            : 0);
+    gen.write("failed", searchResponse.shards().failed().intValue());
+    gen.writeEnd();
+
+    gen.writeStartObject("hits");
+    if (searchResponse.hits().total() != null) {
+      gen.writeStartObject("total");
+      gen.write("value", searchResponse.hits().total().value());
+      gen.write("relation", searchResponse.hits().total().relation().jsonValue());
+      gen.writeEnd();
+    }
+    gen.writeStartArray("hits");
+    gen.writeEnd();
+    gen.writeEnd();
+
+    if (searchResponse.aggregations() != null && !searchResponse.aggregations().isEmpty()) {
+      gen.writeStartObject("aggregations");
+      for (var entry : searchResponse.aggregations().entrySet()) {
+        gen.writeKey(entry.getKey());
+        entry.getValue().serialize(gen, jsonpMapper);
+      }
+      gen.writeEnd();
+    }
+
+    gen.writeEnd();
+    gen.close();
+
+    return sw.toString();
   }
 
   @Override

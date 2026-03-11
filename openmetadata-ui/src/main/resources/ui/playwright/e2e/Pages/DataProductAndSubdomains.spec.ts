@@ -123,7 +123,9 @@ test.describe('Data Product Comprehensive Tests', () => {
 
       // Verify description was updated
       await expect(
-        page.getByTestId('markdown-parser').getByText('Updated data product description')
+        page
+          .getByTestId('markdown-parser')
+          .getByText('Updated data product description')
       ).toBeVisible({ timeout: 10000 });
     } finally {
       await dataProduct.delete(apiContext);
@@ -857,6 +859,95 @@ test.describe('Data Product Search and Filter', () => {
     } finally {
       await domain1.delete(apiContext);
       await domain2.delete(apiContext);
+      await afterAction();
+    }
+  });
+});
+
+test.describe('Data Product Name in Entity Name Cell', () => {
+  test.slow(true);
+
+  test.beforeEach(async ({ page }) => {
+    await redirectToHomePage(page);
+  });
+
+  test('Entity name cell shows both display name and name', async ({
+    page,
+  }) => {
+    const { afterAction, apiContext } = await getApiContext(page);
+    const domain = new Domain();
+    const dataProduct = new DataProduct([domain]);
+
+    try {
+      await domain.create(apiContext);
+      await dataProduct.create(apiContext);
+
+      await sidebarClick(page, SidebarItem.DATA_PRODUCT);
+
+      await page.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
+
+      // Search for the specific data product
+      const searchBox = page
+        .getByTestId('page-layout-v1')
+        .getByPlaceholder('Search');
+
+      await Promise.all([
+        searchBox.fill(dataProduct.data.name),
+        page.waitForResponse(
+          '/api/v1/search/query?q=*&index=data_product_search_index*'
+        ),
+      ]);
+
+      await page.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
+
+      // Verify the row shows both display name and name
+      const row = page.getByTestId(dataProduct.data.name);
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(dataProduct.responseData.displayName);
+      await expect(row).toContainText(dataProduct.responseData.name);
+    } finally {
+      await dataProduct.delete(apiContext);
+      await domain.delete(apiContext);
+      await afterAction();
+    }
+  });
+
+  test('Search data products by name', async ({ page }) => {
+    const { afterAction, apiContext } = await getApiContext(page);
+    const domain = new Domain();
+    const dataProduct = new DataProduct([domain]);
+
+    try {
+      await domain.create(apiContext);
+      await dataProduct.create(apiContext);
+
+      await sidebarClick(page, SidebarItem.DATA_PRODUCT);
+
+      // Search using the name
+      const searchBox = page
+        .getByTestId('page-layout-v1')
+        .getByPlaceholder('Search');
+
+      await Promise.all([
+        searchBox.fill(dataProduct.responseData.name),
+        page.waitForResponse(
+          '/api/v1/search/query?q=*&index=data_product_search_index*'
+        ),
+      ]);
+
+      await page.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
+
+      // Verify the data product appears in search results
+      await expect(page.getByTestId(dataProduct.data.name)).toBeVisible();
+    } finally {
+      await dataProduct.delete(apiContext);
+      await domain.delete(apiContext);
       await afterAction();
     }
   });

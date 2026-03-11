@@ -210,10 +210,15 @@ test.describe(
           { state: 'detached' }
         );
 
+        const teamsSearchBar = page.getByTestId(
+          'owner-select-teams-search-bar'
+        );
+        await teamsSearchBar.waitFor({ state: 'visible' });
+
         const searchUser = page.waitForResponse(
           `/api/v1/search/query?q=*${encodeURIComponent(teamName)}*`
         );
-        await page.getByTestId(`owner-select-teams-search-bar`).fill(teamName);
+        await teamsSearchBar.fill(teamName);
         await searchUser;
 
         const ownerItem = page.getByRole('listitem', {
@@ -266,8 +271,18 @@ test.describe(
         }
 
         // Add Multiple GlossaryTerm to Table
-        await assignGlossaryTerm(page, glossaryTerm.responseData);
-        await assignGlossaryTerm(page, glossaryTerm2.responseData, 'Edit');
+        await assignGlossaryTerm(
+          page,
+          glossaryTerm.responseData,
+          'Add',
+          entity.endpoint
+        );
+        await assignGlossaryTerm(
+          page,
+          glossaryTerm2.responseData,
+          'Edit',
+          entity.endpoint
+        );
       });
     }
   }
@@ -732,7 +747,9 @@ test.describe(
 
         // Navigate to glossary term page with full page load
         await page.goto(
-          `/glossary/${encodeURIComponent(testGlossaryTerm.responseData.fullyQualifiedName)}`
+          `/glossary/${encodeURIComponent(
+            testGlossaryTerm.responseData.fullyQualifiedName
+          )}`
         );
 
         // Wait for page to be fully loaded

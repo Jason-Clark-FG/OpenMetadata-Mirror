@@ -169,7 +169,7 @@ public class McpPermissionIT {
         new CreateMcpServer()
             .withName(ns.prefix("deletable-server"))
             .withServerType(McpServerType.Custom)
-            .withTransportType(McpTransportType.Streamable)
+            .withTransportType(McpTransportType.StreamableHTTP)
             .withDescription("Server that admin can delete");
 
     McpServer created = createMcpServer(SdkClients.adminClient(), create);
@@ -302,7 +302,7 @@ public class McpPermissionIT {
         new CreateMcpServer()
             .withName(ns.prefix("unowned-server"))
             .withServerType(McpServerType.Security)
-            .withTransportType(McpTransportType.Streamable)
+            .withTransportType(McpTransportType.StreamableHTTP)
             .withDescription("Server with no owner - anyone can set owner");
     // Note: No owners set
 

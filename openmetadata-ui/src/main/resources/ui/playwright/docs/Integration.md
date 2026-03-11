@@ -2,7 +2,7 @@
 
 # Integration
 
-> **1 Components** | **6 Files** | **53 Tests** | **57 Scenarios** 🚀
+> **1 Components** | **7 Files** | **61 Tests** | **66 Scenarios** 🚀
 
 ## Table of Contents
 - [Connectors](#connectors)
@@ -14,7 +14,7 @@
 ## Connectors
 
 <details open>
-<summary>📄 <b>ServiceIngestion.spec.ts</b> (45 tests, 45 scenarios)</summary>
+<summary>📄 <b>ServiceIngestion.spec.ts</b> (47 tests, 48 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/nightly/ServiceIngestion.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/nightly/ServiceIngestion.spec.ts)
 
@@ -122,6 +122,33 @@
 | # | Test Case | Description |
 |---|-----------|-------------|
 | 1 | **Service Ingestion Pagination** - Default Pagination size should be 15 | Tests default ingestion pagination size  Verifies ingestion pipelines load with a default page size of 15 |
+
+### Agent Run History - Last 5 Runs Visible
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Agent Run History - Last 5 Runs Visible** - Create MySQL service and ingest metadata | Create MySQL service and ingest metadata |
+| 2 | **Agent Run History - Last 5 Runs Visible** - Run metadata agent 5 times and verify all run statuses are visible | Tests that all 5 run statuses are visible in the UI after running the metadata agent 5 times.  Validates the fix for #25800 — agent status shows true last 5 runs |
+| | ↳ *Trigger and wait for run ${...}* | |
+| | ↳ *Verify all 5 run statuses are visible in the UI* | |
+
+</details>
+
+<details open>
+<summary>📄 <b>ServiceCreationPermissions.spec.ts</b> (6 tests, 6 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Flow/ServiceCreationPermissions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Flow/ServiceCreationPermissions.spec.ts)
+
+### Service Creation with isOwner() Permissions
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Service Creation with isOwner() Permissions** - User with service creation permission can create a new database service | User with service creation permission can create a new database service |
+| 2 | **Service Creation with isOwner() Permissions** - User can view but cannot modify services they do not own | User can view but cannot modify services they do not own |
+| 3 | **Service Creation with isOwner() Permissions** - User can update connection details of their own service | User can update connection details of their own service |
+| 4 | **Service Creation with isOwner() Permissions** - Different user can view but cannot modify service owned by another user | Different user can view but cannot modify service owned by another user |
+| 5 | **Service Creation with isOwner() Permissions** - Owner can delete their own service | Owner can delete their own service |
+| 6 | **Service Creation with isOwner() Permissions** - Owner can update description of their service | Owner can update description of their service |
 
 </details>
 

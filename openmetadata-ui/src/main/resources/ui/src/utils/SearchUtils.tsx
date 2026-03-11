@@ -15,12 +15,14 @@ import { SearchOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import i18next from 'i18next';
 import { isEmpty } from 'lodash';
+import { Bucket } from 'Models';
 import { Link } from 'react-router-dom';
 import { ReactComponent as GlossaryTermIcon } from '../assets/svg/book.svg';
 import { ReactComponent as IconChart } from '../assets/svg/chart.svg';
 import { ReactComponent as IconDashboard } from '../assets/svg/dashboard-grey.svg';
 import { ReactComponent as IconApiCollection } from '../assets/svg/ic-api-collection-default.svg';
 import { ReactComponent as IconApiEndpoint } from '../assets/svg/ic-api-endpoint-default.svg';
+import { ReactComponent as ColumnIcon } from '../assets/svg/ic-column.svg';
 import { ReactComponent as DataProductIcon } from '../assets/svg/ic-data-product.svg';
 import { ReactComponent as IconDatabase } from '../assets/svg/ic-database.svg';
 import { ReactComponent as IconDatabaseSchema } from '../assets/svg/ic-schema.svg';
@@ -40,6 +42,7 @@ import { EntityType, FqnPart } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { SearchSourceAlias } from '../interface/search.interface';
 import { getPartialNameFromTableFQN } from './CommonUtils';
+import { ElasticsearchQuery } from './QueryBuilderUtils';
 import searchClassBase from './SearchClassBase';
 import serviceUtilClassBase from './ServiceUtilClassBase';
 import { escapeESReservedCharacters, getEncodedFqn } from './StringsUtils';
@@ -210,6 +213,12 @@ export const getGroupLabel = (index: string) => {
 
       break;
 
+    case SearchIndex.COLUMN:
+      label = i18next.t('label.column-plural');
+      GroupIcon = ColumnIcon;
+
+      break;
+
     default: {
       const { label: indexLabel, GroupIcon: IndexIcon } =
         searchClassBase.getIndexGroupLabel(index);
@@ -222,7 +231,7 @@ export const getGroupLabel = (index: string) => {
   }
 
   const groupLabel = (
-    <div className="d-flex items-center p-y-xs">
+    <div className="d-flex items-center p-y-xs p-x-lg">
       <GroupIcon className="m-r-sm" height={16} width={16} />
       <p className="text-grey-muted text-xs">{label}</p>
     </div>
@@ -248,7 +257,7 @@ export const getSuggestionElement = (
   return (
     <Button
       block
-      className="text-left truncate p-0"
+      className="text-left truncate p-y-0 p-x-lg"
       data-testid={dataTestId}
       icon={
         <img
@@ -327,7 +336,7 @@ export const getEntityTypeFromSearchIndex = (searchIndex: string) => {
  * @returns An array of objects with value and title properties
  */
 export const parseBucketsData = (
-  buckets: Array<Record<string, unknown>>,
+  buckets: Array<Bucket>,
   sourceFields?: string,
   sourceFieldOptionType?: {
     label: string;
@@ -336,25 +345,51 @@ export const parseBucketsData = (
 ) => {
   if (sourceFieldOptionType) {
     return buckets.map((bucket) => {
-      const data = bucket['top_hits#top']?.hits?.hits?.[0]?._source;
+      const topHitsData = (bucket as Record<string, unknown>)[
+        'top_hits#top'
+      ] as
+        | {
+            hits?: {
+              hits?: Array<{
+                _source?: Record<string, unknown>;
+              }>;
+            };
+          }
+        | undefined;
+      const data = topHitsData?.hits?.hits?.[0]?._source;
 
       return {
-        title: data[sourceFieldOptionType.label],
-        value: data[sourceFieldOptionType.value],
+        title: data?.[sourceFieldOptionType.label] as string,
+        value: data?.[sourceFieldOptionType.value] as string,
       };
     });
   }
 
   return buckets.map((bucket) => {
-    const actualValue = sourceFields
-      ? sourceFields
-          .split('.')
-          .reduce(
-            (obj, key) =>
-              obj && obj[key] !== undefined ? obj[key] : undefined,
-            bucket['top_hits#top']?.hits?.hits?.[0]?._source
-          ) ?? bucket.key
-      : bucket.key;
+    const topHitsSource = (
+      (bucket as Record<string, unknown>)['top_hits#top'] as
+        | {
+            hits?: {
+              hits?: Array<{
+                _source?: Record<string, unknown>;
+              }>;
+            };
+          }
+        | undefined
+    )?.hits?.hits?.[0]?._source;
+
+    const actualValue =
+      sourceFields && topHitsSource
+        ? sourceFields
+            .split('.')
+            .reduce(
+              (obj: unknown, key: string): unknown =>
+                obj && typeof obj === 'object' && obj !== null && key in obj
+                  ? (obj as Record<string, unknown>)[key]
+                  : undefined,
+              topHitsSource
+            ) ?? bucket.key
+        : bucket.key;
 
     return {
       value: actualValue,
@@ -372,6 +407,25 @@ export const parseBucketsData = (
  * @param wildcardTerms - Optional record for wildcard queries
  * @returns Query filter object for searchQuery API
  */
+const NESTED_FIELDS = ['owners'];
+
+const getNestedPath = (field: string): string | undefined => {
+  return NESTED_FIELDS.find((nested) => field.startsWith(`${nested}.`));
+};
+
+const wrapTermQuery = (
+  field: string,
+  value: string | number | boolean,
+  nestedPath?: string
+): ElasticsearchQuery => {
+  const termQuery: ElasticsearchQuery = { term: { [field]: value } };
+  if (nestedPath) {
+    return { nested: { path: nestedPath, query: termQuery } };
+  }
+
+  return termQuery;
+};
+
 export const getTermQuery = (
   terms: Record<string, string | string[] | number | boolean>,
   queryType: 'must' | 'must_not' | 'should' | 'should_not' = 'must',
@@ -386,11 +440,12 @@ export const getTermQuery = (
 ) => {
   const termQueries = Object.entries(terms)
     .map(([field, value]) => {
+      const nestedPath = getNestedPath(field);
       if (Array.isArray(value)) {
-        return value.map((v) => ({ term: { [field]: v } }));
+        return value.map((v) => wrapTermQuery(field, v, nestedPath));
       }
 
-      return { term: { [field]: value } };
+      return wrapTermQuery(field, value, nestedPath);
     })
     .flat();
 
@@ -403,11 +458,12 @@ export const getTermQuery = (
   const mustNotQueries = options?.mustNotTerms
     ? Object.entries(options.mustNotTerms)
         .map(([field, value]) => {
+          const nestedPath = getNestedPath(field);
           if (Array.isArray(value)) {
-            return value.map((v) => ({ term: { [field]: v } }));
+            return value.map((v) => wrapTermQuery(field, v, nestedPath));
           }
 
-          return { term: { [field]: value } };
+          return wrapTermQuery(field, value, nestedPath);
         })
         .flat()
     : [];
@@ -418,7 +474,7 @@ export const getTermQuery = (
       }))
     : [];
 
-  const allQueries: any[] = [
+  const allQueries: ElasticsearchQuery[] = [
     ...termQueries,
     ...wildcardQueries,
     ...matchQueries,
@@ -443,7 +499,13 @@ export const getTermQuery = (
     });
   }
 
-  const boolQuery: any = {
+  // Define type for Elasticsearch bool query structure
+  type ESBoolQuery = Record<string, ElasticsearchQuery[] | number> & {
+    must_not?: ElasticsearchQuery[];
+    minimum_should_match?: number;
+  };
+
+  const boolQuery: ESBoolQuery = {
     [queryType]: allQueries,
   };
 

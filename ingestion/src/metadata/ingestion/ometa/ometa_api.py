@@ -69,6 +69,7 @@ from metadata.ingestion.ometa.mixins.data_contract_mixin import OMetaDataContrac
 from metadata.ingestion.ometa.mixins.data_insight_mixin import DataInsightMixin
 from metadata.ingestion.ometa.mixins.domain_mixin import OMetaDomainMixin
 from metadata.ingestion.ometa.mixins.es_mixin import ESMixin
+from metadata.ingestion.ometa.mixins.file_mixin import OMetaFileMixin
 from metadata.ingestion.ometa.mixins.ingestion_pipeline_mixin import (
     OMetaIngestionPipelineMixin,
 )
@@ -77,6 +78,7 @@ from metadata.ingestion.ometa.mixins.mlmodel_mixin import OMetaMlModelMixin
 from metadata.ingestion.ometa.mixins.patch_mixin import OMetaPatchMixin
 from metadata.ingestion.ometa.mixins.pipeline_mixin import OMetaPipelineMixin
 from metadata.ingestion.ometa.mixins.profile_mixin import OMetaProfileMixin
+from metadata.ingestion.ometa.mixins.progress_mixin import OMetaProgressMixin
 from metadata.ingestion.ometa.mixins.query_mixin import OMetaQueryMixin
 from metadata.ingestion.ometa.mixins.role_policy_mixin import OMetaRolePolicyMixin
 from metadata.ingestion.ometa.mixins.search_index_mixin import OMetaSearchIndexMixin
@@ -264,6 +266,7 @@ class OpenMetadata(
     OMetaPipelineMixin,
     OMetaMlModelMixin,
     OMetaTableMixin,
+    OMetaFileMixin,
     OMetaTopicMixin,
     OMetaVersionMixin,
     OMetaServiceMixin,
@@ -284,6 +287,7 @@ class OpenMetadata(
     OMetaSuggestionsMixin,
     OMetaDomainMixin,
     OMetaProfileMixin,
+    OMetaProgressMixin,
     OMetaTagGlossaryMixin,
     Generic[T, C],
 ):

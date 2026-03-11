@@ -198,7 +198,7 @@ public class McpServerResourceIT {
         new CreateMcpServer()
             .withName(ns.prefix("mcp-with-prompts"))
             .withServerType(McpServerType.DataAccess)
-            .withTransportType(McpTransportType.Streamable)
+            .withTransportType(McpTransportType.StreamableHTTP)
             .withDescription("MCP Server with prompts")
             .withPrompts(List.of(prompt));
 
@@ -321,7 +321,7 @@ public class McpServerResourceIT {
         new CreateMcpServer()
             .withName(ns.prefix("mcp-update-display"))
             .withServerType(McpServerType.Custom)
-            .withTransportType(McpTransportType.Streamable)
+            .withTransportType(McpTransportType.StreamableHTTP)
             .withDisplayName("Initial Display Name")
             .withDescription("Test server");
 
@@ -331,7 +331,7 @@ public class McpServerResourceIT {
         new CreateMcpServer()
             .withName(ns.prefix("mcp-update-display"))
             .withServerType(McpServerType.Custom)
-            .withTransportType(McpTransportType.Streamable)
+            .withTransportType(McpTransportType.StreamableHTTP)
             .withDisplayName("Updated Display Name")
             .withDescription("Test server");
 

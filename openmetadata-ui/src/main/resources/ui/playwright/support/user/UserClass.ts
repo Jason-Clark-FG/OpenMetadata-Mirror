@@ -198,7 +198,7 @@ export class UserClass {
   }
 
   getUserDisplayName() {
-    return this.responseData.displayName;
+    return this.responseData.displayName ?? this.responseData.name;
   }
 
   async login(

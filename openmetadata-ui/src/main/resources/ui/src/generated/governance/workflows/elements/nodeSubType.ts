@@ -14,16 +14,21 @@
  * SubType of the Node.
  */
 export enum NodeSubType {
+    ApplyRecognizerFeedbackTask = "applyRecognizerFeedbackTask",
+    CheckChangeDescriptionTask = "checkChangeDescriptionTask",
     CheckEntityAttributesTask = "checkEntityAttributesTask",
     CreateAndRunIngestionPipelineTask = "createAndRunIngestionPipelineTask",
+    CreateRecognizerFeedbackApprovalTask = "createRecognizerFeedbackApprovalTask",
     DataCompletenessTask = "dataCompletenessTask",
     EndEvent = "endEvent",
     ParallelGateway = "parallelGateway",
+    RejectRecognizerFeedbackTask = "rejectRecognizerFeedbackTask",
     RollbackEntityTask = "rollbackEntityTask",
     RunAppTask = "runAppTask",
     SetEntityAttributeTask = "setEntityAttributeTask",
     SetEntityCertificationTask = "setEntityCertificationTask",
     SetGlossaryTermStatusTask = "setGlossaryTermStatusTask",
+    SinkTask = "sinkTask",
     StartEvent = "startEvent",
     UserApprovalTask = "userApprovalTask",
 }
