@@ -408,7 +408,6 @@ describe('tagFormFields', () => {
       expect(result).toEqual({
         name: 'mutuallyExclusive',
         label: 'label.mutually-exclusive',
-        muiLabel: 'label.mutually-exclusive',
         type: FieldTypes.UT_SWITCH,
         required: false,
         props: {
