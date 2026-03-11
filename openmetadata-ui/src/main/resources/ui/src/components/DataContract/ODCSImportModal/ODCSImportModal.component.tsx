@@ -657,7 +657,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
     if (isValidating) {
       return (
         <div className="validation-loading-panel">
-          <Loader className="tw:text-secondary tw:mb-3" size={24} />
+          <Loader size="default" />
           <Typography as="p" className="tw:text-sm tw:text-secondary">
             {t('message.validating-contract-schema')}
           </Typography>
@@ -966,6 +966,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             className={`import-mode-option${
               importMode === 'merge' ? ' selected' : ''
             }`}
+            data-testid="import-mode-merge"
             onClick={() => setImportMode('merge')}>
             <div className="tw:flex tw:justify-between tw:items-start">
               <div>
@@ -983,6 +984,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             className={`import-mode-option${
               importMode === 'replace' ? ' selected' : ''
             }`}
+            data-testid="import-mode-replace"
             onClick={() => setImportMode('replace')}>
             <div className="tw:flex tw:justify-between tw:items-start">
               <div>
@@ -1025,7 +1027,13 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             onSelectionChange={(key) =>
               setSelectedObjectName(key ? String(key) : '')
             }>
-            {(item) => <SelectItem id={item.id}>{item.label}</SelectItem>}
+            {(item) => (
+              <SelectItem
+                data-testid={`schema-object-option-${item.id}`}
+                id={item.id}>
+                {item.label}
+              </SelectItem>
+            )}
           </Select>
         </div>
       </div>

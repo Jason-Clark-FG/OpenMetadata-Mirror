@@ -2193,11 +2193,7 @@ description:
         ).toBeVisible();
 
         // Select replace mode
-        const replaceRadio = page.locator(
-          'input[type="radio"][value="replace"]'
-        );
-        await expect(replaceRadio).toBeVisible();
-        await replaceRadio.click();
+        await page.getByTestId('import-mode-replace').click();
 
         const importResponse = page.waitForResponse(
           '/api/v1/dataContracts/odcs/yaml**mode=replace**'
