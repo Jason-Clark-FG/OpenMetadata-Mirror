@@ -431,13 +431,9 @@ const GlossaryHeader = ({
   ];
 
   const statusBadge = useMemo(() => {
-    if (!isGlossary) {
-      const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
+    const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
 
-      return <EntityStatusBadge showDivider status={entityStatus} />;
-    }
-
-    return null;
+    return <EntityStatusBadge showDivider status={entityStatus} />;
   }, [isGlossary, selectedData]);
 
   const createButtons = useMemo(() => {
@@ -448,29 +444,33 @@ const GlossaryHeader = ({
           data-testid="add-new-tag-button-header"
           size="middle"
           type="primary"
-          onClick={handleAddGlossaryTermClick}>
+          onClick={handleAddGlossaryTermClick}
+        >
           {t('label.add-entity', { entity: t('label.term-lowercase') })}
         </Button>
       ) : (
         <>
-          {glossaryTermStatus && glossaryTermStatus === EntityStatus.Approved && (
-            <Dropdown
-              className="m-l-xs"
-              menu={{
-                items: addButtonContent,
-              }}
-              placement="bottomRight"
-              trigger={['click']}>
-              <Button
-                data-testid="glossary-term-add-button-menu"
-                type="primary">
-                <Space>
-                  {t('label.add')}
-                  <DownOutlined />
-                </Space>
-              </Button>
-            </Dropdown>
-          )}
+          {glossaryTermStatus &&
+            glossaryTermStatus === EntityStatus.Approved && (
+              <Dropdown
+                className="m-l-xs"
+                menu={{
+                  items: addButtonContent,
+                }}
+                placement="bottomRight"
+                trigger={['click']}
+              >
+                <Button
+                  data-testid="glossary-term-add-button-menu"
+                  type="primary"
+                >
+                  <Space>
+                    {t('label.add')}
+                    <DownOutlined />
+                  </Space>
+                </Button>
+              </Dropdown>
+            )}
         </>
       );
     }
@@ -566,18 +566,21 @@ const GlossaryHeader = ({
                         ? 'exit-version-history'
                         : 'version-plural-history'
                     }`
-                  )}>
+                  )}
+                >
                   <Button
                     className={classNames('', {
                       'text-primary border-primary': version,
                     })}
                     data-testid="version-button"
                     icon={<Icon component={VersionIcon} />}
-                    onClick={handleVersionClick}>
+                    onClick={handleVersionClick}
+                  >
                     <Typography.Text
                       className={classNames('', {
                         'text-primary': version,
-                      })}>
+                      })}
+                    >
                       {toString(selectedData.version)}
                     </Typography.Text>
                   </Button>
@@ -596,14 +599,16 @@ const GlossaryHeader = ({
                   overlayStyle={{ width: '350px' }}
                   placement="bottomRight"
                   trigger={['click']}
-                  onOpenChange={setShowActions}>
+                  onOpenChange={setShowActions}
+                >
                   <Tooltip
                     placement="topRight"
                     title={t('label.manage-entity', {
                       entity: isGlossary
                         ? t('label.glossary')
                         : t('label.glossary-term'),
-                    })}>
+                    })}
+                  >
                     <Button
                       className="glossary-manage-dropdown-button"
                       data-testid="manage-button"
