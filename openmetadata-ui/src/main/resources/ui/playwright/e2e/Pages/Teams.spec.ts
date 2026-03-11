@@ -135,7 +135,6 @@ test.describe('Teams Page', () => {
     await afterAction();
   });
 
-
   test.beforeEach('Visit Home Page', async ({ page }) => {
     await redirectToHomePage(page);
     const fetchOrganizationResponse = page.waitForResponse(
