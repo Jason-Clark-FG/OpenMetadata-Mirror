@@ -77,6 +77,9 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
   // For multi-node production deployments, consider database-backed rate limiting.
   private static final int REGISTRATION_MAX_PER_HOUR = 10;
   private static final int TOKEN_MAX_PER_MINUTE = 30;
+  private static final int MAX_RATE_LIMIT_ENTRIES = 10_000;
+  private static final java.util.regex.Pattern IP_PATTERN =
+      java.util.regex.Pattern.compile("[0-9a-fA-F.:]+");
   private final java.util.concurrent.ConcurrentHashMap<
           String, java.util.concurrent.atomic.AtomicInteger>
       registrationAttempts = new java.util.concurrent.ConcurrentHashMap<>();
@@ -730,7 +733,9 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
       String xff = request.getHeader("X-Forwarded-For");
       if (xff != null && !xff.isEmpty()) {
         String clientIp = xff.split(",")[0].trim();
-        if (!clientIp.isEmpty()) {
+        if (!clientIp.isEmpty()
+            && clientIp.length() <= 45
+            && IP_PATTERN.matcher(clientIp).matches()) {
           return clientIp;
         }
       }
@@ -749,6 +754,9 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
         registrationAttempts.clear();
         registrationWindowStart = now;
       }
+      if (registrationAttempts.size() >= MAX_RATE_LIMIT_ENTRIES) {
+        return true;
+      }
       java.util.concurrent.atomic.AtomicInteger count =
           registrationAttempts.computeIfAbsent(
               clientIp, k -> new java.util.concurrent.atomic.AtomicInteger(0));
@@ -762,6 +770,9 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
       if (now - tokenWindowStart > 60_000) {
         tokenAttempts.clear();
         tokenWindowStart = now;
+      }
+      if (tokenAttempts.size() >= MAX_RATE_LIMIT_ENTRIES) {
+        return true;
       }
       java.util.concurrent.atomic.AtomicInteger count =
           tokenAttempts.computeIfAbsent(
