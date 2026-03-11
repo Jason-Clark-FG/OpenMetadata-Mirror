@@ -1157,10 +1157,11 @@ test.describe('Input Output Ports', () => {
       });
 
       await test.step('Verify data product node is visible', async () => {
-        await expect(page.locator('text=Data Product').first()).toBeVisible();
-        await expect(
-          page.locator(`text=${dataProduct.data.displayName}`).first()
-        ).toBeVisible();
+        const centerNode = page.getByTestId('data-product-center-node');
+
+        await expect(centerNode).toBeVisible();
+        await expect(centerNode).toContainText('Data Product');
+        await expect(centerNode).toContainText(dataProduct.data.displayName);
       });
 
     

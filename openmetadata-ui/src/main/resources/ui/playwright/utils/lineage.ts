@@ -214,14 +214,22 @@ export const dragConnection = async (
   const selector = !isColumnLineage
     ? '.lineage-node-handle'
     : '.lineage-column-node-handle';
+  const sourceNode = page.locator(`[data-testid="${sourceId}"]`);
+  const targetNode = page.locator(`[data-testid="${targetId}"]`);
+  const sourceHandle = sourceNode.locator(
+    `${selector}.react-flow__handle-right`
+  );
+  const targetHandle = targetNode.locator(
+    `${selector}.react-flow__handle-left`
+  );
 
   const lineageRes = page.waitForResponse('/api/v1/lineage');
-  await page
-    .locator(`[data-testid="${sourceId}"] ${selector}.react-flow__handle-right`)
-    .dispatchEvent('click');
-  await page
-    .locator(`[data-testid="${targetId}"] ${selector}.react-flow__handle-left`)
-    .dispatchEvent('click');
+  await sourceNode.hover();
+  await sourceHandle.waitFor({ state: 'visible' });
+  await sourceHandle.dispatchEvent('click');
+  await targetNode.hover();
+  await targetHandle.waitFor({ state: 'visible' });
+  await targetHandle.dispatchEvent('click');
 
   await lineageRes;
 };
@@ -295,6 +303,8 @@ export const performExpand = async (
 ) => {
   const nodeFqn = get(node, 'entityResponseData.fullyQualifiedName');
   const handleDirection = upstream ? 'left' : 'right';
+  const nodeLocator = page.locator(`[data-testid="lineage-node-${nodeFqn}"]`);
+  await nodeLocator.hover();
   const expandBtn = page
     .locator(`[data-testid="lineage-node-${nodeFqn}"]`)
     .locator(`.react-flow__handle-${handleDirection}`)

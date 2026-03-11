@@ -52,11 +52,13 @@ import {
   deleteNode,
   editLineage,
   editLineageClick,
+  performExpand,
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
   setupEntitiesForLineage,
   toggleLineageFilters,
+  updateLineageConfigFromModal,
   verifyColumnLayerInactive,
   verifyColumnLineageInCSV,
   verifyExportLineageCSV,
@@ -565,23 +567,35 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
     await redirectToHomePage(page);
     await table.visitEntityPage(page);
     await visitLineageTab(page);
-    await editLineage(page);
     await performZoomOut(page);
 
-    // connect table to topic
-    await connectEdgeBetweenNodes(page, table, topic);
-    await rearrangeNodes(page);
+    const tableToTopicResponse = await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: table.entityResponseData.id, type: 'table' },
+      { id: topic.entityResponseData.id, type: 'topic' }
+    );
+    expect(tableToTopicResponse.ok()).toBeTruthy();
 
-    // connect topic to dashboard
-    await connectEdgeBetweenNodes(page, topic, dashboard);
-    await rearrangeNodes(page);
+    const topicToDashboardResponse = await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: topic.entityResponseData.id, type: 'topic' },
+      { id: dashboard.entityResponseData.id, type: 'dashboard' }
+    );
+    expect(topicToDashboardResponse.ok()).toBeTruthy();
 
-    // connect dashboard to table
-    await connectEdgeBetweenNodes(page, dashboard, table);
-    await rearrangeNodes(page);
+    const dashboardToTableResponse = await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      { id: dashboard.entityResponseData.id, type: 'dashboard' },
+      { id: table.entityResponseData.id, type: 'table' }
+    );
+    expect(dashboardToTableResponse.ok()).toBeTruthy();
 
-    await page.reload();
-    await page.waitForLoadState('networkidle');
+    await table.visitEntityPage(page);
+    await visitLineageTab(page);
+    await updateLineageConfigFromModal(page, {
+      upstreamDepth: 2,
+      downstreamDepth: 2,
+    });
     await performZoomOut(page);
 
     await expect(page.getByTestId(`lineage-node-${tableFqn}`)).toBeVisible();

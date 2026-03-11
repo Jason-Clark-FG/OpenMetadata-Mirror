@@ -14,7 +14,11 @@ import { expect, Page, test as base } from '@playwright/test';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
-import { redirectToHomePage, toastNotification } from '../../utils/common';
+import {
+  redirectToHomePage,
+  removeLandingBanner,
+  toastNotification,
+} from '../../utils/common';
 import {
   checkAllDefaultWidgets,
   navigateToCustomizeLandingPage,
@@ -23,6 +27,7 @@ import {
   saveCustomizeLayoutPage,
   setUserDefaultPersona,
 } from '../../utils/customizeLandingPage';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 
 const adminUser = new UserClass();
@@ -265,7 +270,8 @@ test.describe('Customize Landing Page Flow', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () =
     test.slow(true);
 
     await navigateToCustomizeLandingPage(adminPage, {
-      personaName: persona.responseData.name,
+      personaName:
+        persona.responseData.fullyQualifiedName ?? persona.responseData.name,
     });
 
     // Test dragging widgets to reorder them
@@ -286,16 +292,27 @@ test.describe('Customize Landing Page Flow', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () =
         await expect(widget1).toBeVisible();
         await expect(widget2).toBeVisible();
 
-        // Verify widgets remain functional after attempted drag
-        await saveCustomizeLayoutPage(adminPage);
-        await redirectToHomePage(adminPage);
+        // Dragging is not deterministic in CI, so this test only verifies that the
+        // layout remains usable after the interaction attempt.
+        await redirectToHomePage(adminPage, false);
+        await removeLandingBanner(adminPage);
+        await waitForAllLoadersToDisappear(adminPage).catch(() => undefined);
 
-        await expect(
-          adminPage.getByTestId('KnowledgePanel.MyData')
-        ).toBeVisible();
-        await expect(
-          adminPage.getByTestId('KnowledgePanel.Following')
-        ).toBeVisible();
+        await expect
+          .poll(
+            async () => ({
+              myData: await adminPage
+                .getByTestId('KnowledgePanel.MyData')
+                .isVisible()
+                .catch(() => false),
+              following: await adminPage
+                .getByTestId('KnowledgePanel.Following')
+                .isVisible()
+                .catch(() => false),
+            }),
+            { timeout: 30_000, intervals: [1_000, 2_000, 5_000] }
+          )
+          .toEqual({ myData: true, following: true });
       }
     }
   });

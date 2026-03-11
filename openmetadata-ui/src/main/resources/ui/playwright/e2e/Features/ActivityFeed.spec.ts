@@ -21,6 +21,7 @@ import { REACTION_EMOJIS, reactOnFeed } from '../../utils/activityFeed';
 import { performAdminLogin } from '../../utils/admin';
 import {
   redirectToHomePage,
+  removeLandingBanner,
   uuid,
   visitOwnProfilePage,
 } from '../../utils/common';
@@ -63,6 +64,8 @@ test.describe('FeedWidget on landing page', () => {
         try {
           // Set persona as default
           await redirectToHomePage(adminPage);
+          await removeLandingBanner(adminPage);
+          await waitForAllLoadersToDisappear(adminPage);
           await setUserDefaultPersona(adminPage, testPersona.data.displayName);
 
           // Navigate to customize landing page
@@ -93,6 +96,8 @@ test.describe('FeedWidget on landing page', () => {
           }
 
           await redirectToHomePage(adminPage);
+          await removeLandingBanner(adminPage);
+          await waitForAllLoadersToDisappear(adminPage);
           await adminPage.waitForLoadState('networkidle');
         } finally {
           await adminPage.close();
@@ -106,6 +111,8 @@ test.describe('FeedWidget on landing page', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
+    await removeLandingBanner(page);
+    await waitForAllLoadersToDisappear(page);
     await page.waitForLoadState('networkidle');
   });
 
@@ -701,7 +708,21 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
     expect(feedResponse.status()).toBe(200);
     await waitForAllLoadersToDisappear(page);
 
-    await page.getByTestId('comments-input-field').click();
+    const commentsInput = page.getByTestId('comments-input-field');
+    if (!(await commentsInput.isVisible().catch(() => false))) {
+      const seededThread = page
+        .locator('[data-testid="message-container"], [data-testid="feed-reply-card"]')
+        .filter({
+          hasText: 'Initial conversation for Chinese character encoding test',
+        })
+        .first();
+
+      await expect(seededThread).toBeVisible({ timeout: 30_000 });
+      await seededThread.click();
+      await waitForAllLoadersToDisappear(page);
+    }
+
+    await commentsInput.click();
 
     const editorLocator = page.locator(
       '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
@@ -761,7 +782,7 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
     );
 
     await waitForAllLoadersToDisappear(newPage);
-    expect(newPage.getByTestId('user-display-name')).toHaveText(userName);
+    await expect(newPage.getByTestId('user-display-name')).toHaveText(userName);
   });
 
   test('Should encode the chinese character while mentioning api endpoint', async ({
