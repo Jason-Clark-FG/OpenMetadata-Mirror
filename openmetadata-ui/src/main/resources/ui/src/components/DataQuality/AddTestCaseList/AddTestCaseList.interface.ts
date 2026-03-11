@@ -24,5 +24,4 @@ export interface AddTestCaseModalProps {
   testCaseParams?: ListTestCaseParamsBySearch;
   selectedTest?: string[];
   showButton?: boolean;
-  showSelectAll?: boolean;
 }

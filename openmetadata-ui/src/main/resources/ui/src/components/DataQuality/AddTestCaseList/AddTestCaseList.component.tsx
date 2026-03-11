@@ -69,7 +69,6 @@ export const AddTestCaseList = ({
   selectedTest,
   onChange,
   showButton = true,
-  showSelectAll = false,
   testCaseParams,
 }: AddTestCaseModalProps) => {
   const { t } = useTranslation();
@@ -591,7 +590,7 @@ export const AddTestCaseList = ({
             onChange={handleFilterChange}
             onSearch={handleFilterSearch}
           />
-          {showSelectAll && items.length > 0 && (
+          {items.length > 0 && (
             <Button
               className="p-0 h-auto font-normal"
               data-testid="select-all-test-cases"

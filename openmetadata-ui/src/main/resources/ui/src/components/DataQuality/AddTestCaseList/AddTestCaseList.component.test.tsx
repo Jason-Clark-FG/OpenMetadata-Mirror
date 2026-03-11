@@ -129,8 +129,7 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           type="button"
           onClick={() =>
             onChange([{ key: 'Success', label: 'Success' }], 'status')
-          }
-        >
+          }>
           Apply status Success
         </button>
         <button
@@ -138,8 +137,7 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           type="button"
           onClick={() =>
             onChange([{ key: 'table', label: 'Table' }], 'testType')
-          }
-        >
+          }>
           Apply testType table
         </button>
         <button
@@ -155,15 +153,13 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
               ],
               'table'
             )
-          }
-        >
+          }>
           Apply table filter
         </button>
         <button
           data-testid="filter-table-search"
           type="button"
-          onClick={() => onSearch?.('table_search_term', 'table')}
-        >
+          onClick={() => onSearch?.('table_search_term', 'table')}>
           Trigger table search
         </button>
         <button
@@ -171,8 +167,7 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           type="button"
           onClick={() =>
             onChange([{ key: 'sample.table::id', label: 'id' }], 'column')
-          }
-        >
+          }>
           Apply column filter
         </button>
       </div>
@@ -1018,48 +1013,14 @@ describe('AddTestCaseList', () => {
     });
   });
 
-  it('does not render select all button when showSelectAll is false (default)', async () => {
+  it('renders select all button when items exist', async () => {
     mockGetListTestCaseBySearch.mockResolvedValue({
       data: mockTestCases,
       paging: { total: 3 },
     });
 
     await act(async () => {
-      renderWithRouter(mockProps);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId('select-all-test-cases')).toBeNull();
-  });
-
-  it('does not render select all button when showSelectAll is false and items exist', async () => {
-    mockGetListTestCaseBySearch.mockResolvedValue({
-      data: mockTestCases,
-      paging: { total: 3 },
-    });
-
-    await act(async () => {
-      renderWithRouter({ ...mockProps, showSelectAll: false });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByTestId('select-all-test-cases')).toBeNull();
-  });
-
-  it('renders select all button when showSelectAll is true and items exist', async () => {
-    mockGetListTestCaseBySearch.mockResolvedValue({
-      data: mockTestCases,
-      paging: { total: 3 },
-    });
-
-    await act(async () => {
-      renderWithRouter({ ...mockProps, showSelectAll: true });
+      renderWithRouter({ ...mockProps });
     });
 
     await waitFor(() => {
@@ -1069,14 +1030,14 @@ describe('AddTestCaseList', () => {
     expect(screen.getByTestId('select-all-test-cases')).toBeInTheDocument();
   });
 
-  it('does not render select all button when showSelectAll is true but no items', async () => {
+  it('does not render select all button when no items', async () => {
     mockGetListTestCaseBySearch.mockResolvedValue({
       data: [],
       paging: { total: 0 },
     });
 
     await act(async () => {
-      renderWithRouter({ ...mockProps, showSelectAll: true });
+      renderWithRouter({ ...mockProps });
     });
 
     await waitFor(() => {
@@ -1093,7 +1054,7 @@ describe('AddTestCaseList', () => {
     });
 
     await act(async () => {
-      renderWithRouter({ ...mockProps, showSelectAll: true });
+      renderWithRouter({ ...mockProps });
     });
 
     await waitFor(() => {
@@ -1122,7 +1083,6 @@ describe('AddTestCaseList', () => {
     await act(async () => {
       renderWithRouter({
         ...mockProps,
-        showSelectAll: true,
         onChange,
       });
     });
@@ -1162,7 +1122,6 @@ describe('AddTestCaseList', () => {
     await act(async () => {
       renderWithRouter({
         ...mockProps,
-        showSelectAll: true,
         onChange,
       });
     });
@@ -1209,7 +1168,6 @@ describe('AddTestCaseList', () => {
     await act(async () => {
       renderWithRouter({
         ...mockProps,
-        showSelectAll: true,
         onChange,
       });
     });
@@ -1257,7 +1215,6 @@ describe('AddTestCaseList', () => {
     await act(async () => {
       renderWithRouter({
         ...mockProps,
-        showSelectAll: true,
         onChange,
       });
     });
