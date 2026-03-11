@@ -12,6 +12,7 @@
       "entityTypes": ["recognizerFeedback"],
       "events": ["Created", "Updated"],
       "exclude": [],
+      "include": [],
       "filter": {}
     },
     "output": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"]
