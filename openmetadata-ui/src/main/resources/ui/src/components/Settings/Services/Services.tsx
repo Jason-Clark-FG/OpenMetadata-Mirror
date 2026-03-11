@@ -110,11 +110,12 @@ const Services = ({ serviceName }: ServicesProps) => {
     const mustClauses: object[] = [];
 
     if (searchTerm) {
+      const escapedTerm = searchTerm.replace(/[*?\\]/g, '\\$&');
       mustClauses.push({
         bool: {
           should: [
-            { wildcard: { 'name.keyword': `*${searchTerm}*` } },
-            { wildcard: { 'displayName.keyword': `*${searchTerm}*` } },
+            { wildcard: { 'name.keyword': `*${escapedTerm}*` } },
+            { wildcard: { 'displayName.keyword': `*${escapedTerm}*` } },
           ],
           minimum_should_match: 1,
         },
@@ -138,10 +139,12 @@ const Services = ({ serviceName }: ServicesProps) => {
   }, [searchTerm, serviceTypeFilter]);
 
   const searchIndex = useMemo(() => {
+    return serviceUtilClassBase.getServiceTypeFromEntityType(serviceName);
+  }, [serviceName]);
+
+  useEffect(() => {
     setSearchTerm('');
     setServiceTypeFilter([]);
-
-    return serviceUtilClassBase.getServiceTypeFromEntityType(serviceName);
   }, [serviceName]);
 
   const getServiceDetails = useCallback(
