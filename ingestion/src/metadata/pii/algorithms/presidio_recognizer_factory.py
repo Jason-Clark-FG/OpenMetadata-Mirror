@@ -135,7 +135,7 @@ class PresidioRecognizerFactory:
             patterns=patterns,
             name=recognizer_config.name.root,
             supported_language=config.supportedLanguage.value,
-            context=config.context,
+            context=config.context or [],
             global_regex_flags=PresidioRecognizerFactory._get_regex_flags(
                 config.regexFlags
             ),

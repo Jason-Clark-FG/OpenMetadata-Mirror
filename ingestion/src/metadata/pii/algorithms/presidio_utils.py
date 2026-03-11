@@ -13,6 +13,7 @@ Utilities for working with the Presidio Library.
 """
 import inspect
 import logging
+import types
 from functools import cache, wraps
 from itertools import groupby
 from typing import (
@@ -34,10 +35,11 @@ from dateutil import parser
 from presidio_analyzer import (
     AnalyzerEngine,
     EntityRecognizer,
+    Pattern,
     PatternRecognizer,
     RecognizerRegistry,
     RecognizerResult,
-    predefined_recognizers, Pattern,
+    predefined_recognizers,
 )
 from presidio_analyzer.nlp_engine import NlpArtifacts, SpacyNlpEngine
 from presidio_analyzer.predefined_recognizers import (
@@ -45,7 +47,8 @@ from presidio_analyzer.predefined_recognizers import (
     CreditCardRecognizer,
     DateRecognizer,
     NhsRecognizer,
-    UsLicenseRecognizer, UsBankRecognizer,
+    UsBankRecognizer,
+    UsLicenseRecognizer,
 )
 from spacy.cli.download import download  # pyright: ignore[reportUnknownVariableType]
 
@@ -288,16 +291,14 @@ def date_recognizer(**kwargs: Any) -> ValidatedDateRecognizer:
     return ValidatedDateRecognizer(**kwargs)
 
 
-@recognizer_factories.add(UsBankRecognizer)
+@recognizer_factories.add(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
+    UsBankRecognizer
+)
 def eager_us_bank_recognizer(**kwargs: Any) -> UsBankRecognizer:
     """Boosts UsBankRecognizer scores, improving results in combination with context enhancement."""
     if kwargs.get("patterns") is None:
         kwargs["patterns"] = [
-            Pattern(
-                name=p.name,
-                regex=p.regex,
-                score=0.5
-            )
+            Pattern(name=p.name, regex=p.regex, score=0.5)
             for p in UsBankRecognizer.PATTERNS
         ]
 
@@ -376,7 +377,7 @@ def enhance_using_context(recognizer: EntityRecognizer) -> EntityRecognizer:
 
         for result in results:
             # if previously enhanced, then ignore
-            if result.recognition_metadata.get(
+            if result.recognition_metadata.get(  # pyright: ignore[reportUnknownMemberType]
                 RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
             ):
                 continue
@@ -389,19 +390,17 @@ def enhance_using_context(recognizer: EntityRecognizer) -> EntityRecognizer:
                 original_score = result.score
                 result.score = rec.MAX_SCORE
 
-                result.recognition_metadata[
+                result.recognition_metadata[  # pyright: ignore[reportUnknownMemberType]
                     RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
                 ] = True
 
                 logger.debug(
-                    f"Enhanced {result.entity_type} score: "
-                    f"{original_score:.2f} → {result.score:.2f} "
-                    f"(context: {rec.context})"
+                    f"Enhanced {result.entity_type} score: {original_score:.2f} → {result.score:.2f} (context: {rec.context})"
                 )
 
         return results
 
-    recognizer.enhance_using_context = wrapped.__get__(recognizer, type(recognizer))
+    recognizer.enhance_using_context = types.MethodType(wrapped, recognizer)
 
     return recognizer
 
@@ -414,7 +413,7 @@ def filter_enhanced_results_below_threshold(
 
         @wraps(old_enhancing_function)
         def wrapped(
-            rec: EntityRecognizer,
+            rec: EntityRecognizer,  # pyright: ignore[reportUnusedParameter]
             text: str,
             raw_recognizer_results: List[RecognizerResult],
             other_raw_recognizer_results: List[RecognizerResult],
@@ -431,7 +430,7 @@ def filter_enhanced_results_below_threshold(
 
             return [result for result in results if result.score >= threshold]
 
-        recognizer.enhance_using_context = wrapped.__get__(recognizer, type(recognizer))
+        recognizer.enhance_using_context = types.MethodType(wrapped, recognizer)
         return recognizer
 
     return decorate_entity_recognizer
