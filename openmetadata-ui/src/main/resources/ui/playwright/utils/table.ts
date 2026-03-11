@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { expect, Page } from '@playwright/test';
+import { TableClass } from '../support/entity/TableClass';
 
 // Pagination is performed for "performance_test_table" Table Entity
 export const columnPaginationTable = async (page: Page) => {
@@ -100,4 +101,17 @@ export const columnPaginationTable = async (page: Page) => {
   await expect(page.getByTestId('entity-table').getByRole('row')).toHaveCount(
     26
   );
+};
+
+export const getTableColumnsCount = (columns: TableClass['children']) => {
+  let columnsCount = 0;
+
+  columns.forEach((column) => {
+    columnsCount += 1;
+    if (column.children) {
+      columnsCount += getTableColumnsCount(column.children);
+    }
+  });
+
+  return columnsCount;
 };

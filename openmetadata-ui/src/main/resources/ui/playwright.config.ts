@@ -92,7 +92,7 @@ export default defineConfig({
       // Added admin setup as a dependency. This will authorize the page with an admin user before running the test. doc: https://playwright.dev/docs/auth#multiple-signed-in-roles
       dependencies: ['setup', 'entity-data-setup'],
       grepInvert: [/@data-insight/, /@ingestion/, /@sample-data/, /@basic/],
-      teardown: 'entity-data-teardown',
+      teardown: 'SearchRBAC',
       testIgnore: [
         '**/nightly/**',
         '**/DataAssetRulesEnabled.spec.ts',
@@ -108,6 +108,13 @@ export default defineConfig({
       testMatch: STATEFUL_TEST_FILES,
       grepInvert: [/@sample-data/],
       fullyParallel: false,
+        '**/SearchRBAC.spec.ts',
+      ],
+    },
+    {
+      name: 'SearchRBAC',
+      testMatch: '**/SearchRBAC.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
       teardown: 'entity-data-teardown',
     },
     {
