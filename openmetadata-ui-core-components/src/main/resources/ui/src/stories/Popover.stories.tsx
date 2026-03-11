@@ -135,7 +135,7 @@ export const Placements: StoryObj = {
     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24, padding: 64 }}>
       {(["top", "bottom", "left", "right"] as const).map((placement) => (
         <PopoverTrigger key={placement}>
-          <Button color="secondary" size="sm" style={{ textTransform: "capitalize" }}>
+          <Button color="secondary" size="sm" className="tw:capitalize">
             {placement}
           </Button>
           <Popover placement={placement} arrow>
