@@ -351,11 +351,18 @@ public class RBACConditionEvaluator {
       OMQueryBuilder existsQuery = queryBuilderFactory.existsQuery("domains.id");
       collector.addMustNot(existsQuery); // Wrap existsQuery in a List
     } else {
+      List<OMQueryBuilder> domainQueries = new ArrayList<>();
       for (EntityReference domain : user.getDomains()) {
         String domainId = domain.getId().toString();
-        OMQueryBuilder domainQuery = queryBuilderFactory.termQuery("domains.id", domainId);
-        collector.addMust(domainQuery);
+        domainQueries.add(queryBuilderFactory.termQuery("domains.id", domainId));
       }
+      OMQueryBuilder domainQuery;
+      if (domainQueries.size() == 1) {
+        domainQuery = domainQueries.get(0);
+      } else {
+        domainQuery = queryBuilderFactory.boolQuery().should(domainQueries);
+      }
+      collector.addMust(domainQuery);
     }
   }
 
