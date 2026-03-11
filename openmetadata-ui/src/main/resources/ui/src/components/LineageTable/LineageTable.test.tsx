@@ -765,7 +765,7 @@ describe('LineageTable', () => {
       });
     });
 
-    it('should node pass onSearchValueChange for column-level lineage', () => {
+    it('should not pass onSearchValueChange for column-level lineage', () => {
       const mockState = {
         ...defaultMockState,
         searchValue: 'test search',
@@ -1003,7 +1003,7 @@ describe('LineageTable', () => {
       });
     });
 
-    it('should node pass onSearchValueChange for table-level lineage', () => {
+    it('should not pass onSearchValueChange for table-level lineage', () => {
       const mockState = {
         ...defaultMockState,
         searchValue: 'test search',
