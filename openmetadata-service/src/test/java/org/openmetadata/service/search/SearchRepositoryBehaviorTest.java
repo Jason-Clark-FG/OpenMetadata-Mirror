@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -135,6 +136,11 @@ class SearchRepositoryBehaviorTest {
                 Map.entry(Entity.QUERY, TABLE_MAPPING)),
             "cluster");
     Entity.setSearchRepository(repository);
+  }
+
+  @AfterEach
+  void tearDown() {
+    Entity.setSearchRepository(null);
   }
 
   @Test
