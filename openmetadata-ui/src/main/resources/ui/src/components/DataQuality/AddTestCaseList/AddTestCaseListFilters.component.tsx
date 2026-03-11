@@ -14,7 +14,6 @@
 import { Space } from 'antd';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TestCaseType } from '../../../enums/TestSuite.enum';
 import SearchDropdown from '../../SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
 import {
@@ -42,7 +41,7 @@ const AddTestCaseListFilters = ({
 
   const handleSearch = useCallback(
     (searchText: string, searchKey: string) => {
-      onSearch(searchText, searchKey as TestCaseType);
+      onSearch(searchText, searchKey as AddTestCaseListFilterKey);
     },
     [onSearch]
   );

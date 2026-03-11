@@ -244,13 +244,11 @@ export const AddTestCaseList = ({
                 .filter(Boolean) as string[])
             : [];
         const columnName =
-          columnNamesFromKeys.length > 0
-            ? columnNamesFromKeys.join(',')
-            : undefined;
-        const entityLink =
-          filterTables.length > 0
-            ? `<#E::table::${filterTables[0]}>`
-            : undefined;
+          columnNamesFromKeys.length > 0 ? columnNamesFromKeys[0] : undefined;
+        const filterTable = filterTables[0];
+        const entityLink = filterTable
+          ? `<#E::table::${filterTable}>`
+          : undefined;
 
         const requestParams = {
           q,
@@ -400,10 +398,10 @@ export const AddTestCaseList = ({
   }, [fetchColumnOptions]);
 
   const handleFilterSearch = useCallback(
-    (searchText: string, searchKey: TestCaseType) => {
-      if (searchKey === TestCaseType.table) {
+    (searchText: string, searchKey: AddTestCaseListFilterKey) => {
+      if (searchKey === AddTestCaseListFilterKey.Table) {
         debounceFetchTableData(searchText);
-      } else if (searchKey === TestCaseType.column) {
+      } else if (searchKey === AddTestCaseListFilterKey.Column) {
         debounceFetchColumnData(searchText);
       }
     },
@@ -507,24 +505,24 @@ export const AddTestCaseList = ({
   const handleFilterChange = useCallback(
     (values: SearchDropdownOption[], searchKey: AddTestCaseListFilterKey) => {
       switch (searchKey) {
-        case 'status': {
+        case AddTestCaseListFilterKey.Status: {
           setFilterStatus(values[0]?.key as TestCaseStatus | undefined);
 
           break;
         }
-        case 'testType': {
+        case AddTestCaseListFilterKey.TestType: {
           setFilterTestType(
             (values[0]?.key ?? TestCaseType.all) as TestCaseType
           );
 
           break;
         }
-        case 'table': {
+        case AddTestCaseListFilterKey.Table: {
           setFilterTables(values.length > 0 ? [values[0].key] : []);
 
           break;
         }
-        case 'column': {
+        case AddTestCaseListFilterKey.Column: {
           setFilterColumns(values.length > 0 ? [values[0].key] : []);
 
           break;

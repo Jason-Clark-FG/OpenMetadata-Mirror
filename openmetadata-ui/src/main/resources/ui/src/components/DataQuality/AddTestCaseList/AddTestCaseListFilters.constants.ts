@@ -11,15 +11,12 @@
  *  limitations under the License.
  */
 
-export const ADD_TEST_CASE_LIST_FILTER_KEYS = [
-  'status',
-  'testType',
-  'table',
-  'column',
-] as const;
-
-export type AddTestCaseListFilterKey =
-  (typeof ADD_TEST_CASE_LIST_FILTER_KEYS)[number];
+export enum AddTestCaseListFilterKey {
+  Status = 'status',
+  TestType = 'testType',
+  Table = 'table',
+  Column = 'column',
+}
 
 export interface AddTestCaseListFilterConfig {
   searchKey: AddTestCaseListFilterKey;
@@ -31,24 +28,24 @@ export interface AddTestCaseListFilterConfig {
 
 export const ADD_TEST_CASE_LIST_FILTERS: AddTestCaseListFilterConfig[] = [
   {
-    searchKey: 'status',
+    searchKey: AddTestCaseListFilterKey.Status,
     labelKey: 'label.status',
     singleSelect: true,
   },
   {
-    searchKey: 'testType',
+    searchKey: AddTestCaseListFilterKey.TestType,
     labelKey: 'label.test-type',
     singleSelect: true,
   },
   {
-    searchKey: 'table',
+    searchKey: AddTestCaseListFilterKey.Table,
     labelKey: 'label.table',
     singleSelect: true,
     showSelectedCounts: true,
     enableSearch: true,
   },
   {
-    searchKey: 'column',
+    searchKey: AddTestCaseListFilterKey.Column,
     labelKey: 'label.column',
     singleSelect: true,
     showSelectedCounts: true,
