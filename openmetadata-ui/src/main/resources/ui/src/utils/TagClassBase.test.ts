@@ -12,6 +12,7 @@
  */
 import { queryFilterToRemoveSomeClassification } from '../constants/Tag.constants';
 import { SearchIndex } from '../enums/search.enum';
+import { Tag } from '../generated/entity/classification/tag';
 import { searchQuery } from '../rest/searchAPI';
 import tagClassBase, { TagClassBase } from './TagClassBase';
 
@@ -104,6 +105,34 @@ describe('TagClassBase', () => {
       paging: {
         total: 1,
       },
+    });
+  });
+
+  describe('getAdditionalTagDetailPageTabs', () => {
+    it('returns an empty array by default', () => {
+      const mockTag = {
+        fullyQualifiedName: 'PII.Sensitive',
+      } as unknown as Tag;
+
+      const result = tagClassBase.getAdditionalTagDetailPageTabs(
+        mockTag,
+        'overview'
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array regardless of activeTab value', () => {
+      const mockTag = {
+        fullyQualifiedName: 'PII.Sensitive',
+      } as unknown as Tag;
+
+      expect(
+        tagClassBase.getAdditionalTagDetailPageTabs(mockTag, 'assets')
+      ).toEqual([]);
+      expect(
+        tagClassBase.getAdditionalTagDetailPageTabs(mockTag, 'activity_feed')
+      ).toEqual([]);
     });
   });
 });
