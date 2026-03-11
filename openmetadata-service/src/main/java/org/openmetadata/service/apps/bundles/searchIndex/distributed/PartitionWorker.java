@@ -654,6 +654,7 @@ public class PartitionWorker {
 
     SearchIndexPartition updated =
         partition.toBuilder()
+            .status(PartitionStatus.PROCESSING)
             .cursor(cursor)
             .processedCount(processed)
             .successCount(success)
