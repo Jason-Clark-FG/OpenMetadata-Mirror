@@ -72,8 +72,8 @@ public final class UserUtil {
 
   public static void addUsers(
       AuthProvider authProvider, Set<String> adminUsers, String domain, Boolean isAdmin) {
-    try {
-      for (String keyValue : adminUsers) {
+    for (String keyValue : adminUsers) {
+      try {
         String userName = "";
         String password = "";
         if (keyValue.contains(":")) {
@@ -85,9 +85,9 @@ public final class UserUtil {
           password = getPassword(userName);
         }
         createOrUpdateUser(authProvider, userName, password, domain, isAdmin);
+      } catch (Exception ex) {
+        LOG.error("[BootstrapUser] Encountered Exception while bootstrapping admin user", ex);
       }
-    } catch (Exception ex) {
-      LOG.error("[BootstrapUser] Encountered Exception while bootstrapping admin user", ex);
     }
   }
 
@@ -102,8 +102,7 @@ public final class UserUtil {
 
       // Fetch Original User, is available
       User originalUser = userRepository.getByName(null, username, new Fields(fieldList));
-      if (Boolean.FALSE.equals(originalUser.getIsBot())
-          && Boolean.TRUE.equals(originalUser.getIsAdmin())) {
+      if (Boolean.FALSE.equals(originalUser.getIsBot())) {
         updatedUser = originalUser;
 
         // Update Auth Mechanism if not present, and send mail to the user
