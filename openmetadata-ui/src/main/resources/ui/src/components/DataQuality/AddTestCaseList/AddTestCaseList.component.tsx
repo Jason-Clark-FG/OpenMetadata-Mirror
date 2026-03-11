@@ -204,10 +204,7 @@ export const AddTestCaseList = ({
       const buckets =
         response.data?.aggregations?.[`sterms#${COLUMN_AGGREGATE_FIELD}`]
           ?.buckets ?? [];
-      const options = parseColumnAggregateBuckets(
-        buckets as { key: string }[],
-        undefined
-      );
+      const options = parseColumnAggregateBuckets(buckets as { key: string }[]);
       setColumnOptionsFromApi(options);
     } catch {
       setColumnOptionsFromApi([]);
@@ -262,7 +259,7 @@ export const AddTestCaseList = ({
           offset: (page - 1) * PAGE_SIZE_MEDIUM,
           testCaseStatus: filterStatus,
           testCaseType:
-            filterTestType !== TestCaseType.all ? filterTestType : undefined,
+            filterTestType === TestCaseType.all ? undefined : filterTestType,
           ...(entityLink && { entityLink }),
           ...(columnName && { columnName }),
         };

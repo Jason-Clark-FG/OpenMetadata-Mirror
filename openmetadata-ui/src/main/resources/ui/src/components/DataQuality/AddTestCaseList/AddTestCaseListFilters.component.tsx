@@ -21,6 +21,7 @@ import {
   ADD_TEST_CASE_LIST_FILTERS,
 } from './AddTestCaseListFilters.constants';
 import { AddTestCaseListFiltersProps } from './AddTestCaseListFilters.interface';
+import './AddTestCaseListFilters.style.less';
 
 const AddTestCaseListFilters = ({
   filterOptions,
@@ -43,6 +44,7 @@ const AddTestCaseListFilters = ({
       {ADD_TEST_CASE_LIST_FILTERS.map((filter) => (
         <SearchDropdown
           hideCounts
+          dropdownClassName="add-test-case-filter-dropdown"
           hideSearchBar={!filter.enableSearch}
           isSuggestionsLoading={filterLoading?.[filter.searchKey]}
           key={filter.searchKey}
