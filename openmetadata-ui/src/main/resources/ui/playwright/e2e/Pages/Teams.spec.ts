@@ -381,61 +381,59 @@ test.describe('Teams Page', () => {
   test('Create a new private team and check if its visible to admin in teams selection dropdown on user profile', async ({
     page,
   }) => {
-    await settingClick(page, GlobalSettingOptions.TEAMS);
-    await expect(page.getByTestId('add-team')).toBeVisible({ timeout: 30000 });
-    await page.getByTestId('add-team').click({ force: true });
+    const { apiContext, afterAction } = await getApiContext(page);
+    const privateTeam = new TeamClass({
+      name: `pw-private-team-${uuid()}`,
+      displayName: `PW Private ${uuid()}`,
+      description: 'Private team for profile visibility validation',
+      teamType: 'Group',
+      users: [],
+    });
 
-    const publicTeam = await createTeam(page);
-    await page.goto(
-      `/settings/members/teams/${encodeURIComponent(publicTeam.name ?? '')}`,
-      { waitUntil: 'domcontentloaded' }
-    );
-    await waitForAllLoadersToDisappear(page).catch(() => undefined);
+    try {
+      await privateTeam.create(apiContext);
+      const privateTeamFqn =
+        privateTeam.responseData.fullyQualifiedName ??
+        `Organization.${privateTeam.responseData.name ?? privateTeam.data.name}`;
+      const createdTeamResponse = await apiContext.get(
+        `/api/v1/teams/name/${encodeURIComponent(privateTeamFqn)}?include=all`
+      );
+      const createdTeam = await createdTeamResponse.json();
 
-    await page
-      .getByTestId('team-details-collapse')
-      .getByTestId('manage-button')
-      .click();
+      expect(createdTeam.isJoinable).toBe(false);
 
-    await expect(
-      page.getByTestId('manage-dropdown-list-container')
-    ).toBeVisible();
+      await visitOwnProfilePage(page);
+      await page.waitForLoadState('networkidle');
 
-    await expect(page.locator('button[role="switch"]')).toHaveAttribute(
-      'aria-checked',
-      'false'
-    );
+      await page.getByTestId('edit-teams-button').click();
 
-    await clickOutside(page);
+      await expect(page.getByTestId('profile-teams-edit-popover')).toBeVisible();
 
-    await visitOwnProfilePage(page);
-    await page.waitForLoadState('networkidle');
+      await page
+        .getByTestId('profile-teams-edit-popover')
+        .getByText(
+          privateTeam.responseData.displayName ?? privateTeam.data.displayName
+        )
+        .click();
 
-    await page.getByTestId('edit-teams-button').click();
+      const updateUserResponse = page.waitForResponse('/api/v1/users/*');
+      await page.getByTestId('teams-edit-save-btn').click();
+      await updateUserResponse;
 
-    await expect(page.getByTestId('profile-teams-edit-popover')).toBeVisible();
+      await expect(
+        page.getByTestId('profile-teams-edit-popover')
+      ).not.toBeVisible();
 
-    await page
-      .getByTestId('profile-teams-edit-popover')
-      .getByText(publicTeam.displayName)
-      .click();
-
-    const updateUserResponse = page.waitForResponse('/api/v1/users/*');
-    await page.getByTestId('teams-edit-save-btn').click();
-    await updateUserResponse;
-
-    await expect(
-      page.getByTestId('profile-teams-edit-popover')
-    ).not.toBeVisible();
-
-    await page
-      .getByTestId('user-profile-teams')
-      .getByText(publicTeam.displayName)
-      .click();
-
-    await page.waitForLoadState('networkidle');
-
-    await hardDeleteTeam(page);
+      await page
+        .getByTestId('user-profile-teams')
+        .getByText(
+          privateTeam.responseData.displayName ?? privateTeam.data.displayName
+        )
+        .click();
+    } finally {
+      await privateTeam.delete(apiContext).catch(() => undefined);
+      await afterAction().catch(() => undefined);
+    }
   });
 
   test('Permanently deleting a team without soft deleting should work properly', async ({
