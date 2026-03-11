@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, test } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { BIG_ENTITY_DELETE_TIMEOUT } from '../../constant/delete';
 import { ApiCollectionClass } from '../../support/entity/ApiCollectionClass';
 import { DatabaseClass } from '../../support/entity/DatabaseClass';
@@ -33,10 +33,6 @@ import {
   toastNotification,
 } from '../../utils/common';
 import { addMultiOwner, assignTier } from '../../utils/entity';
-import { performUserLogin } from '../../utils/user';
-import { openEntityVersion, visitVersionedEntityPage } from '../../utils/version';
-
-test.describe.configure({ mode: 'serial' });
 
 const entities = {
   'Api Service': new ApiServiceClass(),
@@ -54,21 +50,25 @@ const entities = {
 };
 
 // use the admin user to login
-test.use({ storageState: 'playwright/.auth/admin.json' });
+
 const adminUser = new UserClass();
+
+const test = base.extend<{ page: Page }>({
+  page: async ({ browser }, use) => {
+    const adminPage = await browser.newPage();
+    await adminUser.login(adminPage);
+    await use(adminPage);
+    await adminPage.close();
+  },
+});
 
 test.describe('Service Version pages', () => {
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
     test.slow();
 
-    const {
-      apiContext: setupApiContext,
-      afterAction: setupAfterAction,
-    } = await performAdminLogin(browser);
-    await adminUser.create(setupApiContext);
-    await adminUser.setAdminRole(setupApiContext);
-
-    const { apiContext, afterAction } = await performUserLogin(browser, adminUser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
+    await adminUser.create(apiContext);
+    await adminUser.setAdminRole(apiContext);
 
     for (const entity of Object.values(entities)) {
       await entity.create(apiContext);
@@ -115,7 +115,6 @@ test.describe('Service Version pages', () => {
     }
 
     await afterAction();
-    await setupAfterAction();
   });
 
   test.afterAll('Cleanup', async ({ browser }) => {
@@ -123,6 +122,7 @@ test.describe('Service Version pages', () => {
 
     const { apiContext, afterAction } = await performAdminLogin(browser);
     await adminUser.delete(apiContext);
+
     await afterAction();
   });
 
@@ -144,13 +144,10 @@ test.describe('Service Version pages', () => {
      * in the UI to highlight what changed between versions
      */
     test(key, async ({ page }) => {
-      const entityData = entity.get() as { fullyQualifiedName?: string; entity?: { fullyQualifiedName?: string } };
-      await visitVersionedEntityPage(
-        page,
-        entity.endpoint,
-        entityData.entity?.fullyQualifiedName ?? entityData.fullyQualifiedName ?? ''
-      );
-      await openEntityVersion(page, '0.2');
+      await entity.visitEntityPage(page);
+      const versionDetailResponse = page.waitForResponse(`**/versions/0.2`);
+      await page.locator('[data-testid="version-button"]').click();
+      await versionDetailResponse;
 
       /**
        * Step 1: Validate version 0.2 changes
@@ -160,34 +157,29 @@ test.describe('Service Version pages', () => {
        * - Description container with diff-added showing the updated description text
        * - Two tags (PersonalData.SpecialCategory and PII.Sensitive) marked as added in the right panel
        */
-      await test.step(
-        'should show edited tags and description changes',
-        async () => {
-          await expect(
-            page.locator(
-              '[data-testid="domain-link"] [data-testid="diff-added"]'
-            )
-          ).toBeVisible();
+      await test.step('should show edited tags and description changes', async () => {
+        await expect(
+          page.locator('[data-testid="domain-link"] [data-testid="diff-added"]')
+        ).toBeVisible();
 
-          await expect(
-            page.locator(
-              `[data-testid="asset-description-container"] ${descriptionBoxReadOnly} [data-testid="diff-added"]`
-            )
-          ).toBeVisible();
+        await expect(
+          page.locator(
+            `[data-testid="asset-description-container"] ${descriptionBoxReadOnly} [data-testid="diff-added"]`
+          )
+        ).toBeVisible();
 
-          await expect(
-            page.locator(
-              '[data-testid="entity-right-panel"] .diff-added [data-testid="tag-PersonalData.SpecialCategory"]'
-            )
-          ).toBeVisible();
+        await expect(
+          page.locator(
+            '[data-testid="entity-right-panel"] .diff-added [data-testid="tag-PersonalData.SpecialCategory"]'
+          )
+        ).toBeVisible();
 
-          await expect(
-            page.locator(
-              '[data-testid="entity-right-panel"] .diff-added [data-testid="tag-PII.Sensitive"]'
-            )
-          ).toBeVisible();
-        }
-      );
+        await expect(
+          page.locator(
+            '[data-testid="entity-right-panel"] .diff-added [data-testid="tag-PII.Sensitive"]'
+          )
+        ).toBeVisible();
+      });
 
       /**
        * Step 2: Validate owner change tracking in version 0.3
@@ -208,7 +200,9 @@ test.describe('Service Version pages', () => {
           type: 'Users',
         });
 
-        await openEntityVersion(page, '0.3');
+        const versionDetailResponse = page.waitForResponse(`**/versions/0.3`);
+        await page.locator('[data-testid="version-button"]').click();
+        await versionDetailResponse;
 
         await expect(
           page.locator('[data-testid="owner-link"] [data-testid="diff-added"]')
@@ -226,7 +220,9 @@ test.describe('Service Version pages', () => {
 
         await assignTier(page, 'Tier1', entity.endpoint);
 
-        await openEntityVersion(page, '0.3');
+        const versionDetailResponse = page.waitForResponse(`**/versions/0.3`);
+        await page.locator('[data-testid="version-button"]').click();
+        await versionDetailResponse;
 
         await expect(
           page.locator('[data-testid="Tier"] > [data-testid="diff-added"]')
@@ -247,46 +243,45 @@ test.describe('Service Version pages', () => {
        *
        * This ensures that soft-deleted entities remain viewable in version history with proper deleted indicators
        */
-      await test.step(
-        'should show version details after soft deleted',
-        async () => {
-          await page.locator('[data-testid="version-button"]').click();
+      await test.step('should show version details after soft deleted', async () => {
+        await page.locator('[data-testid="version-button"]').click();
 
-          await page.click('[data-testid="manage-button"]');
-          await page.click('[data-testid="delete-button"]');
+        await page.click('[data-testid="manage-button"]');
+        await page.click('[data-testid="delete-button"]');
 
-          await page.waitForSelector('[role="dialog"].ant-modal');
+        await page.waitForSelector('[role="dialog"].ant-modal');
 
-          await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
+        await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
-          await page.fill('[data-testid="confirmation-text-input"]', 'DELETE');
-          const deleteResponse = page.waitForResponse(
-            `/api/v1/${entity.endpoint}/async/*?hardDelete=false&recursive=true`
-          );
-          await page.click('[data-testid="confirm-button"]');
+        await page.fill('[data-testid="confirmation-text-input"]', 'DELETE');
+        const deleteResponse = page.waitForResponse(
+          `/api/v1/${entity.endpoint}/async/*?hardDelete=false&recursive=true`
+        );
+        await page.click('[data-testid="confirm-button"]');
 
-          await deleteResponse;
+        await deleteResponse;
 
-          await toastNotification(
-            page,
-            /deleted successfully!/,
-            BIG_ENTITY_DELETE_TIMEOUT
-          );
+        await toastNotification(
+          page,
+          /deleted successfully!/,
+          BIG_ENTITY_DELETE_TIMEOUT
+        );
 
-          await page.reload();
+        await page.reload();
 
-          const deletedBadge = page.locator('[data-testid="deleted-badge"]');
+        const deletedBadge = page.locator('[data-testid="deleted-badge"]');
 
-          await expect(deletedBadge).toHaveText('Deleted');
+        await expect(deletedBadge).toHaveText('Deleted');
 
-          await openEntityVersion(page, '0.4');
+        const versionDetailResponse = page.waitForResponse(`**/versions/0.4`);
+        await page.locator('[data-testid="version-button"]').click();
+        await versionDetailResponse;
 
-          // Deleted badge should be visible
-          await expect(
-            page.locator('[data-testid="deleted-badge"]')
-          ).toBeVisible();
-        }
-      );
+        // Deleted badge should be visible
+        await expect(
+          page.locator('[data-testid="deleted-badge"]')
+        ).toBeVisible();
+      });
     });
   });
 });

@@ -25,7 +25,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -62,6 +61,7 @@ import {
   validateODCSYaml,
 } from '../../../rest/contractAPI';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import Loader from '../../common/Loader/Loader';
 import {
   ContractImportModalProps,
   ImportMode,
@@ -840,7 +840,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <CircularProgress size={24} sx={{ mb: '12px' }} />
+          <Loader size="small" style={{ marginBottom: '12px' }} />
           <Typography
             sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
             {t('message.validating-contract-schema')}
@@ -1764,7 +1764,11 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           variant="contained"
           onClick={handleImport}>
           {(isLoading || isValidating) && (
-            <CircularProgress color="inherit" size={16} sx={{ mr: 1 }} />
+            <Loader
+              size="x-small"
+              style={{ marginRight: '8px' }}
+              type="white"
+            />
           )}
           {t('label.import')}
         </Button>
