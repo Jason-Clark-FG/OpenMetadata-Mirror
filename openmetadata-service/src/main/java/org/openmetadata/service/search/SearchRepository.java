@@ -541,9 +541,23 @@ public class SearchRepository {
       IndexMapping indexMapping = entityIndexMap.get(entityType);
       List<Map<String, String>> docs = new ArrayList<>();
       for (EntityInterface entity : entities) {
-        SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
-        String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
-        docs.add(Collections.singletonMap(entity.getId().toString(), doc));
+        try {
+          SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
+          String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
+          docs.add(Collections.singletonMap(entity.getId().toString(), doc));
+        } catch (Exception ie) {
+          LOG.error(
+              "Issue in building search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+              entity.getId(),
+              entityType,
+              ie.getMessage(),
+              ie.getCause(),
+              ExceptionUtils.getStackTrace(ie));
+        }
+      }
+
+      if (docs.isEmpty()) {
+        return;
       }
 
       try {
