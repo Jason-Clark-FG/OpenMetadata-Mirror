@@ -22,3 +22,20 @@ SET json = jsonb_set(
       '{connection,config,type}', '"CustomDatabase"'
     )::json
 WHERE serviceType = 'Iceberg';
+
+-- Migrate serviceType in child entities (serviceType is in JSON blob only, no generated column)
+UPDATE database_entity
+SET json = jsonb_set(json::jsonb, '{serviceType}', '"CustomDatabase"')::json
+WHERE json->>'serviceType' = 'Iceberg';
+
+UPDATE database_schema_entity
+SET json = jsonb_set(json::jsonb, '{serviceType}', '"CustomDatabase"')::json
+WHERE json->>'serviceType' = 'Iceberg';
+
+UPDATE table_entity
+SET json = jsonb_set(json::jsonb, '{serviceType}', '"CustomDatabase"')::json
+WHERE json->>'serviceType' = 'Iceberg';
+
+UPDATE stored_procedure_entity
+SET json = jsonb_set(json::jsonb, '{serviceType}', '"CustomDatabase"')::json
+WHERE json->>'serviceType' = 'Iceberg';

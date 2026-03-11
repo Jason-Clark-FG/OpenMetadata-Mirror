@@ -21,3 +21,20 @@ SET json = JSON_SET(
     )
 WHERE serviceType = 'Iceberg';
 
+-- Migrate serviceType in child entities (serviceType is in JSON blob only, no generated column)
+UPDATE database_entity
+SET json = JSON_SET(json, '$.serviceType', 'CustomDatabase')
+WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.serviceType')) = 'Iceberg';
+
+UPDATE database_schema_entity
+SET json = JSON_SET(json, '$.serviceType', 'CustomDatabase')
+WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.serviceType')) = 'Iceberg';
+
+UPDATE table_entity
+SET json = JSON_SET(json, '$.serviceType', 'CustomDatabase')
+WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.serviceType')) = 'Iceberg';
+
+UPDATE stored_procedure_entity
+SET json = JSON_SET(json, '$.serviceType', 'CustomDatabase')
+WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.serviceType')) = 'Iceberg';
+
