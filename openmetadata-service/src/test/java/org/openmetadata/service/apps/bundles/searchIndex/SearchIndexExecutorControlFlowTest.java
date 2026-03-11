@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
@@ -26,9 +27,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
+import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.analytics.ReportData;
 import org.openmetadata.schema.system.EntityError;
 import org.openmetadata.schema.system.EntityStats;
@@ -51,6 +55,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesDAO;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
+import org.openmetadata.service.search.DefaultRecreateHandler;
 import org.openmetadata.service.search.EntityReindexContext;
 import org.openmetadata.service.search.RecreateIndexHandler;
 import org.openmetadata.service.search.ReindexContext;
@@ -836,11 +841,543 @@ class SearchIndexExecutorControlFlowTest {
     assertTrue(executor.isStopped());
   }
 
+  @Test
+  void executeCompletesRecreateFlowForZeroEntityWorkload() throws Exception {
+    ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
+    ReindexingJobContext jobContext = mock(ReindexingJobContext.class);
+    CollectionDAO.SearchIndexFailureDAO failureDao = mock(CollectionDAO.SearchIndexFailureDAO.class);
+    EntityRepository<?> entityRepository = mock(EntityRepository.class);
+    EntityDAO entityDao = mock(EntityDAO.class);
+    BulkSink sink = mock(BulkSink.class);
+    DefaultRecreateHandler handler = mock(DefaultRecreateHandler.class);
+    UUID jobId = UUID.randomUUID();
+    ReindexContext recreateContext = new ReindexContext();
+    ReindexingConfiguration config =
+        ReindexingConfiguration.builder()
+            .entities(Set.of(Entity.TABLE))
+            .recreateIndex(true)
+            .build();
+
+    recreateContext.add(
+        Entity.TABLE,
+        "table_canonical",
+        "table_original",
+        "table_staged",
+        Set.of("table_existing"),
+        "table_alias",
+        List.of("column_alias"));
+    when(jobContext.getJobId()).thenReturn(jobId);
+    when(collectionDAO.searchIndexFailureDAO()).thenReturn(failureDao);
+    when(entityRepository.getDao()).thenReturn(entityDao);
+    when(entityDao.listCount(any(ListFilter.class))).thenReturn(0);
+    when(searchRepository.createBulkSink(100, 100, 104857600L)).thenReturn(sink);
+    when(searchRepository.createReindexHandler()).thenReturn(handler);
+    when(handler.reCreateIndexes(Set.of(Entity.TABLE))).thenReturn(recreateContext);
+    executor.addListener(listener);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedConstruction<SearchIndexClusterValidator> ignored =
+            mockConstruction(SearchIndexClusterValidator.class)) {
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TABLE)).thenReturn(entityRepository);
+
+      ExecutionResult result = executor.execute(config, jobContext);
+
+      assertEquals(ExecutionResult.Status.COMPLETED, result.status());
+    }
+
+    verify(listener).onJobStarted(jobContext);
+    verify(listener).onJobConfigured(jobContext, config);
+    verify(listener).onIndexRecreationStarted(Set.of(Entity.TABLE));
+    verify(listener).onEntityTypeStarted(Entity.TABLE, 0);
+    verify(listener).onEntityTypeCompleted(eq(Entity.TABLE), any());
+    verify(listener).onJobCompleted(any(Stats.class), anyLong());
+    verify(handler).reCreateIndexes(Set.of(Entity.TABLE));
+    verify(handler).promoteEntityIndex(any(EntityReindexContext.class), eq(true));
+    verify(sink).close();
+  }
+
+  @Test
+  void executeReturnsFailedResultWhenInitializationThrows() {
+    ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
+    ReindexingJobContext jobContext = mock(ReindexingJobContext.class);
+    EntityRepository<?> entityRepository = mock(EntityRepository.class);
+    EntityDAO entityDao = mock(EntityDAO.class);
+    ReindexingConfiguration config =
+        ReindexingConfiguration.builder().entities(Set.of(Entity.TABLE)).build();
+
+    when(jobContext.getJobId()).thenReturn(UUID.randomUUID());
+    when(entityRepository.getDao()).thenReturn(entityDao);
+    when(entityDao.listCount(any(ListFilter.class))).thenReturn(0);
+    when(searchRepository.createBulkSink(100, 100, 104857600L))
+        .thenThrow(new IllegalStateException("sink init failed"));
+    executor.addListener(listener);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TABLE)).thenReturn(entityRepository);
+
+      ExecutionResult result = executor.execute(config, jobContext);
+
+      assertEquals(ExecutionResult.Status.FAILED, result.status());
+    }
+
+    verify(listener).onJobStarted(jobContext);
+    verify(listener).onJobFailed(any(Stats.class), any(IllegalStateException.class));
+  }
+
+  @Test
+  void processEntityTypeSubmitsRegularReadersAndAdjustsBoundaryShortfall() throws Exception {
+    ExecutorService producerExecutor = mock(ExecutorService.class);
+    ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
+    Phaser producerPhaser = new Phaser(1);
+    String boundaryCursor = RestUtil.encodeCursor("{\"name\":\"m\",\"id\":\"1\"}");
+
+    doAnswer(
+            invocation -> {
+              ((Runnable) invocation.getArgument(0)).run();
+              return null;
+            })
+        .when(producerExecutor)
+        .submit(any(Runnable.class));
+    executor.addListener(listener);
+    executor.getStats().set(statsWithEntityTotals(Map.of(Entity.USER, 45)));
+    setField("producerExecutor", producerExecutor);
+    setField("taskQueue", queue);
+    setField("config", ReindexingConfiguration.builder().entities(Set.of(Entity.USER)).build());
+    setField("batchSize", new java.util.concurrent.atomic.AtomicReference<>(10));
+
+    try (MockedConstruction<PaginatedEntitiesSource> ignored =
+        mockConstruction(
+            PaginatedEntitiesSource.class,
+            (source, context) -> {
+              when(source.findBoundaryCursors(3, 45)).thenReturn(List.of(boundaryCursor));
+              when(source.readNextKeyset(any()))
+                  .thenReturn(
+                      (ResultList)
+                          new ResultList<>(List.of(mock(EntityInterface.class)), null, null, 1));
+            })) {
+      invokePrivateMethod(
+          "processEntityType", new Class<?>[] {String.class, Phaser.class}, Entity.USER, producerPhaser);
+    }
+
+    assertEquals(2, queue.size());
+    assertTrue(producerPhaser.isTerminated());
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchCounters =
+        (Map<String, AtomicInteger>) getField("entityBatchCounters");
+    assertEquals(0, batchCounters.get(Entity.USER).get());
+    verify(listener).onEntityTypeStarted(Entity.USER, 45);
+    verify(listener).onEntityTypeCompleted(eq(Entity.USER), any());
+  }
+
+  @Test
+  void processKeysetBatchesRecordsSuccessfulReadAndPromotesEntity() throws Exception {
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
+    DefaultRecreateHandler handler = mock(DefaultRecreateHandler.class);
+    ReindexContext recreateContext = new ReindexContext();
+    Phaser producerPhaser = new Phaser(1);
+
+    recreateContext.add(
+        Entity.TABLE,
+        "table_canonical",
+        "table_original",
+        "table_staged",
+        Set.of("table_existing"),
+        "table_alias",
+        List.of("column_alias"));
+    setField("taskQueue", queue);
+    setField("config", ReindexingConfiguration.builder().recreateIndex(true).build());
+    setField("recreateIndexHandler", handler);
+    setField("recreateContext", recreateContext);
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchCounters =
+        (Map<String, AtomicInteger>) getField("entityBatchCounters");
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchFailures =
+        (Map<String, AtomicInteger>) getField("entityBatchFailures");
+    batchCounters.put(Entity.TABLE, new AtomicInteger(1));
+    batchFailures.put(Entity.TABLE, new AtomicInteger(0));
+
+    invokePrivateMethod(
+        "processKeysetBatches",
+        new Class<?>[] {
+          String.class,
+          int.class,
+          int.class,
+          String.class,
+          SearchIndexExecutor.KeysetBatchReader.class,
+          Phaser.class
+        },
+        Entity.TABLE,
+        10,
+        5,
+        null,
+        (SearchIndexExecutor.KeysetBatchReader)
+            cursor -> new ResultList<>(List.of("entity"), null, null, 1),
+        producerPhaser);
+
+    assertEquals(1, queue.size());
+    assertTrue(producerPhaser.isTerminated());
+    assertEquals(0, batchFailures.get(Entity.TABLE).get());
+    verify(handler).promoteEntityIndex(any(EntityReindexContext.class), eq(true));
+  }
+
+  @Test
+  void processKeysetBatchesRecordsReaderFailuresAndMarksEntityFailed() throws Exception {
+    ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
+    IndexingFailureRecorder failureRecorder = mock(IndexingFailureRecorder.class);
+    Phaser producerPhaser = new Phaser(1);
+    SearchIndexException exception =
+        new SearchIndexException(
+            new IndexingError().withMessage("read timeout").withFailedCount(2));
+
+    executor.addListener(listener);
+    executor.getStats().set(statsWithEntityTotals(Map.of(Entity.TABLE, 5)));
+    setField("taskQueue", new LinkedBlockingQueue<>());
+    setField("failureRecorder", failureRecorder);
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchCounters =
+        (Map<String, AtomicInteger>) getField("entityBatchCounters");
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchFailures =
+        (Map<String, AtomicInteger>) getField("entityBatchFailures");
+    batchCounters.put(Entity.TABLE, new AtomicInteger(1));
+    batchFailures.put(Entity.TABLE, new AtomicInteger(0));
+
+    invokePrivateMethod(
+        "processKeysetBatches",
+        new Class<?>[] {
+          String.class,
+          int.class,
+          int.class,
+          String.class,
+          SearchIndexExecutor.KeysetBatchReader.class,
+          Phaser.class
+        },
+        Entity.TABLE,
+        5,
+        5,
+        null,
+        (SearchIndexExecutor.KeysetBatchReader)
+            cursor -> {
+              throw exception;
+            },
+        producerPhaser);
+
+    verify(failureRecorder)
+        .recordReaderFailure(eq(Entity.TABLE), eq("read timeout"), any(String.class));
+    verify(listener).onError(eq(Entity.TABLE), eq(exception.getIndexingError()), any(Stats.class));
+    assertEquals(2, executor.getStats().get().getReaderStats().getFailedRecords());
+    assertEquals(2, executor.getStats().get().getJobStats().getFailedRecords());
+    assertEquals(1, batchFailures.get(Entity.TABLE).get());
+    assertTrue(producerPhaser.isTerminated());
+  }
+
+  @Test
+  void submitReadersSingleReaderQueuesBatchesWithoutBoundaryLookup() throws Exception {
+    ExecutorService producerExecutor = mock(ExecutorService.class);
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
+    Phaser producerPhaser = new Phaser(1);
+
+    doAnswer(
+            invocation -> {
+              ((Runnable) invocation.getArgument(0)).run();
+              return null;
+            })
+        .when(producerExecutor)
+        .submit(any(Runnable.class));
+    setField("producerExecutor", producerExecutor);
+    setField("taskQueue", queue);
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchCounters =
+        (Map<String, AtomicInteger>) getField("entityBatchCounters");
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchFailures =
+        (Map<String, AtomicInteger>) getField("entityBatchFailures");
+    batchCounters.put(Entity.TABLE, new AtomicInteger(1));
+    batchFailures.put(Entity.TABLE, new AtomicInteger(0));
+
+    invokePrivateMethod(
+        "submitReaders",
+        new Class<?>[] {
+          String.class,
+          int.class,
+          int.class,
+          int.class,
+          Phaser.class,
+          java.util.function.Supplier.class,
+          java.util.function.BiFunction.class
+        },
+        Entity.TABLE,
+        1,
+        5,
+        1,
+        producerPhaser,
+        (java.util.function.Supplier<SearchIndexExecutor.KeysetBatchReader>)
+            () -> cursor -> new ResultList<>(List.of("entity"), null, null, 1),
+        (java.util.function.BiFunction<Integer, Integer, List<String>>)
+            (readers, total) -> {
+              throw new AssertionError("Boundary lookup should not run for a single reader");
+            });
+
+    assertEquals(1, queue.size());
+    assertTrue(producerPhaser.isTerminated());
+    assertEquals(0, batchFailures.get(Entity.TABLE).get());
+  }
+
+  @Test
+  void processBatchQueuesReadResultsAndPromotesFinalBatch() throws Exception {
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
+    CountDownLatch latch = new CountDownLatch(1);
+    DefaultRecreateHandler handler = mock(DefaultRecreateHandler.class);
+    ReindexContext recreateContext = new ReindexContext();
+
+    recreateContext.add(
+        Entity.USER,
+        "user_canonical",
+        "user_original",
+        "user_staged",
+        Set.of("user_existing"),
+        "user_alias",
+        List.of("team_alias"));
+    executor.getStats().set(statsWithEntityTotals(Map.of(Entity.USER, 1)));
+    setField("taskQueue", queue);
+    setField("batchSize", new java.util.concurrent.atomic.AtomicReference<>(10));
+    setField("config", ReindexingConfiguration.builder().recreateIndex(true).build());
+    setField("recreateIndexHandler", handler);
+    setField("recreateContext", recreateContext);
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchCounters =
+        (Map<String, AtomicInteger>) getField("entityBatchCounters");
+    @SuppressWarnings("unchecked")
+    Map<String, AtomicInteger> batchFailures =
+        (Map<String, AtomicInteger>) getField("entityBatchFailures");
+    batchCounters.put(Entity.USER, new AtomicInteger(1));
+    batchFailures.put(Entity.USER, new AtomicInteger(0));
+
+    try (MockedConstruction<PaginatedEntitiesSource> ignored =
+        mockConstruction(
+            PaginatedEntitiesSource.class,
+            (source, context) ->
+                when(source.readWithCursor(RestUtil.encodeCursor("0")))
+                    .thenReturn(
+                        (ResultList)
+                            new ResultList<>(List.of(mock(EntityInterface.class)))))) {
+      invokePrivateMethod(
+          "processBatch",
+          new Class<?>[] {String.class, int.class, CountDownLatch.class},
+          Entity.USER,
+          0,
+          latch);
+    }
+
+    assertEquals(0, latch.getCount());
+    assertEquals(1, queue.size());
+    verify(handler).promoteEntityIndex(any(EntityReindexContext.class), eq(true));
+  }
+
+  @Test
+  void handleSinkFailureRoutesProcessAndSinkStagesToRecorder() throws Exception {
+    IndexingFailureRecorder failureRecorder = mock(IndexingFailureRecorder.class);
+    setField("failureRecorder", failureRecorder);
+
+    invokePrivateMethod(
+        "handleSinkFailure",
+        new Class<?>[] {
+          String.class,
+          String.class,
+          String.class,
+          String.class,
+          IndexingFailureRecorder.FailureStage.class
+        },
+        Entity.TABLE,
+        "1",
+        "svc.db.table",
+        "process boom",
+        IndexingFailureRecorder.FailureStage.PROCESS);
+    invokePrivateMethod(
+        "handleSinkFailure",
+        new Class<?>[] {
+          String.class,
+          String.class,
+          String.class,
+          String.class,
+          IndexingFailureRecorder.FailureStage.class
+        },
+        Entity.TABLE,
+        "2",
+        "svc.db.table",
+        "sink boom",
+        IndexingFailureRecorder.FailureStage.SINK);
+
+    verify(failureRecorder)
+        .recordProcessFailure(Entity.TABLE, "1", "svc.db.table", "process boom");
+    verify(failureRecorder).recordSinkFailure(Entity.TABLE, "2", "svc.db.table", "sink boom");
+  }
+
+  @Test
+  void isBackpressureActiveTracksQueueFillRatio() throws Exception {
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>(10);
+    ReindexingMetrics metrics = mock(ReindexingMetrics.class);
+
+    for (int i = 0; i < 10; i++) {
+      queue.add(i);
+    }
+    setField("taskQueue", queue);
+
+    try (MockedStatic<ReindexingMetrics> metricsMock = mockStatic(ReindexingMetrics.class)) {
+      metricsMock.when(ReindexingMetrics::getInstance).thenReturn(metrics);
+
+      assertTrue((Boolean) invokePrivateMethod("isBackpressureActive", new Class<?>[0]));
+      verify(metrics).updateQueueFillRatio(100);
+
+      queue.clear();
+      assertFalse((Boolean) invokePrivateMethod("isBackpressureActive", new Class<?>[0]));
+      verify(metrics).updateQueueFillRatio(0);
+    }
+  }
+
+  @Test
+  void calculateNumberOfThreadsHandlesExactRemaindersAndInvalidBatchSize() throws Exception {
+    assertEquals(
+        1,
+        invokePrivateMethod(
+            "calculateNumberOfThreads", new Class<?>[] {int.class, int.class}, 10, 0));
+    assertEquals(
+        2,
+        invokePrivateMethod(
+            "calculateNumberOfThreads", new Class<?>[] {int.class, int.class}, 40, 20));
+    assertEquals(
+        3,
+        invokePrivateMethod(
+            "calculateNumberOfThreads", new Class<?>[] {int.class, int.class}, 41, 20));
+  }
+
+  @Test
+  void runConsumerProcessesQueuedWorkUntilPoisonPill() throws Exception {
+    BulkSink sink = mock(BulkSink.class);
+    @SuppressWarnings("unchecked")
+    Source<Object> source = mock(Source.class);
+    LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
+    CountDownLatch latch = new CountDownLatch(1);
+
+    executor.getStats().set(statsWithEntityTotals(Map.of(Entity.TABLE, 1)));
+    setField("config", ReindexingConfiguration.builder().build());
+    setField("searchIndexSink", sink);
+    setField("taskQueue", queue);
+    when(source.readWithCursor(RestUtil.encodeCursor("0")))
+        .thenReturn((ResultList) new ResultList<>(List.of(mock(EntityInterface.class))));
+
+    invokePrivateMethod(
+        "processReadTask", new Class<?>[] {String.class, Source.class, int.class}, Entity.TABLE, source, 0);
+    invokePrivateMethod("signalConsumersToStop", new Class<?>[] {int.class}, 1);
+    invokePrivateMethod(
+        "runConsumer", new Class<?>[] {int.class, CountDownLatch.class}, 0, latch);
+
+    verify(sink).write(any(List.class), any(Map.class));
+    assertEquals(0, latch.getCount());
+    assertEquals(1, executor.getStats().get().getJobStats().getSuccessRecords());
+  }
+
+  @Test
+  void processEntityReindexStopsImmediatelyWhenExecutorIsStopped() throws Exception {
+    ExecutorService producerExecutor = mock(ExecutorService.class);
+    ExecutorService jobExecutor = mock(ExecutorService.class);
+
+    setField("producerExecutor", producerExecutor);
+    setField("jobExecutor", jobExecutor);
+    ((java.util.concurrent.atomic.AtomicBoolean) getField("stopped")).set(true);
+
+    invokePrivateMethod("processEntityReindex", new Class<?>[] {Set.class}, Set.of(Entity.TABLE));
+
+    verify(producerExecutor).shutdownNow();
+    verify(jobExecutor).shutdownNow();
+    ((java.util.concurrent.atomic.AtomicBoolean) getField("stopped")).set(false);
+  }
+
+  @Test
+  void cleanupExecutorsShutsDownAllPoolsWhenStillRunning() throws Exception {
+    ExecutorService consumerExecutor = Executors.newSingleThreadExecutor();
+    ExecutorService jobExecutor = Executors.newSingleThreadExecutor();
+    ExecutorService producerExecutor = Executors.newSingleThreadExecutor();
+
+    setField("consumerExecutor", consumerExecutor);
+    setField("jobExecutor", jobExecutor);
+    setField("producerExecutor", producerExecutor);
+
+    invokePrivateMethod("cleanupExecutors", new Class<?>[0]);
+
+    assertTrue(consumerExecutor.isShutdown());
+    assertTrue(jobExecutor.isShutdown());
+    assertTrue(producerExecutor.isShutdown());
+  }
+
+  @Test
+  void removeListenerReturnsExecutorInstance() {
+    ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
+
+    assertSame(executor, executor.addListener(listener).removeListener(listener));
+  }
+
+  @Test
+  void expandEntitiesReturnsIndexedUniverseWhenAllRequested() throws Exception {
+    when(searchRepository.getEntityIndexMap())
+        .thenReturn(
+            Map.of(
+                Entity.TABLE, mock(org.openmetadata.search.IndexMapping.class),
+                Entity.ENTITY_REPORT_DATA, mock(org.openmetadata.search.IndexMapping.class)));
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(Entity::getEntityList).thenReturn(Set.of(Entity.TABLE, Entity.USER));
+
+      @SuppressWarnings("unchecked")
+      Set<String> expanded =
+          (Set<String>)
+              invokePrivateMethod("expandEntities", new Class<?>[] {Set.class}, Set.of("all"));
+
+      assertTrue(expanded.contains(Entity.TABLE));
+      assertTrue(expanded.contains(Entity.ENTITY_REPORT_DATA));
+      assertFalse(expanded.contains(Entity.USER));
+    }
+  }
+
   private Stats initializeStats(Set<String> entities) {
     Stats stats = executor.initializeTotalRecords(entities);
     if (stats.getEntityStats() == null) {
       stats.setEntityStats(new EntityStats());
     }
+    return stats;
+  }
+
+  private Stats statsWithEntityTotals(Map<String, Integer> entityTotals) {
+    Stats stats = new Stats();
+    EntityStats entityStats = new EntityStats();
+    int totalRecords = 0;
+
+    for (Map.Entry<String, Integer> entry : entityTotals.entrySet()) {
+      totalRecords += entry.getValue();
+      entityStats
+          .getAdditionalProperties()
+          .put(
+              entry.getKey(),
+              new StepStats()
+                  .withTotalRecords(entry.getValue())
+                  .withSuccessRecords(0)
+                  .withFailedRecords(0));
+    }
+
+    stats.setEntityStats(entityStats);
+    stats.setJobStats(
+        new StepStats().withTotalRecords(totalRecords).withSuccessRecords(0).withFailedRecords(0));
+    stats.setReaderStats(
+        new StepStats()
+            .withTotalRecords(totalRecords)
+            .withSuccessRecords(0)
+            .withFailedRecords(0)
+            .withWarningRecords(0));
+    stats.setSinkStats(new StepStats().withTotalRecords(0).withSuccessRecords(0).withFailedRecords(0));
+    stats.setProcessStats(
+        new StepStats().withTotalRecords(0).withSuccessRecords(0).withFailedRecords(0));
     return stats;
   }
 
