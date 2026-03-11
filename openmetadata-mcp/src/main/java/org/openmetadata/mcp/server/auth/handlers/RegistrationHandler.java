@@ -17,6 +17,15 @@ import org.openmetadata.mcp.server.auth.repository.OAuthClientRepository;
  * Handler for OAuth 2.0 Dynamic Client Registration (RFC 7591).
  *
  * <p>Processes client registration requests and generates client credentials.
+ *
+ * <p>TODO: The registration endpoint is currently open (unauthenticated) per RFC 7591 §3 SHOULD
+ * and MCP spec requirements. Future improvements:
+ * <ul>
+ *   <li>Add configurable registration policy (open vs admin-only) via MCPConfiguration
+ *   <li>Add client expiry and automated cleanup of orphaned registrations
+ *   <li>Consider static client initialization during server configuration
+ *   <li>Add admin API for listing and pruning registered clients
+ * </ul>
  */
 @Slf4j
 public class RegistrationHandler {
@@ -115,6 +124,14 @@ public class RegistrationHandler {
 
   private static final int MAX_URI_FIELD_LENGTH = 2048;
 
+  private static final int MAX_REDIRECT_URIS = 10;
+
+  private static final int MAX_CONTACTS = 5;
+
+  private static final int MAX_GRANT_TYPES = 5;
+
+  private static final int MAX_RESPONSE_TYPES = 5;
+
   private void validateRegistrationRequest(OAuthClientMetadata metadata)
       throws RegistrationException {
 
@@ -128,6 +145,7 @@ public class RegistrationHandler {
     validateUriFieldLength(metadata.getTosUri(), "tos_uri");
     validateUriFieldLength(metadata.getPolicyUri(), "policy_uri");
     if (metadata.getContacts() != null) {
+      validateListSize(metadata.getContacts(), "contacts", MAX_CONTACTS);
       for (String contact : metadata.getContacts()) {
         validateFieldLength(contact, "contacts entry", MAX_STRING_FIELD_LENGTH);
       }
@@ -138,6 +156,7 @@ public class RegistrationHandler {
       throw new RegistrationException(
           "invalid_redirect_uri", "At least one redirect_uri must be provided");
     }
+    validateListSize(metadata.getRedirectUris(), "redirect_uris", MAX_REDIRECT_URIS);
 
     // Validate redirect URI schemes and hosts
     // RFC 8252 Section 7.1: native apps may use private-use URI schemes (e.g. cursor://, vscode://)
@@ -164,6 +183,7 @@ public class RegistrationHandler {
 
     // Validate supported grant types
     if (metadata.getGrantTypes() != null) {
+      validateListSize(metadata.getGrantTypes(), "grant_types", MAX_GRANT_TYPES);
       for (String grantType : metadata.getGrantTypes()) {
         if (!isSupportedGrantType(grantType)) {
           throw new RegistrationException(
@@ -174,6 +194,7 @@ public class RegistrationHandler {
 
     // Validate supported response types
     if (metadata.getResponseTypes() != null) {
+      validateListSize(metadata.getResponseTypes(), "response_types", MAX_RESPONSE_TYPES);
       for (String responseType : metadata.getResponseTypes()) {
         if (!responseType.equals("code")) {
           throw new RegistrationException(
@@ -236,6 +257,15 @@ public class RegistrationHandler {
       throw new RegistrationException(
           "invalid_client_metadata",
           fieldName + " exceeds maximum length of " + MAX_URI_FIELD_LENGTH);
+    }
+  }
+
+  private void validateListSize(java.util.Collection<?> list, String fieldName, int maxSize)
+      throws RegistrationException {
+    if (list != null && list.size() > maxSize) {
+      throw new RegistrationException(
+          "invalid_client_metadata",
+          fieldName + " exceeds maximum allowed entries (" + maxSize + ")");
     }
   }
 }

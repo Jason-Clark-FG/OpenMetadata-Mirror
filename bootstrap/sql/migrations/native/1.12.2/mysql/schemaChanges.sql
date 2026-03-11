@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
     CONSTRAINT oauth_authorization_codes_user_check CHECK (CHAR_LENGTH(user_name) > 0),
     CONSTRAINT oauth_authorization_codes_challenge_method_check CHECK (
         code_challenge_method IS NULL OR
-        code_challenge_method IN ('plain', 'S256')
+        code_challenge_method IN ('S256')
     )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -176,14 +176,30 @@ public class OAuthTokenRepository {
   }
 
   /**
-   * Rotate a refresh token: revoke all existing tokens for the user/client, then store
-   * the new one. These are two sequential DB operations (not wrapped in a single transaction).
-   * If the server crashes or insert fails after revoke, the user must re-authenticate via SSO
-   * — this is the safer failure mode compared to having two valid tokens simultaneously.
+   * Rotate a refresh token using atomic CAS: atomically revoke the old token (UPDATE ... WHERE
+   * revoked = FALSE), then revoke any remaining tokens for cleanup, then store the new one.
+   * If the CAS fails (row count = 0), the old token was already revoked by a concurrent request.
+   *
+   * @param oldTokenValue The old refresh token value to atomically revoke
+   * @param newToken The new refresh token to store
+   * @throws TokenRotationException if the old token was already consumed (concurrent refresh)
    */
   public void rotateRefreshToken(
-      RefreshToken newToken, String clientId, String userName, List<String> scopes) {
-    // Revoke all existing tokens for this user+client first
+      String oldTokenValue,
+      RefreshToken newToken,
+      String clientId,
+      String userName,
+      List<String> scopes) {
+    // Atomic CAS: only one concurrent request can successfully revoke this token
+    String oldTokenHash = hashToken(oldTokenValue);
+    int rowsAffected = refreshTokenDAO.revokeAtomic(oldTokenHash);
+
+    if (rowsAffected == 0) {
+      throw new TokenRotationException(
+          "Refresh token already consumed — possible concurrent refresh or replay attack");
+    }
+
+    // Revoke any other lingering tokens for this user+client (belt-and-suspenders cleanup)
     refreshTokenDAO.revokeAllForUser(clientId, userName);
 
     // Store the new token
@@ -198,6 +214,12 @@ public class OAuthTokenRepository {
         newToken.getExpiresAt());
 
     LOG.debug("Rotated refresh token for user: {}, client: {}", userName, clientId);
+  }
+
+  public static class TokenRotationException extends RuntimeException {
+    public TokenRotationException(String message) {
+      super(message);
+    }
   }
 
   /**

@@ -1,5 +1,6 @@
 package org.openmetadata.mcp.server.auth.repository;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -7,21 +8,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.mcp.auth.OAuthClientInformation;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.fernet.Fernet;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.oauth.OAuthRecords.OAuthClientRecord;
 
 /**
- * Repository for managing OAuth client registrations with database persistence and secret encryption.
+ * Repository for managing OAuth client registrations with database persistence and BCrypt secret
+ * hashing.
  */
 @Slf4j
 public class OAuthClientRepository {
+  private static final int BCRYPT_COST = 12;
   private final CollectionDAO.OAuthClientDAO dao;
-  private final Fernet fernet;
 
   public OAuthClientRepository() {
     this.dao = Entity.getCollectionDAO().oauthClientDAO();
-    this.fernet = Fernet.getInstance();
   }
 
   /**
@@ -29,7 +29,10 @@ public class OAuthClientRepository {
    */
   public void register(OAuthClientInformation clientInfo) {
     String clientSecret = clientInfo.getClientSecret();
-    String encryptedSecret = clientSecret != null ? fernet.encrypt(clientSecret) : null;
+    String hashedSecret =
+        clientSecret != null
+            ? BCrypt.withDefaults().hashToString(BCRYPT_COST, clientSecret.toCharArray())
+            : null;
 
     // Convert scope from String to List<String> for database storage
     String scope = clientInfo.getScope();
@@ -38,7 +41,7 @@ public class OAuthClientRepository {
 
     dao.insert(
         clientInfo.getClientId(),
-        encryptedSecret,
+        hashedSecret,
         clientInfo.getClientName(),
         JsonUtils.pojoToJson(
             clientInfo.getRedirectUris().stream().map(URI::toString).collect(Collectors.toList())),
@@ -50,11 +53,8 @@ public class OAuthClientRepository {
   }
 
   /**
-   * Get OAuth client by client ID.
-   *
-   * <p>HIGH: Handles Fernet decryption failures gracefully (e.g., during key rotation). If client
-   * secret decryption fails, the client is still returned but without the secret (null). This
-   * allows public clients to continue working, but confidential clients will fail authentication.
+   * Get OAuth client by client ID. The clientSecret field is set to the BCrypt hash
+   * (not the original secret) for verification by ClientAuthenticator.
    */
   public OAuthClientInformation findByClientId(String clientId) {
     OAuthClientRecord record = dao.findByClientId(clientId);
@@ -62,31 +62,9 @@ public class OAuthClientRepository {
       return null;
     }
 
-    String decryptedSecret = null;
-    if (record.clientSecretEncrypted() != null) {
-      try {
-        decryptedSecret = fernet.decrypt(record.clientSecretEncrypted());
-      } catch (Exception e) {
-        boolean isConfidentialClient =
-            record.tokenEndpointAuthMethod() != null
-                && !record.tokenEndpointAuthMethod().equals("none");
-
-        LOG.error(
-            "Failed to decrypt client secret for client {}. Error: {}", clientId, e.getMessage());
-
-        if (isConfidentialClient) {
-          throw new IllegalStateException(
-              "Failed to decrypt client secret for confidential client "
-                  + clientId
-                  + ". This may indicate Fernet key rotation.",
-              e);
-        }
-      }
-    }
-
     OAuthClientInformation clientInfo = new OAuthClientInformation();
     clientInfo.setClientId(record.clientId());
-    clientInfo.setClientSecret(decryptedSecret);
+    clientInfo.setClientSecret(record.clientSecretEncrypted());
     clientInfo.setClientName(record.clientName());
     clientInfo.setRedirectUris(
         record.redirectUris().stream().map(URI::create).collect(Collectors.toList()));

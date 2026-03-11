@@ -168,8 +168,10 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       LOG.warn("Failed to get base URL from system settings: {}", e.getMessage());
     }
 
-    // TODO: Silently falling back to localhost:8585 will cause subtle failures in production.
-    //  Consider throwing an exception or logging at ERROR level to surface misconfiguration.
+    LOG.error(
+        "No base URL configured in MCP settings or system settings. "
+            + "Falling back to http://localhost:8585 — this is only suitable for local development. "
+            + "Configure a proper base URL for production deployments.");
     return "http://localhost:8585";
   }
 
@@ -652,7 +654,11 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
                 + " seconds ago. Please restart the authorization flow.");
       }
 
-      // Atomically mark as used — prevents replay attacks
+      // Atomically mark as used — prevents replay attacks.
+      // NOTE: Consuming BEFORE PKCE verification is intentional per RFC 6749 §4.1.2 (single-use).
+      // If PKCE verification fails after consumption, the client must restart the flow. This is
+      // the safer tradeoff: consuming after PKCE would allow unlimited retry attacks on intercepted
+      // codes (attacker brute-forces code_verifier). See also RFC 7636 §4.6.
       OAuthAuthorizationCodeRecord usedRecord = codeRepository.markAsUsedAtomic(code);
       if (usedRecord == null) {
         String clientIP =
@@ -680,24 +686,29 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       }
 
       // CRITICAL: Validate redirect URI matches (RFC 6749 Section 4.1.3)
+      // redirect_uri is always stored during authorization — reject if missing as a safety net
       String storedRedirectUri = usedRecord.redirectUri();
       URI requestRedirectUri = authCode.getRedirectUri();
-      if (storedRedirectUri != null && !storedRedirectUri.isEmpty()) {
-        if (requestRedirectUri == null) {
-          throw new TokenException(
-              "invalid_request",
-              "redirect_uri is required when it was included in the authorization request");
-        }
-        if (!requestRedirectUri.toString().equals(storedRedirectUri)) {
-          LOG.error(
-              "SECURITY ALERT: Redirect URI mismatch in token exchange! "
-                  + "Authorization used '{}' but token request used '{}'",
-              storedRedirectUri,
-              requestRedirectUri);
-          throw new TokenException(
-              "invalid_grant",
-              "Redirect URI in token request does not match authorization request");
-        }
+      if (storedRedirectUri == null || storedRedirectUri.isEmpty()) {
+        LOG.error(
+            "SECURITY ALERT: Authorization code has no stored redirect_uri. "
+                + "This should never happen — the authorization endpoint always stores redirect_uri.");
+        throw new TokenException(
+            "server_error", "Authorization code has no associated redirect URI");
+      }
+      if (requestRedirectUri == null) {
+        throw new TokenException(
+            "invalid_request",
+            "redirect_uri is required when it was included in the authorization request");
+      }
+      if (!requestRedirectUri.toString().equals(storedRedirectUri)) {
+        LOG.error(
+            "SECURITY ALERT: Redirect URI mismatch in token exchange! "
+                + "Authorization used '{}' but token request used '{}'",
+            storedRedirectUri,
+            requestRedirectUri);
+        throw new TokenException(
+            "invalid_grant", "Redirect URI in token request does not match authorization request");
       }
 
       if (!verifyPKCE(codeVerifier, usedRecord.codeChallenge())) {
@@ -739,7 +750,7 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       tokenRepository.storeRefreshToken(
           refreshToken, client.getClientId(), userName, usedRecord.scopes());
 
-      LOG.info(
+      LOG.debug(
           "Generated refresh token for user: {} (expires in {} days)",
           userName,
           REFRESH_TOKEN_EXPIRY_DAYS);
@@ -777,7 +788,8 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
       authCode.setClientId(record.clientId());
       authCode.setCodeChallenge(record.codeChallenge());
       authCode.setExpiresAt(record.expiresAt());
-      authCode.setRedirectUri(java.net.URI.create(record.redirectUri()));
+      authCode.setRedirectUri(
+          record.redirectUri() != null ? java.net.URI.create(record.redirectUri()) : null);
       authCode.setScopes(record.scopes() != null ? record.scopes() : List.of());
 
       return CompletableFuture.completedFuture(authCode);
@@ -874,13 +886,18 @@ public class UserSSOOAuthProvider implements OAuthAuthorizationServerProvider {
           new RefreshToken(
               newRefreshTokenValue, client.getClientId(), requestedScopes, newRefreshExpiresAt);
 
-      // Atomic rotation: revoke all existing tokens for this user+client, then store the new one.
-      // This prevents the window where both old and new tokens are valid simultaneously.
-      tokenRepository.rotateRefreshToken(
-          newRefreshToken, client.getClientId(), userName, requestedScopes);
+      // Atomic CAS rotation: atomically revoke the old token, then store the new one.
+      // If a concurrent request already consumed this token, CAS fails and we reject.
+      try {
+        tokenRepository.rotateRefreshToken(
+            refreshTokenValue, newRefreshToken, client.getClientId(), userName, requestedScopes);
+      } catch (OAuthTokenRepository.TokenRotationException e) {
+        LOG.warn("Concurrent refresh token use detected for user: {}", userName);
+        throw new TokenException("invalid_grant", "Refresh token has already been used");
+      }
       LOG.debug("Refresh token rotated for user: {}", userName);
 
-      LOG.info(
+      LOG.debug(
           "New refresh token generated for user: {} (expires in {} days)",
           userName,
           REFRESH_TOKEN_EXPIRY_DAYS);

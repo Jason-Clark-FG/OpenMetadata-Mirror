@@ -10907,6 +10907,10 @@ public interface CollectionDAO {
     @SqlUpdate("UPDATE oauth_refresh_tokens SET revoked = TRUE WHERE token_hash = :tokenHash")
     void revoke(@Bind("tokenHash") String tokenHash);
 
+    @SqlUpdate(
+        "UPDATE oauth_refresh_tokens SET revoked = TRUE WHERE token_hash = :tokenHash AND revoked = FALSE")
+    int revokeAtomic(@Bind("tokenHash") String tokenHash);
+
     @SqlUpdate("DELETE FROM oauth_refresh_tokens WHERE token_hash = :tokenHash")
     void delete(@Bind("tokenHash") String tokenHash);
 

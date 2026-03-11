@@ -1,13 +1,13 @@
 package org.openmetadata.mcp.server.auth.middleware;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import java.util.concurrent.CompletableFuture;
 import org.openmetadata.mcp.auth.OAuthAuthorizationServerProvider;
 import org.openmetadata.mcp.auth.OAuthClientInformation;
 
 /**
- * Authenticator for OAuth clients.
+ * Authenticates OAuth clients by verifying client_id and client_secret.
+ * Client secrets are stored as BCrypt hashes — only verification is possible, not recovery.
  */
 public class ClientAuthenticator {
 
@@ -39,19 +39,16 @@ public class ClientAuthenticator {
                     new AuthenticationException("Client not found"));
               }
 
-              // If client has a secret, verify it using constant-time comparison
+              // If client has a secret (stored as BCrypt hash), verify it
               if (client.getClientSecret() != null) {
                 if (clientSecret == null) {
                   return CompletableFuture.failedFuture(
                       new AuthenticationException("Client secret required"));
                 }
 
-                // Use MessageDigest.isEqual() for constant-time comparison to prevent timing
-                // attacks
-                byte[] expectedBytes = client.getClientSecret().getBytes(StandardCharsets.UTF_8);
-                byte[] providedBytes = clientSecret.getBytes(StandardCharsets.UTF_8);
-
-                if (!MessageDigest.isEqual(expectedBytes, providedBytes)) {
+                BCrypt.Result result =
+                    BCrypt.verifyer().verify(clientSecret.toCharArray(), client.getClientSecret());
+                if (!result.verified) {
                   return CompletableFuture.failedFuture(
                       new AuthenticationException("Invalid client secret"));
                 }

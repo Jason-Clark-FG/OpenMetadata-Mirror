@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS oauth_authorization_codes (
     CONSTRAINT oauth_authorization_codes_scopes_check CHECK (jsonb_typeof(scopes) = 'array'),
     CONSTRAINT oauth_authorization_codes_challenge_method_check CHECK (
         code_challenge_method IS NULL OR
-        code_challenge_method IN ('plain', 'S256')
+        code_challenge_method IN ('S256')
     )
 );
 
@@ -95,7 +95,7 @@ COMMENT ON TABLE oauth_authorization_codes IS 'Temporary authorization codes for
 COMMENT ON COLUMN oauth_authorization_codes.code IS 'Unique authorization code string';
 COMMENT ON COLUMN oauth_authorization_codes.user_name IS 'Username of the user who initiated the authorization';
 COMMENT ON COLUMN oauth_authorization_codes.code_challenge IS 'PKCE code challenge for public clients';
-COMMENT ON COLUMN oauth_authorization_codes.code_challenge_method IS 'PKCE code challenge method (plain or S256)';
+COMMENT ON COLUMN oauth_authorization_codes.code_challenge_method IS 'PKCE code challenge method (S256 only)';
 COMMENT ON COLUMN oauth_authorization_codes.expires_at IS 'Unix timestamp (milliseconds) when code expires';
 COMMENT ON COLUMN oauth_authorization_codes.used IS 'Whether the authorization code has been exchanged for tokens';
 

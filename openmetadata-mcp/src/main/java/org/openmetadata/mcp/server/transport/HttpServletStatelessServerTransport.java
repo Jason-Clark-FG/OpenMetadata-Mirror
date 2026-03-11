@@ -96,7 +96,7 @@ public class HttpServletStatelessServerTransport extends HttpServlet
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     String requestURI = request.getRequestURI();
-    if (!requestURI.endsWith(mcpEndpoint)) {
+    if (!requestURI.equals(mcpEndpoint)) {
       response.sendError(HttpServletResponse.SC_NOT_FOUND);
       return;
     }
@@ -115,7 +115,7 @@ public class HttpServletStatelessServerTransport extends HttpServlet
       throws ServletException, IOException {
 
     String requestURI = request.getRequestURI();
-    if (!requestURI.endsWith(mcpEndpoint)) {
+    if (!requestURI.equals(mcpEndpoint)) {
       response.sendError(HttpServletResponse.SC_NOT_FOUND);
       return;
     }

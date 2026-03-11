@@ -546,7 +546,7 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
 
     LOG.debug("Token request params (sanitized): {}", sanitizeParamsForLogging(params));
 
-    String clientIp = request.getRemoteAddr();
+    String clientIp = getClientIp(request);
     if (isTokenRateLimited(clientIp)) {
       LOG.warn("Token endpoint rate limit exceeded for IP: {}", clientIp);
       setCorsHeaders(request, response);
@@ -605,18 +605,23 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
               "invalid_grant", "Authorization code was not issued to this client");
         }
 
-        // Validate redirect_uri (RFC 6749 Section 4.1.3): if redirect_uri was included in
-        // the authorization request, it MUST be present and identical in the token request
-        if (storedCode.getRedirectUri() != null) {
-          if (redirectUri == null) {
-            throw new TokenException(
-                "invalid_request",
-                "redirect_uri is required when it was included in the authorization request");
-          }
-          if (!storedCode.getRedirectUri().toString().equals(redirectUri)) {
-            throw new TokenException(
-                "invalid_grant", "redirect_uri does not match authorization request");
-          }
+        // Validate redirect_uri (RFC 6749 Section 4.1.3): redirect_uri is always stored
+        // during authorization — reject if missing as a safety net
+        if (storedCode.getRedirectUri() == null) {
+          LOG.error(
+              "SECURITY ALERT: Authorization code has no stored redirect_uri. "
+                  + "This should never happen.");
+          throw new TokenException(
+              "server_error", "Authorization code has no associated redirect URI");
+        }
+        if (redirectUri == null) {
+          throw new TokenException(
+              "invalid_request",
+              "redirect_uri is required when it was included in the authorization request");
+        }
+        if (!storedCode.getRedirectUri().toString().equals(redirectUri)) {
+          throw new TokenException(
+              "invalid_grant", "redirect_uri does not match authorization request");
         }
 
         AuthorizationCode authCode = new AuthorizationCode();
@@ -713,6 +718,30 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
     }
   }
 
+  /**
+   * Extract client IP, trusting X-Forwarded-For only when the direct connection is from a
+   * loopback address (i.e. a local reverse proxy). This prevents external clients from spoofing
+   * XFF to bypass rate limiting. In-memory counters are per-JVM — consider a shared rate limiter
+   * (Redis or DB-backed) for multi-node deployments.
+   */
+  private String getClientIp(HttpServletRequest request) {
+    String remoteAddr = request.getRemoteAddr();
+    if (isLoopback(remoteAddr)) {
+      String xff = request.getHeader("X-Forwarded-For");
+      if (xff != null && !xff.isEmpty()) {
+        String clientIp = xff.split(",")[0].trim();
+        if (!clientIp.isEmpty()) {
+          return clientIp;
+        }
+      }
+    }
+    return remoteAddr;
+  }
+
+  private static boolean isLoopback(String ip) {
+    return "127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip);
+  }
+
   private boolean isRegistrationRateLimited(String clientIp) {
     long now = System.currentTimeMillis();
     synchronized (registrationAttempts) {
@@ -744,7 +773,7 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
   private void handleRegistrationRequest(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     try {
-      String clientIp = request.getRemoteAddr();
+      String clientIp = getClientIp(request);
       if (isRegistrationRateLimited(clientIp)) {
         LOG.warn("Registration rate limit exceeded for IP: {}", clientIp);
         setCorsHeaders(request, response);
