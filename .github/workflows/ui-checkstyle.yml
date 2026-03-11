@@ -34,22 +34,17 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
-  # Setup: install dependencies once, cache for all check jobs
+  # Detect which UI source files were changed in the PR
   # ──────────────────────────────────────────────────────────────────────────
-  setup:
+  changed-files:
     runs-on: ubuntu-latest
+    outputs:
+      # Space-separated list of changed source files (for eslint / prettier / organize-imports)
+      src_files: ${{ steps.changed.outputs.all_changed_files }}
+      src_files_count: ${{ steps.changed.outputs.all_changed_files_count }}
+      # Space-separated unique directories that contain changed files (for license-header-check)
+      src_dirs: ${{ steps.dirs.outputs.dirs }}
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: false
-          swap-storage: true
-          docker-images: false
-
       - name: Wait for the labeler
         uses: lewagon/wait-on-check-action@v1.3.4
         if: ${{ github.event_name == 'pull_request_target' }}
@@ -71,6 +66,53 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         if: success()
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Need fetch-depth > 1 so changed-files can diff against the base
+          fetch-depth: 0
+
+      - name: Get changed UI source files
+        id: changed
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            openmetadata-ui/src/main/resources/ui/src/**/*.ts
+            openmetadata-ui/src/main/resources/ui/src/**/*.tsx
+            openmetadata-ui/src/main/resources/ui/src/**/*.js
+            openmetadata-ui/src/main/resources/ui/src/**/*.jsx
+            openmetadata-ui/src/main/resources/ui/src/**/*.json
+          separator: " "
+
+      - name: Derive unique parent directories for license-header check
+        id: dirs
+        if: steps.changed.outputs.all_changed_files_count > 0
+        run: |
+          FILES="${{ steps.changed.outputs.all_changed_files }}"
+          DIRS=$(echo "$FILES" | tr ' ' '\n' | xargs -I{} dirname {} | sort -u | tr '\n' ' ')
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Setup: install dependencies once, cache for all check jobs
+  # ──────────────────────────────────────────────────────────────────────────
+  setup:
+    needs: changed-files
+    # Skip the whole setup (and all downstream jobs) if no source files changed
+    if: needs.changed-files.outputs.src_files_count > 0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: true
+          docker-images: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -96,10 +138,10 @@ jobs:
           key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Check 1: ESLint
+  # Check 1: ESLint — only on changed files
   # ──────────────────────────────────────────────────────────────────────────
   lint:
-    needs: setup
+    needs: [changed-files, setup]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -122,11 +164,14 @@ jobs:
           path: openmetadata-ui/src/main/resources/ui/node_modules
           key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Run ESLint
+      - name: Run ESLint on changed files
         id: lint
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
-        run: yarn run lint
+        env:
+          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
+        run: |
+          NODE_OPTIONS='--max-old-space-size=8192' npx eslint $CHANGED_FILES
 
       - name: Comment on PR (ESLint failure)
         if: steps.lint.outcome != 'success'
@@ -136,7 +181,7 @@ jobs:
           body: |
             ### ❌ ESLint Check Failed
 
-            Fix ESLint issues by running:
+            Fix ESLint issues in the changed files by running:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn run lint:fix
@@ -150,10 +195,10 @@ jobs:
         run: exit 1
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Check 2: Prettier
+  # Check 2: Prettier — only on changed files
   # ──────────────────────────────────────────────────────────────────────────
   prettier:
-    needs: setup
+    needs: [changed-files, setup]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -176,11 +221,14 @@ jobs:
           path: openmetadata-ui/src/main/resources/ui/node_modules
           key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Run Prettier Check
+      - name: Run Prettier on changed files
         id: prettier
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
-        run: yarn run pretty:check
+        env:
+          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
+        run: |
+          npx prettier --config ./.prettierrc.yaml --ignore-path ./.prettierignore --check $CHANGED_FILES
 
       - name: Comment on PR (Prettier failure)
         if: steps.prettier.outcome != 'success'
@@ -190,7 +238,7 @@ jobs:
           body: |
             ### ❌ Prettier Check Failed
 
-            Fix Prettier formatting issues by running:
+            Fix Prettier formatting in the changed files by running:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn run pretty
@@ -204,10 +252,10 @@ jobs:
         run: exit 1
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Check 3: License Headers
+  # Check 3: License Headers — on directories containing changed files
   # ──────────────────────────────────────────────────────────────────────────
   license-header:
-    needs: setup
+    needs: [changed-files, setup]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -230,11 +278,19 @@ jobs:
           path: openmetadata-ui/src/main/resources/ui/node_modules
           key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Run License Header Check
+      - name: Run License Header Check on changed files
         id: license-header
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
-        run: yarn run license-header-check
+        env:
+          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
+        run: |
+          # license-check-and-add doesn't support individual file args,
+          # so we check each changed file directly via its Node API.
+          echo "$CHANGED_FILES" | tr ' ' '\n' | while read -r f; do
+            # Resolve the path relative to the repo root
+            npx license-check-and-add check -f .licenseheaderrc.json "$f"
+          done
 
       - name: Comment on PR (License Header failure)
         if: steps.license-header.outcome != 'success'
@@ -244,7 +300,7 @@ jobs:
           body: |
             ### ❌ License Header Check Failed
 
-            One or more files are missing the required license header. Fix them by running:
+            One or more changed files are missing the required license header. Fix them by running:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn run license-header-fix
@@ -258,10 +314,10 @@ jobs:
         run: exit 1
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Check 4: Organize Imports
+  # Check 4: Organize Imports — only on changed .ts/.tsx files
   # ──────────────────────────────────────────────────────────────────────────
   organize-imports:
-    needs: setup
+    needs: [changed-files, setup]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -284,11 +340,24 @@ jobs:
           path: openmetadata-ui/src/main/resources/ui/node_modules
           key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Run Organize Imports Check
+      - name: Filter changed files to .ts/.tsx only
+        id: ts-files
+        env:
+          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
+        run: |
+          TS_FILES=$(echo "$CHANGED_FILES" | tr ' ' '\n' | grep -E '\.(ts|tsx)$' | tr '\n' ' ')
+          echo "files=$TS_FILES" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$TS_FILES" | wc -w | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Run Organize Imports on changed .ts/.tsx files
         id: organize-imports
+        if: steps.ts-files.outputs.count > 0
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
-        run: yarn run organize-imports:check
+        env:
+          TS_FILES: ${{ steps.ts-files.outputs.files }}
+        run: |
+          npx organize-imports-cli $TS_FILES --list-different
 
       - name: Comment on PR (Organize Imports failure)
         if: steps.organize-imports.outcome != 'success'
@@ -298,7 +367,7 @@ jobs:
           body: |
             ### ❌ Organize Imports Check Failed
 
-            Fix import ordering issues by running:
+            Fix import ordering in the changed files by running:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn run organize-imports
