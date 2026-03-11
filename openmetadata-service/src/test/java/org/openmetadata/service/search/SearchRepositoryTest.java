@@ -9,12 +9,15 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -295,6 +298,26 @@ class SearchRepositoryTest {
 
     // Verify createBulkSink was never called
     verify(realSearchRepository, times(0)).createBulkSink(anyInt(), anyInt(), anyLong());
+  }
+
+  @Test
+  void testUpdateEntitiesBulkFallsBackToIndividualUpdatesWhenBulkWriteFails() throws Exception {
+    SearchRepository realSearchRepository = mock(SearchRepository.class);
+    BulkSink mockBulkSink = mock(BulkSink.class);
+    doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
+        .thenReturn(mockBulkSink);
+    doThrow(new IOException("bulk failure")).when(mockBulkSink).write(any(), any());
+    doNothing().when(realSearchRepository).updateEntityIndex(any());
+    doNothing().when(mockBulkSink).close();
+
+    List<EntityInterface> entities = List.of(new MockEntityWithType("table", "table1"));
+
+    realSearchRepository.updateEntitiesBulk(entities);
+
+    verify(realSearchRepository).updateEntityIndex(entities.getFirst());
+    verify(mockBulkSink, never()).flushAndAwait(anyInt());
+    verify(mockBulkSink).close();
   }
 
   /** Mock entity that allows setting a specific entity type for testing */
