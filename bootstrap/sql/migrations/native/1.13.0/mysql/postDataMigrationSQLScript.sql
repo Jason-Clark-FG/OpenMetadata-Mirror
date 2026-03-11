@@ -12,9 +12,9 @@ WHERE dse.serviceType = 'Iceberg'
   AND JSON_EXTRACT(ipe.json, '$.service.type') = 'databaseService';
 
 -- Migrate Iceberg database services to CustomDatabase (connector removed)
+-- serviceType is a GENERATED column derived from json, so only update json
 UPDATE dbservice_entity
-SET serviceType = 'CustomDatabase',
-    json = JSON_SET(
+SET json = JSON_SET(
       json,
       '$.serviceType', 'CustomDatabase',
       '$.connection.config.type', 'CustomDatabase'

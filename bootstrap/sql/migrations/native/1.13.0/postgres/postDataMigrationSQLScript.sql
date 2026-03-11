@@ -12,9 +12,9 @@ WHERE dse.serviceType = 'Iceberg'
   AND ipe.json::jsonb -> 'service' ->> 'id' = dse.id;
 
 -- Migrate Iceberg database services to CustomDatabase (connector removed)
+-- serviceType is a GENERATED column derived from json, so only update json
 UPDATE dbservice_entity
-SET serviceType = 'CustomDatabase',
-    json = jsonb_set(
+SET json = jsonb_set(
       jsonb_set(
         json::jsonb,
         '{serviceType}', '"CustomDatabase"'
