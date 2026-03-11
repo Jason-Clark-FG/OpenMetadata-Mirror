@@ -100,6 +100,20 @@
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- MCP module for MCP integration tests -->
+    <dependency>
+      <groupId>org.open-metadata</groupId>
+      <artifactId>openmetadata-mcp</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- AssertJ for fluent assertions -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.27.7</version>
+      <scope>test</scope>
+    </dependency>
     <!-- Dropwizard testing harness -->
     <dependency>
       <groupId>io.dropwizard</groupId>
@@ -182,6 +196,7 @@
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
                     <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
                     <databaseType>mysql</databaseType>
@@ -214,6 +229,7 @@
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
                     <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
                     <databaseType>mysql</databaseType>
@@ -264,6 +280,8 @@
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
                     <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
+                    <include>**/PatchTableEmbeddingIT.java</include>
                   </includes>
                   <systemPropertyVariables>
                     <databaseType>postgres</databaseType>
@@ -296,13 +314,15 @@
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
                     <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
+                    <exclude>**/PatchTableEmbeddingIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
                     <databaseType>postgres</databaseType>
                     <databaseImage>postgres:15</databaseImage>
                     <searchType>opensearch</searchType>
                     <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
-                    
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -346,6 +366,7 @@
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
                     <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
                     <databaseType>postgres</databaseType>
@@ -378,6 +399,7 @@
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
                     <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
                     <databaseType>postgres</databaseType>
@@ -428,13 +450,15 @@
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
                     <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
+                    <include>**/PatchTableEmbeddingIT.java</include>
                   </includes>
                   <systemPropertyVariables>
                     <databaseType>mysql</databaseType>
                     <databaseImage>mysql:8.3.0</databaseImage>
                     <searchType>opensearch</searchType>
                     <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
-                    
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -460,6 +484,8 @@
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
                     <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
+                    <exclude>**/PatchTableEmbeddingIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
                     <databaseType>mysql</databaseType>
@@ -510,6 +536,7 @@
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
                     <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
                     <enableRdf>true</enableRdf>
@@ -544,6 +571,7 @@
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
                     <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
                     <enableRdf>true</enableRdf>
