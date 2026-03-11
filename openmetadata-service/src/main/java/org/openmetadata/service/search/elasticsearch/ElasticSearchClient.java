@@ -13,7 +13,9 @@ import es.co.elastic.clients.elasticsearch.core.BulkResponse;
 import es.co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import es.co.elastic.clients.elasticsearch.nodes.NodesStatsResponse;
 import es.co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import es.co.elastic.clients.transport.rest5_client.Rest5ClientOptions;
 import es.co.elastic.clients.transport.rest5_client.Rest5ClientTransport;
+import es.co.elastic.clients.transport.rest5_client.low_level.RequestOptions;
 import es.co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import es.co.elastic.clients.transport.rest5_client.low_level.Rest5ClientBuilder;
 import jakarta.json.JsonObject;
@@ -34,10 +36,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
-import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http.message.BasicHeader;
 import org.jetbrains.annotations.NotNull;
 import org.openmetadata.schema.api.entityRelationship.SearchEntityRelationshipRequest;
 import org.openmetadata.schema.api.entityRelationship.SearchEntityRelationshipResult;
@@ -115,14 +114,6 @@ public class ElasticSearchClient implements SearchClient {
               Stream.of("schemaDefinition", "customMetrics", "embedding"))
           .toList();
 
-  private static final Header[] defaultHeadersEs7 =
-      new Header[] {
-        new BasicHeader(
-            HttpHeaders.ACCEPT, "application/vnd.elasticsearch+json; compatible-with=7"),
-        new BasicHeader(
-            HttpHeaders.CONTENT_TYPE, "application/vnd.elasticsearch+json; compatible-with=7")
-      };
-
   // Add this field to the class
   private NLQService nlqService;
 
@@ -133,7 +124,8 @@ public class ElasticSearchClient implements SearchClient {
   // Update the constructor to accept NLQService
   public ElasticSearchClient(ElasticSearchConfiguration config, NLQService nlqService) {
     this.lowLevelClient = getLowLevelRestClient(config);
-    this.newClient = createElasticSearchNewClient(lowLevelClient);
+    int esMajorVersion = detectEsMajorVersion(this.lowLevelClient);
+    this.newClient = createElasticSearchNewClient(lowLevelClient, esMajorVersion);
     clusterAlias = config != null ? config.getClusterAlias() : "";
     isClientAvailable = newClient != null;
     isNewClientAvailable = newClient != null;
@@ -151,18 +143,27 @@ public class ElasticSearchClient implements SearchClient {
         new ElasticSearchSearchManager(newClient, rbacConditionEvaluator, clusterAlias, nlqService);
   }
 
-  private ElasticsearchClient createElasticSearchNewClient(Rest5Client lowLevelClient) {
+  private ElasticsearchClient createElasticSearchNewClient(
+      Rest5Client lowLevelClient, int esMajorVersion) {
     try {
       if (lowLevelClient == null) {
         LOG.error("Cannot create Elasticsearch client with null Rest5Client");
         return null;
       }
-      // Create transport - the Rest5ClientTransport handles content-type headers automatically
+      RequestOptions requestOptions =
+          RequestOptions.DEFAULT.toBuilder()
+              .addHeader(
+                  "Accept", "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
+              .addHeader(
+                  "Content-Type",
+                  "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
+              .build();
+      Rest5ClientOptions options = new Rest5ClientOptions(requestOptions, false);
       Rest5ClientTransport transport =
-          new Rest5ClientTransport(lowLevelClient, new JacksonJsonpMapper());
+          new Rest5ClientTransport(lowLevelClient, new JacksonJsonpMapper(), options);
       ElasticsearchClient newClient = new ElasticsearchClient(transport);
-
-      LOG.info("Successfully initialized new Elasticsearch Java API client");
+      LOG.info(
+          "Successfully initialized new Elasticsearch Java API client for ES {}.x", esMajorVersion);
       return newClient;
     } catch (Exception e) {
       LOG.error("Failed to initialize new Elasticsearch client", e);
@@ -736,16 +737,6 @@ public class ElasticSearchClient implements SearchClient {
                             esConfig.getSocketTimeoutSecs())));
 
         restClientBuilder.setCompressionEnabled(true);
-
-        Rest5Client tempClient = restClientBuilder.build();
-        boolean isElasticsearch7 = isElasticsearch7Version(tempClient);
-        tempClient.close();
-
-        if (isElasticsearch7) {
-          restClientBuilder.setDefaultHeaders(defaultHeadersEs7);
-        }
-        // For ES 9.x, don't set custom headers - the client handles content-type automatically
-
         return restClientBuilder.build();
       } catch (Exception e) {
         LOG.error("Failed to create low level rest client ", e);
@@ -960,7 +951,7 @@ public class ElasticSearchClient implements SearchClient {
     }
   }
 
-  private boolean isElasticsearch7Version(Rest5Client restClient) {
+  private int detectEsMajorVersion(Rest5Client restClient) {
     try {
       es.co.elastic.clients.transport.rest5_client.low_level.Request request =
           new es.co.elastic.clients.transport.rest5_client.low_level.Request("GET", "/");
@@ -974,13 +965,13 @@ public class ElasticSearchClient implements SearchClient {
       JsonNode versionNode = jsonNode.get("version");
       if (versionNode != null && versionNode.get("number") != null) {
         String version = versionNode.get("number").asText();
-        LOG.info("ES Server version is running on: {}", version);
-        return version.startsWith("7.");
+        LOG.info("Detected Elasticsearch server version: {}", version);
+        return Integer.parseInt(version.split("\\.")[0]);
       }
     } catch (Exception e) {
-      LOG.error("Failed to detect Elasticsearch version, assuming non-7.x", e);
+      LOG.error("Failed to detect Elasticsearch version, defaulting to client major version", e);
     }
-    return false;
+    return 9;
   }
 
   @Override
