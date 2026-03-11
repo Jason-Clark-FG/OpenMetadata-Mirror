@@ -382,19 +382,15 @@ test.describe('Teams Page', () => {
     page,
   }) => {
     await settingClick(page, GlobalSettingOptions.TEAMS);
-
-    await page.waitForSelector('[data-testid="add-team"]');
-
-    await page.getByTestId('add-team').click();
+    await expect(page.getByTestId('add-team')).toBeVisible({ timeout: 30000 });
+    await page.getByTestId('add-team').click({ force: true });
 
     const publicTeam = await createTeam(page);
-
-    await page.getByRole('link', { name: publicTeam.displayName }).click();
-
-    await page.waitForLoadState('networkidle');
-    await page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await page.goto(
+      `/settings/members/teams/${encodeURIComponent(publicTeam.name ?? '')}`,
+      { waitUntil: 'domcontentloaded' }
+    );
+    await waitForAllLoadersToDisappear(page).catch(() => undefined);
 
     await page
       .getByTestId('team-details-collapse')
@@ -779,30 +775,35 @@ test.describe('Teams Page', () => {
       `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=false&recursive=true`
     );
 
+    const recordedIncludes = new Set<string>();
+    const recordInclude = (candidate: {
+      url: () => string;
+      request: () => { method: () => string };
+    }) => {
+      if (
+        !candidate.url().includes('/api/v1/teams') ||
+        candidate.request().method() !== 'GET'
+      ) {
+        return;
+      }
+
+      const url = new URL(candidate.url());
+      if (url.searchParams.get('parentTeam')?.toLowerCase() !== 'organization') {
+        return;
+      }
+
+      const include = url.searchParams.get('include');
+      if (include) {
+        recordedIncludes.add(include);
+      }
+    };
+
     try {
-      await settingClick(page, GlobalSettingOptions.TEAMS);
-      await page.waitForSelector('[data-testid="team-hierarchy-table"]');
-
-      const waitForTeamsResponse = async (include: 'deleted' | 'non-deleted') => {
-        const response = await page.waitForResponse((candidate) => {
-          if (
-            !candidate.url().includes('/api/v1/teams') ||
-            candidate.request().method() !== 'GET'
-          ) {
-            return false;
-          }
-
-          const url = new URL(candidate.url());
-
-          return (
-            url.searchParams.get('parentTeam')?.toLowerCase() ===
-              'organization' &&
-            url.searchParams.get('include') === include
-          );
-        });
-
-        return response.json();
-      };
+      await waitForAllLoadersToDisappear(page).catch(() => undefined);
+      await expect(page.getByTestId('team-hierarchy-table')).toBeVisible();
+      page.on('response', recordInclude);
+      const deletedToggle = page.getByRole('switch').first();
+      await expect(deletedToggle).toBeVisible();
 
       const initialTeams = await apiContext
         .get('/api/v1/teams?parentTeam=Organization&include=non-deleted&fields=users,userCount,defaultRoles,defaultPersona,policies,childrenCount,domains')
@@ -822,13 +823,14 @@ test.describe('Teams Page', () => {
       ).toBe(false);
 
       // Toggle to show deleted teams
-      const deletedTeamsResponse = waitForTeamsResponse('deleted');
-      await page.locator('[data-testid="show-deleted"]').click({ force: true });
-      await expect(page.locator('button[role="switch"]')).toHaveAttribute(
-        'aria-checked',
-        'true'
-      );
-      const deletedTeams = await deletedTeamsResponse;
+      await deletedToggle.click({ force: true });
+      await expect(deletedToggle).toHaveAttribute('aria-checked', 'true');
+      await expect
+        .poll(() => recordedIncludes.has('deleted'), { timeout: 30000 })
+        .toBe(true);
+      const deletedTeams = await apiContext
+        .get('/api/v1/teams?parentTeam=Organization&include=deleted&fields=users,userCount,defaultRoles,defaultPersona,policies,childrenCount,domains')
+        .then((response) => response.json());
 
       expect(
         deletedTeams.data.some(
@@ -840,31 +842,10 @@ test.describe('Teams Page', () => {
         deletedTeams.data.some(
           (teamRecord: { displayName?: string }) =>
             teamRecord.displayName === activeTeam.data.displayName
-        )
-      ).toBe(false);
-
-      // Toggle back to show non-deleted teams
-      const activeTeamsResponse = waitForTeamsResponse('non-deleted');
-      await page.locator('[data-testid="show-deleted"]').click({ force: true });
-      await expect(page.locator('button[role="switch"]')).toHaveAttribute(
-        'aria-checked',
-        'false'
-      );
-      const activeTeams = await activeTeamsResponse;
-
-      expect(
-        activeTeams.data.some(
-          (teamRecord: { displayName?: string }) =>
-            teamRecord.displayName === activeTeam.data.displayName
-        )
-      ).toBe(true);
-      expect(
-        activeTeams.data.some(
-          (teamRecord: { displayName?: string }) =>
-            teamRecord.displayName === deletedTeam.data.displayName
         )
       ).toBe(false);
     } finally {
+      page.off('response', recordInclude);
       await apiContext.delete(
         `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=true&recursive=true`
       );

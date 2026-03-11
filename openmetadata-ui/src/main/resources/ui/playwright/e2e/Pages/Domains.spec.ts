@@ -78,6 +78,7 @@ import {
   replyAnnouncement,
   unFollowEntity,
   waitForAllLoadersToDisappear,
+  getEncodedFqn,
 } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
 import {
@@ -685,9 +686,33 @@ test.describe('Domains', () => {
 
       await page.reload();
       await redirectToHomePage(page);
+      const dataProductFqn =
+        dataProduct.responseData.fullyQualifiedName ?? dataProduct.data.name;
+      await expect
+        .poll(async () => {
+          const response = await apiContext.get(
+            `/api/v1/dataProducts/name/${getEncodedFqn(
+              dataProductFqn
+            )}?fields=owners,experts`
+          );
 
-      await sidebarClick(page, SidebarItem.DATA_PRODUCT);
-      await selectDataProduct(page, dataProduct.data);
+          if (!response.ok()) {
+            return { owners: 0, experts: 0 };
+          }
+
+          const body = await response.json();
+
+          return {
+            owners: body.owners?.length ?? 0,
+            experts: body.experts?.length ?? 0,
+          };
+        })
+        .toEqual({ owners: 1, experts: 1 });
+
+      await page.goto(`/dataProduct/${encodeURIComponent(dataProductFqn)}`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId(user1.responseData.displayName)

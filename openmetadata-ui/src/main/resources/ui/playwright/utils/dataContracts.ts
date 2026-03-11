@@ -100,18 +100,43 @@ export const waitForDataContractExecution = async (
 ) => {
   const { apiContext } = await getApiContext(page);
   let consecutiveErrors = 0;
+  const terminalStatusPattern =
+    /(Aborted|Success|Failed|PartialSuccess|Queued)/;
 
   await expect
     .poll(
       async () => {
         try {
-          const response = await apiContext
-            .get(`/api/v1/dataContracts/${contractId}/results/${resultId}`)
-            .then((res) => res.json());
+          const [latestResultResponse, specificResultResponse] =
+            await Promise.all([
+              apiContext
+                .get(`/api/v1/dataContracts/${contractId}/results/latest`)
+                .then((res) => (res.ok() ? res.json() : null))
+                .catch(() => null),
+              apiContext
+                .get(`/api/v1/dataContracts/${contractId}/results/${resultId}`)
+                .then((res) => (res.ok() ? res.json() : null))
+                .catch(() => null),
+            ]);
 
           consecutiveErrors = 0; // Reset error counter on success
 
-          return response.contractExecutionStatus;
+          const latestStatus = latestResultResponse?.contractExecutionStatus;
+          const specificStatus = specificResultResponse?.contractExecutionStatus;
+
+          if (
+            latestStatus &&
+            terminalStatusPattern.test(latestStatus) &&
+            latestResultResponse?.id === resultId
+          ) {
+            return latestStatus;
+          }
+
+          if (specificStatus && terminalStatusPattern.test(specificStatus)) {
+            return specificStatus;
+          }
+
+          return latestStatus ?? specificStatus ?? 'Running';
         } catch (error) {
           consecutiveErrors++;
           if (consecutiveErrors >= maxConsecutiveErrors) {
@@ -126,12 +151,10 @@ export const waitForDataContractExecution = async (
       {
         message: 'Wait for data contract execution to complete',
         timeout: 300_000,
-        intervals: [30_000, 20_000, 10_000],
+        intervals: [10_000, 15_000, 20_000],
       }
     )
-    .toEqual(
-      expect.stringMatching(/(Aborted|Success|Failed|PartialSuccess|Queued)/)
-    );
+    .toEqual(expect.stringMatching(terminalStatusPattern));
 };
 
 export const saveSecurityAndSLADetails = async (
