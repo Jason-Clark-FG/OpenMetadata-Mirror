@@ -62,6 +62,9 @@ from metadata.generated.schema.api.data.createTableProfile import (
 )
 from metadata.generated.schema.api.data.createTopic import CreateTopicRequest
 from metadata.generated.schema.api.data.createWorksheet import CreateWorksheetRequest
+from metadata.generated.schema.api.domains.createDataProduct import (
+    CreateDataProductRequest,
+)
 from metadata.generated.schema.api.domains.createDomain import CreateDomainRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 from metadata.generated.schema.api.services.createDatabaseService import (
@@ -101,7 +104,9 @@ from metadata.generated.schema.entity.data.storedProcedure import (
 from metadata.generated.schema.entity.data.table import (
     Column,
     ColumnProfile,
+    DataModel,
     DataType,
+    ModelType,
     SystemProfile,
     Table,
     TableData,
@@ -172,6 +177,7 @@ from metadata.ingestion.models.tests_data import (
 )
 from metadata.ingestion.models.user import OMetaUserProfile
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.database.database_service import DataModelLink
 from metadata.parsers.schema_parsers import (
     InvalidSchemaTypeException,
     schema_parser_config_registry,
@@ -327,6 +333,47 @@ class SampleDataSource(
         self.mysql_database_service = self.metadata.get_service_or_create(
             entity=DatabaseService,
             config=WorkflowSource(**self.mysql_database_service_json),
+        )
+
+        # Postgres service for dbt sample data (jaffle_shop)
+        self.postgres_database_service_json = json.load(
+            open(  # pylint: disable=consider-using-with
+                sample_data_folder + "/postgres/database_service.json",
+                "r",
+                encoding=UTF_8,
+            )
+        )
+        self.postgres_database = json.load(
+            open(  # pylint: disable=consider-using-with
+                sample_data_folder + "/postgres/database.json",
+                "r",
+                encoding=UTF_8,
+            )
+        )
+        self.postgres_database_schema = json.load(
+            open(  # pylint: disable=consider-using-with
+                sample_data_folder + "/postgres/database_schema.json",
+                "r",
+                encoding=UTF_8,
+            )
+        )
+        self.postgres_tables = json.load(
+            open(  # pylint: disable=consider-using-with
+                sample_data_folder + "/postgres/tables.json",
+                "r",
+                encoding=UTF_8,
+            )
+        )
+        self.postgres_dbt_data_models = json.load(
+            open(  # pylint: disable=consider-using-with
+                sample_data_folder + "/postgres/dbt_data_models.json",
+                "r",
+                encoding=UTF_8,
+            )
+        )
+        self.postgres_database_service = self.metadata.get_service_or_create(
+            entity=DatabaseService,
+            config=WorkflowSource(**self.postgres_database_service_json),
         )
 
         self.database_service_json = json.load(
@@ -719,13 +766,18 @@ class SampleDataSource(
                 encoding=UTF_8,
             )
         )
-        self.domain = json.load(
-            open(
-                sample_data_folder + "/domains/domain.json",
-                "r",
-                encoding=UTF_8,
-            )
-        )
+        with open(
+            sample_data_folder + "/domains/domain.json",
+            "r",
+            encoding=UTF_8,
+        ) as domain_file:
+            self.domain = json.load(domain_file)
+        with open(
+            sample_data_folder + "/domains/dataProduct.json",
+            "r",
+            encoding=UTF_8,
+        ) as data_product_file:
+            self.data_product = json.load(data_product_file)
 
         # Load data contracts sample data
         try:
@@ -838,13 +890,17 @@ class SampleDataSource(
 
     def _iter(self, *_, **__) -> Iterable[Entity]:
         yield from self.ingest_domains()
+        yield from self.ingest_data_products()
         yield from self.ingest_teams()
         yield from self.ingest_users()
         yield from self.ingest_drives()
+
         yield from self.ingest_tables()
         self.ingest_tables_sample_data()
         yield from self.ingest_glue()
         yield from self.ingest_mysql()
+        yield from self.ingest_postgres()
+        yield from self.ingest_dbt_data_models()
         yield from self.ingest_stored_procedures()
         yield from self.ingest_topics()
         yield from self.ingest_charts()
@@ -873,10 +929,33 @@ class SampleDataSource(
         yield from self.ingest_data_contracts()
         yield from self.ingest_sagemaker_models()
 
-    def ingest_domains(self):
+    def ingest_domains(self) -> Iterable[Either[CreateDomainRequest]]:
+        """Ingest sample domains"""
+        try:
+            domain_request = CreateDomainRequest(**self.domain)
+            yield Either(right=domain_request)
+        except Exception as exc:
+            yield Either(
+                left=StackTraceError(
+                    name="Domain",
+                    error=f"Error ingesting domain: {exc}",
+                    stackTrace=traceback.format_exc(),
+                )
+            )
 
-        domain_request = CreateDomainRequest(**self.domain)
-        yield Either(right=domain_request)
+    def ingest_data_products(self) -> Iterable[Either[CreateDataProductRequest]]:
+        """Ingest sample data products"""
+        try:
+            data_product_request = CreateDataProductRequest(**self.data_product)
+            yield Either(right=data_product_request)
+        except Exception as exc:
+            yield Either(
+                left=StackTraceError(
+                    name="DataProduct",
+                    error=f"Error ingesting data product: {exc}",
+                    stackTrace=traceback.format_exc(),
+                )
+            )
 
     def ingest_data_contracts(self) -> Iterable[Either[CreateDataContractRequest]]:
         """
@@ -1301,6 +1380,85 @@ class SampleDataSource(
             )
             yield Either(right=table_request)
 
+    def ingest_postgres(self) -> Iterable[Either[Entity]]:
+        """Ingest Sample Data for postgres database source with dbt jaffle_shop project"""
+        db = CreateDatabaseRequest(
+            name=self.postgres_database["name"],
+            description=self.postgres_database.get("description"),
+            service=self.postgres_database_service.fullyQualifiedName,
+        )
+        yield Either(right=db)
+
+        database_entity = fqn.build(
+            self.metadata,
+            entity_type=Database,
+            service_name=self.postgres_database_service.fullyQualifiedName.root,
+            database_name=db.name.root,
+        )
+        database_object = self.metadata.get_by_name(
+            entity=Database, fqn=database_entity
+        )
+
+        schema = CreateDatabaseSchemaRequest(
+            name=self.postgres_database_schema["name"],
+            description=self.postgres_database_schema.get("description"),
+            database=database_object.fullyQualifiedName,
+        )
+        yield Either(right=schema)
+
+        database_schema_entity = fqn.build(
+            self.metadata,
+            entity_type=DatabaseSchema,
+            service_name=self.postgres_database_service.fullyQualifiedName.root,
+            database_name=db.name.root,
+            schema_name=schema.name.root,
+        )
+        database_schema_object = self.metadata.get_by_name(
+            entity=DatabaseSchema, fqn=database_schema_entity
+        )
+
+        for table in self.postgres_tables["tables"]:
+            table_request = CreateTableRequest(
+                name=table["name"],
+                description=table["description"],
+                columns=table["columns"],
+                databaseSchema=database_schema_object.fullyQualifiedName,
+                tableType=table["tableType"],
+            )
+            yield Either(right=table_request)
+
+    def ingest_dbt_data_models(self) -> Iterable[Either[DataModelLink]]:
+        """Apply dbt DataModel metadata to postgres jaffle_shop tables"""
+        for dm in self.postgres_dbt_data_models["dataModels"]:
+            try:
+                table_entity = self.metadata.get_by_name(
+                    entity=Table, fqn=dm["tableFqn"]
+                )
+                if not table_entity:
+                    continue
+                data_model = DataModel(
+                    modelType=ModelType.DBT,
+                    resourceType=dm.get("resourceType"),
+                    description=dm.get("description"),
+                    path=dm.get("path"),
+                    rawSql=dm["rawSql"] if dm.get("rawSql") else None,
+                    sql=dm["sql"] if dm.get("sql") else None,
+                    upstream=dm.get("upstream"),
+                    dbtSourceProject=dm.get("dbtSourceProject"),
+                    columns=[Column(**col) for col in dm.get("columns", [])],
+                )
+                yield Either(
+                    right=DataModelLink(table_entity=table_entity, datamodel=data_model)
+                )
+            except Exception as exc:
+                yield Either(
+                    left=StackTraceError(
+                        name=dm.get("tableFqn", "unknown"),
+                        error=f"Error creating dbt DataModel: {exc}",
+                        stackTrace=traceback.format_exc(),
+                    )
+                )
+
     def ingest_glue(self) -> Iterable[Either[Entity]]:
         """Ingest Sample Data for glue database source"""
 
@@ -1489,6 +1647,29 @@ class SampleDataSource(
                             CreateCustomMetricRequest(**custom_metric),
                             table_entity.id.root,
                         )
+
+            # Patch certification if present in the sample data
+            if table.get("certification"):
+                try:
+                    from metadata.generated.schema.type.assetCertification import (
+                        AssetCertification,
+                    )
+
+                    destination = table_entity.model_copy(deep=True)
+                    destination.certification = AssetCertification.model_validate(
+                        table["certification"]
+                    )
+
+                    self.metadata.patch(
+                        entity=Table, source=table_entity, destination=destination
+                    )
+                    logger.debug(
+                        f"Patched certification for {table_entity.fullyQualifiedName.root}"
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"Failed to patch certification for {table.get('name')}: {exc}"
+                    )
 
     def ingest_stored_procedures(self) -> Iterable[Either[Entity]]:
         """Ingest Sample Stored Procedures"""
@@ -1933,13 +2114,17 @@ class SampleDataSource(
                         if pipeline:
                             pipeline_obs = PipelineObservability(
                                 pipeline=EntityReference(
-                                    id=pipeline.id.root
-                                    if hasattr(pipeline.id, "root")
-                                    else pipeline.id,
+                                    id=(
+                                        pipeline.id.root
+                                        if hasattr(pipeline.id, "root")
+                                        else pipeline.id
+                                    ),
                                     type="pipeline",
-                                    fullyQualifiedName=pipeline.fullyQualifiedName.root
-                                    if hasattr(pipeline.fullyQualifiedName, "root")
-                                    else str(pipeline.fullyQualifiedName),
+                                    fullyQualifiedName=(
+                                        pipeline.fullyQualifiedName.root
+                                        if hasattr(pipeline.fullyQualifiedName, "root")
+                                        else str(pipeline.fullyQualifiedName)
+                                    ),
                                 ),
                                 scheduleInterval=obs_data.get("scheduleInterval"),
                                 startTime=obs_data.get("startTime"),
@@ -2213,24 +2398,16 @@ class SampleDataSource(
                 fqn=table_profile["fqn"],
             )
             for days, profile in enumerate(table_profile["profile"]):
-                table_profile = OMetaTableProfileSampleData(
-                    table=table,
-                    profile=CreateTableProfileRequest(
-                        tableProfile=TableProfile(
-                            columnCount=profile["columnCount"],
-                            rowCount=profile["rowCount"],
-                            createDateTime=profile.get("createDateTime"),
-                            sizeInByte=profile.get("sizeInByte"),
-                            customMetrics=profile.get("customMetrics"),
-                            timestamp=Timestamp(
-                                int(
-                                    (datetime.now() - timedelta(days=days)).timestamp()
-                                    * 1000
-                                )
-                            ),
-                        ),
-                        columnProfile=[
-                            ColumnProfile(
+                try:
+                    table_profile = OMetaTableProfileSampleData(
+                        table=table,
+                        profile=CreateTableProfileRequest(
+                            tableProfile=TableProfile(
+                                columnCount=profile["columnCount"],
+                                rowCount=profile["rowCount"],
+                                createDateTime=profile.get("createDateTime"),
+                                sizeInByte=profile.get("sizeInByte"),
+                                customMetrics=profile.get("customMetrics"),
                                 timestamp=Timestamp(
                                     int(
                                         (
@@ -2239,30 +2416,45 @@ class SampleDataSource(
                                         * 1000
                                     )
                                 ),
-                                **col_profile,
-                            )
-                            for col_profile in profile["columnProfile"]
-                        ],
-                        systemProfile=[
-                            SystemProfile(
-                                timestamp=Timestamp(
-                                    int(
-                                        (
-                                            datetime.now()
-                                            - timedelta(
-                                                days=days, hours=random.randint(0, 24)
-                                            )
-                                        ).timestamp()
-                                        * 1000
-                                    )
-                                ),
-                                **system_profile,
-                            )
-                            for system_profile in profile["systemProfile"]
-                        ],
-                    ),
-                )
-                yield Either(right=table_profile)
+                            ),
+                            columnProfile=[
+                                ColumnProfile(
+                                    timestamp=Timestamp(
+                                        int(
+                                            (
+                                                datetime.now() - timedelta(days=days)
+                                            ).timestamp()
+                                            * 1000
+                                        )
+                                    ),
+                                    **col_profile,
+                                )
+                                for col_profile in profile["columnProfile"]
+                            ],
+                            systemProfile=[
+                                SystemProfile(
+                                    timestamp=Timestamp(
+                                        int(
+                                            (
+                                                datetime.now()
+                                                - timedelta(
+                                                    days=days,
+                                                    hours=random.randint(0, 24),
+                                                )
+                                            ).timestamp()
+                                            * 1000
+                                        )
+                                    ),
+                                    **system_profile,
+                                )
+                                for system_profile in profile["systemProfile"]
+                            ],
+                        ),
+                    )
+                    yield Either(right=table_profile)
+                except Exception as exc:
+                    logger.debug(traceback.format_exc())
+                    logger.warning(f"Error ingesting Profiles [{table_profile}]: {exc}")
 
     def ingest_test_suite(self) -> Iterable[Either[OMetaTestSuiteSample]]:
         """Iterate over all the testSuite and testCase and ingest them"""
@@ -2383,9 +2575,12 @@ class SampleDataSource(
     def ingest_test_case_results(self) -> Iterable[Either[OMetaTestCaseResultsSample]]:
         """Iterate over all the testSuite and testCase and ingest them"""
         for test_case_results in self.tests_case_results["testCaseResults"]:
+            table_fqn = test_case_results.get(
+                "tableFqn", "sample_data.ecommerce_db.shopify.dim_address"
+            )
             case = self.metadata.get_by_name(
                 TestCase,
-                f"sample_data.ecommerce_db.shopify.dim_address.{test_case_results['name']}",
+                f"{table_fqn}.{test_case_results['name']}",
                 fields=["testSuite", "testDefinition"],
             )
             if case:

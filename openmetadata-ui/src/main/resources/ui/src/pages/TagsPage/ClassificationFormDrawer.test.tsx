@@ -19,6 +19,79 @@ jest.mock('./TagsForm', () => {
   return jest.fn(() => <div data-testid="tags-form">Tags Form</div>);
 });
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  SlideoutMenu: Object.assign(
+    ({
+      isOpen,
+      onOpenChange,
+      children,
+      'data-testid': testId,
+    }: {
+      isOpen: boolean;
+      onOpenChange?: (isOpen: boolean) => void;
+      children: (arg: { close: () => void }) => React.ReactNode;
+      'data-testid'?: string;
+    }) => {
+      if (!isOpen) {
+        return null;
+      }
+
+      const close = () => onOpenChange?.(false);
+
+      return <div data-testid={testId}>{children({ close })}</div>;
+    },
+    {
+      Header: ({
+        children,
+        onClose,
+        'data-testid': testId,
+      }: {
+        children: React.ReactNode;
+        onClose?: () => void;
+        'data-testid'?: string;
+      }) => (
+        <div data-testid={testId}>
+          {children}
+          <button data-testid="drawer-close-icon" onClick={onClose} />
+        </div>
+      ),
+      Content: ({ children }: { children: React.ReactNode }) => (
+        <div>{children}</div>
+      ),
+      Footer: ({ children }: { children: React.ReactNode }) => (
+        <div>{children}</div>
+      ),
+    }
+  ),
+  Button: ({
+    children,
+    onClick,
+    isDisabled,
+    isLoading,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    isDisabled?: boolean;
+    isLoading?: boolean;
+    'data-testid'?: string;
+  }) => (
+    <button
+      data-testid={testId}
+      disabled={isDisabled || isLoading}
+      onClick={onClick}>
+      {children}
+    </button>
+  ),
+  Typography: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+  }) => <div data-testid={testId}>{children}</div>,
+}));
+
 const mockForm = {
   submit: jest.fn(),
   resetFields: jest.fn(),
@@ -51,7 +124,7 @@ describe('ClassificationFormDrawer', () => {
     expect(
       screen.getByTestId('classification-form-drawer')
     ).toBeInTheDocument();
-    expect(screen.getByTestId('form-heading')).toHaveTextContent(
+    expect(screen.getByTestId('drawer-heading')).toHaveTextContent(
       'label.adding-new-classification'
     );
   });

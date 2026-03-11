@@ -35,6 +35,7 @@ import {
   AZURESQL,
   BIGQUERY,
   BIGTABLE,
+  BURSTIQ,
   CASSANDRA,
   CLICKHOUSE,
   COCKROACH,
@@ -103,12 +104,14 @@ import {
   SAP_HANA,
   SAS,
   SCIKIT,
+  SFTP,
   SIGMA,
   SINGLESTORE,
   SNOWFLAKE,
   SPARK,
   SPLINE,
   SQLITE,
+  STARROCKS,
   SUPERSET,
   SYNAPSE,
   TABLEAU,
@@ -119,7 +122,6 @@ import {
   UNITYCATALOG,
   VERTICA,
 } from '../constants/Services.constant';
-import { SearchSuggestions } from '../context/GlobalSearchProvider/GlobalSearchSuggestions/GlobalSearchSuggestions.interface';
 import { EntityType } from '../enums/entity.enum';
 import { ExplorePageTabs } from '../enums/Explore.enum';
 import {
@@ -146,7 +148,6 @@ import { MessagingServiceType } from '../generated/entity/data/topic';
 import { APIServiceType } from '../generated/entity/services/apiService';
 import { MetadataServiceType } from '../generated/entity/services/metadataService';
 import { Type as SecurityServiceType } from '../generated/entity/services/securityService';
-import { SearchSourceAlias } from '../interface/search.interface';
 import {
   ConfigData,
   ExtraInfoType,
@@ -188,8 +189,11 @@ class ServiceUtilClassBase {
     DriveServiceType.GoogleDrive,
     DriveServiceType.SharePoint,
     DatabaseServiceType.ServiceNow,
+    DatabaseServiceType.Dremio,
     MetadataServiceType.Collibra,
     PipelineServiceType.Mulesoft,
+    DatabaseServiceType.MicrosoftFabric,
+    PipelineServiceType.MicrosoftFabricPipeline,
   ];
 
   DatabaseServiceTypeSmallCase = this.convertEnumToLowerCase<
@@ -263,6 +267,24 @@ class ServiceUtilClassBase {
 
   public getEditServiceDetails() {
     return this.serviceDetails;
+  }
+
+  public getAddWorkflowData(
+    connectionType: string,
+    serviceType: ServiceType,
+    serviceName?: string,
+    configData?: ConfigData
+  ) {
+    return {
+      name: getTestConnectionName(connectionType),
+      workflowType: WorkflowType.TestConnection,
+      request: {
+        connection: { config: configData as ConfigObject },
+        serviceType,
+        connectionType,
+        serviceName,
+      },
+    };
   }
 
   public getServiceConfigData(data: {
@@ -454,6 +476,9 @@ class ServiceUtilClassBase {
       case this.DatabaseServiceTypeSmallCase.Doris:
         return DORIS;
 
+      case this.DatabaseServiceTypeSmallCase.StarRocks:
+        return STARROCKS;
+
       case this.DatabaseServiceTypeSmallCase.Druid:
         return DRUID;
 
@@ -513,6 +538,9 @@ class ServiceUtilClassBase {
 
       case this.DatabaseServiceTypeSmallCase.Synapse:
         return SYNAPSE;
+
+      case this.DatabaseServiceTypeSmallCase.BurstIQ:
+        return BURSTIQ;
 
       case this.MessagingServiceTypeSmallCase.CustomMessaging:
         return TOPIC_DEFAULT;
@@ -673,6 +701,9 @@ class ServiceUtilClassBase {
       case this.DriveServiceTypeSmallCase.GoogleDrive:
         return GOOGLE_DRIVE;
 
+      case this.DriveServiceTypeSmallCase.Sftp:
+        return SFTP;
+
       case this.DatabaseServiceTypeSmallCase.Timescale:
         return TIMESCALE;
 
@@ -705,9 +736,10 @@ class ServiceUtilClassBase {
     }
   }
 
-  public getServiceTypeLogo(
-    searchSource: SearchSuggestions[number] | SearchSourceAlias
-  ): string {
+  public getServiceTypeLogo(searchSource: {
+    serviceType?: string;
+    entityType?: string;
+  }): string {
     const type = get(searchSource, 'serviceType', '');
     const entityType = get(searchSource, 'entityType', '');
 
@@ -733,6 +765,7 @@ class ServiceUtilClassBase {
 
     return this.getServiceLogo(type);
   }
+
   public getDataAssetsService(serviceType: string): ExplorePageTabs {
     const database = this.DatabaseServiceTypeSmallCase;
     const messaging = this.MessagingServiceTypeSmallCase;
@@ -746,41 +779,41 @@ class ServiceUtilClassBase {
 
     switch (true) {
       case Object.values(database).includes(
-        serviceType as typeof database[keyof typeof database]
+        serviceType as (typeof database)[keyof typeof database]
       ):
         return ExplorePageTabs.TABLES;
       case Object.values(messaging).includes(
-        serviceType as typeof messaging[keyof typeof messaging]
+        serviceType as (typeof messaging)[keyof typeof messaging]
       ):
         return ExplorePageTabs.TOPICS;
       case Object.values(dashboard).includes(
-        serviceType as typeof dashboard[keyof typeof dashboard]
+        serviceType as (typeof dashboard)[keyof typeof dashboard]
       ):
         return ExplorePageTabs.DASHBOARDS;
       case Object.values(mlmodel).includes(
-        serviceType as typeof mlmodel[keyof typeof mlmodel]
+        serviceType as (typeof mlmodel)[keyof typeof mlmodel]
       ):
         return ExplorePageTabs.MLMODELS;
       case Object.values(pipeline).includes(
-        serviceType as typeof pipeline[keyof typeof pipeline]
+        serviceType as (typeof pipeline)[keyof typeof pipeline]
       ):
         return ExplorePageTabs.PIPELINES;
       case Object.values(storage).includes(
-        serviceType as typeof storage[keyof typeof storage]
+        serviceType as (typeof storage)[keyof typeof storage]
       ):
         return ExplorePageTabs.CONTAINERS;
       case Object.values(search).includes(
-        serviceType as typeof search[keyof typeof search]
+        serviceType as (typeof search)[keyof typeof search]
       ):
         return ExplorePageTabs.SEARCH_INDEX;
 
       case Object.values(api).includes(
-        serviceType as typeof api[keyof typeof api]
+        serviceType as (typeof api)[keyof typeof api]
       ):
         return ExplorePageTabs.API_ENDPOINT;
 
       case Object.values(security).includes(
-        serviceType as typeof security[keyof typeof security]
+        serviceType as (typeof security)[keyof typeof security]
       ):
         return ExplorePageTabs.TABLES; // Security services don't have a specific tab, default to tables
 

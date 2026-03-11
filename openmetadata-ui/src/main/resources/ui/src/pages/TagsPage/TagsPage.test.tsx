@@ -12,10 +12,7 @@
  *  limitations under the License.
  */
 
-import { ThemeProvider } from '@mui/material';
-import { createMuiTheme } from '@openmetadata/ui-core-components';
 import {
-  act,
   findAllByTestId,
   findByTestId,
   findByText,
@@ -27,7 +24,9 @@ import {
   waitFor,
   waitForElementToBeRemoved,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import ResizableLeftPanels from '../../components/common/ResizablePanels/ResizableLeftPanels';
 import { deleteTag, getAllClassifications } from '../../rest/tagAPI';
 import { checkPermission } from '../../utils/PermissionsUtils';
 import { descriptionTableObject } from '../../utils/TableColumn.util';
@@ -58,12 +57,8 @@ jest.mock('react-router-dom', () => ({
     .mockImplementation(({ children, ...rest }) => <a {...rest}>{children}</a>),
 }));
 
-const theme = createMuiTheme();
-
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ThemeProvider theme={theme}>
-    <MemoryRouter>{children}</MemoryRouter>
-  </ThemeProvider>
+  <MemoryRouter>{children}</MemoryRouter>
 );
 
 const mockProps = {
@@ -246,6 +241,97 @@ jest.mock('../../utils/TagsUtils', () => ({
     .mockImplementation(() => <a href="/">Usage Count</a>),
 }));
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Badge: ({
+    children,
+    'data-testid': testId,
+    className,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+    className?: string;
+  }) => (
+    <span className={className} data-testid={testId}>
+      {children}
+    </span>
+  ),
+  Typography: ({
+    children,
+    className,
+    as: Tag = 'span',
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    as?: keyof JSX.IntrinsicElements;
+  }) => (
+    <Tag className={className} spec-url="">
+      {children}
+    </Tag>
+  ),
+  Button: ({
+    children,
+    onClick,
+    isDisabled,
+    'data-testid': testId,
+    className,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    isDisabled?: boolean;
+    'data-testid'?: string;
+    className?: string;
+  }) => (
+    <button
+      className={className}
+      data-testid={testId}
+      disabled={isDisabled}
+      onClick={onClick}>
+      {children}
+    </button>
+  ),
+  Tooltip: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title?: React.ReactNode;
+  }) => (
+    <div data-testid="tooltip" title={title as string}>
+      {children}
+    </div>
+  ),
+  TooltipTrigger: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <button className={className}>{children}</button>,
+  Toggle: ({
+    isSelected,
+    onChange,
+    isDisabled,
+    'data-testid': testId,
+  }: {
+    isSelected?: boolean;
+    onChange?: (val: boolean) => void;
+    isDisabled?: boolean;
+    'data-testid'?: string;
+  }) => (
+    <button
+      aria-checked={isSelected}
+      aria-disabled={isDisabled}
+      data-testid={testId}
+      role="switch"
+      onClick={() => onChange?.(!isSelected)}>
+      toggle
+    </button>
+  ),
+  SlideoutMenu: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}));
+
 jest.mock('../../components/common/ResizablePanels/ResizableLeftPanels', () =>
   jest.fn().mockImplementation(({ firstPanel, secondPanel }) => (
     <div>
@@ -255,8 +341,34 @@ jest.mock('../../components/common/ResizablePanels/ResizableLeftPanels', () =>
   ))
 );
 
+jest.mock('./ClassificationFormDrawer', () =>
+  jest.fn().mockImplementation(({ open }) =>
+    open ? (
+      <div data-testid="classification-form-drawer">
+        <input data-testid="name" />
+      </div>
+    ) : null
+  )
+);
+
+jest.mock('./TagFormDrawer', () =>
+  jest.fn().mockImplementation(({ open }) =>
+    open ? (
+      <div data-testid="tag-form-drawer">
+        <input data-testid="name" />
+      </div>
+    ) : null
+  )
+);
+
 jest.mock('../../hoc/withPageLayout', () => ({
-  withPageLayout: jest.fn().mockImplementation((Component) => Component),
+  withPageLayout: jest.fn().mockImplementation((Component) => {
+    const WrappedComponent = (props: Record<string, unknown>) => (
+      <Component {...props} />
+    );
+
+    return WrappedComponent;
+  }),
 }));
 
 jest.mock(
@@ -512,11 +624,7 @@ describe('Test TagsPage page', () => {
 
   it('Should render error placeholder if categories api fails', async () => {
     (getAllClassifications as jest.Mock).mockImplementationOnce(() =>
-      Promise.reject({
-        response: {
-          data: { message: 'Error!' },
-        },
-      })
+      Promise.reject(new Error('Error!'))
     );
     const { container } = render(<TagsPage {...mockProps} />, {
       wrapper: Wrapper,
@@ -576,13 +684,8 @@ describe('Test TagsPage page', () => {
     expect(cancelAssociatedTag).toBeInTheDocument();
     expect(saveAssociatedTag).toBeInTheDocument();
 
-    await act(async () => {
-      fireEvent.change(tagCategoryHeading, {
-        target: {
-          value: 'newPII',
-        },
-      });
-    });
+    await userEvent.clear(tagCategoryHeading);
+    await userEvent.type(tagCategoryHeading, 'newPII');
 
     expect(tagCategoryHeading).toHaveValue('newPII');
   });
@@ -621,7 +724,7 @@ describe('Test TagsPage page', () => {
   describe('Render Sad Paths', () => {
     it.skip('Show error message on failing of deleteTag API', async () => {
       (deleteTag as jest.Mock).mockImplementationOnce(() =>
-        Promise.reject({ response: { data: 'error!' } })
+        Promise.reject(new Error('Error!'))
       );
       render(<TagsPage {...mockProps} />, { wrapper: Wrapper });
       await waitForElementToBeRemoved(() => screen.getByTestId('loader'));
@@ -662,6 +765,25 @@ describe('Test TagsPage page', () => {
       expect(
         queryByTitle(container, 'confirmation-modal')
       ).not.toBeInTheDocument();
+    });
+  });
+
+  it('should pass classification name as pageTitle to withPageLayout', async () => {
+    (getAllClassifications as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve(MOCK_ALL_CLASSIFICATIONS)
+    );
+
+    render(<TagsPage {...mockProps} />, {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(ResizableLeftPanels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageTitle: 'PersonalData',
+        }),
+        expect.anything()
+      );
     });
   });
 });

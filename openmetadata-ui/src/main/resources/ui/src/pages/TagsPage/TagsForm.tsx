@@ -11,18 +11,23 @@
  *  limitations under the License.
  */
 
-import { Box, Grid } from '@mui/material';
+import { Grid } from '@openmetadata/ui-core-components';
 import { Form } from 'antd';
 import { castArray } from 'lodash';
 import { Suspense, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityAttachmentProvider } from '../../components/common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
+import MUIFormItemLabel from '../../components/common/MUIFormItemLabel/MUIFormItemLabel';
 import { VALIDATION_MESSAGES } from '../../constants/constants';
 import {
   DEFAULT_FORM_VALUE,
   TAG_NAME_VALIDATION_RULES,
 } from '../../constants/Tags.constant';
 import { EntityType } from '../../enums/entity.enum';
+import { CreateClassification } from '../../generated/api/classification/createClassification';
+import { CreateTag } from '../../generated/api/classification/createTag';
+import { Classification } from '../../generated/entity/classification/classification';
+import { Tag } from '../../generated/entity/classification/tag';
 import { EntityReference } from '../../generated/entity/type';
 import { useEntityRules } from '../../hooks/useEntityRules';
 import { FieldProp } from '../../interface/FormUtils.interface';
@@ -40,7 +45,7 @@ import {
   getOwnerField,
 } from './tagFormFields';
 import './TagsForm.less';
-import { RenameFormProps, SubmitProps } from './TagsPage.interface';
+import { RenameFormProps } from './TagsPage.interface';
 
 const TagsForm = ({
   formRef,
@@ -111,7 +116,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      muiLabel: t(field.muiLabel),
+      muiLabel: <MUIFormItemLabel label={t(field.muiLabel)} />,
       props: {
         ...field.props,
         placeholder: t(field.placeholder),
@@ -122,7 +127,7 @@ const TagsForm = ({
   const colorField = useMemo(
     () => ({
       ...COLOR_FIELD,
-      muiLabel: t(COLOR_FIELD.muiLabel),
+      muiLabel: <MUIFormItemLabel label={t(COLOR_FIELD.muiLabel)} />,
     }),
     [t]
   );
@@ -132,8 +137,8 @@ const TagsForm = ({
 
     return {
       ...field,
-      label: <>{t(field.label as string)}</>,
-      placeholder: t(field.placeholder as string),
+      muiLabel: t(field.muiLabel),
+      placeholder: t(field.placeholder),
       rules: TAG_NAME_VALIDATION_RULES.map((rule) => ({
         ...rule,
         message: rule.message
@@ -156,7 +161,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      label: t(field.label),
+      muiLabel: t(field.muiLabel),
       placeholder: t(field.placeholder),
     };
   }, [t, disableDisplayNameField]);
@@ -169,7 +174,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      label: t(field.label),
+      muiLabel: t(field.muiLabel),
     };
   }, [
     t,
@@ -184,7 +189,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      label: t(field.label),
+      muiLabel: t(field.muiLabel),
     };
   }, [entityRules.canAddMultipleDomains, t]);
 
@@ -197,7 +202,7 @@ const TagsForm = ({
     const fields: FieldProp[] = [
       {
         ...descriptionField,
-        label: t(descriptionField.label),
+        label: <MUIFormItemLabel label={t(descriptionField.label)} />,
       },
     ];
 
@@ -232,7 +237,7 @@ const TagsForm = ({
 
     return {
       ...field,
-      label: t(field.label),
+      muiLabel: t(field.muiLabel),
     };
   }, [t, disableMutuallyExclusiveField, isMutuallyExclusive]);
 
@@ -242,7 +247,7 @@ const TagsForm = ({
     [isClassification]
   );
 
-  const handleSave = async (data: SubmitProps) => {
+  const handleSave = async (data: Classification | Tag | undefined) => {
     const domains = castArray(selectedDomain).filter(Boolean);
     const owners = castArray(selectedOwners).filter(Boolean);
 
@@ -262,7 +267,7 @@ const TagsForm = ({
         ...data,
         owners: owners?.length ? owners : undefined,
         domains: domainsData,
-      };
+      } as CreateClassification | CreateTag;
       await onSubmit(submitData);
       formRef.setFieldsValue(DEFAULT_FORM_VALUE);
     } catch {
@@ -285,29 +290,27 @@ const TagsForm = ({
         name="tags"
         validateMessages={VALIDATION_MESSAGES}
         onFinish={handleSave}>
-        {/* Name and Display Name row */}
-        <Grid container spacing={4}>
-          <Grid size={6}>{getField(nameField)}</Grid>
-          <Grid size={6}>{getField(displayNameField)}</Grid>
+        <Grid colGap="4">
+          <Grid.Item span={12}>{getField(nameField)}</Grid.Item>
+          <Grid.Item span={12}>{getField(displayNameField)}</Grid.Item>
         </Grid>
 
-        {/* Icon and Color row */}
         {!isClassification && (
-          <Grid container spacing={2}>
-            <Grid>{getField(iconField)}</Grid>
-            <Grid sx={{ ml: 'auto' }}>{getField(colorField)}</Grid>
+          <Grid colGap="4">
+            <Grid.Item span={4}>{getField(iconField)}</Grid.Item>
+            <Grid.Item span={20}>{getField(colorField)}</Grid.Item>
           </Grid>
         )}
 
-        {/* Remaining fields */}
         {generateFormFields(formFields)}
-        <Box sx={{ mb: 6 }}>
+        <div className="tw:mb-6">
           {showMutuallyExclusive && getField(mutuallyExclusiveField)}
-        </Box>
+        </div>
 
-        {/* Owner and Domain fields */}
-        <div className="m-t-xss">{getField(ownerField)}</div>
-        <div className="m-t-xss">{getField(domainField)}</div>
+        <Grid>
+          <Grid.Item>{getField(ownerField)}</Grid.Item>
+          <Grid.Item>{getField(domainField)}</Grid.Item>
+        </Grid>
 
         {/* Auto Classification fields */}
         {autoClassificationComponent && (

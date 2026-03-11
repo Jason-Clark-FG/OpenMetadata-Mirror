@@ -2,7 +2,7 @@
 
 # Governance
 
-> **6 Components** | **42 Files** | **671 Tests** | **1111 Scenarios** 🚀
+> **6 Components** | **63 Files** | **933 Tests** | **1598 Scenarios** 🚀
 
 ## Table of Contents
 - [Custom Properties](#custom-properties)
@@ -19,7 +19,7 @@
 ## Custom Properties
 
 <details open>
-<summary>📄 <b>Customproperties-part1.spec.ts</b> (162 tests, 162 scenarios)</summary>
+<summary>📄 <b>Customproperties-part1.spec.ts</b> (191 tests, 195 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/Customproperties-part1.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/Customproperties-part1.spec.ts)
 
@@ -27,173 +27,207 @@
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Custom properties without custom property config** - Add Integer custom property for container | Add Integer custom property for container |
-| 2 | **Custom properties without custom property config** - Add Integer custom property for dashboard | Add Integer custom property for dashboard |
-| 3 | **Custom properties without custom property config** - Add Integer custom property for database | Add Integer custom property for database |
-| 4 | **Custom properties without custom property config** - Add Integer custom property for databaseSchema | Add Integer custom property for databaseSchema |
-| 5 | **Custom properties without custom property config** - Add Integer custom property for glossaryTerm | Add Integer custom property for glossaryTerm |
-| 6 | **Custom properties without custom property config** - Add Integer custom property for mlmodel | Add Integer custom property for mlmodel |
-| 7 | **Custom properties without custom property config** - Add Integer custom property for pipeline | Add Integer custom property for pipeline |
-| 8 | **Custom properties without custom property config** - Add Integer custom property for searchIndex | Add Integer custom property for searchIndex |
-| 9 | **Custom properties without custom property config** - Add Integer custom property for storedProcedure | Add Integer custom property for storedProcedure |
-| 10 | **Custom properties without custom property config** - Add Integer custom property for table | Add Integer custom property for table |
-| 11 | **Custom properties without custom property config** - Add Integer custom property for topic | Add Integer custom property for topic |
-| 12 | **Custom properties without custom property config** - Add Integer custom property for apiCollection | Add Integer custom property for apiCollection |
-| 13 | **Custom properties without custom property config** - Add Integer custom property for apiEndpoint | Add Integer custom property for apiEndpoint |
-| 14 | **Custom properties without custom property config** - Add Integer custom property for dataProduct | Add Integer custom property for dataProduct |
-| 15 | **Custom properties without custom property config** - Add Integer custom property for domain | Add Integer custom property for domain |
-| 16 | **Custom properties without custom property config** - Add Integer custom property for dashboardDataModel | Add Integer custom property for dashboardDataModel |
-| 17 | **Custom properties without custom property config** - Add Integer custom property for metric | Add Integer custom property for metric |
-| 18 | **Custom properties without custom property config** - Add Integer custom property for chart | Add Integer custom property for chart |
-| 19 | **Custom properties without custom property config** - Add String custom property for container | Add String custom property for container |
-| 20 | **Custom properties without custom property config** - Add String custom property for dashboard | Add String custom property for dashboard |
-| 21 | **Custom properties without custom property config** - Add String custom property for database | Add String custom property for database |
-| 22 | **Custom properties without custom property config** - Add String custom property for databaseSchema | Add String custom property for databaseSchema |
-| 23 | **Custom properties without custom property config** - Add String custom property for glossaryTerm | Add String custom property for glossaryTerm |
-| 24 | **Custom properties without custom property config** - Add String custom property for mlmodel | Add String custom property for mlmodel |
-| 25 | **Custom properties without custom property config** - Add String custom property for pipeline | Add String custom property for pipeline |
-| 26 | **Custom properties without custom property config** - Add String custom property for searchIndex | Add String custom property for searchIndex |
-| 27 | **Custom properties without custom property config** - Add String custom property for storedProcedure | Add String custom property for storedProcedure |
-| 28 | **Custom properties without custom property config** - Add String custom property for table | Add String custom property for table |
-| 29 | **Custom properties without custom property config** - Add String custom property for topic | Add String custom property for topic |
-| 30 | **Custom properties without custom property config** - Add String custom property for apiCollection | Add String custom property for apiCollection |
-| 31 | **Custom properties without custom property config** - Add String custom property for apiEndpoint | Add String custom property for apiEndpoint |
-| 32 | **Custom properties without custom property config** - Add String custom property for dataProduct | Add String custom property for dataProduct |
-| 33 | **Custom properties without custom property config** - Add String custom property for domain | Add String custom property for domain |
-| 34 | **Custom properties without custom property config** - Add String custom property for dashboardDataModel | Add String custom property for dashboardDataModel |
-| 35 | **Custom properties without custom property config** - Add String custom property for metric | Add String custom property for metric |
-| 36 | **Custom properties without custom property config** - Add String custom property for chart | Add String custom property for chart |
-| 37 | **Custom properties without custom property config** - Add Markdown custom property for container | Add Markdown custom property for container |
-| 38 | **Custom properties without custom property config** - Add Markdown custom property for dashboard | Add Markdown custom property for dashboard |
-| 39 | **Custom properties without custom property config** - Add Markdown custom property for database | Add Markdown custom property for database |
-| 40 | **Custom properties without custom property config** - Add Markdown custom property for databaseSchema | Add Markdown custom property for databaseSchema |
-| 41 | **Custom properties without custom property config** - Add Markdown custom property for glossaryTerm | Add Markdown custom property for glossaryTerm |
-| 42 | **Custom properties without custom property config** - Add Markdown custom property for mlmodel | Add Markdown custom property for mlmodel |
-| 43 | **Custom properties without custom property config** - Add Markdown custom property for pipeline | Add Markdown custom property for pipeline |
-| 44 | **Custom properties without custom property config** - Add Markdown custom property for searchIndex | Add Markdown custom property for searchIndex |
-| 45 | **Custom properties without custom property config** - Add Markdown custom property for storedProcedure | Add Markdown custom property for storedProcedure |
-| 46 | **Custom properties without custom property config** - Add Markdown custom property for table | Add Markdown custom property for table |
-| 47 | **Custom properties without custom property config** - Add Markdown custom property for topic | Add Markdown custom property for topic |
-| 48 | **Custom properties without custom property config** - Add Markdown custom property for apiCollection | Add Markdown custom property for apiCollection |
-| 49 | **Custom properties without custom property config** - Add Markdown custom property for apiEndpoint | Add Markdown custom property for apiEndpoint |
-| 50 | **Custom properties without custom property config** - Add Markdown custom property for dataProduct | Add Markdown custom property for dataProduct |
-| 51 | **Custom properties without custom property config** - Add Markdown custom property for domain | Add Markdown custom property for domain |
-| 52 | **Custom properties without custom property config** - Add Markdown custom property for dashboardDataModel | Add Markdown custom property for dashboardDataModel |
-| 53 | **Custom properties without custom property config** - Add Markdown custom property for metric | Add Markdown custom property for metric |
-| 54 | **Custom properties without custom property config** - Add Markdown custom property for chart | Add Markdown custom property for chart |
-| 55 | **Custom properties without custom property config** - Add Duration custom property for container | Add Duration custom property for container |
-| 56 | **Custom properties without custom property config** - Add Duration custom property for dashboard | Add Duration custom property for dashboard |
-| 57 | **Custom properties without custom property config** - Add Duration custom property for database | Add Duration custom property for database |
-| 58 | **Custom properties without custom property config** - Add Duration custom property for databaseSchema | Add Duration custom property for databaseSchema |
-| 59 | **Custom properties without custom property config** - Add Duration custom property for glossaryTerm | Add Duration custom property for glossaryTerm |
-| 60 | **Custom properties without custom property config** - Add Duration custom property for mlmodel | Add Duration custom property for mlmodel |
-| 61 | **Custom properties without custom property config** - Add Duration custom property for pipeline | Add Duration custom property for pipeline |
-| 62 | **Custom properties without custom property config** - Add Duration custom property for searchIndex | Add Duration custom property for searchIndex |
-| 63 | **Custom properties without custom property config** - Add Duration custom property for storedProcedure | Add Duration custom property for storedProcedure |
-| 64 | **Custom properties without custom property config** - Add Duration custom property for table | Add Duration custom property for table |
-| 65 | **Custom properties without custom property config** - Add Duration custom property for topic | Add Duration custom property for topic |
-| 66 | **Custom properties without custom property config** - Add Duration custom property for apiCollection | Add Duration custom property for apiCollection |
-| 67 | **Custom properties without custom property config** - Add Duration custom property for apiEndpoint | Add Duration custom property for apiEndpoint |
-| 68 | **Custom properties without custom property config** - Add Duration custom property for dataProduct | Add Duration custom property for dataProduct |
-| 69 | **Custom properties without custom property config** - Add Duration custom property for domain | Add Duration custom property for domain |
-| 70 | **Custom properties without custom property config** - Add Duration custom property for dashboardDataModel | Add Duration custom property for dashboardDataModel |
-| 71 | **Custom properties without custom property config** - Add Duration custom property for metric | Add Duration custom property for metric |
-| 72 | **Custom properties without custom property config** - Add Duration custom property for chart | Add Duration custom property for chart |
-| 73 | **Custom properties without custom property config** - Add Email custom property for container | Add Email custom property for container |
-| 74 | **Custom properties without custom property config** - Add Email custom property for dashboard | Add Email custom property for dashboard |
-| 75 | **Custom properties without custom property config** - Add Email custom property for database | Add Email custom property for database |
-| 76 | **Custom properties without custom property config** - Add Email custom property for databaseSchema | Add Email custom property for databaseSchema |
-| 77 | **Custom properties without custom property config** - Add Email custom property for glossaryTerm | Add Email custom property for glossaryTerm |
-| 78 | **Custom properties without custom property config** - Add Email custom property for mlmodel | Add Email custom property for mlmodel |
-| 79 | **Custom properties without custom property config** - Add Email custom property for pipeline | Add Email custom property for pipeline |
-| 80 | **Custom properties without custom property config** - Add Email custom property for searchIndex | Add Email custom property for searchIndex |
-| 81 | **Custom properties without custom property config** - Add Email custom property for storedProcedure | Add Email custom property for storedProcedure |
-| 82 | **Custom properties without custom property config** - Add Email custom property for table | Add Email custom property for table |
-| 83 | **Custom properties without custom property config** - Add Email custom property for topic | Add Email custom property for topic |
-| 84 | **Custom properties without custom property config** - Add Email custom property for apiCollection | Add Email custom property for apiCollection |
-| 85 | **Custom properties without custom property config** - Add Email custom property for apiEndpoint | Add Email custom property for apiEndpoint |
-| 86 | **Custom properties without custom property config** - Add Email custom property for dataProduct | Add Email custom property for dataProduct |
-| 87 | **Custom properties without custom property config** - Add Email custom property for domain | Add Email custom property for domain |
-| 88 | **Custom properties without custom property config** - Add Email custom property for dashboardDataModel | Add Email custom property for dashboardDataModel |
-| 89 | **Custom properties without custom property config** - Add Email custom property for metric | Add Email custom property for metric |
-| 90 | **Custom properties without custom property config** - Add Email custom property for chart | Add Email custom property for chart |
-| 91 | **Custom properties without custom property config** - Add Number custom property for container | Add Number custom property for container |
-| 92 | **Custom properties without custom property config** - Add Number custom property for dashboard | Add Number custom property for dashboard |
-| 93 | **Custom properties without custom property config** - Add Number custom property for database | Add Number custom property for database |
-| 94 | **Custom properties without custom property config** - Add Number custom property for databaseSchema | Add Number custom property for databaseSchema |
-| 95 | **Custom properties without custom property config** - Add Number custom property for glossaryTerm | Add Number custom property for glossaryTerm |
-| 96 | **Custom properties without custom property config** - Add Number custom property for mlmodel | Add Number custom property for mlmodel |
-| 97 | **Custom properties without custom property config** - Add Number custom property for pipeline | Add Number custom property for pipeline |
-| 98 | **Custom properties without custom property config** - Add Number custom property for searchIndex | Add Number custom property for searchIndex |
-| 99 | **Custom properties without custom property config** - Add Number custom property for storedProcedure | Add Number custom property for storedProcedure |
-| 100 | **Custom properties without custom property config** - Add Number custom property for table | Add Number custom property for table |
-| 101 | **Custom properties without custom property config** - Add Number custom property for topic | Add Number custom property for topic |
-| 102 | **Custom properties without custom property config** - Add Number custom property for apiCollection | Add Number custom property for apiCollection |
-| 103 | **Custom properties without custom property config** - Add Number custom property for apiEndpoint | Add Number custom property for apiEndpoint |
-| 104 | **Custom properties without custom property config** - Add Number custom property for dataProduct | Add Number custom property for dataProduct |
-| 105 | **Custom properties without custom property config** - Add Number custom property for domain | Add Number custom property for domain |
-| 106 | **Custom properties without custom property config** - Add Number custom property for dashboardDataModel | Add Number custom property for dashboardDataModel |
-| 107 | **Custom properties without custom property config** - Add Number custom property for metric | Add Number custom property for metric |
-| 108 | **Custom properties without custom property config** - Add Number custom property for chart | Add Number custom property for chart |
-| 109 | **Custom properties without custom property config** - Add Sql Query custom property for container | Add Sql Query custom property for container |
-| 110 | **Custom properties without custom property config** - Add Sql Query custom property for dashboard | Add Sql Query custom property for dashboard |
-| 111 | **Custom properties without custom property config** - Add Sql Query custom property for database | Add Sql Query custom property for database |
-| 112 | **Custom properties without custom property config** - Add Sql Query custom property for databaseSchema | Add Sql Query custom property for databaseSchema |
-| 113 | **Custom properties without custom property config** - Add Sql Query custom property for glossaryTerm | Add Sql Query custom property for glossaryTerm |
-| 114 | **Custom properties without custom property config** - Add Sql Query custom property for mlmodel | Add Sql Query custom property for mlmodel |
-| 115 | **Custom properties without custom property config** - Add Sql Query custom property for pipeline | Add Sql Query custom property for pipeline |
-| 116 | **Custom properties without custom property config** - Add Sql Query custom property for searchIndex | Add Sql Query custom property for searchIndex |
-| 117 | **Custom properties without custom property config** - Add Sql Query custom property for storedProcedure | Add Sql Query custom property for storedProcedure |
-| 118 | **Custom properties without custom property config** - Add Sql Query custom property for table | Add Sql Query custom property for table |
-| 119 | **Custom properties without custom property config** - Add Sql Query custom property for topic | Add Sql Query custom property for topic |
-| 120 | **Custom properties without custom property config** - Add Sql Query custom property for apiCollection | Add Sql Query custom property for apiCollection |
-| 121 | **Custom properties without custom property config** - Add Sql Query custom property for apiEndpoint | Add Sql Query custom property for apiEndpoint |
-| 122 | **Custom properties without custom property config** - Add Sql Query custom property for dataProduct | Add Sql Query custom property for dataProduct |
-| 123 | **Custom properties without custom property config** - Add Sql Query custom property for domain | Add Sql Query custom property for domain |
-| 124 | **Custom properties without custom property config** - Add Sql Query custom property for dashboardDataModel | Add Sql Query custom property for dashboardDataModel |
-| 125 | **Custom properties without custom property config** - Add Sql Query custom property for metric | Add Sql Query custom property for metric |
-| 126 | **Custom properties without custom property config** - Add Sql Query custom property for chart | Add Sql Query custom property for chart |
-| 127 | **Custom properties without custom property config** - Add Time Interval custom property for container | Add Time Interval custom property for container |
-| 128 | **Custom properties without custom property config** - Add Time Interval custom property for dashboard | Add Time Interval custom property for dashboard |
-| 129 | **Custom properties without custom property config** - Add Time Interval custom property for database | Add Time Interval custom property for database |
-| 130 | **Custom properties without custom property config** - Add Time Interval custom property for databaseSchema | Add Time Interval custom property for databaseSchema |
-| 131 | **Custom properties without custom property config** - Add Time Interval custom property for glossaryTerm | Add Time Interval custom property for glossaryTerm |
-| 132 | **Custom properties without custom property config** - Add Time Interval custom property for mlmodel | Add Time Interval custom property for mlmodel |
-| 133 | **Custom properties without custom property config** - Add Time Interval custom property for pipeline | Add Time Interval custom property for pipeline |
-| 134 | **Custom properties without custom property config** - Add Time Interval custom property for searchIndex | Add Time Interval custom property for searchIndex |
-| 135 | **Custom properties without custom property config** - Add Time Interval custom property for storedProcedure | Add Time Interval custom property for storedProcedure |
-| 136 | **Custom properties without custom property config** - Add Time Interval custom property for table | Add Time Interval custom property for table |
-| 137 | **Custom properties without custom property config** - Add Time Interval custom property for topic | Add Time Interval custom property for topic |
-| 138 | **Custom properties without custom property config** - Add Time Interval custom property for apiCollection | Add Time Interval custom property for apiCollection |
-| 139 | **Custom properties without custom property config** - Add Time Interval custom property for apiEndpoint | Add Time Interval custom property for apiEndpoint |
-| 140 | **Custom properties without custom property config** - Add Time Interval custom property for dataProduct | Add Time Interval custom property for dataProduct |
-| 141 | **Custom properties without custom property config** - Add Time Interval custom property for domain | Add Time Interval custom property for domain |
-| 142 | **Custom properties without custom property config** - Add Time Interval custom property for dashboardDataModel | Add Time Interval custom property for dashboardDataModel |
-| 143 | **Custom properties without custom property config** - Add Time Interval custom property for metric | Add Time Interval custom property for metric |
-| 144 | **Custom properties without custom property config** - Add Time Interval custom property for chart | Add Time Interval custom property for chart |
-| 145 | **Custom properties without custom property config** - Add Timestamp custom property for container | Add Timestamp custom property for container |
-| 146 | **Custom properties without custom property config** - Add Timestamp custom property for dashboard | Add Timestamp custom property for dashboard |
-| 147 | **Custom properties without custom property config** - Add Timestamp custom property for database | Add Timestamp custom property for database |
-| 148 | **Custom properties without custom property config** - Add Timestamp custom property for databaseSchema | Add Timestamp custom property for databaseSchema |
-| 149 | **Custom properties without custom property config** - Add Timestamp custom property for glossaryTerm | Add Timestamp custom property for glossaryTerm |
-| 150 | **Custom properties without custom property config** - Add Timestamp custom property for mlmodel | Add Timestamp custom property for mlmodel |
-| 151 | **Custom properties without custom property config** - Add Timestamp custom property for pipeline | Add Timestamp custom property for pipeline |
-| 152 | **Custom properties without custom property config** - Add Timestamp custom property for searchIndex | Add Timestamp custom property for searchIndex |
-| 153 | **Custom properties without custom property config** - Add Timestamp custom property for storedProcedure | Add Timestamp custom property for storedProcedure |
-| 154 | **Custom properties without custom property config** - Add Timestamp custom property for table | Add Timestamp custom property for table |
-| 155 | **Custom properties without custom property config** - Add Timestamp custom property for topic | Add Timestamp custom property for topic |
-| 156 | **Custom properties without custom property config** - Add Timestamp custom property for apiCollection | Add Timestamp custom property for apiCollection |
-| 157 | **Custom properties without custom property config** - Add Timestamp custom property for apiEndpoint | Add Timestamp custom property for apiEndpoint |
-| 158 | **Custom properties without custom property config** - Add Timestamp custom property for dataProduct | Add Timestamp custom property for dataProduct |
-| 159 | **Custom properties without custom property config** - Add Timestamp custom property for domain | Add Timestamp custom property for domain |
-| 160 | **Custom properties without custom property config** - Add Timestamp custom property for dashboardDataModel | Add Timestamp custom property for dashboardDataModel |
-| 161 | **Custom properties without custom property config** - Add Timestamp custom property for metric | Add Timestamp custom property for metric |
-| 162 | **Custom properties without custom property config** - Add Timestamp custom property for chart | Add Timestamp custom property for chart |
+| 1 | **Custom properties without custom property config** - Integer | Integer |
+| 2 | **Custom properties without custom property config** - String | String |
+| 3 | **Custom properties without custom property config** - Markdown | Markdown |
+| 4 | **Custom properties without custom property config** - Duration | Duration |
+| 5 | **Custom properties without custom property config** - Email | Email |
+| 6 | **Custom properties without custom property config** - Number | Number |
+| 7 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 8 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 9 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 10 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 11 | **Custom properties without custom property config** - Integer | Integer |
+| 12 | **Custom properties without custom property config** - String | String |
+| 13 | **Custom properties without custom property config** - Markdown | Markdown |
+| 14 | **Custom properties without custom property config** - Duration | Duration |
+| 15 | **Custom properties without custom property config** - Email | Email |
+| 16 | **Custom properties without custom property config** - Number | Number |
+| 17 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 18 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 19 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 20 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 21 | **Custom properties without custom property config** - Integer | Integer |
+| 22 | **Custom properties without custom property config** - String | String |
+| 23 | **Custom properties without custom property config** - Markdown | Markdown |
+| 24 | **Custom properties without custom property config** - Duration | Duration |
+| 25 | **Custom properties without custom property config** - Email | Email |
+| 26 | **Custom properties without custom property config** - Number | Number |
+| 27 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 28 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 29 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 30 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 31 | **Custom properties without custom property config** - Integer | Integer |
+| 32 | **Custom properties without custom property config** - String | String |
+| 33 | **Custom properties without custom property config** - Markdown | Markdown |
+| 34 | **Custom properties without custom property config** - Duration | Duration |
+| 35 | **Custom properties without custom property config** - Email | Email |
+| 36 | **Custom properties without custom property config** - Number | Number |
+| 37 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 38 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 39 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 40 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 41 | **Custom properties without custom property config** - Integer | Integer |
+| 42 | **Custom properties without custom property config** - String | String |
+| 43 | **Custom properties without custom property config** - Markdown | Markdown |
+| 44 | **Custom properties without custom property config** - Duration | Duration |
+| 45 | **Custom properties without custom property config** - Email | Email |
+| 46 | **Custom properties without custom property config** - Number | Number |
+| 47 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 48 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 49 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 50 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 51 | **Custom properties without custom property config** - Integer | Integer |
+| 52 | **Custom properties without custom property config** - String | String |
+| 53 | **Custom properties without custom property config** - Markdown | Markdown |
+| 54 | **Custom properties without custom property config** - Duration | Duration |
+| 55 | **Custom properties without custom property config** - Email | Email |
+| 56 | **Custom properties without custom property config** - Number | Number |
+| 57 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 58 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 59 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 60 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 61 | **Custom properties without custom property config** - Integer | Integer |
+| 62 | **Custom properties without custom property config** - String | String |
+| 63 | **Custom properties without custom property config** - Markdown | Markdown |
+| 64 | **Custom properties without custom property config** - Duration | Duration |
+| 65 | **Custom properties without custom property config** - Email | Email |
+| 66 | **Custom properties without custom property config** - Number | Number |
+| 67 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 68 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 69 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 70 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 71 | **Custom properties without custom property config** - Integer | Integer |
+| 72 | **Custom properties without custom property config** - String | String |
+| 73 | **Custom properties without custom property config** - Markdown | Markdown |
+| 74 | **Custom properties without custom property config** - Duration | Duration |
+| 75 | **Custom properties without custom property config** - Email | Email |
+| 76 | **Custom properties without custom property config** - Number | Number |
+| 77 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 78 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 79 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 80 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 81 | **Custom properties without custom property config** - Integer | Integer |
+| 82 | **Custom properties without custom property config** - String | String |
+| 83 | **Custom properties without custom property config** - Markdown | Markdown |
+| 84 | **Custom properties without custom property config** - Duration | Duration |
+| 85 | **Custom properties without custom property config** - Email | Email |
+| 86 | **Custom properties without custom property config** - Number | Number |
+| 87 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 88 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 89 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 90 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 91 | **Custom properties without custom property config** - Integer | Integer |
+| 92 | **Custom properties without custom property config** - String | String |
+| 93 | **Custom properties without custom property config** - Markdown | Markdown |
+| 94 | **Custom properties without custom property config** - Duration | Duration |
+| 95 | **Custom properties without custom property config** - Email | Email |
+| 96 | **Custom properties without custom property config** - Number | Number |
+| 97 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 98 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 99 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 100 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 101 | **Custom properties without custom property config** - Integer | Integer |
+| 102 | **Custom properties without custom property config** - String | String |
+| 103 | **Custom properties without custom property config** - Markdown | Markdown |
+| 104 | **Custom properties without custom property config** - Duration | Duration |
+| 105 | **Custom properties without custom property config** - Email | Email |
+| 106 | **Custom properties without custom property config** - Number | Number |
+| 107 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 108 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 109 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 110 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 111 | **Custom properties without custom property config** - Integer | Integer |
+| 112 | **Custom properties without custom property config** - String | String |
+| 113 | **Custom properties without custom property config** - Markdown | Markdown |
+| 114 | **Custom properties without custom property config** - Duration | Duration |
+| 115 | **Custom properties without custom property config** - Email | Email |
+| 116 | **Custom properties without custom property config** - Number | Number |
+| 117 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 118 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 119 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 120 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 121 | **Custom properties without custom property config** - Integer | Integer |
+| 122 | **Custom properties without custom property config** - String | String |
+| 123 | **Custom properties without custom property config** - Markdown | Markdown |
+| 124 | **Custom properties without custom property config** - Duration | Duration |
+| 125 | **Custom properties without custom property config** - Email | Email |
+| 126 | **Custom properties without custom property config** - Number | Number |
+| 127 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 128 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 129 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 130 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 131 | **Custom properties without custom property config** - Integer | Integer |
+| 132 | **Custom properties without custom property config** - String | String |
+| 133 | **Custom properties without custom property config** - Markdown | Markdown |
+| 134 | **Custom properties without custom property config** - Duration | Duration |
+| 135 | **Custom properties without custom property config** - Email | Email |
+| 136 | **Custom properties without custom property config** - Number | Number |
+| 137 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 138 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 139 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 140 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 141 | **Custom properties without custom property config** - Integer | Integer |
+| 142 | **Custom properties without custom property config** - String | String |
+| 143 | **Custom properties without custom property config** - Markdown | Markdown |
+| 144 | **Custom properties without custom property config** - Duration | Duration |
+| 145 | **Custom properties without custom property config** - Email | Email |
+| 146 | **Custom properties without custom property config** - Number | Number |
+| 147 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 148 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 149 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 150 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 151 | **Custom properties without custom property config** - Integer | Integer |
+| 152 | **Custom properties without custom property config** - String | String |
+| 153 | **Custom properties without custom property config** - Markdown | Markdown |
+| 154 | **Custom properties without custom property config** - Duration | Duration |
+| 155 | **Custom properties without custom property config** - Email | Email |
+| 156 | **Custom properties without custom property config** - Number | Number |
+| 157 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 158 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 159 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 160 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 161 | **Custom properties without custom property config** - Integer | Integer |
+| 162 | **Custom properties without custom property config** - String | String |
+| 163 | **Custom properties without custom property config** - Markdown | Markdown |
+| 164 | **Custom properties without custom property config** - Duration | Duration |
+| 165 | **Custom properties without custom property config** - Email | Email |
+| 166 | **Custom properties without custom property config** - Number | Number |
+| 167 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 168 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 169 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 170 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 171 | **Custom properties without custom property config** - Integer | Integer |
+| 172 | **Custom properties without custom property config** - String | String |
+| 173 | **Custom properties without custom property config** - Markdown | Markdown |
+| 174 | **Custom properties without custom property config** - Duration | Duration |
+| 175 | **Custom properties without custom property config** - Email | Email |
+| 176 | **Custom properties without custom property config** - Number | Number |
+| 177 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 178 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 179 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 180 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 181 | **Custom properties without custom property config** - Integer | Integer |
+| 182 | **Custom properties without custom property config** - String | String |
+| 183 | **Custom properties without custom property config** - Markdown | Markdown |
+| 184 | **Custom properties without custom property config** - Duration | Duration |
+| 185 | **Custom properties without custom property config** - Email | Email |
+| 186 | **Custom properties without custom property config** - Number | Number |
+| 187 | **Custom properties without custom property config** - Sql Query | Sql Query |
+| 188 | **Custom properties without custom property config** - Time Interval | Time Interval |
+| 189 | **Custom properties without custom property config** - Timestamp | Timestamp |
+| 190 | **Custom properties without custom property config** - Hyperlink | Hyperlink |
+| 191 | **Custom properties without custom property config** - sqlQuery shows scrollable CodeMirror container and no expand toggle | SqlQuery shows scrollable CodeMirror container and no expand toggle |
+| | ↳ *Create sqlQuery property* | |
+| | ↳ *Set multi-line SQL value* | |
+| | ↳ *Verify .CodeMirror-scroll is height-constrained and scrollable* | |
+| | ↳ *Verify expand/collapse toggle is hidden* | |
+| | ↳ *Cleanup property* | |
 
 </details>
 
 <details open>
-<summary>📄 <b>Customproperties-part2.spec.ts</b> (126 tests, 126 scenarios)</summary>
+<summary>📄 <b>Customproperties-part2.spec.ts</b> (135 tests, 145 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/Customproperties-part2.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/Customproperties-part2.spec.ts)
 
@@ -201,132 +235,200 @@
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Custom properties with custom property config** - Add Enum custom property for container | Add Enum custom property for container |
-| 2 | **Custom properties with custom property config** - Add Enum custom property for dashboard | Add Enum custom property for dashboard |
-| 3 | **Custom properties with custom property config** - Add Enum custom property for database | Add Enum custom property for database |
-| 4 | **Custom properties with custom property config** - Add Enum custom property for databaseSchema | Add Enum custom property for databaseSchema |
-| 5 | **Custom properties with custom property config** - Add Enum custom property for glossaryTerm | Add Enum custom property for glossaryTerm |
-| 6 | **Custom properties with custom property config** - Add Enum custom property for mlmodel | Add Enum custom property for mlmodel |
-| 7 | **Custom properties with custom property config** - Add Enum custom property for pipeline | Add Enum custom property for pipeline |
-| 8 | **Custom properties with custom property config** - Add Enum custom property for searchIndex | Add Enum custom property for searchIndex |
-| 9 | **Custom properties with custom property config** - Add Enum custom property for storedProcedure | Add Enum custom property for storedProcedure |
-| 10 | **Custom properties with custom property config** - Add Enum custom property for table | Add Enum custom property for table |
-| 11 | **Custom properties with custom property config** - Add Enum custom property for topic | Add Enum custom property for topic |
-| 12 | **Custom properties with custom property config** - Add Enum custom property for apiCollection | Add Enum custom property for apiCollection |
-| 13 | **Custom properties with custom property config** - Add Enum custom property for apiEndpoint | Add Enum custom property for apiEndpoint |
-| 14 | **Custom properties with custom property config** - Add Enum custom property for dataProduct | Add Enum custom property for dataProduct |
-| 15 | **Custom properties with custom property config** - Add Enum custom property for domain | Add Enum custom property for domain |
-| 16 | **Custom properties with custom property config** - Add Enum custom property for dashboardDataModel | Add Enum custom property for dashboardDataModel |
-| 17 | **Custom properties with custom property config** - Add Enum custom property for metric | Add Enum custom property for metric |
-| 18 | **Custom properties with custom property config** - Add Enum custom property for chart | Add Enum custom property for chart |
-| 19 | **Custom properties with custom property config** - Add Table custom property for container | Add Table custom property for container |
-| 20 | **Custom properties with custom property config** - Add Table custom property for dashboard | Add Table custom property for dashboard |
-| 21 | **Custom properties with custom property config** - Add Table custom property for database | Add Table custom property for database |
-| 22 | **Custom properties with custom property config** - Add Table custom property for databaseSchema | Add Table custom property for databaseSchema |
-| 23 | **Custom properties with custom property config** - Add Table custom property for glossaryTerm | Add Table custom property for glossaryTerm |
-| 24 | **Custom properties with custom property config** - Add Table custom property for mlmodel | Add Table custom property for mlmodel |
-| 25 | **Custom properties with custom property config** - Add Table custom property for pipeline | Add Table custom property for pipeline |
-| 26 | **Custom properties with custom property config** - Add Table custom property for searchIndex | Add Table custom property for searchIndex |
-| 27 | **Custom properties with custom property config** - Add Table custom property for storedProcedure | Add Table custom property for storedProcedure |
-| 28 | **Custom properties with custom property config** - Add Table custom property for table | Add Table custom property for table |
-| 29 | **Custom properties with custom property config** - Add Table custom property for topic | Add Table custom property for topic |
-| 30 | **Custom properties with custom property config** - Add Table custom property for apiCollection | Add Table custom property for apiCollection |
-| 31 | **Custom properties with custom property config** - Add Table custom property for apiEndpoint | Add Table custom property for apiEndpoint |
-| 32 | **Custom properties with custom property config** - Add Table custom property for dataProduct | Add Table custom property for dataProduct |
-| 33 | **Custom properties with custom property config** - Add Table custom property for domain | Add Table custom property for domain |
-| 34 | **Custom properties with custom property config** - Add Table custom property for dashboardDataModel | Add Table custom property for dashboardDataModel |
-| 35 | **Custom properties with custom property config** - Add Table custom property for metric | Add Table custom property for metric |
-| 36 | **Custom properties with custom property config** - Add Table custom property for chart | Add Table custom property for chart |
-| 37 | **Custom properties with custom property config** - Add Entity Reference custom property for container | Add Entity Reference custom property for container |
-| 38 | **Custom properties with custom property config** - Add Entity Reference custom property for dashboard | Add Entity Reference custom property for dashboard |
-| 39 | **Custom properties with custom property config** - Add Entity Reference custom property for database | Add Entity Reference custom property for database |
-| 40 | **Custom properties with custom property config** - Add Entity Reference custom property for databaseSchema | Add Entity Reference custom property for databaseSchema |
-| 41 | **Custom properties with custom property config** - Add Entity Reference custom property for glossaryTerm | Add Entity Reference custom property for glossaryTerm |
-| 42 | **Custom properties with custom property config** - Add Entity Reference custom property for mlmodel | Add Entity Reference custom property for mlmodel |
-| 43 | **Custom properties with custom property config** - Add Entity Reference custom property for pipeline | Add Entity Reference custom property for pipeline |
-| 44 | **Custom properties with custom property config** - Add Entity Reference custom property for searchIndex | Add Entity Reference custom property for searchIndex |
-| 45 | **Custom properties with custom property config** - Add Entity Reference custom property for storedProcedure | Add Entity Reference custom property for storedProcedure |
-| 46 | **Custom properties with custom property config** - Add Entity Reference custom property for table | Add Entity Reference custom property for table |
-| 47 | **Custom properties with custom property config** - Add Entity Reference custom property for topic | Add Entity Reference custom property for topic |
-| 48 | **Custom properties with custom property config** - Add Entity Reference custom property for apiCollection | Add Entity Reference custom property for apiCollection |
-| 49 | **Custom properties with custom property config** - Add Entity Reference custom property for apiEndpoint | Add Entity Reference custom property for apiEndpoint |
-| 50 | **Custom properties with custom property config** - Add Entity Reference custom property for dataProduct | Add Entity Reference custom property for dataProduct |
-| 51 | **Custom properties with custom property config** - Add Entity Reference custom property for domain | Add Entity Reference custom property for domain |
-| 52 | **Custom properties with custom property config** - Add Entity Reference custom property for dashboardDataModel | Add Entity Reference custom property for dashboardDataModel |
-| 53 | **Custom properties with custom property config** - Add Entity Reference custom property for metric | Add Entity Reference custom property for metric |
-| 54 | **Custom properties with custom property config** - Add Entity Reference custom property for chart | Add Entity Reference custom property for chart |
-| 55 | **Custom properties with custom property config** - Add Entity Reference list custom property for container | Add Entity Reference list custom property for container |
-| 56 | **Custom properties with custom property config** - Add Entity Reference list custom property for dashboard | Add Entity Reference list custom property for dashboard |
-| 57 | **Custom properties with custom property config** - Add Entity Reference list custom property for database | Add Entity Reference list custom property for database |
-| 58 | **Custom properties with custom property config** - Add Entity Reference list custom property for databaseSchema | Add Entity Reference list custom property for databaseSchema |
-| 59 | **Custom properties with custom property config** - Add Entity Reference list custom property for glossaryTerm | Add Entity Reference list custom property for glossaryTerm |
-| 60 | **Custom properties with custom property config** - Add Entity Reference list custom property for mlmodel | Add Entity Reference list custom property for mlmodel |
-| 61 | **Custom properties with custom property config** - Add Entity Reference list custom property for pipeline | Add Entity Reference list custom property for pipeline |
-| 62 | **Custom properties with custom property config** - Add Entity Reference list custom property for searchIndex | Add Entity Reference list custom property for searchIndex |
-| 63 | **Custom properties with custom property config** - Add Entity Reference list custom property for storedProcedure | Add Entity Reference list custom property for storedProcedure |
-| 64 | **Custom properties with custom property config** - Add Entity Reference list custom property for table | Add Entity Reference list custom property for table |
-| 65 | **Custom properties with custom property config** - Add Entity Reference list custom property for topic | Add Entity Reference list custom property for topic |
-| 66 | **Custom properties with custom property config** - Add Entity Reference list custom property for apiCollection | Add Entity Reference list custom property for apiCollection |
-| 67 | **Custom properties with custom property config** - Add Entity Reference list custom property for apiEndpoint | Add Entity Reference list custom property for apiEndpoint |
-| 68 | **Custom properties with custom property config** - Add Entity Reference list custom property for dataProduct | Add Entity Reference list custom property for dataProduct |
-| 69 | **Custom properties with custom property config** - Add Entity Reference list custom property for domain | Add Entity Reference list custom property for domain |
-| 70 | **Custom properties with custom property config** - Add Entity Reference list custom property for dashboardDataModel | Add Entity Reference list custom property for dashboardDataModel |
-| 71 | **Custom properties with custom property config** - Add Entity Reference list custom property for metric | Add Entity Reference list custom property for metric |
-| 72 | **Custom properties with custom property config** - Add Entity Reference list custom property for chart | Add Entity Reference list custom property for chart |
-| 73 | **Custom properties with custom property config** - Add Date custom property for container | Add Date custom property for container |
-| 74 | **Custom properties with custom property config** - Add Date custom property for dashboard | Add Date custom property for dashboard |
-| 75 | **Custom properties with custom property config** - Add Date custom property for database | Add Date custom property for database |
-| 76 | **Custom properties with custom property config** - Add Date custom property for databaseSchema | Add Date custom property for databaseSchema |
-| 77 | **Custom properties with custom property config** - Add Date custom property for glossaryTerm | Add Date custom property for glossaryTerm |
-| 78 | **Custom properties with custom property config** - Add Date custom property for mlmodel | Add Date custom property for mlmodel |
-| 79 | **Custom properties with custom property config** - Add Date custom property for pipeline | Add Date custom property for pipeline |
-| 80 | **Custom properties with custom property config** - Add Date custom property for searchIndex | Add Date custom property for searchIndex |
-| 81 | **Custom properties with custom property config** - Add Date custom property for storedProcedure | Add Date custom property for storedProcedure |
-| 82 | **Custom properties with custom property config** - Add Date custom property for table | Add Date custom property for table |
-| 83 | **Custom properties with custom property config** - Add Date custom property for topic | Add Date custom property for topic |
-| 84 | **Custom properties with custom property config** - Add Date custom property for apiCollection | Add Date custom property for apiCollection |
-| 85 | **Custom properties with custom property config** - Add Date custom property for apiEndpoint | Add Date custom property for apiEndpoint |
-| 86 | **Custom properties with custom property config** - Add Date custom property for dataProduct | Add Date custom property for dataProduct |
-| 87 | **Custom properties with custom property config** - Add Date custom property for domain | Add Date custom property for domain |
-| 88 | **Custom properties with custom property config** - Add Date custom property for dashboardDataModel | Add Date custom property for dashboardDataModel |
-| 89 | **Custom properties with custom property config** - Add Date custom property for metric | Add Date custom property for metric |
-| 90 | **Custom properties with custom property config** - Add Date custom property for chart | Add Date custom property for chart |
-| 91 | **Custom properties with custom property config** - Add Time custom property for container | Add Time custom property for container |
-| 92 | **Custom properties with custom property config** - Add Time custom property for dashboard | Add Time custom property for dashboard |
-| 93 | **Custom properties with custom property config** - Add Time custom property for database | Add Time custom property for database |
-| 94 | **Custom properties with custom property config** - Add Time custom property for databaseSchema | Add Time custom property for databaseSchema |
-| 95 | **Custom properties with custom property config** - Add Time custom property for glossaryTerm | Add Time custom property for glossaryTerm |
-| 96 | **Custom properties with custom property config** - Add Time custom property for mlmodel | Add Time custom property for mlmodel |
-| 97 | **Custom properties with custom property config** - Add Time custom property for pipeline | Add Time custom property for pipeline |
-| 98 | **Custom properties with custom property config** - Add Time custom property for searchIndex | Add Time custom property for searchIndex |
-| 99 | **Custom properties with custom property config** - Add Time custom property for storedProcedure | Add Time custom property for storedProcedure |
-| 100 | **Custom properties with custom property config** - Add Time custom property for table | Add Time custom property for table |
-| 101 | **Custom properties with custom property config** - Add Time custom property for topic | Add Time custom property for topic |
-| 102 | **Custom properties with custom property config** - Add Time custom property for apiCollection | Add Time custom property for apiCollection |
-| 103 | **Custom properties with custom property config** - Add Time custom property for apiEndpoint | Add Time custom property for apiEndpoint |
-| 104 | **Custom properties with custom property config** - Add Time custom property for dataProduct | Add Time custom property for dataProduct |
-| 105 | **Custom properties with custom property config** - Add Time custom property for domain | Add Time custom property for domain |
-| 106 | **Custom properties with custom property config** - Add Time custom property for dashboardDataModel | Add Time custom property for dashboardDataModel |
-| 107 | **Custom properties with custom property config** - Add Time custom property for metric | Add Time custom property for metric |
-| 108 | **Custom properties with custom property config** - Add Time custom property for chart | Add Time custom property for chart |
-| 109 | **Custom properties with custom property config** - Add DateTime custom property for container | Add DateTime custom property for container |
-| 110 | **Custom properties with custom property config** - Add DateTime custom property for dashboard | Add DateTime custom property for dashboard |
-| 111 | **Custom properties with custom property config** - Add DateTime custom property for database | Add DateTime custom property for database |
-| 112 | **Custom properties with custom property config** - Add DateTime custom property for databaseSchema | Add DateTime custom property for databaseSchema |
-| 113 | **Custom properties with custom property config** - Add DateTime custom property for glossaryTerm | Add DateTime custom property for glossaryTerm |
-| 114 | **Custom properties with custom property config** - Add DateTime custom property for mlmodel | Add DateTime custom property for mlmodel |
-| 115 | **Custom properties with custom property config** - Add DateTime custom property for pipeline | Add DateTime custom property for pipeline |
-| 116 | **Custom properties with custom property config** - Add DateTime custom property for searchIndex | Add DateTime custom property for searchIndex |
-| 117 | **Custom properties with custom property config** - Add DateTime custom property for storedProcedure | Add DateTime custom property for storedProcedure |
-| 118 | **Custom properties with custom property config** - Add DateTime custom property for table | Add DateTime custom property for table |
-| 119 | **Custom properties with custom property config** - Add DateTime custom property for topic | Add DateTime custom property for topic |
-| 120 | **Custom properties with custom property config** - Add DateTime custom property for apiCollection | Add DateTime custom property for apiCollection |
-| 121 | **Custom properties with custom property config** - Add DateTime custom property for apiEndpoint | Add DateTime custom property for apiEndpoint |
-| 122 | **Custom properties with custom property config** - Add DateTime custom property for dataProduct | Add DateTime custom property for dataProduct |
-| 123 | **Custom properties with custom property config** - Add DateTime custom property for domain | Add DateTime custom property for domain |
-| 124 | **Custom properties with custom property config** - Add DateTime custom property for dashboardDataModel | Add DateTime custom property for dashboardDataModel |
-| 125 | **Custom properties with custom property config** - Add DateTime custom property for metric | Add DateTime custom property for metric |
-| 126 | **Custom properties with custom property config** - Add DateTime custom property for chart | Add DateTime custom property for chart |
+| 1 | **Custom properties with custom property config** - Enum | Enum |
+| 2 | **Custom properties with custom property config** - Table | Table |
+| 3 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 4 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 5 | **Custom properties with custom property config** - Date | Date |
+| 6 | **Custom properties with custom property config** - Time | Time |
+| 7 | **Custom properties with custom property config** - Date Time | Date Time |
+| 8 | **Custom properties with custom property config** - Enum | Enum |
+| 9 | **Custom properties with custom property config** - Table | Table |
+| 10 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 11 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 12 | **Custom properties with custom property config** - Date | Date |
+| 13 | **Custom properties with custom property config** - Time | Time |
+| 14 | **Custom properties with custom property config** - Date Time | Date Time |
+| 15 | **Custom properties with custom property config** - Enum | Enum |
+| 16 | **Custom properties with custom property config** - Table | Table |
+| 17 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 18 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 19 | **Custom properties with custom property config** - Date | Date |
+| 20 | **Custom properties with custom property config** - Time | Time |
+| 21 | **Custom properties with custom property config** - Date Time | Date Time |
+| 22 | **Custom properties with custom property config** - Enum | Enum |
+| 23 | **Custom properties with custom property config** - Table | Table |
+| 24 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 25 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 26 | **Custom properties with custom property config** - Date | Date |
+| 27 | **Custom properties with custom property config** - Time | Time |
+| 28 | **Custom properties with custom property config** - Date Time | Date Time |
+| 29 | **Custom properties with custom property config** - Enum | Enum |
+| 30 | **Custom properties with custom property config** - Table | Table |
+| 31 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 32 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 33 | **Custom properties with custom property config** - Date | Date |
+| 34 | **Custom properties with custom property config** - Time | Time |
+| 35 | **Custom properties with custom property config** - Date Time | Date Time |
+| 36 | **Custom properties with custom property config** - Enum | Enum |
+| 37 | **Custom properties with custom property config** - Table | Table |
+| 38 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 39 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 40 | **Custom properties with custom property config** - Date | Date |
+| 41 | **Custom properties with custom property config** - Time | Time |
+| 42 | **Custom properties with custom property config** - Date Time | Date Time |
+| 43 | **Custom properties with custom property config** - Enum | Enum |
+| 44 | **Custom properties with custom property config** - Table | Table |
+| 45 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 46 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 47 | **Custom properties with custom property config** - Date | Date |
+| 48 | **Custom properties with custom property config** - Time | Time |
+| 49 | **Custom properties with custom property config** - Date Time | Date Time |
+| 50 | **Custom properties with custom property config** - Enum | Enum |
+| 51 | **Custom properties with custom property config** - Table | Table |
+| 52 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 53 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 54 | **Custom properties with custom property config** - Date | Date |
+| 55 | **Custom properties with custom property config** - Time | Time |
+| 56 | **Custom properties with custom property config** - Date Time | Date Time |
+| 57 | **Custom properties with custom property config** - Enum | Enum |
+| 58 | **Custom properties with custom property config** - Table | Table |
+| 59 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 60 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 61 | **Custom properties with custom property config** - Date | Date |
+| 62 | **Custom properties with custom property config** - Time | Time |
+| 63 | **Custom properties with custom property config** - Date Time | Date Time |
+| 64 | **Custom properties with custom property config** - Enum | Enum |
+| 65 | **Custom properties with custom property config** - Table | Table |
+| 66 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 67 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 68 | **Custom properties with custom property config** - Date | Date |
+| 69 | **Custom properties with custom property config** - Time | Time |
+| 70 | **Custom properties with custom property config** - Date Time | Date Time |
+| 71 | **Custom properties with custom property config** - Enum | Enum |
+| 72 | **Custom properties with custom property config** - Table | Table |
+| 73 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 74 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 75 | **Custom properties with custom property config** - Date | Date |
+| 76 | **Custom properties with custom property config** - Time | Time |
+| 77 | **Custom properties with custom property config** - Date Time | Date Time |
+| 78 | **Custom properties with custom property config** - Enum | Enum |
+| 79 | **Custom properties with custom property config** - Table | Table |
+| 80 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 81 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 82 | **Custom properties with custom property config** - Date | Date |
+| 83 | **Custom properties with custom property config** - Time | Time |
+| 84 | **Custom properties with custom property config** - Date Time | Date Time |
+| 85 | **Custom properties with custom property config** - Enum | Enum |
+| 86 | **Custom properties with custom property config** - Table | Table |
+| 87 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 88 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 89 | **Custom properties with custom property config** - Date | Date |
+| 90 | **Custom properties with custom property config** - Time | Time |
+| 91 | **Custom properties with custom property config** - Date Time | Date Time |
+| 92 | **Custom properties with custom property config** - Enum | Enum |
+| 93 | **Custom properties with custom property config** - Table | Table |
+| 94 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 95 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 96 | **Custom properties with custom property config** - Date | Date |
+| 97 | **Custom properties with custom property config** - Time | Time |
+| 98 | **Custom properties with custom property config** - Date Time | Date Time |
+| 99 | **Custom properties with custom property config** - Enum | Enum |
+| 100 | **Custom properties with custom property config** - Table | Table |
+| 101 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 102 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 103 | **Custom properties with custom property config** - Date | Date |
+| 104 | **Custom properties with custom property config** - Time | Time |
+| 105 | **Custom properties with custom property config** - Date Time | Date Time |
+| 106 | **Custom properties with custom property config** - Enum | Enum |
+| 107 | **Custom properties with custom property config** - Table | Table |
+| 108 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 109 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 110 | **Custom properties with custom property config** - Date | Date |
+| 111 | **Custom properties with custom property config** - Time | Time |
+| 112 | **Custom properties with custom property config** - Date Time | Date Time |
+| 113 | **Custom properties with custom property config** - Enum | Enum |
+| 114 | **Custom properties with custom property config** - Table | Table |
+| 115 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 116 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 117 | **Custom properties with custom property config** - Date | Date |
+| 118 | **Custom properties with custom property config** - Time | Time |
+| 119 | **Custom properties with custom property config** - Date Time | Date Time |
+| 120 | **Custom properties with custom property config** - Enum | Enum |
+| 121 | **Custom properties with custom property config** - Table | Table |
+| 122 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 123 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 124 | **Custom properties with custom property config** - Date | Date |
+| 125 | **Custom properties with custom property config** - Time | Time |
+| 126 | **Custom properties with custom property config** - Date Time | Date Time |
+| 127 | **Custom properties with custom property config** - Enum | Enum |
+| 128 | **Custom properties with custom property config** - Table | Table |
+| 129 | **Custom properties with custom property config** - Entity Reference | Entity Reference |
+| 130 | **Custom properties with custom property config** - Entity Reference List | Entity Reference List |
+| 131 | **Custom properties with custom property config** - Date | Date |
+| 132 | **Custom properties with custom property config** - Time | Time |
+| 133 | **Custom properties with custom property config** - Date Time | Date Time |
+| 134 | **Custom properties with custom property config** - entityReferenceList shows item count, scrollable list, no expand toggle | EntityReferenceList shows item count, scrollable list, no expand toggle |
+| | ↳ *Create entityReferenceList property* | |
+| | ↳ *Set 5 user references as value* | |
+| | ↳ *Verify item count (5) in property name* | |
+| | ↳ *Verify .entity-list-body is scrollable* | |
+| | ↳ *Verify expand/collapse toggle is hidden* | |
+| | ↳ *Cleanup property* | |
+| 135 | **Custom properties with custom property config** - table-cp shows row count, scrollable container, no expand toggle | Table-cp shows row count, scrollable container, no expand toggle |
+| | ↳ *Create table-cp property* | |
+| | ↳ *Add 5 rows of data to table property* | |
+| | ↳ *Verify row count (5) in property name* | |
+| | ↳ *Verify .custom-property-scrollable-container is scrollable* | |
+| | ↳ *Verify expand/collapse toggle is hidden* | |
+| | ↳ *Cleanup property* | |
+
+</details>
+
+<details open>
+<summary>📄 <b>CustomPropertyAdvanceSeach.spec.ts</b> (19 tests, 19 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Flow/AdvanceSearchFilter/CustomPropertyAdvanceSeach.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Flow/AdvanceSearchFilter/CustomPropertyAdvanceSeach.spec.ts)
+
+### Custom Property Advanced Search Filter for Dashboard
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Custom Property Advanced Search Filter for Dashboard** - String CP with all operators | String CP with all operators |
+| 2 | **Custom Property Advanced Search Filter for Dashboard** - Email CP with all operators | Email CP with all operators |
+| 3 | **Custom Property Advanced Search Filter for Dashboard** - Markdown CP with all operators | Markdown CP with all operators |
+| 4 | **Custom Property Advanced Search Filter for Dashboard** - SQL Query CP with all operators | SQL Query CP with all operators |
+| 5 | **Custom Property Advanced Search Filter for Dashboard** - Duration CP with all operators | Duration CP with all operators |
+| 6 | **Custom Property Advanced Search Filter for Dashboard** - Time CP with all operators | Time CP with all operators |
+| 7 | **Custom Property Advanced Search Filter for Dashboard** - Integer CP with all operators | Integer CP with all operators |
+| 8 | **Custom Property Advanced Search Filter for Dashboard** - Number CP with all operators | Number CP with all operators |
+| 9 | **Custom Property Advanced Search Filter for Dashboard** - Timestamp CP with all operators | Timestamp CP with all operators |
+| 10 | **Custom Property Advanced Search Filter for Dashboard** - Entity Reference CP with all operators | Entity Reference CP with all operators |
+| 11 | **Custom Property Advanced Search Filter for Dashboard** - Entity Reference List CP with all operators | Entity Reference List CP with all operators |
+| 12 | **Custom Property Advanced Search Filter for Dashboard** - DateTime CP with all operators | DateTime CP with all operators |
+| 13 | **Custom Property Advanced Search Filter for Dashboard** - Date CP with all operators | Date CP with all operators |
+| 14 | **Custom Property Advanced Search Filter for Dashboard** - Enum CP with all operators | Enum CP with all operators |
+| 15 | **Custom Property Advanced Search Filter for Dashboard** - Time Interval CP with operators | Time Interval CP with operators |
+| 16 | **Custom Property Advanced Search Filter for Dashboard** - Hyperlink CP with operators | Hyperlink CP with operators |
+| 17 | **Custom Property Advanced Search Filter for Dashboard** - Table CP - Name column with all operators | Table CP - Name column with all operators |
+| 18 | **Custom Property Advanced Search Filter for Dashboard** - Table CP - Role column with all operators | Table CP - Role column with all operators |
+| 19 | **Custom Property Advanced Search Filter for Dashboard** - Table CP - Sr No column with all operators | Table CP - Sr No column with all operators |
+
+</details>
+
+<details open>
+<summary>📄 <b>HyperlinkCustomProperty.spec.ts</b> (4 tests, 4 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/HyperlinkCustomProperty.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/HyperlinkCustomProperty.spec.ts)
+
+### Hyperlink Custom Property Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Hyperlink Custom Property Tests** - should reject javascript: protocol URLs for XSS protection | Reject javascript: protocol URLs for XSS protection |
+| 2 | **Hyperlink Custom Property Tests** - should accept valid http and https URLs | Accept valid http and https URLs |
+| 3 | **Hyperlink Custom Property Tests** - should display URL when no display text is provided | Display URL when no display text is provided |
+| 4 | **Hyperlink Custom Property Tests** - should show No Data placeholder when hyperlink has no value | Show No Data placeholder when hyperlink has no value |
 
 </details>
 
@@ -371,19 +473,15 @@
 </details>
 
 <details open>
-<summary>📄 <b>CustomPropertyAdvanceSeach.spec.ts</b> (1 tests, 4 scenarios)</summary>
+<summary>📄 <b>EnumCustomPropertyWidget.spec.ts</b> (1 tests, 1 scenarios)</summary>
 
-> Source: [`src/main/resources/ui/playwright/e2e/Flow/AdvanceSearchFilter/CustomPropertyAdvanceSeach.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Flow/AdvanceSearchFilter/CustomPropertyAdvanceSeach.spec.ts)
+> Source: [`src/main/resources/ui/playwright/e2e/Features/EnumCustomPropertyWidget.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/EnumCustomPropertyWidget.spec.ts)
 
-### Standalone Tests
+### Enum Custom Property on Table Right Panel
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | CustomProperty Dashboard Filter | CustomProperty Dashboard Filter |
-| | ↳ *Create Dashboard Custom Property* | |
-| | ↳ *Add Custom Property in Dashboard* | |
-| | ↳ *Filter Dashboard using AdvanceSearch Custom Property* | |
-| | ↳ *Delete Custom Property * | |
+| 1 | **Enum Custom Property on Table Right Panel** - Create Enum Property, Add Value, Verify, Remove Value | Create Enum Property, Add Value, Verify, Remove Value |
 
 </details>
 
@@ -403,17 +501,12 @@
 
 | # | Test Case | Description |
 |---|-----------|-------------|
-| 1 | **Metric Entity Special Test Cases** - Verify Metric Type Update | Metric Type Update |
-| 2 | **Metric Entity Special Test Cases** - Verify Unit of Measurement Update | Unit of Measurement Update |
-| 3 | **Metric Entity Special Test Cases** - Verify Granularity Update | Granularity Update |
-| 4 | **Metric Entity Special Test Cases** - verify metric expression update | Metric expression update |
-| 5 | **Metric Entity Special Test Cases** - Verify Related Metrics Update | Related Metrics Update |
-
-### Listing page and add Metric flow should work
-
-| # | Test Case | Description |
-|---|-----------|-------------|
-| 1 | **Listing page and add Metric flow should work** - Metric listing page and add metric from the "Add button" | Metric listing page and add metric from the "Add button" |
+| 1 | **Metric Entity Special Test Cases** - Metric creation flow should work | Metric creation flow should work |
+| 2 | **Metric Entity Special Test Cases** - Verify Metric Type Update | Metric Type Update |
+| 3 | **Metric Entity Special Test Cases** - Verify Unit of Measurement Update | Unit of Measurement Update |
+| 4 | **Metric Entity Special Test Cases** - Verify Granularity Update | Granularity Update |
+| 5 | **Metric Entity Special Test Cases** - verify metric expression update | Metric expression update |
+| 6 | **Metric Entity Special Test Cases** - Verify Related Metrics Update | Related Metrics Update |
 
 </details>
 
@@ -462,7 +555,7 @@
 ## Domains & Data Products
 
 <details open>
-<summary>📄 <b>Domains.spec.ts</b> (26 tests, 45 scenarios)</summary>
+<summary>📄 <b>Domains.spec.ts</b> (40 tests, 69 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/Domains.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/Domains.spec.ts)
 
@@ -486,33 +579,63 @@
 | | ↳ *Create DataProduct and custom properties for it* | |
 | | ↳ *Set ${...} Custom Property* | |
 | | ↳ *Update ${...} Custom Property* | |
-| 5 | **Domains** - Switch domain from navbar and check domain query call wrap in quotes | Switch domain from navbar and check domain query call wrap in quotes |
-| 6 | **Domains** - Rename domain | Rename domain |
-| 7 | **Domains** - Follow/unfollow subdomain and create nested sub domain | Follow/unfollow subdomain and create nested sub domain |
-| 8 | **Domains** - Should clear assets from data products after deletion of data product in Domain | Clear assets from data products after deletion of data product in Domain |
+| 5 | **Domains** - Rename domain | Rename domain |
+| 6 | **Domains** - Follow/unfollow subdomain and create nested sub domain | Follow/unfollow subdomain and create nested sub domain |
+| 7 | **Domains** - Should clear assets from data products after deletion of data product in Domain | Clear assets from data products after deletion of data product in Domain |
 | | ↳ *Delete domain & recreate the same domain and data product* | |
-| 9 | **Domains** - Should inherit owners and experts from parent domain | Inherit owners and experts from parent domain |
-| 10 | **Domains** - Domain owner should able to edit description of domain | Domain owner should able to edit description of domain |
-| 11 | **Domains** - Verify domain and subdomain asset count accuracy | Domain and subdomain asset count accuracy |
+| 8 | **Domains** - Should inherit owners and experts from parent domain | Inherit owners and experts from parent domain |
+| 9 | **Domains** - Domain owner should able to edit description of domain | Domain owner should able to edit description of domain |
+| 10 | **Domains** - Verify domain and subdomain asset count accuracy | Domain and subdomain asset count accuracy |
 | | ↳ *Create domain and subdomain via API* | |
 | | ↳ *Add assets to domain* | |
 | | ↳ *Add assets to subdomain* | |
 | | ↳ *Verify domain asset count matches displayed cards* | |
 | | ↳ *Verify subdomain asset count matches displayed cards* | |
+| 11 | **Domains** - Verify domain data products count includes subdomain data products | Domain data products count includes subdomain data products |
+| | ↳ *Create domain, subdomain, and data products via API* | |
+| | ↳ *Verify domain data products tab shows both domain and subdomain data products* | |
+| | ↳ *Verify subdomain data products tab shows only its own data products* | |
+| | ↳ *Delete subdomain and verify its data products are not visible in domain* | |
+| | ↳ *Verify deeply nested subdomain data products are visible at each level* | |
 | 12 | **Domains** - Verify domain tags and glossary terms | Domain tags and glossary terms |
-| 13 | **Domains** - Verify data product tags and glossary terms | Data product tags and glossary terms |
-| 14 | **Domains** - Verify clicking All Domains sets active domain to default value | Clicking All Domains sets active domain to default value |
-| 15 | **Domains** - Verify redirect path on data product delete | Redirect path on data product delete |
-| 16 | **Domains** - Verify duplicate domain creation | Duplicate domain creation |
-| 17 | **Domains** - Create domain custom property and verify value persistence | Create domain custom property and verify value persistence |
+| 13 | **Domains** - Create domain with tags using MUITagSuggestion | Create domain with tags using MUITagSuggestion |
+| | ↳ *Navigate to add domain* | |
+| | ↳ *Fill domain form* | |
+| | ↳ *Search and select tag via MUITagSuggestion* | |
+| | ↳ *Save domain and verify tag is applied* | |
+| 14 | **Domains** - Create subdomain with tags using MUITagSuggestion | Create subdomain with tags using MUITagSuggestion |
+| | ↳ *Navigate to domain and open subdomain modal* | |
+| | ↳ *Fill subdomain form* | |
+| | ↳ *Search and select tag via MUITagSuggestion* | |
+| | ↳ *Save subdomain and verify tag is applied* | |
+| 15 | **Domains** - Verify data product tags and glossary terms | Data product tags and glossary terms |
+| 16 | **Domains** - Verify clicking All Domains sets active domain to default value | Clicking All Domains sets active domain to default value |
+| 17 | **Domains** - Verify redirect path on data product delete | Redirect path on data product delete |
+| 18 | **Domains** - Verify duplicate domain creation | Duplicate domain creation |
+| 19 | **Domains** - Create domain custom property and verify value persistence | Create domain custom property and verify value persistence |
 | | ↳ *Create custom property for domain entity* | |
 | | ↳ *Navigate to domain and assign custom property value* | |
 | | ↳ *Reload and verify custom property value persists* | |
 | | ↳ *Cleanup custom property* | |
-| 18 | **Domains** - Domain announcement create, edit & delete | Domain announcement create, edit & delete |
-| 19 | **Domains** - Data Product announcement create, edit & delete | Data Product announcement create, edit & delete |
-| 20 | **Domains** - should handle domain after description is deleted | Tests that verify UI handles entities with deleted descriptions gracefully. The issue occurs when: 1. An entity is created with a description 2. The description is later deleted/cleared via API patch 3. The API returns the entity without a description field (due to @JsonInclude(NON_NULL)) 4. UI should handle this gracefully instead of crashing |
-| 21 | **Domains** - should handle data product after description is deleted | Handle data product after description is deleted |
+| 20 | **Domains** - Domain announcement create, edit & delete | Domain announcement create, edit & delete |
+| 21 | **Domains** - Data Product announcement create, edit & delete | Data Product announcement create, edit & delete |
+| 22 | **Domains** - should handle domain after description is deleted | Tests that verify UI handles entities with deleted descriptions gracefully. The issue occurs when: 1. An entity is created with a description 2. The description is later deleted/cleared via API patch 3. The API returns the entity without a description field (due to @JsonInclude(NON_NULL)) 4. UI should handle this gracefully instead of crashing |
+| 23 | **Domains** - should handle data product after description is deleted | Handle data product after description is deleted |
+
+### Domain Rename Comprehensive Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Rename Comprehensive Tests** - Rename domain with subdomains attached verifies subdomain accessibility | Rename domain with subdomains attached verifies subdomain accessibility |
+| 2 | **Domain Rename Comprehensive Tests** - Rename domain with deeply nested subdomains (3+ levels) verifies FQN propagation | Rename domain with deeply nested subdomains (3+ levels) verifies FQN propagation |
+| 3 | **Domain Rename Comprehensive Tests** - Rename domain with data products attached at domain and subdomain levels | Rename domain with data products attached at domain and subdomain levels |
+| 4 | **Domain Rename Comprehensive Tests** - Rename domain with tags and glossary terms preserves associations | Rename domain with tags and glossary terms preserves associations |
+| 5 | **Domain Rename Comprehensive Tests** - Rename domain with assets (tables, topics, dashboards) preserves associations | Rename domain with assets (tables, topics, dashboards) preserves associations |
+| 6 | **Domain Rename Comprehensive Tests** - Rename domain with owners and experts preserves assignments | Rename domain with owners and experts preserves assignments |
+| 7 | **Domain Rename Comprehensive Tests** - Subdomain rename does not affect parent domain and updates nested children | Subdomain rename does not affect parent domain and updates nested children |
+| 8 | **Domain Rename Comprehensive Tests** - Comprehensive domain rename with ALL relationships preserved | Comprehensive domain rename with ALL relationships preserved |
+| 9 | **Domain Rename Comprehensive Tests** - Multiple consecutive domain renames preserve all associations | Multiple consecutive domain renames preserve all associations |
+| 10 | **Domain Rename Comprehensive Tests** - Rename to existing domain name shows appropriate error | Rename to existing domain name shows appropriate error |
 
 ### Domains Rbac
 
@@ -550,6 +673,338 @@
 | # | Test Case | Description |
 |---|-----------|-------------|
 | 1 | **Domain Tree View Functionality** - should render the domain tree view with correct details | Render the domain tree view with correct details |
+| 2 | **Domain Tree View Functionality** - Verify Domain entity API calls do not include invalid domains field in glossary term assets | Domain entity API calls do not include invalid domains field in glossary term assets |
+| 3 | **Domain Tree View Functionality** - Verify Domain entity API calls do not include invalid domains field in tag assets | Domain entity API calls do not include invalid domains field in tag assets |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainUIInteractions.spec.ts</b> (20 tests, 20 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DomainUIInteractions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DomainUIInteractions.spec.ts)
+
+### Domain Owner Management
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Owner Management** - Add owner to domain via UI | Add owner to domain via UI |
+| 2 | **Domain Owner Management** - Remove owner from domain via UI | Remove owner from domain via UI |
+
+### Domain Expert Management
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Expert Management** - Add expert to domain via UI | Add expert to domain via UI |
+
+### Domain Style Editing
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Style Editing** - Edit domain style - change icon URL | Edit domain style - change icon URL |
+
+### Data Product UI Operations
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product UI Operations** - Rename data product via UI | Rename data product via UI |
+| 2 | **Data Product UI Operations** - Delete data product via UI | Delete data product via UI |
+| 3 | **Data Product UI Operations** - Add owner to data product via UI | Add owner to data product via UI |
+
+### Subdomain Management
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Subdomain Management** - Delete subdomain via UI | Delete subdomain via UI |
+| 2 | **Subdomain Management** - Rename subdomain via UI | Rename subdomain via UI |
+
+### Domain Form Validation
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Form Validation** - Domain name validation - special characters | Domain name validation - special characters |
+| 2 | **Domain Form Validation** - Domain name validation - max length | Domain name validation - max length |
+| 3 | **Domain Form Validation** - Domain description required validation | Domain description required validation |
+
+### Domain Assets Tab Operations
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Assets Tab Operations** - Search assets within domain | Search assets within domain |
+
+### Domain Global Dropdown
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Global Dropdown** - Select domain from global dropdown filters explore | Select domain from global dropdown filters explore |
+| 2 | **Domain Global Dropdown** - Clear domain selection returns to All Domains | Clear domain selection returns to All Domains |
+
+### Domain Breadcrumb Navigation
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Breadcrumb Navigation** - Navigate from subdomain to parent domain via breadcrumb | Navigate from subdomain to parent domain via breadcrumb |
+| 2 | **Domain Breadcrumb Navigation** - Navigate from data product to parent domain | Navigate from data product to parent domain |
+
+### Delete Domain with Dependencies
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Delete Domain with Dependencies** - Delete domain with subdomains shows warning | Delete domain with subdomains shows warning |
+| 2 | **Delete Domain with Dependencies** - Delete domain with assets removes domain from assets | Delete domain with assets removes domain from assets |
+
+### Copy FQN Functionality
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Copy FQN Functionality** - Copy domain FQN to clipboard | Copy domain FQN to clipboard |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainAdvanced.spec.ts</b> (19 tests, 19 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DomainAdvanced.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DomainAdvanced.spec.ts)
+
+### Domain Expert Permissions
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Expert Permissions** - Domain expert can edit domain description and tags | Domain expert can edit domain description and tags |
+| 2 | **Domain Expert Permissions** - Domain expert can manage data products | Domain expert can manage data products |
+
+### Move Assets Between Domains
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Move Assets Between Domains** - Move table from one domain to another via API | Move table from one domain to another via API |
+| 2 | **Move Assets Between Domains** - Move asset from domain to subdomain via API | Move asset from domain to subdomain via API |
+
+### Subdomain Permissions
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Subdomain Permissions** - User with domain access can view subdomains | User with domain access can view subdomains |
+| 2 | **Subdomain Permissions** - User can access subdomain details page | User can access subdomain details page |
+
+### Domain Version History
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Version History** - Domain version history shows changes | Domain version history shows changes |
+| 2 | **Domain Version History** - Data product version history shows changes | Data product version history shows changes |
+
+### Domain Description Editing
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Description Editing** - Admin can edit domain description | Admin can edit domain description |
+| 2 | **Domain Description Editing** - Admin can edit data product description | Admin can edit data product description |
+
+### Bulk Domain Asset Operations
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Bulk Domain Asset Operations** - Add multiple assets to domain at once | Add multiple assets to domain at once |
+| 2 | **Bulk Domain Asset Operations** - Remove multiple assets from domain at once | Remove multiple assets from domain at once |
+
+### Cross-Domain Access Denial
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Cross-Domain Access Denial** - User can access assets in their domain | User can access assets in their domain |
+| 2 | **Cross-Domain Access Denial** - User with domain policy is restricted by policy rules | User with domain policy is restricted by policy rules |
+
+### Domain Type Behavior
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Type Behavior** - Create domain with Source System type | Create domain with Source System type |
+| 2 | **Domain Type Behavior** - Create domain with Consumer-aligned type | Create domain with Consumer-aligned type |
+
+### Data Product Asset Management
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Asset Management** - Move assets between data products | Move assets between data products |
+
+### Domain Search and Filter
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Search and Filter** - Search for domain by name | Search for domain by name |
+| 2 | **Domain Search and Filter** - Filter assets by domain from explore page | Filter assets by domain from explore page |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataProductAndSubdomains.spec.ts</b> (17 tests, 17 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DataProductAndSubdomains.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DataProductAndSubdomains.spec.ts)
+
+### Data Product Comprehensive Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Comprehensive Tests** - Create data product via UI with description | Create data product via UI with description |
+| 2 | **Data Product Comprehensive Tests** - Edit data product description via UI | Edit data product description via UI |
+| 3 | **Data Product Comprehensive Tests** - Add expert to data product via UI | Add expert to data product via UI |
+| 4 | **Data Product Comprehensive Tests** - Add tags to data product via UI | Add tags to data product via UI |
+| 5 | **Data Product Comprehensive Tests** - Add assets to data product and verify count | Add assets to data product and verify count |
+| 6 | **Data Product Comprehensive Tests** - Data product linked to subdomain | Data product linked to subdomain |
+
+### Multiple Subdomains Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Multiple Subdomains Tests** - Create multiple sibling subdomains under a domain | Create multiple sibling subdomains under a domain |
+| 2 | **Multiple Subdomains Tests** - Create nested subdomain (subdomain of subdomain) | Create nested subdomain (subdomain of subdomain) |
+| 3 | **Multiple Subdomains Tests** - Navigate between sibling subdomains | Navigate between sibling subdomains |
+| 4 | **Multiple Subdomains Tests** - Assign assets to different subdomains | Assign assets to different subdomains |
+| 5 | **Multiple Subdomains Tests** - Data products under different subdomains | Data products under different subdomains |
+| 6 | **Multiple Subdomains Tests** - Subdomain assets count reflects in parent domain | Subdomain assets count reflects in parent domain |
+| 7 | **Multiple Subdomains Tests** - Delete subdomain with data products shows proper cleanup | Delete subdomain with data products shows proper cleanup |
+
+### Data Product Search and Filter
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Search and Filter** - Search data products by name | Search data products by name |
+| 2 | **Data Product Search and Filter** - Filter data products by domain in global selector | Filter data products by domain in global selector |
+
+### Data Product Name in Entity Name Cell
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Name in Entity Name Cell** - Entity name cell shows both display name and name | Entity name cell shows both display name and name |
+| 2 | **Data Product Name in Entity Name Cell** - Search data products by name | Search data products by name |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainFilterQueryFilter.spec.ts</b> (12 tests, 12 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DomainFilterQueryFilter.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DomainFilterQueryFilter.spec.ts)
+
+### Domain Filter - User Behavior Tests
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Filter - User Behavior Tests** - Assets from selected domain should be visible in explore page | Assets from selected domain should be visible in explore page |
+| 2 | **Domain Filter - User Behavior Tests** - Subdomain assets should be visible when parent domain is selected | Subdomain assets should be visible when parent domain is selected |
+| 3 | **Domain Filter - User Behavior Tests** - Domain filter should persist across page navigation | Domain filter should persist across page navigation |
+| 4 | **Domain Filter - User Behavior Tests** - Domain filter should work with different asset types | Domain filter should work with different asset types |
+| 5 | **Domain Filter - User Behavior Tests** - Domain page assets tab should show only domain assets | Domain page assets tab should show only domain assets |
+| 6 | **Domain Filter - User Behavior Tests** - 3-level domain hierarchy: SubSubDomain assets visible when SubDomain selected | 3-level domain hierarchy: SubSubDomain assets visible when SubDomain selected |
+| 7 | **Domain Filter - User Behavior Tests** - Search suggestions should be filtered by selected domain | Search suggestions should be filtered by selected domain |
+| 8 | **Domain Filter - User Behavior Tests** - Domain filter should use exact match and prefix with dot to prevent false positives | Domain filter should use exact match and prefix with dot to prevent false positives |
+| 9 | **Domain Filter - User Behavior Tests** - Quick filters should persist when domain filter is applied and cleared | Quick filters should persist when domain filter is applied and cleared |
+| 10 | **Domain Filter - User Behavior Tests** - Domain assets tab should NOT show assets from other domains | Domain assets tab should NOT show assets from other domains |
+| 11 | **Domain Filter - User Behavior Tests** - Domain Data Products tab should NOT show data products from other domains | Domain Data Products tab should NOT show data products from other domains |
+| 12 | **Domain Filter - User Behavior Tests** - Multi-nested domain hierarchy: filters should scope correctly at every level | Multi-nested domain hierarchy: filters should scope correctly at every level |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainDataProductsRightPanel.spec.ts</b> (9 tests, 9 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DomainDataProductsRightPanel.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DomainDataProductsRightPanel.spec.ts)
+
+### Domain Data Products Tab - Right Panel
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Data Products Tab - Right Panel** - Should open right panel when clicking data product card in domain | Open right panel when clicking data product card in domain |
+| 2 | **Domain Data Products Tab - Right Panel** - Should display data product name link in panel in domain context | Display data product name link in panel in domain context |
+| 3 | **Domain Data Products Tab - Right Panel** - Should display overview tab for data product | Display overview tab for data product |
+| 4 | **Domain Data Products Tab - Right Panel** - Should edit description for data product from domain context | Edit description for data product from domain context |
+| 5 | **Domain Data Products Tab - Right Panel** - Should display overview tab content for data product in domain context | Display overview tab content for data product in domain context |
+| 6 | **Domain Data Products Tab - Right Panel** - Should edit tags for data product from domain context | Edit tags for data product from domain context |
+| 7 | **Domain Data Products Tab - Right Panel** - Should assign tier for data product from domain context | Assign tier for data product from domain context |
+| 8 | **Domain Data Products Tab - Right Panel** - Should edit owners for data product from domain context | Edit owners for data product from domain context |
+| 9 | **Domain Data Products Tab - Right Panel** - Should not display glossary terms section in domain data products context | Not display glossary terms section in domain data products context |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainTierCertificationVoting.spec.ts</b> (8 tests, 8 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DomainTierCertificationVoting.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DomainTierCertificationVoting.spec.ts)
+
+### Domain & DataProduct - Tier, Certification, and Voting
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain & DataProduct - Tier, Certification, and Voting** - Domain - Tier assign, update, and remove | Domain - Tier assign, update, and remove |
+| 2 | **Domain & DataProduct - Tier, Certification, and Voting** - Domain - Certification assign, update, and remove | Domain - Certification assign, update, and remove |
+| 3 | **Domain & DataProduct - Tier, Certification, and Voting** - Domain - UpVote and DownVote | Domain - UpVote and DownVote |
+| 4 | **Domain & DataProduct - Tier, Certification, and Voting** - DataProduct - Tier assign, update, and remove | DataProduct - Tier assign, update, and remove |
+| 5 | **Domain & DataProduct - Tier, Certification, and Voting** - DataProduct - Certification assign, update, and remove | DataProduct - Certification assign, update, and remove |
+| 6 | **Domain & DataProduct - Tier, Certification, and Voting** - DataProduct - UpVote and DownVote | DataProduct - UpVote and DownVote |
+| 7 | **Domain & DataProduct - Tier, Certification, and Voting** - Edit buttons not visible on Domain | Edit buttons not visible on Domain |
+| 8 | **Domain & DataProduct - Tier, Certification, and Voting** - Edit buttons not visible on DataProduct | Edit buttons not visible on DataProduct |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataProducts.spec.ts</b> (8 tests, 43 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DataProducts.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DataProducts.spec.ts)
+
+### Data Products
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Products** - Data Product List Page - Initial Load | Data Product List Page - Initial Load |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Verify page header and controls* | |
+| | ↳ *Verify view toggle buttons* | |
+| 2 | **Data Products** - Create Data Product and Manage Assets | Create Data Product and Manage Assets |
+| | ↳ *Setup test assets* | |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Create new data product* | |
+| | ↳ *Open data product details* | |
+| | ↳ *Add assets to data product* | |
+| | ↳ *Verify asset count* | |
+| | ↳ *Remove assets from data product* | |
+| | ↳ *Delete data product* | |
+| | ↳ *Cleanup test assets* | |
+| 3 | **Data Products** - Search Data Products | Search Data Products |
+| | ↳ *Create test data products* | |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Search for specific data product* | |
+| | ↳ *Clear search* | |
+| | ↳ *Cleanup test data products* | |
+| 4 | **Data Products** - View Toggle - Table and Card Views | View Toggle - Table and Card Views |
+| | ↳ *Create test data product* | |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Verify table view is default* | |
+| | ↳ *Switch to card view* | |
+| | ↳ *Switch back to table view* | |
+| | ↳ *Cleanup test data product* | |
+| 5 | **Data Products** - Pagination | Pagination |
+| | ↳ *Create 30 test data products* | |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Verify pagination controls are visible* | |
+| | ↳ *Navigate to page 2* | |
+| | ↳ *Navigate back to page 1* | |
+| | ↳ *Cleanup test data products* | |
+| 6 | **Data Products** - Empty State - No Data Products | Empty State - No Data Products |
+| | ↳ *Mock API to return empty data products list* | |
+| | ↳ *Navigate to Data Products page* | |
+| | ↳ *Verify empty state is shown* | |
+| | ↳ *Click add button from empty state* | |
+| 7 | **Data Products** - Data Product - Follow/Unfollow | Data Product - Follow/Unfollow |
+| | ↳ *Create test data product* | |
+| | ↳ *Navigate to data product details* | |
+| | ↳ *Follow data product* | |
+| | ↳ *Verify follow button is changed to unfollow* | |
+| | ↳ *Cleanup test data product* | |
+| 8 | **Data Products** - Create data product with tags using MUITagSuggestion | Create data product with tags using MUITagSuggestion |
+| | ↳ *Navigate to add data product* | |
+| | ↳ *Fill data product form* | |
+| | ↳ *Search and select tag via MUITagSuggestion* | |
+| | ↳ *Save and verify tag is applied* | |
+| | ↳ *Cleanup* | |
 
 </details>
 
@@ -572,6 +1027,82 @@
 </details>
 
 <details open>
+<summary>📄 <b>DataProductRename.spec.ts</b> (4 tests, 4 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataProductRename.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataProductRename.spec.ts)
+
+### Data Product Rename
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Rename** - should rename data product and verify assets are still associated | Rename data product and verify assets are still associated |
+| 2 | **Data Product Rename** - should update only display name without changing the actual name | Update only display name without changing the actual name |
+| 3 | **Data Product Rename** - should handle multiple consecutive renames and preserve assets | Handle multiple consecutive renames and preserve assets |
+| 4 | **Data Product Rename** - should show error when renaming to a name that already exists | Show error when renaming to a name that already exists |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataProductRenameConsolidation.spec.ts</b> (4 tests, 4 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataProductRenameConsolidation.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataProductRenameConsolidation.spec.ts)
+
+### Data Product Rename + Field Update Consolidation
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Rename + Field Update Consolidation** - Rename then update description - assets should be preserved | Rename then update description - assets should be preserved |
+| 2 | **Data Product Rename + Field Update Consolidation** - Rename then add tags - assets should be preserved | Rename then add tags - assets should be preserved |
+| 3 | **Data Product Rename + Field Update Consolidation** - Rename then change owner - assets should be preserved | Rename then change owner - assets should be preserved |
+| 4 | **Data Product Rename + Field Update Consolidation** - Multiple rename + update cycles - assets should be preserved | Multiple rename + update cycles - assets should be preserved |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataProductPermissions.spec.ts</b> (3 tests, 3 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/Permissions/DataProductPermissions.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Permissions/DataProductPermissions.spec.ts)
+
+### Data Product Permissions
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Permissions** - Data Product allow operations | Data Product allow operations |
+| 2 | **Data Product Permissions** - Data Product deny operations | Data Product deny operations |
+| 3 | **Data Product Permissions** - Data Product expert can edit data product details | Data Product expert can edit data product details |
+
+</details>
+
+<details open>
+<summary>📄 <b>SampleDataDomainDataProduct.spec.ts</b> (3 tests, 3 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/SampleDataDomainDataProduct.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/SampleDataDomainDataProduct.spec.ts)
+
+### Sample Data Domain and Data Product Validation
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Sample Data Domain and Data Product Validation** - Verify TestDomain exists from sample data ingestion | TestDomain exists from sample data ingestion |
+| 2 | **Sample Data Domain and Data Product Validation** - Verify TestDataProduct exists under TestDomain | TestDataProduct exists under TestDomain |
+| 3 | **Sample Data Domain and Data Product Validation** - Verify TestDataProduct shows correct details and domain association | TestDataProduct shows correct details and domain association |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataProductDomainMigration.spec.ts</b> (2 tests, 2 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/DataProductDomainMigration.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataProductDomainMigration.spec.ts)
+
+### Data Product Domain Migration
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Product Domain Migration** - Changing data product domain via API migrates assets to new domain | Changing data product domain via API migrates assets to new domain |
+| 2 | **Data Product Domain Migration** - Data product with no assets can change domain without confirmation | Data product with no assets can change domain without confirmation |
+
+</details>
+
+<details open>
 <summary>📄 <b>DataProductPersonaCustomization.spec.ts</b> (2 tests, 7 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/DataProductPersonaCustomization.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/DataProductPersonaCustomization.spec.ts)
@@ -589,6 +1120,20 @@
 | | ↳ *pre-requisite* | |
 | | ↳ *apply tab label customization for Data Product* | |
 | | ↳ *validate applied label change for Data Product Documentation tab* | |
+
+</details>
+
+<details open>
+<summary>📄 <b>DomainWidgetFilter.spec.ts</b> (2 tests, 2 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/LandingPageWidgets/DomainWidgetFilter.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/LandingPageWidgets/DomainWidgetFilter.spec.ts)
+
+### Domain Widget Filter
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Domain Widget Filter** - Setup Domains widget on landing page | Setup Domains widget on landing page |
+| 2 | **Domain Widget Filter** - Domains widget should show only selected domain when domain filter is active | Domains widget should show only selected domain when domain filter is active |
 
 </details>
 
@@ -631,7 +1176,7 @@
 ## Glossary
 
 <details open>
-<summary>📄 <b>Glossary.spec.ts</b> (44 tests, 68 scenarios)</summary>
+<summary>📄 <b>Glossary.spec.ts</b> (45 tests, 70 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/Glossary.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/Glossary.spec.ts)
 
@@ -696,33 +1241,36 @@
 | 28 | **Glossary tests** - Check for duplicate Glossary Term | For duplicate Glossary Term |
 | | ↳ *Create Glossary Term One* | |
 | | ↳ *Create Glossary Term Two* | |
-| 29 | **Glossary tests** - Verify Glossary Deny Permission | Glossary Deny Permission |
-| 30 | **Glossary tests** - Verify Glossary Term Deny Permission | Glossary Term Deny Permission |
-| 31 | **Glossary tests** - Term should stay approved when changes made by reviewer | Term should stay approved when changes made by reviewer |
+| 29 | **Glossary tests** - Check for duplicate Glossary Term with Glossary having dot in name | For duplicate Glossary Term with Glossary having dot in name |
+| | ↳ *Create Glossary Term One* | |
+| | ↳ *Create Glossary Term Two* | |
+| 30 | **Glossary tests** - Verify Glossary Deny Permission | Glossary Deny Permission |
+| 31 | **Glossary tests** - Verify Glossary Term Deny Permission | Glossary Term Deny Permission |
+| 32 | **Glossary tests** - Term should stay approved when changes made by reviewer | Term should stay approved when changes made by reviewer |
 | | ↳ *Navigate to glossary and verify workflow widget* | |
 | | ↳ *Perform Changes by reviewer* | |
-| 32 | **Glossary tests** - Glossary creation with domain selection | Glossary creation with domain selection |
+| 33 | **Glossary tests** - Glossary creation with domain selection | Glossary creation with domain selection |
 | | ↳ *Create domain* | |
 | | ↳ *Navigate to Glossary page* | |
 | | ↳ *Open Add Glossary form* | |
 | | ↳ *Save glossary and verify creation with domain* | |
-| 33 | **Glossary tests** - Create glossary, change language to Dutch, and delete glossary | Create glossary, change language to Dutch, and delete glossary |
+| 34 | **Glossary tests** - Create glossary, change language to Dutch, and delete glossary | Create glossary, change language to Dutch, and delete glossary |
 | | ↳ *Create Glossary via API* | |
 | | ↳ *Navigate to Glossary page* | |
 | | ↳ *Change application language to German* | |
 | | ↳ *Open delete modal and verify delete confirmation* | |
 | | ↳ *Change language back to English* | |
-| 34 | **Glossary tests** - should handle glossary after description is deleted | Tests that verify UI handles entities with deleted descriptions gracefully. The issue occurs when: 1. An entity is created with a description 2. The description is later deleted/cleared via API patch 3. The API returns the entity without a description field (due to @JsonInclude(NON_NULL)) 4. UI should handle this gracefully instead of crashing |
-| 35 | **Glossary tests** - should handle glossary term after description is deleted | Handle glossary term after description is deleted |
-| 36 | **Glossary tests** - Create glossary with all optional fields (tags, owners, reviewers, domain) | Create glossary with all optional fields (tags, owners, reviewers, domain) |
-| 37 | **Glossary tests** - Create glossary term via row action (+) button | Create glossary term via row action (+) button |
-| 38 | **Glossary tests** - Create term with synonyms during creation | Create term with synonyms during creation |
-| 39 | **Glossary tests** - Create term with references during creation | Create term with references during creation |
-| 40 | **Glossary tests** - Create term with related terms, tags and owners during creation | Create term with related terms, tags and owners during creation |
-| 41 | **Glossary tests** - Update glossary term display name via edit modal | Update glossary term display name via edit modal |
-| 42 | **Glossary tests** - Update glossary display name via rename modal | Update glossary display name via rename modal |
-| 43 | **Glossary tests** - Cancel glossary delete operation | Cancel glossary delete operation |
-| 44 | **Glossary tests** - Cancel glossary term delete operation | Cancel glossary term delete operation |
+| 35 | **Glossary tests** - should handle glossary after description is deleted | Tests that verify UI handles entities with deleted descriptions gracefully. The issue occurs when: 1. An entity is created with a description 2. The description is later deleted/cleared via API patch 3. The API returns the entity without a description field (due to @JsonInclude(NON_NULL)) 4. UI should handle this gracefully instead of crashing |
+| 36 | **Glossary tests** - should handle glossary term after description is deleted | Handle glossary term after description is deleted |
+| 37 | **Glossary tests** - Create glossary with all optional fields (tags, owners, reviewers, domain) | Create glossary with all optional fields (tags, owners, reviewers, domain) |
+| 38 | **Glossary tests** - Create glossary term via row action (+) button | Create glossary term via row action (+) button |
+| 39 | **Glossary tests** - Create term with synonyms during creation | Create term with synonyms during creation |
+| 40 | **Glossary tests** - Create term with references during creation | Create term with references during creation |
+| 41 | **Glossary tests** - Create term with related terms, tags and owners during creation | Create term with related terms, tags and owners during creation |
+| 42 | **Glossary tests** - Update glossary term display name via edit modal | Update glossary term display name via edit modal |
+| 43 | **Glossary tests** - Update glossary display name via rename modal | Update glossary display name via rename modal |
+| 44 | **Glossary tests** - Cancel glossary delete operation | Cancel glossary delete operation |
+| 45 | **Glossary tests** - Cancel glossary term delete operation | Cancel glossary term delete operation |
 
 </details>
 
@@ -766,7 +1314,7 @@
 </details>
 
 <details open>
-<summary>📄 <b>GlossaryP3Tests.spec.ts</b> (21 tests, 21 scenarios)</summary>
+<summary>📄 <b>GlossaryP3Tests.spec.ts</b> (23 tests, 23 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryP3Tests.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryP3Tests.spec.ts)
 
@@ -795,6 +1343,70 @@
 | 19 | **Glossary P3 Tests** - should handle multiple rapid API calls | Handle multiple rapid API calls |
 | 20 | **Glossary P3 Tests** - should show error state when navigating to non-existent glossary | Show error state when navigating to non-existent glossary |
 | 21 | **Glossary P3 Tests** - should show error state when navigating to non-existent term | Show error state when navigating to non-existent term |
+| 22 | **Glossary P3 Tests** - should validate reference URL requires http/https prefix when creating term | Validate reference URL requires http/https prefix when creating term |
+| 23 | **Glossary P3 Tests** - should validate reference URL requires http/https prefix when editing term | Validate reference URL requires http/https prefix when editing term |
+
+</details>
+
+<details open>
+<summary>📄 <b>GlossaryStatusFilterLargeDataset.spec.ts</b> (19 tests, 19 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryStatusFilterLargeDataset.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryStatusFilterLargeDataset.spec.ts)
+
+### Glossary Status Filter - Large Dataset
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Glossary Status Filter - Large Dataset** - should display only Draft terms when filtered | Display only Draft terms when filtered |
+| 2 | **Glossary Status Filter - Large Dataset** - should display only Approved terms when filtered | Display only Approved terms when filtered |
+| 3 | **Glossary Status Filter - Large Dataset** - should display only In Review terms when filtered | Display only In Review terms when filtered |
+| 4 | **Glossary Status Filter - Large Dataset** - should display only Deprecated terms when filtered | Display only Deprecated terms when filtered |
+| 5 | **Glossary Status Filter - Large Dataset** - should display only Rejected terms when filtered | Display only Rejected terms when filtered |
+| 6 | **Glossary Status Filter - Large Dataset** - should display terms matching multiple selected statuses | Display terms matching multiple selected statuses |
+| 7 | **Glossary Status Filter - Large Dataset** - should display all terms when All is selected | Display all terms when All is selected |
+| 8 | **Glossary Status Filter - Large Dataset** - should maintain filter state across pagination | Maintain filter state across pagination |
+| 9 | **Glossary Status Filter - Large Dataset** - should return matching terms for search query | Return matching terms for search query |
+| 10 | **Glossary Status Filter - Large Dataset** - should show no results for non-matching query | Show no results for non-matching query |
+| 11 | **Glossary Status Filter - Large Dataset** - should restore all terms when search is cleared | Restore all terms when search is cleared |
+| 12 | **Glossary Status Filter - Large Dataset** - should paginate through search results | Paginate through search results |
+| 13 | **Glossary Status Filter - Large Dataset** - should filter search results by selected status | Filter search results by selected status |
+| 14 | **Glossary Status Filter - Large Dataset** - should paginate combined search and status results | Paginate combined search and status results |
+| 15 | **Glossary Status Filter - Large Dataset** - should maintain status filter when search is cleared | Maintain status filter when search is cleared |
+| 16 | **Glossary Status Filter - Large Dataset** - should maintain search when status filter is changed | Maintain search when status filter is changed |
+| 17 | **Glossary Status Filter - Large Dataset** - should revert changes when Cancel is clicked | Revert changes when Cancel is clicked |
+| 18 | **Glossary Status Filter - Large Dataset** - should reset pagination when filter changes | Reset pagination when filter changes |
+| 19 | **Glossary Status Filter - Large Dataset** - should apply status filter within acceptable time | Apply status filter within acceptable time |
+
+</details>
+
+<details open>
+<summary>📄 <b>GlossaryStatusFilterNestedTerms.spec.ts</b> (19 tests, 19 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryStatusFilterNestedTerms.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryStatusFilterNestedTerms.spec.ts)
+
+### Glossary Status Filter - Nested Terms
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Glossary Status Filter - Nested Terms** - filter by parent status shows parent and allows expansion to see children | Filter by parent status shows parent and allows expansion to see children |
+| 2 | **Glossary Status Filter - Nested Terms** - filter by child status shows child as flat result even if parent does not match | Filter by child status shows child as flat result even if parent does not match |
+| 3 | **Glossary Status Filter - Nested Terms** - filter shows parent when status matches and all children on expand | Filter shows parent when status matches and all children on expand |
+| 4 | **Glossary Status Filter - Nested Terms** - multiple status filter shows terms matching any selected status | Multiple status filter shows terms matching any selected status |
+| 5 | **Glossary Status Filter - Nested Terms** - filter by grandparent status shows only approved terms | Filter by grandparent status shows only approved terms |
+| 6 | **Glossary Status Filter - Nested Terms** - expanding grandparent shows parent with any status | Expanding grandparent shows parent with any status |
+| 7 | **Glossary Status Filter - Nested Terms** - filter by middle level status shows nested term as flat result | Filter by middle level status shows nested term as flat result |
+| 8 | **Glossary Status Filter - Nested Terms** - filter by leaf level status shows nested term as flat result | Filter by leaf level status shows nested term as flat result |
+| 9 | **Glossary Status Filter - Nested Terms** - search for child term name + apply non-matching status filter shows no results | Search for child term name + apply non-matching status filter shows no results |
+| 10 | **Glossary Status Filter - Nested Terms** - search for child term name + matching status shows child | Search for child term name + matching status shows child |
+| 11 | **Glossary Status Filter - Nested Terms** - search for parent term name with child status filter shows no results | Search for parent term name with child status filter shows no results |
+| 12 | **Glossary Status Filter - Nested Terms** - clearing search maintains status filter | Clearing search maintains status filter |
+| 13 | **Glossary Status Filter - Nested Terms** - clearing status filter maintains search results | Clearing status filter maintains search results |
+| 14 | **Glossary Status Filter - Nested Terms** - apply filter, expand parent, verify children shown | Apply filter, expand parent, verify children shown |
+| 15 | **Glossary Status Filter - Nested Terms** - change filter while expanded updates visible root terms | Change filter while expanded updates visible root terms |
+| 16 | **Glossary Status Filter - Nested Terms** - expand all button loads all terms | Expand all button loads all terms |
+| 17 | **Glossary Status Filter - Nested Terms** - deeply nested term (5 levels) - filter shows matching terms as flat results | Deeply nested term (5 levels) - filter shows matching terms as flat results |
+| 18 | **Glossary Status Filter - Nested Terms** - all children have same status different from parent | All children have same status different from parent |
+| 19 | **Glossary Status Filter - Nested Terms** - only leaf nodes match filter - parent chain does not | Only leaf nodes match filter - parent chain does not |
 
 </details>
 
@@ -874,6 +1486,28 @@
 | 3 | owner should not see approve/reject buttons if not a reviewer | Owner should not see approve/reject buttons if not a reviewer |
 | 4 | should change status when non-reviewer edits approved term | Change status when non-reviewer edits approved term |
 | 5 | should delete parent term and cascade delete children | Delete parent term and cascade delete children |
+
+</details>
+
+<details open>
+<summary>📄 <b>GlossaryTermRightPanel.spec.ts</b> (10 tests, 10 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/GlossaryTermRightPanel.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/GlossaryTermRightPanel.spec.ts)
+
+### Glossary Term Assets Tab - Right Panel
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Glossary Term Assets Tab - Right Panel** - Should open right panel when clicking asset in glossary term assets tab | Open right panel when clicking asset in glossary term assets tab |
+| 2 | **Glossary Term Assets Tab - Right Panel** - Should display correct tabs for table entity in glossary term assets context | Display correct tabs for table entity in glossary term assets context |
+| 3 | **Glossary Term Assets Tab - Right Panel** - Should edit description from glossary term assets context | Edit description from glossary term assets context |
+| 4 | **Glossary Term Assets Tab - Right Panel** - Should display entity name link in panel header in glossary term assets context | Display entity name link in panel header in glossary term assets context |
+| 5 | **Glossary Term Assets Tab - Right Panel** - Should display overview tab content in glossary term assets context | Display overview tab content in glossary term assets context |
+| 6 | **Glossary Term Assets Tab - Right Panel** - Should edit tags from glossary term assets context | Edit tags from glossary term assets context |
+| 7 | **Glossary Term Assets Tab - Right Panel** - Should assign tier from glossary term assets context | Assign tier from glossary term assets context |
+| 8 | **Glossary Term Assets Tab - Right Panel** - Should edit owners from glossary term assets context | Edit owners from glossary term assets context |
+| 9 | **Glossary Term Assets Tab - Right Panel** - Should edit domain from glossary term assets context | Edit domain from glossary term assets context |
+| 10 | **Glossary Term Assets Tab - Right Panel** - Should edit glossary terms from glossary term assets context | Edit glossary terms from glossary term assets context |
 
 </details>
 
@@ -958,7 +1592,7 @@
 | | ↳ *create custom properties for extension edit* | |
 | | ↳ *should export data glossary term details* | |
 | | ↳ *should import and edit with one additional glossaryTerm* | |
-| | ↳ *should have term in review state* | |
+| | ↳ *should verify bulk import details in version history* | |
 | | ↳ *delete custom properties* | |
 | 2 | **Glossary Bulk Import Export** - Check for Circular Reference in Glossary Import | For Circular Reference in Glossary Import |
 | | ↳ *Create glossary for circular reference test* | |
@@ -1145,6 +1779,31 @@
 </details>
 
 <details open>
+<summary>📄 <b>GlossaryExpandAllWithStatusFilter.spec.ts</b> (4 tests, 9 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryExpandAllWithStatusFilter.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryExpandAllWithStatusFilter.spec.ts)
+
+### Glossary Expand All with Status Filter
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Glossary Expand All with Status Filter** - Expand All with Draft filter shows all terms including children of non-matching parents | Expand All with Draft filter shows all terms including children of non-matching parents |
+| | ↳ *Apply Draft status filter* | |
+| | ↳ *Expand all and verify all terms are visible* | |
+| 2 | **Glossary Expand All with Status Filter** - Expand All with Approved filter shows all terms | Expand All with Approved filter shows all terms |
+| | ↳ *Apply Approved status filter* | |
+| | ↳ *Expand all and verify all terms are visible* | |
+| 3 | **Glossary Expand All with Status Filter** - Expand All with default filter shows all terms | Expand All with default filter shows all terms |
+| | ↳ *Expand all and verify all terms are visible* | |
+| 4 | **Glossary Expand All with Status Filter** - Expand All shows all children regardless of status filter | Expand All shows all children regardless of status filter |
+| | ↳ *Apply Draft filter and expand all* | |
+| | ↳ *Verify MixedStatusChild (Draft) appears under ApprovedParent* | |
+| | ↳ *Collapse all and verify filter re-applies* | |
+| | ↳ *Switch to Approved filter and expand again* | |
+
+</details>
+
+<details open>
 <summary>📄 <b>GlossaryVoting.spec.ts</b> (3 tests, 3 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryVoting.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Features/Glossary/GlossaryVoting.spec.ts)
@@ -1167,7 +1826,7 @@
 ## Tags
 
 <details open>
-<summary>📄 <b>Tag.spec.ts</b> (21 tests, 25 scenarios)</summary>
+<summary>📄 <b>Tag.spec.ts</b> (21 tests, 28 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/Tag.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/Tag.spec.ts)
 
@@ -1183,6 +1842,7 @@
 | 6 | **Tag Page with Admin Roles** - Delete a Tag | Delete a Tag |
 | 7 | **Tag Page with Admin Roles** - Add and Remove Assets | Add and Remove Assets |
 | | ↳ *Add Asset * | |
+| | ↳ *Verify EntityType Filter* | |
 | | ↳ *Delete Asset* | |
 | 8 | **Tag Page with Admin Roles** - Create tag with domain | Create tag with domain |
 | 9 | **Tag Page with Admin Roles** - Verify Owner Add Delete | Owner Add Delete |
@@ -1198,6 +1858,7 @@
 | 3 | **Tag Page with Data Consumer Roles** - Edit Tag Description for Data Consumer | Edit Tag Description for Data Consumer |
 | 4 | **Tag Page with Data Consumer Roles** - Add and Remove Assets for Data Consumer | Add and Remove Assets for Data Consumer |
 | | ↳ *Add Asset * | |
+| | ↳ *Verify EntityType Filter* | |
 | | ↳ *Delete Asset* | |
 | 5 | **Tag Page with Data Consumer Roles** - Tag toggle should be disabled for user without EditAll permission | Tag toggle should be disabled for user without EditAll permission |
 
@@ -1210,6 +1871,7 @@
 | 3 | **Tag Page with Data Steward Roles** - Edit Tag Description for Data Steward | Edit Tag Description for Data Steward |
 | 4 | **Tag Page with Data Steward Roles** - Add and Remove Assets for Data Steward | Add and Remove Assets for Data Steward |
 | | ↳ *Add Asset * | |
+| | ↳ *Verify EntityType Filter* | |
 | | ↳ *Delete Asset* | |
 
 ### Tag Page with Limited EditTag Permission
@@ -1219,6 +1881,29 @@
 | 1 | **Tag Page with Limited EditTag Permission** - Add and Remove Assets and Check Restricted Entity | Add and Remove Assets and Check Restricted Entity |
 | | ↳ *Add Asset * | |
 | | ↳ *Delete Asset* | |
+
+</details>
+
+<details open>
+<summary>📄 <b>TagPageRightPanel.spec.ts</b> (11 tests, 11 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/TagPageRightPanel.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/TagPageRightPanel.spec.ts)
+
+### Tag Page Assets - Right Panel
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Tag Page Assets - Right Panel** - Should open right panel when clicking asset in tag assets page | Open right panel when clicking asset in tag assets page |
+| 2 | **Tag Page Assets - Right Panel** - Should display correct tabs for table entity in tag assets page context | Display correct tabs for table entity in tag assets page context |
+| 3 | **Tag Page Assets - Right Panel** - Should edit description from tag assets page context | Edit description from tag assets page context |
+| 4 | **Tag Page Assets - Right Panel** - Should display entity name link in panel header in tag assets page context | Display entity name link in panel header in tag assets page context |
+| 5 | **Tag Page Assets - Right Panel** - Should display overview tab content in tag assets page context | Display overview tab content in tag assets page context |
+| 6 | **Tag Page Assets - Right Panel** - Panel should not be visible before any asset is selected | Panel should not be visible before any asset is selected |
+| 7 | **Tag Page Assets - Right Panel** - Should edit tags from tag assets page context | Edit tags from tag assets page context |
+| 8 | **Tag Page Assets - Right Panel** - Should assign tier from tag assets page context | Assign tier from tag assets page context |
+| 9 | **Tag Page Assets - Right Panel** - Should edit owners from tag assets page context | Edit owners from tag assets page context |
+| 10 | **Tag Page Assets - Right Panel** - Should edit domain from tag assets page context | Edit domain from tag assets page context |
+| 11 | **Tag Page Assets - Right Panel** - Should edit glossary terms from tag assets page context | Edit glossary terms from tag assets page context |
 
 </details>
 
@@ -1328,7 +2013,7 @@
 ## Data Contracts
 
 <details open>
-<summary>📄 <b>DataContracts.spec.ts</b> (46 tests, 309 scenarios)</summary>
+<summary>📄 <b>DataContracts.spec.ts</b> (48 tests, 423 scenarios)</summary>
 
 > Source: [`src/main/resources/ui/playwright/e2e/Pages/DataContracts.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DataContracts.spec.ts)
 
@@ -1350,8 +2035,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 2 | **Data Contracts** - Create Data Contract and validate for Topic | Create Data Contract and validate for Topic |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1366,8 +2057,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 3 | **Data Contracts** - Create Data Contract and validate for Dashboard | Create Data Contract and validate for Dashboard |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1382,8 +2079,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 4 | **Data Contracts** - Create Data Contract and validate for DashboardDataModel | Create Data Contract and validate for DashboardDataModel |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1398,8 +2101,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 5 | **Data Contracts** - Create Data Contract and validate for Pipeline | Create Data Contract and validate for Pipeline |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1414,8 +2123,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 6 | **Data Contracts** - Create Data Contract and validate for MlModel | Create Data Contract and validate for MlModel |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1430,8 +2145,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 7 | **Data Contracts** - Create Data Contract and validate for Container | Create Data Contract and validate for Container |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1446,8 +2167,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 8 | **Data Contracts** - Create Data Contract and validate for SearchIndex | Create Data Contract and validate for SearchIndex |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1462,8 +2189,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 9 | **Data Contracts** - Create Data Contract and validate for Store Procedure | Create Data Contract and validate for Store Procedure |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1478,8 +2211,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 10 | **Data Contracts** - Create Data Contract and validate for ApiEndpoint | Create Data Contract and validate for ApiEndpoint |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1494,8 +2233,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 11 | **Data Contracts** - Create Data Contract and validate for Api Collection | Create Data Contract and validate for Api Collection |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1510,8 +2255,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 12 | **Data Contracts** - Create Data Contract and validate for Chart | Create Data Contract and validate for Chart |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1526,8 +2277,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 13 | **Data Contracts** - Create Data Contract and validate for Directory | Create Data Contract and validate for Directory |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1542,8 +2299,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 14 | **Data Contracts** - Create Data Contract and validate for File | Create Data Contract and validate for File |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1558,8 +2321,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 15 | **Data Contracts** - Create Data Contract and validate for Spreadsheet | Create Data Contract and validate for Spreadsheet |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1574,8 +2343,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 16 | **Data Contracts** - Create Data Contract and validate for Worksheet | Create Data Contract and validate for Worksheet |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1590,8 +2365,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 17 | **Data Contracts** - Create Data Contract and validate for Database | Create Data Contract and validate for Database |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1606,8 +2387,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 18 | **Data Contracts** - Create Data Contract and validate for Database Schema | Create Data Contract and validate for Database Schema |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1622,8 +2409,14 @@
 | | ↳ *Edit quality expectations from the data contract and validate* | |
 | | ↳ *Verify YAML view* | |
 | | ↳ *Export YAML* | |
+| | ↳ *Export ODCS YAML* | |
 | | ↳ *Edit and Validate Contract data* | |
 | | ↳ *Delete contract* | |
+| | ↳ *Import contract from ODCS YAML* | |
+| | ↳ *Delete imported contract* | |
+| | ↳ *Import contract from OM YAML* | |
+| | ↳ *Export OM YAML* | |
+| | ↳ *Delete OM imported contract* | |
 | 19 | **Data Contracts** - Pagination in Schema Tab with Selection Persistent | Pagination in Schema Tab with Selection Persistent |
 | | ↳ *Redirect to Home Page and visit entity* | |
 | | ↳ *Open contract section and start adding contract* | |
@@ -1647,6 +2440,14 @@
 | | ↳ *Update Security and SLA Details* | |
 | | ↳ *Validate the updated values Security and SLA Details* | |
 | | ↳ *Validate after removing security policies* | |
+| 29 | **Data Contracts** - ODCS Import Modal with Merge Mode should preserve existing contract ID | ODCS Import Modal with Merge Mode should preserve existing contract ID |
+| | ↳ *Create initial contract via ODCS import* | |
+| | ↳ *Import again via modal with merge mode (default)* | |
+| | ↳ *Cleanup: Delete contract* | |
+| 30 | **Data Contracts** - ODCS Import Modal with Replace Mode should overwrite all fields | ODCS Import Modal with Replace Mode should overwrite all fields |
+| | ↳ *Create initial contract with SLA via ODCS import* | |
+| | ↳ *Import again via modal with replace mode* | |
+| | ↳ *Cleanup: Delete contract* | |
 
 ### Data Contracts With Persona Table
 
@@ -1957,6 +2758,82 @@
 | | ↳ *Open contract section and start adding contract* | |
 | | ↳ *UpdatedOn with GreaterThanEqual condition should passed* | |
 | | ↳ *UpdatedOn with GreaterThanEqual condition should failed* | |
+
+</details>
+
+<details open>
+<summary>📄 <b>DataContractInheritance.spec.ts</b> (8 tests, 56 scenarios)</summary>
+
+> Source: [`src/main/resources/ui/playwright/e2e/Pages/DataContractInheritance.spec.ts`](https://github.com/open-metadata/OpenMetadata/blob/main/openmetadata-ui/src/main/resources/ui/playwright/e2e/Pages/DataContractInheritance.spec.ts)
+
+### Data Contract Inheritance
+
+| # | Test Case | Description |
+|---|-----------|-------------|
+| 1 | **Data Contract Inheritance** - Full Contract Inheritance - Asset inherits full contract from Data Product | Full Contract Inheritance - Asset inherits full contract from Data Product |
+| | ↳ *Navigate to Data Product and add contract* | |
+| | ↳ *Fill Data Product contract details* | |
+| | ↳ *Fill Terms of Service* | |
+| | ↳ *Fill Semantics* | |
+| | ↳ *Fill SLA* | |
+| | ↳ *Save contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Navigate to asset and verify inherited contract* | |
+| 2 | **Data Contract Inheritance** - Partial Contract Inheritance - Asset contract merges with Data Product contract | Partial Contract Inheritance - Asset contract merges with Data Product contract |
+| | ↳ *Navigate to asset and add contract with semantics* | |
+| | ↳ *Fill asset contract details* | |
+| | ↳ *Fill asset semantics* | |
+| | ↳ *Save asset contract* | |
+| | ↳ *Navigate to second Data Product and add contract with different semantics and SLA* | |
+| | ↳ *Fill Data Product contract details* | |
+| | ↳ *Fill Data Product Terms of Service* | |
+| | ↳ *Fill Data Product semantics (different from asset)* | |
+| | ↳ *Fill Data Product SLA* | |
+| | ↳ *Save Data Product contract* | |
+| | ↳ *Add asset with contract to Data Product* | |
+| | ↳ *Navigate to asset and verify merged contract* | |
+| 3 | **Data Contract Inheritance** - Edit Asset Contract - Add SLA when inheriting SLA from Data Product (PATCH should use /add not /replace) | Edit Asset Contract - Add SLA when inheriting SLA from Data Product (PATCH should use /add not /replace) |
+| | ↳ *Navigate to Data Product and add contract with SLA* | |
+| | ↳ *Fill Data Product contract with SLA* | |
+| | ↳ *Fill Data Product SLA* | |
+| | ↳ *Save Data Product contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Navigate to asset and add contract WITHOUT SLA* | |
+| | ↳ *Fill asset contract details (without SLA initially)* | |
+| | ↳ *Save asset contract without SLA - should be POST (create new)* | |
+| | ↳ *Edit contract again to ADD its own SLA* | |
+| | ↳ *Fill asset own SLA (this tests PATCH uses /add not /replace)* | |
+| | ↳ *Save contract with own SLA - PATCH should succeed* | |
+| | ↳ *Verify asset now has its own SLA (no inherited icon)* | |
+| 4 | **Data Contract Inheritance** - Edit Inherited Contract - Creates new asset contract instead of modifying parent | Edit Inherited Contract - Creates new asset contract instead of modifying parent |
+| | ↳ *Create Data Product with contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Navigate to asset and verify inherited contract* | |
+| | ↳ *Click Edit on inherited contract - should open ADD form, not EDIT* | |
+| | ↳ *Fill new asset contract details* | |
+| | ↳ *Save new asset contract - should create, not update* | |
+| | ↳ *Verify asset now has its own contract (non-inherited)* | |
+| | ↳ *Verify Data Product contract was NOT modified* | |
+| 5 | **Data Contract Inheritance** - Delete Button Disabled - Fully inherited contracts cannot be deleted | Delete Button Disabled - Fully inherited contracts cannot be deleted |
+| | ↳ *Create Data Product with contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Navigate to asset and verify delete is disabled for inherited contract* | |
+| 6 | **Data Contract Inheritance** - Run Validation - Inherited contract validation uses entity-based validation | Run Validation - Inherited contract validation uses entity-based validation |
+| | ↳ *Create Data Product with contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Navigate to asset and run validation on inherited contract* | |
+| 7 | **Data Contract Inheritance** - Remove Asset - Inherited contract no longer shown when asset is removed from Data Product | Remove Asset - Inherited contract no longer shown when asset is removed from Data Product |
+| | ↳ *Create Data Product with contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Verify asset shows inherited contract* | |
+| | ↳ *Remove asset from Data Product* | |
+| | ↳ *Verify asset no longer shows inherited contract* | |
+| 8 | **Data Contract Inheritance** - Delete Asset Contract - Falls back to showing inherited contract from Data Product | Delete Asset Contract - Falls back to showing inherited contract from Data Product |
+| | ↳ *Create Data Product with contract* | |
+| | ↳ *Add asset to Data Product* | |
+| | ↳ *Create asset own contract* | |
+| | ↳ *Delete asset own contract* | |
+| | ↳ *Verify asset now shows inherited contract from Data Product* | |
 
 </details>
 

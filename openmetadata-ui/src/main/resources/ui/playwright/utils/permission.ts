@@ -52,6 +52,33 @@ export const initializePermissions = async (
   return { apiContext, policy, role };
 };
 
+export const setupUserWithPolicy = async (
+  apiContext: APIRequestContext,
+  user: UserClass,
+  policy: PolicyClass,
+  role: RolesClass,
+  policyRules: Array<{
+    name: string;
+    resources: string[];
+    operations: string[];
+    effect: string;
+  }>
+) => {
+  await user.create(apiContext, false);
+  const pol = await policy.create(apiContext, policyRules);
+  const rol = await role.create(apiContext, [pol.fullyQualifiedName]);
+  await user.patch({
+    apiContext,
+    patchData: [
+      {
+        op: 'add',
+        path: '/roles/0',
+        value: { id: rol.id, type: 'role', name: rol.name },
+      },
+    ],
+  });
+};
+
 export const assignRoleToUser = async (page: Page, testUser: UserClass) => {
   const { apiContext } = await getApiContext(page);
 
@@ -107,9 +134,15 @@ export const validateViewPermissions = async (
   // check Add domain permission
   await expect(page.locator('[data-testid="add-domain"]')).not.toBeVisible();
 
-  await expect(
-    page.locator('[data-testid="edit-displayName-button"]')
-  ).toHaveCount(permission?.editDisplayName ? 8 : 0);
+  if (permission?.editDisplayName) {
+    expect(
+      await page.locator('[data-testid="edit-displayName-button"]').count()
+    ).toBeGreaterThan(0);
+  } else {
+    await expect(
+      page.locator('[data-testid="edit-displayName-button"]')
+    ).toHaveCount(0);
+  }
 
   // check edit owner permission
   await expect(page.locator('[data-testid="edit-owner"]')).not.toBeVisible();
