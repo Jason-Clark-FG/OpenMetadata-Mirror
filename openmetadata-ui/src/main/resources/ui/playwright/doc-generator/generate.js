@@ -126,7 +126,13 @@ const DOMAIN_MAPPING = {
   ApiCollection: { domain: 'Integration', name: 'Connectors' },
 };
 
-const VALID_DOMAIN_TAGS = ['Governance', 'Discovery', 'Platform', 'Observability', 'Integration'];
+const VALID_DOMAIN_TAGS = [
+  'Governance',
+  'Discovery',
+  'Platform',
+  'Observability',
+  'Integration',
+];
 
 function getComponentInfo(fileName, domainMapping, tags = []) {
   // Helper to resolve via filename
@@ -150,7 +156,9 @@ function getComponentInfo(fileName, domainMapping, tags = []) {
     }
 
     // B. Domain Name Match (Strict Validation against VALID_DOMAIN_TAGS)
-    const matchingDomain = VALID_DOMAIN_TAGS.find(d => d.toLowerCase() === cleanTagLower);
+    const matchingDomain = VALID_DOMAIN_TAGS.find(
+      (d) => d.toLowerCase() === cleanTagLower
+    );
     if (matchingDomain) {
       // User specified a valid Domain (e.g. @Observability).
       // This overrides filename logic unless the filename provides a MORE SPECIFIC component *within that same domain*.
@@ -201,8 +209,12 @@ function generateDocs({
   // 2. Group by Domain + Component
   const groupings = new Map();
 
-  parsedFiles.forEach(file => {
-    const { domain, name } = getComponentInfo(file.fileName, domainMapping, file.tags);
+  parsedFiles.forEach((file) => {
+    const { domain, name } = getComponentInfo(
+      file.fileName,
+      domainMapping,
+      file.tags
+    );
     const key = `${domain}:${name}`;
 
     if (!groupings.has(key)) {
@@ -236,7 +248,7 @@ function generateDocs({
     components: components.length,
     files: parsedFiles.length,
     tests: components.reduce((s, c) => s + c.totalTests, 0),
-    steps: components.reduce((s, c) => s + c.totalSteps, 0)
+    steps: components.reduce((s, c) => s + c.totalSteps, 0),
   };
 
   // Group Components by Domain for Generation
