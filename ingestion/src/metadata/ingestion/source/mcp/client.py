@@ -80,6 +80,7 @@ class StdioTransport:
         self._message_id = 0
         self._lock = threading.Lock()
         self._responses: Dict[int, Dict] = {}
+        self._response_events: Dict[int, threading.Event] = {}
         self._reader_thread: Optional[threading.Thread] = None
         self._running = False
 
@@ -134,6 +135,8 @@ class StdioTransport:
                         if msg_id is not None:
                             with self._lock:
                                 self._responses[msg_id] = response
+                                if msg_id in self._response_events:
+                                    self._response_events[msg_id].set()
                     except json.JSONDecodeError as e:
                         logger.warning(f"Failed to parse MCP response: {e}")
             except Exception as e:
@@ -173,6 +176,10 @@ class StdioTransport:
             raise McpProtocolError("Transport not connected")
 
         msg_id = self._get_next_id()
+        event = threading.Event()
+        with self._lock:
+            self._response_events[msg_id] = event
+
         request = {
             "jsonrpc": "2.0",
             "id": msg_id,
@@ -185,22 +192,23 @@ class StdioTransport:
             self.process.stdin.write(json.dumps(request) + "\n")
             self.process.stdin.flush()
         except Exception as e:
+            with self._lock:
+                self._response_events.pop(msg_id, None)
             raise McpProtocolError(f"Failed to send request: {e}")
 
-        import time
-
-        start_time = time.time()
-        while time.time() - start_time < self.timeout:
+        if event.wait(timeout=self.timeout):
             with self._lock:
-                if msg_id in self._responses:
-                    response = self._responses.pop(msg_id)
-                    if "error" in response:
-                        raise McpProtocolError(
-                            f"MCP error: {response['error'].get('message', 'Unknown error')}"
-                        )
-                    return response.get("result", {})
-            time.sleep(0.01)
+                self._response_events.pop(msg_id, None)
+                response = self._responses.pop(msg_id, {})
+            if "error" in response:
+                raise McpProtocolError(
+                    f"MCP error: {response['error'].get('message', 'Unknown error')}"
+                )
+            return response.get("result", {})
 
+        with self._lock:
+            self._response_events.pop(msg_id, None)
+            self._responses.pop(msg_id, None)
         raise McpProtocolError(f"Timeout waiting for response to {method}")
 
     def close(self) -> None:

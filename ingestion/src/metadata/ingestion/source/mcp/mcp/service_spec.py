@@ -11,6 +11,7 @@
 """
 MCP Service Spec
 """
+
 from metadata.ingestion.source.mcp.metadata import McpSource
 from metadata.utils.service_spec import BaseSpec
 

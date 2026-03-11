@@ -13,6 +13,7 @@ MCP Connection Handler
 
 Handles connection creation and testing for MCP (Model Context Protocol) servers.
 """
+
 from functools import partial
 from typing import List, Optional
 
@@ -95,7 +96,11 @@ class McpConnectionManager:
         for server_config in direct_servers:
             server_info = McpServerInfo(
                 name=server_config.name,
-                transport=server_config.transport.value if server_config.transport else "Stdio",
+                transport=(
+                    server_config.transport.value
+                    if server_config.transport
+                    else "Stdio"
+                ),
                 command=server_config.command,
                 args=server_config.args or [],
                 env=server_config.env or {},

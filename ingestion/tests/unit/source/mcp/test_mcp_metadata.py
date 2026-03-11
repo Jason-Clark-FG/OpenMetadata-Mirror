@@ -11,6 +11,7 @@
 """
 Unit tests for MCP metadata source module
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -96,13 +97,13 @@ class TestInferResourceType:
         assert infer_resource_type("https://api.github.com") == ResourceType.URL
 
     def test_database_uri(self):
-        assert (
-            infer_resource_type("postgres://localhost/db") == ResourceType.Database
-        )
+        assert infer_resource_type("postgres://localhost/db") == ResourceType.Database
         assert (
             infer_resource_type("mysql://localhost:3306/mydb") == ResourceType.Database
         )
-        assert infer_resource_type("sqlite:///path/to/db.sqlite") == ResourceType.Database
+        assert (
+            infer_resource_type("sqlite:///path/to/db.sqlite") == ResourceType.Database
+        )
         assert infer_resource_type("mongodb://localhost/test") == ResourceType.Database
 
     def test_mime_type_document(self):
@@ -113,9 +114,7 @@ class TestInferResourceType:
             infer_resource_type("custom://doc", "application/json")
             == ResourceType.Document
         )
-        assert (
-            infer_resource_type("custom://doc", "text/html") == ResourceType.Document
-        )
+        assert infer_resource_type("custom://doc", "text/html") == ResourceType.Document
 
     def test_mime_type_blob(self):
         assert infer_resource_type("custom://img", "image/png") == ResourceType.Blob

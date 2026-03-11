@@ -11,6 +11,7 @@
 """
 Unit tests for MCP client module
 """
+
 import json
 import tempfile
 from unittest.mock import MagicMock, patch
@@ -53,7 +54,7 @@ class TestMcpServerInfo:
             args=["-y", "server-package"],
             env={"API_KEY": "secret"},
             url="http://localhost:8080",
-            api_key="test-key",
+            api_key="test-api-key-12345",
         )
         assert server.name == "my-server"
         assert server.transport == "SSE"
@@ -61,7 +62,7 @@ class TestMcpServerInfo:
         assert server.args == ["-y", "server-package"]
         assert server.env == {"API_KEY": "secret"}
         assert server.url == "http://localhost:8080"
-        assert server.api_key == "test-key"
+        assert server.api_key == "test-api-key-12345"
 
 
 class TestStdioTransport:
@@ -107,11 +108,11 @@ class TestHttpTransport:
     def test_initialization(self):
         transport = HttpTransport(
             url="http://localhost:8080/",
-            api_key="test-key",
+            api_key="test-api-key-12345",
             timeout=30,
         )
         assert transport.url == "http://localhost:8080"
-        assert transport.api_key == "test-key"
+        assert transport.api_key == "test-api-key-12345"
         assert transport.timeout == 30
 
     def test_url_trailing_slash_removed(self):
@@ -119,10 +120,12 @@ class TestHttpTransport:
         assert transport.url == "http://example.com/api"
 
     def test_connect_sets_headers(self):
-        transport = HttpTransport(url="http://localhost:8080", api_key="secret")
+        transport = HttpTransport(
+            url="http://localhost:8080", api_key="test-api-key-12345"
+        )
         transport.connect()
         assert "Authorization" in transport.session.headers
-        assert transport.session.headers["Authorization"] == "Bearer secret"
+        assert transport.session.headers["Authorization"] == "Bearer test-api-key-12345"
         assert transport.session.headers["Content-Type"] == "application/json"
 
     @patch("requests.Session.post")
@@ -215,9 +218,7 @@ class TestParseClaudeDesktopConfig:
                 },
             }
         }
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config, f)
             f.flush()
 
@@ -227,7 +228,11 @@ class TestParseClaudeDesktopConfig:
 
         fs_server = next(s for s in servers if s.name == "filesystem")
         assert fs_server.command == "npx"
-        assert fs_server.args == ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+        assert fs_server.args == [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "/tmp",
+        ]
         assert fs_server.env == {"DEBUG": "true"}
         assert fs_server.transport == "Stdio"
 
@@ -237,9 +242,7 @@ class TestParseClaudeDesktopConfig:
 
     def test_parse_empty_config(self):
         config = {"mcpServers": {}}
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config, f)
             f.flush()
             servers = parse_claude_desktop_config(f.name)
@@ -251,9 +254,7 @@ class TestParseClaudeDesktopConfig:
         assert servers == []
 
     def test_parse_invalid_json(self):
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("not valid json {")
             f.flush()
             servers = parse_claude_desktop_config(f.name)
@@ -275,9 +276,7 @@ class TestParseVscodeConfig:
                 }
             }
         }
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config, f)
             f.flush()
             servers = parse_vscode_config(f.name)
@@ -307,16 +306,12 @@ class TestDiscoverServersFromConfigFiles:
             }
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f1:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f1:
             json.dump(config1, f1)
             f1.flush()
             path1 = f1.name
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f2:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f2:
             json.dump(config2, f2)
             f2.flush()
             path2 = f2.name
@@ -332,16 +327,12 @@ class TestDiscoverServersFromConfigFiles:
         config1 = {"mcpServers": {"duplicate": {"command": "cmd1"}}}
         config2 = {"mcpServers": {"duplicate": {"command": "cmd2"}}}
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f1:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f1:
             json.dump(config1, f1)
             f1.flush()
             path1 = f1.name
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f2:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f2:
             json.dump(config2, f2)
             f2.flush()
             path2 = f2.name

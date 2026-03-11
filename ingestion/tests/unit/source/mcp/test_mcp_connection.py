@@ -11,6 +11,7 @@
 """
 Unit tests for MCP connection module
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -108,10 +109,10 @@ class TestMcpConnectionManager:
         assert http_server.transport == "SSE"
         assert http_server.url == "http://localhost:8080"
 
-    @patch("metadata.ingestion.source.mcp.connection.discover_servers_from_config_files")
-    def test_discover_from_config_files(
-        self, mock_discover, config_file_connection
-    ):
+    @patch(
+        "metadata.ingestion.source.mcp.connection.discover_servers_from_config_files"
+    )
+    def test_discover_from_config_files(self, mock_discover, config_file_connection):
         mock_discover.return_value = [
             McpServerInfo(name="server1", command="cmd1"),
             McpServerInfo(name="server2", command="cmd2"),
@@ -171,9 +172,7 @@ class TestMcpConnectionManager:
         assert client == mock_client
 
     @patch("metadata.ingestion.source.mcp.connection.McpClient")
-    def test_test_server_connection_success(
-        self, mock_client_class, direct_connection
-    ):
+    def test_test_server_connection_success(self, mock_client_class, direct_connection):
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
@@ -186,9 +185,7 @@ class TestMcpConnectionManager:
         mock_client.close.assert_called_once()
 
     @patch("metadata.ingestion.source.mcp.connection.McpClient")
-    def test_test_server_connection_failure(
-        self, mock_client_class, direct_connection
-    ):
+    def test_test_server_connection_failure(self, mock_client_class, direct_connection):
         mock_client = MagicMock()
         mock_client.connect.side_effect = McpProtocolError("Connection failed")
         mock_client_class.return_value = mock_client
@@ -262,7 +259,7 @@ class TestDiscoverFromDirectConfig:
                     name="secure-server",
                     transport=TransportType.SSE,
                     url="http://localhost:8080",
-                    apiKey="secret-key",
+                    apiKey="test-api-key-67890",
                 ),
             ],
         )
@@ -270,7 +267,7 @@ class TestDiscoverFromDirectConfig:
         servers = manager.discover_servers()
 
         assert len(servers) == 1
-        assert servers[0].api_key == "secret-key"
+        assert servers[0].api_key == "test-api-key-67890"
 
     def test_handles_empty_servers_list(self):
         connection = McpConnection(
