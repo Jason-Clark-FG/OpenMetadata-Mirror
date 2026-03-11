@@ -166,6 +166,12 @@ public class ElasticSearchIndexSink
         pending.push(chunk.subList(0, mid));
       }
     }
+    if (lastResponse == null) {
+      LOG.warn(
+          "[EsSearchIndexSink] No successful bulk response received for batch of {} operations",
+          taggedOps.size());
+      lastResponse = BulkResponse.of(b -> b.errors(false).items(List.of()).took(0));
+    }
     return lastResponse;
   }
 

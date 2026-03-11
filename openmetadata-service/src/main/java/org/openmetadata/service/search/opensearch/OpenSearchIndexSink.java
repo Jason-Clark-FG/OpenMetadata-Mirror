@@ -165,6 +165,12 @@ public class OpenSearchIndexSink
         pending.push(chunk.subList(0, mid));
       }
     }
+    if (lastResponse == null) {
+      LOG.warn(
+          "[OsSearchIndexSink] No successful bulk response received for batch of {} operations",
+          taggedOps.size());
+      lastResponse = new BulkResponse.Builder().errors(false).items(List.of()).took(0).build();
+    }
     return lastResponse;
   }
 
