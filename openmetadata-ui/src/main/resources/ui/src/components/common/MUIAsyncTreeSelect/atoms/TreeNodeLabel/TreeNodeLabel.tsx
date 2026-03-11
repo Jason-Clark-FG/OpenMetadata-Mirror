@@ -11,8 +11,9 @@
  *  limitations under the License.
  */
 
-import { Box, Checkbox, CircularProgress, Typography } from '@mui/material';
+import { Box, Checkbox, Typography } from '@mui/material';
 import React, { FC, memo } from 'react';
+import Loader from '../../../../Loader/Loader';
 import { TreeNode } from '../../../atoms/asyncTreeSelect/types';
 
 export interface TreeNodeLabelProps {
@@ -87,7 +88,7 @@ const TreeNodeLabel: FC<TreeNodeLabelProps> = ({
         variant="body2">
         {node.label}
       </Typography>
-      {isLoading && <CircularProgress size={16} sx={{ ml: 1 }} thickness={2} />}
+      {isLoading && <Loader size="x-small" style={{ marginLeft: '8px' }} />}
     </Box>
   );
 };
