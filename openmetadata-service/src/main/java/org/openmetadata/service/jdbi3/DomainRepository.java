@@ -50,9 +50,11 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.domains.DomainResource;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
+import org.openmetadata.service.search.EntityBuilderConstant;
 import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
+import org.openmetadata.service.search.QueryFilterBuilder;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -239,22 +241,29 @@ public class DomainRepository extends EntityRepository<Domain> {
 
     List<Domain> allDomains = listAll(getFields("fullyQualifiedName"), new ListFilter(null));
     Map<String, Integer> domainAssetCounts = new LinkedHashMap<>();
-
     for (Domain domain : allDomains) {
-      InheritedFieldQuery query =
-          InheritedFieldQuery.forDomain(domain.getFullyQualifiedName(), 0, 0);
+      String fullyQualifiedName = domain.getFullyQualifiedName();
+      domainAssetCounts.put(fullyQualifiedName, 0);
+    }
 
-      Integer count =
-          inheritedFieldEntitySearch.getCountForField(
-              query,
-              () -> {
-                LOG.warn(
-                    "Search fallback for domain {} asset count. Returning 0.",
-                    domain.getFullyQualifiedName());
-                return 0;
-              });
+    String queryFilter =
+        QueryFilterBuilder.buildDomainAssetsCountFilter("domains.fullyQualifiedName");
+    Map<String, Integer> exactCounts =
+        inheritedFieldEntitySearch.getAggregatedCountsByField(
+            "domains.fullyQualifiedName", queryFilter, EntityBuilderConstant.MAX_AGGREGATE_SIZE);
 
-      domainAssetCounts.put(domain.getFullyQualifiedName(), count);
+    for (Map.Entry<String, Integer> entry : exactCounts.entrySet()) {
+      String currentDomainFqn = entry.getKey();
+      int count = entry.getValue();
+      while (currentDomainFqn != null) {
+        if (domainAssetCounts.containsKey(currentDomainFqn)) {
+          domainAssetCounts.computeIfPresent(
+              currentDomainFqn, (ignored, current) -> current + count);
+        }
+        int separatorIndex = currentDomainFqn.lastIndexOf('.');
+        currentDomainFqn =
+            separatorIndex > 0 ? currentDomainFqn.substring(0, separatorIndex) : null;
+      }
     }
 
     return domainAssetCounts;

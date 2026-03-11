@@ -75,9 +75,11 @@ import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.rules.RuleEngine;
 import org.openmetadata.service.rules.RuleValidationException;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
+import org.openmetadata.service.search.EntityBuilderConstant;
 import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
+import org.openmetadata.service.search.QueryFilterBuilder;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -437,20 +439,20 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     Map<String, Integer> dataProductAssetCounts = new LinkedHashMap<>();
 
     for (DataProduct dataProduct : allDataProducts) {
-      InheritedFieldQuery query =
-          InheritedFieldQuery.forDataProduct(dataProduct.getFullyQualifiedName(), 0, 0);
+      dataProductAssetCounts.put(dataProduct.getFullyQualifiedName(), 0);
+    }
 
-      Integer count =
-          inheritedFieldEntitySearch.getCountForField(
-              query,
-              () -> {
-                LOG.warn(
-                    "Search fallback for data product {} asset count. Returning 0.",
-                    dataProduct.getFullyQualifiedName());
-                return 0;
-              });
+    String queryFilter =
+        QueryFilterBuilder.buildGenericAssetsCountFilter("dataProducts.fullyQualifiedName", false);
+    Map<String, Integer> exactCounts =
+        inheritedFieldEntitySearch.getAggregatedCountsByField(
+            "dataProducts.fullyQualifiedName",
+            queryFilter,
+            EntityBuilderConstant.MAX_AGGREGATE_SIZE);
 
-      dataProductAssetCounts.put(dataProduct.getFullyQualifiedName(), count);
+    for (Map.Entry<String, Integer> entry : exactCounts.entrySet()) {
+      dataProductAssetCounts.computeIfPresent(
+          entry.getKey(), (ignored, current) -> entry.getValue());
     }
 
     return dataProductAssetCounts;
