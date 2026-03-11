@@ -150,17 +150,23 @@ public class ElasticSearchClient implements SearchClient {
         LOG.error("Cannot create Elasticsearch client with null Rest5Client");
         return null;
       }
-      RequestOptions requestOptions =
-          RequestOptions.DEFAULT.toBuilder()
-              .addHeader(
-                  "Accept", "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
-              .addHeader(
-                  "Content-Type",
-                  "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
-              .build();
-      Rest5ClientOptions options = new Rest5ClientOptions(requestOptions, false);
+      Rest5ClientOptions options = null;
+      if (esMajorVersion < 9) {
+        RequestOptions requestOptions =
+            RequestOptions.DEFAULT.toBuilder()
+                .addHeader(
+                    "Accept",
+                    "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
+                .addHeader(
+                    "Content-Type",
+                    "application/vnd.elasticsearch+json; compatible-with=" + esMajorVersion)
+                .build();
+        options = new Rest5ClientOptions(requestOptions, false);
+      }
       Rest5ClientTransport transport =
-          new Rest5ClientTransport(lowLevelClient, new JacksonJsonpMapper(), options);
+          options != null
+              ? new Rest5ClientTransport(lowLevelClient, new JacksonJsonpMapper(), options)
+              : new Rest5ClientTransport(lowLevelClient, new JacksonJsonpMapper());
       ElasticsearchClient newClient = new ElasticsearchClient(transport);
       LOG.info(
           "Successfully initialized new Elasticsearch Java API client for ES {}.x", esMajorVersion);
@@ -952,6 +958,10 @@ public class ElasticSearchClient implements SearchClient {
   }
 
   private int detectEsMajorVersion(Rest5Client restClient) {
+    if (restClient == null) {
+      LOG.warn("Rest5Client is null, defaulting ES major version to 9");
+      return 9;
+    }
     try {
       es.co.elastic.clients.transport.rest5_client.low_level.Request request =
           new es.co.elastic.clients.transport.rest5_client.low_level.Request("GET", "/");
