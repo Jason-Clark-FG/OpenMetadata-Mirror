@@ -10,8 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { ThemeProvider } from '@mui/material/styles';
-import { createMuiTheme } from '@openmetadata/ui-core-components';
 import {
   act,
   fireEvent,
@@ -25,7 +23,36 @@ import {
 } from '../../../../generated/type/csvImportResult';
 import { BulkImportVersionSummary } from './BulkImportVersionSummary.component';
 
-const theme = createMuiTheme();
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Button: jest
+    .fn()
+    .mockImplementation(({ children, onClick, 'data-testid': testId }) => (
+      <button data-testid={testId} onClick={onClick}>
+        {children}
+      </button>
+    )),
+  ButtonUtility: jest
+    .fn()
+    .mockImplementation(({ children, onClick, 'data-testid': testId }) => (
+      <button data-testid={testId} onClick={onClick}>
+        {children}
+      </button>
+    )),
+  Typography: jest
+    .fn()
+    .mockImplementation(({ children, 'data-testid': testId, ...props }) => (
+      <span data-testid={testId} {...props}>
+        {children}
+      </span>
+    )),
+  Dialog: jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
+  Modal: jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
+  ModalOverlay: jest
+    .fn()
+    .mockImplementation(({ children, isOpen }) =>
+      isOpen ? <div>{children}</div> : null
+    ),
+}));
 
 const mockCsvImportResult: CSVImportResult = {
   dryRun: false,
@@ -57,10 +84,6 @@ jest.mock('../../../../utils/CSV/CSV.utils', () => ({
     .mockImplementation((column, data) => data.value),
 }));
 
-const renderWithTheme = (component: React.ReactElement) => {
-  return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
-};
-
 describe('BulkImportVersionSummary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -76,9 +99,7 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should render bulk import stats in column layout', () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     expect(screen.getByText('label.rows-processed:')).toBeInTheDocument();
     expect(screen.getByTestId('processed-row')).toHaveTextContent('2');
@@ -89,18 +110,14 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should render View More button', () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     expect(screen.getByTestId('view-more-button')).toBeInTheDocument();
     expect(screen.getByText('label.view-more')).toBeInTheDocument();
   });
 
   it('should open modal when View More button is clicked', async () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
@@ -113,9 +130,7 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should parse CSV and render DataGrid when modal opens', async () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
@@ -135,9 +150,7 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should close modal when close button is clicked', async () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
@@ -162,9 +175,7 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should not parse CSV again if already parsed', async () => {
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
@@ -193,9 +204,7 @@ describe('BulkImportVersionSummary', () => {
       importResultsCsv: undefined,
     };
 
-    renderWithTheme(
-      <BulkImportVersionSummary csvImportResult={resultWithoutCsv} />
-    );
+    render(<BulkImportVersionSummary csvImportResult={resultWithoutCsv} />);
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 

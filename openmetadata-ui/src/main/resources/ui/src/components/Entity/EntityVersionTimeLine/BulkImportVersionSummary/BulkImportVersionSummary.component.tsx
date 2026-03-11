@@ -11,15 +11,13 @@
  *  limitations under the License.
  */
 import {
-  Box,
   Button,
+  ButtonUtility,
   Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
+  Modal,
+  ModalOverlay,
   Typography,
-  useTheme,
-} from '@mui/material';
+} from '@openmetadata/ui-core-components';
 import { capitalize } from 'lodash';
 import { useState } from 'react';
 import DataGrid from 'react-data-grid';
@@ -37,7 +35,6 @@ interface BulkImportVersionSummaryProps {
 export const BulkImportVersionSummary = ({
   csvImportResult,
 }: BulkImportVersionSummaryProps) => {
-  const theme = useTheme();
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { readString } = usePapaParse();
@@ -89,125 +86,110 @@ export const BulkImportVersionSummary = ({
     setIsModalOpen(false);
   };
 
-  const labelStyle = {
-    color: theme.palette.grey[500],
-    minWidth: 120,
-  };
-
-  const valueStyle = {
-    fontWeight: theme.typography.h6.fontWeight,
-    color: theme.palette.grey[900],
-  };
-
   return (
     <>
-      <Box sx={{ mt: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex' }}>
-            <Typography sx={labelStyle} variant="caption">
-              {t('label.rows-processed')}:
-            </Typography>
+      <div className="tw:mt-1">
+        <div className="tw:flex tw:flex-col tw:gap-1 tw:mb-1">
+          <div className="tw:flex">
+            <div className="tw:min-w-30">
+              <Typography as="span" className="tw:text-gray-500 tw:text-xs">
+                {t('label.rows-processed')}:
+              </Typography>
+            </div>
             <Typography
-              data-testid="processed-row"
-              sx={valueStyle}
-              variant="caption">
+              as="span"
+              className="tw:text-xs tw:font-medium"
+              data-testid="processed-row">
               {csvImportResult.numberOfRowsProcessed}
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex' }}>
-            <Typography sx={labelStyle} variant="caption">
-              {t('label.passed')}:
-            </Typography>
+          </div>
+          <div className="tw:flex">
+            <div className="tw:min-w-30">
+              <Typography as="span" className="tw:text-gray-500 tw:text-xs">
+                {t('label.passed')}:
+              </Typography>
+            </div>
             <Typography
-              data-testid="passed-row"
-              sx={valueStyle}
-              variant="caption">
+              as="span"
+              className="tw:text-xs tw:font-medium"
+              data-testid="passed-row">
               {csvImportResult.numberOfRowsPassed}
             </Typography>
-          </Box>
-          <Box sx={{ display: 'flex' }}>
-            <Typography sx={labelStyle} variant="caption">
-              {t('label.failed')}:
-            </Typography>
+          </div>
+          <div className="tw:flex">
+            <div className="tw:min-w-30">
+              <Typography as="span" className="tw:text-gray-500 tw:text-xs">
+                {t('label.failed')}:
+              </Typography>
+            </div>
             <Typography
-              data-testid="failed-row"
-              sx={valueStyle}
-              variant="caption">
+              as="span"
+              className="tw:text-xs tw:font-medium"
+              data-testid="failed-row">
               {csvImportResult.numberOfRowsFailed}
             </Typography>
-          </Box>
-        </Box>
+          </div>
+        </div>
         <Button
+          className="tw:text-xs"
+          color="link-color"
           data-testid="view-more-button"
-          size="small"
-          sx={{
-            p: 0,
-            mt: 1,
-            minWidth: 'auto',
-            fontSize: theme.typography.caption.fontSize,
-            color: theme.palette.primary.main,
-            '&:hover': {
-              color: theme.palette.allShades.brand[700],
-            },
-          }}
-          variant="text"
+          size="sm"
           onClick={handleViewMore}>
           {t('label.view-more')}
         </Button>
-      </Box>
-      <Dialog
-        data-testid="bulk-import-details-modal"
-        maxWidth="md"
-        open={isModalOpen}
-        slotProps={{
-          paper: {
-            sx: {
-              width: 800,
-              maxWidth: '100%',
-              height: '60vh',
-              maxHeight: 700,
-            },
-          },
-        }}
-        sx={{ zIndex: 1300 }}
-        onClose={handleClose}>
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            p: '16px 24px !important',
-            boxShadow: (theme) => theme.shadows[1],
-            flexShrink: 0,
-          }}>
-          {t('label.bulk-import-entity', { entity: t('label.detail-plural') })}
-          <IconButton
-            data-testid="close-modal-button"
-            size="small"
-            onClick={handleClose}>
-            <CloseIcon height={12} width={12} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            p: '24px !important',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-          }}>
-          {tableData && (
-            <Box className="om-rdg" sx={{ flex: 1, minHeight: 0 }}>
-              <DataGrid
-                className="rdg-light"
-                columns={tableData.columns}
-                rows={tableData.dataSource}
-                style={{ height: '100%' }}
-              />
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+      </div>
+      {isModalOpen && (
+        <ModalOverlay
+          isOpen
+          className="tw:z-1100"
+          onOpenChange={(open) => !open && handleClose()}>
+          <Modal>
+            <Dialog
+              aria-label={t('label.bulk-import-entity', {
+                entity: t('label.detail-plural'),
+              })}>
+              <div
+                className="tw:flex tw:flex-col"
+                data-testid="bulk-import-details-modal"
+                style={{
+                  width: 800,
+                  maxWidth: '100%',
+                  height: '60vh',
+                  maxHeight: 700,
+                  background: 'white',
+                  borderRadius: 12,
+                }}>
+                <div className="tw:flex tw:justify-between tw:items-center tw:p-4 tw:shrink-0">
+                  <Typography as="h4">
+                    {t('label.bulk-import-entity', {
+                      entity: t('label.detail-plural'),
+                    })}
+                  </Typography>
+                  <ButtonUtility
+                    color="tertiary"
+                    data-testid="close-modal-button"
+                    icon={<CloseIcon height={12} width={12} />}
+                    onClick={handleClose}
+                  />
+                </div>
+                <div className="tw:p-6 tw:overflow-hidden tw:flex tw:flex-col tw:flex-1">
+                  {tableData && (
+                    <div className="om-rdg tw:flex-1 tw:min-h-0">
+                      <DataGrid
+                        className="rdg-light"
+                        columns={tableData.columns}
+                        rows={tableData.dataSource}
+                        style={{ height: '100%' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Dialog>
+          </Modal>
+        </ModalOverlay>
+      )}
     </>
   );
 };
