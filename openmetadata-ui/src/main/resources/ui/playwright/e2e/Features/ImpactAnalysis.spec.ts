@@ -288,7 +288,7 @@ test.describe('Impact Analysis', () => {
   test('verify owner filter for Asset level impact analysis', async ({
     page,
   }) => {
-    await page.getByRole('button', { name: 'Filters' }).click();
+    await page.getByTestId('filters-button').click();
     await page.getByTestId('search-dropdown-Owners').click();
 
     await expect(
@@ -318,7 +318,7 @@ test.describe('Impact Analysis', () => {
   test.fixme(
     'verify domain for Asset level impact analysis',
     async ({ page }) => {
-      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByTestId('filters-button').click();
       await page.getByTestId('search-dropdown-Domains').click();
 
       await expect(
@@ -346,7 +346,7 @@ test.describe('Impact Analysis', () => {
   );
 
   test('verify tier for Asset level impact analysis', async ({ page }) => {
-    await page.getByRole('button', { name: 'Filters' }).click();
+    await page.getByTestId('filters-button').click();
     await page.getByTestId('search-dropdown-Tier').click();
 
     await expect(

@@ -13,6 +13,7 @@
 
 import {
   Button,
+  ButtonUtility,
   Dropdown,
   Tooltip,
   TooltipTrigger,
@@ -62,7 +63,6 @@ import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import { AssetsUnion } from '../../DataAssets/AssetsSelectionModal/AssetSelectionModal.interface';
 import { ExploreQuickFilterField } from '../../Explore/ExplorePage.interface';
 import ExploreQuickFilters from '../../Explore/ExploreQuickFilters';
-import { StyledIconButton } from '../../LineageTable/LineageTable.styled';
 import { LineageConfig } from './EntityLineage.interface';
 import LineageConfigModal from './LineageConfigModal';
 import LineageSearchSelect from './LineageSearchSelect/LineageSearchSelect';
@@ -347,13 +347,12 @@ const CustomControls: FC<{
         placement="top"
         title={t('label.edit-entity', { entity: t('label.lineage') })}>
         <TooltipTrigger>
-          <StyledIconButton
-            color={isEditMode ? 'primary' : 'default'}
+          <Button
+            color={isEditMode ? 'primary' : 'secondary'}
             data-testid="edit-lineage"
-            size="large"
-            onClick={toggleEditMode}>
-            <EditIcon />
-          </StyledIconButton>
+            iconLeading={EditIcon}
+            onClick={toggleEditMode}
+          />
         </TooltipTrigger>
       </Tooltip>
     ) : null;
@@ -373,12 +372,11 @@ const CustomControls: FC<{
     };
 
     return (
-      <StyledIconButton
+      <ButtonUtility
         data-testid="lineage-config"
-        size="large"
-        onClick={handleSettingsClick}>
-        <SettingsOutlined />
-      </StyledIconButton>
+        icon={SettingsOutlined}
+        onClick={handleSettingsClick}
+      />
     );
   }, []);
 
@@ -388,13 +386,13 @@ const CustomControls: FC<{
         <div className="tw:flex tw:items-center tw:gap-4">
           <Tooltip placement="top" title={t('label.filter-plural')}>
             <TooltipTrigger>
-              <StyledIconButton
+              <Button
                 aria-label={t('label.filter-plural')}
-                color={filterSelectionActive ? 'primary' : 'default'}
-                size="large"
-                onClick={toggleFilterSelection}>
-                <FilterLinesIcon />
-              </StyledIconButton>
+                color={filterSelectionActive ? 'primary' : 'secondary'}
+                data-testid="filters-button"
+                iconLeading={FilterLinesIcon}
+                onClick={toggleFilterSelection}
+              />
             </TooltipTrigger>
           </Tooltip>
           {searchBarComponent}
@@ -428,7 +426,7 @@ const CustomControls: FC<{
                 : t('label.export')
             }>
             <TooltipTrigger>
-              <StyledIconButton
+              <ButtonUtility
                 aria-label={
                   activeTab === 'impact_analysis'
                     ? t('label.export-as-type', { type: t('label.csv') })
@@ -436,10 +434,9 @@ const CustomControls: FC<{
                 }
                 data-testid="export-button"
                 disabled={isEditMode}
-                size="large"
-                onClick={handleExportClick}>
-                <DownloadIcon />
-              </StyledIconButton>
+                icon={DownloadIcon}
+                onClick={handleExportClick}
+              />
             </TooltipTrigger>
           </Tooltip>
           {settingsButton}
@@ -451,20 +448,19 @@ const CustomControls: FC<{
                 : t('label.full-screen-view')
             }>
             <TooltipTrigger>
-              <StyledIconButton
+              <ButtonUtility
                 aria-label={
                   isFullScreen
                     ? t('label.exit-full-screen')
                     : t('label.full-screen-view')
                 }
-                size="large"
+                icon={isFullScreen ? ExitFullScreenIcon : FullscreenIcon}
                 onClick={() =>
                   updateURLParams({
                     [FULLSCREEN_QUERY_PARAM_KEY]: !isFullScreen,
                   })
-                }>
-                {isFullScreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
-              </StyledIconButton>
+                }
+              />
             </TooltipTrigger>
           </Tooltip>
         </div>

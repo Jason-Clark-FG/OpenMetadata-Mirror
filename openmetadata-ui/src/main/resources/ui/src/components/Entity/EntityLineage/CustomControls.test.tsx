@@ -45,8 +45,18 @@ jest.mock('@openmetadata/ui-core-components', () => ({
   Button: jest
     .fn()
     .mockImplementation(
-      ({ children, onClick, isDisabled, 'data-testid': testId }) => (
-        <button data-testid={testId} disabled={isDisabled} onClick={onClick}>
+      ({
+        children,
+        onClick,
+        isDisabled,
+        'aria-label': ariaLabel,
+        'data-testid': testId,
+      }) => (
+        <button
+          aria-label={ariaLabel}
+          data-testid={testId}
+          disabled={isDisabled}
+          onClick={onClick}>
           {children}
         </button>
       )
@@ -82,6 +92,25 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     .mockImplementation(({ children, as: Tag = 'span', className }) => (
       <Tag className={className}>{children}</Tag>
     )),
+  ButtonUtility: jest
+    .fn()
+    .mockImplementation(
+      ({
+        children,
+        onClick,
+        disabled,
+        'aria-label': ariaLabel,
+        'data-testid': testId,
+      }) => (
+        <button
+          aria-label={ariaLabel}
+          data-testid={testId}
+          disabled={disabled}
+          onClick={onClick}>
+          {children}
+        </button>
+      )
+    ),
 }));
 
 jest.mock('react-router-dom', () => ({
