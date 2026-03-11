@@ -1454,6 +1454,114 @@ class SearchRepositoryBehaviorTest {
     assertTrue(repository.createReindexHandler() instanceof RecreateWithEmbeddings);
   }
 
+  @Test
+  void reportingWrappersDelegateToSearchClient() throws IOException {
+    SearchAggregation searchAggregation = mock(SearchAggregation.class);
+    SearchListFilter filter = mock(SearchListFilter.class);
+    SubjectContext subjectContext = mock(SubjectContext.class);
+    jakarta.json.JsonObject aggregationResult = mock(jakarta.json.JsonObject.class);
+    DataQualityReport report = new DataQualityReport();
+    Response response = Response.ok("chart").build();
+    org.openmetadata.schema.api.entityRelationship.SearchSchemaEntityRelationshipResult schemaResult =
+        new org.openmetadata.schema.api.entityRelationship.SearchSchemaEntityRelationshipResult();
+
+    when(filter.getCondition(Entity.TABLE)).thenReturn("deleted = false");
+    when(searchClient.searchByField("name", "orders", "table", false)).thenReturn(response);
+    when(searchClient.aggregate("query", Entity.TABLE, searchAggregation, "deleted = false"))
+        .thenReturn(aggregationResult);
+    when(searchClient.genericAggregation("query", "table", searchAggregation)).thenReturn(report);
+    when(searchClient.genericAggregation("query", "table", searchAggregation, subjectContext))
+        .thenReturn(report);
+    when(
+            searchClient.listDataInsightChartResult(
+                10L,
+                20L,
+                "tier1",
+                "teamA",
+                DataInsightChartResult.DataInsightChartType.UNUSED_ASSETS,
+                25,
+                5,
+                "{}",
+                "report_index"))
+        .thenReturn(response);
+    when(searchClient.getSchemaEntityRelationship("svc.db.schema", "{}", "*", 1, 2, 3, 4, false))
+        .thenReturn(schemaResult);
+
+    assertSame(response, repository.searchByField("name", "orders", "table", false));
+    assertSame(
+        aggregationResult,
+        repository.aggregate("query", Entity.TABLE, searchAggregation, filter));
+    assertSame(report, repository.genericAggregation("query", "table", searchAggregation));
+    assertSame(
+        report,
+        repository.genericAggregation("query", "table", searchAggregation, subjectContext));
+    assertSame(
+        response,
+        repository.listDataInsightChartResult(
+            10L,
+            20L,
+            "tier1",
+            "teamA",
+            DataInsightChartResult.DataInsightChartType.UNUSED_ASSETS,
+            25,
+            5,
+            "{}",
+            "report_index"));
+    assertSame(
+        schemaResult,
+        repository.getSchemaEntityRelationship("svc.db.schema", "{}", "*", 1, 2, 3, 4, false));
+  }
+
+  @Test
+  void repositoryMetadataHelpersExposeUnderlyingState() throws Exception {
+    Object highLevelClient = new Object();
+    EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
+
+    when(searchClient.getHighLevelClient()).thenReturn(highLevelClient);
+    when(embeddingClient.getModelId()).thenReturn("text-embedding-3-large");
+    setPrivateField(repository, "embeddingClient", embeddingClient);
+
+    assertEquals(
+        Set.of(
+            Entity.TABLE,
+            Entity.DOMAIN,
+            Entity.DATA_PRODUCT,
+            Entity.DATABASE_SERVICE,
+            Entity.TAG,
+            Entity.GLOSSARY_TERM,
+            Entity.GLOSSARY,
+            Entity.CLASSIFICATION,
+            Entity.PAGE,
+            Entity.TEST_SUITE,
+            Entity.QUERY),
+        repository.getSearchEntities());
+    assertSame(highLevelClient, repository.getHighLevelClient());
+    assertEquals("text-embedding-3-large", repository.getModelIdentifier());
+  }
+
+  @Test
+  void repositoryLifecycleHelpersDelegateToInternalOperations() {
+    SearchRepository spyRepository =
+        spy(
+            newRepository(
+                Map.ofEntries(
+                    Map.entry(Entity.TABLE, TABLE_MAPPING),
+                    Map.entry(Entity.DOMAIN, DOMAIN_MAPPING),
+                    Map.entry(Entity.DATA_PRODUCT, DATA_PRODUCT_MAPPING)),
+                "cluster"));
+
+    doNothing().when(spyRepository).updateIndex(any(IndexMapping.class));
+    doNothing().when(spyRepository).initializeVectorSearchService();
+
+    spyRepository.updateIndexes();
+    spyRepository.prepareForReindex();
+
+    verify(spyRepository).updateIndex(TABLE_MAPPING);
+    verify(spyRepository).updateIndex(DOMAIN_MAPPING);
+    verify(spyRepository).updateIndex(DATA_PRODUCT_MAPPING);
+    verify(spyRepository).initializeVectorSearchService();
+  }
+
   private SearchRepository newRepository(
       Map<String, IndexMapping> entityIndexMap, String clusterAlias) {
     return newRepository(
