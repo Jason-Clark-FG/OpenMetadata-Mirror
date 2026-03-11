@@ -18,6 +18,11 @@ import { TableClass } from '../../support/entity/TableClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import {
+  addTestCaseToLogicalTestSuite,
+  addTestSuitePipeline,
+  removeTestCasesFromLogicalTestSuite,
+} from '../../utils/dataQuality';
+import {
   assignSingleSelectDomain,
   descriptionBox,
   redirectToHomePage,
@@ -293,20 +298,24 @@ test(
         .getByTestId('update-btn')
         .click();
       await clearStatusResponse;
-    await test.step('Create', async () => {
-      await page.click('[data-testid="add-test-suite-btn"]');
-      await page.fill('[data-testid="test-suite-name"]', NEW_TEST_SUITE.name);
-      await page.locator(descriptionBox).fill(NEW_TEST_SUITE.description);
-
-      const getTestCase = page.waitForResponse(
-        `/api/v1/dataQuality/testCases/search/list?*`
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
       );
-      await page.fill(
-        '[data-testid="test-case-selection-card"] [data-testid="searchbar"]',
-        testCaseName1
-      );
-      await getTestCase;
+    });
 
+    await test.step('Select all then unselect all test cases', async () => {
+      const addTestCaseCard = page.locator(
+        '[data-testid="test-case-selection-card"]'
+      );
+      const selectAllBtn = addTestCaseCard.getByTestId('select-all-test-cases');
+      await expect(selectAllBtn).toBeVisible();
+      await selectAllBtn.click();
+      await page.waitForSelector(
+        "[data-testid='test-case-selection-card'] [data-testid='loader']",
+        { state: 'detached' }
+      );
+      await selectAllBtn.click();
       await page.waitForSelector(
         "[data-testid='test-case-selection-card'] [data-testid='loader']",
         { state: 'detached' }
@@ -371,203 +380,22 @@ test(
     });
 
     await test.step('Add test case to logical test suite by owner', async () => {
-      await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
-      await ownerPage.waitForLoadState('networkidle');
-      await ownerPage.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
-      const testCaseResponse = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/search/list*'
-      );
-      await ownerPage.click('[data-testid="add-test-case-btn"]');
-      await testCaseResponse;
-      await ownerPage.waitForSelector(
-        "[data-testid='test-case-selection-card'] [data-testid='loader']",
-        { state: 'detached' }
-      );
-
-      const getTestCase = ownerPage.waitForResponse(
-        `/api/v1/dataQuality/testCases/search/list?*`
-      );
-      await ownerPage.fill('[data-testid="searchbar"]', testCaseName2);
-      await getTestCase;
-
-      await ownerPage.click(`[data-testid="${testCaseName2}"]`);
-      const updateTestCase = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases'
-      );
-      await ownerPage.click('[data-testid="submit"]');
-      await updateTestCase;
-      await ownerPage.waitForSelector(
-        '[data-testid="test-case-selection-card"]',
-        {
-          state: 'detached',
-        }
+      await addTestCaseToLogicalTestSuite(
+        ownerPage,
+        NEW_TEST_SUITE.name,
+        testCaseName2 ?? ''
       );
     });
 
     await test.step('Add test suite pipeline', async () => {
-      await page.getByRole('tab', { name: 'Pipeline' }).click();
-
-      await expect(page.getByTestId('add-placeholder-button')).toBeVisible();
-
-      await page.getByTestId('add-placeholder-button').click();
-      await page.getByTestId('select-all-test-cases').click();
-
-      await expect(
-        page.getByTestId('cron-type').getByText('Day')
-      ).toBeAttached();
-
-      await page.getByTestId('deploy-button').click();
-
-      await expect(page.getByTestId('view-service-button')).toBeVisible();
-
-      await page.waitForSelector('[data-testid="body-text"]', {
-        state: 'detached',
-      });
-
-      await expect(page.getByTestId('success-line')).toContainText(
-        /has been created and deployed successfully/
-      );
-
-      await page.getByTestId('view-service-button').click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await addTestSuitePipeline(page);
     });
 
     await test.step('Remove test case from logical test suite by owner', async () => {
-      await ownerPage.getByTestId(`action-dropdown-${testCaseName1}`).click();
-      await ownerPage.click(`[data-testid="remove-${testCaseName1}"]`);
-      const removeTestCase1 = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
-      );
-      await ownerPage.click('[data-testid="save-button"]');
-      await removeTestCase1;
-      await ownerPage.getByTestId(`action-dropdown-${testCaseName2}`).click();
-      await ownerPage.click(`[data-testid="remove-${testCaseName2}"]`);
-      const removeTestCase2 = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
-      );
-      await ownerPage.click('[data-testid="save-button"]');
-      await removeTestCase2;
-    });
-
-    await test.step('Test suite filters', async () => {
-      const owner = loggedInUser.displayName;
-      const testSuite = page.waitForResponse(
-        '/api/v1/dataQuality/testSuites/search/list?*testSuiteType=logical*'
-      );
-      });
-    });
-
-    await test.step('Domain Add, Update and Remove', async () => {
-      await assignSingleSelectDomain(page, domain1.responseData);
-      await assignSingleSelectDomain(page, domain2.responseData);
-      await removeSingleSelectDomain(page, domain2.responseData, true);
-    });
-
-    await test.step(
-      'User as Owner assign, update & delete for test suite',
-      async () => {
-        await addMultiOwner({
-          page,
-          ownerNames: [user1.getUserDisplayName()],
-          activatorBtnDataTestId: 'edit-owner',
-          endpoint: EntityTypeEndpoint.TestSuites,
-          type: 'Users',
-        });
-        await removeOwnersFromList({
-          page,
-          ownerNames: [user1.getUserDisplayName()],
-          endpoint: EntityTypeEndpoint.TestSuites,
-        });
-        await addMultiOwner({
-          page,
-          ownerNames: [loggedInUser.displayName],
-          activatorBtnDataTestId: 'edit-owner',
-          endpoint: EntityTypeEndpoint.TestSuites,
-          type: 'Users',
-        });
-      }
-    );
-
-    await test.step('Add test case to logical test suite by owner', async () => {
-      await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
-      await ownerPage.waitForLoadState('networkidle');
-      await ownerPage.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
-      const testCaseResponse = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/search/list*'
-      );
-      await ownerPage.click('[data-testid="add-test-case-btn"]');
-      await testCaseResponse;
-
-      const getTestCase = ownerPage.waitForResponse(
-        `/api/v1/dataQuality/testCases/search/list?*`
-      );
-      await ownerPage.fill('[data-testid="searchbar"]', testCaseName2);
-      await getTestCase;
-
-      await ownerPage.click(`[data-testid="${testCaseName2}"]`);
-      const updateTestCase = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases'
-      );
-      await ownerPage.click('[data-testid="submit"]');
-      await updateTestCase;
-      await ownerPage.waitForSelector('.ant-modal-content', {
-        state: 'detached',
-      });
-    });
-
-    await test.step('Add test suite pipeline', async () => {
-      await page.getByRole('tab', { name: 'Pipeline' }).click();
-
-      await expect(page.getByTestId('add-placeholder-button')).toBeVisible();
-
-      await page.getByTestId('add-placeholder-button').click();
-      await page.getByTestId('select-all-test-cases').click();
-
-      await expect(
-        page.getByTestId('cron-type').getByText('Day')
-      ).toBeAttached();
-
-      await page.getByTestId('deploy-button').click();
-
-      await expect(page.getByTestId('view-service-button')).toBeVisible();
-
-      await page.waitForSelector('[data-testid="body-text"]', {
-        state: 'detached',
-      });
-
-      await expect(page.getByTestId('success-line')).toContainText(
-        /has been created and deployed successfully/
-      );
-
-      await page.getByTestId('view-service-button').click();
-      await page.waitForLoadState('networkidle');
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
-    });
-
-    await test.step('Remove test case from logical test suite by owner', async () => {
-      await ownerPage.getByTestId(`action-dropdown-${testCaseName1}`).click();
-      await ownerPage.click(`[data-testid="remove-${testCaseName1}"]`);
-      const removeTestCase1 = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
-      );
-      await ownerPage.click('[data-testid="save-button"]');
-      await removeTestCase1;
-      await ownerPage.getByTestId(`action-dropdown-${testCaseName2}`).click();
-      await ownerPage.click(`[data-testid="remove-${testCaseName2}"]`);
-      const removeTestCase2 = ownerPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
-      );
-      await ownerPage.click('[data-testid="save-button"]');
-      await removeTestCase2;
+      await removeTestCasesFromLogicalTestSuite(ownerPage, [
+        testCaseName1 ?? '',
+        testCaseName2 ?? '',
+      ]);
     });
 
     await test.step('Test suite filters', async () => {

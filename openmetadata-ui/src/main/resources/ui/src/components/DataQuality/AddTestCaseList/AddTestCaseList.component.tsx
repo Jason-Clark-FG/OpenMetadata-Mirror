@@ -13,7 +13,6 @@
 import { Button, Checkbox, Col, List, Row, Space, Typography } from 'antd';
 import { debounce } from 'lodash';
 import isEmpty from 'lodash/isEmpty';
-import omit from 'lodash/omit';
 import VirtualList from 'rc-virtual-list';
 import {
   UIEventHandler,
@@ -261,21 +260,15 @@ export const AddTestCaseList = ({
           q,
           limit: PAGE_SIZE_MEDIUM,
           offset: (page - 1) * PAGE_SIZE_MEDIUM,
-          ...(filterStatus && { testCaseStatus: filterStatus }),
-          ...(filterTestType &&
-            filterTestType !== TestCaseType.all && {
-              testCaseType: filterTestType,
-            }),
+          testCaseStatus: filterStatus,
+          testCaseType:
+            filterTestType !== TestCaseType.all ? filterTestType : undefined,
           ...(entityLink && { entityLink }),
           ...(columnName && { columnName }),
         };
-        if (testCaseParams) {
-          Object.assign(requestParams, {
-            ...omit(testCaseParams, Object.keys(requestParams)),
-          });
-        }
+        const mergedParams = { ...testCaseParams, ...requestParams };
 
-        const testCaseResponse = await getListTestCaseBySearch(requestParams);
+        const testCaseResponse = await getListTestCaseBySearch(mergedParams);
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
         if (selectedTest) {
@@ -342,13 +335,17 @@ export const AddTestCaseList = ({
     const allCurrentlySelected = items.every((item) =>
       selectedItems?.has(item.id ?? '')
     );
+    // When selecting: merge current page into selection. When deselecting: clear all pages.
     if (allCurrentlySelected) {
+      // Deselect all items across all pages.
       setSelectedItems(new Map());
       onChange?.([]);
     } else {
-      const allSelected = new Map(items.map((test) => [test.id ?? '', test]));
-      setSelectedItems(allSelected);
-      onChange?.([...allSelected.values()]);
+      // Add current page's items to selection; keep existing selections from other pages.
+      const next = new Map(selectedItems);
+      items.forEach((test) => next.set(test.id ?? '', test));
+      setSelectedItems(next);
+      onChange?.([...next.values()]);
     }
   }, [items, selectedItems, onChange]);
 
@@ -428,8 +425,7 @@ export const AddTestCaseList = ({
             align="center"
             className="w-full"
             direction="vertical"
-            prefixCls="w-full"
-          >
+            prefixCls="w-full">
             <ErrorPlaceHolder
               className="mt-0-important p-b-sm"
               type={ERROR_PLACEHOLDER_TYPE.FILTER}
@@ -444,14 +440,12 @@ export const AddTestCaseList = ({
             loading={{
               spinning: isLoading,
               indicator: <Loader />,
-            }}
-          >
+            }}>
             <VirtualList
               data={listSource}
               height={500}
               itemKey="id"
-              onScroll={onScroll}
-            >
+              onScroll={onScroll}>
               {(test) => {
                 const tableFqn = getEntityFQN(test.entityLink);
                 const tableName = getNameFromFQN(tableFqn);
@@ -461,14 +455,12 @@ export const AddTestCaseList = ({
                   <Space
                     className="m-b-md border rounded-4 p-sm cursor-pointer bg-white"
                     direction="vertical"
-                    onClick={() => handleCardClick(test)}
-                  >
+                    onClick={() => handleCardClick(test)}>
                     <Space className="justify-between w-full">
                       <Typography.Paragraph
                         className="m-0 font-medium text-base w-max-500"
                         data-testid={test.name}
-                        ellipsis={{ tooltip: true }}
-                      >
+                        ellipsis={{ tooltip: true }}>
                         {getEntityName(test)}
                       </Typography.Paragraph>
 
@@ -479,8 +471,7 @@ export const AddTestCaseList = ({
                     </Space>
                     <Typography.Paragraph
                       className="m-0 w-max-500"
-                      ellipsis={{ tooltip: true }}
-                    >
+                      ellipsis={{ tooltip: true }}>
                       {getEntityName(test.testDefinition)}
                     </Typography.Paragraph>
                     <Typography.Paragraph className="m-0">
@@ -491,8 +482,7 @@ export const AddTestCaseList = ({
                           tableFqn,
                           EntityTabs.PROFILER
                         )}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                        onClick={(e) => e.stopPropagation()}>
                         {tableName}
                       </Link>
                     </Typography.Paragraph>
@@ -609,8 +599,7 @@ export const AddTestCaseList = ({
               className="p-0 h-auto font-normal"
               data-testid="select-all-test-cases"
               type="link"
-              onClick={handleSelectAll}
-            >
+              onClick={handleSelectAll}>
               {t('label.select-all')}
               {(selectedItems?.size ?? 0) > 0 &&
                 ` (${selectedItems?.size ?? 0})`}
@@ -622,8 +611,7 @@ export const AddTestCaseList = ({
       {showButton && (
         <Col
           className="d-flex justify-end items-center p-y-xss gap-4"
-          span={24}
-        >
+          span={24}>
           <Button data-testid="cancel" type="link" onClick={onCancel}>
             {cancelText ?? t('label.cancel')}
           </Button>
@@ -631,8 +619,7 @@ export const AddTestCaseList = ({
             data-testid="submit"
             loading={isLoading}
             type="primary"
-            onClick={handleSubmit}
-          >
+            onClick={handleSubmit}>
             {submitText ?? t('label.create')}
           </Button>
         </Col>
