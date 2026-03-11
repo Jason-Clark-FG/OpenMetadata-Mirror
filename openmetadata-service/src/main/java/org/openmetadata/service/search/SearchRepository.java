@@ -1119,7 +1119,7 @@ public class SearchRepository {
       EntityInterface entity) {
 
     if (changeDescription != null && entityType.equalsIgnoreCase(Entity.PAGE)) {
-      String indexName = indexMapping.getIndexName();
+      String indexName = indexMapping.getIndexName(clusterAlias);
       for (FieldChange field : changeDescription.getFieldsAdded()) {
         if (field.getName().contains(PARENT)) {
           String oldParentFQN = entity.getName();
@@ -1191,11 +1191,11 @@ public class SearchRepository {
         if (field.getName().equalsIgnoreCase(FIELD_DISPLAY_NAME)) {
           Map<String, Object> updates = new HashMap<>();
           updates.put("displayName", field.getNewValue().toString());
-          paramMap.put("tagFQN", oldFQN);
+          paramMap.put("tagFQN", entity.getFullyQualifiedName());
           paramMap.put("updates", updates);
           searchClient.updateChildren(
               GLOBAL_SEARCH_ALIAS,
-              new ImmutablePair<>(TAGS_FQN, oldFQN),
+              new ImmutablePair<>(TAGS_FQN, entity.getFullyQualifiedName()),
               new ImmutablePair<>(UPDATE_TAGS_FIELD_SCRIPT, paramMap));
         }
       }
