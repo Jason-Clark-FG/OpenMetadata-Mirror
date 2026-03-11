@@ -17,7 +17,7 @@ import { Box, Typography } from '@mui/material';
 import { SimpleTreeView, SimpleTreeViewProps } from '@mui/x-tree-view';
 import React, { FC, memo, MutableRefObject, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import Loader from '../../../../Loader/Loader';
+import Loader from '../../../Loader/Loader';
 
 export interface TreeContentProps {
   loading: boolean;

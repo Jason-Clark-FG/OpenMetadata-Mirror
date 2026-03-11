@@ -13,8 +13,8 @@
 
 import { Box, Checkbox, Typography } from '@mui/material';
 import React, { FC, memo } from 'react';
-import Loader from '../../../../Loader/Loader';
 import { TreeNode } from '../../../atoms/asyncTreeSelect/types';
+import Loader from '../../../Loader/Loader';
 
 export interface TreeNodeLabelProps {
   node: TreeNode;

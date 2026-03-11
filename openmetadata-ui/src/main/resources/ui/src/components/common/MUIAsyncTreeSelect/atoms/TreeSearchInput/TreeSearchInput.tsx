@@ -15,8 +15,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { Box, IconButton, InputAdornment, TextField } from '@mui/material';
 import React, { FC, memo, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import Loader from '../../../../Loader/Loader';
 import { TagChip } from '../../../atoms/TagChip';
+import Loader from '../../../Loader/Loader';
 
 export interface TreeSearchInputProps {
   open: boolean;

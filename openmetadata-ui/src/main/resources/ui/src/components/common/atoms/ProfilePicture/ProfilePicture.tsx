@@ -13,13 +13,13 @@
 
 import { Avatar, SxProps, Theme } from '@mui/material';
 import { useMemo } from 'react';
-import Loader from '../../Loader/Loader';
 import { usePermissionProvider } from '../../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../../context/PermissionProvider/PermissionProvider.interface';
 import { User } from '../../../../generated/entity/teams/user';
 import { useUserProfile } from '../../../../hooks/user-profile/useUserProfile';
 import { getRandomColor } from '../../../../utils/CommonUtils';
 import { userPermissions } from '../../../../utils/PermissionsUtils';
+import Loader from '../../Loader/Loader';
 
 type UserData = Pick<User, 'name' | 'displayName'>;
 
@@ -81,7 +81,7 @@ const ProfilePicture = ({
     return (
       <Avatar sx={getAvatarStyles()}>
         <Loader
-          size="x-small"
+          size={size >= 24 ? 'small' : 'x-small'}
           type={avatarType === 'solid' ? 'white' : 'default'}
         />
       </Avatar>
