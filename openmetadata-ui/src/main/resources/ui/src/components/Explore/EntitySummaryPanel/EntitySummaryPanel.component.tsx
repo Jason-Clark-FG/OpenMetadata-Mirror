@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { CloseOutlined } from '@mui/icons-material';
+import { XClose } from '@untitledui/icons';
 import { Button, Card } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -945,7 +945,8 @@ export default function EntitySummaryPanel({
         lineage: panelPath === 'lineage',
         'glossary-term-assets-tab': panelPath === 'glossary-term-assets-tab',
       })}
-      data-testid="entity-summary-panel-container">
+      data-testid="entity-summary-panel-container"
+    >
       {isSideDrawer && (
         <div className="d-flex items-center justify-between">
           <EntityTitleSection
@@ -966,7 +967,7 @@ export default function EntitySummaryPanel({
             aria-label={t('label.close')}
             className="drawer-close-icon flex-center mr-2"
             data-testid="drawer-close-icon"
-            icon={<CloseOutlined />}
+            icon={<XClose />}
             size="small"
             onClick={handleClosePanel}
           />
@@ -977,12 +978,14 @@ export default function EntitySummaryPanel({
           bordered={false}
           className={`summary-panel-container ${
             isSideDrawer ? 'drawer-summary-panel-container' : ''
-          }`}>
+          }`}
+        >
           <Card
             className={`content-area ${
               isSideDrawer ? 'drawer-content-area' : ''
             }`}
-            style={{ width: '100%', display: 'block' }}>
+            style={{ width: '100%', display: 'block' }}
+          >
             {renderTabContent()}
           </Card>
         </Card>

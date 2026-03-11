@@ -11,14 +11,16 @@
  *  limitations under the License.
  */
 
-import { Avatar, AvatarProps, useTheme } from '@mui/material';
+import { Avatar } from '@openmetadata/ui-core-components';
 import { FC } from 'react';
 import {
   getDefaultIconForEntityType,
   ICON_MAP,
 } from '../../../utils/IconUtils';
 
-export interface EntityAvatarProps extends AvatarProps {
+type AvatarSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
+export interface EntityAvatarProps {
   entity: {
     name?: string;
     displayName?: string;
@@ -32,56 +34,58 @@ export interface EntityAvatarProps extends AvatarProps {
     };
   };
   size?: number;
+  className?: string;
+  alt?: string;
 }
 
-/**
- * A reusable component for rendering entity avatars with custom icons
- * Supports URL-based icons, icon names from ICON_MAP, and default icons
- */
+const getSizeVariant = (size: number): AvatarSize => {
+  if (size <= 16) {
+    return 'xxs';
+  }
+  if (size <= 24) {
+    return 'xs';
+  }
+  if (size <= 32) {
+    return 'sm';
+  }
+  if (size <= 48) {
+    return 'lg';
+  }
+  if (size <= 56) {
+    return 'xl';
+  }
+  if (size >= 64) {
+    return '2xl';
+  }
+
+  return 'md';
+};
+
 export const EntityAvatar: FC<EntityAvatarProps> = ({
   entity,
   size = 40,
-  className = 'entity-avatar',
-  sx: customSx,
+  className,
   alt,
-  ...avatarProps
 }) => {
-  const theme = useTheme();
-  const bgColor = entity.style?.color || theme.palette.allShades.brand[600];
   const avatarAlt = alt ?? entity.name ?? entity.displayName;
+  const sizeVariant = getSizeVariant(size);
 
-  // Check if it's a URL (for Avatar src prop)
   const isUrl =
     entity.style?.iconURL &&
     (entity.style.iconURL.startsWith('http') ||
       entity.style.iconURL.startsWith('/'));
 
   if (isUrl) {
-    // For URLs, use Avatar's src prop
     return (
       <Avatar
         alt={avatarAlt}
         className={className}
+        size={sizeVariant}
         src={entity.style?.iconURL}
-        sx={[
-          {
-            width: size,
-            height: size,
-            backgroundColor: bgColor,
-            color: theme.palette.allShades.white,
-            '& .MuiAvatar-img': {
-              width: size * 0.6,
-              height: size * 0.6,
-            },
-          },
-          customSx,
-        ]}
-        {...avatarProps}
       />
     );
   }
 
-  // For icon names, render the icon component
   const IconComponent = entity.style?.iconURL
     ? ICON_MAP[entity.style.iconURL]
     : null;
@@ -91,39 +95,20 @@ export const EntityAvatar: FC<EntityAvatarProps> = ({
       <Avatar
         alt={avatarAlt}
         className={className}
-        sx={[
-          {
-            width: size,
-            height: size,
-            backgroundColor: bgColor,
-            color: theme.palette.allShades.white,
-          },
-          customSx,
-        ]}
-        {...avatarProps}>
-        <IconComponent size={size * 0.6} style={{ strokeWidth: 1.5 }} />
-      </Avatar>
+        placeholderIcon={IconComponent as FC<{ className?: string }>}
+        size={sizeVariant}
+      />
     );
   }
 
-  // Default icons when no iconURL is provided
   const DefaultIcon = getDefaultIconForEntityType(entity.entityType);
 
   return (
     <Avatar
       alt={avatarAlt}
       className={className}
-      sx={[
-        {
-          width: size,
-          height: size,
-          backgroundColor: bgColor,
-          color: theme.palette.allShades.white,
-        },
-        customSx,
-      ]}
-      {...avatarProps}>
-      <DefaultIcon size={size * 0.6} style={{ strokeWidth: 1.5 }} />
-    </Avatar>
+      placeholderIcon={DefaultIcon as FC<{ className?: string }>}
+      size={sizeVariant}
+    />
   );
 };
