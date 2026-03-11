@@ -15,9 +15,7 @@ The framework resolves connection modules via:
   metadata.ingestion.source.{service_type}.{source_type}.connection
 This re-exports from the parent to avoid code duplication.
 """
-from metadata.ingestion.source.mcp.connection import (
-    get_connection,
-    test_connection,
-)
+
+from metadata.ingestion.source.mcp.connection import get_connection, test_connection
 
 __all__ = ["get_connection", "test_connection"]

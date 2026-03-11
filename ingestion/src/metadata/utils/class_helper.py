@@ -25,9 +25,6 @@ from metadata.generated.schema.entity.services.serviceType import ServiceType
 from metadata.generated.schema.metadataIngestion.apiServiceMetadataPipeline import (
     ApiServiceMetadataPipeline,
 )
-from metadata.generated.schema.metadataIngestion.mcpServiceMetadataPipeline import (
-    McpServiceMetadataPipeline,
-)
 from metadata.generated.schema.metadataIngestion.dashboardServiceMetadataPipeline import (
     DashboardServiceMetadataPipeline,
 )
@@ -47,6 +44,9 @@ from metadata.generated.schema.metadataIngestion.dataInsightPipeline import (
     DataInsightPipeline,
 )
 from metadata.generated.schema.metadataIngestion.dbtPipeline import DbtPipeline
+from metadata.generated.schema.metadataIngestion.mcpServiceMetadataPipeline import (
+    McpServiceMetadataPipeline,
+)
 from metadata.generated.schema.metadataIngestion.messagingServiceMetadataPipeline import (
     MessagingServiceMetadataPipeline,
 )

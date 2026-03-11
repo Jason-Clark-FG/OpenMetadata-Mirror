@@ -14,6 +14,7 @@ MCP (Model Context Protocol) Client
 This module provides a client for communicating with MCP servers using
 the JSON-RPC 2.0 protocol over various transports (Stdio, SSE, HTTP).
 """
+
 import json
 import os
 import subprocess
@@ -127,14 +128,17 @@ class StdioTransport:
                     break
                 line = line.strip()
                 if line:
-                    response = json.loads(line)
-                    msg_id = response.get("id")
-                    if msg_id is not None:
-                        with self._lock:
-                            self._responses[msg_id] = response
-            except json.JSONDecodeError:
-                continue
-            except Exception:
+                    try:
+                        response = json.loads(line)
+                        msg_id = response.get("id")
+                        if msg_id is not None:
+                            with self._lock:
+                                self._responses[msg_id] = response
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse MCP response: {e}")
+            except Exception as e:
+                if self._running:
+                    logger.error(f"Error reading from MCP server: {e}")
                 break
 
     def _drain_stderr(self) -> None:
@@ -148,9 +152,7 @@ class StdioTransport:
             except Exception:
                 break
 
-    def send_notification(
-        self, method: str, params: Optional[Dict] = None
-    ) -> None:
+    def send_notification(self, method: str, params: Optional[Dict] = None) -> None:
         """Send a JSON-RPC notification (no id, no response expected)"""
         if not self.process or not self.process.stdin:
             raise McpProtocolError("Transport not connected")
@@ -206,10 +208,19 @@ class StdioTransport:
         self._running = False
         if self.process:
             try:
-                self.process.terminate()
-                self.process.wait(timeout=5)
+                if self.process.stdin:
+                    self.process.stdin.close()
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
             except Exception:
-                self.process.kill()
+                pass
+        if self._reader_thread and self._reader_thread.is_alive():
+            self._reader_thread.join(timeout=2)
+        if self._stderr_thread and self._stderr_thread.is_alive():
+            self._stderr_thread.join(timeout=2)
 
 
 class HttpTransport:
@@ -233,9 +244,7 @@ class HttpTransport:
             self.session.headers["Authorization"] = f"Bearer {self.api_key}"
         self.session.headers["Content-Type"] = "application/json"
 
-    def send_notification(
-        self, method: str, params: Optional[Dict] = None
-    ) -> None:
+    def send_notification(self, method: str, params: Optional[Dict] = None) -> None:
         """Send a JSON-RPC notification via HTTP POST (no response expected)"""
         notification = {"jsonrpc": "2.0", "method": method}
         if params:

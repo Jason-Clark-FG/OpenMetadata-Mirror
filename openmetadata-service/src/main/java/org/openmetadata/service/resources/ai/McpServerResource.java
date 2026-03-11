@@ -557,7 +557,7 @@ public class McpServerResource extends EntityResource<McpServer, McpServerReposi
       @Parameter(description = "Name of the MCP Server", schema = @Schema(type = "string"))
           @PathParam("fqn")
           String fqn) {
-    return deleteByName(uriInfo, securityContext, fqn, false, hardDelete);
+    return deleteByName(uriInfo, securityContext, fqn, recursive, hardDelete);
   }
 
   @PUT

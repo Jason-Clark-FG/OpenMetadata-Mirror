@@ -14,6 +14,7 @@ MCP (Model Context Protocol) Source
 Discovers and catalogs MCP servers, their tools, resources, and prompts
 for AI governance in OpenMetadata.
 """
+
 import re
 import traceback
 from typing import Any, Dict, Iterable, List, Optional
@@ -23,12 +24,12 @@ from metadata.generated.schema.entity.ai.mcpServer import (
     ConnectionConfig,
     McpPrompt,
     McpResource,
+    McpTool,
     PromptArgument,
     ResourceType,
     ServerCapabilities,
     ServerInfo,
     ServerType,
-    McpTool,
     TransportType,
 )
 from metadata.generated.schema.entity.services.connections.mcp.mcpConnection import (
@@ -45,11 +46,8 @@ from metadata.ingestion.api.models import Either
 from metadata.ingestion.api.steps import InvalidSourceException, Source
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.connections import get_connection, test_connection_common
-from metadata.ingestion.source.mcp.client import (
-    McpClient,
-    McpProtocolError,
-    McpServerInfo as ClientServerInfo,
-)
+from metadata.ingestion.source.mcp.client import McpClient, McpProtocolError
+from metadata.ingestion.source.mcp.client import McpServerInfo as ClientServerInfo
 from metadata.ingestion.source.mcp.connection import McpConnectionManager
 from metadata.utils.filters import filter_by_server
 from metadata.utils.helpers import retry_with_docker_host
@@ -245,9 +243,7 @@ class McpSource(Source):
         if self.service_connection.fetchTools:
             try:
                 client.list_tools()
-                logger.debug(
-                    f"Fetched {len(server.tools)} tools from '{server.name}'"
-                )
+                logger.debug(f"Fetched {len(server.tools)} tools from '{server.name}'")
             except McpProtocolError as e:
                 logger.warning(f"Could not fetch tools from '{server.name}': {e}")
 
@@ -303,7 +299,9 @@ class McpSource(Source):
             )
 
         tools = self._convert_tools(server.tools) if server.tools else None
-        resources = self._convert_resources(server.resources) if server.resources else None
+        resources = (
+            self._convert_resources(server.resources) if server.resources else None
+        )
         prompts = self._convert_prompts(server.prompts) if server.prompts else None
 
         description = f"MCP server: {server.name}"
@@ -321,9 +319,11 @@ class McpSource(Source):
             description=description,
             serverType=server_type,
             transportType=transport_type,
-            protocolVersion=server.server_info.get("protocolVersion")
-            if server.server_info
-            else None,
+            protocolVersion=(
+                server.server_info.get("protocolVersion")
+                if server.server_info
+                else None
+            ),
             serverInfo=server_info,
             connectionConfig=connection_config,
             capabilities=capabilities,
@@ -352,9 +352,7 @@ class McpSource(Source):
             result.append(mcp_tool)
         return result
 
-    def _convert_resources(
-        self, resources: List[Dict[str, Any]]
-    ) -> List[McpResource]:
+    def _convert_resources(self, resources: List[Dict[str, Any]]) -> List[McpResource]:
         """Convert MCP protocol resources to OpenMetadata McpResource objects"""
         result = []
         for resource in resources:

@@ -11,6 +11,7 @@
 """
 OMeta API endpoints
 """
+
 from metadata.generated.schema.analytics.webAnalyticEventData import (
     WebAnalyticEventData,
 )
@@ -125,6 +126,7 @@ from metadata.generated.schema.api.tests.createTestDefinition import (
 from metadata.generated.schema.api.tests.createTestSuite import CreateTestSuiteRequest
 from metadata.generated.schema.dataInsight.dataInsightChart import DataInsightChart
 from metadata.generated.schema.dataInsight.kpi.kpi import Kpi
+from metadata.generated.schema.entity.ai.mcpServer import McpServer
 from metadata.generated.schema.entity.applications.app import App
 from metadata.generated.schema.entity.applications.createAppRequest import (
     CreateAppRequest,
@@ -176,13 +178,12 @@ from metadata.generated.schema.entity.services.connections.testConnectionDefinit
     TestConnectionDefinition,
 )
 from metadata.generated.schema.entity.services.dashboardService import DashboardService
-from metadata.generated.schema.entity.ai.mcpServer import McpServer
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
-from metadata.generated.schema.entity.services.mcpService import McpService
 from metadata.generated.schema.entity.services.driveService import DriveService
 from metadata.generated.schema.entity.services.ingestionPipelines.ingestionPipeline import (
     IngestionPipeline,
 )
+from metadata.generated.schema.entity.services.mcpService import McpService
 from metadata.generated.schema.entity.services.messagingService import MessagingService
 from metadata.generated.schema.entity.services.metadataService import MetadataService
 from metadata.generated.schema.entity.services.mlmodelService import MlModelService

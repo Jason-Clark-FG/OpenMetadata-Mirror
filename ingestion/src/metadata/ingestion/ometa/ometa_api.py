@@ -14,6 +14,7 @@ for the metadata-server API. It is based on the generated pydantic
 models from the JSON schemas and provides a typed approach to
 working with OpenMetadata entities.
 """
+
 import traceback
 from collections import OrderedDict
 from collections.abc import Generator
@@ -461,10 +462,12 @@ class OpenMetadata(
                 None,
                 [
                     self.class_root,
-                    self.entity_path
-                    if not file_name.startswith("test")
-                    and not file_name.startswith("eventSubscription")
-                    else None,
+                    (
+                        self.entity_path
+                        if not file_name.startswith("test")
+                        and not file_name.startswith("eventSubscription")
+                        else None
+                    ),
                     self.get_module_path(create),
                     self.update_file_name(create, file_name),
                 ],
