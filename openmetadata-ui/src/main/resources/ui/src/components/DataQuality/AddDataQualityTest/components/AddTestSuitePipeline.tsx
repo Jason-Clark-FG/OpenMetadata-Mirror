@@ -197,14 +197,14 @@ const AddTestSuitePipeline = ({
                   ]}
                   valuePropName="selectedTest">
                   <AddTestCaseList
-                    filters={
+                    showButton={false}
+                    testCaseFilters={
                       !testSuiteId
                         ? `testSuite.fullyQualifiedName:"${escapeESReservedCharacters(
                             testSuite?.fullyQualifiedName ?? fqn
                           )}"`
                         : undefined
                     }
-                    showButton={false}
                     testCaseParams={{ testSuiteId }}
                   />
                 </Form.Item>

@@ -333,27 +333,27 @@ describe('AddTestCaseList', () => {
       });
     });
 
-    it('applies filters when provided', async () => {
-      const filters = 'testSuiteFullyQualifiedName:sample.test.suite';
+    it('applies testCaseFilters when provided', async () => {
+      const testCaseFilters = 'testSuiteFullyQualifiedName:sample.test.suite';
 
       await act(async () => {
-        renderWithRouter({ ...mockProps, filters });
+        renderWithRouter({ ...mockProps, testCaseFilters });
       });
 
       await waitFor(() => {
         expect(mockGetListTestCaseBySearch).toHaveBeenCalledWith({
-          q: `* && ${filters}`,
+          q: `* && ${testCaseFilters}`,
           limit: 25,
           offset: 0,
         });
       });
     });
 
-    it('combines search term with filters', async () => {
-      const filters = 'testSuiteFullyQualifiedName:sample.test.suite';
+    it('combines search term with testCaseFilters', async () => {
+      const testCaseFilters = 'testSuiteFullyQualifiedName:sample.test.suite';
 
       await act(async () => {
-        renderWithRouter({ ...mockProps, filters });
+        renderWithRouter({ ...mockProps, testCaseFilters });
       });
 
       const searchBar = screen.getByTestId('search-bar');
@@ -364,7 +364,7 @@ describe('AddTestCaseList', () => {
 
       await waitFor(() => {
         expect(mockGetListTestCaseBySearch).toHaveBeenCalledWith({
-          q: `*column_test* && ${filters}`,
+          q: `*column_test* && ${testCaseFilters}`,
           limit: 25,
           offset: 0,
         });

@@ -65,11 +65,13 @@ export const AddTestCaseList = ({
   onSubmit,
   cancelText,
   submitText,
-  filters,
+  testCaseFilters,
+  columnFilters,
   selectedTest,
   onChange,
   showButton = true,
   testCaseParams,
+  hideTableFilter = false,
 }: AddTestCaseModalProps) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>();
@@ -189,28 +191,33 @@ export const AddTestCaseList = ({
     [fetchTableData]
   );
 
-  const fetchColumnOptions = useCallback(async (search?: string) => {
-    setIsColumnOptionsLoading(true);
-    try {
-      const response = await getAggregateFieldOptions(
-        SearchIndex.DATA_ASSET,
-        COLUMN_AGGREGATE_FIELD,
-        search ?? '',
-        '',
-        undefined,
-        false
-      );
-      const buckets =
-        response.data?.aggregations?.[`sterms#${COLUMN_AGGREGATE_FIELD}`]
-          ?.buckets ?? [];
-      const options = parseColumnAggregateBuckets(buckets as { key: string }[]);
-      setColumnOptionsFromApi(options);
-    } catch {
-      setColumnOptionsFromApi([]);
-    } finally {
-      setIsColumnOptionsLoading(false);
-    }
-  }, []);
+  const fetchColumnOptions = useCallback(
+    async (search?: string) => {
+      setIsColumnOptionsLoading(true);
+      try {
+        const response = await getAggregateFieldOptions(
+          SearchIndex.DATA_ASSET,
+          COLUMN_AGGREGATE_FIELD,
+          search ?? '',
+          columnFilters ?? '',
+          undefined,
+          false
+        );
+        const buckets =
+          response.data?.aggregations?.[`sterms#${COLUMN_AGGREGATE_FIELD}`]
+            ?.buckets ?? [];
+        const options = parseColumnAggregateBuckets(
+          buckets as { key: string }[]
+        );
+        setColumnOptionsFromApi(options);
+      } catch {
+        setColumnOptionsFromApi([]);
+      } finally {
+        setIsColumnOptionsLoading(false);
+      }
+    },
+    [columnFilters]
+  );
 
   const debounceFetchColumnData = useCallback(
     debounce((search: string) => fetchColumnOptions(search), 500),
@@ -235,7 +242,9 @@ export const AddTestCaseList = ({
       try {
         setIsLoading(true);
         const globalSearch = searchText ? `*${searchText}*` : WILD_CARD_CHAR;
-        const q = filters ? `${globalSearch} && ${filters}` : globalSearch;
+        const q = testCaseFilters
+          ? `${globalSearch} && ${testCaseFilters}`
+          : globalSearch;
 
         const columnNamesFromKeys =
           filterColumns.length > 0
@@ -289,7 +298,7 @@ export const AddTestCaseList = ({
       }
     },
     [
-      filters,
+      testCaseFilters,
       selectedTest,
       testCaseParams,
       filterStatus,
@@ -585,6 +594,7 @@ export const AddTestCaseList = ({
             filterLoading={filterLoading}
             filterOptions={filterOptions}
             filterSelectedKeys={filterSelectedKeys}
+            hideTableFilter={hideTableFilter}
             onChange={handleFilterChange}
             onSearch={handleFilterSearch}
           />

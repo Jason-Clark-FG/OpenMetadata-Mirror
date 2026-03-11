@@ -110,7 +110,10 @@ import {
 } from '../../../../utils/formUtils';
 import { getScheduleOptionsFromSchedules } from '../../../../utils/SchedularUtils';
 import { getIngestionName } from '../../../../utils/ServiceUtils';
-import { generateUUID } from '../../../../utils/StringsUtils';
+import {
+  escapeESReservedCharacters,
+  generateUUID,
+} from '../../../../utils/StringsUtils';
 import { generateEntityLink } from '../../../../utils/TableUtils';
 import { showSuccessToast } from '../../../../utils/ToastUtils';
 import AlertBar from '../../../AlertBar/AlertBar';
@@ -1390,6 +1393,14 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                           ]}
                           valuePropName="selectedTest">
                           <AddTestCaseList
+                            columnFilters={
+                              table?.fullyQualifiedName
+                                ? `fullyQualifiedName:"${escapeESReservedCharacters(
+                                    table.fullyQualifiedName
+                                  )}"`
+                                : undefined
+                            }
+                            hideTableFilter={Boolean(table)}
                             showButton={false}
                             testCaseParams={{
                               testSuiteId:

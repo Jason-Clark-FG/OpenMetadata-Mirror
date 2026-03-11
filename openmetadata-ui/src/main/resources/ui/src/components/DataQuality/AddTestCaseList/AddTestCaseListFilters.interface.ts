@@ -23,4 +23,5 @@ export interface AddTestCaseListFiltersProps {
     searchKey: AddTestCaseListFilterKey
   ) => void;
   onSearch: (searchText: string, searchKey: AddTestCaseListFilterKey) => void;
+  hideTableFilter?: boolean;
 }

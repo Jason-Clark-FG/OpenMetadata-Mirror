@@ -12,7 +12,7 @@
  */
 
 import { Space } from 'antd';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchDropdown from '../../SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
@@ -27,10 +27,20 @@ const AddTestCaseListFilters = ({
   filterOptions,
   filterSelectedKeys,
   filterLoading,
+  hideTableFilter = false,
   onChange,
   onSearch,
 }: AddTestCaseListFiltersProps) => {
   const { t } = useTranslation();
+  const filtersToShow = useMemo(
+    () =>
+      ADD_TEST_CASE_LIST_FILTERS.filter(
+        (filter) =>
+          !hideTableFilter ||
+          filter.searchKey !== AddTestCaseListFilterKey.Table
+      ),
+    [hideTableFilter]
+  );
 
   const handleChange = useCallback(
     (values: SearchDropdownOption[], searchKey: string) => {
@@ -47,8 +57,8 @@ const AddTestCaseListFilters = ({
   );
 
   return (
-    <Space className="tw-flex-wrap" size="middle">
-      {ADD_TEST_CASE_LIST_FILTERS.map((filter) => (
+    <Space className="add-test-case-filters" size="middle">
+      {filtersToShow.map((filter) => (
         <SearchDropdown
           hideCounts
           dropdownClassName="add-test-case-filter-dropdown"
