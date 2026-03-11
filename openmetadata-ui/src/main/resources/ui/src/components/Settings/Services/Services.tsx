@@ -58,7 +58,6 @@ import { getTermQuery } from '../../../utils/SearchUtils';
 import {
   getOptionalFields,
   getResourceEntityFromServiceCategory,
-  getSearchIndexFromService,
   getServiceTypesFromServiceCategory,
 } from '../../../utils/ServiceUtils';
 import { stringToHTML } from '../../../utils/StringsUtils';
@@ -75,6 +74,7 @@ import RichTextEditorPreviewerNew from '../../common/RichTextEditor/RichTextEdit
 import ButtonSkeleton from '../../common/Skeleton/CommonSkeletons/ControlElements/ControlElements.component';
 import { ColumnFilter } from '../../Database/ColumnFilter/ColumnFilter.component';
 import PageHeader from '../../PageHeader/PageHeader.component';
+import serviceUtilClassBase from '../../../utils/ServiceUtilClassBase';
 
 interface ServicesProps {
   serviceName: ServiceCategory;
@@ -117,7 +117,7 @@ const Services = ({ serviceName }: ServicesProps) => {
     setSearchTerm('');
     setServiceTypeFilter([]);
 
-    return getSearchIndexFromService(serviceName);
+    return serviceUtilClassBase.getServiceTypeFromEntityType(serviceName);
   }, [serviceName]);
 
   const getServiceDetails = useCallback(
