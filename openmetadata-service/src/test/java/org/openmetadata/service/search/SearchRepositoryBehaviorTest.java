@@ -3,6 +3,7 @@ package org.openmetadata.service.search;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -11,10 +12,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.ws.rs.core.Response;
@@ -32,13 +35,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedConstruction;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
+import org.openmetadata.schema.api.entityRelationship.SearchEntityRelationshipRequest;
+import org.openmetadata.schema.api.entityRelationship.SearchEntityRelationshipResult;
+import org.openmetadata.schema.api.lineage.EntityCountLineageRequest;
+import org.openmetadata.schema.api.lineage.LineagePaginationInfo;
 import org.openmetadata.schema.api.lineage.SearchLineageRequest;
 import org.openmetadata.schema.api.lineage.SearchLineageResult;
+import org.openmetadata.schema.api.search.SearchSettings;
+import org.openmetadata.schema.dataInsight.DataInsightChartResult;
 import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.PipelineStatus;
+import org.openmetadata.schema.entity.data.QueryCostSearchResult;
+import org.openmetadata.schema.search.AggregationRequest;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.search.SearchRequest;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
@@ -55,9 +67,18 @@ import org.openmetadata.search.IndexMapping;
 import org.openmetadata.search.IndexMappingLoader;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
+import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.nlq.NLQService;
 import org.openmetadata.service.search.nlq.NLQServiceFactory;
+import org.openmetadata.service.search.opensearch.OpenSearchClient;
+import org.openmetadata.service.search.vector.OpenSearchVectorService;
+import org.openmetadata.service.search.vector.VectorIndexService;
 import org.openmetadata.service.search.vector.client.EmbeddingClient;
+import org.openmetadata.service.security.policyevaluator.SubjectContext;
+import org.openmetadata.schema.settings.SettingsType;
+import org.openmetadata.schema.tests.DataQualityReport;
+import org.openmetadata.service.apps.bundles.searchIndex.ElasticSearchBulkSink;
+import org.openmetadata.service.apps.bundles.searchIndex.OpenSearchBulkSink;
 
 class SearchRepositoryBehaviorTest {
 
@@ -1203,11 +1224,254 @@ class SearchRepositoryBehaviorTest {
     assertThrows(IllegalArgumentException.class, () -> repository.createEmbeddingClient(config));
   }
 
+  @Test
+  void initializeVectorSearchServiceSkipsWhenEmbeddingsAreDisabled() {
+    SearchRepository spyRepository = spy(repository);
+    doReturn(false).when(spyRepository).isVectorEmbeddingEnabled();
+
+    spyRepository.initializeVectorSearchService();
+
+    assertNull(spyRepository.getEmbeddingClient());
+    assertNull(spyRepository.getVectorIndexService());
+    assertNull(spyRepository.getVectorEmbeddingHandler());
+    verifyNoInteractions(searchClient);
+  }
+
+  @Test
+  void initializeVectorSearchServiceInitializesOpenSearchVectorSupport() throws Exception {
+    NaturalLanguageSearchConfiguration nlConfig =
+        new NaturalLanguageSearchConfiguration().withEmbeddingProvider("openai");
+    SearchRepository openSearchRepository =
+        newRepository(
+            Map.of(Entity.TABLE, TABLE_MAPPING),
+            "cluster",
+            ElasticSearchConfiguration.SearchType.OPENSEARCH,
+            nlConfig);
+    SearchRepository spyRepository = spy(openSearchRepository);
+    OpenSearchClient openSearchClient = mock(OpenSearchClient.class);
+    os.org.opensearch.client.opensearch.OpenSearchClient rawClient =
+        mock(os.org.opensearch.client.opensearch.OpenSearchClient.class);
+    EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
+    OpenSearchVectorService vectorService = mock(OpenSearchVectorService.class);
+
+    when(openSearchClient.getNewClient()).thenReturn(rawClient);
+    when(embeddingClient.getDimension()).thenReturn(1536);
+    doReturn(true).when(spyRepository).isVectorEmbeddingEnabled();
+    doReturn(embeddingClient)
+        .when(spyRepository)
+        .createEmbeddingClient(any(ElasticSearchConfiguration.class));
+    setPrivateField(spyRepository, "searchClient", openSearchClient);
+
+    try (var settingsCacheMock = mockStatic(SettingsCache.class);
+        var vectorServiceMock = mockStatic(OpenSearchVectorService.class)) {
+      settingsCacheMock
+          .when(() -> SettingsCache.getSetting(SettingsType.SEARCH_SETTINGS, SearchSettings.class))
+          .thenReturn(null);
+      vectorServiceMock
+          .when(() -> OpenSearchVectorService.init(rawClient, embeddingClient, "en"))
+          .thenAnswer(invocation -> null);
+      vectorServiceMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
+
+      spyRepository.initializeVectorSearchService();
+    }
+
+    assertSame(embeddingClient, spyRepository.getEmbeddingClient());
+    assertSame(vectorService, spyRepository.getVectorIndexService());
+    assertNotNull(spyRepository.getVectorEmbeddingHandler());
+    verify(vectorService).ensureHybridSearchPipeline(0.6, 0.4);
+  }
+
+  @Test
+  void updateHybridSearchPipelineDelegatesOnlyForOpenSearchVectorService() throws Exception {
+    OpenSearchVectorService vectorService = mock(OpenSearchVectorService.class);
+    setPrivateField(repository, "vectorIndexService", vectorService);
+
+    repository.updateHybridSearchPipeline(0.7, 0.3);
+
+    verify(vectorService).ensureHybridSearchPipeline(0.7, 0.3);
+
+    setPrivateField(repository, "vectorIndexService", mock(VectorIndexService.class));
+    repository.updateHybridSearchPipeline(0.8, 0.2);
+  }
+
+  @Test
+  void requestAndAggregationWrappersDelegateToSearchClient() throws IOException {
+    SearchRequest request = new SearchRequest().withQuery("orders");
+    SubjectContext subjectContext = mock(SubjectContext.class);
+    AggregationRequest aggregationRequest = new AggregationRequest();
+    Response response = Response.ok("payload").build();
+    QueryCostSearchResult queryCostResult = mock(QueryCostSearchResult.class);
+
+    when(searchClient.previewSearch(request, subjectContext, null)).thenReturn(response);
+    when(searchClient.searchWithNLQ(request, subjectContext)).thenReturn(response);
+    when(searchClient.searchWithDirectQuery(request, subjectContext)).thenReturn(response);
+    when(
+            searchClient.getDocByID(
+                "idx", "00000000-0000-0000-0000-000000000123"))
+        .thenReturn(response);
+    when(searchClient.searchBySourceUrl("https://src")).thenReturn(response);
+    when(searchClient.aggregate(aggregationRequest)).thenReturn(response);
+    when(searchClient.getEntityTypeCounts(request, "global")).thenReturn(response);
+    when(searchClient.getQueryCostRecords("service")).thenReturn(queryCostResult);
+
+    assertSame(response, repository.previewSearch(request, subjectContext, null));
+    assertSame(response, repository.searchWithNLQ(request, subjectContext));
+    assertSame(response, repository.searchWithDirectQuery(request, subjectContext));
+    assertSame(response, repository.getDocument("idx", UUID.fromString("00000000-0000-0000-0000-000000000123")));
+    assertSame(response, repository.searchBySourceUrl("https://src"));
+    assertSame(response, repository.aggregate(aggregationRequest));
+    assertSame(response, repository.getEntityTypeCounts(request, "global"));
+    assertSame(queryCostResult, repository.getQueryCostRecords("service"));
+  }
+
+  @Test
+  void listAndPaginationWrappersUseMappedIndices() throws IOException {
+    SearchListFilter filter = mock(SearchListFilter.class);
+    SearchSortFilter sortFilter = mock(SearchSortFilter.class);
+    SearchResultListMapper listMapper = mock(SearchResultListMapper.class);
+    SubjectContext subjectContext = mock(SubjectContext.class);
+
+    when(filter.getCondition(Entity.TABLE)).thenReturn("status = 'Active'");
+    when(searchClient.listWithOffset(
+            "status = 'Active'",
+            25,
+            10,
+            "cluster_table_search_index",
+            sortFilter,
+            "orders",
+            null))
+        .thenReturn(listMapper);
+    when(searchClient.listWithOffset(
+            "status = 'Active'",
+            25,
+            10,
+            "cluster_table_search_index",
+            sortFilter,
+            "orders",
+            "query",
+            subjectContext))
+        .thenReturn(listMapper);
+    when(searchClient.listWithDeepPagination(
+            "cluster_table_search_index",
+            "orders",
+            "status = 'Active'",
+            new String[] {"name"},
+            sortFilter,
+            15,
+            new Object[] {"after"}))
+        .thenReturn(listMapper);
+
+    assertSame(listMapper, repository.listWithOffset(filter, 25, 10, Entity.TABLE, sortFilter, "orders"));
+    assertSame(
+        listMapper,
+        repository.listWithOffset(
+            filter, 25, 10, Entity.TABLE, sortFilter, "orders", "query", subjectContext));
+    assertSame(
+        listMapper,
+        repository.listWithDeepPagination(
+            Entity.TABLE,
+            "orders",
+            "status = 'Active'",
+            new String[] {"name"},
+            sortFilter,
+            15,
+            new Object[] {"after"}));
+  }
+
+  @Test
+  void lineageAndRelationshipWrappersDelegateToSearchClient() throws IOException {
+    SearchLineageRequest lineageRequest = new SearchLineageRequest().withFqn("svc.db.orders");
+    EntityCountLineageRequest entityCountRequest = new EntityCountLineageRequest();
+    SearchEntityRelationshipRequest entityRelationshipRequest = new SearchEntityRelationshipRequest();
+    SearchLineageResult lineageResult = new SearchLineageResult();
+    SearchEntityRelationshipResult entityRelationshipResult = new SearchEntityRelationshipResult();
+    LineagePaginationInfo paginationInfo = new LineagePaginationInfo();
+    Response response = Response.ok("lineage").build();
+
+    when(searchClient.searchLineage(lineageRequest)).thenReturn(lineageResult);
+    when(searchClient.searchPlatformLineage("alias", "{}", false)).thenReturn(lineageResult);
+    when(searchClient.searchLineageWithDirection(lineageRequest)).thenReturn(lineageResult);
+    when(searchClient.getLineagePaginationInfo("svc.db.orders", 1, 2, "{}", false, Entity.TABLE))
+        .thenReturn(paginationInfo);
+    when(searchClient.searchLineageByEntityCount(entityCountRequest)).thenReturn(lineageResult);
+    when(searchClient.searchEntityRelationship("svc.db.orders", 1, 2, "{}", false))
+        .thenReturn(response);
+    when(searchClient.searchDataQualityLineage("svc.db.orders", 1, "{}", false)).thenReturn(response);
+    when(searchClient.searchSchemaEntityRelationship("svc.db.orders", 1, 2, "{}", false))
+        .thenReturn(response);
+    when(searchClient.searchEntityRelationship(entityRelationshipRequest))
+        .thenReturn(entityRelationshipResult);
+    when(searchClient.searchEntityRelationshipWithDirection(entityRelationshipRequest))
+        .thenReturn(entityRelationshipResult);
+
+    assertSame(lineageResult, repository.searchLineage(lineageRequest));
+    assertSame(lineageResult, repository.searchPlatformLineage("alias", "{}", false));
+    assertSame(lineageResult, repository.searchLineageWithDirection(lineageRequest));
+    assertSame(
+        paginationInfo,
+        repository.getLineagePaginationInfo("svc.db.orders", 1, 2, "{}", false, Entity.TABLE));
+    assertSame(lineageResult, repository.searchLineageByEntityCount(entityCountRequest));
+    assertSame(response, repository.searchEntityRelationship("svc.db.orders", 1, 2, "{}", false));
+    assertSame(response, repository.searchDataQualityLineage("svc.db.orders", 1, "{}", false));
+    assertSame(
+        response,
+        repository.searchSchemaEntityRelationship("svc.db.orders", 1, 2, "{}", false));
+    assertSame(entityRelationshipResult, repository.searchEntityRelationship(entityRelationshipRequest));
+    assertSame(
+        entityRelationshipResult,
+        repository.searchEntityRelationshipWithDirection(entityRelationshipRequest));
+  }
+
+  @Test
+  void createBulkSinkUsesSearchTypeSpecificImplementation() {
+    when(searchClient.getSearchType()).thenReturn(ElasticSearchConfiguration.SearchType.OPENSEARCH);
+    try (MockedConstruction<OpenSearchBulkSink> ignored = mockConstruction(OpenSearchBulkSink.class)) {
+      assertNotNull(repository.createBulkSink(10, 2, 1024L));
+    }
+
+    when(searchClient.getSearchType()).thenReturn(ElasticSearchConfiguration.SearchType.ELASTICSEARCH);
+    try (MockedConstruction<ElasticSearchBulkSink> ignored =
+        mockConstruction(ElasticSearchBulkSink.class)) {
+      assertNotNull(repository.createBulkSink(10, 2, 1024L));
+    }
+  }
+
+  @Test
+  void createReindexHandlerAndDeleteRelationshipHelpersUseExpectedImplementations() throws IOException {
+    repository.createReindexHandler();
+
+    repository.deleteRelationshipFromSearch(
+        UUID.fromString("00000000-0000-0000-0000-000000000001"),
+        UUID.fromString("00000000-0000-0000-0000-000000000002"));
+
+    verify(searchClient)
+        .updateChildren(
+            eq(SearchClient.GLOBAL_SEARCH_ALIAS),
+            eq(new org.apache.commons.lang3.tuple.ImmutablePair<>(
+                "upstreamEntityRelationship.docId.keyword",
+                "00000000-0000-0000-0000-000000000001-00000000-0000-0000-0000-000000000002")),
+            any(org.apache.commons.lang3.tuple.Pair.class));
+    assertTrue(repository.createReindexHandler() instanceof RecreateWithEmbeddings);
+  }
+
   private SearchRepository newRepository(
       Map<String, IndexMapping> entityIndexMap, String clusterAlias) {
+    return newRepository(
+        entityIndexMap,
+        clusterAlias,
+        ElasticSearchConfiguration.SearchType.ELASTICSEARCH,
+        null);
+  }
+
+  private SearchRepository newRepository(
+      Map<String, IndexMapping> entityIndexMap,
+      String clusterAlias,
+      ElasticSearchConfiguration.SearchType searchType,
+      NaturalLanguageSearchConfiguration nlConfig) {
     ElasticSearchConfiguration config = new ElasticSearchConfiguration();
     config.setClusterAlias(clusterAlias);
-    config.setSearchType(ElasticSearchConfiguration.SearchType.ELASTICSEARCH);
+    config.setSearchType(searchType);
+    config.setNaturalLanguageSearch(nlConfig);
 
     IndexMappingLoader mappingLoader = mock(IndexMappingLoader.class);
     when(mappingLoader.getIndexMapping()).thenReturn(entityIndexMap);
