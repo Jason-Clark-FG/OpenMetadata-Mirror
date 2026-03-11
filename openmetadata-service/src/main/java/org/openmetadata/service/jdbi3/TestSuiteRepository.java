@@ -369,7 +369,7 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
     }
 
     String domainField =
-        Entity.TEST_CASE_RESOLUTION_STATUS.equals(index)
+        (Entity.TEST_CASE_RESOLUTION_STATUS.equals(index) || Entity.TEST_CASE_RESULT.equals(index))
             ? "testCase.domains.fullyQualifiedName"
             : "domains.fullyQualifiedName";
 

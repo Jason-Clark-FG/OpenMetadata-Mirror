@@ -1,5 +1,7 @@
 package org.openmetadata.service.search.indexes;
 
+import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +49,7 @@ public record TestCaseResultIndex(TestCaseResult testCaseResult) implements Sear
         Entity.getEntityByName(
             Entity.TEST_CASE,
             testCaseResult.getTestCaseFQN(),
-            "testSuites,testSuite,testDefinition,entityLink,owners,tags",
+            "testSuites,testSuite,testDefinition,entityLink,owners,tags,domains",
             Include.ALL);
 
     // Load TestDefinition with only required fields
@@ -77,6 +79,9 @@ public record TestCaseResultIndex(TestCaseResult testCaseResult) implements Sear
     esDoc.put("@timestamp", testCaseResult.getTimestamp());
     if (testDefinition != null) {
       esDoc.put("testDefinition", JsonUtils.getMap(testDefinition));
+    }
+    if (!nullOrEmpty(testCase.getDomains())) {
+      esDoc.put("domains", getEntitiesWithDisplayName(testCase.getDomains()));
     }
     setParentRelationships(testCase, esDoc);
     return esDoc;
