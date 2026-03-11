@@ -715,8 +715,6 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
    */
   private boolean isConditionalTask(WorkflowNodeDefinitionInterface node) {
     String nodeType = node.getSubType();
-    return "checkEntityAttributesTask".equals(nodeType)
-        || "userApprovalTask".equals(nodeType)
-        || "checkChangeDescriptionTask".equals(nodeType);
+    return "checkEntityAttributesTask".equals(nodeType) || "userApprovalTask".equals(nodeType);
   }
 }

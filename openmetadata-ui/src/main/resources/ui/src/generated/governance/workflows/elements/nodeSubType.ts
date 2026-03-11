@@ -15,7 +15,6 @@
  */
 export enum NodeSubType {
     ApplyRecognizerFeedbackTask = "applyRecognizerFeedbackTask",
-    CheckChangeDescriptionTask = "checkChangeDescriptionTask",
     CheckEntityAttributesTask = "checkEntityAttributesTask",
     CreateAndRunIngestionPipelineTask = "createAndRunIngestionPipelineTask",
     CreateRecognizerFeedbackApprovalTask = "createRecognizerFeedbackApprovalTask",

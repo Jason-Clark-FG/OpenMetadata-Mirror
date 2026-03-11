@@ -12,7 +12,6 @@
       "entityTypes": ["glossaryTerm"],
       "events": ["Created", "Updated"],
       "exclude": [],
-      "include": [],
       "filter": {}
     },
     "output": ["relatedEntity", "updatedBy"]
