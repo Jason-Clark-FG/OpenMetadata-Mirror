@@ -25,6 +25,9 @@ from metadata.generated.schema.entity.services.serviceType import ServiceType
 from metadata.generated.schema.metadataIngestion.apiServiceMetadataPipeline import (
     ApiServiceMetadataPipeline,
 )
+from metadata.generated.schema.metadataIngestion.mcpServiceMetadataPipeline import (
+    McpServiceMetadataPipeline,
+)
 from metadata.generated.schema.metadataIngestion.dashboardServiceMetadataPipeline import (
     DashboardServiceMetadataPipeline,
 )
@@ -81,6 +84,7 @@ SERVICE_TYPE_REF = {
     ServiceType.Search.value: "searchService",
     ServiceType.Storage.value: "storageService",
     ServiceType.Security.value: "securityService",
+    ServiceType.Mcp.value: "mcpService",
     # We use test suites as "services" for DQ Ingestion Pipelines
     TestSuiteServiceType.TestSuite.value: "testSuite",
 }
@@ -97,6 +101,7 @@ SOURCE_CONFIG_TYPE_INGESTION = {
     MlModelServiceMetadataPipeline.__name__: PipelineType.metadata,
     StorageServiceMetadataPipeline.__name__: PipelineType.metadata,
     SearchServiceMetadataPipeline.__name__: PipelineType.metadata,
+    McpServiceMetadataPipeline.__name__: PipelineType.metadata,
     TestSuitePipeline.__name__: PipelineType.TestSuite,
     MetadataToElasticSearchPipeline.__name__: PipelineType.elasticSearchReindex,
     DataInsightPipeline.__name__: PipelineType.dataInsight,

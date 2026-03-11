@@ -42,12 +42,12 @@
       "enum": [
         "Stdio",
         "SSE",
-        "Streamable"
+        "StreamableHTTP"
       ],
       "javaEnums": [
         {"name": "Stdio"},
         {"name": "SSE"},
-        {"name": "Streamable"}
+        {"name": "StreamableHTTP"}
       ]
     },
     "developmentStage": {

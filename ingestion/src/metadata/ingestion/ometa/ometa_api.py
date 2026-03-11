@@ -454,6 +454,7 @@ class OpenMetadata(
             .replace("datacontract", "dataContract")
             .replace("chatconversation", "chatConversation")
             .replace("eventsubscription", "eventSubscription")
+            .replace("mcpserver", "mcpServer")
         )
         class_path = ".".join(
             filter(

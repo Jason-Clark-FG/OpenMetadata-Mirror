@@ -60,8 +60,8 @@ logger = ingestion_logger()
 TRANSPORT_TYPE_MAP = {
     "stdio": TransportType.Stdio,
     "sse": TransportType.SSE,
-    "streamablehttp": TransportType.Streamable,
-    "streamable": TransportType.Streamable,
+    "streamablehttp": TransportType.StreamableHTTP,
+    "streamable": TransportType.StreamableHTTP,
 }
 
 SERVER_NAME_PATTERNS = {

@@ -14,6 +14,7 @@ OMeta API endpoints
 from metadata.generated.schema.analytics.webAnalyticEventData import (
     WebAnalyticEventData,
 )
+from metadata.generated.schema.api.ai.createMcpServer import CreateMcpServerRequest
 from metadata.generated.schema.api.automations.createWorkflow import (
     CreateWorkflowRequest,
 )
@@ -85,6 +86,9 @@ from metadata.generated.schema.api.services.createDatabaseService import (
 )
 from metadata.generated.schema.api.services.createDriveService import (
     CreateDriveServiceRequest,
+)
+from metadata.generated.schema.api.services.createMcpService import (
+    CreateMcpServiceRequest,
 )
 from metadata.generated.schema.api.services.createMessagingService import (
     CreateMessagingServiceRequest,
@@ -172,7 +176,9 @@ from metadata.generated.schema.entity.services.connections.testConnectionDefinit
     TestConnectionDefinition,
 )
 from metadata.generated.schema.entity.services.dashboardService import DashboardService
+from metadata.generated.schema.entity.ai.mcpServer import McpServer
 from metadata.generated.schema.entity.services.databaseService import DatabaseService
+from metadata.generated.schema.entity.services.mcpService import McpService
 from metadata.generated.schema.entity.services.driveService import DriveService
 from metadata.generated.schema.entity.services.ingestionPipelines.ingestionPipeline import (
     IngestionPipeline,
@@ -296,6 +302,10 @@ ROUTES = {
     CreateSearchServiceRequest.__name__: "/services/searchServices",
     SecurityService.__name__: "/services/securityServices",
     CreateSecurityServiceRequest.__name__: "/services/securityServices",
+    McpService.__name__: "/services/mcpServices",
+    CreateMcpServiceRequest.__name__: "/services/mcpServices",
+    McpServer.__name__: "/mcpServers",
+    CreateMcpServerRequest.__name__: "/mcpServers",
     IngestionPipeline.__name__: "/services/ingestionPipelines",
     CreateIngestionPipelineRequest.__name__: "/services/ingestionPipelines",
     TestConnectionDefinition.__name__: "/services/testConnectionDefinitions",

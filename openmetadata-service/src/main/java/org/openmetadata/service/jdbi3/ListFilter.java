@@ -66,6 +66,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
     conditions.add(getEntityStatusCondition());
+    conditions.add(getServerIdCondition());
     String condition = addCondition(conditions);
     return condition.isEmpty() ? "WHERE TRUE" : "WHERE " + condition;
   }
@@ -336,6 +337,11 @@ public class ListFilter extends Filter<ListFilter> {
     return apiCollection == null
         ? ""
         : getFqnPrefixCondition(apiEndpoint, apiCollection, "apiCollection");
+  }
+
+  private String getServerIdCondition() {
+    String serverId = queryParams.get("serverId");
+    return serverId == null ? "" : "serverId = :serverId";
   }
 
   private String getEntityFQNHashCondition() {

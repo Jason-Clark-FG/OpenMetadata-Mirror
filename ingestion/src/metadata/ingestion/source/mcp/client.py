@@ -107,6 +107,9 @@ class StdioTransport:
             self._reader_thread = threading.Thread(target=self._read_responses)
             self._reader_thread.daemon = True
             self._reader_thread.start()
+            self._stderr_thread = threading.Thread(target=self._drain_stderr)
+            self._stderr_thread.daemon = True
+            self._stderr_thread.start()
         except FileNotFoundError:
             raise McpProtocolError(
                 f"Command not found: {self.command}. "
@@ -133,6 +136,32 @@ class StdioTransport:
                 continue
             except Exception:
                 break
+
+    def _drain_stderr(self) -> None:
+        """Background thread to drain stderr and prevent buffer deadlock"""
+        while self._running and self.process and self.process.stderr:
+            try:
+                line = self.process.stderr.readline()
+                if not line:
+                    break
+                logger.debug(f"MCP server stderr: {line.strip()}")
+            except Exception:
+                break
+
+    def send_notification(
+        self, method: str, params: Optional[Dict] = None
+    ) -> None:
+        """Send a JSON-RPC notification (no id, no response expected)"""
+        if not self.process or not self.process.stdin:
+            raise McpProtocolError("Transport not connected")
+        notification = {"jsonrpc": "2.0", "method": method}
+        if params:
+            notification["params"] = params
+        try:
+            self.process.stdin.write(json.dumps(notification) + "\n")
+            self.process.stdin.flush()
+        except Exception as e:
+            raise McpProtocolError(f"Failed to send notification: {e}")
 
     def send_request(
         self, method: str, params: Optional[Dict] = None
@@ -203,6 +232,22 @@ class HttpTransport:
         if self.api_key:
             self.session.headers["Authorization"] = f"Bearer {self.api_key}"
         self.session.headers["Content-Type"] = "application/json"
+
+    def send_notification(
+        self, method: str, params: Optional[Dict] = None
+    ) -> None:
+        """Send a JSON-RPC notification via HTTP POST (no response expected)"""
+        notification = {"jsonrpc": "2.0", "method": method}
+        if params:
+            notification["params"] = params
+        try:
+            self.session.post(
+                f"{self.url}/mcp",
+                json=notification,
+                timeout=self.timeout,
+            )
+        except Exception:
+            pass
 
     def send_request(
         self, method: str, params: Optional[Dict] = None
@@ -308,7 +353,7 @@ class McpClient:
         self.server_config.server_info = result.get("serverInfo", {})
         self.server_config.capabilities = result.get("capabilities", {})
 
-        self._transport.send_request("notifications/initialized", {})
+        self._transport.send_notification("notifications/initialized", {})
         self._initialized = True
 
         return result
