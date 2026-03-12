@@ -10,33 +10,25 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Dropdown } from '@openmetadata/ui-core-components';
-import { ChevronDown, Download01, Plus, Settings01 } from '@untitledui/icons';
+import { Button, Dropdown, Tooltip } from '@openmetadata/ui-core-components';
 import {
-  Dropdown as AntDropdown,
-  Card,
-  Col,
-  Divider,
-  MenuProps,
-  RadioChangeEvent,
-  Row,
-  Tooltip,
-  Typography,
-} from 'antd';
+  ChevronDown,
+  Download01,
+  Edit01,
+  Play,
+  Plus,
+  Settings01,
+  Trash01,
+  Upload01,
+} from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { isEmpty } from 'lodash';
-import type { MenuInfo } from 'rc-menu/lib/interface';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import approvedIcon from '../../../assets/img/approved.png';
-import { ReactComponent as EditIcon } from '../../../assets/svg/edit-new-thick.svg';
 import { ReactComponent as EmptyContractIcon } from '../../../assets/svg/empty-contract.svg';
 import { ReactComponent as FlagIcon } from '../../../assets/svg/flag.svg';
-import { ReactComponent as RunIcon } from '../../../assets/svg/ic-circle-pause.svg';
-import { ReactComponent as ExportIcon } from '../../../assets/svg/ic-export-box.svg';
-import { ReactComponent as ImportIcon } from '../../../assets/svg/ic-import.svg';
 import { ReactComponent as InheritIcon } from '../../../assets/svg/ic-inherit.svg';
-import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-trash.svg';
 import {
   ContractImportFormat,
   DATA_CONTRACT_ACTION_DROPDOWN_KEY,
@@ -60,7 +52,6 @@ import {
 } from '../../../utils/DataContract/DataContractUtils';
 import { formatDateTime } from '../../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { getPopupContainer } from '../../../utils/formUtils';
 import { pruneEmptyChildren } from '../../../utils/TableUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import AlertBar from '../../AlertBar/AlertBar';
@@ -153,114 +144,6 @@ const ContractDetail: React.FC<{
 
   const isInheritedContract = Boolean(contract?.inherited);
 
-  const contractActionsItems: MenuProps['items'] = useMemo(() => {
-    return [
-      ...(hasEditPermission
-        ? [
-            {
-              label: (
-                <div
-                  className="contract-action-dropdown-item"
-                  data-testid="contract-edit-button">
-                  <EditIcon className="anticon" />
-
-                  {t('label.edit')}
-                </div>
-              ),
-              key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.EDIT,
-            },
-            {
-              label: (
-                <div
-                  className="contract-action-dropdown-item"
-                  data-testid="contract-run-now-button">
-                  <RunIcon className="anticon" />
-
-                  {t('label.run-now')}
-                </div>
-              ),
-              key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.RUN_NOW,
-            },
-            {
-              label: (
-                <div
-                  className="contract-action-dropdown-item"
-                  data-testid="import-openmetadata-contract-button">
-                  <ImportIcon className="anticon" />
-
-                  {t('label.import')}
-                </div>
-              ),
-              key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_OPENMETADATA,
-            },
-            {
-              label: (
-                <div
-                  className="contract-action-dropdown-item"
-                  data-testid="import-odcs-contract-button">
-                  <ImportIcon className="anticon" />
-
-                  {t('label.import-odcs')}
-                </div>
-              ),
-              key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS,
-            },
-          ]
-        : []),
-      {
-        label: (
-          <div
-            className="contract-action-dropdown-item"
-            data-testid="export-contract-button">
-            <ExportIcon className="anticon" />
-
-            {t('label.export')}
-          </div>
-        ),
-        key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.EXPORT,
-      },
-      {
-        label: (
-          <div
-            className="contract-action-dropdown-item"
-            data-testid="export-odcs-contract-button">
-            <ExportIcon className="anticon" />
-
-            {t('label.export-odcs')}
-          </div>
-        ),
-        key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.EXPORT_ODCS,
-      },
-      ...(hasEditPermission
-        ? [
-            {
-              type: 'divider' as const,
-            },
-            {
-              label: (
-                <div
-                  className={`contract-action-dropdown-item contract-action-dropdown-delete-item ${
-                    isInheritedContract ? 'disabled' : ''
-                  }`}
-                  data-testid="delete-contract-button"
-                  title={
-                    isInheritedContract
-                      ? t('message.inherited-contract-cannot-be-deleted')
-                      : undefined
-                  }>
-                  <DeleteIcon className="anticon" />
-
-                  {t('label.delete')}
-                </div>
-              ),
-              key: DATA_CONTRACT_ACTION_DROPDOWN_KEY.DELETE,
-              disabled: isInheritedContract,
-            },
-          ]
-        : []),
-    ];
-  }, [isInheritedContract, hasEditPermission, t]);
-
   const handleExportContract = useCallback(() => {
     if (!contract) {
       return;
@@ -316,7 +199,6 @@ const ContractDetail: React.FC<{
 
     try {
       setValidateLoading(true);
-      // Use entity-based validation for inherited contracts to materialize and store results
       if (isInheritedContract && contract.entity?.id && contract.entity?.type) {
         await validateContractByEntityId(
           contract.entity.id,
@@ -351,8 +233,8 @@ const ContractDetail: React.FC<{
   );
 
   const handleContractAction = useCallback(
-    (item: MenuInfo) => {
-      switch (item.key) {
+    (key: string | number) => {
+      switch (key) {
         case DATA_CONTRACT_ACTION_DROPDOWN_KEY.RUN_NOW:
           return handleRunNow();
 
@@ -385,9 +267,12 @@ const ContractDetail: React.FC<{
     ]
   );
 
-  const handleModeChange = useCallback((e: RadioChangeEvent) => {
-    setMode(e.target.value);
-  }, []);
+  const handleModeChange = useCallback(
+    (e: { target: { value: DataContractMode } }) => {
+      setMode(e.target.value);
+    },
+    []
+  );
 
   const renderDataContractHeader = useMemo(() => {
     if (!contract) {
@@ -403,50 +288,35 @@ const ContractDetail: React.FC<{
           className="contract-status-img"
           src={approvedIcon}
         />
-        <Row
-          align="middle"
-          className="w-full"
-          gutter={[0, 4]}
-          justify="space-between">
-          <Col span={20}>
+        <div className="d-flex flex-wrap items-center justify-between gap-1 w-full">
+          <div className="tw:flex-1">
             <div className="d-flex items-center gap-2">
-              <Typography.Text
-                className="contract-title"
-                data-testid="contract-title">
+              <span className="contract-title" data-testid="contract-title">
                 {getEntityName(contract)}
-              </Typography.Text>
+              </span>
               {(contract as ContractWithInheritance & { inherited?: boolean })
                 .inherited && (
                 <Tooltip
                   title={t('label.inherited-entity', {
                     entity: t('label.contract'),
                   })}>
-                  <InheritIcon
-                    className="inherit-icon cursor-pointer"
-                    width={16}
-                  />
+                  <button
+                    className="tw:inline-flex tw:cursor-pointer tw:border-0 tw:bg-transparent tw:p-0"
+                    type="button">
+                    <InheritIcon className="inherit-icon" width={16} />
+                  </button>
                 </Tooltip>
               )}
             </div>
-          </Col>
-          <Col className="d-flex justify-end" span={4}>
+          </div>
+          <div className="d-flex justify-end">
             <div className="contract-action-container">
               <ContractViewSwitchTab
                 handleModeChange={handleModeChange}
                 mode={mode}
               />
 
-              <AntDropdown
-                destroyPopupOnHide
-                getPopupContainer={getPopupContainer}
-                menu={{
-                  items: contractActionsItems,
-                  onClick: handleContractAction,
-                }}
-                overlayClassName="contract-action-dropdown"
-                overlayStyle={{ width: 180 }}
-                placement="bottomRight"
-                trigger={['click']}>
+              <Dropdown.Root>
                 <Button
                   className="contract-action-button"
                   color="secondary"
@@ -454,18 +324,79 @@ const ContractDetail: React.FC<{
                   iconLeading={Settings01}
                   size="sm"
                 />
-              </AntDropdown>
+                <Dropdown.Popover className="tw:w-auto">
+                  <Dropdown.Menu onAction={handleContractAction}>
+                    {hasEditPermission ? (
+                      <Dropdown.Item
+                        data-testid="contract-edit-button"
+                        icon={Edit01}
+                        id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.EDIT}
+                        label={t('label.edit')}
+                      />
+                    ) : null}
+                    {hasEditPermission ? (
+                      <Dropdown.Item
+                        data-testid="contract-run-now-button"
+                        icon={Play}
+                        id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.RUN_NOW}
+                        label={t('label.run-now')}
+                      />
+                    ) : null}
+                    {hasEditPermission ? (
+                      <Dropdown.Item
+                        data-testid="import-openmetadata-contract-button"
+                        icon={Download01}
+                        id={
+                          DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_OPENMETADATA
+                        }
+                        label={t('label.import')}
+                      />
+                    ) : null}
+                    {hasEditPermission ? (
+                      <Dropdown.Item
+                        data-testid="import-odcs-contract-button"
+                        icon={Download01}
+                        id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.IMPORT_ODCS}
+                        label={t('label.import-odcs')}
+                      />
+                    ) : null}
+                    <Dropdown.Item
+                      data-testid="export-contract-button"
+                      icon={Upload01}
+                      id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.EXPORT}
+                      label={t('label.export')}
+                    />
+                    <Dropdown.Item
+                      data-testid="export-odcs-contract-button"
+                      icon={Upload01}
+                      id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.EXPORT_ODCS}
+                      label={t('label.export-odcs')}
+                    />
+                    {hasEditPermission ? <Dropdown.Separator /> : null}
+                    {hasEditPermission ? (
+                      <Dropdown.Item
+                        className="contract-delete-item"
+                        data-testid="delete-contract-button"
+                        icon={Trash01}
+                        id={DATA_CONTRACT_ACTION_DROPDOWN_KEY.DELETE}
+                        isDisabled={isInheritedContract}
+                        label={t('label.delete')}
+                      />
+                    ) : null}
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown.Root>
             </div>
-          </Col>
-          <Col className="d-flex items-center gap-2 flex-wrap" span={24}>
+          </div>
+          <div className="d-flex items-center gap-2 flex-wrap w-full">
             {contract.createdBy && (
               <>
                 <div className="d-flex items-center">
-                  <Typography.Text
+                  <span
                     className="contract-sub-header-title"
                     data-testid="contract-created-by-label">
                     {`${t('label.created-by')} : `}
-                  </Typography.Text>
+                  </span>
 
                   <OwnerLabel
                     owners={[
@@ -474,42 +405,36 @@ const ContractDetail: React.FC<{
                   />
                 </div>
 
-                <Divider
-                  className="self-center vertical-divider"
-                  type="vertical"
-                />
+                <span className="self-center contract-vertical-divider" />
               </>
             )}
 
             {contract.createdAt && (
               <>
                 <div className="d-flex items-center">
-                  <Typography.Text
+                  <span
                     className="contract-sub-header-title"
                     data-testid="contract-created-at-label">
                     {`${t('label.created-at')} : `}
-                  </Typography.Text>
+                  </span>
 
-                  <Typography.Text
+                  <span
                     className="contract-sub-header-value"
                     data-testid="contract-created-at-value">
                     {formatDateTime(contract.createdAt)}
-                  </Typography.Text>
+                  </span>
                 </div>
 
-                <Divider
-                  className="self-center vertical-divider"
-                  type="vertical"
-                />
+                <span className="self-center contract-vertical-divider" />
               </>
             )}
 
             <div className="d-flex items-center">
-              <Typography.Text
+              <span
                 className="contract-sub-header-title"
                 data-testid="contract-version-label">
                 {`${t('label.version')} : `}
-              </Typography.Text>
+              </span>
 
               <StatusBadgeV2
                 className="contract-version-badge"
@@ -518,14 +443,14 @@ const ContractDetail: React.FC<{
               />
             </div>
 
-            <Divider className="self-center vertical-divider" type="vertical" />
+            <span className="self-center contract-vertical-divider" />
 
             <div className="d-flex items-center">
-              <Typography.Text
+              <span
                 className="contract-sub-header-title"
                 data-testid="contract-status-label">
                 {`${t('label.status')} : `}
-              </Typography.Text>
+              </span>
 
               <StatusBadgeV2
                 className="contract-success-badge"
@@ -535,16 +460,16 @@ const ContractDetail: React.FC<{
               />
             </div>
 
-            <Divider className="self-center vertical-divider" type="vertical" />
+            <span className="self-center contract-vertical-divider" />
 
             <div
               className="d-flex items-center"
               data-testid="contract-owner-card">
-              <Typography.Text
+              <span
                 className="contract-sub-header-title"
                 data-testid="contract-status-label">
                 {`${t('label.owner-plural')} : `}
-              </Typography.Text>
+              </span>
 
               <OwnerLabel
                 avatarSize={24}
@@ -554,11 +479,21 @@ const ContractDetail: React.FC<{
                 showLabel={false}
               />
             </div>
-          </Col>
-        </Row>
+          </div>
+        </div>
       </div>
     );
-  }, [contract, mode, handleRunNow, handleModeChange, validateLoading]);
+  }, [
+    contract,
+    mode,
+    handleRunNow,
+    handleModeChange,
+    validateLoading,
+    hasEditPermission,
+    isInheritedContract,
+    handleContractAction,
+    t,
+  ]);
 
   useEffect(() => {
     if (contract?.id && contract?.latestResult?.resultId) {
@@ -574,9 +509,9 @@ const ContractDetail: React.FC<{
             <EmptyContractIcon className="empty-contract-icon" height={140} />
           }
           type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}>
-          <Typography.Paragraph className="m-t-md w-80" type="secondary">
+          <p className="m-t-md w-80 tw:text-secondary">
             {t('message.no-contract-description')}
-          </Typography.Paragraph>
+          </p>
         </ErrorPlaceHolder>
       );
     }
@@ -598,9 +533,9 @@ const ContractDetail: React.FC<{
             <EmptyContractIcon className="empty-contract-icon" height={140} />
           }
           type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}>
-          <Typography.Paragraph className="m-t-md w-80" type="secondary">
+          <p className="m-t-md w-80 tw:text-secondary">
             {t('message.create-contract-description')}
-          </Typography.Paragraph>
+          </p>
 
           <Dropdown.Root>
             <Button
@@ -653,211 +588,206 @@ const ContractDetail: React.FC<{
         onClose={handleImportModalClose}
         onSuccess={handleImportSuccess}
       />
-      <Card
-        className="contract-card-container"
-        style={{ marginBottom: 16 }}
-        title={renderDataContractHeader}>
-        {mode === DataContractMode.YAML ? (
-          <ContractYaml contract={contract} />
-        ) : (
-          <Row className="contract-detail-container">
-            {showContractStatusAlert && (
-              <Col className="contract-card-items" span={24}>
-                <AlertBar
-                  defaultExpand
-                  className="h-full"
-                  message={latestContractResults?.result ?? ''}
-                  type="error"
-                />
-              </Col>
-            )}
-
-            {/* Description Component */}
-            {!isDescriptionContentEmpty(contract.description ?? '') && (
-              <Col className="contract-card-items" span={24}>
-                <div className="contract-card-header-container">
-                  <Typography.Text className="contract-card-header">
-                    {t('label.description')}
-                  </Typography.Text>
-                  <Divider className="contract-dash-separator" />
-                </div>
-
-                <RichTextEditorPreviewerV1
-                  enableSeeMoreVariant
-                  markdown={contract.description ?? ''}
-                />
-              </Col>
-            )}
-
-            {/* Terms of Use Component */}
-            {(() => {
-              const contractWithInheritance =
-                contract as ContractWithInheritance;
-              const termsOfUse = contractWithInheritance?.termsOfUse;
-              const termsContent =
-                typeof termsOfUse === 'string'
-                  ? termsOfUse
-                  : termsOfUse?.content ?? '';
-              const isInherited =
-                typeof termsOfUse === 'object' && termsOfUse?.inherited;
-
-              if (isDescriptionContentEmpty(termsContent)) {
-                return null;
-              }
-
-              const inheritedIcon = isInherited ? (
-                <Tooltip
-                  title={t('label.inherited-entity', {
-                    entity: t('label.terms-of-service'),
-                  })}>
-                  <InheritIcon
-                    className="inherit-icon cursor-pointer"
-                    width={14}
+      <div
+        className="contract-card-container tw:border tw:border-border-secondary tw:rounded-lg tw:bg-primary"
+        style={{ marginBottom: 16 }}>
+        <div className="contract-card-head">
+          <div className="contract-card-head-title">
+            {renderDataContractHeader}
+          </div>
+        </div>
+        <div className="contract-card-body">
+          {mode === DataContractMode.YAML ? (
+            <ContractYaml contract={contract} />
+          ) : (
+            <div className="contract-detail-container">
+              {showContractStatusAlert && (
+                <div className="contract-card-items">
+                  <AlertBar
+                    defaultExpand
+                    className="h-full"
+                    message={latestContractResults?.result ?? ''}
+                    type="error"
                   />
-                </Tooltip>
-              ) : null;
+                </div>
+              )}
 
-              return (
-                <Col className="contract-card-items" span={24}>
+              {!isDescriptionContentEmpty(contract.description ?? '') && (
+                <div className="contract-card-items">
                   <div className="contract-card-header-container">
-                    <div className="d-flex items-center gap-1">
-                      <Typography.Text className="contract-card-header">
-                        {t('label.terms-of-service')}
-                      </Typography.Text>
-                      {inheritedIcon}
-                    </div>
-                    <Divider className="contract-dash-separator" />
+                    <span className="contract-card-header">
+                      {t('label.description')}
+                    </span>
+                    <hr className="contract-dash-separator" />
                   </div>
 
                   <RichTextEditorPreviewerV1
                     enableSeeMoreVariant
-                    markdown={termsContent}
+                    markdown={contract.description ?? ''}
                   />
-                </Col>
-              );
-            })()}
-
-            {/* SLA Component */}
-            <ContractSLA contract={contract} />
-
-            {/* Schema Component */}
-            {!isEmpty(schemaDetail) && (
-              <Col
-                className="contract-card-items"
-                data-testid="schema-table-card"
-                span={24}>
-                <div className="contract-card-header-container">
-                  <Typography.Text className="contract-card-header">
-                    {t('label.schema')}
-                  </Typography.Text>
-                  <Divider className="contract-dash-separator" />
                 </div>
+              )}
 
-                <ContractSchemaTable
-                  contractStatus={constraintStatus['schema']}
-                  latestSchemaValidationResult={
-                    latestContractResults?.schemaValidation
-                  }
-                  schemaDetail={schemaDetail}
-                />
-              </Col>
-            )}
+              {(() => {
+                const contractWithInheritance =
+                  contract as ContractWithInheritance;
+                const termsOfUse = contractWithInheritance?.termsOfUse;
+                const termsContent =
+                  typeof termsOfUse === 'string'
+                    ? termsOfUse
+                    : termsOfUse?.content ?? '';
+                const isInherited =
+                  typeof termsOfUse === 'object' && termsOfUse?.inherited;
 
-            {/* Security Component */}
-            {!isEmpty(contract.security) &&
-              (() => {
-                const inheritedIcon = contract.security?.inherited ? (
+                if (isDescriptionContentEmpty(termsContent)) {
+                  return null;
+                }
+
+                const inheritedIcon = isInherited ? (
                   <Tooltip
                     title={t('label.inherited-entity', {
-                      entity: t('label.security'),
+                      entity: t('label.terms-of-service'),
                     })}>
-                    <InheritIcon
-                      className="inherit-icon cursor-pointer"
-                      width={14}
-                    />
+                    <button
+                      className="tw:inline-flex tw:cursor-pointer tw:border-0 tw:bg-transparent tw:p-0"
+                      type="button">
+                      <InheritIcon className="inherit-icon" width={14} />
+                    </button>
                   </Tooltip>
                 ) : null;
 
                 return (
-                  <Col
-                    className="contract-card-items"
-                    data-testid="security-card"
-                    span={24}>
+                  <div className="contract-card-items">
                     <div className="contract-card-header-container">
                       <div className="d-flex items-center gap-1">
-                        <Typography.Text className="contract-card-header">
-                          {t('label.security')}
-                        </Typography.Text>
+                        <span className="contract-card-header">
+                          {t('label.terms-of-service')}
+                        </span>
                         {inheritedIcon}
                       </div>
-                      <Divider className="contract-dash-separator" />
+                      <hr className="contract-dash-separator" />
                     </div>
 
-                    <ContractSecurityCard security={contract.security} />
-                  </Col>
+                    <RichTextEditorPreviewerV1
+                      enableSeeMoreVariant
+                      markdown={termsContent}
+                    />
+                  </div>
                 );
               })()}
 
-            {/* Semantics Component */}
-            {contract?.semantics && contract?.semantics.length > 0 && (
-              <Col
-                className="contract-card-items"
-                data-testid="semantics-card"
-                span={24}>
-                <div className="contract-card-header-container">
-                  <Typography.Text className="contract-card-header">
-                    {t('label.semantic-plural')}
-                  </Typography.Text>
-                  <Divider className="contract-dash-separator" />
+              <ContractSLA contract={contract} />
+
+              {!isEmpty(schemaDetail) && (
+                <div
+                  className="contract-card-items"
+                  data-testid="schema-table-card">
+                  <div className="contract-card-header-container">
+                    <span className="contract-card-header">
+                      {t('label.schema')}
+                    </span>
+                    <hr className="contract-dash-separator" />
+                  </div>
+
+                  <ContractSchemaTable
+                    contractStatus={constraintStatus['schema']}
+                    latestSchemaValidationResult={
+                      latestContractResults?.schemaValidation
+                    }
+                    schemaDetail={schemaDetail}
+                  />
                 </div>
+              )}
 
-                <ContractSemantics
-                  contractStatus={constraintStatus['semantic']}
-                  latestContractResults={latestContractResults}
-                  semantics={contract?.semantics}
-                />
-              </Col>
-            )}
+              {!isEmpty(contract.security) &&
+                (() => {
+                  const inheritedIcon = contract.security?.inherited ? (
+                    <Tooltip
+                      title={t('label.inherited-entity', {
+                        entity: t('label.security'),
+                      })}>
+                      <button
+                        className="tw:inline-flex tw:cursor-pointer tw:border-0 tw:bg-transparent tw:p-0"
+                        type="button">
+                        <InheritIcon className="inherit-icon" width={14} />
+                      </button>
+                    </Tooltip>
+                  ) : null;
 
-            {/* Quality Component */}
-            {contract?.testSuite?.id && (
-              <Col
-                className="contract-card-items"
-                data-testid="data-quality-card"
-                span={24}>
-                <div className="contract-card-header-container">
-                  <Typography.Text className="contract-card-header">
-                    {t('label.quality')}
-                  </Typography.Text>
-                  <Divider className="contract-dash-separator" />
+                  return (
+                    <div
+                      className="contract-card-items"
+                      data-testid="security-card">
+                      <div className="contract-card-header-container">
+                        <div className="d-flex items-center gap-1">
+                          <span className="contract-card-header">
+                            {t('label.security')}
+                          </span>
+                          {inheritedIcon}
+                        </div>
+                        <hr className="contract-dash-separator" />
+                      </div>
+
+                      <ContractSecurityCard security={contract.security} />
+                    </div>
+                  );
+                })()}
+
+              {contract?.semantics && contract?.semantics.length > 0 && (
+                <div
+                  className="contract-card-items"
+                  data-testid="semantics-card">
+                  <div className="contract-card-header-container">
+                    <span className="contract-card-header">
+                      {t('label.semantic-plural')}
+                    </span>
+                    <hr className="contract-dash-separator" />
+                  </div>
+
+                  <ContractSemantics
+                    contractStatus={constraintStatus['semantic']}
+                    latestContractResults={latestContractResults}
+                    semantics={contract?.semantics}
+                  />
                 </div>
+              )}
 
-                <ContractQualityCard
-                  contract={contract}
-                  contractStatus={constraintStatus['quality']}
-                />
-              </Col>
-            )}
+              {contract?.testSuite?.id && (
+                <div
+                  className="contract-card-items"
+                  data-testid="data-quality-card">
+                  <div className="contract-card-header-container">
+                    <span className="contract-card-header">
+                      {t('label.quality')}
+                    </span>
+                    <hr className="contract-dash-separator" />
+                  </div>
 
-            {/* Contract Execution Chart */}
-            {contract.id && contract.latestResult?.resultId && (
-              <Col
-                className="contract-card-items"
-                data-testid="schema-table-card"
-                span={24}>
-                <div className="contract-card-header-container">
-                  <Typography.Text className="contract-card-header">
-                    {t('label.execution-history')}
-                  </Typography.Text>
-                  <Divider className="contract-dash-separator" />
+                  <ContractQualityCard
+                    contract={contract}
+                    contractStatus={constraintStatus['quality']}
+                  />
                 </div>
+              )}
 
-                <ContractExecutionChart contract={contract} />
-              </Col>
-            )}
-          </Row>
-        )}
-      </Card>
+              {contract.id && contract.latestResult?.resultId && (
+                <div
+                  className="contract-card-items"
+                  data-testid="schema-table-card">
+                  <div className="contract-card-header-container">
+                    <span className="contract-card-header">
+                      {t('label.execution-history')}
+                    </span>
+                    <hr className="contract-dash-separator" />
+                  </div>
+
+                  <ContractExecutionChart contract={contract} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 };
