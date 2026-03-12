@@ -1175,17 +1175,12 @@ public class ESLineageGraphBuilder
 
   /**
    * Checks if the query filter contains node-level filters that require path preservation.
+   * All common filters (name, displayName, tag, tier, domain, service, owner) are indexed
+   * in ES and work directly without needing path preservation.
    */
   private boolean hasNodeLevelFilters(String queryFilter) {
-    if (nullOrEmpty(queryFilter)) {
-      return false;
-    }
-
-    // Only owner/displayName/description require path preservation (in-memory filtering)
-    // Tag, tier, domain, service filters are indexed in ES and work directly
-    return queryFilter.contains("owner")
-        || queryFilter.contains("displayName")
-        || queryFilter.contains("description");
+    // All filters are indexed in ES and work directly - no path preservation needed
+    return false;
   }
 
   /**

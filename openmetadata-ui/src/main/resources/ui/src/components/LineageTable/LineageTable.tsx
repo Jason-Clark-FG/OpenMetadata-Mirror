@@ -290,21 +290,25 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     EntityFields.GLOSSARY_TERMS,
   ];
 
-  // Query filter for table data & search values
-  // Sends ALL filters to ES - both query_filter and column_filter need the same filters
-  // query_filter gets the right NODES, column_filter filters the EDGES within those nodes
+  // Query filter for table-level filtering (filters tables/nodes)
+  // For Table-level: includes search value + table-level filters
+  // For Column-level: only table-level filters (search goes to column_filter)
   const queryFilter = useMemo(() => {
-    // Send ALL filters to query_filter (don't exclude column-level filters)
-    const quickFilterQuery = getQuickFilterQuery(selectedQuickFilters);
+    // Filter out column-level filters - they go to column_filter
+    const tableLevelFilters = selectedQuickFilters.filter(
+      (filter) => !columnLevelFilterKeys.includes(filter.key as EntityFields)
+    );
+
+    const quickFilterQuery = getQuickFilterQuery(tableLevelFilters);
     const mustClauses: QueryFieldInterface[] = [];
 
-    // Add quick filter conditions (e.g., service, column, tag, glossary)
+    // Add table-level filter conditions (e.g., service, domain, tier, owner)
     if (quickFilterQuery?.query?.bool?.must) {
       mustClauses.push(...quickFilterQuery.query.bool.must);
     }
 
-    // Add search value conditions for name and displayName using wildcard
-    if (searchValue) {
+    // Add search value for table name search ONLY in Table-level mode
+    if (searchValue && impactLevel === EImpactLevel.TableLevel) {
       mustClauses.push(getSearchNameEsQuery(searchValue));
     }
 
@@ -315,16 +319,13 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         : undefined;
 
     return JSON.stringify(query);
-  }, [selectedQuickFilters, searchValue]);
+  }, [selectedQuickFilters, searchValue, impactLevel, columnLevelFilterKeys]);
 
-  // Column filter for column-level lineage filtering (simple format)
-  // Only used when impactLevel is ColumnLevel for post-processing edges
+  // Column filter for column-level filtering (filters edges by column)
+  // For Table-level: only column dropdown selections (Column, Tag, Glossary)
+  // For Column-level: search value + column filters
   // Format: "columnName:val1,columnName:val2,tag:PII,glossary:Term"
   const columnFilterValue = useMemo(() => {
-    if (impactLevel !== EImpactLevel.ColumnLevel) {
-      return undefined;
-    }
-
     const filters: string[] = [];
 
     selectedQuickFilters.forEach((filter) => {
@@ -345,13 +346,13 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
       }
     });
 
-    // Include search value as column name filter when in ColumnLevel mode
-    if (searchValue) {
+    // Include search value as column name filter ONLY in Column-level mode
+    if (searchValue && impactLevel === EImpactLevel.ColumnLevel) {
       filters.push(`columnName:${searchValue}`);
     }
 
     return filters.length > 0 ? filters.join(',') : undefined;
-  }, [impactLevel, selectedQuickFilters, searchValue]);
+  }, [impactLevel, selectedQuickFilters, searchValue, columnLevelFilterKeys]);
 
   // Define table columns
   const extraTableFilters = useMemo(() => {
@@ -541,12 +542,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         onSearchValueChange={setSearchValue}
       />
     );
-  }, [
-    searchValue,
-    lineagePagingInfo,
-    nodeDepthOptions,
-    filterNodeIds,
-  ]);
+  }, [searchValue, lineagePagingInfo, nodeDepthOptions, filterNodeIds]);
 
   // Render function for column names with search highlighting and popover
   const renderName = useCallback(
