@@ -514,9 +514,9 @@ export interface ConfigObject {
      *
      * Hex API URL. For Hex.tech cloud, use https://app.hex.tech
      *
-     * Pub/Sub APIs URL. For local testing with the emulator, use http://localhost:8085.
-     *
      * Host and Port of the Ssrs instance.
+     *
+     * Pub/Sub APIs URL. For local testing with the emulator, use http://localhost:8085.
      *
      * Pipeline Service Management/UI URI.
      *
