@@ -182,14 +182,6 @@ jest.mock('@mui/material/styles', () => ({
   }),
 }));
 
-jest.mock('@mui/icons-material', () => ({
-  HelpOutlineIcon: jest
-    .fn()
-    .mockImplementation(() => (
-      <div data-testid="help-outline-icon">HelpIcon</div>
-    )),
-}));
-
 jest.mock('@ant-design/icons', () => ({
   CloseOutlined: () => <div data-testid="close-icon">CloseIcon</div>,
 }));
@@ -670,6 +662,10 @@ describe('ColumnDetailPanel', () => {
         />
       );
 
+      await waitFor(() => {
+        expect(getByTestId('tags-section')).toBeInTheDocument();
+      });
+
       const updateButton = getByTestId('update-tags');
       fireEvent.click(updateButton);
 
@@ -689,6 +685,10 @@ describe('ColumnDetailPanel', () => {
           onColumnFieldUpdate={onColumnFieldUpdate}
         />
       );
+
+      await waitFor(() => {
+        expect(getByTestId('glossary-terms-section')).toBeInTheDocument();
+      });
 
       const updateButton = getByTestId('update-glossary-terms');
       fireEvent.click(updateButton);

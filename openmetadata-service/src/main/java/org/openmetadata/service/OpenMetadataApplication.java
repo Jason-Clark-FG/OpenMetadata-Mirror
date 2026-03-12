@@ -573,6 +573,9 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       LOG.info("RDF knowledge graph support initialized");
     }
 
+    searchRepository.createMissingIndexes();
+    searchRepository.createOrUpdateIndexTemplates();
+
     LOG.info("Core search infrastructure initialization completed");
   }
 
@@ -1042,6 +1045,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
 
     EngineIoServerOptions eioOptions = EngineIoServerOptions.newFromDefault();
     eioOptions.setAllowedCorsOrigins(null);
+    eioOptions.setMaxTimeoutThreadPoolSize(8);
     WebSocketManager.WebSocketManagerBuilder.build(eioOptions);
     FilterHolder socketAddressFilterHolder = new FilterHolder();
     socketAddressFilterHolder.setFilter(socketAddressFilter);
