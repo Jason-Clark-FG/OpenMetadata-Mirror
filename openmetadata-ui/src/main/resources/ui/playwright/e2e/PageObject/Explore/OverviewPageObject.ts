@@ -425,13 +425,9 @@ export class OverviewPageObject extends RightPanelBase {
     await expect(this.selectOwnerTabsLoader).toHaveCount(0);
 
     if (type === 'Teams') {
-      await this.page
-        .getByRole('listitem', { name: owner, exact: true })
-        .click();
+      await this.page.getByRole('listitem', { name: owner }).click();
     } else {
-      await this.page
-        .getByRole('listitem', { name: owner, exact: true })
-        .click();
+      await this.page.getByRole('listitem', { name: owner }).click();
       await this.updateOwnersButton.click();
     }
     await this.loader.waitFor({ state: 'detached' });

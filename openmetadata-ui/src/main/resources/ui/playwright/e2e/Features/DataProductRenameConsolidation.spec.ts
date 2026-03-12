@@ -389,9 +389,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       await searchResponse;
 
       // Click on the user in the list
-      await page
-        .getByRole('listitem', { name: ownerDisplayName, exact: true })
-        .click();
+      await page.getByRole('listitem', { name: ownerDisplayName }).click();
 
       const patchResponse = page.waitForResponse(
         (response) =>

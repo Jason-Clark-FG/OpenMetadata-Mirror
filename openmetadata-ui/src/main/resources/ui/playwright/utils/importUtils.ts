@@ -178,7 +178,7 @@ export const fillTeamOwnerDetails = async (page: Page, owners: string[]) => {
       '[data-testid="select-owner-tabs"] [data-testid="loader"]',
       { state: 'detached' }
     );
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
   }
 
   await page

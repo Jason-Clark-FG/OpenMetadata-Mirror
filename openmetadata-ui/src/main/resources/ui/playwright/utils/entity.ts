@@ -141,13 +141,10 @@ export const addOwner = async ({
 
   if (type === 'Teams') {
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
     await patchRequest;
   } else {
-    const ownerItem = page.getByRole('listitem', {
-      name: owner,
-      exact: true,
-    });
+    const ownerItem = page.getByRole('listitem', { name: owner });
 
     await expect
       .poll(
@@ -233,9 +230,9 @@ export const addOwnerWithoutValidation = async ({
   await searchUser;
 
   if (type === 'Teams') {
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
   } else {
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
     await page.getByTestId('selectable-list-update-btn').click();
   }
 };
@@ -267,10 +264,10 @@ export const updateOwner = async ({
 
   if (type === 'Teams') {
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
     await patchRequest;
   } else {
-    await page.getByRole('listitem', { name: owner, exact: true }).click();
+    await page.getByRole('listitem', { name: owner }).click();
 
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
     await page.getByTestId('selectable-list-update-btn').click();
