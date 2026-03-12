@@ -84,6 +84,13 @@
       "description": "Callback Url.",
       "type": "string"
     },
+    "callbackUrls": {
+      "description": "List of Callback URLs to support multiple endpoints (e.g. load balancer and direct server). The server will select the URL matching the incoming request host.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "maxAge": {
       "description": "Validity for the JWT Token created from SAML Response",
       "type": "string"

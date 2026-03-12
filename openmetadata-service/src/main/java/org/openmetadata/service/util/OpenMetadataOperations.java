@@ -585,7 +585,11 @@ public class OpenMetadataOperations implements Callable<Integer> {
         LOG.info("  Provider Name: {}", authConfig.getProviderName());
         LOG.info("  Authority: {}", authConfig.getAuthority());
         LOG.info("  Client ID: {}", authConfig.getClientId());
-        LOG.info("  Callback URL: {}", authConfig.getCallbackUrl());
+        if (authConfig.getCallbackUrls() != null && !authConfig.getCallbackUrls().isEmpty()) {
+          LOG.info("  Callback URLs: {}", authConfig.getCallbackUrls());
+        } else {
+          LOG.info("  Callback URL: {}", authConfig.getCallbackUrl());
+        }
 
         if (authConfig.getLdapConfiguration() != null) {
           LOG.info("  LDAP Host: {}", authConfig.getLdapConfiguration().getHost());

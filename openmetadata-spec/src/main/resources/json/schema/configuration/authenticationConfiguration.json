@@ -71,6 +71,14 @@
       "description": "Callback URL",
       "type": "string"
     },
+    "callbackUrls": {
+      "title": "Callback URLs",
+      "description": "List of Callback URLs to support multiple endpoints (e.g. load balancer and direct server). The server will select the URL matching the incoming request host.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "jwtPrincipalClaims": {
       "title": "Jwt Principal Claims",
       "description": "Jwt Principal Claim",

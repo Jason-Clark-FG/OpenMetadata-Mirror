@@ -1058,7 +1058,10 @@ public class SystemRepository {
               FieldPaths.AUTH_AUTHORITY, "Authority is required");
         }
 
-        if (nullOrEmpty(authConfig.getCallbackUrl())) {
+        boolean hasCallbackUrl = !nullOrEmpty(authConfig.getCallbackUrl());
+        boolean hasCallbackUrls =
+            authConfig.getCallbackUrls() != null && !authConfig.getCallbackUrls().isEmpty();
+        if (!hasCallbackUrl && !hasCallbackUrls) {
           return ValidationErrorBuilder.createFieldError(
               FieldPaths.AUTH_CALLBACK_URL, "Callback URL is required");
         }

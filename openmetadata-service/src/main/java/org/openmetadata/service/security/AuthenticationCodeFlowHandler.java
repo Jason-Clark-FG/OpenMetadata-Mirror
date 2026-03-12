@@ -127,6 +127,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
   public static final String DEFAULT_PRINCIPAL_DOMAIN = "openmetadata.org";
   public static final String OIDC_CREDENTIAL_PROFILE = "oidcCredentialProfile";
   public static final String SESSION_REDIRECT_URI = "sessionRedirectUri";
+  public static final String SESSION_CALLBACK_URL = "sessionCallbackUrl";
   public static final String SESSION_USER_ID = "userId";
   public static final String SESSION_USERNAME = "username";
   public static final String REDIRECT_URI_KEY = "redirectUri";
@@ -158,11 +159,16 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
   private AuthenticationCodeFlowHandler(
       AuthenticationConfiguration authenticationConfiguration,
       AuthorizerConfiguration authorizerConfiguration) {
-    // Assert oidcConfig and Callback Url
     CommonHelper.assertNotNull(
         "OidcConfiguration", authenticationConfiguration.getOidcConfiguration());
-    CommonHelper.assertNotBlank(
-        "CallbackUrl", authenticationConfiguration.getOidcConfiguration().getCallbackUrl());
+    OidcClientConfig oidcConfig = authenticationConfiguration.getOidcConfiguration();
+    boolean hasCallbackUrl = CommonHelper.isNotBlank(oidcConfig.getCallbackUrl());
+    boolean hasCallbackUrls =
+        oidcConfig.getCallbackUrls() != null && !oidcConfig.getCallbackUrls().isEmpty();
+    if (!hasCallbackUrl && !hasCallbackUrls) {
+      throw new IllegalArgumentException(
+          "Either callbackUrl or callbackUrls must be configured in oidcConfiguration");
+    }
     CommonHelper.assertNotBlank(
         "ServerUrl", authenticationConfiguration.getOidcConfiguration().getServerUrl());
 
@@ -203,7 +209,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
   private void initializeFields() {
     this.client = buildOidcClient(authenticationConfiguration.getOidcConfiguration());
-    client.setCallbackUrl(authenticationConfiguration.getOidcConfiguration().getCallbackUrl());
+    client.setCallbackUrl(getPrimaryCallbackUrl(authenticationConfiguration.getOidcConfiguration()));
 
     this.serverUrl = authenticationConfiguration.getOidcConfiguration().getServerUrl();
     this.claimsOrder = authenticationConfiguration.getJwtPrincipalClaims();
@@ -326,7 +332,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
         LOG.debug("Performing Auth Code Flow to Idp: {} ", session.getId());
         Map<String, String> params = buildLoginParams();
 
-        params.put(OidcConfiguration.REDIRECT_URI, client.getCallbackUrl());
+        String callbackUrl = selectCallbackUrl(req);
+        session.setAttribute(SESSION_CALLBACK_URL, callbackUrl);
+        params.put(OidcConfiguration.REDIRECT_URI, callbackUrl);
 
         addStateAndNonceParameters(client, session, params);
 
@@ -347,6 +355,64 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     } catch (Exception e) {
       getErrorMessage(resp, new TechnicalException(e));
     }
+  }
+
+  private String getPrimaryCallbackUrl(OidcClientConfig oidcConfig) {
+    List<String> urls = oidcConfig.getCallbackUrls();
+    if (urls != null && !urls.isEmpty()) {
+      return urls.get(0);
+    }
+    return oidcConfig.getCallbackUrl();
+  }
+
+  private List<String> getConfiguredCallbackUrls() {
+    OidcClientConfig oidcConfig = authenticationConfiguration.getOidcConfiguration();
+    List<String> urls = oidcConfig.getCallbackUrls();
+    if (urls != null && !urls.isEmpty()) {
+      return urls;
+    }
+    return Collections.singletonList(oidcConfig.getCallbackUrl());
+  }
+
+  private String selectCallbackUrl(HttpServletRequest req) {
+    List<String> urls = getConfiguredCallbackUrls();
+    if (urls.size() == 1) {
+      return urls.get(0);
+    }
+    String forwardedHost = req.getHeader("X-Forwarded-Host");
+    String forwardedProto = req.getHeader("X-Forwarded-Proto");
+    String requestScheme = nullOrEmpty(forwardedProto) ? req.getScheme() : forwardedProto;
+    String requestHost;
+    if (!nullOrEmpty(forwardedHost)) {
+      requestHost = forwardedHost;
+    } else {
+      int port = req.getServerPort();
+      boolean isDefaultPort =
+          ("https".equals(requestScheme) && port == 443)
+              || ("http".equals(requestScheme) && port == 80);
+      requestHost = isDefaultPort ? req.getServerName() : req.getServerName() + ":" + port;
+    }
+    for (String url : urls) {
+      try {
+        URI uri = new URI(url);
+        int uriPort = uri.getPort();
+        boolean isDefaultPort =
+            ("https".equals(uri.getScheme()) && uriPort == 443)
+                || ("http".equals(uri.getScheme()) && uriPort == 80);
+        String uriHost =
+            (uriPort == -1 || isDefaultPort) ? uri.getHost() : uri.getHost() + ":" + uriPort;
+        if (uri.getScheme().equalsIgnoreCase(requestScheme)
+            && uriHost.equalsIgnoreCase(requestHost)) {
+          LOG.debug("Selected callback URL {} for request host {}", url, requestHost);
+          return url;
+        }
+      } catch (URISyntaxException e) {
+        LOG.warn("Invalid callback URL configured: {}", url);
+      }
+    }
+    LOG.debug(
+        "No callback URL matched request host {}, using primary: {}", requestHost, urls.get(0));
+    return urls.get(0);
   }
 
   public static HttpSession getHttpSession(HttpServletRequest request, boolean createSession) {
@@ -380,7 +446,10 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       }
 
       LOG.debug("Performing Auth Callback For User Session: {} ", session.getId());
-      String computedCallbackUrl = client.getCallbackUrl();
+      String computedCallbackUrl = (String) session.getAttribute(SESSION_CALLBACK_URL);
+      if (nullOrEmpty(computedCallbackUrl)) {
+        computedCallbackUrl = client.getCallbackUrl();
+      }
       Map<String, List<String>> parameters = retrieveCallbackParameters(req);
       AuthenticationResponse response =
           AuthenticationResponseParser.parse(new URI(computedCallbackUrl), parameters);
