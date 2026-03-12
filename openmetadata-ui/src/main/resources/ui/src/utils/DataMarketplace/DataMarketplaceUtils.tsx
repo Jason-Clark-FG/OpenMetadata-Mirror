@@ -17,18 +17,25 @@ import { DetailPageWidgetKeys } from '../../enums/CustomizeDetailPage.enum';
 import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.interface';
 
 export const getDataMarketplaceWidgetsFromKey = (
-  widgetConfig: WidgetConfig
+  widgetConfig: WidgetConfig,
+  isEditView?: boolean
 ) => {
   if (
     widgetConfig.i.startsWith(DetailPageWidgetKeys.MARKETPLACE_DATA_PRODUCTS)
   ) {
     return (
-      <MarketplaceDataProductsWidget widgetKey={widgetConfig.i} />
+      <MarketplaceDataProductsWidget
+        isEditView={isEditView}
+        widgetKey={widgetConfig.i}
+      />
     );
   }
   if (widgetConfig.i.startsWith(DetailPageWidgetKeys.MARKETPLACE_DOMAINS)) {
     return (
-      <MarketplaceDomainsWidget widgetKey={widgetConfig.i} />
+      <MarketplaceDomainsWidget
+        isEditView={isEditView}
+        widgetKey={widgetConfig.i}
+      />
     );
   }
 

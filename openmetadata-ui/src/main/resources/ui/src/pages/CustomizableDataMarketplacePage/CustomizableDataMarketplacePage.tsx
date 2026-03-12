@@ -11,25 +11,26 @@
  *  limitations under the License.
  */
 
-import { Col, Row, Space } from 'antd';
+import { HolderOutlined } from '@ant-design/icons';
 import { compare } from 'fast-json-patch';
-import { isEmpty } from 'lodash';
+import { isEmpty, startCase } from 'lodash';
 import { useCallback, useMemo, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { useTranslation } from 'react-i18next';
-import { GenericWidget } from '../../components/Customization/GenericWidget/GenericWidget';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
 import MarketplaceSearchBar from '../../components/DataMarketplace/MarketplaceSearchBar/MarketplaceSearchBar.component';
 import { CustomizablePageHeader } from '../../components/MyData/CustomizableComponents/CustomizablePageHeader/CustomizablePageHeader';
 import { CustomizeMyDataProps } from '../../components/MyData/CustomizableComponents/CustomizeMyData/CustomizeMyData.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { EntityTabs } from '../../enums/entity.enum';
-import { Page } from '../../generated/system/ui/page';
+import { Page, PageType } from '../../generated/system/ui/page';
 import dataMarketplaceClassBase from '../../utils/DataMarketplace/DataMarketplaceClassBase';
+import { getDataMarketplaceWidgetsFromKey } from '../../utils/DataMarketplace/DataMarketplaceUtils';
 import { getEntityName } from '../../utils/EntityUtils';
 import { WidgetConfig } from '../CustomizablePage/CustomizablePage.interface';
 import { useCustomizeStore } from '../CustomizablePage/CustomizeStore';
-import '../CustomizeDetailsPage/customize-details-page.less';
+import '../DataMarketplacePage/data-marketplace-page.less';
+import './customizable-data-marketplace-page.less';
 
 const DRAG_TYPE = 'MARKETPLACE_WIDGET';
 
@@ -58,11 +59,19 @@ const DraggableWidgetCard = ({
     },
   });
 
+  const widgetName = startCase(
+    widget.i.replace('KnowledgePanel.', '').replace(/\d+$/, '')
+  );
+
   return (
     <div
       ref={(node) => drag(drop(node))}
-      style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
-      <GenericWidget isEditView widgetKey={widget.i} />
+      style={{ opacity: isDragging ? 0.5 : 1 }}>
+      <div className="marketplace-draggable-header">
+        <HolderOutlined />
+        <span>{widgetName}</span>
+      </div>
+      {getDataMarketplaceWidgetsFromKey(widget, true)}
     </div>
   );
 };
@@ -116,34 +125,35 @@ const CustomizableDataMarketplacePage = ({
 
   const moveWidget = useCallback(
     (fromIndex: number, toIndex: number) => {
-      setLayout((prev) => {
-        const newLayout = [...prev];
-        const [moved] = newLayout.splice(fromIndex, 1);
-        newLayout.splice(toIndex, 0, moved);
+      const newLayout = [...layout];
+      const [moved] = newLayout.splice(fromIndex, 1);
+      newLayout.splice(toIndex, 0, moved);
 
-        let cumulativeY = 0;
-        newLayout.forEach((widget) => {
-          widget.y = cumulativeY;
-          cumulativeY += widget.h;
-        });
-
-        const tabs = currentPage?.tabs ?? [
-          {
-            ...dataMarketplaceClassBase.getDataMarketplaceDetailPageTabsIds()[0],
-          },
-        ];
-
-        updateCurrentPage({
-          ...currentPage,
-          tabs: tabs.map((tab, i) =>
-            i === 0 ? { ...tab, layout: newLayout } : tab
-          ),
-        } as Page);
-
-        return newLayout;
+      let cumulativeY = 0;
+      newLayout.forEach((widget) => {
+        widget.y = cumulativeY;
+        cumulativeY += widget.h;
       });
+
+      setLayout(newLayout);
+
+      const tabs = currentPage?.tabs ?? [
+        {
+          ...dataMarketplaceClassBase.getDataMarketplaceDetailPageTabsIds()[0],
+        },
+      ];
+
+      const updatedPage = {
+        ...currentPage,
+        pageType: currentPageType as PageType,
+        tabs: tabs.map((tab, i) =>
+          i === 0 ? { ...tab, layout: newLayout } : tab
+        ),
+      } as Page;
+
+      updateCurrentPage(updatedPage);
     },
-    [currentPage, updateCurrentPage]
+    [layout, currentPage, currentPageType, updateCurrentPage]
   );
 
   return (
@@ -152,32 +162,28 @@ const CustomizableDataMarketplacePage = ({
       pageTitle={t('label.customize-entity', {
         entity: t('label.data-marketplace'),
       })}>
-      <Row className="customize-details-page" gutter={[0, 20]}>
-        <Col span={24}>
-          <CustomizablePageHeader
-            disableSave={disableSave}
-            personaName={getEntityName(personaDetails)}
-            onReset={handleReset}
-            onSave={handleSave}
-          />
-        </Col>
-        <Col className="p-x-md" span={24}>
+      <CustomizablePageHeader
+        disableSave={disableSave}
+        personaName={getEntityName(personaDetails)}
+        onReset={handleReset}
+        onSave={handleSave}
+      />
+      <div className="marketplace-grid-wrapper" dir="ltr">
+        <div className="p-x-box">
           <MarketplaceGreetingBanner />
-          <MarketplaceSearchBar />
-        </Col>
-        <Col span={24}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            {layout.map((widget, index) => (
-              <DraggableWidgetCard
-                index={index}
-                key={widget.i}
-                moveWidget={moveWidget}
-                widget={widget}
-              />
-            ))}
-          </Space>
-        </Col>
-      </Row>
+          <MarketplaceSearchBar isEditView />
+        </div>
+        <div className="marketplace-customize-widgets p-x-box">
+          {layout.map((widget, index) => (
+            <DraggableWidgetCard
+              index={index}
+              key={widget.i}
+              moveWidget={moveWidget}
+              widget={widget}
+            />
+          ))}
+        </div>
+      </div>
     </PageLayoutV1>
   );
 };

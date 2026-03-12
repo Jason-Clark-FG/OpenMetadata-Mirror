@@ -14,11 +14,13 @@
 import { CommonWidgetType, GridSizes } from '../../constants/CustomizeWidgets.constants';
 import { DetailPageWidgetKeys } from '../../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../../enums/entity.enum';
+import { DataProduct } from '../../generated/entity/domains/dataProduct';
+import { Domain, DomainType } from '../../generated/entity/domains/domain';
 import { Tab } from '../../generated/system/ui/uiCustomization';
 import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.interface';
 import { getTabLabelFromId } from '../CustomizePage/CustomizePageUtils';
-import { getDataMarketplaceWidgetsFromKey } from './DataMarketplaceUtils';
 import i18n from '../i18next/LocalUtil';
+import { getDataMarketplaceWidgetsFromKey } from './DataMarketplaceUtils';
 
 type MarketplaceWidgetKeys =
   | DetailPageWidgetKeys.MARKETPLACE_DATA_PRODUCTS
@@ -29,8 +31,8 @@ class DataMarketplaceClassBase {
 
   constructor() {
     this.defaultWidgetHeight = {
-      [DetailPageWidgetKeys.MARKETPLACE_DATA_PRODUCTS]: 2,
-      [DetailPageWidgetKeys.MARKETPLACE_DOMAINS]: 2,
+      [DetailPageWidgetKeys.MARKETPLACE_DATA_PRODUCTS]: 1,
+      [DetailPageWidgetKeys.MARKETPLACE_DOMAINS]: 1,
     };
   }
 
@@ -69,7 +71,7 @@ class DataMarketplaceClassBase {
         i: DetailPageWidgetKeys.MARKETPLACE_DOMAINS,
         w: 8,
         x: 0,
-        y: 2,
+        y: 1,
         static: false,
       },
     ];
@@ -109,12 +111,64 @@ class DataMarketplaceClassBase {
           DetailPageWidgetKeys.MARKETPLACE_DOMAINS
         ];
       default:
-        return 2;
+        return 1;
     }
   }
 
   public getDummyData() {
     return {} as Record<string, unknown>;
+  }
+
+  public getDummyDataProducts(): DataProduct[] {
+    return [
+      {
+        id: 'dummy-dp-1',
+        name: 'sales-metrics',
+        displayName: 'Sales Metrics',
+        fullyQualifiedName: 'sales-metrics',
+        description: 'Key sales performance indicators',
+      } as DataProduct,
+      {
+        id: 'dummy-dp-2',
+        name: 'customer-analytics',
+        displayName: 'Customer Analytics',
+        fullyQualifiedName: 'customer-analytics',
+        description: 'Customer behavior analysis',
+      } as DataProduct,
+      {
+        id: 'dummy-dp-3',
+        name: 'revenue-reports',
+        displayName: 'Revenue Reports',
+        fullyQualifiedName: 'revenue-reports',
+        description: 'Financial revenue data',
+      } as DataProduct,
+    ];
+  }
+
+  public getDummyDomains(): Domain[] {
+    return [
+      {
+        id: 'dummy-domain-1',
+        name: 'engineering',
+        displayName: 'Engineering',
+        fullyQualifiedName: 'engineering',
+        domainType: DomainType.Aggregate,
+      } as Domain,
+      {
+        id: 'dummy-domain-2',
+        name: 'marketing',
+        displayName: 'Marketing',
+        fullyQualifiedName: 'marketing',
+        domainType: DomainType.ConsumerAligned,
+      } as Domain,
+      {
+        id: 'dummy-domain-3',
+        name: 'finance',
+        displayName: 'Finance',
+        fullyQualifiedName: 'finance',
+        domainType: DomainType.SourceAligned,
+      } as Domain,
+    ];
   }
 }
 

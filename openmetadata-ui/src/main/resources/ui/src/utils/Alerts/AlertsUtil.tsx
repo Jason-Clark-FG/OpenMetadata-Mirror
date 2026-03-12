@@ -88,7 +88,7 @@ import {
   SubscriptionCategory,
   SubscriptionType,
   Webhook,
-  WebhookAuthType,
+  Type as WebhookAuthType,
 } from '../../generated/events/eventSubscription';
 import { Status as DestinationStatus } from '../../generated/events/testDestinationStatus';
 import { TestCaseStatus } from '../../generated/tests/testCase';
@@ -469,7 +469,7 @@ export const getDestinationConfigField = (
                             },
                             {
                               label: t('label.oauth2-client-credential-plural'),
-                              value: WebhookAuthType.OAuth2,
+                              value: WebhookAuthType.Oauth2,
                             },
                           ]}
                           placeholder={t('label.authentication-type')}
@@ -535,7 +535,7 @@ export const getDestinationConfigField = (
                           );
                         }
 
-                        if (selectedAuthType === WebhookAuthType.OAuth2) {
+                        if (selectedAuthType === WebhookAuthType.Oauth2) {
                           return (
                             <>
                               <Col span={24}>

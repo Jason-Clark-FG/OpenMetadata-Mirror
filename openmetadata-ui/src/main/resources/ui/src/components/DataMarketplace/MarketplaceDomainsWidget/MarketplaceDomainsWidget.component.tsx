@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 
-import { Button, Typography } from 'antd';
+import { Button } from '@openmetadata/ui-core-components';
+import { Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
-import { isEmpty } from 'lodash';
+import { isEmpty, noop } from 'lodash';
 import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,16 +24,18 @@ import {
   ROUTES,
 } from '../../../constants/constants';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
+import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../../generated/api/domains/createDomain';
 import { Domain } from '../../../generated/entity/domains/domain';
+import { WidgetCommonProps } from '../../../pages/CustomizablePage/CustomizablePage.interface';
 import { addDomains, patchDomains } from '../../../rest/domainAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import { createEntityWithCoverImage } from '../../../utils/CoverImageUploadUtils';
+import dataMarketplaceClassBase from '../../../utils/DataMarketplace/DataMarketplaceClassBase';
 import { getDomainIcon } from '../../../utils/DomainUtils';
-import { WidgetCommonProps } from '../../../pages/CustomizablePage/CustomizablePage.interface';
 import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { useFormDrawerWithRef } from '../../common/atoms/drawer';
 import Loader from '../../common/Loader/Loader';
@@ -43,16 +46,22 @@ import './marketplace-domains-widget.less';
 
 const DISPLAY_COUNT = 3;
 
-const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
+const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { permissions } = usePermissionProvider();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [form] = useForm();
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [domains, setDomains] = useState<Domain[]>(
+    isEditView ? dataMarketplaceClassBase.getDummyDomains() : []
+  );
+  const [loading, setLoading] = useState(!isEditView);
   const [isFormLoading, setIsFormLoading] = useState(false);
 
   const fetchDomains = useCallback(async () => {
+    if (isEditView) {
+      return;
+    }
     setLoading(true);
     try {
       const res = await searchQuery({
@@ -70,7 +79,7 @@ const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isEditView]);
 
   useEffect(() => {
     fetchDomains();
@@ -128,9 +137,12 @@ const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
 
   const handleClick = useCallback(
     (domain: Domain) => {
+      if (isEditView) {
+        return;
+      }
       navigate(getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
-    [navigate]
+    [navigate, isEditView]
   );
 
   const cardList = useMemo(
@@ -148,12 +160,12 @@ const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
                 ? `${t('label.type')}: ${domain.domainType}`
                 : ''
             }
-            onClick={() => handleClick(domain)}
+            onClick={isEditView ? noop : () => handleClick(domain)}
           />
         ))}
       </div>
     ),
-    [domains, handleClick, t]
+    [domains, handleClick, isEditView, t]
   );
 
   if (loading) {
@@ -183,19 +195,24 @@ const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
             })}
           </Typography.Text>
         </div>
-        <div className="marketplace-widget-actions">
-          <Button
-            data-testid="add-domain-btn"
-            onClick={openDrawer}>
-            + {t('label.add-entity', { entity: t('label.domain') })}
-          </Button>
-          <Link
-            className="view-all-link"
-            data-testid="view-all-domains"
-            to={ROUTES.DOMAIN}>
-            {t('label.view-all')} &rarr;
-          </Link>
-        </div>
+        {!isEditView && (
+          <div className="marketplace-widget-actions">
+            {permissions.domain?.Create && (
+              <Button
+                color="secondary"
+                data-testid="add-domain-btn"
+                onPress={openDrawer}>
+                + {t('label.add-entity', { entity: t('label.domain') })}
+              </Button>
+            )}
+            <Link
+              className="view-all-link"
+              data-testid="view-all-domains"
+              to={ROUTES.DOMAIN}>
+              {t('label.view-all')} &rarr;
+            </Link>
+          </div>
+        )}
       </div>
       {isEmpty(domains) ? (
         <Typography.Text className="text-grey-muted">
@@ -204,7 +221,7 @@ const MarketplaceDomainsWidget = (_props: WidgetCommonProps) => {
       ) : (
         cardList
       )}
-      {formDrawer}
+      {!isEditView && formDrawer}
     </div>
   );
 };

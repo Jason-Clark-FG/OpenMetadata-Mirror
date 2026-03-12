@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 
-import { Button, Input, Popover, Tag, Typography } from 'antd';
+import { Button } from '@openmetadata/ui-core-components';
+import { Input, Popover, Tag, Typography } from 'antd';
 import { debounce, isEmpty } from 'lodash';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
@@ -33,7 +34,7 @@ import './marketplace-search-bar.less';
 
 const PAGE_SIZE = 5;
 
-const MarketplaceSearchBar = () => {
+const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { recentSearches, addSearch, clearSearches } =
@@ -86,6 +87,12 @@ const MarketplaceSearchBar = () => {
     [fetchResults]
   );
 
+  useEffect(() => {
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [debouncedFetch]);
+
   const handleChange = useCallback(
     (value: string) => {
       setSearchValue(value);
@@ -104,12 +111,13 @@ const MarketplaceSearchBar = () => {
   const handleSearch = useCallback(
     (value: string) => {
       if (value.trim()) {
+        debouncedFetch.cancel();
         addSearch(value.trim());
         fetchResults(value);
         setIsOpen(true);
       }
     },
-    [addSearch, fetchResults]
+    [addSearch, fetchResults, debouncedFetch]
   );
 
   const handleDataProductClick = useCallback(
@@ -248,6 +256,7 @@ const MarketplaceSearchBar = () => {
             autoComplete="off"
             className="marketplace-search-input"
             data-testid="marketplace-search-input"
+            disabled={isEditView}
             placeholder={t('label.search-for-type', {
               type: t('label.data-product-plural') +
                 ', ' +
@@ -277,7 +286,7 @@ const MarketplaceSearchBar = () => {
             }
           />
         </Popover>
-      {!isEmpty(recentSearches) && (
+      {!isEditView && !isEmpty(recentSearches) && (
         <div
           className="marketplace-recent-searches"
           data-testid="marketplace-recent-searches">
@@ -296,10 +305,9 @@ const MarketplaceSearchBar = () => {
             ))}
           </div>
           <Button
-            className="clear-btn"
+            color="link-gray"
             data-testid="clear-recent-searches"
-            type="link"
-            onClick={clearSearches}>
+            onPress={clearSearches}>
             {t('label.clear')}
           </Button>
         </div>

@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 
-import { Button, Typography } from 'antd';
+import { Button } from '@openmetadata/ui-core-components';
+import { Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
-import { isEmpty } from 'lodash';
+import { isEmpty, noop } from 'lodash';
 import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,17 +24,19 @@ import {
   ROUTES,
 } from '../../../constants/constants';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
+import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../../generated/api/domains/createDomain';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
+import { WidgetCommonProps } from '../../../pages/CustomizablePage/CustomizablePage.interface';
 import { addDataProducts, patchDataProduct } from '../../../rest/dataProductAPI';
 import { searchData } from '../../../rest/miscAPI';
 import { getTextFromHtmlString } from '../../../utils/BlockEditorUtils';
 import { createEntityWithCoverImage } from '../../../utils/CoverImageUploadUtils';
+import dataMarketplaceClassBase from '../../../utils/DataMarketplace/DataMarketplaceClassBase';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
-import { WidgetCommonProps } from '../../../pages/CustomizablePage/CustomizablePage.interface';
 import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import { useFormDrawerWithRef } from '../../common/atoms/drawer';
 import Loader from '../../common/Loader/Loader';
@@ -44,16 +47,22 @@ import './marketplace-data-products-widget.less';
 
 const DISPLAY_COUNT = 3;
 
-const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
+const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { permissions } = usePermissionProvider();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [form] = useForm();
-  const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataProducts, setDataProducts] = useState<DataProduct[]>(
+    isEditView ? dataMarketplaceClassBase.getDummyDataProducts() : []
+  );
+  const [loading, setLoading] = useState(!isEditView);
   const [isFormLoading, setIsFormLoading] = useState(false);
 
   const fetchDataProducts = useCallback(async () => {
+    if (isEditView) {
+      return;
+    }
     setLoading(true);
     try {
       const res = await searchData(
@@ -74,7 +83,7 @@ const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isEditView]);
 
   useEffect(() => {
     fetchDataProducts();
@@ -132,11 +141,14 @@ const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
 
   const handleClick = useCallback(
     (dp: DataProduct) => {
+      if (isEditView) {
+        return;
+      }
       navigate(
         getEntityDetailsPath(EntityType.DATA_PRODUCT, dp.fullyQualifiedName ?? '')
       );
     },
-    [navigate]
+    [navigate, isEditView]
   );
 
   const cardList = useMemo(
@@ -150,12 +162,12 @@ const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
             key={dp.id}
             name={dp.displayName || dp.name}
             subtitle={getTextFromHtmlString(dp.description)}
-            onClick={() => handleClick(dp)}
+            onClick={isEditView ? noop : () => handleClick(dp)}
           />
         ))}
       </div>
     ),
-    [dataProducts, handleClick]
+    [dataProducts, handleClick, isEditView]
   );
 
   if (loading) {
@@ -183,17 +195,24 @@ const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
             })}
           </Typography.Text>
         </div>
-        <div className="marketplace-widget-actions">
-          <Button data-testid="add-data-product-btn" onClick={openDrawer}>
-            + {t('label.add-entity', { entity: t('label.data-product') })}
-          </Button>
-          <Link
-            className="view-all-link"
-            data-testid="view-all-data-products"
-            to={ROUTES.DATA_PRODUCT}>
-            {t('label.view-all')} &rarr;
-          </Link>
-        </div>
+        {!isEditView && (
+          <div className="marketplace-widget-actions">
+            {permissions.dataProduct?.Create && (
+              <Button
+                color="secondary"
+                data-testid="add-data-product-btn"
+                onPress={openDrawer}>
+                + {t('label.add-entity', { entity: t('label.data-product') })}
+              </Button>
+            )}
+            <Link
+              className="view-all-link"
+              data-testid="view-all-data-products"
+              to={ROUTES.DATA_PRODUCT}>
+              {t('label.view-all')} &rarr;
+            </Link>
+          </div>
+        )}
       </div>
       {isEmpty(dataProducts) ? (
         <Typography.Text className="text-grey-muted">
@@ -204,7 +223,7 @@ const MarketplaceDataProductsWidget = (_props: WidgetCommonProps) => {
       ) : (
         cardList
       )}
-      {formDrawer}
+      {!isEditView && formDrawer}
     </div>
   );
 };

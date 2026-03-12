@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button } from 'antd';
+import { Button } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import RGL, { ReactGridLayoutProps, WidthProvider } from 'react-grid-layout';
@@ -73,17 +73,20 @@ const DataMarketplacePage = () => {
         ) as WidgetConfig[];
 
         if (!isEmpty(tabLayout)) {
-          setLayout(tabLayout);
+          setLayout([...tabLayout].sort((a, b) => a.y - b.y));
         } else if (!isEmpty(pageData?.layout)) {
-          // Fallback to flat layout (old format)
-          setLayout(pageData?.layout as WidgetConfig[]);
+          setLayout(
+            [...(pageData?.layout as WidgetConfig[])].sort(
+              (a, b) => a.y - b.y
+            )
+          );
         } else {
           setLayout(defaultLayout);
         }
       } else {
         setLayout(defaultLayout);
       }
-    } catch {
+    } catch (error) {
       setLayout(defaultLayout);
     } finally {
       setIsLoading(false);
@@ -128,8 +131,9 @@ const DataMarketplacePage = () => {
           <div className="d-flex justify-end m-b-sm">
             {selectedPersona && (
               <Button
+                color="secondary"
                 data-testid="customize-marketplace-btn"
-                onClick={handleCustomize}>
+                onPress={handleCustomize}>
                 {t('label.customize')}
               </Button>
             )}
@@ -143,8 +147,9 @@ const DataMarketplacePage = () => {
           containerPadding={[0, 0]}
           isDraggable={false}
           isResizable={false}
-          margin={[16, 8]}
-          rowHeight={100}>
+          margin={[16, 24]}
+          rowHeight={156}
+          style={{ marginTop: 24 }}>
           {widgets}
         </ReactGridLayout>
       </div>
