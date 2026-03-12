@@ -70,7 +70,9 @@ class MigrationUtilTest {
     assertEquals("{\"and\":[]}", triggerJson.get("config").get("filter").get("default").asText());
 
     Set<String> nodeNames =
-        workflow.getNodes().stream().map(WorkflowNodeDefinitionInterface::getName).collect(Collectors.toSet());
+        workflow.getNodes().stream()
+            .map(WorkflowNodeDefinitionInterface::getName)
+            .collect(Collectors.toSet());
     assertTrue(nodeNames.contains("CheckIfGlossaryTermIsNew"));
     assertTrue(nodeNames.contains("SetGlossaryTermStatusToInReviewForUpdate"));
     assertTrue(nodeNames.contains("ApprovalForUpdates"));
@@ -83,17 +85,18 @@ class MigrationUtilTest {
         workflow.getEdges().stream()
             .map(edge -> edge.getFrom() + "->" + edge.getTo() + ":" + edge.getCondition())
             .collect(Collectors.toSet());
-    assertFalse(edges.contains("CheckGlossaryTermIsReadyToBeReviewed->SetGlossaryTermStatusToInReview:true"));
-    assertTrue(edges.contains("CheckGlossaryTermIsReadyToBeReviewed->CheckIfGlossaryTermIsNew:true"));
+    assertFalse(
+        edges.contains(
+            "CheckGlossaryTermIsReadyToBeReviewed->SetGlossaryTermStatusToInReview:true"));
+    assertTrue(
+        edges.contains("CheckGlossaryTermIsReadyToBeReviewed->CheckIfGlossaryTermIsNew:true"));
     assertTrue(edges.contains("CheckIfGlossaryTermIsNew->SetGlossaryTermStatusToInReview:true"));
     assertTrue(
-        edges.contains(
-            "CheckIfGlossaryTermIsNew->SetGlossaryTermStatusToInReviewForUpdate:false"));
+        edges.contains("CheckIfGlossaryTermIsNew->SetGlossaryTermStatusToInReviewForUpdate:false"));
     assertTrue(edges.contains("SetGlossaryTermStatusToInReviewForUpdate->ApprovalForUpdates:null"));
     assertTrue(edges.contains("ApprovalForUpdates->RollbackGlossaryTermChanges:false"));
     assertTrue(
-        edges.contains(
-            "ApprovalForUpdates->SetGlossaryTermStatusToApprovedAfterReview:true"));
+        edges.contains("ApprovalForUpdates->SetGlossaryTermStatusToApprovedAfterReview:true"));
   }
 
   @Test
@@ -130,7 +133,8 @@ class MigrationUtilTest {
 
       MigrationUtil.updateGlossaryTermApprovalWorkflow();
 
-      verify(repository, never()).createOrUpdate(isNull(), org.mockito.ArgumentMatchers.any(), eq("admin"));
+      verify(repository, never())
+          .createOrUpdate(isNull(), org.mockito.ArgumentMatchers.any(), eq("admin"));
     }
   }
 
@@ -157,8 +161,7 @@ class MigrationUtilTest {
             """;
 
     String updatedNodeJson =
-        (String)
-            invokePrivateStatic("updateApprovalNodeWithThresholdsAndOutput", originalNodeJson);
+        (String) invokePrivateStatic("updateApprovalNodeWithThresholdsAndOutput", originalNodeJson);
     JsonNode updatedNode = MAPPER.readTree(updatedNodeJson);
 
     assertEquals(1, updatedNode.get("config").get("approvalThreshold").asInt());

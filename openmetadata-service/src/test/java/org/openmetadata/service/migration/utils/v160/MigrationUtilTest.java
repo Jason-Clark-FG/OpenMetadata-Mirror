@@ -94,8 +94,7 @@ class MigrationUtilTest {
             .withId(UUID.randomUUID())
             .withFullyQualifiedName("OrganizationPolicy")
             .withRules(
-                new ArrayList<>(
-                    List.of(new Rule().withName("OrganizationPolicy-ViewAll-Rule"))));
+                new ArrayList<>(List.of(new Rule().withName("OrganizationPolicy-ViewAll-Rule"))));
 
     when(repository.findByName("OrganizationPolicy", Include.NON_DELETED))
         .thenReturn(policy)
@@ -116,7 +115,10 @@ class MigrationUtilTest {
     PolicyRepository repository = mock(PolicyRepository.class);
     CollectionDAO collectionDAO = mock(CollectionDAO.class, RETURNS_DEEP_STUBS);
     Policy policy =
-        new Policy().withId(UUID.randomUUID()).withFullyQualifiedName("OrganizationPolicy").withRules(null);
+        new Policy()
+            .withId(UUID.randomUUID())
+            .withFullyQualifiedName("OrganizationPolicy")
+            .withRules(null);
 
     when(repository.findByName("OrganizationPolicy", Include.NON_DELETED)).thenReturn(policy);
 
@@ -128,7 +130,8 @@ class MigrationUtilTest {
 
     assertEquals(1, policy.getRules().size());
     assertEquals("OrganizationPolicy-ViewAll-Rule", policy.getRules().getFirst().getName());
-    verify(collectionDAO.policyDAO()).update(eq(policy.getId()), eq(policy.getFullyQualifiedName()), anyString());
+    verify(collectionDAO.policyDAO())
+        .update(eq(policy.getId()), eq(policy.getFullyQualifiedName()), anyString());
   }
 
   @Test
@@ -138,7 +141,8 @@ class MigrationUtilTest {
     Policy consumerPolicy = editPolicy("DataConsumerPolicy");
     Policy stewardPolicy = editPolicy("DataStewardPolicy");
 
-    when(repository.findByName("DataConsumerPolicy", Include.NON_DELETED)).thenReturn(consumerPolicy);
+    when(repository.findByName("DataConsumerPolicy", Include.NON_DELETED))
+        .thenReturn(consumerPolicy);
     when(repository.findByName("DataStewardPolicy", Include.NON_DELETED)).thenReturn(stewardPolicy);
 
     try (MockedStatic<Entity> entity = mockStatic(Entity.class)) {
@@ -148,13 +152,21 @@ class MigrationUtilTest {
     }
 
     assertTrue(
-        consumerPolicy.getRules().getFirst().getOperations().contains(MetadataOperation.EDIT_GLOSSARY_TERMS));
+        consumerPolicy
+            .getRules()
+            .getFirst()
+            .getOperations()
+            .contains(MetadataOperation.EDIT_GLOSSARY_TERMS));
     assertTrue(
         consumerPolicy.getRules().getFirst().getOperations().contains(MetadataOperation.EDIT_TIER));
     assertTrue(
         consumerPolicy.getRules().getFirst().getOperations().contains(MetadataOperation.EDIT_TAGS));
     assertTrue(
-        stewardPolicy.getRules().getFirst().getOperations().contains(MetadataOperation.EDIT_GLOSSARY_TERMS));
+        stewardPolicy
+            .getRules()
+            .getFirst()
+            .getOperations()
+            .contains(MetadataOperation.EDIT_GLOSSARY_TERMS));
     verify(collectionDAO.policyDAO(), times(2)).update(any(), anyString(), anyString());
   }
 
@@ -163,9 +175,13 @@ class MigrationUtilTest {
     PolicyRepository repository = mock(PolicyRepository.class);
     CollectionDAO collectionDAO = mock(CollectionDAO.class, RETURNS_DEEP_STUBS);
     Policy noRulesPolicy =
-        new Policy().withId(UUID.randomUUID()).withFullyQualifiedName("PolicyWithoutRules").withRules(null);
+        new Policy()
+            .withId(UUID.randomUUID())
+            .withFullyQualifiedName("PolicyWithoutRules")
+            .withRules(null);
 
-    when(repository.findByName("PolicyWithoutRules", Include.NON_DELETED)).thenReturn(noRulesPolicy);
+    when(repository.findByName("PolicyWithoutRules", Include.NON_DELETED))
+        .thenReturn(noRulesPolicy);
     when(repository.findByName("BrokenPolicy", Include.NON_DELETED))
         .thenThrow(new IllegalStateException("repository broken"));
 
@@ -261,9 +277,19 @@ class MigrationUtilTest {
     List<Map<String, Object>> rows =
         List.of(Map.of("id", tableId.toString(), "json", JsonUtils.pojoToJson(table)));
 
-    when(handle.createQuery(TABLE_CONSTRAINT_FETCH_MY_SQL).bind("limit", 1000).bind("offset", 0).mapToMap().list())
+    when(handle
+            .createQuery(TABLE_CONSTRAINT_FETCH_MY_SQL)
+            .bind("limit", 1000)
+            .bind("offset", 0)
+            .mapToMap()
+            .list())
         .thenReturn(rows);
-    when(handle.createQuery(TABLE_CONSTRAINT_FETCH_MY_SQL).bind("limit", 1000).bind("offset", 1000).mapToMap().list())
+    when(handle
+            .createQuery(TABLE_CONSTRAINT_FETCH_MY_SQL)
+            .bind("limit", 1000)
+            .bind("offset", 1000)
+            .mapToMap()
+            .list())
         .thenReturn(List.of());
     when(tableRepository.findTo(tableId, Entity.TABLE, Relationship.RELATED_TO, Entity.TABLE))
         .thenReturn(
@@ -300,7 +326,8 @@ class MigrationUtilTest {
     }
 
     verify(tableRepository)
-        .addRelationship(tableId, newRelatedId, Entity.TABLE, Entity.TABLE, Relationship.RELATED_TO);
+        .addRelationship(
+            tableId, newRelatedId, Entity.TABLE, Entity.TABLE, Relationship.RELATED_TO);
     verify(tableRepository, never())
         .addRelationship(
             tableId, existingRelatedId, Entity.TABLE, Entity.TABLE, Relationship.RELATED_TO);
@@ -321,21 +348,19 @@ class MigrationUtilTest {
     List<Map<String, Object>> rows =
         List.of(Map.of("id", tableId.toString(), "json", JsonUtils.pojoToJson(table)));
 
-    when(
-            handle
-                .createQuery(TABLE_CONSTRAINT_FETCH_POSTGRES)
-                .bind("limit", 1000)
-                .bind("offset", 0)
-                .mapToMap()
-                .list())
+    when(handle
+            .createQuery(TABLE_CONSTRAINT_FETCH_POSTGRES)
+            .bind("limit", 1000)
+            .bind("offset", 0)
+            .mapToMap()
+            .list())
         .thenReturn(rows);
-    when(
-            handle
-                .createQuery(TABLE_CONSTRAINT_FETCH_POSTGRES)
-                .bind("limit", 1000)
-                .bind("offset", 1000)
-                .mapToMap()
-                .list())
+    when(handle
+            .createQuery(TABLE_CONSTRAINT_FETCH_POSTGRES)
+            .bind("limit", 1000)
+            .bind("offset", 1000)
+            .mapToMap()
+            .list())
         .thenReturn(List.of());
     when(tableRepository.findTo(tableId, Entity.TABLE, Relationship.RELATED_TO, Entity.TABLE))
         .thenReturn(List.of());
@@ -353,7 +378,8 @@ class MigrationUtilTest {
     }
 
     verify(tableRepository, never())
-        .addRelationship(any(), any(), eq(Entity.TABLE), eq(Entity.TABLE), eq(Relationship.RELATED_TO));
+        .addRelationship(
+            any(), any(), eq(Entity.TABLE), eq(Entity.TABLE), eq(Relationship.RELATED_TO));
   }
 
   @Test
@@ -373,8 +399,10 @@ class MigrationUtilTest {
 
     assertTrue(postgresSql.getAllValues().stream().allMatch(sql -> sql.contains("jsonb_set")));
     assertTrue(mySqlSql.getAllValues().stream().allMatch(sql -> sql.contains("JSON_SET")));
-    assertTrue(postgresSql.getAllValues().stream().anyMatch(sql -> sql.contains("api_endpoint_entity")));
-    assertTrue(mySqlSql.getAllValues().stream().anyMatch(sql -> sql.contains("api_collection_entity")));
+    assertTrue(
+        postgresSql.getAllValues().stream().anyMatch(sql -> sql.contains("api_endpoint_entity")));
+    assertTrue(
+        mySqlSql.getAllValues().stream().anyMatch(sql -> sql.contains("api_collection_entity")));
   }
 
   @Test
@@ -429,6 +457,7 @@ class MigrationUtilTest {
                 List.of(
                     new Rule()
                         .withName(name + "-EditRule")
-                        .withOperations(new ArrayList<>(List.of(MetadataOperation.EDIT_DESCRIPTION))))));
+                        .withOperations(
+                            new ArrayList<>(List.of(MetadataOperation.EDIT_DESCRIPTION))))));
   }
 }

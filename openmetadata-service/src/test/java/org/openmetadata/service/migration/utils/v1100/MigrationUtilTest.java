@@ -65,8 +65,10 @@ class MigrationUtilTest {
 
   @Test
   void migrateEntityStatusForExistingEntitiesUsesPostgresBatchStatements() {
-    when(handle.createQuery(GLOSSARY_TERM_COUNT_POSTGRES).mapTo(Integer.class).one()).thenReturn(800);
-    when(handle.createQuery(DATA_CONTRACT_COUNT_POSTGRES).mapTo(Integer.class).one()).thenReturn(800);
+    when(handle.createQuery(GLOSSARY_TERM_COUNT_POSTGRES).mapTo(Integer.class).one())
+        .thenReturn(800);
+    when(handle.createQuery(DATA_CONTRACT_COUNT_POSTGRES).mapTo(Integer.class).one())
+        .thenReturn(800);
     when(update.execute()).thenReturn(500, 300, 500, 300);
 
     MigrationUtil migrationUtil = new MigrationUtil(handle, ConnectionType.POSTGRES);
@@ -106,7 +108,9 @@ class MigrationUtilTest {
         .forEach(
             sql ->
                 assertEquals(
-                    true, sql.contains("WHEN JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.status')) = 'Active'")));
+                    true,
+                    sql.contains(
+                        "WHEN JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.status')) = 'Active'")));
   }
 
   @Test
@@ -130,12 +134,15 @@ class MigrationUtilTest {
     UUID orphanEntityId = UUID.randomUUID();
     UUID orphanDeleteFailureEntityId = UUID.randomUUID();
 
-    DataContract valid = contract("service.schema.table.contractA", validEntityId, UUID.randomUUID());
-    DataContract orphan = contract("service.schema.table.contractB", orphanEntityId, UUID.randomUUID());
+    DataContract valid =
+        contract("service.schema.table.contractA", validEntityId, UUID.randomUUID());
+    DataContract orphan =
+        contract("service.schema.table.contractB", orphanEntityId, UUID.randomUUID());
     DataContract orphanWithDeleteFailure =
         contract("service.schema.table.contractC", orphanDeleteFailureEntityId, UUID.randomUUID());
 
-    when(repository.getFields("id,entity")).thenReturn(new EntityUtil.Fields(Set.of("id", "entity")));
+    when(repository.getFields("id,entity"))
+        .thenReturn(new EntityUtil.Fields(Set.of("id", "entity")));
     when(repository.listAll(any(EntityUtil.Fields.class), any()))
         .thenReturn(List.of(valid, orphan, orphanWithDeleteFailure));
     when(repository.delete(Entity.ADMIN_USER_NAME, orphanWithDeleteFailure.getId(), true, true))
@@ -144,10 +151,13 @@ class MigrationUtilTest {
     try (MockedStatic<Entity> entity = mockStatic(Entity.class)) {
       entity.when(() -> Entity.getEntityRepository(Entity.DATA_CONTRACT)).thenReturn(repository);
       entity
-          .when(() -> Entity.getEntityReferenceById(Entity.TABLE, validEntityId, Include.NON_DELETED))
+          .when(
+              () -> Entity.getEntityReferenceById(Entity.TABLE, validEntityId, Include.NON_DELETED))
           .thenReturn(new EntityReference().withId(validEntityId).withType(Entity.TABLE));
       entity
-          .when(() -> Entity.getEntityReferenceById(Entity.TABLE, orphanEntityId, Include.NON_DELETED))
+          .when(
+              () ->
+                  Entity.getEntityReferenceById(Entity.TABLE, orphanEntityId, Include.NON_DELETED))
           .thenThrow(EntityNotFoundException.byId(orphanEntityId.toString()));
       entity
           .when(
@@ -168,7 +178,8 @@ class MigrationUtilTest {
   @Test
   void cleanupOrphanedDataContractsReturnsEarlyWhenNoContractsExist() {
     DataContractRepository repository = mock(DataContractRepository.class);
-    when(repository.getFields("id,entity")).thenReturn(new EntityUtil.Fields(Set.of("id", "entity")));
+    when(repository.getFields("id,entity"))
+        .thenReturn(new EntityUtil.Fields(Set.of("id", "entity")));
     when(repository.listAll(any(EntityUtil.Fields.class), any())).thenReturn(List.of());
 
     try (MockedStatic<Entity> entity = mockStatic(Entity.class)) {
@@ -183,12 +194,11 @@ class MigrationUtilTest {
 
   @Test
   void removeStoredProcedureIndexDropsMysqlIndexWhenPresent() {
-    when(
-            handle
-                .createQuery(STORED_PROCEDURE_INDEX_QUERY)
-                .bind("keyName", "idx_stored_procedure_entity_deleted_name_id")
-                .mapToMap()
-                .findFirst())
+    when(handle
+            .createQuery(STORED_PROCEDURE_INDEX_QUERY)
+            .bind("keyName", "idx_stored_procedure_entity_deleted_name_id")
+            .mapToMap()
+            .findFirst())
         .thenReturn(Optional.of(Map.of("Key_name", "idx_stored_procedure_entity_deleted_name_id")));
     when(update.execute()).thenReturn(1);
 
@@ -201,12 +211,11 @@ class MigrationUtilTest {
 
   @Test
   void removeStoredProcedureIndexSkipsMissingIndexesAndNonMysqlConnections() {
-    when(
-            handle
-                .createQuery(STORED_PROCEDURE_INDEX_QUERY)
-                .bind("keyName", "idx_stored_procedure_entity_deleted_name_id")
-                .mapToMap()
-                .findFirst())
+    when(handle
+            .createQuery(STORED_PROCEDURE_INDEX_QUERY)
+            .bind("keyName", "idx_stored_procedure_entity_deleted_name_id")
+            .mapToMap()
+            .findFirst())
         .thenReturn(Optional.empty());
 
     MigrationUtil mysqlMigrationUtil = new MigrationUtil(handle, ConnectionType.MYSQL);
@@ -215,7 +224,8 @@ class MigrationUtilTest {
     verify(handle, never()).createUpdate(DROP_STORED_PROCEDURE_INDEX);
 
     Handle postgresHandle = mock(Handle.class, RETURNS_DEEP_STUBS);
-    MigrationUtil postgresMigrationUtil = new MigrationUtil(postgresHandle, ConnectionType.POSTGRES);
+    MigrationUtil postgresMigrationUtil =
+        new MigrationUtil(postgresHandle, ConnectionType.POSTGRES);
     postgresMigrationUtil.removeStoredProcedureIndex();
 
     verify(postgresHandle, never()).createQuery(anyString());

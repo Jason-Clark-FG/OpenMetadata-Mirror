@@ -48,12 +48,15 @@ class MigrationUtilTest {
   void fixDatabaseHierarchyFqnsRepairsDatabaseSchemaTableAndStoredProcedure() {
     Handle handle = mock(Handle.class, RETURNS_DEEP_STUBS);
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
-    CollectionDAO.DatabaseServiceDAO databaseServiceDAO = mock(CollectionDAO.DatabaseServiceDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.DatabaseServiceDAO databaseServiceDAO =
+        mock(CollectionDAO.DatabaseServiceDAO.class);
     CollectionDAO.DatabaseDAO databaseDAO = mock(CollectionDAO.DatabaseDAO.class);
     CollectionDAO.DatabaseSchemaDAO schemaDAO = mock(CollectionDAO.DatabaseSchemaDAO.class);
     CollectionDAO.TableDAO tableDAO = mock(CollectionDAO.TableDAO.class);
-    CollectionDAO.StoredProcedureDAO storedProcedureDAO = mock(CollectionDAO.StoredProcedureDAO.class);
+    CollectionDAO.StoredProcedureDAO storedProcedureDAO =
+        mock(CollectionDAO.StoredProcedureDAO.class);
 
     when(collectionDAO.relationshipDAO()).thenReturn(relationshipDAO);
     when(collectionDAO.dbServiceDAO()).thenReturn(databaseServiceDAO);
@@ -70,10 +73,7 @@ class MigrationUtilTest {
 
     stubServiceRows(handle, "dbservice_entity", serviceId);
     when(relationshipDAO.findTo(
-            serviceId,
-            Entity.DATABASE_SERVICE,
-            Relationship.CONTAINS.ordinal(),
-            Entity.DATABASE))
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of(relationship(databaseId, Entity.DATABASE)));
     when(relationshipDAO.findTo(
             databaseId, Entity.DATABASE, Relationship.CONTAINS.ordinal(), Entity.DATABASE_SCHEMA))
@@ -90,7 +90,10 @@ class MigrationUtilTest {
 
     String serviceFqn = "\"db.service\"";
     DatabaseService databaseService =
-        new DatabaseService().withId(serviceId).withName("db.service").withFullyQualifiedName(serviceFqn);
+        new DatabaseService()
+            .withId(serviceId)
+            .withName("db.service")
+            .withFullyQualifiedName(serviceFqn);
     Database database =
         new Database()
             .withId(databaseId)
@@ -143,8 +146,10 @@ class MigrationUtilTest {
   void fixServiceChildFqnsRepairsDashboardDataModelsApiCollectionsAndEndpoints() {
     Handle handle = mock(Handle.class, RETURNS_DEEP_STUBS);
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
-    CollectionDAO.EntityRelationshipDAO relationshipDAO = mock(CollectionDAO.EntityRelationshipDAO.class);
-    CollectionDAO.DashboardServiceDAO dashboardServiceDAO = mock(CollectionDAO.DashboardServiceDAO.class);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        mock(CollectionDAO.EntityRelationshipDAO.class);
+    CollectionDAO.DashboardServiceDAO dashboardServiceDAO =
+        mock(CollectionDAO.DashboardServiceDAO.class);
     CollectionDAO.DataModelDAO dataModelDAO = mock(CollectionDAO.DataModelDAO.class);
     CollectionDAO.ApiServiceDAO apiServiceDAO = mock(CollectionDAO.ApiServiceDAO.class);
     CollectionDAO.APICollectionDAO apiCollectionDAO = mock(CollectionDAO.APICollectionDAO.class);
@@ -172,7 +177,10 @@ class MigrationUtilTest {
             Entity.DASHBOARD_DATA_MODEL))
         .thenReturn(List.of(relationship(dataModelId, Entity.DASHBOARD_DATA_MODEL)));
     when(relationshipDAO.findTo(
-            apiServiceId, Entity.API_SERVICE, Relationship.CONTAINS.ordinal(), Entity.API_COLLECTION))
+            apiServiceId,
+            Entity.API_SERVICE,
+            Relationship.CONTAINS.ordinal(),
+            Entity.API_COLLECTION))
         .thenReturn(List.of(relationship(apiCollectionId, Entity.API_COLLECTION)));
     when(relationshipDAO.findTo(
             apiCollectionId,
@@ -196,7 +204,10 @@ class MigrationUtilTest {
 
     String apiServiceFqn = "\"api.service\"";
     ApiService apiService =
-        new ApiService().withId(apiServiceId).withName("api.service").withFullyQualifiedName(apiServiceFqn);
+        new ApiService()
+            .withId(apiServiceId)
+            .withName("api.service")
+            .withFullyQualifiedName(apiServiceFqn);
     APICollection apiCollection =
         new APICollection()
             .withId(apiCollectionId)
@@ -219,7 +230,8 @@ class MigrationUtilTest {
     MigrationUtil.fixApiCollectionFqnHash(handle, collectionDAO);
     MigrationUtil.fixApiEndpointFqnHash(handle, collectionDAO);
 
-    String dataModelFqn = FullyQualifiedName.add(dashboardServiceFqn + ".model", dataModel.getName());
+    String dataModelFqn =
+        FullyQualifiedName.add(dashboardServiceFqn + ".model", dataModel.getName());
     String apiCollectionFqn = FullyQualifiedName.add(apiServiceFqn, apiCollection.getName());
     String apiEndpointFqn = FullyQualifiedName.add(apiCollectionFqn, apiEndpoint.getName());
 
@@ -285,7 +297,8 @@ class MigrationUtilTest {
         Map.of("tag", new QueryStatus(QueryStatus.Status.SUCCESS, "tag ok"));
 
     try (MockedStatic<EntityRepository> entityRepositoryMock = mockStatic(EntityRepository.class);
-        MockedStatic<LongStatementsUtil> longStatementsMock = mockStatic(LongStatementsUtil.class)) {
+        MockedStatic<LongStatementsUtil> longStatementsMock =
+            mockStatic(LongStatementsUtil.class)) {
       entityRepositoryMock
           .when(
               () ->
