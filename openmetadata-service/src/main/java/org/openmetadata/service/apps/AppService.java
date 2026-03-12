@@ -448,11 +448,8 @@ public class AppService {
     appRepository.createOrUpdate(uriInfo, app, updatedBy);
 
     if (app.getAppType() == AppType.Internal && SCHEDULED_TYPES.contains(app.getScheduleType())) {
-      try {
-        AppScheduler.getInstance().scheduleServiceBoundApplication(app, serviceId.toString());
-      } catch (Exception e) {
-        LOG.error("Failed to schedule service-bound application {}", app.getName(), e);
-      }
+      // TODO: Service-bound scheduling implementation
+      LOG.warn("Service-bound scheduling not yet implemented for app {}", app.getName());
     }
 
     return Response.status(Response.Status.OK)
@@ -481,11 +478,8 @@ public class AppService {
     appRepository.createOrUpdate(uriInfo, app, updatedBy);
 
     if (app.getAppType() == AppType.Internal) {
-      try {
-        AppScheduler.getInstance().deleteServiceBoundApplication(app, serviceId.toString());
-      } catch (Exception e) {
-        LOG.error("Failed to delete service-bound application job {}", app.getName(), e);
-      }
+      // TODO: Service-bound job deletion implementation
+      LOG.warn("Service-bound job deletion not yet implemented for app {}", app.getName());
     }
 
     return Response.status(Response.Status.OK)

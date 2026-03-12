@@ -23,6 +23,7 @@ import {
   ScheduleType,
 } from '../../../../generated/entity/applications/app';
 import { getIngestionPipelineByFqn } from '../../../../rest/ingestionPipelineAPI';
+import { getAppSchedule } from '../../../../utils/AppConfigUtils';
 import { getCronDefaultValue } from '../../../../utils/SchedularUtils';
 import Loader from '../../../common/Loader/Loader';
 import ScheduleInterval from '../../Services/AddIngestion/Steps/ScheduleInterval';
@@ -82,7 +83,7 @@ const AppSchedule = ({
   }, [appData]);
 
   const cronString = useMemo(() => {
-    const cronExpression = (appData.appSchedule as AppScheduleClass)
+    const cronExpression = (getAppSchedule(appData) as AppScheduleClass)
       ?.cronExpression;
     if (cronExpression) {
       return cronstrue.toString(cronExpression, {
@@ -152,11 +153,16 @@ const AppSchedule = ({
         pipelineSchedules
       ),
       initialData: {
-        cron: (appData.appSchedule as AppScheduleClass)?.cronExpression,
+        cron: (getAppSchedule(appData) as AppScheduleClass)?.cronExpression,
       },
       defaultCron: getCronDefaultValue(appData?.name ?? ''),
     };
-  }, [appData.name, appData.appType, appData.appSchedule, pipelineSchedules]);
+  }, [
+    appData.name,
+    appData.appType,
+    getAppSchedule(appData),
+    pipelineSchedules,
+  ]);
 
   const translatedSchedularOptions = useMemo(
     () =>
@@ -180,7 +186,7 @@ const AppSchedule = ({
     <>
       <Row>
         <Col className="flex-col" flex="auto">
-          {appData.appSchedule && (
+          {getAppSchedule(appData) && (
             <>
               <div className="d-flex items-center gap-2">
                 <Typography.Text className="right-panel-label">
@@ -188,9 +194,10 @@ const AppSchedule = ({
                 </Typography.Text>
                 <Typography.Text
                   className="font-medium"
-                  data-testid="schedule-type">
-                  {(appData.appSchedule as AppScheduleClass).scheduleTimeline ??
-                    ''}
+                  data-testid="schedule-type"
+                >
+                  {(getAppSchedule(appData) as AppScheduleClass)
+                    .scheduleTimeline ?? ''}
                 </Typography.Text>
               </div>
 
@@ -201,7 +208,8 @@ const AppSchedule = ({
                   </Typography.Text>
                   <Typography.Text
                     className="font-medium"
-                    data-testid="cron-string">
+                    data-testid="cron-string"
+                  >
                     {cronString}
                   </Typography.Text>
                 </div>
@@ -218,7 +226,8 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isDeployLoading}
                   type="primary"
-                  onClick={onDeployTrigger}>
+                  onClick={onDeployTrigger}
+                >
                   {t('label.deploy')}
                 </Button>
               )}
@@ -228,7 +237,8 @@ const AppSchedule = ({
                   data-testid="edit-button"
                   disabled={appData.deleted}
                   type="primary"
-                  onClick={() => setShowModal(true)}>
+                  onClick={() => setShowModal(true)}
+                >
                   {t('label.edit')}
                 </Button>
               )}
@@ -239,7 +249,8 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isRunLoading}
                   type="primary"
-                  onClick={onAppTrigger}>
+                  onClick={onAppTrigger}
+                >
                   {t('label.run-now')}
                 </Button>
               )}
@@ -261,7 +272,8 @@ const AppSchedule = ({
         okText={t('label.save')}
         open={showModal}
         title={t('label.update-entity', { entity: t('label.schedule') })}
-        width={650}>
+        width={650}
+      >
         <ScheduleInterval
           isEditMode
           buttonProps={{

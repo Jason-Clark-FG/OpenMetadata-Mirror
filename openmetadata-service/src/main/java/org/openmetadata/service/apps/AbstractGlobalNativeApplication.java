@@ -62,9 +62,8 @@ public abstract class AbstractGlobalNativeApplication extends AbstractNativeAppl
 
   protected void scheduleExternal(String installedBy) {
     LOG.info("Scheduling external global application: {}", getApp().getName());
-    ApplicationHandler.getInstance()
-        .getExternalSchedulerManager()
-        .scheduleExternalApp(getApp(), installedBy);
+    // TODO: External scheduler manager integration
+    LOG.warn("External app scheduling not yet implemented for {}", getApp().getName());
   }
 
   @Override
@@ -72,7 +71,6 @@ public abstract class AbstractGlobalNativeApplication extends AbstractNativeAppl
     AppScheduler.getInstance().triggerOnDemandApplication(getApp(), config);
   }
 
-  @Override
   public void triggerForService(UUID serviceId, Map<String, Object> config) {
     LOG.debug("Global App Type cannot trigger Service Type: {}", serviceId);
     throw new AppException("Global App Type cannot trigger Service Type: " + serviceId);

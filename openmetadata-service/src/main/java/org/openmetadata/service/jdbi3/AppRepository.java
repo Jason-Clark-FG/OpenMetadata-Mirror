@@ -35,6 +35,7 @@ import org.openmetadata.service.exception.AppException;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.resources.apps.AppResource;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
+import org.openmetadata.service.util.AppBoundConfigurationUtil;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 
@@ -556,8 +557,13 @@ public class AppRepository extends EntityRepository<App> {
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
       recordChange(
-          "appConfiguration", original.getAppConfiguration(), updated.getAppConfiguration());
-      recordChange("appSchedule", original.getAppSchedule(), updated.getAppSchedule());
+          "appConfiguration",
+          AppBoundConfigurationUtil.getAppConfiguration(original),
+          AppBoundConfigurationUtil.getAppConfiguration(updated));
+      recordChange(
+          "appSchedule",
+          AppBoundConfigurationUtil.getAppSchedule(original),
+          AppBoundConfigurationUtil.getAppSchedule(updated));
       recordChange("bot", original.getBot(), updated.getBot());
       recordChange(
           "eventSubscriptions", original.getEventSubscriptions(), updated.getEventSubscriptions());
