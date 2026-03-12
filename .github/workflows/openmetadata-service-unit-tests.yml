@@ -27,7 +27,7 @@ on:
       - "pom.xml"
       - "Makefile"
       - "bootstrap/**"
-  pull_request_target:
+  pull_request:
     types: [labeled, opened, synchronize, reopened, ready_for_review]
     paths:
       - ".github/workflows/openmetadata-service-unit-tests.yml"
@@ -56,34 +56,22 @@ jobs:
     timeout-minutes: 90
     env:
       NEW_CODE_COVERAGE_THRESHOLD: "90"
-    if: ${{ github.event_name != 'pull_request_target' || !github.event.pull_request.draft }}
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     steps:
-      - name: Wait for the labeler
-        uses: lewagon/wait-on-check-action@v1.3.4
-        if: ${{ github.event_name == 'pull_request_target' }}
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: Team Label
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-
-      - name: Verify PR labels
-        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
-        if: ${{ github.event_name == 'pull_request_target' }}
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          valid-labels: "safe to test"
-          pull-request-number: "${{ github.event.pull_request.number }}"
-          disable-reviews: true
+      - name: Require safe-to-test label
+        if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'safe to test') }}
+        run: |
+          echo "The 'safe to test' label is required before running OpenMetadata service unit tests."
+          exit 1
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Fetch PR base branch
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: git fetch --no-tags origin ${{ github.event.pull_request.base.ref }}
 
       - name: Cache Maven dependencies
@@ -124,7 +112,7 @@ jobs:
 
       - name: Evaluate new-code coverage
         id: diff-coverage
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           python3 scripts/jacoco_diff_coverage.py \
             --report openmetadata-service/target/site/jacoco/jacoco.xml \
@@ -135,32 +123,32 @@ jobs:
             --markdown-output openmetadata-service/target/diff-coverage.md
 
       - name: Add coverage summary to job summary
-        if: ${{ always() && github.event_name == 'pull_request_target' && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
+        if: ${{ always() && github.event_name == 'pull_request' && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
         run: cat openmetadata-service/target/diff-coverage.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment PR with coverage summary
-        if: ${{ always() && github.event_name == 'pull_request_target' && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
+        if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: openmetadata-service-new-code-coverage
           path: openmetadata-service/target/diff-coverage.md
 
       - name: Upload JaCoCo report
-        if: ${{ always() && github.event_name == 'pull_request_target' }}
+        if: ${{ always() && github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: openmetadata-service-jacoco-report
           path: openmetadata-service/target/site/jacoco/
 
       - name: Upload surefire reports
-        if: failure()
+        if: ${{ failure() && hashFiles('openmetadata-service/target/surefire-reports/TEST-*.xml') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: openmetadata-service-surefire-reports
           path: openmetadata-service/target/surefire-reports/
 
       - name: Publish Test Report
-        if: ${{ always() }}
+        if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('openmetadata-service/target/surefire-reports/TEST-*.xml') != '' }}
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
