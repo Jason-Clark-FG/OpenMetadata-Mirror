@@ -198,7 +198,9 @@ public class OpenSearchVectorService implements VectorIndexService {
   }
 
   private static int collectSearchHits(
-      JsonNode hitsNode, double threshold, LinkedHashMap<String, List<Map<String, Object>>> byParent) {
+      JsonNode hitsNode,
+      double threshold,
+      LinkedHashMap<String, List<Map<String, Object>>> byParent) {
     int pageHitCount = 0;
     for (JsonNode hit : hitsNode) {
       pageHitCount++;

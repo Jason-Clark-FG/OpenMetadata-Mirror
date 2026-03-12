@@ -28,11 +28,13 @@ class RuleEngineTest {
         MockedStatic<SettingsCache> settingsCache = mockStatic(SettingsCache.class)) {
       entity.when(Entity::getSystemRepository).thenReturn(systemRepository);
       settingsCache
-          .when(() -> SettingsCache.getSetting(SettingsType.ENTITY_RULES_SETTINGS, EntityRulesSettings.class))
+          .when(
+              () ->
+                  SettingsCache.getSetting(
+                      SettingsType.ENTITY_RULES_SETTINGS, EntityRulesSettings.class))
           .thenThrow(EntityNotFoundException.byMessage("missing settings"));
 
-      assertEquals(
-          List.of(), RuleEngine.getInstance().evaluateAndReturn(table, null, true, false));
+      assertEquals(List.of(), RuleEngine.getInstance().evaluateAndReturn(table, null, true, false));
     }
   }
 
@@ -45,7 +47,10 @@ class RuleEngineTest {
         MockedStatic<SettingsCache> settingsCache = mockStatic(SettingsCache.class)) {
       entity.when(Entity::getSystemRepository).thenReturn(systemRepository);
       settingsCache
-          .when(() -> SettingsCache.getSetting(SettingsType.ENTITY_RULES_SETTINGS, EntityRulesSettings.class))
+          .when(
+              () ->
+                  SettingsCache.getSetting(
+                      SettingsType.ENTITY_RULES_SETTINGS, EntityRulesSettings.class))
           .thenThrow(new IllegalStateException("cache corrupted"));
 
       IllegalStateException exception =
