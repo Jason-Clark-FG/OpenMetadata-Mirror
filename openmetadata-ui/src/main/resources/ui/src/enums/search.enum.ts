@@ -47,6 +47,7 @@ export enum SearchIndex {
   DATA_PRODUCT = 'dataProduct',
   INGESTION_PIPELINE = 'ingestionPipeline',
   API_SERVICE = 'apiService',
+  METADATA_SERVICE = 'metadataService',
   API_COLLECTION = 'apiCollection',
   API_ENDPOINT = 'apiEndpoint',
   METRIC = 'metric',
