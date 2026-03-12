@@ -284,11 +284,20 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   }, [lineageDirection, radioGroupOptions]);
 
   // Column-level filter keys used for column_filter post-processing
-  const columnLevelFilterKeys = [
-    EntityFields.COLUMN,
-    EntityFields.TAG,
-    EntityFields.GLOSSARY_TERMS,
-  ];
+  // On Table-level: only COLUMN goes to column_filter (for Column dropdown in post-processing)
+  // On Column-level: COLUMN, TAG, GLOSSARY_TERMS all go to column_filter (filter columns)
+  const columnLevelFilterKeys = useMemo(() => {
+    if (impactLevel === EImpactLevel.ColumnLevel) {
+      return [
+        EntityFields.COLUMN,
+        EntityFields.TAG,
+        EntityFields.GLOSSARY_TERMS,
+      ];
+    }
+
+    // Table-level: only Column dropdown is a column filter
+    return [EntityFields.COLUMN];
+  }, [impactLevel]);
 
   // Query filter for table-level filtering (filters tables/nodes)
   // For Table-level: includes search value + table-level filters
