@@ -12,6 +12,7 @@
  */
 
 import { removeSession } from '@analytics/session-utils';
+import { UploadOutlined } from '@ant-design/icons';
 import Form, { IChangeEvent } from '@rjsf/core';
 import {
   CustomValidator,
@@ -67,6 +68,7 @@ import {
   handleClientTypeChange,
   hasFieldValidationErrors,
   isValidNonBasicProvider,
+  parseSamlMetadataXml,
   parseValidationErrors,
   removeRequiredFields,
   removeSchemaFields,
@@ -128,6 +130,7 @@ const SSOConfigurationFormRJSF = ({
   const [isModalSave, setIsModalSave] = useState<boolean>(false);
   const [errorClearTrigger, setErrorClearTrigger] = useState<number>(0);
   const fieldErrorsRef = useRef<ErrorSchema>({});
+  const metadataFileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to setup configuration state - extracted to avoid redundancy
   const setupConfigurationState = useCallback(
@@ -248,6 +251,64 @@ const SSOConfigurationFormRJSF = ({
   const handleClearFieldError = useCallback((fieldPath: string) => {
     clearFieldError(fieldErrorsRef, fieldPath);
   }, []);
+
+  const handleMetadataFileUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const xmlContent = e.target?.result as string;
+          const parsed = parseSamlMetadataXml(xmlContent);
+
+          setInternalData((prev) => {
+            if (!prev) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              authenticationConfiguration: {
+                ...prev.authenticationConfiguration,
+                samlConfiguration: {
+                  ...prev.authenticationConfiguration?.samlConfiguration,
+                  idp: {
+                    ...prev.authenticationConfiguration?.samlConfiguration?.idp,
+                    entityId: parsed.entityId,
+                    ssoLoginUrl: parsed.ssoLoginUrl,
+                    idpX509Certificate:
+                      parsed.idpX509Certificate ??
+                      prev.authenticationConfiguration?.samlConfiguration?.idp
+                        ?.idpX509Certificate ??
+                      '',
+                  },
+                },
+              },
+            };
+          });
+
+          showSuccessToast(t('message.metadata-xml-parsed-successfully'));
+        } catch (error) {
+          showErrorToast(
+            error instanceof Error
+              ? error.message
+              : t('message.metadata-xml-parse-failed')
+          );
+        }
+      };
+      reader.readAsText(file);
+
+      // Reset file input so re-uploading the same file triggers onChange
+      if (metadataFileInputRef.current) {
+        metadataFileInputRef.current.value = '';
+      }
+    },
+    [t]
+  );
 
   const handleValidationErrors = useCallback(
     (
@@ -848,7 +909,8 @@ const SSOConfigurationFormRJSF = ({
     return (
       <Card
         className="sso-provider-selection flex-col"
-        data-testid="sso-configuration-form-card">
+        data-testid="sso-configuration-form-card"
+      >
         <ProviderSelector
           selectedProvider={currentProvider as AuthProvider}
           onProviderSelect={handleProviderSelect}
@@ -857,8 +919,34 @@ const SSOConfigurationFormRJSF = ({
     );
   }
 
+  const isSamlProvider = currentProvider === AuthProvider.Saml;
+
   const formContent = (
     <>
+      {isEditMode && showForm && isSamlProvider && (
+        <>
+          <input
+            accept=".xml,application/xml,text/xml"
+            data-testid="saml-metadata-file-input"
+            ref={metadataFileInputRef}
+            style={{ display: 'none' }}
+            type="file"
+            onChange={handleMetadataFileUpload}
+          />
+          <div className="m-b-md">
+            <Button
+              data-testid="upload-metadata-xml-btn"
+              icon={<UploadOutlined />}
+              onClick={() => metadataFileInputRef.current?.click()}
+            >
+              {t('label.upload-idp-metadata-xml')}
+            </Button>
+            <Typography.Text className="m-l-sm text-grey-muted text-xs">
+              {t('message.upload-idp-metadata-xml-description')}
+            </Typography.Text>
+          </div>
+        </>
+      )}
       {isEditMode && showForm && (
         <Form
           focusOnFirstError
@@ -926,7 +1014,8 @@ const SSOConfigurationFormRJSF = ({
                       className="cancel-sso-configuration text-md"
                       data-testid="cancel-sso-configuration"
                       type="link"
-                      onClick={handleCancelClick}>
+                      onClick={handleCancelClick}
+                    >
                       {t('label.cancel')}
                     </Button>
                     <Button
@@ -935,7 +1024,8 @@ const SSOConfigurationFormRJSF = ({
                       disabled={isLoading}
                       loading={isLoading}
                       type="primary"
-                      onClick={handleSave}>
+                      onClick={handleSave}
+                    >
                       {t('label.save')}
                     </Button>
                   </div>
@@ -965,7 +1055,8 @@ const SSOConfigurationFormRJSF = ({
   const wrappedFormContent = (
     <Card
       className="sso-configuration-form-card flex-col p-0"
-      data-testid="sso-configuration-form-card">
+      data-testid="sso-configuration-form-card"
+    >
       {/* SSO Provider Header */}
       {currentProvider && (
         <div className="sso-provider-form-header flex items-center justify-between">
@@ -988,7 +1079,8 @@ const SSOConfigurationFormRJSF = ({
             <Button
               data-testid="change-provider-button"
               type="link"
-              onClick={onChangeProvider}>
+              onClick={onChangeProvider}
+            >
               {t('label.change-provider')}
             </Button>
           )}
@@ -1025,7 +1117,8 @@ const SSOConfigurationFormRJSF = ({
                     className="cancel-sso-configuration text-md"
                     data-testid="cancel-sso-configuration"
                     type="link"
-                    onClick={handleCancelClick}>
+                    onClick={handleCancelClick}
+                  >
                     {t('label.cancel')}
                   </Button>
                   <Button
@@ -1034,7 +1127,8 @@ const SSOConfigurationFormRJSF = ({
                     disabled={isLoading}
                     loading={isLoading}
                     type="primary"
-                    onClick={handleSave}>
+                    onClick={handleSave}
+                  >
                     {t('label.save')}
                   </Button>
                 </div>
