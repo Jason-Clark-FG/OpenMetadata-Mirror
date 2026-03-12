@@ -105,7 +105,7 @@ test.describe(
         const searchResponse = page.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/search/query') &&
-            response.url().includes('metric_search_index')
+            response.url().includes('metric')
         );
 
         await page

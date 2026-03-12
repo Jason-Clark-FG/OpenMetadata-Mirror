@@ -186,7 +186,7 @@ test.describe('Table Search', () => {
       );
       await testTableSearch(
         page,
-        'dashboard_data_model_search_index',
+        'dashboardDataModel',
         displayName,
         baseDataModel.entity.name
       );
@@ -233,7 +233,7 @@ test.describe('Table Search', () => {
       await test.step('search with original mixed-case term', async () => {
         await testTableSearch(
           page,
-          'dashboard_data_model_search_index',
+          'dashboardDataModel',
           mixedCaseName,
           baseDataModel.entity.name
         );
@@ -242,7 +242,7 @@ test.describe('Table Search', () => {
       await test.step('search with all-uppercase term', async () => {
         await testTableSearch(
           page,
-          'dashboard_data_model_search_index',
+          'dashboardDataModel',
           mixedCaseName.toUpperCase(),
           baseDataModel.entity.name
         );
@@ -251,7 +251,7 @@ test.describe('Table Search', () => {
       await test.step('search with all-lowercase term', async () => {
         await testTableSearch(
           page,
-          'dashboard_data_model_search_index',
+          'dashboardDataModel',
           mixedCaseName.toLowerCase(),
           baseDataModel.entity.name
         );
