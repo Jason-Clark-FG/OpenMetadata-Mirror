@@ -665,6 +665,13 @@ public class OpenSearchClient implements SearchClient {
     return dataInsightAggregatorManager.buildDIChart(diChart, start, end, live);
   }
 
+  @Override
+  public DataInsightCustomChartResultList buildDIChart(
+      @NotNull DataInsightCustomChart diChart, long start, long end, boolean live, String filter)
+      throws IOException {
+    return dataInsightAggregatorManager.buildDIChart(diChart, start, end, live, filter);
+  }
+
   /**
    * Parses the host string for AwsSdk2Transport. Strips protocol prefix, trailing slash, handles
    * comma-separated hosts (uses first), and removes port. AwsSdk2Transport expects a bare hostname.
@@ -835,6 +842,12 @@ public class OpenSearchClient implements SearchClient {
   @Override
   public void deleteILMPolicy(String policyName) throws IOException {
     genericManager.deleteILMPolicy(policyName);
+  }
+
+  @Override
+  public void createOrUpdateIndexTemplate(
+      String templateName, String indexPattern, String mappingContent) throws IOException {
+    genericManager.createOrUpdateIndexTemplate(templateName, indexPattern, mappingContent);
   }
 
   @Override
