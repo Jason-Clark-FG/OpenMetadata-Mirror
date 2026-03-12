@@ -64,12 +64,14 @@ class ElasticSearchBulkSinkBehaviorTest {
         mockConstruction(ElasticSearchBulkSink.CustomBulkProcessor.class)) {
       ElasticSearchBulkSink sink = new ElasticSearchBulkSink(searchRepository, 10, 2, 1000L);
 
-      sink.write(List.of(), Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, mock(StageStatsTracker.class)));
+      sink.write(
+          List.of(), Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, mock(StageStatsTracker.class)));
 
       assertThrows(
           IllegalArgumentException.class,
           () -> sink.write(List.of(mock(EntityInterface.class)), Map.of()));
-      verify(processorConstruction.constructed().getFirst(), never()).add(any(), any(), any(), any(), anyLong());
+      verify(processorConstruction.constructed().getFirst(), never())
+          .add(any(), any(), any(), any(), anyLong());
     }
   }
 
@@ -84,18 +86,13 @@ class ElasticSearchBulkSinkBehaviorTest {
 
       sink.write(
           List.of(mock(EntityInterface.class)),
-          Map.of(
-              "entityType",
-              ENTITY_TYPE,
-              BulkSink.STATS_TRACKER_CONTEXT_KEY,
-              tracker));
+          Map.of("entityType", ENTITY_TYPE, BulkSink.STATS_TRACKER_CONTEXT_KEY, tracker));
 
-      assertSame(
-          tracker,
-          sink.extractTracker(Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, tracker)));
+      assertSame(tracker, sink.extractTracker(Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, tracker)));
       assertNull(sink.extractTracker(Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, "not-a-tracker")));
       assertNull(sink.extractTracker(null));
-      verify(processorConstruction.constructed().getFirst(), never()).add(any(), any(), any(), any(), anyLong());
+      verify(processorConstruction.constructed().getFirst(), never())
+          .add(any(), any(), any(), any(), anyLong());
     }
   }
 
@@ -121,13 +118,16 @@ class ElasticSearchBulkSinkBehaviorTest {
       invokePrivate(
           sink,
           "addEntity",
-          new Class<?>[] {EntityInterface.class, String.class, boolean.class, StageStatsTracker.class},
+          new Class<?>[] {
+            EntityInterface.class, String.class, boolean.class, StageStatsTracker.class
+          },
           entity,
           "table_index",
           false,
           tracker);
 
-      verify(processor).add(any(), eq(entityId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
+      verify(processor)
+          .add(any(), eq(entityId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
       verify(tracker).incrementPendingSink();
       verify(tracker).recordProcess(StatsResult.SUCCESS);
       assertEquals(1, sink.getProcessStats().getSuccessRecords());
@@ -151,13 +151,16 @@ class ElasticSearchBulkSinkBehaviorTest {
       sink.setFailureCallback(failureCallback);
 
       entityMock.when(() -> Entity.getEntityTypeFromObject(entity)).thenReturn(ENTITY_TYPE);
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, entity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, entity))
           .thenThrow(EntityNotFoundException.byId(entityId.toString()));
 
       invokePrivate(
           sink,
           "addEntity",
-          new Class<?>[] {EntityInterface.class, String.class, boolean.class, StageStatsTracker.class},
+          new Class<?>[] {
+            EntityInterface.class, String.class, boolean.class, StageStatsTracker.class
+          },
           entity,
           "table_index",
           true,
@@ -198,9 +201,11 @@ class ElasticSearchBulkSinkBehaviorTest {
 
       entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
       SearchIndex searchIndex = new StubSearchIndex(Map.of("field", "value"));
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, successEntity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, successEntity))
           .thenReturn(searchIndex);
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, failedEntity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, failedEntity))
           .thenThrow(new IllegalStateException("boom"));
 
       invokePrivate(
@@ -224,7 +229,8 @@ class ElasticSearchBulkSinkBehaviorTest {
           ENTITY_TYPE,
           tracker);
 
-      verify(processor).add(any(), eq(successId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
+      verify(processor)
+          .add(any(), eq(successId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
       verify(tracker).incrementPendingSink();
       verify(tracker).recordProcess(StatsResult.SUCCESS);
       verify(tracker).recordProcess(StatsResult.FAILED);
@@ -295,7 +301,8 @@ class ElasticSearchBulkSinkBehaviorTest {
   }
 
   private void invokePrivate(
-      Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
     Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     method.invoke(target, args);

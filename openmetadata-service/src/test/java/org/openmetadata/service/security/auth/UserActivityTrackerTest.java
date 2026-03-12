@@ -365,7 +365,8 @@ class UserActivityTrackerTest {
     Map<String, ?> cacheAfter = getCache();
     assertEquals(2, cacheAfter.size());
     assertSame(existingActivity, cacheAfter.get("user1"));
-    assertEquals(existingLastLocalUpdate, getActivityField(cacheAfter.get("user1"), "lastLocalUpdate"));
+    assertEquals(
+        existingLastLocalUpdate, getActivityField(cacheAfter.get("user1"), "lastLocalUpdate"));
     assertTrue(cacheAfter.containsKey("user2"));
   }
 
@@ -391,7 +392,8 @@ class UserActivityTrackerTest {
   void testShutdownRestoresInterruptWhenAwaitTerminationIsInterrupted() throws Exception {
     ScheduledExecutorService scheduler = mock(ScheduledExecutorService.class);
     ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
-    when(scheduler.awaitTermination(5, TimeUnit.SECONDS)).thenThrow(new InterruptedException("stop"));
+    when(scheduler.awaitTermination(5, TimeUnit.SECONDS))
+        .thenThrow(new InterruptedException("stop"));
     setField(tracker, "scheduler", scheduler);
     setField(tracker, "virtualThreadExecutor", executor);
 

@@ -629,7 +629,9 @@ class PartitionWorkerTest {
     when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(searchIndexServerStatsDAO);
     when(bulkSink.flushAndAwait(30)).thenReturn(true);
     when(bulkSink.getPendingVectorTaskCount()).thenReturn(0);
-    doThrow(new IllegalStateException("sink unavailable")).when(bulkSink).write(anyList(), anyMap());
+    doThrow(new IllegalStateException("sink unavailable"))
+        .when(bulkSink)
+        .write(anyList(), anyMap());
 
     ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
     when(resolver.getServerId()).thenReturn("server-a");
@@ -664,8 +666,7 @@ class PartitionWorkerTest {
 
   @Test
   void processPartitionAdjustsSuccessCountsForProcessFailures() throws Exception {
-    PartitionWorker partitionWorker =
-        new PartitionWorker(coordinator, bulkSink, 2, null, false);
+    PartitionWorker partitionWorker = new PartitionWorker(coordinator, bulkSink, 2, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 2);
 
     ResultList<EntityInterface> resultList = new ResultList<>();
@@ -709,8 +710,7 @@ class PartitionWorkerTest {
 
   @Test
   void processPartitionFailsPartitionWhenCompletionThrows() throws Exception {
-    PartitionWorker partitionWorker =
-        new PartitionWorker(coordinator, bulkSink, 2, null, false);
+    PartitionWorker partitionWorker = new PartitionWorker(coordinator, bulkSink, 2, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 1);
 
     ResultList<EntityInterface> resultList = new ResultList<>();
@@ -784,8 +784,7 @@ class PartitionWorkerTest {
 
   @Test
   void testPartitionResult_RecordWithReaderFailuresDefaultsWarningsToZero() {
-    PartitionWorker.PartitionResult result =
-        new PartitionWorker.PartitionResult(10, 2, false, 3);
+    PartitionWorker.PartitionResult result = new PartitionWorker.PartitionResult(10, 2, false, 3);
 
     assertEquals(10, result.successCount());
     assertEquals(2, result.failedCount());

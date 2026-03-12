@@ -301,7 +301,8 @@ class ElasticSearchBulkProcessorTest {
   @SuppressWarnings("unchecked")
   private Map<String, StageStatsTracker> getTrackerMap(
       ElasticSearchBulkSink.CustomBulkProcessor processor) throws Exception {
-    Field field = ElasticSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("docIdToTracker");
+    Field field =
+        ElasticSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("docIdToTracker");
     field.setAccessible(true);
     return (Map<String, StageStatsTracker>) field.get(processor);
   }

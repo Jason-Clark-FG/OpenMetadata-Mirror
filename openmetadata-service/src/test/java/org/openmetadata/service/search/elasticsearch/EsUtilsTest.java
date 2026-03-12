@@ -15,6 +15,12 @@ import static org.openmetadata.service.search.SearchUtils.DOWNSTREAM_ENTITY_RELA
 import static org.openmetadata.service.search.SearchUtils.getLineageDirectionAggregationField;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import es.co.elastic.clients.elasticsearch.ElasticsearchClient;
+import es.co.elastic.clients.elasticsearch.core.SearchRequest;
+import es.co.elastic.clients.elasticsearch.core.SearchResponse;
+import es.co.elastic.clients.elasticsearch.core.search.Hit;
+import es.co.elastic.clients.elasticsearch.core.search.HitsMetadata;
+import es.co.elastic.clients.json.JsonData;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,12 +35,6 @@ import org.openmetadata.schema.api.lineage.LineageDirection;
 import org.openmetadata.sdk.exception.SearchException;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.search.SearchRepository;
-import es.co.elastic.clients.elasticsearch.ElasticsearchClient;
-import es.co.elastic.clients.elasticsearch.core.SearchRequest;
-import es.co.elastic.clients.elasticsearch.core.SearchResponse;
-import es.co.elastic.clients.elasticsearch.core.search.Hit;
-import es.co.elastic.clients.elasticsearch.core.search.HitsMetadata;
-import es.co.elastic.clients.json.JsonData;
 
 @ExtendWith(MockitoExtension.class)
 class EsUtilsTest {
@@ -344,7 +344,12 @@ class EsUtilsTest {
 
     SearchResponse<JsonData> result =
         EsUtils.searchEntitiesWithLimitOffset(
-            client, "table_search_index", "{\"query\":{\"term\":{\"owner\":\"bot\"}}}", 5, 10, true);
+            client,
+            "table_search_index",
+            "{\"query\":{\"term\":{\"owner\":\"bot\"}}}",
+            5,
+            10,
+            true);
 
     assertSame(searchResponse, result);
     SearchRequest request = requestCaptor.getValue();
@@ -360,7 +365,8 @@ class EsUtilsTest {
     when(client.search(requestCaptor.capture(), eq(JsonData.class))).thenReturn(searchResponse);
 
     SearchResponse<JsonData> result =
-        EsUtils.searchEntitiesWithLimitOffset(client, "table_search_index", "{invalid", 0, 2, false);
+        EsUtils.searchEntitiesWithLimitOffset(
+            client, "table_search_index", "{invalid", 0, 2, false);
 
     assertSame(searchResponse, result);
     assertNotNull(requestCaptor.getValue().query());
@@ -375,7 +381,8 @@ class EsUtilsTest {
       when(searchResponse.hits()).thenReturn(hitsMetadata);
       when(hitsMetadata.hits()).thenReturn(List.of(firstHit, secondHit));
       when(firstHit.source())
-          .thenReturn(EsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
+          .thenReturn(
+              EsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
       when(secondHit.source()).thenReturn(null);
 
       Map<String, Object> result =
@@ -403,7 +410,8 @@ class EsUtilsTest {
       when(searchResponse.hits()).thenReturn(hitsMetadata);
       when(hitsMetadata.hits()).thenReturn(List.of(firstHit));
       when(firstHit.source())
-          .thenReturn(EsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
+          .thenReturn(
+              EsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
 
       Map<String, Object> result =
           EsUtils.searchEREntityByKey(

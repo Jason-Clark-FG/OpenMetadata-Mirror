@@ -599,10 +599,7 @@ class DistributedSearchIndexExecutorTest {
             IllegalStateException.class,
             () ->
                 executor.execute(
-                    mock(BulkSink.class),
-                    null,
-                    false,
-                    ReindexingConfiguration.builder().build()));
+                    mock(BulkSink.class), null, false, ReindexingConfiguration.builder().build()));
 
     assertTrue(exception.getMessage().contains("No job to execute"));
   }
@@ -1103,7 +1100,8 @@ class DistributedSearchIndexExecutorTest {
         SearchIndexJob.builder().id(UUID.randomUUID()).status(IndexJobStatus.RUNNING).build();
     setField("currentJob", runningJob);
 
-    runLoopUntilInterrupted("runStaleReclaimerLoop", new Class<?>[] {UUID.class}, runningJob.getId());
+    runLoopUntilInterrupted(
+        "runStaleReclaimerLoop", new Class<?>[] {UUID.class}, runningJob.getId());
     runLoopUntilInterrupted("runLockRefreshLoop", new Class<?>[] {UUID.class}, runningJob.getId());
     runLoopUntilInterrupted("runPartitionHeartbeatLoop", new Class<?>[] {});
   }

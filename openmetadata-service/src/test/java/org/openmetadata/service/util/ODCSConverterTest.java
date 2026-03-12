@@ -39,6 +39,7 @@ import org.openmetadata.schema.api.data.Policy;
 import org.openmetadata.schema.api.data.RefreshFrequency;
 import org.openmetadata.schema.api.data.Retention;
 import org.openmetadata.schema.entity.data.DataContract;
+import org.openmetadata.schema.entity.data.TermsOfUse;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSDataContract;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSDescription;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSLogicalTypeOptions;
@@ -47,7 +48,6 @@ import org.openmetadata.schema.entity.datacontract.odcs.ODCSRole;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSSchemaElement;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSSlaProperty;
 import org.openmetadata.schema.entity.datacontract.odcs.ODCSTeamMember;
-import org.openmetadata.schema.entity.data.TermsOfUse;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.Column;
@@ -979,7 +979,8 @@ class ODCSConverterTest {
     entity.setFullyQualifiedName("service.database.schema.table");
     entity.setDescription("Entity level description");
     contract.setEntity(entity);
-    contract.setSchema(List.of(new Column().withName("customer_id").withDataType(ColumnDataType.INT)));
+    contract.setSchema(
+        List.of(new Column().withName("customer_id").withDataType(ColumnDataType.INT)));
 
     ODCSDataContract odcs = ODCSConverter.toODCS(contract);
 
@@ -1085,7 +1086,8 @@ class ODCSConverterTest {
     contract.setId(UUID.randomUUID());
     contract.setName("classification_contract");
     contract.setEntityStatus(EntityStatus.APPROVED);
-    contract.setEntity(new EntityReference().withId(UUID.randomUUID()).withType("table").withName("customers"));
+    contract.setEntity(
+        new EntityReference().withId(UUID.randomUUID()).withType("table").withName("customers"));
 
     Policy unnamedPolicy = new Policy();
     unnamedPolicy.setIdentities(List.of("owner@example.com"));

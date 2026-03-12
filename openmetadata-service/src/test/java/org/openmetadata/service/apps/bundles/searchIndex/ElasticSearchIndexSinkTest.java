@@ -30,12 +30,12 @@ import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
+import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.SearchIndexException;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.search.elasticsearch.ElasticSearchClient;
 import org.openmetadata.service.search.indexes.SearchIndex;
-import org.openmetadata.search.IndexMapping;
 
 class ElasticSearchIndexSinkTest {
 
@@ -130,7 +130,9 @@ class ElasticSearchIndexSinkTest {
       SearchIndexException exception =
           assertThrows(
               SearchIndexException.class,
-              () -> sink.write(List.of(firstEntity, secondEntity), Map.of("entityType", ENTITY_TYPE)));
+              () ->
+                  sink.write(
+                      List.of(firstEntity, secondEntity), Map.of("entityType", ENTITY_TYPE)));
 
       assertNotNull(exception.getIndexingError());
       assertEquals(1, exception.getIndexingError().getSuccessCount());
@@ -244,11 +246,12 @@ class ElasticSearchIndexSinkTest {
     BulkResponse response = mock(BulkResponse.class);
     List<BulkResponseItem> items =
         java.util.stream.IntStream.range(0, itemCount)
-            .mapToObj(i -> {
-              BulkResponseItem item = mock(BulkResponseItem.class);
-              when(item.error()).thenReturn(null);
-              return item;
-            })
+            .mapToObj(
+                i -> {
+                  BulkResponseItem item = mock(BulkResponseItem.class);
+                  when(item.error()).thenReturn(null);
+                  return item;
+                })
             .toList();
     when(response.items()).thenReturn(items);
     when(response.errors()).thenReturn(false);

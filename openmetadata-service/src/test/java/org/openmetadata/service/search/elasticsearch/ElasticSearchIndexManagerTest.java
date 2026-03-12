@@ -16,7 +16,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import es.co.elastic.clients.elasticsearch.ElasticsearchClient;
+import es.co.elastic.clients.elasticsearch._types.DocStats;
 import es.co.elastic.clients.elasticsearch._types.HealthStatus;
+import es.co.elastic.clients.elasticsearch._types.StoreStats;
+import es.co.elastic.clients.elasticsearch.indices.AliasDefinition;
 import es.co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import es.co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
 import es.co.elastic.clients.elasticsearch.indices.DeleteIndexRequest;
@@ -30,7 +33,6 @@ import es.co.elastic.clients.elasticsearch.indices.PutMappingRequest;
 import es.co.elastic.clients.elasticsearch.indices.PutMappingResponse;
 import es.co.elastic.clients.elasticsearch.indices.UpdateAliasesRequest;
 import es.co.elastic.clients.elasticsearch.indices.UpdateAliasesResponse;
-import es.co.elastic.clients.elasticsearch.indices.AliasDefinition;
 import es.co.elastic.clients.elasticsearch.indices.get_alias.IndexAliases;
 import es.co.elastic.clients.elasticsearch.indices.stats.IndexStats;
 import es.co.elastic.clients.elasticsearch.indices.stats.IndicesStats;
@@ -48,8 +50,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openmetadata.search.IndexMapping;
-import es.co.elastic.clients.elasticsearch._types.DocStats;
-import es.co.elastic.clients.elasticsearch._types.StoreStats;
 
 @ExtendWith(MockitoExtension.class)
 class ElasticSearchIndexManagerTest {
@@ -443,7 +443,8 @@ class ElasticSearchIndexManagerTest {
     IndexAliases aliasMetadata = mock(IndexAliases.class);
     when(getAliasResponse.aliases()).thenReturn(Map.of(TEST_INDEX, aliasMetadata));
     when(aliasMetadata.aliases())
-        .thenReturn(Map.of("table", mock(AliasDefinition.class), "entity", mock(AliasDefinition.class)));
+        .thenReturn(
+            Map.of("table", mock(AliasDefinition.class), "entity", mock(AliasDefinition.class)));
 
     Set<String> result = indexManager.getAliases(TEST_INDEX);
 
@@ -626,7 +627,8 @@ class ElasticSearchIndexManagerTest {
     ElasticSearchIndexManager managerWithNullClient =
         new ElasticSearchIndexManager(null, CLUSTER_ALIAS);
 
-    assertFalse(managerWithNullClient.swapAliases(Set.of(TEST_INDEX), "new_index", Set.of("table")));
+    assertFalse(
+        managerWithNullClient.swapAliases(Set.of(TEST_INDEX), "new_index", Set.of("table")));
     verifyNoInteractions(indicesClient);
   }
 
@@ -758,13 +760,17 @@ class ElasticSearchIndexManagerTest {
     ShardRouting primaryRouting = mock(ShardRouting.class);
     ShardRouting replicaRouting = mock(ShardRouting.class);
 
-    when(indicesClient.stats(any(java.util.function.Function.class))).thenReturn(indicesStatsResponse);
+    when(indicesClient.stats(any(java.util.function.Function.class)))
+        .thenReturn(indicesStatsResponse);
     when(indicesStatsResponse.indices())
         .thenReturn(
             Map.of(
-                ".kibana", mock(IndicesStats.class),
-                TEST_INDEX, visibleStats,
-                "entity_search_index", statsWithoutPrimaries));
+                ".kibana",
+                mock(IndicesStats.class),
+                TEST_INDEX,
+                visibleStats,
+                "entity_search_index",
+                statsWithoutPrimaries));
     when(visibleStats.primaries()).thenReturn(primaryStats);
     when(primaryStats.docs()).thenReturn(docStats);
     when(docStats.count()).thenReturn(42L);

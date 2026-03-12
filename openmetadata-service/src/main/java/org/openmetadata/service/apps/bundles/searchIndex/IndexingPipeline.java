@@ -412,7 +412,9 @@ public class IndexingPipeline implements AutoCloseable {
     try {
       if (!EntityReader.TIME_SERIES_ENTITIES.contains(entityType)) {
         EntityRepository<?> repository = Entity.getEntityRepository(entityType);
-        return repository.getDao().listCount(new ListFilter(org.openmetadata.schema.type.Include.ALL));
+        return repository
+            .getDao()
+            .listCount(new ListFilter(org.openmetadata.schema.type.Include.ALL));
       }
 
       EntityTimeSeriesRepository<?> repository;

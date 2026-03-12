@@ -366,7 +366,8 @@ class DistributedJobStatsAggregatorTest {
   }
 
   @Test
-  void testAggregateAndBroadcastSkipsUnchangedRunningStatsAndEmitsTerminalUpdate() throws Exception {
+  void testAggregateAndBroadcastSkipsUnchangedRunningStatsAndEmitsTerminalUpdate()
+      throws Exception {
     CollectionDAO collectionDAO = mock(CollectionDAO.class);
     CollectionDAO.SearchIndexServerStatsDAO serverStatsDAO =
         mock(CollectionDAO.SearchIndexServerStatsDAO.class);
@@ -449,8 +450,7 @@ class DistributedJobStatsAggregatorTest {
     when(serverStatsDAO.getAggregatedStats(jobId.toString())).thenReturn(aggregatedStats);
 
     SearchIndexJob job =
-        newJob(IndexJobStatus.COMPLETED_WITH_ERRORS)
-            .toBuilder()
+        newJob(IndexJobStatus.COMPLETED_WITH_ERRORS).toBuilder()
             .completedAt(300L)
             .updatedAt(320L)
             .build();
@@ -502,8 +502,7 @@ class DistributedJobStatsAggregatorTest {
     aggregator = new DistributedJobStatsAggregator(coordinator, jobId);
 
     SearchIndexJob job =
-        newJob(IndexJobStatus.RUNNING)
-            .toBuilder()
+        newJob(IndexJobStatus.RUNNING).toBuilder()
             .totalRecords((long) Integer.MAX_VALUE + 25)
             .processedRecords(100)
             .successRecords(60)
@@ -528,7 +527,8 @@ class DistributedJobStatsAggregatorTest {
             invokePrivate(
                 "convertToStats",
                 new Class<?>[] {
-                  SearchIndexJob.class, CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats.class
+                  SearchIndexJob.class,
+                  CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats.class
                 },
                 job,
                 aggregatedStats);
@@ -547,8 +547,12 @@ class DistributedJobStatsAggregatorTest {
     assertEquals(Integer.MAX_VALUE, tableStats.getTotalRecords());
     assertEquals(Integer.MAX_VALUE, tableStats.getSuccessRecords());
 
-    assertEquals(Integer.MAX_VALUE, invokeStaticPrivate("safeToInt", new Class<?>[] {long.class}, Long.MAX_VALUE));
-    assertEquals(Integer.MIN_VALUE, invokeStaticPrivate("safeToInt", new Class<?>[] {long.class}, Long.MIN_VALUE));
+    assertEquals(
+        Integer.MAX_VALUE,
+        invokeStaticPrivate("safeToInt", new Class<?>[] {long.class}, Long.MAX_VALUE));
+    assertEquals(
+        Integer.MIN_VALUE,
+        invokeStaticPrivate("safeToInt", new Class<?>[] {long.class}, Long.MIN_VALUE));
   }
 
   @Test
@@ -557,16 +561,20 @@ class DistributedJobStatsAggregatorTest {
 
     assertEquals(
         AppRunRecord.Status.PENDING,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.INITIALIZING));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.INITIALIZING));
     assertEquals(
         AppRunRecord.Status.PENDING,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.READY));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.READY));
     assertEquals(
         AppRunRecord.Status.RUNNING,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.RUNNING));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.RUNNING));
     assertEquals(
         AppRunRecord.Status.SUCCESS,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.COMPLETED));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.COMPLETED));
     assertEquals(
         AppRunRecord.Status.ACTIVE_ERROR,
         invokePrivate(
@@ -575,13 +583,16 @@ class DistributedJobStatsAggregatorTest {
             IndexJobStatus.COMPLETED_WITH_ERRORS));
     assertEquals(
         AppRunRecord.Status.FAILED,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.FAILED));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.FAILED));
     assertEquals(
         AppRunRecord.Status.STOP_IN_PROGRESS,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.STOPPING));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.STOPPING));
     assertEquals(
         AppRunRecord.Status.STOPPED,
-        invokePrivate("convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.STOPPED));
+        invokePrivate(
+            "convertStatus", new Class<?>[] {IndexJobStatus.class}, IndexJobStatus.STOPPED));
   }
 
   @Test
@@ -593,7 +604,8 @@ class DistributedJobStatsAggregatorTest {
     aggregator = new DistributedJobStatsAggregator(coordinator, jobId);
     aggregator.setProgressListener(listener, context);
 
-    SearchIndexJob completedWithErrors = baseJob.toBuilder().status(IndexJobStatus.COMPLETED_WITH_ERRORS).build();
+    SearchIndexJob completedWithErrors =
+        baseJob.toBuilder().status(IndexJobStatus.COMPLETED_WITH_ERRORS).build();
     SearchIndexJob failed =
         baseJob.toBuilder().status(IndexJobStatus.FAILED).errorMessage("failed downstream").build();
     SearchIndexJob stopped = baseJob.toBuilder().status(IndexJobStatus.STOPPED).build();
@@ -641,7 +653,8 @@ class DistributedJobStatsAggregatorTest {
     setStaticField(WebSocketManager.class, "instance", null);
 
     AppRunRecord appRunRecord =
-        new AppRunRecord().withSuccessContext(new org.openmetadata.schema.entity.app.SuccessContext());
+        new AppRunRecord()
+            .withSuccessContext(new org.openmetadata.schema.entity.app.SuccessContext());
 
     invokePrivate("broadcastStats", new Class<?>[] {AppRunRecord.class}, appRunRecord);
   }
@@ -734,14 +747,16 @@ class DistributedJobStatsAggregatorTest {
 
   private Object invokePrivate(String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
-    Method method = DistributedJobStatsAggregator.class.getDeclaredMethod(methodName, parameterTypes);
+    Method method =
+        DistributedJobStatsAggregator.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     return method.invoke(aggregator, args);
   }
 
   private Object invokeStaticPrivate(String methodName, Class<?>[] parameterTypes, Object... args)
       throws Exception {
-    Method method = DistributedJobStatsAggregator.class.getDeclaredMethod(methodName, parameterTypes);
+    Method method =
+        DistributedJobStatsAggregator.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     return method.invoke(null, args);
   }
@@ -762,7 +777,8 @@ class DistributedJobStatsAggregatorTest {
     ((AtomicBoolean) getField("running")).set(running);
   }
 
-  private static void setStaticField(Class<?> type, String fieldName, Object value) throws Exception {
+  private static void setStaticField(Class<?> type, String fieldName, Object value)
+      throws Exception {
     Field field = type.getDeclaredField(fieldName);
     field.setAccessible(true);
     field.set(null, value);

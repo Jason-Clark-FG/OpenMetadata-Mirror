@@ -397,7 +397,12 @@ class OsUtilsTest {
 
     SearchResponse<JsonData> result =
         OsUtils.searchEntitiesWithLimitOffset(
-            client, "table_search_index", "{\"query\":{\"term\":{\"owner\":\"bot\"}}}", 5, 10, true);
+            client,
+            "table_search_index",
+            "{\"query\":{\"term\":{\"owner\":\"bot\"}}}",
+            5,
+            10,
+            true);
 
     assertSame(searchResponse, result);
     SearchRequest request = requestCaptor.getValue();
@@ -413,7 +418,8 @@ class OsUtilsTest {
     when(client.search(requestCaptor.capture(), eq(JsonData.class))).thenReturn(searchResponse);
 
     SearchResponse<JsonData> result =
-        OsUtils.searchEntitiesWithLimitOffset(client, "table_search_index", "{invalid", 0, 2, false);
+        OsUtils.searchEntitiesWithLimitOffset(
+            client, "table_search_index", "{invalid", 0, 2, false);
 
     assertSame(searchResponse, result);
     assertNotNull(requestCaptor.getValue().query());
@@ -428,7 +434,8 @@ class OsUtilsTest {
       when(searchResponse.hits()).thenReturn(hitsMetadata);
       when(hitsMetadata.hits()).thenReturn(List.of(firstHit, secondHit));
       when(firstHit.source())
-          .thenReturn(OsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
+          .thenReturn(
+              OsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
       when(secondHit.source()).thenReturn(null);
 
       Map<String, Object> result =
@@ -456,7 +463,8 @@ class OsUtilsTest {
       when(searchResponse.hits()).thenReturn(hitsMetadata);
       when(hitsMetadata.hits()).thenReturn(List.of(firstHit));
       when(firstHit.source())
-          .thenReturn(OsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
+          .thenReturn(
+              OsUtils.toJsonData("{\"fullyQualifiedName\":\"sample.orders\",\"name\":\"orders\"}"));
 
       Map<String, Object> result =
           OsUtils.searchEREntityByKey(
@@ -585,7 +593,9 @@ class OsUtilsTest {
                 }
                 """));
 
-    assertEquals("english", transformed.path("analysis").path("filter").path("om_stemmer").path("language").asText());
+    assertEquals(
+        "english",
+        transformed.path("analysis").path("filter").path("om_stemmer").path("language").asText());
     assertFalse(transformed.path("analysis").path("filter").path("om_stemmer").has("name"));
   }
 
@@ -640,7 +650,12 @@ class OsUtilsTest {
     JsonNode root = org.openmetadata.schema.utils.JsonUtils.readTree(enriched);
     assertEquals(
         "english",
-        root.path("settings").path("analysis").path("filter").path("om_stemmer").path("language").asText());
+        root.path("settings")
+            .path("analysis")
+            .path("filter")
+            .path("om_stemmer")
+            .path("language")
+            .asText());
   }
 
   @Test
@@ -670,10 +685,17 @@ class OsUtilsTest {
                 }
                 """));
 
-    assertEquals("flat_object", transformed.path("properties").path("metadata").path("type").asText());
+    assertEquals(
+        "flat_object", transformed.path("properties").path("metadata").path("type").asText());
     assertEquals(
         "flat_object",
-        transformed.path("properties").path("nested").path("properties").path("tags").path("type").asText());
+        transformed
+            .path("properties")
+            .path("nested")
+            .path("properties")
+            .path("tags")
+            .path("type")
+            .asText());
   }
 
   @Test
@@ -722,8 +744,15 @@ class OsUtilsTest {
       JsonNode root = org.openmetadata.schema.utils.JsonUtils.readTree(enriched);
       assertEquals(
           "english",
-          root.path("settings").path("analysis").path("filter").path("om_stemmer").path("language").asText());
-      assertEquals("flat_object", root.path("mappings").path("properties").path("metadata").path("type").asText());
+          root.path("settings")
+              .path("analysis")
+              .path("filter")
+              .path("om_stemmer")
+              .path("language")
+              .asText());
+      assertEquals(
+          "flat_object",
+          root.path("mappings").path("properties").path("metadata").path("type").asText());
       assertTrue(root.path("mappings").path("properties").path("embedding").isMissingNode());
     }
   }
@@ -796,10 +825,21 @@ class OsUtilsTest {
           root.path("mappings").path("properties").path("embedding").path("type").asText());
       assertEquals(
           "hnsw",
-          root.path("mappings").path("properties").path("embedding").path("method").path("name").asText());
+          root.path("mappings")
+              .path("properties")
+              .path("embedding")
+              .path("method")
+              .path("name")
+              .asText());
       assertEquals(
           48,
-          root.path("mappings").path("properties").path("embedding").path("method").path("parameters").path("m").asInt());
+          root.path("mappings")
+              .path("properties")
+              .path("embedding")
+              .path("method")
+              .path("parameters")
+              .path("m")
+              .asInt());
     }
   }
 }

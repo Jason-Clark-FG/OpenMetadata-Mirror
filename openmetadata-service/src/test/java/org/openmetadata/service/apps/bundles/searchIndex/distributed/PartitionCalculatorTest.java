@@ -40,12 +40,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
 import org.openmetadata.service.jdbi3.EntityDAO;
+import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesDAO;
 import org.openmetadata.service.jdbi3.EntityTimeSeriesRepository;
-import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
-import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 @ExtendWith(MockitoExtension.class)
@@ -351,7 +351,8 @@ class PartitionCalculatorTest {
     EntityTimeSeriesRepository<?> repository = mock(EntityTimeSeriesRepository.class);
     EntityTimeSeriesDAO timeSeriesDAO = mock(EntityTimeSeriesDAO.class);
     when(repository.getTimeSeriesDao()).thenReturn(timeSeriesDAO);
-    when(timeSeriesDAO.listCount(any(), anyLong(), anyLong(), org.mockito.ArgumentMatchers.eq(false)))
+    when(timeSeriesDAO.listCount(
+            any(), anyLong(), anyLong(), org.mockito.ArgumentMatchers.eq(false)))
         .thenReturn(42);
     when(timeSeriesDAO.listCount(any())).thenReturn(84);
     entityMock
@@ -363,12 +364,12 @@ class PartitionCalculatorTest {
     long count = calculator.getEntityCount("entityReportData", config);
 
     assertEquals(42, count);
-    entityMock.verify(
-        () -> Entity.getEntityTimeSeriesRepository(Entity.ENTITY_REPORT_DATA));
+    entityMock.verify(() -> Entity.getEntityTimeSeriesRepository(Entity.ENTITY_REPORT_DATA));
     org.mockito.ArgumentCaptor<ListFilter> filterCaptor =
         org.mockito.ArgumentCaptor.forClass(ListFilter.class);
     org.mockito.Mockito.verify(timeSeriesDAO)
-        .listCount(filterCaptor.capture(), anyLong(), anyLong(), org.mockito.ArgumentMatchers.eq(false));
+        .listCount(
+            filterCaptor.capture(), anyLong(), anyLong(), org.mockito.ArgumentMatchers.eq(false));
     assertEquals(
         FullyQualifiedName.buildHash("entityReportData"),
         filterCaptor.getValue().getQueryParams().get("entityFQNHash"));
@@ -382,7 +383,9 @@ class PartitionCalculatorTest {
     EntityTimeSeriesDAO timeSeriesDAO = mock(EntityTimeSeriesDAO.class);
     when(repository.getTimeSeriesDao()).thenReturn(timeSeriesDAO);
     when(timeSeriesDAO.listCount(any())).thenReturn(17);
-    entityMock.when(() -> Entity.getEntityTimeSeriesRepository("testCaseResult")).thenReturn(repository);
+    entityMock
+        .when(() -> Entity.getEntityTimeSeriesRepository("testCaseResult"))
+        .thenReturn(repository);
 
     long count = calculator.getEntityCount("testCaseResult");
 

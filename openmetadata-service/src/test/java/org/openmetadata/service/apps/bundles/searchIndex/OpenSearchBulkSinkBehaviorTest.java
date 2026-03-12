@@ -67,7 +67,8 @@ class OpenSearchBulkSinkBehaviorTest {
         mockConstruction(OpenSearchBulkSink.CustomBulkProcessor.class)) {
       OpenSearchBulkSink sink = new OpenSearchBulkSink(searchRepository, 10, 2, 1000L);
 
-      sink.write(List.of(), Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, mock(StageStatsTracker.class)));
+      sink.write(
+          List.of(), Map.of(BulkSink.STATS_TRACKER_CONTEXT_KEY, mock(StageStatsTracker.class)));
 
       assertThrows(
           IllegalArgumentException.class,
@@ -137,7 +138,8 @@ class OpenSearchBulkSinkBehaviorTest {
           false,
           Collections.emptyMap());
 
-      verify(processor).add(any(), eq(entityId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
+      verify(processor)
+          .add(any(), eq(entityId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
       verify(tracker).incrementPendingSink();
       verify(tracker).recordProcess(StatsResult.SUCCESS);
       assertEquals(1, sink.getProcessStats().getSuccessRecords());
@@ -161,7 +163,8 @@ class OpenSearchBulkSinkBehaviorTest {
       sink.setFailureCallback(failureCallback);
 
       entityMock.when(() -> Entity.getEntityTypeFromObject(entity)).thenReturn(ENTITY_TYPE);
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, entity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, entity))
           .thenThrow(EntityNotFoundException.byId(entityId.toString()));
 
       invokePrivate(
@@ -219,9 +222,11 @@ class OpenSearchBulkSinkBehaviorTest {
 
       entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
       SearchIndex searchIndex = new StubSearchIndex(Map.of("field", "value"));
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, successEntity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, successEntity))
           .thenReturn(searchIndex);
-      entityMock.when(() -> Entity.buildSearchIndex(ENTITY_TYPE, failedEntity))
+      entityMock
+          .when(() -> Entity.buildSearchIndex(ENTITY_TYPE, failedEntity))
           .thenThrow(new IllegalStateException("boom"));
 
       invokePrivate(
@@ -245,7 +250,8 @@ class OpenSearchBulkSinkBehaviorTest {
           ENTITY_TYPE,
           tracker);
 
-      verify(processor).add(any(), eq(successId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
+      verify(processor)
+          .add(any(), eq(successId.toString()), eq(ENTITY_TYPE), eq(tracker), anyLong());
       verify(tracker).incrementPendingSink();
       verify(tracker).recordProcess(StatsResult.SUCCESS);
       verify(tracker).recordProcess(StatsResult.FAILED);
@@ -320,7 +326,8 @@ class OpenSearchBulkSinkBehaviorTest {
   }
 
   private void invokePrivate(
-      Object target, String methodName, Class<?>[] parameterTypes, Object... args) throws Exception {
+      Object target, String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
     Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     method.invoke(target, args);

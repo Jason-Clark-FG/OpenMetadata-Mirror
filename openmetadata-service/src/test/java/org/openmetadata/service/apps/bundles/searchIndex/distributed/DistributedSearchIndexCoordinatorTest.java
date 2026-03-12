@@ -493,12 +493,7 @@ class DistributedSearchIndexCoordinatorTest {
 
     verify(partitionDAO)
         .updateProgress(
-            eq(partition.getId().toString()),
-            eq(120L),
-            eq(100L),
-            eq(95L),
-            eq(5L),
-            anyLong());
+            eq(partition.getId().toString()), eq(120L), eq(100L), eq(95L), eq(5L), anyLong());
   }
 
   @Test
@@ -1210,7 +1205,8 @@ class DistributedSearchIndexCoordinatorTest {
 
     coordinator.updateStagedIndexMapping(jobId, stagedMapping);
 
-    verify(jobDAO).updateStagedIndexMapping(eq(jobId.toString()), mappingCaptor.capture(), anyLong());
+    verify(jobDAO)
+        .updateStagedIndexMapping(eq(jobId.toString()), mappingCaptor.capture(), anyLong());
     assertEquals(stagedMapping, JsonUtils.readValue(mappingCaptor.getValue(), Map.class));
   }
 

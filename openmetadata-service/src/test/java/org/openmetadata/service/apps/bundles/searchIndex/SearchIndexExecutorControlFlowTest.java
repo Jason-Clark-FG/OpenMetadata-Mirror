@@ -50,6 +50,8 @@ import org.openmetadata.schema.system.Stats;
 import org.openmetadata.schema.system.StepStats;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.apps.bundles.searchIndex.stats.JobStatsManager;
+import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker;
 import org.openmetadata.service.exception.SearchIndexException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.EntityDAO;
@@ -64,11 +66,9 @@ import org.openmetadata.service.search.ReindexContext;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
+import org.openmetadata.service.workflows.interfaces.Source;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntitiesSource;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntityTimeSeriesSource;
-import org.openmetadata.service.workflows.interfaces.Source;
-import org.openmetadata.service.apps.bundles.searchIndex.stats.JobStatsManager;
-import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker;
 
 class SearchIndexExecutorControlFlowTest {
 
@@ -395,7 +395,8 @@ class SearchIndexExecutorControlFlowTest {
 
   @Test
   void cleanupOldFailuresDeletesExpiredRecordsAndSwallowsDaoErrors() throws Exception {
-    CollectionDAO.SearchIndexFailureDAO failureDao = mock(CollectionDAO.SearchIndexFailureDAO.class);
+    CollectionDAO.SearchIndexFailureDAO failureDao =
+        mock(CollectionDAO.SearchIndexFailureDAO.class);
     when(collectionDAO.searchIndexFailureDAO()).thenReturn(failureDao);
     when(failureDao.deleteOlderThan(anyLong())).thenReturn(2);
 
@@ -452,9 +453,7 @@ class SearchIndexExecutorControlFlowTest {
     Optional<String> target =
         (Optional<String>)
             invokePrivateMethod(
-                "getTargetIndexForEntity",
-                new Class<?>[] {String.class},
-                "queryCostResult");
+                "getTargetIndexForEntity", new Class<?>[] {String.class}, "queryCostResult");
 
     assertEquals(Optional.of("query_cost_staged"), target);
   }
@@ -500,7 +499,8 @@ class SearchIndexExecutorControlFlowTest {
           .thenReturn(repository);
 
       int total =
-          (Integer) invokePrivateMethod("getEntityTotal", new Class<?>[] {String.class}, reportType);
+          (Integer)
+              invokePrivateMethod("getEntityTotal", new Class<?>[] {String.class}, reportType);
 
       assertEquals(4, total);
       ArgumentCaptor<ListFilter> filterCaptor = ArgumentCaptor.forClass(ListFilter.class);
@@ -536,7 +536,8 @@ class SearchIndexExecutorControlFlowTest {
   @Test
   void handleSearchIndexExceptionUsesIndexedFailureCounts() throws Exception {
     ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
-    ResultList<String> batch = new ResultList<>(List.of("row"), List.of(new EntityError()), null, null, 1);
+    ResultList<String> batch =
+        new ResultList<>(List.of("row"), List.of(new EntityError()), null, null, 1);
     SearchIndexException exception =
         new SearchIndexException(
             new IndexingError().withMessage("sink boom").withSuccessCount(1).withFailedCount(2));
@@ -597,7 +598,11 @@ class SearchIndexExecutorControlFlowTest {
     setField("taskQueue", queue);
 
     invokePrivateMethod(
-        "processReadTask", new Class<?>[] {String.class, Source.class, int.class}, Entity.TABLE, source, 25);
+        "processReadTask",
+        new Class<?>[] {String.class, Source.class, int.class},
+        Entity.TABLE,
+        source,
+        25);
 
     assertEquals(1, queue.size());
     Object task = queue.poll();
@@ -611,7 +616,8 @@ class SearchIndexExecutorControlFlowTest {
     Source<Object> source = mock(Source.class);
     IndexingFailureRecorder failureRecorder = mock(IndexingFailureRecorder.class);
     ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
-    SearchIndexException exception = new SearchIndexException(new IndexingError().withMessage("read failed"));
+    SearchIndexException exception =
+        new SearchIndexException(new IndexingError().withMessage("read failed"));
 
     when(source.readWithCursor(any(String.class))).thenThrow(exception);
     setField("failureRecorder", failureRecorder);
@@ -620,9 +626,14 @@ class SearchIndexExecutorControlFlowTest {
     executor.getStats().set(initializeStats(Set.of(Entity.TABLE)));
 
     invokePrivateMethod(
-        "processReadTask", new Class<?>[] {String.class, Source.class, int.class}, Entity.TABLE, source, 0);
+        "processReadTask",
+        new Class<?>[] {String.class, Source.class, int.class},
+        Entity.TABLE,
+        source,
+        0);
 
-    verify(failureRecorder).recordReaderFailure(eq(Entity.TABLE), eq("read failed"), any(String.class));
+    verify(failureRecorder)
+        .recordReaderFailure(eq(Entity.TABLE), eq("read failed"), any(String.class));
     verify(listener).onError(eq(Entity.TABLE), eq(exception.getIndexingError()), any(Stats.class));
     assertEquals(25, executor.getStats().get().getReaderStats().getFailedRecords());
     assertEquals(25, executor.getStats().get().getJobStats().getFailedRecords());
@@ -651,7 +662,8 @@ class SearchIndexExecutorControlFlowTest {
     @SuppressWarnings("unchecked")
     Set<String> promotedEntities = (Set<String>) getField("promotedEntities");
     @SuppressWarnings("unchecked")
-    Map<String, AtomicInteger> failures = (Map<String, AtomicInteger>) getField("entityBatchFailures");
+    Map<String, AtomicInteger> failures =
+        (Map<String, AtomicInteger>) getField("entityBatchFailures");
     promotedEntities.add(Entity.TABLE);
     failures.put(Entity.DASHBOARD, new AtomicInteger(1));
     setField("recreateIndexHandler", handler);
@@ -726,8 +738,7 @@ class SearchIndexExecutorControlFlowTest {
               assertTrue((Long) context.arguments().get(5) >= (Long) context.arguments().get(4));
             })) {
       assertNotNull(
-          invokePrivateMethod(
-              "createSource", new Class<?>[] {String.class}, "queryCostResult"));
+          invokePrivateMethod("createSource", new Class<?>[] {String.class}, "queryCostResult"));
     }
   }
 
@@ -736,7 +747,8 @@ class SearchIndexExecutorControlFlowTest {
     @SuppressWarnings("unchecked")
     List<String> regularFields =
         (List<String>)
-            invokePrivateMethod("getSearchIndexFields", new Class<?>[] {String.class}, Entity.TABLE);
+            invokePrivateMethod(
+                "getSearchIndexFields", new Class<?>[] {String.class}, Entity.TABLE);
     @SuppressWarnings("unchecked")
     List<String> timeSeriesFields =
         (List<String>)
@@ -750,7 +762,10 @@ class SearchIndexExecutorControlFlowTest {
     assertSame(
         regularEntities,
         invokePrivateMethod(
-            "extractEntities", new Class<?>[] {String.class, Object.class}, Entity.TABLE, regularEntities));
+            "extractEntities",
+            new Class<?>[] {String.class, Object.class},
+            Entity.TABLE,
+            regularEntities));
     assertSame(
         timeSeriesEntities,
         invokePrivateMethod(
@@ -764,7 +779,8 @@ class SearchIndexExecutorControlFlowTest {
   void updateSinkTotalSubmittedInitializesStatsAndDetermineStatusTracksIncompleteWork()
       throws Exception {
     Stats stats = new Stats();
-    stats.setJobStats(new StepStats().withTotalRecords(10).withSuccessRecords(9).withFailedRecords(0));
+    stats.setJobStats(
+        new StepStats().withTotalRecords(10).withSuccessRecords(9).withFailedRecords(0));
     executor.getStats().set(stats);
 
     executor.updateSinkTotalSubmitted(4);
@@ -776,8 +792,7 @@ class SearchIndexExecutorControlFlowTest {
 
     ((java.util.concurrent.atomic.AtomicBoolean) getField("stopped")).set(true);
     assertEquals(
-        ExecutionResult.Status.STOPPED,
-        invokePrivateMethod("determineStatus", new Class<?>[0]));
+        ExecutionResult.Status.STOPPED, invokePrivateMethod("determineStatus", new Class<?>[0]));
     ((java.util.concurrent.atomic.AtomicBoolean) getField("stopped")).set(false);
   }
 
@@ -847,7 +862,8 @@ class SearchIndexExecutorControlFlowTest {
   void executeCompletesRecreateFlowForZeroEntityWorkload() throws Exception {
     ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
     ReindexingJobContext jobContext = mock(ReindexingJobContext.class);
-    CollectionDAO.SearchIndexFailureDAO failureDao = mock(CollectionDAO.SearchIndexFailureDAO.class);
+    CollectionDAO.SearchIndexFailureDAO failureDao =
+        mock(CollectionDAO.SearchIndexFailureDAO.class);
     EntityRepository<?> entityRepository = mock(EntityRepository.class);
     EntityDAO entityDao = mock(EntityDAO.class);
     BulkSink sink = mock(BulkSink.class);
@@ -959,7 +975,10 @@ class SearchIndexExecutorControlFlowTest {
                           new ResultList<>(List.of(mock(EntityInterface.class)), null, null, 1));
             })) {
       invokePrivateMethod(
-          "processEntityType", new Class<?>[] {String.class, Phaser.class}, Entity.USER, producerPhaser);
+          "processEntityType",
+          new Class<?>[] {String.class, Phaser.class},
+          Entity.USER,
+          producerPhaser);
     }
 
     assertEquals(2, queue.size());
@@ -1163,8 +1182,7 @@ class SearchIndexExecutorControlFlowTest {
             (source, context) ->
                 when(source.readWithCursor(RestUtil.encodeCursor("0")))
                     .thenReturn(
-                        (ResultList)
-                            new ResultList<>(List.of(mock(EntityInterface.class)))))) {
+                        (ResultList) new ResultList<>(List.of(mock(EntityInterface.class)))))) {
       invokePrivateMethod(
           "processBatch",
           new Class<?>[] {String.class, int.class, CountDownLatch.class},
@@ -1212,8 +1230,7 @@ class SearchIndexExecutorControlFlowTest {
         "sink boom",
         IndexingFailureRecorder.FailureStage.SINK);
 
-    verify(failureRecorder)
-        .recordProcessFailure(Entity.TABLE, "1", "svc.db.table", "process boom");
+    verify(failureRecorder).recordProcessFailure(Entity.TABLE, "1", "svc.db.table", "process boom");
     verify(failureRecorder).recordSinkFailure(Entity.TABLE, "2", "svc.db.table", "sink boom");
   }
 
@@ -1271,10 +1288,13 @@ class SearchIndexExecutorControlFlowTest {
         .thenReturn((ResultList) new ResultList<>(List.of(mock(EntityInterface.class))));
 
     invokePrivateMethod(
-        "processReadTask", new Class<?>[] {String.class, Source.class, int.class}, Entity.TABLE, source, 0);
+        "processReadTask",
+        new Class<?>[] {String.class, Source.class, int.class},
+        Entity.TABLE,
+        source,
+        0);
     invokePrivateMethod("signalConsumersToStop", new Class<?>[] {int.class}, 1);
-    invokePrivateMethod(
-        "runConsumer", new Class<?>[] {int.class, CountDownLatch.class}, 0, latch);
+    invokePrivateMethod("runConsumer", new Class<?>[] {int.class, CountDownLatch.class}, 0, latch);
 
     verify(sink).write(any(List.class), any(Map.class));
     assertEquals(0, latch.getCount());
@@ -1414,7 +1434,8 @@ class SearchIndexExecutorControlFlowTest {
 
     verify(tracker).recordReaderBatch(1, 0, 0);
     verify(sink).write(any(List.class), any(Map.class));
-    verify(listener).onError(eq(Entity.TEST_CASE_RESULT), any(IndexingError.class), any(Stats.class));
+    verify(listener)
+        .onError(eq(Entity.TEST_CASE_RESULT), any(IndexingError.class), any(Stats.class));
   }
 
   @Test
@@ -1431,7 +1452,8 @@ class SearchIndexExecutorControlFlowTest {
         .when(sink)
         .write(any(List.class), any(Map.class));
 
-    invokeProcessTask(newIndexingTask(Entity.TABLE, new ResultList<>(List.of(entity), null, null, 0), 0));
+    invokeProcessTask(
+        newIndexingTask(Entity.TABLE, new ResultList<>(List.of(entity), null, null, 0), 0));
 
     verify(listener).onError(eq(Entity.TABLE), any(IndexingError.class), any(Stats.class));
   }
@@ -1465,7 +1487,9 @@ class SearchIndexExecutorControlFlowTest {
             PaginatedEntityTimeSeriesSource.class,
             (source, context) ->
                 when(source.readWithCursor(any()))
-                    .thenReturn((ResultList) new ResultList<>(List.of(mock(EntityTimeSeriesInterface.class)))))) {
+                    .thenReturn(
+                        (ResultList)
+                            new ResultList<>(List.of(mock(EntityTimeSeriesInterface.class)))))) {
       invokePrivateMethod(
           "processEntityType",
           new Class<?>[] {String.class, Phaser.class},
@@ -1482,7 +1506,8 @@ class SearchIndexExecutorControlFlowTest {
     ExecutorService producerExecutor = mock(ExecutorService.class);
     Phaser producerPhaser = new Phaser(1);
 
-    when(producerExecutor.submit(any(Runnable.class))).thenThrow(new IllegalStateException("submit failed"));
+    when(producerExecutor.submit(any(Runnable.class)))
+        .thenThrow(new IllegalStateException("submit failed"));
     executor.getStats().set(statsWithEntityTotals(Map.of(Entity.USER, 40)));
     setField("producerExecutor", producerExecutor);
     setField("taskQueue", new LinkedBlockingQueue<>());
@@ -1490,7 +1515,10 @@ class SearchIndexExecutorControlFlowTest {
     setField("batchSize", new AtomicReference<>(10));
 
     invokePrivateMethod(
-        "processEntityType", new Class<?>[] {String.class, Phaser.class}, Entity.USER, producerPhaser);
+        "processEntityType",
+        new Class<?>[] {String.class, Phaser.class},
+        Entity.USER,
+        producerPhaser);
 
     assertTrue(producerPhaser.isTerminated());
   }
@@ -1608,7 +1636,8 @@ class SearchIndexExecutorControlFlowTest {
             .withSuccessRecords(0)
             .withFailedRecords(0)
             .withWarningRecords(0));
-    stats.setSinkStats(new StepStats().withTotalRecords(0).withSuccessRecords(0).withFailedRecords(0));
+    stats.setSinkStats(
+        new StepStats().withTotalRecords(0).withSuccessRecords(0).withFailedRecords(0));
     stats.setProcessStats(
         new StepStats().withTotalRecords(0).withSuccessRecords(0).withFailedRecords(0));
     return stats;
@@ -1633,9 +1662,11 @@ class SearchIndexExecutorControlFlowTest {
     return field.get(executor);
   }
 
-  private Object newIndexingTask(String entityType, ResultList<?> entities, int offset) throws Exception {
+  private Object newIndexingTask(String entityType, ResultList<?> entities, int offset)
+      throws Exception {
     Class<?> taskClass =
-        Class.forName("org.openmetadata.service.apps.bundles.searchIndex.SearchIndexExecutor$IndexingTask");
+        Class.forName(
+            "org.openmetadata.service.apps.bundles.searchIndex.SearchIndexExecutor$IndexingTask");
     var constructor = taskClass.getDeclaredConstructor(String.class, ResultList.class, int.class);
     constructor.setAccessible(true);
     return constructor.newInstance(entityType, entities, offset);

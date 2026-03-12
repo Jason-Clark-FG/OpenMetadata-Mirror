@@ -311,7 +311,8 @@ class OpenSearchBulkProcessorTest {
   @SuppressWarnings("unchecked")
   private Map<String, String> getEntityTypeMap(OpenSearchBulkSink.CustomBulkProcessor processor)
       throws Exception {
-    Field field = OpenSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("docIdToEntityType");
+    Field field =
+        OpenSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("docIdToEntityType");
     field.setAccessible(true);
     return (Map<String, String>) field.get(processor);
   }
@@ -326,7 +327,8 @@ class OpenSearchBulkProcessorTest {
 
   private AtomicInteger getActiveBulkRequests(OpenSearchBulkSink.CustomBulkProcessor processor)
       throws Exception {
-    Field field = OpenSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("activeBulkRequests");
+    Field field =
+        OpenSearchBulkSink.CustomBulkProcessor.class.getDeclaredField("activeBulkRequests");
     field.setAccessible(true);
     return (AtomicInteger) field.get(processor);
   }

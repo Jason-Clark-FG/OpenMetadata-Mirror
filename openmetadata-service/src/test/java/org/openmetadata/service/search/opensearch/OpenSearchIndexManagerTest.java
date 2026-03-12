@@ -27,6 +27,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openmetadata.search.IndexMapping;
 import os.org.opensearch.client.opensearch.OpenSearchClient;
+import os.org.opensearch.client.opensearch._types.DocStats;
+import os.org.opensearch.client.opensearch._types.StoreStats;
+import os.org.opensearch.client.opensearch.indices.AliasDefinition;
 import os.org.opensearch.client.opensearch.indices.CreateIndexRequest;
 import os.org.opensearch.client.opensearch.indices.CreateIndexResponse;
 import os.org.opensearch.client.opensearch.indices.DeleteIndexRequest;
@@ -41,13 +44,10 @@ import os.org.opensearch.client.opensearch.indices.PutMappingResponse;
 import os.org.opensearch.client.opensearch.indices.UpdateAliasesRequest;
 import os.org.opensearch.client.opensearch.indices.UpdateAliasesResponse;
 import os.org.opensearch.client.opensearch.indices.get_alias.IndexAliases;
-import os.org.opensearch.client.opensearch.indices.stats.IndexStats;
 import os.org.opensearch.client.opensearch.indices.stats.IndexShardStats;
+import os.org.opensearch.client.opensearch.indices.stats.IndexStats;
 import os.org.opensearch.client.opensearch.indices.stats.IndicesStats;
 import os.org.opensearch.client.opensearch.indices.stats.ShardRouting;
-import os.org.opensearch.client.opensearch.indices.AliasDefinition;
-import os.org.opensearch.client.opensearch._types.DocStats;
-import os.org.opensearch.client.opensearch._types.StoreStats;
 import os.org.opensearch.client.transport.endpoints.BooleanResponse;
 
 @ExtendWith(MockitoExtension.class)
@@ -439,7 +439,8 @@ class OpenSearchIndexManagerTest {
     IndexAliases aliasMetadata = mock(IndexAliases.class);
     when(getAliasResponse.result()).thenReturn(Map.of(TEST_INDEX, aliasMetadata));
     when(aliasMetadata.aliases())
-        .thenReturn(Map.of("table", mock(AliasDefinition.class), "entity", mock(AliasDefinition.class)));
+        .thenReturn(
+            Map.of("table", mock(AliasDefinition.class), "entity", mock(AliasDefinition.class)));
 
     Set<String> result = indexManager.getAliases(TEST_INDEX);
 
@@ -630,7 +631,8 @@ class OpenSearchIndexManagerTest {
   void testSwapAliases_ClientNotAvailable() {
     OpenSearchIndexManager managerWithNullClient = new OpenSearchIndexManager(null, CLUSTER_ALIAS);
 
-    assertFalse(managerWithNullClient.swapAliases(Set.of(TEST_INDEX), "new_index", Set.of("table")));
+    assertFalse(
+        managerWithNullClient.swapAliases(Set.of(TEST_INDEX), "new_index", Set.of("table")));
     verifyNoInteractions(indicesClient);
   }
 
@@ -746,7 +748,8 @@ class OpenSearchIndexManagerTest {
 
   @Test
   void testGetAllIndexStats_AggregatesVisibleIndicesOnly() throws IOException {
-    OpenSearchIndexManager spyManager = spy(new OpenSearchIndexManager(openSearchClient, CLUSTER_ALIAS));
+    OpenSearchIndexManager spyManager =
+        spy(new OpenSearchIndexManager(openSearchClient, CLUSTER_ALIAS));
     IndicesStats visibleStats = mock(IndicesStats.class);
     IndexStats primaryStats = mock(IndexStats.class);
     DocStats docStats = mock(DocStats.class);
@@ -756,7 +759,8 @@ class OpenSearchIndexManagerTest {
     ShardRouting primaryRouting = mock(ShardRouting.class);
     ShardRouting replicaRouting = mock(ShardRouting.class);
 
-    when(indicesClient.stats(any(java.util.function.Function.class))).thenReturn(indicesStatsResponse);
+    when(indicesClient.stats(any(java.util.function.Function.class)))
+        .thenReturn(indicesStatsResponse);
     when(indicesStatsResponse.indices())
         .thenReturn(Map.of(".kibana", mock(IndicesStats.class), TEST_INDEX, visibleStats));
     when(visibleStats.primaries()).thenReturn(primaryStats);

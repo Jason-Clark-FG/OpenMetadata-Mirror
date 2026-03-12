@@ -993,11 +993,7 @@ public class OpenSearchBulkSink implements BulkSink {
         }
         if (failureCallback != null) {
           failureCallback.onFailure(
-              entityType,
-              docId,
-              null,
-              failureMessage,
-              IndexingFailureRecorder.FailureStage.SINK);
+              entityType, docId, null, failureMessage, IndexingFailureRecorder.FailureStage.SINK);
         }
       }
 

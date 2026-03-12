@@ -1,6 +1,5 @@
 package org.openmetadata.service.util;
 
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -9,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -223,7 +223,8 @@ class UserUtilTest {
             .withIsAdmin(false);
 
     when(userRepository.getPatchFields()).thenReturn(patchFields());
-    when(userRepository.getByName(any(), eq("ingestion-bot"), any(Fields.class))).thenReturn(botUser);
+    when(userRepository.getByName(any(), eq("ingestion-bot"), any(Fields.class)))
+        .thenReturn(botUser);
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class);
         MockedStatic<EmailUtil> mockedEmailUtil = mockStatic(EmailUtil.class)) {
@@ -232,7 +233,8 @@ class UserUtilTest {
       UserUtil.createOrUpdateUser(
           AuthProvider.BASIC, "ingestion-bot", "ignored", "example.com", true);
 
-      verify(userRepository, never()).createOrUpdate(eq(null), any(User.class), eq(ADMIN_USER_NAME));
+      verify(userRepository, never())
+          .createOrUpdate(eq(null), any(User.class), eq(ADMIN_USER_NAME));
       mockedEmailUtil.verifyNoInteractions();
     }
   }
@@ -326,7 +328,8 @@ class UserUtilTest {
             .withIsBot(true);
 
     when(collectionDAO.changeEventDAO()).thenReturn(changeEventDAO);
-    when(userRepository.getByName(any(), eq("bot-user"), any(Fields.class))).thenReturn(originalUser);
+    when(userRepository.getByName(any(), eq("bot-user"), any(Fields.class)))
+        .thenReturn(originalUser);
     when(userRepository.findByNameOrNull("bot-user", NON_DELETED)).thenReturn(originalUser);
     when(userRepository.createOrUpdate(eq(null), eq(botUser), eq(ADMIN_USER_NAME)))
         .thenReturn(new PutResponse<>(Response.Status.OK, botUser, EventType.ENTITY_UPDATED));
@@ -369,14 +372,17 @@ class UserUtilTest {
         .thenReturn(jwtAuthMechanism);
 
     try (MockedStatic<Entity> mockedEntity = mockStatic(Entity.class);
-        MockedStatic<JWTTokenGenerator> mockedTokenGenerator = mockStatic(JWTTokenGenerator.class)) {
+        MockedStatic<JWTTokenGenerator> mockedTokenGenerator =
+            mockStatic(JWTTokenGenerator.class)) {
       mockedEntity.when(() -> Entity.getEntityRepository(Entity.USER)).thenReturn(userRepository);
       mockedEntity.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
       mockedTokenGenerator.when(JWTTokenGenerator::getInstance).thenReturn(tokenGenerator);
 
       User returnedUser = UserUtil.addOrUpdateBotUser(botUser);
 
-      assertEquals(AuthenticationMechanism.AuthType.JWT, returnedUser.getAuthenticationMechanism().getAuthType());
+      assertEquals(
+          AuthenticationMechanism.AuthType.JWT,
+          returnedUser.getAuthenticationMechanism().getAuthType());
       assertEquals(
           "generated-token",
           JsonUtils.convertValue(
@@ -391,7 +397,8 @@ class UserUtilTest {
         new CatalogSecurityContext(
             () -> "alice", "https", CatalogSecurityContext.OPENID_AUTH, Set.of("DataSteward"));
 
-    assertEquals(Set.of("DataSteward"), UserUtil.getRolesFromAuthorizationToken(catalogSecurityContext));
+    assertEquals(
+        Set.of("DataSteward"), UserUtil.getRolesFromAuthorizationToken(catalogSecurityContext));
   }
 
   @Test

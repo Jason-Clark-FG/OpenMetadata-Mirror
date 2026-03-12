@@ -701,10 +701,7 @@ public class S3LogStorage implements LogStorageInterface {
               return false;
             });
 
-    recentLogsCache
-        .asMap()
-        .keySet()
-        .removeIf(streamKey -> streamKey.startsWith(streamKeyPrefix));
+    recentLogsCache.asMap().keySet().removeIf(streamKey -> streamKey.startsWith(streamKeyPrefix));
     activeListeners.keySet().removeIf(streamKey -> streamKey.startsWith(streamKeyPrefix));
     partialLogOffsets.keySet().removeIf(streamKey -> streamKey.startsWith(streamKeyPrefix));
 

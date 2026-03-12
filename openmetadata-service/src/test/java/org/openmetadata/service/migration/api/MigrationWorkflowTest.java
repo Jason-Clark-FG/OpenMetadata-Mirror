@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
@@ -17,9 +17,9 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,13 +65,7 @@ class MigrationWorkflowTest {
 
     MigrationWorkflow workflow =
         new MigrationWorkflow(
-            jdbi,
-            nativeRoot.toString(),
-            ConnectionType.POSTGRES,
-            null,
-            null,
-            config,
-            false);
+            jdbi, nativeRoot.toString(), ConnectionType.POSTGRES, null, null, config, false);
 
     workflow.loadMigrations();
 
@@ -112,13 +106,7 @@ class MigrationWorkflowTest {
 
     MigrationWorkflow workflow =
         new MigrationWorkflow(
-            jdbi,
-            nativeRoot.toString(),
-            ConnectionType.POSTGRES,
-            null,
-            null,
-            config,
-            false);
+            jdbi, nativeRoot.toString(), ConnectionType.POSTGRES, null, null, config, false);
 
     workflow.loadMigrations();
 
@@ -130,13 +118,7 @@ class MigrationWorkflowTest {
   void validateMigrationsForServerReflectsPendingState() throws Exception {
     MigrationWorkflow workflow =
         new MigrationWorkflow(
-            jdbi,
-            tempDir.toString(),
-            ConnectionType.POSTGRES,
-            null,
-            null,
-            config,
-            false);
+            jdbi, tempDir.toString(), ConnectionType.POSTGRES, null, null, config, false);
 
     setMigrations(workflow, List.of(mock(MigrationProcess.class)));
     assertThrows(IllegalStateException.class, workflow::validateMigrationsForServer);
@@ -168,8 +150,7 @@ class MigrationWorkflowTest {
     invokePrivate(workflow, "prePopulateFlywayMigrationSQLLogs");
 
     verify(migrationDAO)
-        .upsertServerMigrationSQL(
-            eq("0.0.1"), eq("CREATE TABLE sample(id INTEGER)"), anyString());
+        .upsertServerMigrationSQL(eq("0.0.1"), eq("CREATE TABLE sample(id INTEGER)"), anyString());
     verify(migrationDAO)
         .upsertServerMigrationSQL(eq("0.0.1"), eq("INSERT INTO sample VALUES (1)"), anyString());
   }

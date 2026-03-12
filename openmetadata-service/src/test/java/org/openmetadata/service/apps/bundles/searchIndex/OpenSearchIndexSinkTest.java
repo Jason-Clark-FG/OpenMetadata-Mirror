@@ -133,7 +133,9 @@ class OpenSearchIndexSinkTest {
       SearchIndexException exception =
           assertThrows(
               SearchIndexException.class,
-              () -> sink.write(List.of(firstEntity, secondEntity), Map.of("entityType", ENTITY_TYPE)));
+              () ->
+                  sink.write(
+                      List.of(firstEntity, secondEntity), Map.of("entityType", ENTITY_TYPE)));
 
       assertNotNull(exception.getIndexingError());
       assertEquals(1, exception.getIndexingError().getSuccessCount());
@@ -184,7 +186,8 @@ class OpenSearchIndexSinkTest {
         MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       OpenSearchIndexSink sink = new OpenSearchIndexSink(searchClient, 4096, 1, 3, 10, 50);
       OpenSearchAsyncClient asyncClient = asyncConstruction.constructed().getFirst();
-      when(asyncClient.bulk(anyBulkRequestBuilder())).thenThrow(new IOException("bulk write failed"));
+      when(asyncClient.bulk(anyBulkRequestBuilder()))
+          .thenThrow(new IOException("bulk write failed"));
 
       stubSearchIndexDoc(entityMock, entity, entityId, Map.of("field", "value"));
 
@@ -225,11 +228,12 @@ class OpenSearchIndexSinkTest {
     BulkResponse response = mock(BulkResponse.class);
     List<BulkResponseItem> items =
         java.util.stream.IntStream.range(0, itemCount)
-            .mapToObj(i -> {
-              BulkResponseItem item = mock(BulkResponseItem.class);
-              when(item.error()).thenReturn(null);
-              return item;
-            })
+            .mapToObj(
+                i -> {
+                  BulkResponseItem item = mock(BulkResponseItem.class);
+                  when(item.error()).thenReturn(null);
+                  return item;
+                })
             .toList();
     when(response.items()).thenReturn(items);
     when(response.errors()).thenReturn(false);

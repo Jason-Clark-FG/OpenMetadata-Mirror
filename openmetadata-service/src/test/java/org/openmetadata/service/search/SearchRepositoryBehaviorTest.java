@@ -51,11 +51,13 @@ import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.PipelineStatus;
 import org.openmetadata.schema.entity.data.QueryCostSearchResult;
-import org.openmetadata.schema.search.AggregationRequest;
 import org.openmetadata.schema.entity.data.Table;
+import org.openmetadata.schema.search.AggregationRequest;
 import org.openmetadata.schema.search.SearchRequest;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.service.configuration.elasticsearch.NaturalLanguageSearchConfiguration;
+import org.openmetadata.schema.settings.SettingsType;
+import org.openmetadata.schema.tests.DataQualityReport;
 import org.openmetadata.schema.tests.TestSuite;
 import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.ChangeDescription;
@@ -67,6 +69,8 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.search.IndexMapping;
 import org.openmetadata.search.IndexMappingLoader;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.apps.bundles.searchIndex.ElasticSearchBulkSink;
+import org.openmetadata.service.apps.bundles.searchIndex.OpenSearchBulkSink;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
 import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.nlq.NLQService;
@@ -76,10 +80,6 @@ import org.openmetadata.service.search.vector.OpenSearchVectorService;
 import org.openmetadata.service.search.vector.VectorIndexService;
 import org.openmetadata.service.search.vector.client.EmbeddingClient;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
-import org.openmetadata.schema.settings.SettingsType;
-import org.openmetadata.schema.tests.DataQualityReport;
-import org.openmetadata.service.apps.bundles.searchIndex.ElasticSearchBulkSink;
-import org.openmetadata.service.apps.bundles.searchIndex.OpenSearchBulkSink;
 
 class SearchRepositoryBehaviorTest {
 
@@ -683,8 +683,7 @@ class SearchRepositoryBehaviorTest {
             SearchClient.GLOBAL_SEARCH_ALIAS,
             new org.apache.commons.lang3.tuple.ImmutablePair<>("tags.tagFQN", "Glossary.Revenue"),
             new org.apache.commons.lang3.tuple.ImmutablePair<>(
-                SearchClient.REMOVE_TAGS_CHILDREN_SCRIPT,
-                Map.of("fqn", "Glossary.Revenue")));
+                SearchClient.REMOVE_TAGS_CHILDREN_SCRIPT, Map.of("fqn", "Glossary.Revenue")));
   }
 
   @Test
@@ -858,7 +857,9 @@ class SearchRepositoryBehaviorTest {
                 List.of(
                     new FieldChange()
                         .withName(Entity.FIELD_TAGS)
-                        .withNewValue(JsonUtils.pojoToJson(List.of(new TagLabel().withTagFQN("Glossary.Revenue"))))),
+                        .withNewValue(
+                            JsonUtils.pojoToJson(
+                                List.of(new TagLabel().withTagFQN("Glossary.Revenue"))))),
                 List.of(),
                 List.of()),
             Entity.GLOSSARY_TERM,
@@ -866,13 +867,16 @@ class SearchRepositoryBehaviorTest {
     assertTrue(
         invokeRequiresPropagation(
             changeDescription(
-                List.of(), List.of(new FieldChange().withName("parent").withNewValue("{}")), List.of()),
+                List.of(),
+                List.of(new FieldChange().withName("parent").withNewValue("{}")),
+                List.of()),
             Entity.PAGE,
             page));
     assertTrue(
         invokeRequiresPropagation(
             changeDescription(
-                List.of(new FieldChange().withName("upstreamEntityRelationship").withNewValue("{}")),
+                List.of(
+                    new FieldChange().withName("upstreamEntityRelationship").withNewValue("{}")),
                 List.of(),
                 List.of()),
             Entity.TABLE,
@@ -881,7 +885,11 @@ class SearchRepositoryBehaviorTest {
         invokeRequiresPropagation(
             changeDescription(
                 List.of(),
-                List.of(new FieldChange().withName("certification").withOldValue("{}").withNewValue("{}")),
+                List.of(
+                    new FieldChange()
+                        .withName("certification")
+                        .withOldValue("{}")
+                        .withNewValue("{}")),
                 List.of()),
             Entity.TAG,
             certificationTag));
@@ -1491,9 +1499,7 @@ class SearchRepositoryBehaviorTest {
     when(searchClient.previewSearch(request, subjectContext, null)).thenReturn(response);
     when(searchClient.searchWithNLQ(request, subjectContext)).thenReturn(response);
     when(searchClient.searchWithDirectQuery(request, subjectContext)).thenReturn(response);
-    when(
-            searchClient.getDocByID(
-                "idx", "00000000-0000-0000-0000-000000000123"))
+    when(searchClient.getDocByID("idx", "00000000-0000-0000-0000-000000000123"))
         .thenReturn(response);
     when(searchClient.searchBySourceUrl("https://src")).thenReturn(response);
     when(searchClient.aggregate(aggregationRequest)).thenReturn(response);
@@ -1503,7 +1509,9 @@ class SearchRepositoryBehaviorTest {
     assertSame(response, repository.previewSearch(request, subjectContext, null));
     assertSame(response, repository.searchWithNLQ(request, subjectContext));
     assertSame(response, repository.searchWithDirectQuery(request, subjectContext));
-    assertSame(response, repository.getDocument("idx", UUID.fromString("00000000-0000-0000-0000-000000000123")));
+    assertSame(
+        response,
+        repository.getDocument("idx", UUID.fromString("00000000-0000-0000-0000-000000000123")));
     assertSame(response, repository.searchBySourceUrl("https://src"));
     assertSame(response, repository.aggregate(aggregationRequest));
     assertSame(response, repository.getEntityTypeCounts(request, "global"));
@@ -1519,13 +1527,7 @@ class SearchRepositoryBehaviorTest {
 
     when(filter.getCondition(Entity.TABLE)).thenReturn("status = 'Active'");
     when(searchClient.listWithOffset(
-            "status = 'Active'",
-            25,
-            10,
-            "cluster_table_search_index",
-            sortFilter,
-            "orders",
-            null))
+            "status = 'Active'", 25, 10, "cluster_table_search_index", sortFilter, "orders", null))
         .thenReturn(listMapper);
     when(searchClient.listWithOffset(
             "status = 'Active'",
@@ -1547,7 +1549,8 @@ class SearchRepositoryBehaviorTest {
             new Object[] {"after"}))
         .thenReturn(listMapper);
 
-    assertSame(listMapper, repository.listWithOffset(filter, 25, 10, Entity.TABLE, sortFilter, "orders"));
+    assertSame(
+        listMapper, repository.listWithOffset(filter, 25, 10, Entity.TABLE, sortFilter, "orders"));
     assertSame(
         listMapper,
         repository.listWithOffset(
@@ -1568,7 +1571,8 @@ class SearchRepositoryBehaviorTest {
   void lineageAndRelationshipWrappersDelegateToSearchClient() throws IOException {
     SearchLineageRequest lineageRequest = new SearchLineageRequest().withFqn("svc.db.orders");
     EntityCountLineageRequest entityCountRequest = new EntityCountLineageRequest();
-    SearchEntityRelationshipRequest entityRelationshipRequest = new SearchEntityRelationshipRequest();
+    SearchEntityRelationshipRequest entityRelationshipRequest =
+        new SearchEntityRelationshipRequest();
     SearchLineageResult lineageResult = new SearchLineageResult();
     SearchEntityRelationshipResult entityRelationshipResult = new SearchEntityRelationshipResult();
     LineagePaginationInfo paginationInfo = new LineagePaginationInfo();
@@ -1582,7 +1586,8 @@ class SearchRepositoryBehaviorTest {
     when(searchClient.searchLineageByEntityCount(entityCountRequest)).thenReturn(lineageResult);
     when(searchClient.searchEntityRelationship("svc.db.orders", 1, 2, "{}", false))
         .thenReturn(response);
-    when(searchClient.searchDataQualityLineage("svc.db.orders", 1, "{}", false)).thenReturn(response);
+    when(searchClient.searchDataQualityLineage("svc.db.orders", 1, "{}", false))
+        .thenReturn(response);
     when(searchClient.searchSchemaEntityRelationship("svc.db.orders", 1, 2, "{}", false))
         .thenReturn(response);
     when(searchClient.searchEntityRelationship(entityRelationshipRequest))
@@ -1600,9 +1605,9 @@ class SearchRepositoryBehaviorTest {
     assertSame(response, repository.searchEntityRelationship("svc.db.orders", 1, 2, "{}", false));
     assertSame(response, repository.searchDataQualityLineage("svc.db.orders", 1, "{}", false));
     assertSame(
-        response,
-        repository.searchSchemaEntityRelationship("svc.db.orders", 1, 2, "{}", false));
-    assertSame(entityRelationshipResult, repository.searchEntityRelationship(entityRelationshipRequest));
+        response, repository.searchSchemaEntityRelationship("svc.db.orders", 1, 2, "{}", false));
+    assertSame(
+        entityRelationshipResult, repository.searchEntityRelationship(entityRelationshipRequest));
     assertSame(
         entityRelationshipResult,
         repository.searchEntityRelationshipWithDirection(entityRelationshipRequest));
@@ -1611,11 +1616,13 @@ class SearchRepositoryBehaviorTest {
   @Test
   void createBulkSinkUsesSearchTypeSpecificImplementation() {
     when(searchClient.getSearchType()).thenReturn(ElasticSearchConfiguration.SearchType.OPENSEARCH);
-    try (MockedConstruction<OpenSearchBulkSink> ignored = mockConstruction(OpenSearchBulkSink.class)) {
+    try (MockedConstruction<OpenSearchBulkSink> ignored =
+        mockConstruction(OpenSearchBulkSink.class)) {
       assertNotNull(repository.createBulkSink(10, 2, 1024L));
     }
 
-    when(searchClient.getSearchType()).thenReturn(ElasticSearchConfiguration.SearchType.ELASTICSEARCH);
+    when(searchClient.getSearchType())
+        .thenReturn(ElasticSearchConfiguration.SearchType.ELASTICSEARCH);
     try (MockedConstruction<ElasticSearchBulkSink> ignored =
         mockConstruction(ElasticSearchBulkSink.class)) {
       assertNotNull(repository.createBulkSink(10, 2, 1024L));
@@ -1623,7 +1630,8 @@ class SearchRepositoryBehaviorTest {
   }
 
   @Test
-  void createReindexHandlerAndDeleteRelationshipHelpersUseExpectedImplementations() throws IOException {
+  void createReindexHandlerAndDeleteRelationshipHelpersUseExpectedImplementations()
+      throws IOException {
     repository.createReindexHandler();
 
     repository.deleteRelationshipFromSearch(
@@ -1633,9 +1641,10 @@ class SearchRepositoryBehaviorTest {
     verify(searchClient)
         .updateChildren(
             eq(SearchClient.GLOBAL_SEARCH_ALIAS),
-            eq(new org.apache.commons.lang3.tuple.ImmutablePair<>(
-                "upstreamEntityRelationship.docId.keyword",
-                "00000000-0000-0000-0000-000000000001-00000000-0000-0000-0000-000000000002")),
+            eq(
+                new org.apache.commons.lang3.tuple.ImmutablePair<>(
+                    "upstreamEntityRelationship.docId.keyword",
+                    "00000000-0000-0000-0000-000000000001-00000000-0000-0000-0000-000000000002")),
             any(org.apache.commons.lang3.tuple.Pair.class));
     assertTrue(repository.createReindexHandler() instanceof RecreateWithEmbeddings);
   }
@@ -1648,8 +1657,13 @@ class SearchRepositoryBehaviorTest {
     jakarta.json.JsonObject aggregationResult = mock(jakarta.json.JsonObject.class);
     DataQualityReport report = new DataQualityReport();
     Response response = Response.ok("chart").build();
-    org.openmetadata.schema.api.entityRelationship.SearchSchemaEntityRelationshipResult schemaResult =
-        new org.openmetadata.schema.api.entityRelationship.SearchSchemaEntityRelationshipResult();
+    org.openmetadata.schema.api.entityRelationship.SearchSchemaEntityRelationshipResult
+        schemaResult =
+            new org.openmetadata
+                .schema
+                .api
+                .entityRelationship
+                .SearchSchemaEntityRelationshipResult();
 
     when(filter.getCondition(Entity.TABLE)).thenReturn("deleted = false");
     when(searchClient.searchByField("name", "orders", "table", false)).thenReturn(response);
@@ -1658,29 +1672,26 @@ class SearchRepositoryBehaviorTest {
     when(searchClient.genericAggregation("query", "table", searchAggregation)).thenReturn(report);
     when(searchClient.genericAggregation("query", "table", searchAggregation, subjectContext))
         .thenReturn(report);
-    when(
-            searchClient.listDataInsightChartResult(
-                10L,
-                20L,
-                "tier1",
-                "teamA",
-                DataInsightChartResult.DataInsightChartType.UNUSED_ASSETS,
-                25,
-                5,
-                "{}",
-                "report_index"))
+    when(searchClient.listDataInsightChartResult(
+            10L,
+            20L,
+            "tier1",
+            "teamA",
+            DataInsightChartResult.DataInsightChartType.UNUSED_ASSETS,
+            25,
+            5,
+            "{}",
+            "report_index"))
         .thenReturn(response);
     when(searchClient.getSchemaEntityRelationship("svc.db.schema", "{}", "*", 1, 2, 3, 4, false))
         .thenReturn(schemaResult);
 
     assertSame(response, repository.searchByField("name", "orders", "table", false));
     assertSame(
-        aggregationResult,
-        repository.aggregate("query", Entity.TABLE, searchAggregation, filter));
+        aggregationResult, repository.aggregate("query", Entity.TABLE, searchAggregation, filter));
     assertSame(report, repository.genericAggregation("query", "table", searchAggregation));
     assertSame(
-        report,
-        repository.genericAggregation("query", "table", searchAggregation, subjectContext));
+        report, repository.genericAggregation("query", "table", searchAggregation, subjectContext));
     assertSame(
         response,
         repository.listDataInsightChartResult(
@@ -1751,10 +1762,7 @@ class SearchRepositoryBehaviorTest {
   private SearchRepository newRepository(
       Map<String, IndexMapping> entityIndexMap, String clusterAlias) {
     return newRepository(
-        entityIndexMap,
-        clusterAlias,
-        ElasticSearchConfiguration.SearchType.ELASTICSEARCH,
-        null);
+        entityIndexMap, clusterAlias, ElasticSearchConfiguration.SearchType.ELASTICSEARCH, null);
   }
 
   private SearchRepository newRepository(
