@@ -1111,3 +1111,109 @@ export const createFormKeyDownHandler = () => {
     }
   };
 };
+
+/**
+ * Result of parsing a SAML IdP metadata XML file.
+ */
+export interface SamlIdpMetadata {
+  entityId: string;
+  ssoLoginUrl: string;
+  idpX509Certificate?: string;
+}
+
+const SAML_MD_NS = 'urn:oasis:names:tc:SAML:2.0:metadata';
+const XMLDSIG_NS = 'http://www.w3.org/2000/09/xmldsig#';
+
+/**
+ * Parses a SAML IdP federation metadata XML string and extracts
+ * entityId, ssoLoginUrl, and idpX509Certificate.
+ *
+ * Uses the browser's built-in DOMParser — no external dependencies.
+ */
+export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'application/xml');
+
+  // DOMParser signals errors via a <parsererror> element
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) {
+    throw new Error('Invalid XML: the file could not be parsed.');
+  }
+
+  // --- entityID ---
+  const entityDescriptor = doc.getElementsByTagNameNS(
+    SAML_MD_NS,
+    'EntityDescriptor'
+  )[0];
+  const entityId = entityDescriptor?.getAttribute('entityID');
+  if (!entityId) {
+    throw new Error(
+      'Invalid metadata: missing entityID on EntityDescriptor element.'
+    );
+  }
+
+  // --- SSO Login URL ---
+  const ssoServices = doc.getElementsByTagNameNS(
+    SAML_MD_NS,
+    'SingleSignOnService'
+  );
+  let ssoLoginUrl: string | null = null;
+
+  // Prefer HTTP-Redirect binding, fall back to HTTP-POST
+  for (let i = 0; i < ssoServices.length; i++) {
+    const binding = ssoServices[i].getAttribute('Binding') ?? '';
+    const location = ssoServices[i].getAttribute('Location');
+    if (
+      binding === 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' &&
+      location
+    ) {
+      ssoLoginUrl = location;
+
+      break;
+    }
+    // Keep first HTTP-POST as fallback
+    if (
+      !ssoLoginUrl &&
+      binding === 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST' &&
+      location
+    ) {
+      ssoLoginUrl = location;
+    }
+  }
+  if (!ssoLoginUrl) {
+    throw new Error(
+      'Invalid metadata: no SingleSignOnService element with a Location attribute found.'
+    );
+  }
+
+  // --- X.509 Certificate ---
+  // Look for a KeyDescriptor with use="signing", then fall back to any KeyDescriptor
+  const keyDescriptors = doc.getElementsByTagNameNS(
+    SAML_MD_NS,
+    'KeyDescriptor'
+  );
+  let certText: string | undefined;
+
+  for (let i = 0; i < keyDescriptors.length; i++) {
+    const use = keyDescriptors[i].getAttribute('use');
+    if (use === 'signing' || !use) {
+      const x509 = keyDescriptors[i].getElementsByTagNameNS(
+        XMLDSIG_NS,
+        'X509Certificate'
+      )[0];
+      if (x509?.textContent) {
+        certText = x509.textContent.replace(/\s+/g, '');
+
+        break;
+      }
+    }
+  }
+
+  return {
+    entityId,
+    ssoLoginUrl,
+    idpX509Certificate: certText
+      ? `-----BEGIN CERTIFICATE-----\n${certText}\n-----END CERTIFICATE-----`
+      : undefined,
+  };
+};
