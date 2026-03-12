@@ -8961,7 +8961,7 @@ public interface CollectionDAO {
     @SqlQuery(
         value =
             "SELECT json FROM workflow_instance_state_time_series "
-                + "WHERE workflowInstanceId = :workflowInstanceId ORDER BY timestamp ASC")
+                + "WHERE workflowInstanceId = :workflowInstanceId ORDER BY timestamp ASC LIMIT 1000")
     List<String> listAllStatesForInstance(@Bind("workflowInstanceId") String workflowInstanceId);
   }
 

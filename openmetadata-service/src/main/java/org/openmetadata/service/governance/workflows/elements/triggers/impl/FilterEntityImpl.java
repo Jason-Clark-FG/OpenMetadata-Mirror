@@ -94,10 +94,15 @@ public class FilterEntityImpl implements JavaDelegate {
       final String entityLinkStrFinal = entityLinkStr;
       final String processInstanceId = currentProcessInstanceId;
       CompletableFuture.runAsync(
-          () ->
-              WorkflowHandler.getInstance()
-                  .terminateDuplicateInstances(
-                      workflowName, entityLinkStrFinal, processInstanceId));
+              () ->
+                  WorkflowHandler.getInstance()
+                      .terminateDuplicateInstances(
+                          workflowName, entityLinkStrFinal, processInstanceId))
+          .exceptionally(
+              ex -> {
+                log.error("Async termination of duplicate instances failed", ex);
+                return null;
+              });
     }
 
     String workflowKey =

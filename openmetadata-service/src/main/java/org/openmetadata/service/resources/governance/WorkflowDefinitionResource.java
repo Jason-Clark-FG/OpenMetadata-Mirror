@@ -472,15 +472,7 @@ public class WorkflowDefinitionResource
       @Parameter(description = "Id of the Workflow Definition", schema = @Schema(type = "UUID"))
           @PathParam("id")
           UUID id) {
-    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
-    authorizer.authorize(securityContext, operationContext, getResourceContextById(id));
-    Retry.decorateRunnable(
-            RETRY,
-            () ->
-                repository.delete(
-                    securityContext.getUserPrincipal().getName(), id, recursive, hardDelete))
-        .run();
-    return Response.ok().build();
+    return delete(uriInfo, securityContext, id, recursive, hardDelete);
   }
 
   @DELETE
@@ -542,15 +534,7 @@ public class WorkflowDefinitionResource
               schema = @Schema(type = "string"))
           @PathParam("fqn")
           String fqn) {
-    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DELETE);
-    authorizer.authorize(securityContext, operationContext, getResourceContextByName(fqn));
-    Retry.decorateRunnable(
-            RETRY,
-            () ->
-                repository.deleteByName(
-                    securityContext.getUserPrincipal().getName(), fqn, recursive, hardDelete))
-        .run();
-    return Response.ok().build();
+    return deleteByName(uriInfo, securityContext, fqn, recursive, hardDelete);
   }
 
   @PUT
