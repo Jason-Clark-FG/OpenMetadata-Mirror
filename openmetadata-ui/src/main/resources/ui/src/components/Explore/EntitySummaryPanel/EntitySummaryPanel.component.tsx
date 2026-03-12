@@ -485,12 +485,8 @@ export default function EntitySummaryPanel({
         tags: updatedTags,
       });
 
-      if (isEmpty(jsonPatch)) {
+      if (isEmpty(jsonPatch) || isUndefined(entityType)) {
         return updatedTags;
-      }
-
-      if (!entityType) {
-        return;
       }
 
       try {
@@ -575,12 +571,8 @@ export default function EntitySummaryPanel({
         tags: updatedTags,
       });
 
-      if (isEmpty(jsonPatch)) {
+      if (isEmpty(jsonPatch) || isUndefined(entityType)) {
         return updatedTags;
-      }
-
-      if (!entityType) {
-        return;
       }
 
       try {
@@ -670,11 +662,7 @@ export default function EntitySummaryPanel({
               extension: updatedExtension,
             });
 
-            if (isEmpty(jsonPatch)) {
-              return;
-            }
-
-            if (!entityType) {
+            if (isEmpty(jsonPatch) || isUndefined(entityType)) {
               return;
             }
 
