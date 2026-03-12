@@ -36,5 +36,6 @@ public class Migration extends MigrationProcessImpl {
   public void runDataMigration() {
     // Flyway history migration is now handled in MigrationWorkflow.loadMigrations()
     // before parsing SQL files, to ensure it runs before flyway migrations in force mode
+    MigrationUtil.migrateTestCaseDataContractReferences(collectionDAO);
   }
 }
