@@ -382,7 +382,7 @@ describe('tagFormFields', () => {
         disabled: true,
       });
 
-      expect(result.props?.disabled).toBe(true);
+      expect(result.props?.isDisabled).toBe(true);
     });
 
     it('should have horizontal form item layout', () => {
@@ -434,7 +434,7 @@ describe('tagFormFields', () => {
         showHelperText: false,
       });
 
-      expect(result.props?.disabled).toBe(true);
+      expect(result.props?.isDisabled).toBe(true);
     });
 
     it('should have ALERT helper text type', () => {
