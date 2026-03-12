@@ -589,7 +589,6 @@ class TestPubSubTopicLineage:
 
     def test_yield_topic_lineage_topic_not_found(self, mock_pubsub_source):
         """Test yield_topic_lineage skips when topic entity is not found"""
-        from metadata.generated.schema.entity.data.table import Table
         from metadata.ingestion.source.messaging.messaging_service import (
             BrokerTopicDetails,
         )
@@ -597,12 +596,7 @@ class TestPubSubTopicLineage:
         mock_table = MagicMock()
         mock_table.id = "table-id-123"
 
-        def get_by_name_side_effect(entity, fqn):
-            if entity == Table:
-                return mock_table
-            return None
-
-        mock_pubsub_source.metadata.get_by_name.side_effect = get_by_name_side_effect
+        mock_pubsub_source.metadata.get_by_name.return_value = None
 
         subscription = PubSubSubscription(
             name="test-subscription",
@@ -618,8 +612,11 @@ class TestPubSubTopicLineage:
         )
 
         with patch(
+            "metadata.ingestion.source.messaging.pubsub.metadata.fqn.search_table_from_es"
+        ) as mock_search, patch(
             "metadata.ingestion.source.messaging.pubsub.metadata.fqn.build"
         ) as mock_fqn_build:
+            mock_search.return_value = mock_table
             mock_fqn_build.return_value = "test-pubsub-service.test-topic"
             result = list(mock_pubsub_source.yield_topic_lineage(topic_details))
 
@@ -627,7 +624,6 @@ class TestPubSubTopicLineage:
 
     def test_yield_topic_lineage_success(self, mock_pubsub_source):
         """Test yield_topic_lineage successfully creates lineage"""
-        from metadata.generated.schema.entity.data.table import Table
         from metadata.generated.schema.entity.data.topic import Topic
         from metadata.ingestion.source.messaging.messaging_service import (
             BrokerTopicDetails,
@@ -641,14 +637,9 @@ class TestPubSubTopicLineage:
         mock_topic = MagicMock()
         mock_topic.id = topic_uuid
 
-        def get_by_name_side_effect(entity, fqn):
-            if entity == Table:
-                return mock_table
-            if entity == Topic:
-                return mock_topic
-            return None
-
-        mock_pubsub_source.metadata.get_by_name.side_effect = get_by_name_side_effect
+        mock_pubsub_source.metadata.get_by_name.side_effect = (
+            lambda entity, fqn: mock_topic if entity == Topic else None
+        )
 
         subscription = PubSubSubscription(
             name="bq-subscription",
@@ -664,8 +655,11 @@ class TestPubSubTopicLineage:
         )
 
         with patch(
+            "metadata.ingestion.source.messaging.pubsub.metadata.fqn.search_table_from_es"
+        ) as mock_search, patch(
             "metadata.ingestion.source.messaging.pubsub.metadata.fqn.build"
         ) as mock_fqn_build:
+            mock_search.return_value = mock_table
             mock_fqn_build.return_value = "test-pubsub-service.events-topic"
             result = list(mock_pubsub_source.yield_topic_lineage(topic_details))
 
@@ -680,7 +674,6 @@ class TestPubSubTopicLineage:
 
     def test_yield_topic_lineage_multiple_subscriptions(self, mock_pubsub_source):
         """Test yield_topic_lineage handles multiple BigQuery subscriptions"""
-        from metadata.generated.schema.entity.data.table import Table
         from metadata.generated.schema.entity.data.topic import Topic
         from metadata.ingestion.source.messaging.messaging_service import (
             BrokerTopicDetails,
@@ -697,17 +690,15 @@ class TestPubSubTopicLineage:
         mock_topic = MagicMock()
         mock_topic.id = topic_uuid
 
-        call_count = {"table": 0}
+        mock_pubsub_source.metadata.get_by_name.side_effect = (
+            lambda entity, fqn: mock_topic if entity == Topic else None
+        )
 
-        def get_by_name_side_effect(entity, fqn):
-            if entity == Table:
-                call_count["table"] += 1
-                return mock_table1 if call_count["table"] == 1 else mock_table2
-            if entity == Topic:
-                return mock_topic
-            return None
+        search_call_count = {"count": 0}
 
-        mock_pubsub_source.metadata.get_by_name.side_effect = get_by_name_side_effect
+        def search_side_effect(**kwargs):
+            search_call_count["count"] += 1
+            return mock_table1 if search_call_count["count"] == 1 else mock_table2
 
         subscriptions = [
             PubSubSubscription(
@@ -733,8 +724,11 @@ class TestPubSubTopicLineage:
         )
 
         with patch(
+            "metadata.ingestion.source.messaging.pubsub.metadata.fqn.search_table_from_es"
+        ) as mock_search, patch(
             "metadata.ingestion.source.messaging.pubsub.metadata.fqn.build"
         ) as mock_fqn_build:
+            mock_search.side_effect = search_side_effect
             mock_fqn_build.return_value = "test-pubsub-service.multi-topic"
             result = list(mock_pubsub_source.yield_topic_lineage(topic_details))
 
@@ -744,7 +738,6 @@ class TestPubSubTopicLineage:
 
     def test_yield_topic_lineage_table_fqn_parsing(self, mock_pubsub_source):
         """Test yield_topic_lineage correctly parses BigQuery table FQN"""
-        from metadata.generated.schema.entity.data.table import Table
         from metadata.generated.schema.entity.data.topic import Topic
         from metadata.ingestion.source.messaging.messaging_service import (
             BrokerTopicDetails,
@@ -755,17 +748,9 @@ class TestPubSubTopicLineage:
         mock_topic = MagicMock()
         mock_topic.id = "topic-id"
 
-        captured_fqns = []
-
-        def get_by_name_side_effect(entity, fqn):
-            captured_fqns.append((entity, fqn))
-            if entity == Table:
-                return mock_table
-            if entity == Topic:
-                return mock_topic
-            return None
-
-        mock_pubsub_source.metadata.get_by_name.side_effect = get_by_name_side_effect
+        mock_pubsub_source.metadata.get_by_name.side_effect = (
+            lambda entity, fqn: mock_topic if entity == Topic else None
+        )
 
         subscription = PubSubSubscription(
             name="bq-sub",
@@ -783,10 +768,18 @@ class TestPubSubTopicLineage:
         )
 
         with patch(
+            "metadata.ingestion.source.messaging.pubsub.metadata.fqn.search_table_from_es"
+        ) as mock_search, patch(
             "metadata.ingestion.source.messaging.pubsub.metadata.fqn.build"
         ) as mock_fqn_build:
+            mock_search.return_value = mock_table
             mock_fqn_build.return_value = "test-pubsub-service.test-topic"
             list(mock_pubsub_source.yield_topic_lineage(topic_details))
 
-        table_call = [c for c in captured_fqns if c[0] == Table][0]
-        assert table_call[1] == "my-project.my_dataset.my_table"
+        mock_search.assert_called_once_with(
+            metadata=mock_pubsub_source.metadata,
+            database_name="my-project",
+            schema_name="my_dataset",
+            service_name=None,
+            table_name="my_table",
+        )

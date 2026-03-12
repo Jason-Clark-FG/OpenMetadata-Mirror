@@ -429,31 +429,11 @@ class PubsubSource(MessagingServiceSource):
             )
             return
 
-        try:
-            topic_fqn = fqn.build(
-                metadata=self.metadata,
-                entity_type=Topic,
-                service_name=self.context.get().messaging_service,
-                topic_name=self.context.get().topic,
-            )
-            topic_entity = self.metadata.get_by_name(entity=Topic, fqn=topic_fqn)
-            if topic_entity:
-                logger.info(
-                    f"Sample data extraction for Pub/Sub topic {topic_fqn} "
-                    "requires subscription-based message pulling, which is not "
-                    "implemented in this version."
-                )
-        except Exception as err:
-            yield Either(
-                left=StackTraceError(
-                    name=topic_details.topic_name,
-                    error=(
-                        f"Error while yielding topic sample data for topic: "
-                        f"{topic_details.topic_name} - {err}"
-                    ),
-                    stackTrace=traceback.format_exc(),
-                )
-            )
+        logger.info(
+            f"Sample data extraction for Pub/Sub topic {topic_details.topic_name} "
+            "requires subscription-based message pulling, which is not "
+            "implemented in this version."
+        )
 
     def yield_topic_lineage(
         self, topic_details: BrokerTopicDetails
