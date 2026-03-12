@@ -13,6 +13,17 @@ name: UI Checkstyle
 
 on:
   workflow_dispatch:
+  # Trigger analysis when creating or updating a pull request.
+  pull_request_target:
+    types:
+      - labeled
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths:
+      - "openmetadata-ui/src/main/resources/ui/**"
+      - ".github/workflows/ui-checkstyle.yml"
 
 permissions:
   contents: read
@@ -20,11 +31,207 @@ permissions:
 concurrency:
   group: ui-checkstyle-${{ github.head_ref }}
   cancel-in-progress: true
+
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Detect which UI source files were changed in the PR
+  # ──────────────────────────────────────────────────────────────────────────
+  changed-files:
+    runs-on: ubuntu-latest
+    outputs:
+      # Space-separated list of changed source files (for eslint / prettier / organize-imports)
+      src_files: ${{ steps.changed.outputs.all_changed_files }}
+      src_files_count: ${{ steps.changed.outputs.all_changed_files_count }}
+      # Space-separated unique directories that contain changed files (for license-header-check)
+      src_dirs: ${{ steps.dirs.outputs.dirs }}
+    steps:
+      - name: Wait for the labeler
+        uses: lewagon/wait-on-check-action@v1.3.4
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: Team Label
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 90
+
+      - name: Verify PR labels
+        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          valid-labels: "safe to test"
+          pull-request-number: "${{ github.event.pull_request.number }}"
+          disable-reviews: true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        if: success()
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Need fetch-depth > 1 so changed-files can diff against the base
+          fetch-depth: 0
+
+      - name: Get changed UI source files
+        id: changed
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            openmetadata-ui/src/main/resources/ui/src/**/*.ts
+            openmetadata-ui/src/main/resources/ui/src/**/*.tsx
+            openmetadata-ui/src/main/resources/ui/src/**/*.js
+            openmetadata-ui/src/main/resources/ui/src/**/*.jsx
+            openmetadata-ui/src/main/resources/ui/src/**/*.json
+          separator: " "
+
+      - name: Derive unique parent directories for license-header check
+        id: dirs
+        if: steps.changed.outputs.all_changed_files_count > 0
+        run: |
+          FILES="${{ steps.changed.outputs.all_changed_files }}"
+          DIRS=$(echo "$FILES" | tr ' ' '\n' | xargs -I{} dirname {} | sort -u | tr '\n' ' ')
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Setup: install dependencies once, cache for all check jobs
+  # ──────────────────────────────────────────────────────────────────────────
+  setup:
+    needs: changed-files
+    # Skip the whole setup (and all downstream jobs) if no source files changed
+    if: needs.changed-files.outputs.src_files_count > 0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: true
+          docker-images: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Install Antlr4 CLI
+        run: |
+          sudo make install_antlr_cli
+
+      - name: Install Yarn Packages
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: yarn install --frozen-lockfile
+
+      - name: Cache node_modules
+        uses: actions/cache/save@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # UI Checkstyle: Run lint-staged on changed files
+  # ──────────────────────────────────────────────────────────────────────────
   ui-checkstyle:
+    needs: [changed-files, setup]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
-      - name: Render msg
-        run: echo "No checkstyle to run"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "openmetadata-ui/src/main/resources/ui/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
+
+      - name: Restore node_modules
+        uses: actions/cache/restore@v4
+        with:
+          path: openmetadata-ui/src/main/resources/ui/node_modules
+          key: ui-node-modules-${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Run UI Checkstyle
+        id: checkstyle
+        env:
+          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
+        run: |
+          # Stage the changed files so lint-staged can find them
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Staging files: $CHANGED_FILES"
+            git add $CHANGED_FILES
+          else
+            echo "No changed UI files to check."
+            exit 0
+          fi
+
+          # Store the current state of the index to compare later
+          # We use a custom format to check if the working tree matches the index
+          
+          # Run the checkstyle command from the script
+          ./scripts/lint-staged.sh
+
+          # Check if there are any UNSTAGED changes or if the index was updated by lint-staged
+          # 'git diff --exit-code' returns 1 if working tree != index
+          # 'git diff --cached --exit-code' returns 1 if index != HEAD (but index already has our PR changes)
+          
+          # The most reliable way to see if the script changed anything:
+          # If lint-staged is configured to auto-stage, the index will change.
+          # If not, the working tree will change.
+          
+          if ! git diff --exit-code || [ -n "$(git status --porcelain | grep '^[MA]')" ]; then
+            # Filter out the initial staging if possible, or just fail if ANYTHING is modified/staged now
+            # Actually, since we are in CI on a fresh checkout of the PR head, 
+            # ANY difference from the head is what we want to fail on.
+            
+            # Resetting the initial 'git add' to see if there are actual diffs from HEAD
+            git reset
+            
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "changes=true" >> "$GITHUB_OUTPUT"
+              echo "### Detected file changes after running checkstyle:"
+              git status --porcelain
+            else
+              echo "changes=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+            echo "UI Checkstyle completed successfully with no changes."
+          fi
+
+      - name: Comment on PR (Checkstyle failure)
+        if: failure() || steps.checkstyle.outputs.changes == 'true'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### ❌ UI Checkstyle Failed
+
+            ${{ steps.checkstyle.outputs.changes == 'true' && 'Some files were automatically updated by the checkstyle command. Please run the following command from the `ui` directory and commit the changes:' || 'The UI Checkstyle command failed. Please review the logs for details.' }}
+
+            ```bash
+            cd openmetadata-ui/src/main/resources/ui
+            npx lint-staged --concurrent false
+            ```
+
+            > 💡 Use [pre-commit](https://pre-commit.com/) hooks to automate this: `make install_test precommit_install`
+
+      - name: Fail job if changes detected
+        if: steps.checkstyle.outputs.changes == 'true'
+        run: |
+          echo "Failing job because file changes were detected."
+          exit 1

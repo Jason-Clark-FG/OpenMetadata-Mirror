@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -21,7 +21,9 @@ import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { waitForAllLoadersToDisappear 
+  
+} from '../../utils/entity';
 import {
   connectEdgeBetweenNodesViaAPI,
   updateLineageConfigFromModal,
