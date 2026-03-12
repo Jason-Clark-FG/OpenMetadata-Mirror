@@ -118,6 +118,11 @@ export function resolveColumnTitle<T>(
   return col.title as ReactNode;
 }
 
+/**
+ * Returns sticky positioning styles for a fixed column.
+ * Note: assumes a single fixed column per side. If multiple columns are fixed
+ * to the same side, offsets must be computed by the caller.
+ */
 export function getColumnStickyStyle(
   fixed: ColumnType<unknown>['fixed'],
   zIndex: number

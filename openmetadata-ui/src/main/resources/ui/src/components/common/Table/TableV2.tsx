@@ -315,6 +315,7 @@ const TableV2 = <T extends object>(
         setInternalExpandedKeys(next);
       }
       rest.expandable?.onExpand?.(!isExpanded, record);
+      rest.expandable?.onExpandedRowsChange?.([...next]);
     },
     [expandedKeys, rest.expandable]
   );
@@ -336,7 +337,7 @@ const TableV2 = <T extends object>(
       if (!rest.rowSelection?.onChange) {
         return;
       }
-      const dataSource = sortedDataSource;
+      const dataSource = filteredDataSource;
       const selectedKeys =
         keys === 'all'
           ? dataSource.map((r, i) => getRowKey(r, i))
@@ -349,7 +350,7 @@ const TableV2 = <T extends object>(
         type: selectionMode === 'single' ? 'single' : 'multiple',
       });
     },
-    [rest.rowSelection, sortedDataSource, getRowKey, selectionMode]
+    [rest.rowSelection, filteredDataSource, getRowKey, selectionMode]
   );
 
   // ─── Column resize ────────────────────────────────────────────────────────
@@ -482,13 +483,6 @@ const TableV2 = <T extends object>(
       setInternalCurrentPage(1);
     }
   }, [dataSourceLength, clientPagination, internalCurrentPage]);
-
-  // ─── Effective columns ────────────────────────────────────────────────────
-
-  const effectiveColumns = useMemo<ColumnsType<T>>(
-    () => propsColumns,
-    [propsColumns]
-  );
 
   // ─── Flat rows (tree data flattened with depth tracking) ──────────────────
 
@@ -633,7 +627,7 @@ const TableV2 = <T extends object>(
           onSelectionChange={handleSelectionChange}
           onSortChange={handleSortChange}>
           <UntitledTable.Header className="tw:px-2">
-            {effectiveColumns.map((col, colIdx) => {
+            {propsColumns.map((col, colIdx) => {
               const colType = col as ColumnType<T>;
               const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
               const colWidth =
@@ -750,7 +744,7 @@ const TableV2 = <T extends object>(
                   key={rowKey}
                   onClick={rowHandlers.onClick}
                   onDoubleClick={rowHandlers.onDoubleClick}>
-                  {effectiveColumns.map((col, colIdx) => {
+                  {propsColumns.map((col, colIdx) => {
                     const colType = col as ColumnType<T>;
                     const cellKey = String(
                       col.key ?? colType.dataIndex ?? colIdx
