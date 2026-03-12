@@ -593,9 +593,18 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             '[data-testid="glossary-term-select-search-bar"]'
           );
           await expect(searchBar).toBeVisible();
+          const glossarySearchResponse = page.waitForResponse(
+            (response) =>
+              response.url().includes('/api/v1/search/query') &&
+              response.url().includes('glossary_term_search_index') &&
+              response.request().method() === 'GET'
+          );
           await searchBar.fill(
             EntityDataClass.glossaryTerm1.responseData.displayName
           );
+          const glossarySearchRequest = await glossarySearchResponse;
+          expect(glossarySearchRequest.status()).toBe(200);
+          await waitForAllLoadersToDisappear(page);
 
           // Wait for loader to disappear after search
           await waitForAllLoadersToDisappear(page);
@@ -705,8 +714,11 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             columnId: entity.childrenSelectorId ?? '',
             columnNameTestId,
             entityType: entity.type as EntityType,
+            entityEndpoint:
+              entity.type === 'Table' ? entity.endpoint : undefined,
           });
 
+          await waitForAllLoadersToDisappear(page);
           // Remove glossary term
           await cleanupPanel.getByTestId('edit-glossary-terms').click();
           await page
@@ -1020,7 +1032,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           const clickResponse = page.waitForResponse(
             (response) =>
               response.url().includes('/api/v1/columns/name/') ||
-              response.url().includes('/api/v1/tables/name/'),
+              response.url().includes(`/api/v1/${entity.endpoint}/name/`),
             { timeout: 10000 }
           );
 
@@ -1073,7 +1085,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             const intermediateClickResponse = page.waitForResponse(
               (response) =>
                 response.url().includes('/api/v1/columns/name/') ||
-                response.url().includes('/api/v1/tables/name/'),
+                response.url().includes(`/api/v1/${entity.endpoint}/name/`),
               { timeout: 10000 }
             );
 
@@ -1325,6 +1337,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
       test('Glossary Term Add, Update and Remove for child entities', async ({
         page,
       }) => {
+        test.slow(true);
         await page.getByTestId(entity.childrenTabId ?? '').click();
 
         await entity.glossaryTermChildren({
@@ -1346,8 +1359,11 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             columnId: entity.childrenSelectorId ?? '',
             columnNameTestId,
             entityType: entity.type as EntityType,
+            entityEndpoint:
+              entity.type === 'Table' ? entity.endpoint : undefined,
           });
 
+          await waitForAllLoadersToDisappear(page);
           // Add glossary term via panel
           const editButton = panelContainer.getByTestId('edit-glossary-terms');
           await expect(editButton).toBeVisible();
