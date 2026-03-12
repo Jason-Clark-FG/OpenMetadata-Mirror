@@ -1118,7 +1118,7 @@ export const createFormKeyDownHandler = () => {
 export interface SamlIdpMetadata {
   entityId: string;
   ssoLoginUrl: string;
-  idpX509Certificate?: string;
+  idpX509Certificate: string;
 }
 
 const SAML_MD_NS = 'urn:oasis:names:tc:SAML:2.0:metadata';
@@ -1192,7 +1192,7 @@ export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
     SAML_MD_NS,
     'KeyDescriptor'
   );
-  let certText: string | undefined;
+  let certText: string | null = null;
 
   for (let i = 0; i < keyDescriptors.length; i++) {
     const use = keyDescriptors[i].getAttribute('use');
@@ -1209,11 +1209,15 @@ export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
     }
   }
 
+  if (!certText) {
+    throw new Error(
+      'Invalid metadata: no X509Certificate found. A signing certificate is required.'
+    );
+  }
+
   return {
     entityId,
     ssoLoginUrl,
-    idpX509Certificate: certText
-      ? `-----BEGIN CERTIFICATE-----\n${certText}\n-----END CERTIFICATE-----`
-      : undefined,
+    idpX509Certificate: `-----BEGIN CERTIFICATE-----\n${certText}\n-----END CERTIFICATE-----`,
   };
 };

@@ -280,11 +280,7 @@ const SSOConfigurationFormRJSF = ({
                     ...prev.authenticationConfiguration?.samlConfiguration?.idp,
                     entityId: parsed.entityId,
                     ssoLoginUrl: parsed.ssoLoginUrl,
-                    idpX509Certificate:
-                      parsed.idpX509Certificate ??
-                      prev.authenticationConfiguration?.samlConfiguration?.idp
-                        ?.idpX509Certificate ??
-                      '',
+                    idpX509Certificate: parsed.idpX509Certificate,
                   },
                 },
               },
