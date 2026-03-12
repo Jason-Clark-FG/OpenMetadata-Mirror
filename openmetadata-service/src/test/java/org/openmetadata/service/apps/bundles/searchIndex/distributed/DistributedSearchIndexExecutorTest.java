@@ -593,6 +593,21 @@ class DistributedSearchIndexExecutorTest {
   }
 
   @Test
+  void executeRequiresCurrentJobBeforeRunning() {
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                executor.execute(
+                    mock(BulkSink.class),
+                    null,
+                    false,
+                    ReindexingConfiguration.builder().build()));
+
+    assertTrue(exception.getMessage().contains("No job to execute"));
+  }
+
+  @Test
   void executeRunsMinimalHappyPathAndCleansUpResources() throws Exception {
     UUID jobId = UUID.randomUUID();
     SearchIndexJob readyJob =
@@ -790,6 +805,139 @@ class DistributedSearchIndexExecutorTest {
   }
 
   @Test
+  void executeHandlesInterruptedAwaitAndStoppedMetricsCleanup() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    SearchIndexJob runningJob =
+        SearchIndexJob.builder()
+            .id(jobId)
+            .status(IndexJobStatus.RUNNING)
+            .startedAt(100L)
+            .totalRecords(8)
+            .build();
+    SearchIndexJob stoppedJob =
+        runningJob
+            .withStatus(IndexJobStatus.STOPPED)
+            .withSuccessRecords(6)
+            .withFailedRecords(2)
+            .withCompletedAt(200L);
+    BulkSink bulkSink = mock(BulkSink.class);
+    DistributedJobNotifier notifier = mock(DistributedJobNotifier.class);
+    ReindexingMetrics metrics = mock(ReindexingMetrics.class);
+    Timer.Sample timerSample = mock(Timer.Sample.class);
+
+    setField("currentJob", runningJob);
+    setField("jobNotifier", notifier);
+    when(coordinator.getJob(jobId)).thenReturn(Optional.of(stoppedJob));
+    when(coordinator.getJobWithAggregatedStats(jobId)).thenReturn(stoppedJob);
+    when(coordinator.claimNextPartition(jobId)).thenReturn(Optional.empty());
+    when(coordinator.getPartitions(eq(jobId), any())).thenReturn(List.of());
+    when(bulkSink.flushAndAwait(60)).thenReturn(false);
+    doThrow(new IllegalStateException("metrics failed"))
+        .when(metrics)
+        .recordJobStopped(timerSample);
+    doThrow(new IllegalStateException("notify failed")).when(notifier).notifyJobCompleted(jobId);
+
+    try (MockedConstruction<DistributedJobStatsAggregator> aggregatorConstruction =
+            mockConstruction(DistributedJobStatsAggregator.class);
+        MockedConstruction<IndexingFailureRecorder> failureConstruction =
+            mockConstruction(IndexingFailureRecorder.class);
+        MockedStatic<ReindexingMetrics> metricsMock = mockStatic(ReindexingMetrics.class)) {
+
+      metricsMock.when(ReindexingMetrics::getInstance).thenReturn(metrics);
+      when(metrics.startJobTimer()).thenReturn(timerSample);
+
+      Thread.currentThread().interrupt();
+      try {
+        DistributedSearchIndexExecutor.ExecutionResult result =
+            executor.execute(
+                bulkSink,
+                null,
+                false,
+                ReindexingConfiguration.builder()
+                    .entities(Set.of("table"))
+                    .consumerThreads(1)
+                    .build());
+
+        assertEquals(IndexJobStatus.STOPPED, result.status());
+        assertSame(stoppedJob, executor.getCurrentJob());
+      } finally {
+        Thread.interrupted();
+      }
+
+      verify(aggregatorConstruction.constructed().get(0)).start();
+      verify(aggregatorConstruction.constructed().get(0)).forceUpdate();
+      verify(aggregatorConstruction.constructed().get(0)).stop();
+      verify(failureConstruction.constructed().get(0)).close();
+      verify(bulkSink).flushAndAwait(60);
+      verify(metrics).recordJobStopped(timerSample);
+      verify(notifier).notifyJobCompleted(jobId);
+    }
+  }
+
+  @Test
+  void executeForceCompletesStoppingJobsDuringCleanupAndRecordsStoppedMetrics() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    SearchIndexJob runningJob =
+        SearchIndexJob.builder()
+            .id(jobId)
+            .status(IndexJobStatus.RUNNING)
+            .startedAt(100L)
+            .totalRecords(3)
+            .build();
+    SearchIndexJob stoppingJob = runningJob.withStatus(IndexJobStatus.STOPPING);
+    SearchIndexJob stoppedJob =
+        runningJob
+            .withStatus(IndexJobStatus.STOPPED)
+            .withSuccessRecords(2)
+            .withFailedRecords(1)
+            .withCompletedAt(200L);
+    BulkSink bulkSink = mock(BulkSink.class);
+    ReindexingMetrics metrics = mock(ReindexingMetrics.class);
+    Timer.Sample timerSample = mock(Timer.Sample.class);
+
+    setField("currentJob", runningJob);
+    when(coordinator.getJob(jobId))
+        .thenReturn(Optional.of(runningJob), Optional.of(stoppingJob), Optional.of(stoppedJob));
+    when(coordinator.claimNextPartition(jobId)).thenReturn(Optional.empty());
+    when(coordinator.getPartitions(jobId, PartitionStatus.PENDING)).thenReturn(List.of());
+    when(coordinator.getPartitions(jobId, PartitionStatus.PROCESSING)).thenReturn(List.of());
+    when(coordinator.getPartitions(jobId, PartitionStatus.COMPLETED)).thenReturn(List.of());
+    when(coordinator.getPartitions(jobId, PartitionStatus.FAILED)).thenReturn(List.of());
+    when(coordinator.getJobWithAggregatedStats(jobId)).thenReturn(stoppedJob);
+    when(bulkSink.flushAndAwait(60)).thenReturn(true);
+    doThrow(new IllegalStateException("cleanup failed"))
+        .when(coordinator)
+        .forceCompleteProcessingPartitions(jobId);
+
+    try (MockedConstruction<DistributedJobStatsAggregator> aggregatorConstruction =
+            mockConstruction(DistributedJobStatsAggregator.class);
+        MockedConstruction<IndexingFailureRecorder> failureConstruction =
+            mockConstruction(IndexingFailureRecorder.class);
+        MockedStatic<ReindexingMetrics> metricsMock = mockStatic(ReindexingMetrics.class)) {
+
+      metricsMock.when(ReindexingMetrics::getInstance).thenReturn(metrics);
+      when(metrics.startJobTimer()).thenReturn(timerSample);
+
+      DistributedSearchIndexExecutor.ExecutionResult result =
+          executor.execute(
+              bulkSink,
+              null,
+              false,
+              ReindexingConfiguration.builder()
+                  .entities(Set.of("table"))
+                  .consumerThreads(1)
+                  .build());
+
+      assertEquals(IndexJobStatus.STOPPED, result.status());
+      assertSame(stoppedJob, executor.getCurrentJob());
+      verify(aggregatorConstruction.constructed().get(0)).forceUpdate();
+      verify(failureConstruction.constructed().get(0)).close();
+      verify(coordinator).forceCompleteProcessingPartitions(jobId);
+      verify(metrics).recordJobStopped(timerSample);
+    }
+  }
+
+  @Test
   void runWorkerLoopAggregatesPartitionResults() throws Exception {
     UUID jobId = UUID.randomUUID();
     SearchIndexJob runningJob =
@@ -845,6 +993,64 @@ class DistributedSearchIndexExecutorTest {
   }
 
   @Test
+  void runWorkerLoopRetriesClaimingAndBreaksOnInterruptedSleep() throws Exception {
+    UUID jobId = UUID.randomUUID();
+    SearchIndexJob runningJob =
+        SearchIndexJob.builder().id(jobId).status(IndexJobStatus.RUNNING).build();
+    SearchIndexPartition pendingPartition = partition(jobId, "table", PartitionStatus.PENDING);
+    SearchIndexPartition processingPartition =
+        partition(jobId, "table", PartitionStatus.PROCESSING);
+
+    setField("currentJob", runningJob);
+    when(coordinator.getJob(jobId)).thenReturn(Optional.of(runningJob));
+    when(coordinator.claimNextPartition(jobId)).thenReturn(Optional.empty());
+    when(coordinator.getPartitions(jobId, PartitionStatus.PENDING))
+        .thenReturn(List.of(pendingPartition));
+    when(coordinator.getPartitions(jobId, PartitionStatus.PROCESSING))
+        .thenReturn(List.of(processingPartition));
+
+    AtomicReference<Throwable> failure = new AtomicReference<>();
+    Thread workerThread =
+        Thread.ofPlatform()
+            .start(
+                () -> {
+                  try {
+                    invokePrivate(
+                        "runWorkerLoop",
+                        new Class<?>[] {
+                          int.class,
+                          BulkSink.class,
+                          int.class,
+                          ReindexContext.class,
+                          boolean.class,
+                          AtomicLong.class,
+                          AtomicLong.class,
+                          ReindexingConfiguration.class
+                        },
+                        2,
+                        mock(BulkSink.class),
+                        100,
+                        null,
+                        false,
+                        new AtomicLong(),
+                        new AtomicLong(),
+                        ReindexingConfiguration.builder().build());
+                  } catch (Throwable t) {
+                    failure.set(t);
+                  }
+                });
+
+    Thread.sleep(1100);
+    workerThread.interrupt();
+    workerThread.join(2000);
+
+    assertFalse(workerThread.isAlive());
+    assertNull(failure.get());
+    assertTrue(((Set<?>) getField("activePartitions")).isEmpty());
+    assertTrue(((List<?>) getField("activeWorkers")).isEmpty());
+  }
+
+  @Test
   void runWorkerLoopSwallowsPartitionProcessingErrorsAndCleansUpState() throws Exception {
     UUID jobId = UUID.randomUUID();
     SearchIndexJob runningJob =
@@ -892,6 +1098,17 @@ class DistributedSearchIndexExecutorTest {
   }
 
   @Test
+  void backgroundLoopsExitCleanlyWhenInterrupted() throws Exception {
+    SearchIndexJob runningJob =
+        SearchIndexJob.builder().id(UUID.randomUUID()).status(IndexJobStatus.RUNNING).build();
+    setField("currentJob", runningJob);
+
+    runLoopUntilInterrupted("runStaleReclaimerLoop", new Class<?>[] {UUID.class}, runningJob.getId());
+    runLoopUntilInterrupted("runLockRefreshLoop", new Class<?>[] {UUID.class}, runningJob.getId());
+    runLoopUntilInterrupted("runPartitionHeartbeatLoop", new Class<?>[] {});
+  }
+
+  @Test
   void markJobAsFailedDueToLostLockUsesZeroCountsWhenStatsMissing() throws Exception {
     UUID jobId = UUID.randomUUID();
     when(partitionDAO.getAggregatedStats(jobId.toString())).thenReturn(null);
@@ -911,6 +1128,14 @@ class DistributedSearchIndexExecutorTest {
             anyLong(),
             eq("Lost distributed lock - another server may have taken over or lock expired"));
     verify(partitionDAO).cancelPendingPartitions(jobId.toString());
+  }
+
+  @Test
+  void markJobAsFailedDueToLostLockSwallowsDaoFailures() throws Exception {
+    when(collectionDAO.searchIndexJobDAO())
+        .thenThrow(new IllegalStateException("job dao unavailable"));
+
+    invokePrivate("markJobAsFailedDueToLostLock", new Class<?>[] {UUID.class}, UUID.randomUUID());
   }
 
   @Test
@@ -956,6 +1181,42 @@ class DistributedSearchIndexExecutorTest {
     assertFalse(worker.isAlive());
   }
 
+  @Test
+  void interruptAndJoinReturnsAfterTimeoutWhenThreadIgnoresInterrupt() throws Exception {
+    AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+    AtomicReference<Boolean> keepRunning = new AtomicReference<>(true);
+    Thread worker =
+        Thread.ofPlatform()
+            .start(
+                () -> {
+                  try {
+                    while (Boolean.TRUE.equals(keepRunning.get())) {
+                      try {
+                        Thread.sleep(30_000);
+                      } catch (InterruptedException ignored) {
+                        // Keep the thread alive so the join timeout branch executes.
+                      }
+                    }
+                  } catch (Throwable t) {
+                    workerFailure.set(t);
+                  }
+                });
+
+    long start = System.nanoTime();
+    invokePrivate(
+        "interruptAndJoin", new Class<?>[] {Thread.class, String.class}, worker, "stubborn");
+    long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+    assertTrue(elapsedMs >= 4_500, "join should wait close to the timeout before returning");
+    assertTrue(worker.isAlive());
+    assertNull(workerFailure.get());
+
+    keepRunning.set(false);
+    worker.interrupt();
+    worker.join(1_000);
+    assertFalse(worker.isAlive());
+  }
+
   private SearchIndexPartition partition(UUID jobId, String entityType, PartitionStatus status) {
     return SearchIndexPartition.builder()
         .id(UUID.randomUUID())
@@ -991,6 +1252,28 @@ class DistributedSearchIndexExecutorTest {
     Field field = DistributedSearchIndexExecutor.class.getDeclaredField(fieldName);
     field.setAccessible(true);
     field.set(executor, value);
+  }
+
+  private void runLoopUntilInterrupted(String methodName, Class<?>[] parameterTypes, Object... args)
+      throws Exception {
+    AtomicReference<Throwable> failure = new AtomicReference<>();
+    Thread loopThread =
+        Thread.ofPlatform()
+            .start(
+                () -> {
+                  try {
+                    invokePrivate(methodName, parameterTypes, args);
+                  } catch (Throwable t) {
+                    failure.set(t);
+                  }
+                });
+
+    Thread.sleep(100);
+    loopThread.interrupt();
+    loopThread.join(2_000);
+
+    assertFalse(loopThread.isAlive());
+    assertNull(failure.get());
   }
 
   @SuppressWarnings("unchecked")
