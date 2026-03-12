@@ -14,15 +14,33 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.apps.AbstractNativeApplication;
 import org.openmetadata.service.apps.ApplicationContext;
 import org.openmetadata.service.security.ImpersonationContext;
 import org.openmetadata.service.security.JwtFilter;
 
 public class McpAuthFilter implements Filter {
+  private static final String MCP_APP_NAME = "McpApplication";
+  private static final String DEFAULT_MCP_BOT_NAME = MCP_APP_NAME + "Bot";
+
   private final JwtFilter jwtFilter;
+  private volatile String mcpBotName;
 
   public McpAuthFilter(JwtFilter filter) {
     this.jwtFilter = filter;
+  }
+
+  private String getMcpBotName() {
+    if (mcpBotName == null) {
+      AbstractNativeApplication mcpApp =
+          ApplicationContext.getInstance().getAppIfExists(MCP_APP_NAME);
+      if (mcpApp != null && mcpApp.getApp().getBot() != null) {
+        mcpBotName = mcpApp.getApp().getBot().getName();
+      } else {
+        mcpBotName = DEFAULT_MCP_BOT_NAME;
+      }
+    }
+    return mcpBotName;
   }
 
   @Override
@@ -45,16 +63,9 @@ public class McpAuthFilter implements Filter {
       String token = JwtFilter.extractToken(tokenWithType);
       Map<String, Claim> claims = jwtFilter.validateJwtAndGetClaims(token);
 
-      // Extract impersonatedBy claim if present
-      String impersonatedBy =
-          claims.containsKey(JwtFilter.IMPERSONATED_USER_CLAIM)
-              ? claims.get(JwtFilter.IMPERSONATED_USER_CLAIM).asString()
-              : null;
-
-      // Set impersonatedBy in thread-local context for MCP tools to use
-      if (impersonatedBy != null) {
-        ImpersonationContext.setImpersonatedBy(impersonatedBy);
-      }
+      // All MCP requests are impersonated by the MCP bot — this ensures the audit trail
+      // distinguishes MCP-driven changes from direct UI changes
+      ImpersonationContext.setImpersonatedBy(getMcpBotName());
 
       checkForUsernameAndImpersonationValidation(token, claims, jwtFilter);
 
