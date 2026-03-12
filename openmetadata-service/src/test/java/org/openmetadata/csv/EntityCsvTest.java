@@ -642,7 +642,11 @@ public class EntityCsvTest {
     assertNotNull(recursiveDocumentation);
     assertTrue(recursiveDocumentation.getSummary().contains("Entity CSV file"));
 
-    assertNull(EntityCsv.getCsvDocumentation("missing-entity-type", false));
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () -> EntityCsv.getCsvDocumentation("missing-entity-type", false));
+    assertTrue(exception.getMessage().contains("missing-entity-type"));
   }
 
   @Test

@@ -1462,7 +1462,7 @@ class SearchRepositoryBehaviorTest {
           .when(() -> SettingsCache.getSetting(SettingsType.SEARCH_SETTINGS, SearchSettings.class))
           .thenReturn(null);
       vectorServiceMock
-          .when(() -> OpenSearchVectorService.init(rawClient, embeddingClient, "en"))
+          .when(() -> OpenSearchVectorService.init(rawClient, embeddingClient))
           .thenAnswer(invocation -> null);
       vectorServiceMock.when(OpenSearchVectorService::getInstance).thenReturn(vectorService);
 

@@ -334,7 +334,7 @@ public class SearchRepository {
       if (cfg.getSearchType() == ElasticSearchConfiguration.SearchType.OPENSEARCH) {
         os.org.opensearch.client.opensearch.OpenSearchClient osClient =
             ((OpenSearchClient) getSearchClient()).getNewClient();
-        OpenSearchVectorService.init(osClient, embeddingClient, language);
+        OpenSearchVectorService.init(osClient, embeddingClient);
         this.vectorIndexService = OpenSearchVectorService.getInstance();
       } else {
         LOG.warn(

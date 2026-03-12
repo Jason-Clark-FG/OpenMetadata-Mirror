@@ -318,23 +318,25 @@ public abstract class EntityCsv<T extends EntityInterface> {
     try {
       List<String> jsonDataFiles = EntityUtil.getJsonDataResources(path);
       if (jsonDataFiles.isEmpty()) {
-        LOG.error(
-            "FATAL - Failed to load CSV documentation for entity {} from the path {}",
-            effectiveEntityType,
-            path);
-        return null;
+        String message =
+            String.format(
+                "Failed to load CSV documentation for entity %s from path %s",
+                effectiveEntityType, path);
+        LOG.error("FATAL - {}", message);
+        throw new IllegalStateException(message);
       }
       String json =
           CommonUtil.getResourceAsStream(
               EntityRepository.class.getClassLoader(), jsonDataFiles.get(0));
       return JsonUtils.readValue(json, CsvDocumentation.class);
     } catch (IOException e) {
-      LOG.error(
-          "FATAL - Failed to load CSV documentation for entity {} from the path {}",
-          effectiveEntityType,
-          path);
+      String message =
+          String.format(
+              "Failed to load CSV documentation for entity %s from path %s",
+              effectiveEntityType, path);
+      LOG.error("FATAL - {}", message, e);
+      throw new IllegalStateException(message, e);
     }
-    return null;
   }
 
   /** Implement this method to export an entity into a list of fields to create a CSV record */

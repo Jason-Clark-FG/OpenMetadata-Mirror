@@ -18,6 +18,7 @@ import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.SemanticsRule;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.DataContractRepository;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.resources.settings.SettingsCache;
@@ -173,7 +174,7 @@ public class RuleEngine {
         return List.of();
       }
       return settings.getEntitySemantics().stream().filter(SemanticsRule::getEnabled).toList();
-    } catch (Exception e) {
+    } catch (EntityNotFoundException e) {
       LOG.debug(
           "Entity rules settings unavailable, skipping platform semantics: {}", e.getMessage());
       return List.of();
