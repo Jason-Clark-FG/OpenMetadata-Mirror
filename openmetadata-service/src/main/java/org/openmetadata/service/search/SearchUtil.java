@@ -147,7 +147,6 @@ public class SearchUtil {
       case "file_search_index", Entity.FILE -> Entity.FILE;
       case "worksheet_search_index", Entity.WORKSHEET -> Entity.WORKSHEET;
       case "spreadsheet_search_index", Entity.SPREADSHEET -> Entity.SPREADSHEET;
-      case "metric_search_index", Entity.METRIC -> Entity.METRIC;
       case "column_search_index", Entity.TABLE_COLUMN -> Entity.TABLE_COLUMN;
       case "dataAsset" -> "dataAsset";
       default -> "dataAsset";
