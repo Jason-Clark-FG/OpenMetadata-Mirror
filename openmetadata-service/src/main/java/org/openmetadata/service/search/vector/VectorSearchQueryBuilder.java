@@ -235,7 +235,7 @@ public class VectorSearchQueryBuilder {
           .append("{\"match\":{\"customPropertiesTyped.textValue\":\"")
           .append(val)
           .append("\"}}")
-          .append("]}")
+          .append("]}}")
           .append("]}}}}");
     }
     sb.append("]}}");
