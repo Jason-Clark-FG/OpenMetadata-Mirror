@@ -1183,12 +1183,9 @@ public class OSLineageGraphBuilder
       return false;
     }
 
-    // Common node-level filter fields
+    // Only owner/displayName/description require path preservation (in-memory filtering)
+    // Tag, tier, domain, service filters are indexed in ES and work directly
     return queryFilter.contains("owner")
-        || queryFilter.contains("tag")
-        || queryFilter.contains("domain")
-        || queryFilter.contains("service")
-        || queryFilter.contains("tier")
         || queryFilter.contains("displayName")
         || queryFilter.contains("description");
   }
