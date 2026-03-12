@@ -3,6 +3,7 @@ package org.openmetadata.it.tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1385,14 +1386,14 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
         createDatabase(ns, dbService.getFullyQualifiedName());
     DatabaseSchema schema = createDatabaseSchema(ns, db.getFullyQualifiedName());
 
-    // Step 4: Apply the certification tag to the DatabaseSchema
+    // Step 4: Apply the certification tag to the DatabaseSchema via setCertification()
     org.openmetadata.schema.type.TagLabel tagLabel =
         new org.openmetadata.schema.type.TagLabel()
             .withTagFQN(originalTagFqn)
             .withSource(org.openmetadata.schema.type.TagLabel.TagSource.CLASSIFICATION)
             .withLabelType(org.openmetadata.schema.type.TagLabel.LabelType.MANUAL);
 
-    schema.setTags(List.of(tagLabel));
+    schema.setCertification(new AssetCertification().withTagLabel(tagLabel));
     DatabaseSchema taggedSchema =
         client.databaseSchemas().update(schema.getId().toString(), schema);
 
@@ -1413,9 +1414,10 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
     TimeUnit.SECONDS.sleep(2);
 
     // Step 5: Verify search finds the schema by the original tag FQN
+    // Certification tags are indexed under certification.tagLabel.tagFQN, not tags.tagFQN
     String tagFilterBefore =
         String.format(
-            "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"tags.tagFQN\":\"%s\"}}]}}}",
+            "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"certification.tagLabel.tagFQN\":\"%s\"}}]}}}",
             originalTagFqn);
     String searchResponseBefore =
         client
@@ -1491,5 +1493,16 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
     assertTrue(
         foundAfterRename,
         "Schema should appear in search results under tag FQN even after tag display name rename");
+
+    // Step 9: Delete the certification tag and verify the schema no longer has a certification
+    SdkClients.adminClient().tags().delete(certTag.getId().toString());
+
+    DatabaseSchema schemaAfterTagDelete =
+        client.databaseSchemas().getByName(schema.getFullyQualifiedName(), "certification");
+    assertNotNull(
+        schemaAfterTagDelete, "Schema must still be fetchable after certification tag deletion");
+    assertNull(
+        schemaAfterTagDelete.getCertification(),
+        "Schema must not have a certification after the certification tag is deleted");
   }
 }

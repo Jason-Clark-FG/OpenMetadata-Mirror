@@ -5461,6 +5461,15 @@ public abstract class EntityRepository<T extends EntityInterface> {
         checkMutuallyExclusive(updatedTags);
       }
 
+      // Filter out certification tags — handled exclusively by updateCertification()
+      String certClassification = getCertificationClassification();
+      if (certClassification != null) {
+        addedTags.removeIf(
+            tag -> certClassification.equals(FullyQualifiedName.getParentFQN(tag.getTagFQN())));
+        deletedTags.removeIf(
+            tag -> certClassification.equals(FullyQualifiedName.getParentFQN(tag.getTagFQN())));
+      }
+
       // Apply differential updates - only modify what changed
       if (!deletedTags.isEmpty()) {
         applyTagsDelete(deletedTags, fqn);
