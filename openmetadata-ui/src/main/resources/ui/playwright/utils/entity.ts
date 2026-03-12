@@ -157,14 +157,23 @@ export const addOwner = async ({
             return true;
           }
 
+          const searchRetry = page.waitForResponse(
+            (response) =>
+              response.url().includes('/api/v1/search/query') &&
+              response.url().includes('user_search_index')
+          );
           await ownerSearchInput.fill('');
           await ownerSearchInput.fill(owner);
+          await searchRetry;
+          await page.waitForSelector('[data-testid="loader"]', {
+            state: 'detached',
+          });
 
           return await ownerItem.isVisible().catch(() => false);
         },
         {
           timeout: 60000,
-          intervals: [500, 1000, 2000],
+          intervals: [2000, 3000, 5000],
           message: `Timed out waiting for owner ${owner} to appear`,
         }
       )
