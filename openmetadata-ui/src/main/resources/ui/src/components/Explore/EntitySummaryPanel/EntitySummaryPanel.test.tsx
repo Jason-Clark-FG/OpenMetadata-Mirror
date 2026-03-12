@@ -14,12 +14,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
+import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import EntitySummaryPanel from './EntitySummaryPanel.component';
+import { mockApplicationEntityDetails } from './mocks/ApplicationSummary.mock';
 import { mockDashboardEntityDetails } from './mocks/DashboardSummary.mock';
 import { mockDomainEntityDetails } from './mocks/DomainSummary.mock';
+import { mockGlossaryEntityDetails } from './mocks/GlossarySummary.mock';
 import { mockMlModelEntityDetails } from './mocks/MlModelSummary.mock';
 import { mockPipelineEntityDetails } from './mocks/PipelineSummary.mock';
 import { mockTableEntityDetails } from './mocks/TableSummary.mock';
+import { mockTagEntityDetails } from './mocks/TagSummary.mock';
 import { mockTopicEntityDetails } from './mocks/TopicSummary.mock';
 
 const mockHandleClosePanel = jest.fn();
@@ -156,6 +160,16 @@ jest.mock('../../../utils/SearchClassBase', () => ({
     getEntityLink: jest.fn().mockReturnValue('/entity/link'),
     getEntityIcon: jest.fn().mockReturnValue(<span>Icon</span>),
     getEntitySummaryComponent: jest.fn().mockReturnValue(null),
+  },
+}));
+
+jest.mock('../../../utils/EntityUtilClassBase', () => ({
+  __esModule: true,
+  default: {
+    getEntityLink: jest.fn().mockReturnValue('/entity/link'),
+    getEntityPatchAPI: jest.fn(),
+    getEntityByFqn: jest.fn(),
+    getFormattedEntityType: jest.fn((type) => type),
   },
 }));
 
@@ -913,6 +927,229 @@ describe('EntitySummaryPanel component tests', () => {
         expect(screen.getByTestId('entity-display-name')).toHaveTextContent(
           'EntityData Display Name'
         );
+      });
+    });
+  });
+
+  describe('Fallback Patch API Mechanism', () => {
+    const mockPatchAPI = jest.fn();
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
+        mockPatchAPI
+      );
+    });
+
+    describe('Entity types that require fallback API', () => {
+      it('should render GLOSSARY entity without errors', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+        });
+
+        const { container } = render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockGlossaryEntityDetails,
+                entityType: EntityType.GLOSSARY,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(
+            container.querySelector('.entity-summary-panel-container')
+          ).toBeInTheDocument();
+        });
+      });
+
+      it('should render TAG entity without errors', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+        });
+
+        const { container } = render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockTagEntityDetails,
+                entityType: EntityType.TAG,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(
+            container.querySelector('.entity-summary-panel-container')
+          ).toBeInTheDocument();
+        });
+      });
+
+      it('should render APPLICATION entity without errors', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+        });
+
+        const { container } = render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockApplicationEntityDetails,
+                entityType: EntityType.APPLICATION,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(
+            container.querySelector('.entity-summary-panel-container')
+          ).toBeInTheDocument();
+        });
+      });
+
+      it('should have fallback API available for GLOSSARY entity', () => {
+        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
+          mockPatchAPI
+        );
+
+        const result = entityUtilClassBase.getEntityPatchAPI(
+          EntityType.GLOSSARY
+        );
+
+        expect(result).toBe(mockPatchAPI);
+        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
+          EntityType.GLOSSARY
+        );
+      });
+
+      it('should have fallback API available for TAG entity', () => {
+        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
+          mockPatchAPI
+        );
+
+        const result = entityUtilClassBase.getEntityPatchAPI(EntityType.TAG);
+
+        expect(result).toBe(mockPatchAPI);
+        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
+          EntityType.TAG
+        );
+      });
+
+      it('should have fallback API available for APPLICATION entity', () => {
+        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
+          mockPatchAPI
+        );
+
+        const result = entityUtilClassBase.getEntityPatchAPI(
+          EntityType.APPLICATION
+        );
+
+        expect(result).toBe(mockPatchAPI);
+        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
+          EntityType.APPLICATION
+        );
+      });
+    });
+
+    describe('Non-fallback path verification', () => {
+      it('should NOT use fallback for TABLE entity which exists in entityUpdateMap', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+          EditAll: true,
+        });
+
+        render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockTableEntityDetails,
+                entityType: EntityType.TABLE,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(screen.getByTestId('TableSummary')).toBeInTheDocument();
+        });
+
+        expect(entityUtilClassBase.getEntityPatchAPI).not.toHaveBeenCalled();
+      });
+
+      it('should NOT use fallback for TOPIC entity which exists in entityUpdateMap', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+          EditAll: true,
+        });
+
+        render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockTopicEntityDetails,
+                entityType: EntityType.TOPIC,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(screen.getByTestId('TopicSummary')).toBeInTheDocument();
+        });
+
+        expect(entityUtilClassBase.getEntityPatchAPI).not.toHaveBeenCalled();
+      });
+
+      it('should NOT use fallback for DASHBOARD entity which exists in entityUpdateMap', async () => {
+        (
+          usePermissionProvider().getEntityPermission as jest.Mock
+        ).mockResolvedValue({
+          ViewBasic: true,
+          EditAll: true,
+        });
+
+        render(
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                ...mockDashboardEntityDetails,
+                entityType: EntityType.DASHBOARD,
+              },
+            }}
+            handleClosePanel={mockHandleClosePanel}
+          />,
+          { wrapper: Wrapper }
+        );
+
+        await waitFor(() => {
+          expect(screen.getByTestId('DashboardSummary')).toBeInTheDocument();
+        });
+
+        expect(entityUtilClassBase.getEntityPatchAPI).not.toHaveBeenCalled();
       });
     });
   });
