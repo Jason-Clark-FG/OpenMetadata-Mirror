@@ -754,12 +754,17 @@ test.describe(
 
         await expect(
           page
-            .getByTitle(table2.entityResponseData?.['fullyQualifiedName'])
+            .getByTitle(
+              table2.entityResponseData?.['fullyQualifiedName'] ?? '',
+              { exact: true }
+            )
             .locator('div')
         ).toBeVisible();
 
         await page
-          .getByTitle(table2.entityResponseData?.['fullyQualifiedName'])
+          .getByTitle(table2.entityResponseData?.['fullyQualifiedName'] ?? '', {
+            exact: true,
+          })
           .locator('div')
           .click();
 
