@@ -141,8 +141,7 @@ jest.mock('../ContractViewSwitchTab/ContractViewSwitchTab.component', () => {
           data-testid="switch-to-yaml"
           onClick={() =>
             handleModeChange({ target: { value: DataContractMode.YAML } })
-          }
-        >
+          }>
           YAML
         </button>
       </div>
@@ -170,14 +169,12 @@ jest.mock('../ODCSImportModal', () => {
         </span>
         <button
           data-testid="mock-import-success"
-          onClick={() => onSuccess && onSuccess()}
-        >
+          onClick={() => onSuccess && onSuccess()}>
           Import Success
         </button>
         <button
           data-testid="mock-import-close"
-          onClick={() => onClose && onClose()}
-        >
+          onClick={() => onClose && onClose()}>
           Close
         </button>
       </div>
@@ -315,12 +312,25 @@ jest.mock('@openmetadata/ui-core-components', () => {
     return <div data-testid={testId}>{children}</div>;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const MockDropdownItem = ({ label, id, 'data-testid': testId }: any) => (
+  const MockDropdownItem = ({
+    label,
+    id,
+    'data-testid': testId,
+    isDisabled,
+  }: {
+    label?: string;
+    id?: string | number;
+    'data-testid'?: string;
+    isDisabled?: boolean;
+    icon?: React.ElementType;
+    className?: string;
+  }) => (
     <button
       data-testid={testId}
-      onClick={() => menuOnAction && menuOnAction(id)}
-    >
+      disabled={isDisabled}
+      onClick={() =>
+        !isDisabled && menuOnAction && menuOnAction(id as string | number)
+      }>
       {label}
     </button>
   );
@@ -335,7 +345,15 @@ jest.mock('@openmetadata/ui-core-components', () => {
     Separator: MockDropdownSeparator,
   };
 
-  return { Button: MockButton, Dropdown };
+  const MockTooltip = ({
+    children,
+    title: _title,
+  }: {
+    children: React.ReactNode;
+    title?: string;
+  }) => <>{children}</>;
+
+  return { Button: MockButton, Dropdown, Tooltip: MockTooltip };
 });
 
 const mockOnEdit = jest.fn();
@@ -576,16 +594,12 @@ describe('ContractDetail', () => {
       fireEvent.click(screen.getByTestId('manage-contract-actions'));
       const deleteButton = screen.getByTestId('delete-contract-button');
 
-      // The delete menu item should have disabled class
-      expect(deleteButton).toHaveClass('disabled');
+      expect(deleteButton).toBeDisabled();
 
-      // Clicking should not call onDelete since the menu item is disabled
       mockOnDelete.mockClear();
       fireEvent.click(deleteButton);
 
-      // Note: The actual click prevention is handled by antd's Menu disabled prop,
-      // but we verify the disabled class is applied
-      expect(deleteButton.closest('[class*="disabled"]')).toBeTruthy();
+      expect(mockOnDelete).not.toHaveBeenCalled();
     });
 
     it('should not disable delete button for non-inherited contracts', () => {
