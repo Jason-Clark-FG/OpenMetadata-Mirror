@@ -2893,9 +2893,10 @@ test.describe('Glossary tests', () => {
     const { afterAction, apiContext } = await performAdminLogin(browser);
     await user1.delete(apiContext);
     await user2.delete(apiContext);
-    await user3.create(apiContext);
+    await user3.delete(apiContext);
     await team.delete(apiContext);
     await user4.delete(apiContext);
+    await adminUser.delete(apiContext);
     await afterAction();
   });
 });

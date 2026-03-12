@@ -885,6 +885,18 @@ test.describe('Teams Page with EditUser Permission', () => {
     await team2.visitTeamPage(editOnlyUserPage);
   });
 
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext, afterAction } = await performAdminLogin(browser);
+    await user.delete(apiContext);
+    await user2.delete(apiContext);
+    await team2.delete(apiContext);
+    await team.delete(apiContext);
+    await role.delete(apiContext);
+    await policy.delete(apiContext);
+    await editOnlyUser.delete(apiContext);
+    await afterAction();
+  });
+
   test('Add and Remove User for Team', async ({ editOnlyUserPage }) => {
     await test.step('Add user in Team from the placeholder', async () => {
       await addUserInTeam(editOnlyUserPage, user);
@@ -1027,6 +1039,17 @@ test.describe('Teams Page with Data Consumer User', () => {
 
     await expect(dataConsumerPage.getByTestId('add-policy')).not.toBeVisible();
   });
+
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext, afterAction } = await performAdminLogin(browser);
+    await user.delete(apiContext);
+    await team2.delete(apiContext);
+    await team.delete(apiContext);
+    await role.delete(apiContext);
+    await policy.delete(apiContext);
+    await dataConsumerUser.delete(apiContext);
+    await afterAction();
+  });
 });
 
 test.describe('Teams Page action as Owner of Team', () => {
@@ -1168,5 +1191,21 @@ test.describe('Teams Page action as Owner of Team', () => {
       user,
       userName,
     });
+  });
+
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext, afterAction } = await performAdminLogin(browser);
+    await user.delete(apiContext);
+    await dataProduct.delete(apiContext);
+    await domain.delete(apiContext);
+    await teamNoOwner.delete(apiContext);
+    await team4.delete(apiContext);
+    await team3.delete(apiContext);
+    await team2.delete(apiContext);
+    await team.delete(apiContext);
+    await role.delete(apiContext);
+    await policy.delete(apiContext);
+    await ownerUser.delete(apiContext);
+    await afterAction();
   });
 });
