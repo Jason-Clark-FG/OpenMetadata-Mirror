@@ -909,15 +909,15 @@ public class DataContractRepository extends EntityRepository<DataContract> {
             : Collections.emptyList();
     List<UUID> testsToAdd = testsWithoutResults.stream().map(TestCase::getId).toList();
 
-    if (!nullOrEmpty(testsWithoutResults)) {
-      testCaseRepository.addTestCasesToLogicalTestSuite(testSuite, testsToAdd);
+    List<UUID> newTestCases =
+        testsToAdd.stream().filter(testId -> !currentTests.contains(testId)).toList();
+    if (!nullOrEmpty(newTestCases)) {
+      testCaseRepository.addTestCasesToLogicalTestSuite(testSuite, newTestCases);
     }
 
     // Remove tests that are no longer in the quality expectations or already have results
     List<UUID> testsToRemove =
-        currentTests.stream()
-            .filter(testId -> !testCaseRefs.contains(testId) || !testsToAdd.contains(testId))
-            .toList();
+        currentTests.stream().filter(testId -> !testsToAdd.contains(testId)).toList();
     if (!nullOrEmpty(testsToRemove)) {
       testsToRemove.forEach(
           test -> {

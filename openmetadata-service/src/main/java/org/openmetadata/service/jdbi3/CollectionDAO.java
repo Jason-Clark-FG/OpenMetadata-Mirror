@@ -7025,7 +7025,7 @@ public interface CollectionDAO {
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =
-            "UPDATE test_case SET json = jsonb_set(json, '{dataContract}', to_jsonb(:dataContractJson::text), false) WHERE id = :id",
+            "UPDATE test_case SET json = jsonb_set(json, '{dataContract}', :dataContractJson::jsonb, true) WHERE id = :id",
         connectionType = POSTGRES)
     void updateTestCaseDataContract(
         @Bind("id") String id, @Bind("dataContractJson") String dataContractJson);

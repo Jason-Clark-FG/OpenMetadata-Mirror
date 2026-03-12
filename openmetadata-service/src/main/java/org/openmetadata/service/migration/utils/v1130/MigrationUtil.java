@@ -10,6 +10,7 @@ import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
 import org.openmetadata.service.util.EntityUtil;
@@ -103,10 +104,6 @@ public class MigrationUtil {
               try {
                 TestCase testCase =
                     collectionDAO.testCaseDAO().findEntityById(testCaseRef.getId());
-                if (testCase == null) {
-                  LOG.debug("Test case not found: {}", testCaseRef.getId());
-                  continue;
-                }
 
                 if (testCase.getDataContract() != null) {
                   LOG.debug(
@@ -129,6 +126,8 @@ public class MigrationUtil {
                     testCase.getFullyQualifiedName(),
                     dataContract.getFullyQualifiedName());
 
+              } catch (EntityNotFoundException e) {
+                LOG.debug("Test case not found: {}", testCaseRef.getId());
               } catch (Exception e) {
                 LOG.warn(
                     "Failed to update test case {}: {}", testCaseRef.getId(), e.getMessage());
