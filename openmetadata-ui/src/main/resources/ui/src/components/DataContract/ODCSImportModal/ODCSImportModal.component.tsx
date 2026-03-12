@@ -1120,14 +1120,14 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                         <div className="upload-icon-wrapper">
                           <CloudUpload height={20} width={20} />
                         </div>
-                        <Typography as="p" className="tw:text-sm tw:leading-5">
-                          <Typography
-                            as="span"
-                            className="tw:text-brand-600 tw:font-semibold tw:cursor-pointer">
+                        <p className="tw:text-sm tw:leading-5">
+                          <span className="tw:text-brand-600 tw:font-semibold tw:cursor-pointer">
                             {t('label.click-to-upload')}
-                          </Typography>{' '}
-                          {t('label.or-drag-and-drop')}
-                        </Typography>
+                          </span>{' '}
+                          <span className="tw:text-secondary tw:cursor-pointer">
+                            {t('label.or-drag-and-drop')}
+                          </span>
+                        </p>
                         <Typography
                           as="p"
                           className="tw:text-xs tw:leading-[18px] tw:mt-1 tw:text-secondary">

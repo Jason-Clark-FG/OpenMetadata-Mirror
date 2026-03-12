@@ -79,9 +79,6 @@ jest.mock('@openmetadata/ui-core-components', () => ({
   Dialog: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
-  LoadingIndicator: ({ size: _size }: { size?: number }) => (
-    <div data-testid="loading-indicator" />
-  ),
   Modal: ({
     children,
     className: _className,
@@ -181,6 +178,11 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     className?: string;
   }) => <Component className={className}>{children}</Component>,
   Dot: () => <span data-testid="dot-icon" />, // simple dot icon mock
+}));
+
+jest.mock('../../common/Loader/Loader', () => ({
+  __esModule: true,
+  default: () => <div data-testid="loader" />,
 }));
 
 jest.mock('../../../rest/contractAPI', () => ({
