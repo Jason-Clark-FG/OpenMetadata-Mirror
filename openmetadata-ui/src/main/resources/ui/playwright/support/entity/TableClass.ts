@@ -233,16 +233,31 @@ export class TableClass extends EntityClass {
         data: this.service,
       }
     );
+    if (!serviceResponse.ok()) {
+      throw new Error(
+        `TableClass: service create failed (${serviceResponse.status()}): ${await serviceResponse.text()}`
+      );
+    }
     const service = await serviceResponse.json();
 
     const databaseResponse = await apiContext.post('/api/v1/databases', {
       data: { ...this.database, service: service.fullyQualifiedName },
     });
+    if (!databaseResponse.ok()) {
+      throw new Error(
+        `TableClass: database create failed (${databaseResponse.status()}): ${await databaseResponse.text()}`
+      );
+    }
     const database = await databaseResponse.json();
 
     const schemaResponse = await apiContext.post('/api/v1/databaseSchemas', {
       data: { ...this.schema, database: database.fullyQualifiedName },
     });
+    if (!schemaResponse.ok()) {
+      throw new Error(
+        `TableClass: schema create failed (${schemaResponse.status()}): ${await schemaResponse.text()}`
+      );
+    }
     const schema = await schemaResponse.json();
 
     const entityResponse = await apiContext.post('/api/v1/tables', {
@@ -251,6 +266,11 @@ export class TableClass extends EntityClass {
         databaseSchema: schema.fullyQualifiedName,
       },
     });
+    if (!entityResponse.ok()) {
+      throw new Error(
+        `TableClass: table create failed (${entityResponse.status()}): ${await entityResponse.text()}`
+      );
+    }
 
     const entity = await entityResponse.json();
 

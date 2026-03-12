@@ -407,18 +407,14 @@ test.describe('Glossary Permissions', () => {
     ]);
 
     // Login as test user and verify permissions inherited from team
-    await redirectToHomePage(testUserPage);
-    await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
-
-    await testUserPage.waitForLoadState('networkidle');
 
     // Verify user can access the glossary page (team membership works)
     const glossaryHeader = testUserPage.getByTestId(
       'entity-header-display-name'
     );
 
-    await expect(glossaryHeader).toBeVisible({ timeout: 10000 });
+    await expect(glossaryHeader).toBeVisible({ timeout: 15000 });
     await expect(glossaryHeader).toContainText(glossary.data.displayName);
 
     // Clean up

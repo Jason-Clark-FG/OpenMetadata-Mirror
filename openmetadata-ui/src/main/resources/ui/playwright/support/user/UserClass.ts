@@ -54,6 +54,12 @@ export class UserClass {
       data: this.data,
     });
 
+    if (!response.ok()) {
+      throw new Error(
+        `UserClass.create() failed with status ${response.status()}: ${await response.text()}`
+      );
+    }
+
     this.responseData = await response.json();
     if (assignRole) {
       const { entity } = await this.patch({

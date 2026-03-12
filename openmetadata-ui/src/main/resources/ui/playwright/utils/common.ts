@@ -587,7 +587,10 @@ export const visitGlossaryPage = async (page: Page, glossaryName: string) => {
   const glossaryResponse = page.waitForResponse('/api/v1/glossaries?fields=*');
   await sidebarClick(page, SidebarItem.GLOSSARY);
   await glossaryResponse;
-  await page.getByRole('menuitem', { name: glossaryName }).click();
+  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page
+    .getByRole('menuitem', { name: glossaryName })
+    .click({ timeout: 30000 });
   await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 };

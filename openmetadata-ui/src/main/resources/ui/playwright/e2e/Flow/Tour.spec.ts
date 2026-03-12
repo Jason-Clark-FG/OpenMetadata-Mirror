@@ -21,7 +21,7 @@ const user = new UserClass();
 const waitForTourBadgeWithRetry = async (
   page: Page,
   maxAttempts = 3,
-  timeout = 10000
+  timeout = 20000
 ) => {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {

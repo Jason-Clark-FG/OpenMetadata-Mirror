@@ -330,6 +330,12 @@ export const selectDataProduct = async (
   page: Page,
   dataProduct: DataProduct['data']
 ) => {
+  if (!dataProduct?.name) {
+    throw new Error(
+      `selectDataProduct: dataProduct.name is undefined. Ensure create() succeeded. Got: ${JSON.stringify(dataProduct)}`
+    );
+  }
+
   const searchBox = page
     .getByTestId('page-layout-v1')
     .getByPlaceholder('Search');
@@ -681,8 +687,16 @@ export const addAssetsToDataProduct = async (
   await assetRes;
 
   for (const asset of assets) {
-    const name = get(asset, 'entityResponseData.name');
-    const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
+    const name = get(asset, 'entityResponseData.name') as string | undefined;
+    const fqn = get(asset, 'entityResponseData.fullyQualifiedName') as
+      | string
+      | undefined;
+
+    if (!name || !fqn) {
+      throw new Error(
+        `addAssetsToDataProduct: asset missing entityResponseData.name or fullyQualifiedName. Ensure asset.create() succeeded. Got name=${name}, fqn=${fqn}`
+      );
+    }
 
     const searchRes = page.waitForResponse(
       `/api/v1/search/query?q=${name}&index=all&from=0&size=25&*`

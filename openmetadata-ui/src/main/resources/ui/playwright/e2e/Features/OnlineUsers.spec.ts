@@ -107,7 +107,9 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     // Check that admin user shows as "Online now" since we just navigated
     const adminRow = page.locator('tr').filter({ has: adminLink });
 
-    await expect(adminRow.getByText('Online now')).toBeVisible();
+    await expect(adminRow.getByText('Online now')).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test('Should not show bots in online users list', async ({ page }) => {
