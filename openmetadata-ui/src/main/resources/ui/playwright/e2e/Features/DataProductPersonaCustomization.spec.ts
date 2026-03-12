@@ -131,7 +131,6 @@ test.describe('Data Product Persona customization', () => {
       await navigateToPersonaWithPagination(adminPage, persona.data.name, true);
 
       await adminPage.getByRole('tab', { name: 'Customize UI' }).click();
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Data Product', { exact: true }).click();
 
@@ -202,7 +201,6 @@ test.describe('Data Product Persona customization', () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });

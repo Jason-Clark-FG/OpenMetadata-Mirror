@@ -270,7 +270,6 @@ test.describe('Glossary tests', () => {
     await saveButton.click();
 
     // Verify filter is applied (may show no results if no InReview terms exist)
-    await page.waitForLoadState('networkidle');
 
     // The filter should be applied - either showing InReview terms or empty state
     const table = page.getByTestId('glossary-terms-table');
@@ -310,7 +309,6 @@ test.describe('Glossary tests', () => {
     await saveButton.click();
 
     // Wait for filter to apply
-    await page.waitForLoadState('networkidle');
 
     // Verify filtered results
     const table = page.getByTestId('glossary-terms-table');

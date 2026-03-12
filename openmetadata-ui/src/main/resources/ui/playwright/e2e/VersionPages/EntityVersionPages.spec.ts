@@ -155,7 +155,6 @@ test.describe('Entity Version pages', () => {
       const { apiContext } = await getApiContext(page);
       await entity.visitEntityPage(page);
 
-      await page.waitForLoadState('networkidle');
       // Read actual version from API response to avoid hardcoding version numbers.
       const setupPatchVersion = entity.entityResponseData.version;
       const setupVersionText = `v${Number.parseFloat(

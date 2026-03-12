@@ -37,7 +37,6 @@ async function goToLearningResourcesAdmin(page: Page) {
   }
 
   await page.waitForURL('**/my-data');
-  await page.waitForLoadState('networkidle');
   await settingClick(page, GlobalSettingOptions.LEARNING_RESOURCES);
   await waitForAllLoadersToDisappear(page);
   await expect(page.getByTestId('learning-resources-page')).toBeVisible();

@@ -113,7 +113,6 @@ export class TagClass {
     } else {
       await tagLink.click();
     }
-    await page.waitForLoadState('networkidle');
   }
 
   async create(apiContext: APIRequestContext) {

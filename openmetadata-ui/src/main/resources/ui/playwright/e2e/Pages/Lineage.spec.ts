@@ -302,7 +302,6 @@ test('Verify column lineage between table and topic', async ({ page }) => {
   await redirectToHomePage(page);
   await table.visitEntityPage(page);
   await visitLineageTab(page);
-  await page.waitForLoadState('networkidle');
   await verifyColumnLineageInCSV(page, table, topic, sourceCol, targetCol);
 
   await verifyPlatformLineageForEntity(page, tableServiceFqn, topicServiceFqn);
@@ -446,7 +445,6 @@ test('Verify function data in edge drawer', async ({ page }) => {
     await page.reload();
     await lineageReq1;
 
-    await page.waitForLoadState('networkidle');
 
     await activateColumnLayer(page);
     await page
@@ -527,7 +525,6 @@ test('Verify table search with special characters as handled', async ({
     await expect(page.locator('[data-testid="lineage-details"]')).toBeVisible();
 
     await clickLineageNode(page, dbFqn);
-    await page.waitForLoadState('networkidle');
 
     await expect(
       page.locator('.lineage-entity-panel').getByTestId('entity-header-title')

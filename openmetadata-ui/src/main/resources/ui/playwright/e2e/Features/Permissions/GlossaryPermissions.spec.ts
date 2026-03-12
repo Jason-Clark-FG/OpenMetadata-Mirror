@@ -101,7 +101,6 @@ test.describe('Glossary Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
-    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;
@@ -162,7 +161,6 @@ test.describe('Glossary Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
-    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;
@@ -205,7 +203,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // Edit description button should be visible
     const editDescBtn = testUserPage.getByTestId('edit-description');
@@ -227,7 +224,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // Add owner button should be visible
     const addOwner = testUserPage.getByTestId('add-owner');
@@ -254,7 +250,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // Add tag button should be visible
     const addTag = testUserPage
@@ -283,7 +278,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // Manage button should be visible with delete option
     const manageButton = testUserPage.getByTestId('manage-button');
@@ -316,7 +310,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // Add glossary button should be visible (create permission)
     const addGlossaryBtn = testUserPage.getByTestId('add-glossary');
@@ -348,7 +341,6 @@ test.describe('Glossary Permissions', () => {
     await sidebarClick(testUserPage, SidebarItem.GLOSSARY);
     await glossary.visitEntityPage(testUserPage);
 
-    await testUserPage.waitForLoadState('networkidle');
 
     // User should be able to view the glossary page
     const glossaryHeader = testUserPage.getByTestId(

@@ -204,7 +204,6 @@ test.describe(
 
         // Navigate to the landing page
         await redirectToHomePage(adminPage);
-        await adminPage.waitForLoadState('networkidle');
 
         // Check if removed widgets are not present on the landing page
         await expect(
@@ -264,7 +263,6 @@ test.describe(
         await redirectToHomePage(adminPage);
 
         // Ensures the page is fully loaded
-        await adminPage.waitForLoadState('networkidle');
 
         await checkAllDefaultWidgets(adminPage);
       });

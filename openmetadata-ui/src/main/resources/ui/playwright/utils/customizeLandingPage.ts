@@ -543,7 +543,6 @@ export const verifyWidgetEntityNavigation = async (
     }
 
     // Wait for navigation
-    await page.waitForLoadState('networkidle');
 
     // Verify we're on the correct page
     const currentUrl = page.url();

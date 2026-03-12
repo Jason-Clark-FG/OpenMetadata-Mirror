@@ -382,7 +382,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         );
 
         await adminPage.getByRole('tab', { name: 'Customize UI' }).click();
-        await adminPage.waitForLoadState('networkidle');
         await adminPage.getByText('Data Assets').click();
         await adminPage.getByText(type, { exact: true }).click();
 
@@ -483,7 +482,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.waitForLoadState('networkidle');
         await userPage.waitForSelector('[data-testid="loader"]', {
           state: 'detached',
         });
@@ -548,7 +546,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
           true
         );
         await adminPage.getByRole('tab', { name: 'Customize UI' }).click();
-        await adminPage.waitForLoadState('networkidle');
         await adminPage.getByText('Governance').click();
         await adminPage.getByText(type, { exact: true }).click();
 
@@ -639,7 +636,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.waitForLoadState('networkidle');
         await userPage.waitForSelector('[data-testid="loader"]', {
           state: 'detached',
         });
@@ -697,7 +693,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Need to find persona card and click as the list might get paginated
       await navigateToPersonaWithPagination(adminPage, persona.data.name, true);
       await adminPage.getByRole('tab', { name: 'Customize UI' }).click();
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Glossary Term', { exact: true }).click();
 
@@ -724,7 +719,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -780,7 +774,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Need to find persona card and click as the list might get paginated
       await navigateToPersonaWithPagination(adminPage, persona.data.name, true);
       await adminPage.getByRole('tab', { name: 'Customize UI' }).click();
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.getByText('Data Assets').click();
       await adminPage.getByText('Table', { exact: true }).click();
 
@@ -832,7 +825,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -840,7 +832,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Change language to French
       await userPage.getByRole('button', { name: 'EN', exact: true }).click();
       await userPage.getByRole('menuitem', { name: 'Français - FR' }).click();
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });

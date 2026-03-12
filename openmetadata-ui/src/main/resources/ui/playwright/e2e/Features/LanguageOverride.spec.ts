@@ -41,7 +41,6 @@ test.describe('Language Override Tests', () => {
       state: 'visible',
     });
     await germanLocalePage.getByText('EN', { exact: true }).click();
-    await germanLocalePage.waitForLoadState('networkidle');
 
     await germanLocalePage.locator('[data-testid="dropdown-profile"]').click();
     await germanLocalePage.waitForSelector('[role="menu"].profile-dropdown', {

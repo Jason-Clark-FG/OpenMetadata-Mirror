@@ -1761,7 +1761,6 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       await page.getByTestId('subdomains').getByText('Sub Domains').click();
       await subdomainSearchResponse;
 
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -3032,7 +3031,6 @@ test.describe('Domain Access with hasDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -3051,7 +3049,6 @@ test.describe('Domain Access with hasDomain() Rule', () => {
       const subDomainTableFqn =
         testResources.subDomainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(subDomainTableFqn)}`);
-      await userPage.waitForLoadState('networkidle');
 
       // Verify no permission error
       await expect(
@@ -3102,7 +3099,6 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -3120,7 +3116,6 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const noDomainTableFqn =
         testResources.noDomainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(noDomainTableFqn)}`);
-      await userPage.waitForLoadState('networkidle');
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -3257,7 +3252,6 @@ test.describe('Domain Tree View Functionality', () => {
     ).toContainText('1');
 
     await page.getByTestId('subdomains').getByText('Sub Domains').click();
-    await page.waitForLoadState('networkidle');
     await waitForAllLoadersToDisappear(page);
 
     await expect(
@@ -3282,10 +3276,8 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
       await selectDomain(page, testDomain.data);
-      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="glossary-container"]', {
         state: 'visible',
@@ -3359,10 +3351,8 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
       await selectDomain(page, testDomain.data);
-      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="tags-container"]', {
         state: 'visible',

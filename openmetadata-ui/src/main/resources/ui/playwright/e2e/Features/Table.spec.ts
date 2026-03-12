@@ -59,7 +59,6 @@ test.describe(
       await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
       await page.click('[data-testid="test-cases"]');
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -68,7 +67,6 @@ test.describe(
 
       await page.getByTestId('next').click();
 
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -180,14 +178,11 @@ test.describe(
       await firstLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
 
-      await page.goBack({
-        waitUntil: 'networkidle',
-      });
+      await page.goBack();
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
@@ -205,14 +200,11 @@ test.describe(
       await secondLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
 
-      await page.goBack({
-        waitUntil: 'networkidle',
-      });
+      await page.goBack();
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
@@ -228,7 +220,6 @@ test.describe(
 
     test('should persist page size', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
-      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
@@ -258,13 +249,11 @@ test.describe(
       await linkInColumn.click();
 
       await entityApiResponse;
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
 
       await page.goBack();
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -288,7 +277,6 @@ test.describe(
     }) => {
       await page.goto('/table/sample_data.ecommerce_db.shopify.dim_customer');
 
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -377,7 +365,6 @@ test.describe(
         '/table/sample_data.ecommerce_db.shopify.performance_test_table'
       );
 
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -601,7 +588,6 @@ test.describe(
 
       page.reload();
       // Wait for page to be fully loaded
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });

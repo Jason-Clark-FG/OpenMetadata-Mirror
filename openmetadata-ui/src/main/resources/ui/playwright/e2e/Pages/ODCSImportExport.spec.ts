@@ -1770,7 +1770,6 @@ version: "1.0.0"`;
       await page.getByTestId('save-contract-btn').click();
       await saveContractResponse;
 
-      await page.waitForLoadState('networkidle');
 
       // Verify SLA card is now visible after adding SLA
       await expect(page.getByTestId('contract-sla-card')).toBeVisible({
@@ -1859,7 +1858,6 @@ version: "1.0.0"`;
       await page.getByTestId('save-contract-btn').click();
       await saveContractResponse;
 
-      await page.waitForLoadState('networkidle');
 
       // Step 3: Export as ODCS YAML
       const downloadPromise = page.waitForEvent('download');

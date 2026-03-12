@@ -124,15 +124,15 @@ const waitForHomeOrSignin = async (page: Page) => {
 
 export const redirectToHomePage = async (
   page: Page,
-  waitForNetworkIdle = true
+  _waitForLoaders = true
 ) => {
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.goto('/');
     const destination = await waitForHomeOrSignin(page);
 
     if (destination === 'my-data') {
-      if (waitForNetworkIdle) {
-        await page.waitForLoadState('networkidle');
+      if (_waitForLoaders) {
+        await waitForAllLoadersToDisappear(page);
       }
 
       return;
@@ -145,15 +145,15 @@ export const redirectToHomePage = async (
   }
 
   await page.waitForURL('**/my-data');
-  if (waitForNetworkIdle) {
-    await page.waitForLoadState('networkidle');
+  if (_waitForLoaders) {
+    await waitForAllLoadersToDisappear(page);
   }
 };
 
 export const redirectToExplorePage = async (page: Page) => {
   await page.goto('/explore');
   await page.waitForURL('**/explore');
-  await page.waitForLoadState('networkidle');
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const removeLandingBanner = async (page: Page) => {
@@ -591,7 +591,6 @@ export const visitGlossaryPage = async (page: Page, glossaryName: string) => {
   await page
     .getByRole('menuitem', { name: glossaryName })
     .click({ timeout: 30000 });
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 };
 
@@ -671,7 +670,6 @@ export const closeFirstPopupAlert = async (page: Page) => {
 
 export const reloadAndWaitForNetworkIdle = async (page: Page) => {
   await page.reload();
-  await page.waitForLoadState('networkidle');
 
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
@@ -1088,7 +1086,6 @@ export const testTableSorting = async (
   columnIndex = 0
 ) => {
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 
   const header = page.locator(`th:has-text("${columnHeader}")`).first();
   const visibleRowSelector = `tbody tr:not([aria-hidden="true"])`;
@@ -1131,7 +1128,6 @@ export const testTableSearch = async (
   notVisibleText: string
 ) => {
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 
   const waitForSearchResponse = page.waitForResponse(
     `/api/v1/search/query?q=*index=${searchIndex}*`
@@ -1140,7 +1136,6 @@ export const testTableSearch = async (
   await page.getByTestId('searchbar').fill(searchTerm);
   await waitForSearchResponse;
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 
   await expect(page.getByText(searchTerm).first()).toBeVisible();
 

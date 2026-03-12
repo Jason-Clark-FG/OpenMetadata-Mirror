@@ -80,7 +80,6 @@ test.describe('Service Listing', () => {
   });
 
   test('should render the service listing page', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
 
     await page.getByTestId('filter-icon').click();
 
@@ -138,7 +137,6 @@ test.describe('Service Listing', () => {
     } of searchIndexMappings) {
       await test.step(`${settingOption} uses ${expectedIndex}`, async () => {
         await settingClick(page, settingOption);
-        await page.waitForLoadState('networkidle');
 
         const searchResponse = page.waitForResponse(
           `/api/v1/search/query?q=*index=${expectedIndex}*`

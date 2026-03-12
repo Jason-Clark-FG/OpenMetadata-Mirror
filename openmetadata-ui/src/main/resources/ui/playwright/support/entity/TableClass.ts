@@ -343,7 +343,6 @@ export class TableClass extends EntityClass {
 
     if (canUseDirectNavigation && tableFqn.length > 0) {
       await page.goto(`/table/${encodeURIComponent(tableFqn)}`);
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });

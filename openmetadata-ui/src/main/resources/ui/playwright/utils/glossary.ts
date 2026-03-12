@@ -80,8 +80,6 @@ export const selectActiveGlossary = async (
     }
   }
 
-  await page.waitForLoadState('networkidle');
-
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -92,8 +90,6 @@ export const selectActiveGlossaryTerm = async (
   glossaryTermName: string
 ) => {
   await page.getByTestId(glossaryTermName).click();
-
-  await page.waitForLoadState('networkidle');
 
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
@@ -1405,7 +1401,6 @@ export const approveTagsTask = async (
   await sidebarClick(page, SidebarItem.GLOSSARY);
   await glossaryTermsResponse;
   await selectActiveGlossary(page, entity.data.displayName);
-  await page.waitForLoadState('networkidle');
 
   const tagVisibility = page.locator(`[data-testid="tag-${value.tag}"]`);
   await tagVisibility.scrollIntoViewIfNeeded();

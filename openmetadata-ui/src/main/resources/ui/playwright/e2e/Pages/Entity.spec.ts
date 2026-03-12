@@ -823,7 +823,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               if (await nextButton.isEnabled()) {
                 // Navigate to next column
                 await nextButton.click();
-                await page.waitForLoadState('networkidle');
 
                 // Verify pagination updated
                 const updatedPagination = await paginationText.textContent();
@@ -844,7 +843,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                   .nth(0);
 
                 await prevButton.click();
-                await page.waitForLoadState('networkidle');
 
                 // Verify we're back
                 const finalPagination = await paginationText.textContent();
@@ -872,7 +870,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         }
 
         await page.getByTestId(entity.childrenTabId ?? '').click();
-        await page.waitForLoadState('networkidle');
 
         await test.step('Verify nested column has expand icon in main table', async () => {
           // Get the third column which is the nested parent column (name column)
@@ -1168,7 +1165,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         }
 
         await page.getByTestId(entity.childrenTabId ?? '').click();
-        await page.waitForLoadState('networkidle');
 
         await test.step('Verify array column with nested children renders correctly', async () => {
           const tableResponse = entity.entityResponseData as Table;
@@ -1203,7 +1199,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           const parentRow = page.locator(`[data-row-key="${nestedParentFQN}"]`);
 
           await parentRow.waitFor({ state: 'visible' });
-          await page.waitForLoadState('networkidle');
 
           const arrayColumnRow = page.locator(
             `[data-row-key="${arrayColumnFQN}"]`
@@ -1249,7 +1244,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         }
 
         await page.getByTestId(entity.childrenTabId ?? '').click();
-        await page.waitForLoadState('networkidle');
 
         await test.step('Verify mixed siblings have consistent indentation', async () => {
           // columnsName[2] has mixed children: columnsName[3] (STRUCT) and columnsName[4] (ARRAY with nested children)
@@ -2158,7 +2152,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         // Navigate to the table entity page
         await entity.visitEntityPage(page);
-        await page.waitForLoadState('networkidle');
         await page.waitForSelector('[data-testid="loader"]', {
           state: 'detached',
         });
@@ -2179,7 +2172,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await profilerTab.click();
           await profilerResponse;
 
-          await page.waitForLoadState('networkidle');
           await page.waitForSelector('[data-testid="loader"]', {
             state: 'detached',
           });
@@ -2210,7 +2202,6 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await activityFeedTab.click();
           await activityFeedResponse;
 
-          await page.waitForLoadState('networkidle');
           await page.waitForSelector('[data-testid="loader"]', {
             state: 'detached',
           });

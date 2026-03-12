@@ -172,7 +172,6 @@ test.describe('Tag Page Assets - Right Panel', () => {
     await adminPage.goto(
       `/tag/${encodeURIComponent(testTag.responseData.fullyQualifiedName)}`
     );
-    await adminPage.waitForLoadState('networkidle');
 
     const panelLocator = adminPage.locator('.entity-summary-panel-container');
 

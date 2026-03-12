@@ -175,7 +175,6 @@ test.describe('Search Preview test', () => {
       new RegExp(mockEntitySearchSettings.url + '$')
     );
 
-    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -199,7 +198,6 @@ test.describe('Search Preview test', () => {
     await searchInput.fill(table1.entity.name);
     await previewResponse;
 
-    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -256,7 +254,6 @@ test.describe('Column Search Settings Tests', () => {
       /settings\/preferences\/search-settings\/column$/
     );
 
-    await page.waitForLoadState('networkidle');
 
     const fieldContainers = page.getByTestId('field-container-header');
     const firstFieldContainer = fieldContainers.first();
@@ -316,7 +313,6 @@ test.describe('Column Search Settings Tests', () => {
       const columnCard = page.getByTestId('preferences.search-settings.column');
       await columnCard.click();
 
-      await page.waitForLoadState('networkidle');
 
       const searchInput = page.getByTestId('searchbar');
       await searchInput.fill(uniqueColumnName);
@@ -324,7 +320,6 @@ test.describe('Column Search Settings Tests', () => {
       const previewResponse = page.waitForResponse('/api/v1/search/preview');
       await previewResponse;
 
-      await page.waitForLoadState('networkidle');
 
       const searchResultsContainer = page.locator('.search-results-container');
       const matchedCard = searchResultsContainer

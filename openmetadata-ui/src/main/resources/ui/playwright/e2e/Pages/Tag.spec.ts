@@ -181,7 +181,6 @@ test.describe('Tag Page with Admin Roles', () => {
     await adminPage.locator('button[type="submit"]').click();
     await updateColor;
 
-    await adminPage.waitForLoadState('networkidle');
 
     await expect(adminPage.getByText(tag.data.name)).toBeVisible();
   });
@@ -240,7 +239,6 @@ test.describe('Tag Page with Admin Roles', () => {
           classification.responseData.name
       )}`
     );
-    await adminPage.waitForLoadState('networkidle');
     await adminPage.waitForSelector(
       '[data-testid="tags-container"] [data-testid="loader"]',
       {
@@ -273,7 +271,6 @@ test.describe('Tag Page with Admin Roles', () => {
     await adminPage.goto(
       `/tag/${encodeURIComponent(createdTagData.fullyQualifiedName ?? NEW_TAG.name)}`
     );
-    await adminPage.waitForLoadState('networkidle');
     await adminPage.waitForSelector(
       '[data-testid="tags-container"] [data-testid="loader"]',
       {
@@ -302,7 +299,6 @@ test.describe('Tag Page with Admin Roles', () => {
 
     // Verify in My Data page
     await visitUserProfilePage(adminPage, user1.responseData.name);
-    await adminPage.waitForLoadState('networkidle');
 
     const myDataRes = adminPage.waitForResponse(
       `/api/v1/search/query?q=*&index=all&*`
@@ -373,7 +369,6 @@ test.describe('Tag Page with Admin Roles', () => {
     const openClassification = async () => {
       await redirectToHomePage(adminPage);
       await sidebarClick(adminPage, SidebarItem.TAGS);
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.waitForSelector(
         '[data-testid="tags-container"] .table-container [data-testid="loader"]',
         { state: 'detached' }
@@ -419,7 +414,6 @@ test.describe('Tag Page with Admin Roles', () => {
       );
 
       await adminPage.reload();
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.waitForSelector(
         '[data-testid="tags-container"] .table-container [data-testid="loader"]',
         { state: 'detached' }
@@ -444,7 +438,6 @@ test.describe('Tag Page with Admin Roles', () => {
       );
 
       await adminPage.reload();
-      await adminPage.waitForLoadState('networkidle');
       await adminPage.waitForSelector(
         '[data-testid="tags-container"] .table-container [data-testid="loader"]',
         { state: 'detached' }

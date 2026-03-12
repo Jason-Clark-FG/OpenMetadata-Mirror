@@ -2487,7 +2487,6 @@ test.describe('Right Panel Test Suite', () => {
           });
 
           await panelContainer.getByTestId('data-quality-tab').click();
-          await page.waitForLoadState('networkidle');
 
           await expect(
             panelContainer.locator(
@@ -2528,7 +2527,6 @@ test.describe('Right Panel Test Suite', () => {
             entityType: 'table',
           });
 
-          await page.waitForLoadState('networkidle');
 
           expect(forbiddenUrls).toHaveLength(0);
         } finally {

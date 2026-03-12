@@ -102,7 +102,6 @@ test.describe('Data Product Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
-    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;
@@ -158,7 +157,6 @@ test.describe('Data Product Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
-    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;

@@ -291,7 +291,6 @@ export class UserClass {
     await Promise.all([waitLogout, waitSigninNavigation]);
 
     // Ensure all network requests complete
-    await page.waitForLoadState('networkidle');
 
     // Clean up the route interception
     await page.unroute('**/analytics/web/events/collect');

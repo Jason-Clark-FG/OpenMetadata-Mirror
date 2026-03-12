@@ -65,7 +65,6 @@ export const visitClassificationPage = async (
   await sidebarClick(page, SidebarItem.TAGS);
   await classificationResponse;
 
-  await page.waitForLoadState('networkidle');
 
   await page.waitForSelector(
     '[data-testid="tags-container"] .table-container [data-testid="loader"]',
@@ -85,7 +84,6 @@ export const visitClassificationPage = async (
   );
 
   await fetchTags;
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector(
     '[data-testid="tags-container"] .table-container [data-testid="loader"]',
     { state: 'detached' }
@@ -136,7 +134,6 @@ export const addAssetsToTag = async (
       await expect
         .poll(
           async () => {
-            await page.waitForLoadState('networkidle');
 
             return assetSelectionModal
               .locator(`[data-testid="table-data-card_${fqn}"]`)
@@ -205,7 +202,6 @@ export const removeAssetsFromTag = async (
   await page.getByTestId('delete-all-button').click();
   await assetsRemoveRes;
 
-  await page.waitForLoadState('networkidle');
   await page.reload();
   await page.waitForSelector(
     '[data-testid="tags-container"] [data-testid="loader"]',

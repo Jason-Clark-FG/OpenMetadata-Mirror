@@ -75,7 +75,6 @@ export const visitVersionedEntityPage = async (
   fullyQualifiedName: string
 ) => {
   await page.goto(getEntityRoute(endpoint, fullyQualifiedName));
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
   await expect(page.getByTestId('version-button')).toBeVisible({
     timeout: 30000,
@@ -94,7 +93,6 @@ export const openEntityVersion = async (page: Page, version: string) => {
         }
 
         await page.reload();
-        await page.waitForLoadState('networkidle');
         await page.waitForSelector('[data-testid="loader"]', {
           state: 'detached',
         });

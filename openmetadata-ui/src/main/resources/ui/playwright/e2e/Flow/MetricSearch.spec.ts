@@ -71,7 +71,6 @@ test.describe(
       await redirectToHomePage(page);
 
       await sidebarClick(page, SidebarItem.EXPLORE);
-      await page.waitForLoadState('networkidle');
 
       await test.step('Select Metric search index and search', async () => {
         await page.getByTestId('global-search-selector').click();

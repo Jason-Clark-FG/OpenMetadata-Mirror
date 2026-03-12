@@ -642,7 +642,6 @@ export const checkStewardServicesPermissions = async (page: Page) => {
   // Click on the entity link in the drawer title
   await page.click('.summary-panel-container [data-testid="entity-link"]');
 
-  await page.waitForLoadState('networkidle');
 };
 
 export const checkStewardPermissions = async (page: Page) => {

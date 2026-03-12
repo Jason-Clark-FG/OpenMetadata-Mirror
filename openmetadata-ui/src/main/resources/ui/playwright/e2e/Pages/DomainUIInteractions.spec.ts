@@ -156,7 +156,6 @@ test.describe('Domain Owner Management', () => {
       await selectDomain(page, domain.data);
 
       // Wait for page to load and owner to be displayed
-      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('edit-owner')).toBeVisible({
         timeout: 10000,
@@ -498,7 +497,6 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -548,7 +546,6 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -674,7 +671,6 @@ test.describe('Domain Assets Tab Operations', () => {
       await sidebarClick(page, SidebarItem.DOMAIN);
       await selectDomain(page, domain.data);
       await page.getByTestId('assets').click();
-      await page.waitForLoadState('networkidle');
 
       await checkAssetsCount(page, 2);
 
@@ -712,7 +708,6 @@ test.describe('Domain Global Dropdown', () => {
       await domain.create(apiContext);
 
       await page.goto('/explore/tables');
-      await page.waitForLoadState('networkidle');
 
       await page.getByTestId('domain-dropdown').click();
 
@@ -722,7 +717,6 @@ test.describe('Domain Global Dropdown', () => {
 
       if (await domainOption.isVisible()) {
         await domainOption.click();
-        await page.waitForLoadState('networkidle');
 
         await expect(page.getByTestId('domain-dropdown')).toContainText(
           domain.data.displayName
@@ -742,7 +736,6 @@ test.describe('Domain Global Dropdown', () => {
       await domain.create(apiContext);
 
       await page.goto('/explore/tables');
-      await page.waitForLoadState('networkidle');
 
       await page.getByTestId('domain-dropdown').click();
 
@@ -752,7 +745,6 @@ test.describe('Domain Global Dropdown', () => {
 
       if (await domainOption.isVisible()) {
         await domainOption.click();
-        await page.waitForLoadState('networkidle');
 
         await page.getByTestId('domain-dropdown').click();
         await page.getByTestId('all-domains-selector').click();
@@ -784,7 +776,6 @@ test.describe('Domain Breadcrumb Navigation', () => {
 
       const subDomainFqn = subDomain.responseData.fullyQualifiedName;
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.waitForLoadState('networkidle');
 
       const parentLink = page.getByRole('link', {
         name: domain.responseData.fullyQualifiedName,
@@ -792,7 +783,6 @@ test.describe('Domain Breadcrumb Navigation', () => {
 
       if (await parentLink.isVisible()) {
         await parentLink.click();
-        await page.waitForLoadState('networkidle');
 
         await expect(
           page.getByTestId('entity-header-display-name')
@@ -821,7 +811,6 @@ test.describe('Domain Breadcrumb Navigation', () => {
 
       if (await domainLink.isVisible()) {
         await domainLink.click();
-        await page.waitForLoadState('networkidle');
 
         await expect(
           page.getByTestId('entity-header-display-name')
@@ -894,7 +883,6 @@ test.describe('Delete Domain with Dependencies', () => {
           table.entityResponseData.fullyQualifiedName
         )}`
       );
-      await page.waitForLoadState('networkidle');
 
       const domainLinks = page.locator('[data-testid="domain-link"]');
       const count = await domainLinks.count();

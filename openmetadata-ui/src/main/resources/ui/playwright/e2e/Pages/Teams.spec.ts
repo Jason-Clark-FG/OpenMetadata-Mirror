@@ -147,7 +147,6 @@ test.describe('Teams Page', () => {
   test('Teams Page Flow', async ({ page }) => {
     await test.step('Create a new team', async () => {
       await checkTeamTabCount(page);
-      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="add-team"]');
 
@@ -403,7 +402,6 @@ test.describe('Teams Page', () => {
       expect(createdTeam.isJoinable).toBe(false);
 
       await visitOwnProfilePage(page);
-      await page.waitForLoadState('networkidle');
 
       await page.getByTestId('edit-teams-button').click();
 
@@ -443,7 +441,6 @@ test.describe('Teams Page', () => {
     const team = new TeamClass();
     await team.create(apiContext);
     await settingClick(page, GlobalSettingOptions.TEAMS);
-    await page.waitForLoadState('networkidle');
     const getTeamResponse = page.waitForResponse(`/api/v1/teams/name/*?*`);
     await page
       .getByRole('link', { name: team.responseData?.['displayName'] })
@@ -481,7 +478,6 @@ test.describe('Teams Page', () => {
 
     try {
       await settingClick(page, GlobalSettingOptions.TEAMS);
-      await page.waitForLoadState('networkidle');
 
       for (const team of [team1, team2, team3]) {
         await searchTeam(page, team.responseData?.['displayName']);
@@ -514,7 +510,6 @@ test.describe('Teams Page', () => {
 
     try {
       await settingClick(page, GlobalSettingOptions.TEAMS);
-      await page.waitForLoadState('networkidle');
 
       await searchTeam(page, team.responseData?.['displayName']);
 
@@ -523,7 +518,6 @@ test.describe('Teams Page', () => {
         .getByRole('link')
         .click();
 
-      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('team-heading')).toHaveText(
         team.data.displayName

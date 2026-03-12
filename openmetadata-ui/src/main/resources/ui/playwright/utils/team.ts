@@ -42,7 +42,6 @@ export const openTeamsPage = async (page: Page) => {
   }
 
   await page.goto('/settings/members/teams', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle').catch(() => undefined);
 
   if (!(await searchBar.isVisible().catch(() => false))) {
     await redirectToHomePage(page);
@@ -99,7 +98,6 @@ export const createTeam = async (
   const response = await createTeamResponse;
   const createdTeam = await response.json();
 
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -319,7 +317,6 @@ export const searchTeam = async (
 ) => {
   const searchBar = await openTeamsPage(page);
   await page.fill('[data-testid="searchbar"]', teamName);
-  await page.waitForLoadState('networkidle').catch(() => undefined);
 
   if (options?.expectEmptyResults) {
     await expect
@@ -421,7 +418,6 @@ export const verifyTeamListingAssetCount = async (
       )}$`
     )
   );
-  await page.waitForLoadState('networkidle').catch(() => undefined);
 
   const res = page.waitForResponse('/api/v1/search/query?*size=15*');
   await page.getByTestId('assets').click();
@@ -501,7 +497,6 @@ export const addEmailTeam = async (page: Page, email: string) => {
   // Reload the page
   await page.reload();
 
-  await page.waitForLoadState('networkidle');
 
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
@@ -591,7 +586,6 @@ export const executionOnOwnerTeam = async (
 
   const newTeamData = await createTeam(page);
 
-  await page.waitForLoadState('networkidle');
 
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',

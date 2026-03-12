@@ -62,7 +62,6 @@ export const checkPersonaInProfile = async (
     state: 'visible',
   });
   await page.getByTestId('user-name').click();
-  await page.waitForLoadState('networkidle');
 
   if (expectedPersonaName) {
     // Expect persona to be visible with specific name

@@ -62,7 +62,6 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
   test('Explore Tree', async ({ page }) => {
     await test.step('Check the explore tree', async () => {
-      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
@@ -245,7 +244,6 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     const serviceName2 = get(table2.serviceResponseData, 'name', '');
 
     await sidebarClick(page, SidebarItem.EXPLORE);
-    await page.waitForLoadState('networkidle');
 
     // Verify first table's database and schema
     await test.step('Verify first table database and schema', async () => {
@@ -280,7 +278,6 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     // Step 1: Visit explore page and check existing values before rename
     await test.step('Visit explore page and verify existing values', async () => {
       await sidebarClick(page, SidebarItem.EXPLORE);
-      await page.waitForLoadState('networkidle');
 
       // Verify original database and schema names using utility function
       await verifyDatabaseAndSchemaInExploreTree(
@@ -320,7 +317,6 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     // Step 3: Verify the changes are reflected in explore page
     await test.step('Verify renamed values in explore page', async () => {
       await sidebarClick(page, SidebarItem.EXPLORE);
-      await page.waitForLoadState('networkidle');
 
       // Verify updated database and schema names using utility function
       await verifyDatabaseAndSchemaInExploreTree(
@@ -571,7 +567,6 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     const schemaName = table.schemaResponseData.name;
 
     await sidebarClick(page, SidebarItem.EXPLORE);
-    await page.waitForLoadState('networkidle');
 
     await expandServiceInExploreTree(page, serviceName);
     await expandDatabaseInExploreTree(page, dbName);
@@ -605,7 +600,6 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     const schemaName = table.schemaResponseData.name;
 
     await sidebarClick(page, SidebarItem.EXPLORE);
-    await page.waitForLoadState('networkidle');
 
     await expandServiceInExploreTree(page, serviceName);
     await expandDatabaseInExploreTree(page, dbName);

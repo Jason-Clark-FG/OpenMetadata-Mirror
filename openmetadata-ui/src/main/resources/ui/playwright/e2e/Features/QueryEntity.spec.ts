@@ -265,7 +265,6 @@ test('Query Entity', async ({ page }) => {
       .click();
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -283,7 +282,6 @@ test('Query Entity', async ({ page }) => {
       .click();
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });

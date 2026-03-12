@@ -319,7 +319,6 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
     await removeRes;
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
     await checkAssetsCount(page, 1);
 
     await redirectToHomePage(page);
@@ -339,7 +338,6 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
     await selectDataProduct(page, dataProduct.data);
 
     await page.getByTestId('assets').click();
-    await page.waitForLoadState('networkidle');
 
     await page
       .waitForSelector('[data-testid="loader"]', {
@@ -375,12 +373,10 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
       await page.getByTestId('delete-all-button').click();
       await removeRes;
 
-      await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
     }
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
     await checkAssetsCount(page, 0);
 
     await redirectToHomePage(page);

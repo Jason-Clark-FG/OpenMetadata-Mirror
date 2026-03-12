@@ -144,7 +144,6 @@ test.describe('Glossary Hierarchy', () => {
 
       // Navigate to parent term
       await page.getByTestId(parentTerm.responseData.displayName).click();
-      await page.waitForLoadState('networkidle');
 
       // Move parent term (with child) to glossary2
       await changeTermHierarchyFromModal(
@@ -262,7 +261,6 @@ test.describe('Glossary Hierarchy', () => {
 
       // Navigate to deepest term
       await page.getByTestId(terms[DEPTH - 1].responseData.displayName).click();
-      await page.waitForLoadState('networkidle');
 
       // Verify deepest term details are visible
       await expect(
