@@ -775,6 +775,7 @@ test.describe(
         const cancelButton = page.getByTestId('cancel-selection-button');
         await expect(cancelButton).toBeVisible();
         await cancelButton.click();
+        await waitForAllLoadersToDisappear(page);
       });
 
       await test.step('Verify edit button is disabled again', async () => {

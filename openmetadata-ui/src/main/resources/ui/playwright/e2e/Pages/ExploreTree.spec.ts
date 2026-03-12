@@ -317,6 +317,7 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     // Step 3: Verify the changes are reflected in explore page
     await test.step('Verify renamed values in explore page', async () => {
       await sidebarClick(page, SidebarItem.EXPLORE);
+      await waitForAllLoadersToDisappear(page);
 
       // Verify updated database and schema names using utility function
       await verifyDatabaseAndSchemaInExploreTree(

@@ -746,10 +746,12 @@ export class OverviewPageObject extends RightPanelBase {
   // ============ HELPER METHODS ============
 
   private async waitForPatchResponse(): Promise<void> {
+    const endpoint = this.rightPanel.getEntityEndpoint();
+    const urlPattern = endpoint ? `/api/v1/${endpoint}/` : '/api/v1/';
     const responsePromise = this.page.waitForResponse(
       (resp) =>
-        resp.url().includes('/api/v1/') &&
         resp.request().method() === 'PATCH' &&
+        resp.url().includes(urlPattern) &&
         !resp.url().includes('/api/v1/analytics')
     );
 

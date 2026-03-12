@@ -1651,6 +1651,7 @@ version: "1.0.0"`;
       });
 
       // Open the dropdown to see all options
+      await page.getByTestId('schema-object-select').waitFor({ state: 'visible' });
       await page.getByTestId('schema-object-select').click();
 
       // Verify all three objects from the multi-object YAML are listed

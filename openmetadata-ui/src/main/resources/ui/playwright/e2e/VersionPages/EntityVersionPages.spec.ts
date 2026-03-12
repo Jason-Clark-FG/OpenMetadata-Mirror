@@ -167,6 +167,10 @@ test.describe('Entity Version pages', () => {
       );
       await page.locator('[data-testid="version-button"]').click();
       await versionDetailResponse;
+      // Wait for version selector to render before clicking
+      await page
+        .locator(`[data-testid="version-selector-${setupVersionText}"]`)
+        .waitFor({ state: 'visible' });
       // Explicitly select the incremental version in the history panel.
       await page
         .locator(`[data-testid="version-selector-${setupVersionText}"]`)

@@ -30,7 +30,10 @@ import {
   assignSingleSelectDomain,
   redirectToHomePage,
 } from '../../utils/common';
-import { softDeleteEntity } from '../../utils/entity';
+import {
+  softDeleteEntity,
+  waitForAllLoadersToDisappear,
+} from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
 const domain = new Domain();
@@ -96,6 +99,7 @@ entities.forEach((EntityClass) => {
         .click();
       // assign domain
       await assignSingleSelectDomain(page, domain.responseData);
+      await waitForAllLoadersToDisappear(page);
 
       await redirectToHomePage(page);
 

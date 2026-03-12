@@ -280,6 +280,7 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
   test('Data Product asset count should update when assets are added', async ({
     page,
   }) => {
+    test.slow(true);
     await redirectToHomePage(page);
     await waitForAllLoadersToDisappear(page);
     await sidebarClick(page, SidebarItem.DATA_PRODUCT);

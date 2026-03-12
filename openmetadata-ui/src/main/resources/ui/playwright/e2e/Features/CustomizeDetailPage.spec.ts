@@ -940,6 +940,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
+      await waitForAllLoadersToDisappear(userPage);
 
       // Verify the custom tab name is displayed
       await expect(

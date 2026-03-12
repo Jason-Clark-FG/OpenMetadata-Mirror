@@ -463,9 +463,11 @@ test.describe('User with Data Consumer Roles', () => {
     adminPage,
     dataConsumerPage,
   }) => {
+    test.slow(true);
     await redirectToHomePage(adminPage);
 
     await tableEntity.visitEntityPage(adminPage);
+    await waitForAllLoadersToDisappear(adminPage);
 
     await addOwner({
       page: adminPage,
@@ -476,6 +478,7 @@ test.describe('User with Data Consumer Roles', () => {
     });
 
     await tableEntity.visitEntityPage(dataConsumerPage);
+    await waitForAllLoadersToDisappear(dataConsumerPage);
 
     await checkDataConsumerPermissions(dataConsumerPage);
   });

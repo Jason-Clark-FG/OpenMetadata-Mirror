@@ -211,6 +211,7 @@ test.describe('Custom properties with custom property config', () => {
         await adminTestEntity.visitEntityPage(page);
         await waitForAllLoadersToDisappear(page);
         await page.getByTestId('custom_properties').click();
+        await waitForAllLoadersToDisappear(page);
 
         const container = page.locator(
           `[data-testid="custom-property-${propertyName}-card"]`

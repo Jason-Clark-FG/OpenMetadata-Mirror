@@ -77,12 +77,12 @@ test.describe('Domain Owner Management', () => {
       const maxRetries = 5;
 
       for (let retry = 0; retry < maxRetries; retry++) {
-        await searchBar.clear();
         const searchResponse = page.waitForResponse(
           (res) =>
             res.url().includes('/api/v1/search/query') &&
             res.url().includes('user_search_index')
         );
+        await searchBar.clear();
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
@@ -229,12 +229,12 @@ test.describe('Domain Expert Management', () => {
 
       for (let retry = 0; retry < maxRetries; retry++) {
         // Clear and fill search bar
-        await searchBar.clear();
         const searchResponse = page.waitForResponse(
           (res) =>
             res.url().includes('/api/v1/search/query') &&
             res.url().includes('user_search_index')
         );
+        await searchBar.clear();
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
@@ -421,12 +421,12 @@ test.describe('Data Product UI Operations', () => {
       const maxRetries = 5;
 
       for (let retry = 0; retry < maxRetries; retry++) {
-        await searchBar.clear();
         const searchResponse = page.waitForResponse(
           (res) =>
             res.url().includes('/api/v1/search/query') &&
             res.url().includes('user_search_index')
         );
+        await searchBar.clear();
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;

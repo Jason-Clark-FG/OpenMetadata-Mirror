@@ -31,6 +31,7 @@ import {
   getCustomizeDetailsDefaultTabs,
   getCustomizeDetailsEntity,
 } from '../../utils/customizeDetails';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { navigateToPersonaWithPagination } from '../../utils/persona';
 import { settingClick } from '../../utils/sidebar';
 
@@ -301,6 +302,7 @@ test.describe('Data Product Persona customization', () => {
       await userPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
+      await waitForAllLoadersToDisappear(userPage);
 
       // Verify the custom tab name is displayed
       await expect(

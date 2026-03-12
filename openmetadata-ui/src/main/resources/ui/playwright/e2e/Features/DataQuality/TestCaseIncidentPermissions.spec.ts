@@ -25,6 +25,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { setupUserWithPolicy } from '../../../utils/permission';
 import { getCurrentMillis } from '../../../utils/dateTime';
 
@@ -111,6 +112,7 @@ test.describe(
       const incidentTab = page.getByRole('tab', { name: /Incident/i });
       await expect(incidentTab).toBeVisible();
       await incidentTab.click();
+      await waitForAllLoadersToDisappear(page);
       await expect(page.getByTestId('issue-tab-container')).toBeVisible();
     };
 

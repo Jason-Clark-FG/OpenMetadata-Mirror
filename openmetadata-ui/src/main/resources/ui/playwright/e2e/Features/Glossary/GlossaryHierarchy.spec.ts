@@ -15,6 +15,7 @@ import { SidebarItem } from '../../../constant/sidebar';
 import { Glossary } from '../../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../../support/glossary/GlossaryTerm';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   changeTermHierarchyFromModal,
   dragAndDropTerm,
@@ -151,6 +152,7 @@ test.describe('Glossary Hierarchy', () => {
         glossary2ChildTerm.responseData.displayName,
         glossary2.responseData.fullyQualifiedName
       );
+      await waitForAllLoadersToDisappear(page);
 
       // Verify parent and child are now in glossary2
       await redirectToHomePage(page);

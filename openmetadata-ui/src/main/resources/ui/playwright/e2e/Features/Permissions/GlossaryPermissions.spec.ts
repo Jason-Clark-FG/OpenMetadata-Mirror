@@ -392,6 +392,9 @@ test.describe('Glossary Permissions', () => {
       },
     });
 
+    // Wait for permission cache invalidation to propagate
+    await page.waitForTimeout(2000);
+
     // Set up permissions with team as the principal
     await initializePermissions(page, 'allow', [
       'EditDescription',
