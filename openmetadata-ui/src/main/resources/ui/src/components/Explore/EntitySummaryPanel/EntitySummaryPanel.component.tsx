@@ -471,6 +471,31 @@ export default function EntitySummaryPanel({
     [updateEntityData]
   );
 
+  const handleEntityUpdate = useCallback(
+    <T,>(
+      result: Partial<EntityData>,
+      entityLabel: string,
+      returnValue?: T
+    ): T | undefined => {
+      setEntityData(
+        (prev) =>
+          ({
+            ...(prev || entityDetails.details),
+            ...result,
+          } as EntityData)
+      );
+
+      showSuccessToast(
+        t('server.update-entity-success', {
+          entity: t(entityLabel),
+        })
+      );
+
+      return returnValue;
+    },
+    [entityDetails.details, t]
+  );
+
   const handleTagsUpdate = useCallback(
     async (updatedTags: TagLabel[]) => {
       if (onEntityUpdate) {
@@ -495,29 +520,20 @@ export default function EntitySummaryPanel({
           res = await updateTableColumn(fqn, {
             tags: updatedTags,
           });
+
+          return handleEntityUpdate(res, 'label.tag-plural', res.tags);
         } else {
           const apiFunc =
             entityUpdateMap[entityType] ??
             entityUtilClassBase.getEntityPatchAPI(entityType);
           if (apiFunc && id) {
             res = await apiFunc(id, jsonPatch);
+
+            return handleEntityUpdate(res, 'label.tag-plural', res.tags);
           }
+
+          return updatedTags;
         }
-        setEntityData(
-          (prev) =>
-            ({
-              ...(prev || entityDetails.details),
-              ...res,
-            } as EntityData)
-        );
-
-        showSuccessToast(
-          t('server.update-entity-success', {
-            entity: t('label.tag-plural'),
-          })
-        );
-
-        return res.tags;
       } catch (error) {
         showErrorToast(error as AxiosError);
 
@@ -531,6 +547,7 @@ export default function EntitySummaryPanel({
       entityType,
       id,
       entityUpdateMap,
+      handleEntityUpdate,
       t,
       fqn,
     ]
@@ -581,29 +598,28 @@ export default function EntitySummaryPanel({
           res = await updateTableColumn(fqn, {
             tags: updatedTags,
           });
+
+          return handleEntityUpdate(
+            res,
+            'label.glossary-term-plural',
+            res.tags
+          );
         } else {
           const apiFunc =
             entityUpdateMap[entityType] ??
             entityUtilClassBase.getEntityPatchAPI(entityType);
           if (apiFunc && id) {
             res = await apiFunc(id, jsonPatch);
+
+            return handleEntityUpdate(
+              res,
+              'label.glossary-term-plural',
+              res.tags
+            );
           }
+
+          return updatedTags;
         }
-        setEntityData(
-          (prev) =>
-            ({
-              ...(prev || entityDetails.details),
-              ...res,
-            } as EntityData)
-        );
-
-        showSuccessToast(
-          t('server.update-entity-success', {
-            entity: t('label.glossary-term-plural'),
-          })
-        );
-
-        return res.tags;
       } catch (error) {
         showErrorToast(error as AxiosError);
 
@@ -617,6 +633,7 @@ export default function EntitySummaryPanel({
       entityType,
       id,
       entityUpdateMap,
+      handleEntityUpdate,
       t,
       fqn,
     ]
@@ -655,6 +672,8 @@ export default function EntitySummaryPanel({
                 ) as Record<string, unknown>),
               },
             });
+
+            handleEntityUpdate(res, 'label.extension');
           } else {
             const baseData = entityData ?? entityDetails.details;
             const jsonPatch = compare(baseData, {
@@ -671,15 +690,10 @@ export default function EntitySummaryPanel({
               entityUtilClassBase.getEntityPatchAPI(entityType);
             if (apiFunc && id) {
               res = await apiFunc(id, jsonPatch);
+
+              handleEntityUpdate(res, 'label.extension');
             }
           }
-          setEntityData(
-            (prev) =>
-              ({
-                ...(prev || entityDetails.details),
-                ...res,
-              } as EntityData)
-          );
         } catch (error) {
           showErrorToast(error as AxiosError);
 
@@ -693,6 +707,7 @@ export default function EntitySummaryPanel({
       entityType,
       id,
       entityUpdateMap,
+      handleEntityUpdate,
       entityData,
       fqn,
     ]
