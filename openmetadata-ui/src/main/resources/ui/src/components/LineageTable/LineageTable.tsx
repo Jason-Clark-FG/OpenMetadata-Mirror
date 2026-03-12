@@ -538,9 +538,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         nodeDepthOptions={nodeDepthOptions}
         queryFilterNodeIds={filterNodeIds}
         searchValue={searchValue}
-        onSearchValueChange={
-          impactLevel === EImpactLevel.TableLevel ? setSearchValue : undefined
-        }
+        onSearchValueChange={setSearchValue}
       />
     );
   }, [
@@ -548,7 +546,6 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     lineagePagingInfo,
     nodeDepthOptions,
     filterNodeIds,
-    impactLevel,
   ]);
 
   // Render function for column names with search highlighting and popover
