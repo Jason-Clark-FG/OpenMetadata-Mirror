@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { TooltipProps as MUITooltipProps } from '@mui/material/Tooltip';
+import { Toggle, ToggleProps } from '@openmetadata/ui-core-components';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
   Alert,
@@ -67,7 +68,6 @@ import UserTeamSelectableListSearchInput from '../components/common/UserTeamSele
 import MUIAutocomplete, {
   MUIAutocompleteProps,
 } from '../components/form/MUIAutocomplete';
-import MUISwitch, { MUISwitchProps } from '../components/form/MUISwitch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
   FieldProp,
@@ -336,7 +336,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <DomainSelectableList
-            {...(rest as unknown as DomainSelectableListProps)}>
+            {...(rest as unknown as DomainSelectableListProps)}
+          >
             {children}
           </DomainSelectableList>
         );
@@ -365,7 +366,8 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <UserTeamSelectableList
-            {...(rest as unknown as UserSelectDropdownProps)}>
+            {...(rest as unknown as UserSelectDropdownProps)}
+          >
             {children}
           </UserTeamSelectableList>
         );
@@ -462,12 +464,18 @@ export const getField = (field: FieldProp) => {
       );
     }
 
-    case FieldTypes.SWITCH_MUI: {
+    case FieldTypes.UT_SWITCH: {
+      const { isDisabled, onChange, size, ...switchRest } =
+        props as ToggleProps;
+
       return (
-        <Form.Item {...formProps} valuePropName="checked">
-          <MUISwitch
-            label={muiLabel as string}
-            {...(props as MUISwitchProps)}
+        <Form.Item {...formProps} valuePropName="isSelected">
+          <Toggle
+            isDisabled={isDisabled}
+            label={typeof label === 'string' ? label : undefined}
+            size={size}
+            onChange={onChange}
+            {...switchRest}
           />
         </Form.Item>
       );
@@ -517,7 +525,8 @@ export const getField = (field: FieldProp) => {
           'm-b-xss': helperTextType === HelperTextType.ALERT,
         })}
         {...formProps}
-        label={labelValue}>
+        label={labelValue}
+      >
         {fieldElement}
       </Form.Item>
 
