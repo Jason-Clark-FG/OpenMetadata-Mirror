@@ -407,7 +407,9 @@ class TestPresidioRecognizerFactory:
         assert result is not None
         mock_enhance.assert_called_once()
 
-    def test_create_recognizer_applies_confidence_threshold_when_set(self):
+    def test_create_recognizer_applies_confidence_threshold_after_content_enhancement(
+        self,
+    ):
         """Results with a score below confidenceThreshold are filtered out by analyze"""
         recognizer_config = Recognizer(
             name="low_score_recognizer",
@@ -438,6 +440,11 @@ class TestPresidioRecognizerFactory:
             language="en",
         )
         matches = result.analyze("TOKEN-123", ["PII.Token"], nlp_artifacts)
+        assert len(matches) == 1
+
+        matches = result.enhance_using_context(
+            "TOKEN-123", matches, [], nlp_artifacts, []
+        )
         assert matches == []
 
     def test_create_recognizer_no_threshold_filtering_when_not_set(self):

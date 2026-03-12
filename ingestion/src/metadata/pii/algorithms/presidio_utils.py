@@ -35,7 +35,6 @@ from dateutil import parser
 from presidio_analyzer import (
     AnalyzerEngine,
     EntityRecognizer,
-    Pattern,
     PatternRecognizer,
     RecognizerRegistry,
     RecognizerResult,
@@ -291,18 +290,61 @@ def date_recognizer(**kwargs: Any) -> ValidatedDateRecognizer:
     return ValidatedDateRecognizer(**kwargs)
 
 
+class ContextAwareUsBankRecognizer(UsBankRecognizer):
+    def enhance_using_context(
+        self,
+        text: str,
+        raw_recognizer_results: List[RecognizerResult],
+        other_raw_recognizer_results: List[RecognizerResult],
+        nlp_artifacts: NlpArtifacts,
+        context: Optional[List[str]] = None,
+    ) -> List[RecognizerResult]:
+        """Enhance confidence score using context of the entity.
+
+        Boosts the very low scores of the patterns
+
+        :param text: The actual text that was analyzed
+        :param raw_recognizer_results: This recognizer's results, to be updated
+        based on recognizer specific context.
+        :param other_raw_recognizer_results: Other recognizer results matched in
+        the given text to allow related entity context enhancement
+        :param nlp_artifacts: The nlp artifacts contains elements
+                              such as lemmatized tokens for better
+                              accuracy of the context enhancement process
+        :param context: list of context words
+        """
+        if context is None:
+            return raw_recognizer_results
+
+        context_lower = " ".join(context).lower()
+
+        for result in raw_recognizer_results:
+            # if previously enhanced, then ignore
+            if result.recognition_metadata.get(  # pyright: ignore[reportUnknownMemberType]
+                RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
+            ):
+                continue
+
+            if any(ctx_word.lower() in context_lower for ctx_word in self.context):
+                original_score = result.score
+                result.score = self.MAX_SCORE
+
+                result.recognition_metadata[  # pyright: ignore[reportUnknownMemberType]
+                    RecognizerResult.IS_SCORE_ENHANCED_BY_CONTEXT_KEY
+                ] = True
+
+                logger.debug(
+                    f"Enhanced {result.entity_type} score: {original_score:.2f} → {result.score:.2f} (context: {self.context})"
+                )
+
+        return raw_recognizer_results
+
+
 @recognizer_factories.add(  # pyright: ignore[reportUnknownMemberType, reportUntypedFunctionDecorator]
     UsBankRecognizer
 )
-def eager_us_bank_recognizer(**kwargs: Any) -> UsBankRecognizer:
-    """Boosts UsBankRecognizer scores, improving results in combination with context enhancement."""
-    if kwargs.get("patterns") is None:
-        kwargs["patterns"] = [
-            Pattern(name=p.name, regex=p.regex, score=0.5)
-            for p in UsBankRecognizer.PATTERNS
-        ]
-
-    return UsBankRecognizer(**kwargs)
+def eager_us_bank_recognizer(**kwargs: Any) -> ContextAwareUsBankRecognizer:
+    return ContextAwareUsBankRecognizer(**kwargs)
 
 
 def _get_all_pattern_recognizers() -> Iterable[EntityRecognizer]:
