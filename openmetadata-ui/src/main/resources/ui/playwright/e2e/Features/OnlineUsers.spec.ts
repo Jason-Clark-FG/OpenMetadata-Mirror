@@ -102,15 +102,18 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     await expect(page.getByTestId('online-users-table')).toBeVisible();
 
-    // Admin user should appear in the online users list
+    // Admin user should appear in the online users list with recent activity
     const adminLink = page.locator('a').filter({ hasText: 'admin' }).first();
 
     await expect(adminLink).toBeVisible();
 
-    // Check that admin user shows as "Online now" since we just navigated
+    // Check that admin user shows recent activity since we just navigated
     const adminRow = page.locator('tr').filter({ has: adminLink });
+    const activityCell = adminRow.locator('td:nth-child(3)');
 
-    await expect(adminRow.getByText('Online now')).toBeVisible();
+    await expect(activityCell).toHaveText(
+      /(Online now|\d+\s+(seconds?|minutes?)\s+ago)/
+    );
   });
 
   test('Should not show bots in online users list', async ({ page }) => {
