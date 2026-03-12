@@ -17,6 +17,7 @@ import { Glossary } from '../../../support/glossary/Glossary';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   assignRoleToUser,
   cleanupPermissions,
@@ -393,7 +394,7 @@ test.describe('Glossary Permissions', () => {
     });
 
     // Wait for permission cache invalidation to propagate
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // Set up permissions with team as the principal
     await initializePermissions(page, 'allow', [
@@ -403,6 +404,7 @@ test.describe('Glossary Permissions', () => {
 
     // Login as test user and verify permissions inherited from team
     await glossary.visitEntityPage(testUserPage);
+    await waitForAllLoadersToDisappear(testUserPage);
 
     // Verify user can access the glossary page (team membership works)
     const glossaryHeader = testUserPage.getByTestId(

@@ -297,6 +297,7 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       await page.getByRole('link', { name: schemaName }).click();
       // Rename Schema Page
       await schemaRes;
+      await waitForAllLoadersToDisappear(page);
       await updateDisplayNameForEntity(
         page,
         updatedSchemaName,
@@ -307,6 +308,7 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       await page.getByRole('link', { name: dbName }).click();
       // Rename Database Page
       await dbRes;
+      await waitForAllLoadersToDisappear(page);
       await updateDisplayNameForEntity(
         page,
         updatedDbName,

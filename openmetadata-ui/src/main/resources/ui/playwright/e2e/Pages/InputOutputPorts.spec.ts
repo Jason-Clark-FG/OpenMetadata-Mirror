@@ -1617,6 +1617,8 @@ test.describe('Input Output Ports', () => {
         await page.getByTestId(`manage-button-${tableFqn}`).click();
         await page.getByTestId('delete-button').click();
 
+        await page.locator('.ant-alert-warning').waitFor({ state: 'visible' });
+
         await expect(page.locator('.ant-alert-warning')).toBeVisible();
         await expect(
           page.locator('text=This asset is also configured as an Output Port')

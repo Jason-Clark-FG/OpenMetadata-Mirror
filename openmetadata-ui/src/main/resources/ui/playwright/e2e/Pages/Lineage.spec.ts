@@ -139,7 +139,7 @@ for (const EntityClass of entities) {
           state: 'visible',
         });
 
-        await page.waitForTimeout(500);
+        await waitForAllLoadersToDisappear(page);
         await performZoomOut(page);
 
         for (const entity of entities) {
@@ -176,7 +176,7 @@ for (const EntityClass of entities) {
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
         await performZoomOut(page, 8);
-        await page.waitForTimeout(500); // wait for the nodes to settle
+        await waitForAllLoadersToDisappear(page);
 
         const fromNodeFqn = get(
           currentEntity,
@@ -190,11 +190,11 @@ for (const EntityClass of entities) {
         }
       });
 
-      await page.waitForTimeout(500);
+      await waitForAllLoadersToDisappear(page);
 
       await test.step('Verify Lineage Export CSV', async () => {
         await editLineageClick(page);
-        await page.waitForTimeout(500);
+        await waitForAllLoadersToDisappear(page);
         await performZoomOut(page);
         await verifyExportLineageCSV(page, currentEntity, entities, pipeline);
       });
@@ -207,7 +207,7 @@ for (const EntityClass of entities) {
         await editLineage(page);
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
-        await page.waitForTimeout(500); // wait for the nodes to settle
+        await waitForAllLoadersToDisappear(page);
 
         await performZoomOut(page);
 

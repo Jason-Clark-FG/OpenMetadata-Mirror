@@ -184,7 +184,12 @@ test.describe('Data Product Persona customization', () => {
         .getByRole('button', { name: 'Add' })
         .click();
 
+      await waitForAllLoadersToDisappear(adminPage);
+
       await adminPage.getByTestId('add-widget-button').click();
+
+      await expect(adminPage.getByTestId('add-widget-modal')).toBeVisible();
+
       await adminPage.getByTestId('Description-widget').click();
       await adminPage
         .getByTestId('add-widget-modal')

@@ -206,11 +206,13 @@ test.describe('Glossary Hierarchy', () => {
       await expect(
         page.locator('[role="dialog"].change-parent-hierarchy-modal')
       ).not.toBeVisible();
+      await waitForAllLoadersToDisappear(page);
 
       // Verify term is still in original location
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId(term.responseData.displayName)

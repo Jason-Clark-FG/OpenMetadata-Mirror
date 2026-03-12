@@ -335,6 +335,7 @@ test.describe(
         await personaMenuItem.click();
         await clickOutside(userPage);
         await userPage.waitForTimeout(500);
+        await waitForAllLoadersToDisappear(userPage);
 
         // Validate changes in navigation tree
         await validateLeftSidebarWithHiddenItems(userPage, [
@@ -600,6 +601,12 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
           adminPage.getByText('Customize Custom Tab Widgets')
         ).toBeVisible();
 
+        // Wait for dialog to close before interacting with grid layout
+        await adminPage.getByRole('dialog').waitFor({ state: 'hidden' });
+        await adminPage
+          .locator('.ant-modal-wrap')
+          .waitFor({ state: 'detached' });
+
         // Get locator after dialog closes to avoid layout shift issues
         const addWidgetButton = adminPage
           .getByTestId('ExtraWidget.EmptyWidgetPlaceholder')
@@ -639,8 +646,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await userPage.waitForSelector('[data-testid="loader"]', {
           state: 'detached',
         });
+        await waitForAllLoadersToDisappear(userPage);
 
-        expect(userPage.getByRole('tab', { name: 'Custom Tab' })).toBeVisible();
+        await expect(userPage.getByRole('tab', { name: 'Custom Tab' })).toBeVisible();
 
         const customTab = userPage
           .locator('main [role="tablist"]')
