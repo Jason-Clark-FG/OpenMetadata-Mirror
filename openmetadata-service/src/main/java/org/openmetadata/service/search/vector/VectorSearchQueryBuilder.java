@@ -195,28 +195,53 @@ public class VectorSearchQueryBuilder {
   }
 
   public static String escape(String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    return s.replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+        .replace("\b", "\\b")
+        .replace("\f", "\\f");
   }
 
-  private static void appendCustomPropertiesFilter(
+  public static void appendCustomPropertiesFilter(
       StringBuilder sb, String field, List<String> vals) {
     if (nullOrEmpty(vals)) {
       return;
     }
-    boolean first = true;
-    for (String v : vals) {
-      if (!first) sb.append(',');
-      first = false;
-
-      if (field.endsWith(".name")) {
-        sb.append(String.format("{\"term\":{\"%s\":\"%s\"}}", field, escape(v)));
+    if (field.endsWith(".name")) {
+      if (vals.size() == 1) {
+        sb.append("{\"term\":{\"")
+            .append(field)
+            .append("\":\"")
+            .append(escape(vals.get(0)))
+            .append("\"}}");
       } else {
-        // We have a fuzzy search
-        sb.append("{\"match\":{")
-            .append(String.format("\"%s\":{", field))
-            .append(String.format("\"query\": \"%s\",", escape(v)))
-            .append("\"fuzziness\": \"AUTO\"")
-            .append("}}}");
+        sb.append("{\"terms\":{\"").append(field).append("\":[");
+        for (int i = 0; i < vals.size(); i++) {
+          if (i > 0) sb.append(',');
+          sb.append('"').append(escape(vals.get(i))).append('"');
+        }
+        sb.append("]}}");
+      }
+    } else {
+      if (vals.size() == 1) {
+        sb.append("{\"match\":{\"")
+            .append(field)
+            .append("\":{\"query\":\"")
+            .append(escape(vals.get(0)))
+            .append("\",\"fuzziness\":\"AUTO\"}}}");
+      } else {
+        sb.append("{\"bool\":{\"should\":[");
+        for (int i = 0; i < vals.size(); i++) {
+          if (i > 0) sb.append(',');
+          sb.append("{\"match\":{\"")
+              .append(field)
+              .append("\":{\"query\":\"")
+              .append(escape(vals.get(i)))
+              .append("\",\"fuzziness\":\"AUTO\"}}}");
+        }
+        sb.append("]}}");
       }
     }
   }
