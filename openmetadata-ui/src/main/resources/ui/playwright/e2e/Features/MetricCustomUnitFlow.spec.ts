@@ -17,6 +17,7 @@ import {
   clickOutside,
   descriptionBox,
   redirectToHomePage,
+  uuid,
 } from '../../utils/common';
 import {
   removeUnitOfMeasurement,
@@ -49,7 +50,7 @@ test.describe(
         await page.getByTestId('create-metric').click();
 
         // Use a simplified metric creation approach
-        const metricName = `test-unit-metric-${Date.now()}`;
+        const metricName = `test-unit-metric-${uuid()}`;
 
         // Click create to trigger validation
         await page.getByTestId('create-button').click();
