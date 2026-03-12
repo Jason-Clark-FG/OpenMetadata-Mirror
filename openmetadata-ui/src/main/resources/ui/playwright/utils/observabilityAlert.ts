@@ -122,6 +122,15 @@ export const addExternalDestination = async ({
       .getByText('Advanced Configuration')
       .click();
 
+    const authTypeSelect = page.getByTestId(
+      `auth-type-select-${destinationNumber}`
+    );
+    await expect(authTypeSelect).toBeVisible();
+    await authTypeSelect.click();
+    await page.click(
+      `.ant-select-dropdown:visible [title="Bearer (HMAC Signature)"]:visible`
+    );
+
     await expect(
       page.getByTestId(`secret-key-input-${destinationNumber}`)
     ).toBeVisible();
