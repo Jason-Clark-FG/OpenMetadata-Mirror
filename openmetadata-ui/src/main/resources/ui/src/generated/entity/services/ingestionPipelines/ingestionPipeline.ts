@@ -1252,7 +1252,7 @@ export interface Pipeline {
     /**
      * Number of threads to use during metric computations
      */
-    threadCount?: number;
+    threadCount?: number | null;
     /**
      * Profiler Timeout in Seconds
      */
@@ -2137,9 +2137,14 @@ export enum LabelTypeEnum {
  */
 export interface TagLabelMetadata {
     /**
+     * Epoch time in milliseconds when the certification tag expires
+     */
+    expiryDate?: number;
+    /**
      * Metadata about the recognizer that automatically applied this tag
      */
     recognizer?: TagLabelRecognizerMetadata;
+    [property: string]: any;
 }
 
 /**
