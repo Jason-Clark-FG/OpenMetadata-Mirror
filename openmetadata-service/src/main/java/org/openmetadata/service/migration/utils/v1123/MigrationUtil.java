@@ -14,6 +14,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
+import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.resources.databases.DatasourceConfig;
 import org.openmetadata.service.util.EntityUtil;
 
@@ -233,5 +234,135 @@ public class MigrationUtil {
     }
 
     return result;
+  }
+
+  private static final int CERT_BATCH_SIZE = 500;
+
+  public static void migrateCertificationToTagUsage(Handle handle, ConnectionType connType) {
+    String[] entityTables = {
+      "table_entity",
+      "dashboard_entity",
+      "topic_entity",
+      "pipeline_entity",
+      "storage_container_entity",
+      "search_index_entity",
+      "ml_model_entity",
+      "stored_procedure_entity",
+      "dashboard_data_model_entity",
+      "api_endpoint_entity",
+      "api_collection_entity",
+      "database_entity",
+      "database_schema_entity",
+      "data_product_entity",
+      "domain_entity",
+      "chart_entity",
+      "metric_entity"
+    };
+
+    int totalMigrated = 0;
+    for (String table : entityTables) {
+      try {
+        int migrated = migrateCertificationForTable(handle, connType, table);
+        totalMigrated += migrated;
+        if (migrated > 0) {
+          LOG.info("Migrated {} certification records from {}", migrated, table);
+        }
+      } catch (Exception e) {
+        LOG.warn("Could not migrate certification for table '{}': {}", table, e.getMessage());
+      }
+    }
+    LOG.info("Total certification records migrated to tag_usage: {}", totalMigrated);
+  }
+
+  private static int migrateCertificationForTable(
+      Handle handle, ConnectionType connType, String table) throws InterruptedException {
+    int totalMigrated = 0;
+    while (true) {
+      int batchMigrated;
+      if (connType == ConnectionType.POSTGRES) {
+        batchMigrated = migrateCertificationBatchPostgres(handle, table);
+      } else {
+        batchMigrated = migrateCertificationBatchMySQL(handle, table);
+      }
+      totalMigrated += batchMigrated;
+      if (batchMigrated < CERT_BATCH_SIZE) {
+        break;
+      }
+      Thread.sleep(100);
+    }
+    return totalMigrated;
+  }
+
+  /**
+   * Inserts certification tags into tag_usage then removes $.certification from entity JSON.
+   * Returns the number of entity rows updated (used to determine if batch is exhausted).
+   * Uses UPDATE row count (not INSERT) so that reruns after partial migration still clean up
+   * entity JSON even when all tag_usage rows already exist (INSERT IGNORE → 0 rows affected).
+   */
+  private static int migrateCertificationBatchMySQL(Handle handle, String table) {
+    String insertSql =
+        String.format(
+            "INSERT IGNORE INTO tag_usage "
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
+                + "SELECT 0, "
+                + "  JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')), "
+                + "  MD5(JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN'))), "
+                + "  fqnHash, "
+                + "  2, "
+                + "  1, "
+                + "  'admin', "
+                + "  JSON_OBJECT('expiryDate', COALESCE(JSON_EXTRACT(json, '$.certification.expiryDate'), 0)) "
+                + "FROM %s "
+                + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
+                + "LIMIT %d",
+            table, CERT_BATCH_SIZE);
+    handle.createUpdate(insertSql).execute();
+
+    // Always remove $.certification from entity JSON regardless of whether INSERT was a no-op.
+    // This ensures reruns after partial migration still clean up entity records.
+    String updateSql =
+        String.format(
+            "UPDATE %s SET json = JSON_REMOVE(json, '$.certification') "
+                + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
+                + "LIMIT %d",
+            table, CERT_BATCH_SIZE);
+    return handle.createUpdate(updateSql).execute();
+  }
+
+  /**
+   * Inserts certification tags into tag_usage then removes the certification key from entity JSON.
+   * Returns the number of entity rows updated (used to determine if batch is exhausted).
+   */
+  private static int migrateCertificationBatchPostgres(Handle handle, String table) {
+    String insertSql =
+        String.format(
+            "INSERT INTO tag_usage "
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
+                + "SELECT 0, "
+                + "  json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN', "
+                + "  MD5(json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN'), "
+                + "  fqnHash, "
+                + "  2, "
+                + "  1, "
+                + "  'admin', "
+                + "  json_build_object('expiryDate', "
+                + "    COALESCE((json::json -> 'certification' ->> 'expiryDate')::bigint, 0))::text "
+                + "FROM %s "
+                + "WHERE json::jsonb ? 'certification' "
+                + "LIMIT %d "
+                + "ON CONFLICT (source, tagFQNHash, targetFQNHash) DO NOTHING",
+            table, CERT_BATCH_SIZE);
+    handle.createUpdate(insertSql).execute();
+
+    // Always remove the certification key from entity JSON regardless of whether INSERT was a
+    // no-op.
+    String updateSql =
+        String.format(
+            "UPDATE %s SET json = (json::jsonb - 'certification')::json "
+                + "WHERE id IN ("
+                + "  SELECT id FROM %s WHERE json::jsonb ? 'certification' LIMIT %d"
+                + ")",
+            table, table, CERT_BATCH_SIZE);
+    return handle.createUpdate(updateSql).execute();
   }
 }

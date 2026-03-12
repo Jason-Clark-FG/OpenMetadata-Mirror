@@ -167,7 +167,6 @@ import org.openmetadata.schema.api.VoteRequest.VoteType;
 import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.api.teams.CreateTeam;
 import org.openmetadata.schema.configuration.AssetCertificationSettings;
-import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.feed.Suggestion;
 import org.openmetadata.schema.entity.feed.Thread;
@@ -193,6 +192,7 @@ import org.openmetadata.schema.type.ProviderType;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.SuggestionType;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TagLabelMetadata;
 import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.type.ThreadType;
 import org.openmetadata.schema.type.Votes;
@@ -1535,6 +1535,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     storeDomains(entity, entity.getDomains());
     storeDataProducts(entity, entity.getDataProducts());
     storeReviewers(entity, entity.getReviewers());
+    applyCertification(entity);
     storeRelationships(entity);
   }
 
@@ -1549,6 +1550,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     storeReviewers(entities);
     storeDataProducts(entities);
     applyTagsToEntities(entities);
+    entities.forEach(this::applyCertification);
 
     // Entity-specific relationships - must be per-entity (abstract method)
     entities.forEach(this::storeRelationships);
@@ -2943,6 +2945,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     entity.setDataProducts(null);
     entity.setFollowers(null);
     entity.setExperts(null);
+    entity.setCertification(null);
   }
 
   @Transaction
@@ -2960,6 +2963,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     List<EntityReference> dataProducts = entity.getDataProducts();
     List<EntityReference> followers = entity.getFollowers();
     List<EntityReference> experts = entity.getExperts();
+    AssetCertification certification = entity.getCertification();
     nullifyEntityFields(entity);
 
     if (update) {
@@ -3005,6 +3009,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     entity.setDataProducts(dataProducts);
     entity.setFollowers(followers);
     entity.setExperts(experts);
+    entity.setCertification(certification);
   }
 
   protected void storeMany(List<T> entities) {
@@ -3589,19 +3594,55 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected AssetCertification getCertification(T entity) {
-    return !supportsCertification ? null : getCertification(entity.getCertification());
+    if (!supportsCertification) return null;
+    String certClassification = getCertificationClassification();
+    if (certClassification == null) return null;
+    List<TagLabel> tags = daoCollection.tagUsageDAO().getTags(entity.getFullyQualifiedName());
+    for (TagLabel tag : tags) {
+      String parentFqn = FullyQualifiedName.getParentFQN(tag.getTagFQN());
+      if (certClassification.equals(parentFqn)) {
+        return new AssetCertification()
+            .withTagLabel(tag)
+            .withAppliedDate(tag.getAppliedAt() != null ? tag.getAppliedAt().getTime() : null)
+            .withExpiryDate(tag.getMetadata() != null ? tag.getMetadata().getExpiryDate() : null);
+      }
+    }
+    return null;
   }
 
-  protected AssetCertification getCertification(AssetCertification certification) {
-    if (certification == null) {
-      return null;
-    }
+  protected void applyCertification(T entity) {
+    if (!supportsCertification || entity.getCertification() == null) return;
+    AssetCertification cert = entity.getCertification();
+    TagLabel tagLabel = cert.getTagLabel();
+    TagLabelMetadata metadata = new TagLabelMetadata().withExpiryDate(cert.getExpiryDate());
+    daoCollection
+        .tagUsageDAO()
+        .applyTag(
+            TagLabel.TagSource.CLASSIFICATION.ordinal(),
+            tagLabel.getTagFQN(),
+            tagLabel.getTagFQN(),
+            entity.getFullyQualifiedName(),
+            TagLabel.LabelType.AUTOMATED.ordinal(),
+            TagLabel.State.CONFIRMED.ordinal(),
+            null,
+            null,
+            metadata);
+  }
 
-    String certificationTagFqn = certification.getTagLabel().getTagFQN();
-    TagLabel certificationTagLabel =
-        EntityUtil.toTagLabel(TagLabelUtil.getTag(certificationTagFqn));
-    certification.setTagLabel(certificationTagLabel);
-    return certification;
+  protected void deleteCertificationTag(String entityFQN) {
+    String certClassification = getCertificationClassification();
+    if (certClassification == null) return;
+    daoCollection
+        .tagUsageDAO()
+        .deleteTagsByPrefixAndTarget(
+            TagLabel.TagSource.CLASSIFICATION.ordinal(), certClassification + ".", entityFQN);
+  }
+
+  protected String getCertificationClassification() {
+    if (!supportsCertification) return null;
+    return Entity.getSystemRepository()
+        .getAssetCertificationSettingOrDefault()
+        .getAllowedClassification();
   }
 
   protected List<TagLabel> getTags(T entity) {
@@ -3636,8 +3677,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return null;
     }
 
-    // Populate Glossary Tags on Read
-    return addDerivedTagsGracefully(daoCollection.tagUsageDAO().getTags(fqn));
+    List<TagLabel> tags = addDerivedTagsGracefully(daoCollection.tagUsageDAO().getTags(fqn));
+    String certClassification = getCertificationClassification();
+    if (certClassification != null && tags != null) {
+      tags.removeIf(
+          tag -> certClassification.equals(FullyQualifiedName.getParentFQN(tag.getTagFQN())));
+    }
+    return tags;
   }
 
   public final Map<String, List<TagLabel>> getTagsByPrefix(String prefix, String postfix) {
@@ -5816,7 +5862,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
       if (updatedCertification == null) {
         LOG.debug("Setting certification to null");
-        recordChange(FIELD_CERTIFICATION, origCertification, updatedCertification, true);
+        deleteCertificationTag(updated.getFullyQualifiedName());
+        recordChange(FIELD_CERTIFICATION, origCertification, null, true);
         return;
       }
 
@@ -5841,6 +5888,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       Period datePeriod = Period.parse(assetCertificationSettings.getValidityPeriod());
       LocalDateTime targetDateTime = nowDateTime.plus(datePeriod);
       updatedCertification.setExpiryDate(targetDateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
+
+      deleteCertificationTag(updated.getFullyQualifiedName());
+      applyCertification(updated);
 
       recordChange(FIELD_CERTIFICATION, origCertification, updatedCertification, true);
     }
@@ -7240,68 +7290,58 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     long startTime = System.currentTimeMillis();
 
-    // Collect all certification tag FQNs and map to entity IDs
-    Map<String, List<UUID>> entityIdsByTagFqn = new HashMap<>();
-    Map<UUID, AssetCertification> entityCertifications = new HashMap<>();
-
-    for (T entity : entities) {
-      AssetCertification cert = entity.getCertification();
-      if (cert != null && cert.getTagLabel() != null && cert.getTagLabel().getTagFQN() != null) {
-        String tagFqn = cert.getTagLabel().getTagFQN();
-        entityIdsByTagFqn.computeIfAbsent(tagFqn, k -> new ArrayList<>()).add(entity.getId());
-        entityCertifications.put(entity.getId(), cert);
-      }
-    }
-
-    if (entityIdsByTagFqn.isEmpty()) {
-      LOG.debug(
-          "batchFetchCertification: {} entities, 0 certifications in {}ms",
-          entities.size(),
-          System.currentTimeMillis() - startTime);
+    String certClassification = getCertificationClassification();
+    if (certClassification == null) {
       return result;
     }
 
-    // Batch fetch all certification tags at once
-    List<String> tagFqns = new ArrayList<>(entityIdsByTagFqn.keySet());
-    Map<String, Tag> tagsByFqn = new HashMap<>();
+    // Build FQN hash → entity ID map (batch query uses hashed FQNs for lookup)
+    Map<String, UUID> entityIdByFqnHash = new HashMap<>();
+    List<String> fqnList = new ArrayList<>();
+    for (T entity : entities) {
+      fqnList.add(entity.getFullyQualifiedName());
+      entityIdByFqnHash.put(
+          FullyQualifiedName.buildHash(entity.getFullyQualifiedName()), entity.getId());
+    }
 
+    List<CollectionDAO.TagUsageDAO.TagLabelWithFQNHash> allTags;
     try {
-      List<Tag> tags = TagLabelUtil.getTags(tagFqns);
-      for (Tag tag : tags) {
-        tagsByFqn.put(tag.getFullyQualifiedName(), tag);
-      }
+      allTags = daoCollection.tagUsageDAO().getTagsInternalBatch(fqnList);
     } catch (Exception e) {
       LOG.warn(
-          "Batch fetch of certification tags failed, falling back to individual fetch: {}",
+          "batchFetchCertification: batch query failed, falling back to individual fetch: {}",
           e.getMessage());
-      // Fallback to original behavior
       for (T entity : entities) {
         result.put(entity.getId(), getCertification(entity));
       }
       return result;
     }
 
-    // Map tags back to entities
-    for (Map.Entry<String, List<UUID>> entry : entityIdsByTagFqn.entrySet()) {
-      String tagFqn = entry.getKey();
-      Tag tag = tagsByFqn.get(tagFqn);
-
-      if (tag != null) {
-        TagLabel tagLabel = EntityUtil.toTagLabel(tag);
-        for (UUID entityId : entry.getValue()) {
-          AssetCertification cert = entityCertifications.get(entityId);
-          if (cert != null) {
-            cert.setTagLabel(tagLabel);
-            result.put(entityId, cert);
-          }
-        }
+    for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash tagWithHash : allTags) {
+      String tagFqn = tagWithHash.getTagFQN();
+      if (!certClassification.equals(FullyQualifiedName.getParentFQN(tagFqn))) {
+        continue;
       }
+      UUID entityId = entityIdByFqnHash.get(tagWithHash.getTargetFQNHash());
+      if (entityId == null || result.containsKey(entityId)) {
+        continue;
+      }
+      TagLabel tagLabel = tagWithHash.toTagLabel();
+      TagLabelUtil.applyTagCommonFieldsGracefully(tagLabel);
+      result.put(
+          entityId,
+          new AssetCertification()
+              .withTagLabel(tagLabel)
+              .withAppliedDate(
+                  tagLabel.getAppliedAt() != null ? tagLabel.getAppliedAt().getTime() : null)
+              .withExpiryDate(
+                  tagLabel.getMetadata() != null ? tagLabel.getMetadata().getExpiryDate() : null));
     }
 
     LOG.debug(
-        "batchFetchCertification: {} entities, {} cert tags, 1 batch query in {}ms",
+        "batchFetchCertification: {} entities, {} certs found in {}ms",
         entities.size(),
-        tagFqns.size(),
+        result.size(),
         System.currentTimeMillis() - startTime);
 
     return result;

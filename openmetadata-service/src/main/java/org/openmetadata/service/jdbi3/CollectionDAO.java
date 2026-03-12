@@ -4992,6 +4992,13 @@ public interface CollectionDAO {
     @SqlUpdate("DELETE FROM tag_usage where targetFQNHash = :targetFQNHash")
     void deleteTagsByTarget(@BindFQN("targetFQNHash") String targetFQNHash);
 
+    @SqlUpdate(
+        "DELETE FROM tag_usage WHERE source = :source AND tagFQN LIKE :tagFQNPrefix AND targetFQNHash = :targetFQNHash")
+    void deleteTagsByPrefixAndTarget(
+        @Bind("source") int source,
+        @Bind("tagFQNPrefix") String tagFQNPrefix,
+        @BindFQN("targetFQNHash") String targetFQNHash);
+
     @SqlUpdate("DELETE FROM tag_usage WHERE targetFQNHash IN (<targetFQNHashes>)")
     void deleteTagsByTargets(@BindListFQN("targetFQNHashes") List<String> targetFQNs);
 
@@ -5130,6 +5137,12 @@ public interface CollectionDAO {
     class TagLabelMapper implements RowMapper<TagLabel> {
       @Override
       public TagLabel map(ResultSet r, StatementContext ctx) throws SQLException {
+        TagLabelMetadata metadata = null;
+        try {
+          metadata = JsonUtils.readValue(r.getString("metadata"), TagLabelMetadata.class);
+        } catch (Exception e) {
+          // Ignore unknown fields from future schema versions — metadata is best-effort
+        }
         return new TagLabel()
             .withSource(TagLabel.TagSource.values()[r.getInt("source")])
             .withLabelType(TagLabel.LabelType.values()[r.getInt("labelType")])
@@ -5138,7 +5151,7 @@ public interface CollectionDAO {
             .withReason(r.getString("reason"))
             .withAppliedAt(r.getTimestamp("appliedAt"))
             .withAppliedBy(r.getString("appliedBy"))
-            .withMetadata(JsonUtils.readValue(r.getString("metadata"), TagLabelMetadata.class));
+            .withMetadata(metadata);
       }
     }
 
@@ -5187,6 +5200,12 @@ public interface CollectionDAO {
     class TagLabelWithFQNHashMapper implements RowMapper<TagLabelWithFQNHash> {
       @Override
       public TagLabelWithFQNHash map(ResultSet rs, StatementContext ctx) throws SQLException {
+        TagLabelMetadata metadata = null;
+        try {
+          metadata = JsonUtils.readValue(rs.getString("metadata"), TagLabelMetadata.class);
+        } catch (Exception e) {
+          // Ignore unknown fields from future schema versions — metadata is best-effort
+        }
         TagLabelWithFQNHash tag = new TagLabelWithFQNHash();
         tag.setTargetFQNHash(rs.getString("targetFQNHash"));
         tag.setSource(rs.getInt("source"));
@@ -5196,7 +5215,7 @@ public interface CollectionDAO {
         tag.setReason(rs.getString("reason"));
         tag.setAppliedAt(rs.getTimestamp("appliedAt"));
         tag.setAppliedBy(rs.getString("appliedBy"));
-        tag.setMetadata(JsonUtils.readValue(rs.getString("metadata"), TagLabelMetadata.class));
+        tag.setMetadata(metadata);
         return tag;
       }
     }
