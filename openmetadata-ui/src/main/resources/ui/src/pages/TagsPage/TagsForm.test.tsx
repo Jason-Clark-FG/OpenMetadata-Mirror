@@ -14,8 +14,41 @@
 import { render, screen } from '@testing-library/react';
 import { Form } from 'antd';
 import { DEFAULT_FORM_VALUE } from '../../constants/Tags.constant';
+import { Classification } from '../../generated/entity/classification/classification';
+import { Tag } from '../../generated/entity/classification/tag';
 import TagsForm from './TagsForm';
-import { SubmitProps } from './TagsPage.interface';
+
+jest.mock('@openmetadata/ui-core-components', () => {
+  const GridItem = ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  );
+  const GridComponent = ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  );
+  GridComponent.Item = GridItem;
+
+  return {
+    Tooltip: ({
+      children,
+      title,
+    }: {
+      children: React.ReactNode;
+      title?: React.ReactNode;
+    }) => (
+      <div data-testid="tooltip" title={title as string}>
+        {children}
+      </div>
+    ),
+    TooltipTrigger: ({
+      children,
+      className,
+    }: {
+      children: React.ReactNode;
+      className?: string;
+    }) => <button className={className}>{children}</button>,
+    Grid: GridComponent,
+  };
+});
 
 jest.mock('../../components/common/RichTextEditor/RichTextEditor', () => {
   return jest.fn().mockImplementation(({ initialValue }) => {
@@ -60,7 +93,7 @@ const TestWrapper = ({
   showMutuallyExclusive?: boolean;
   isClassification?: boolean;
 }) => {
-  const [formRef] = Form.useForm<SubmitProps>();
+  const [formRef] = Form.useForm<Classification | Tag | undefined>();
 
   return (
     <TagsForm

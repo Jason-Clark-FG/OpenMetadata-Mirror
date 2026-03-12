@@ -32,7 +32,6 @@ import { ReactComponent as EmailIcon } from '../assets/svg/email-colored.svg';
 import { ReactComponent as FileIcon } from '../assets/svg/file-colored-new.svg';
 import { ReactComponent as GlossaryIcon } from '../assets/svg/glossary-term-colored-new.svg';
 import { ReactComponent as HealthIcon } from '../assets/svg/health-check.svg';
-import { ReactComponent as IconImport } from '../assets/svg/ic-import.svg';
 import { ReactComponent as LearningIcon } from '../assets/svg/learning-colored.svg';
 import { ReactComponent as LineageIcon } from '../assets/svg/lineage-colored.svg';
 import { ReactComponent as LoginIcon } from '../assets/svg/login-colored.svg';
@@ -583,6 +582,15 @@ class GlobalSettingsClassBase {
                 icon: DomainIcon,
               },
               {
+                label: t('label.metric-plural'),
+                description: t('message.search-settings-for-entity', {
+                  entity: t('label.metric-plural'),
+                }),
+                isProtected: Boolean(isAdminUser),
+                key: `${GlobalSettingsMenuCategory.PREFERENCES}.${GlobalSettingOptions.SEARCH_SETTINGS}.${GlobalSettingOptions.METRICS}`,
+                icon: MetricIcon,
+              },
+              {
                 label: t('label.search-index-plural'),
                 description: t('message.search-settings-for-entity', {
                   entity: t('label.search-index-plural'),
@@ -627,6 +635,15 @@ class GlobalSettingsClassBase {
                 key: `${GlobalSettingsMenuCategory.PREFERENCES}.${GlobalSettingOptions.SEARCH_SETTINGS}.${GlobalSettingOptions.WORKSHEETS}`,
                 icon: WorksheetIcon,
               },
+              {
+                label: t('label.column-plural'),
+                description: t('message.search-settings-for-entity', {
+                  entity: t('label.column-plural'),
+                }),
+                isProtected: Boolean(isAdminUser),
+                key: `${GlobalSettingsMenuCategory.PREFERENCES}.${GlobalSettingOptions.SEARCH_SETTINGS}.${GlobalSettingOptions.COLUMN}`,
+                icon: ColumnIcon,
+              },
             ].sort((a, b) => a.label.localeCompare(b.label)),
           },
           {
@@ -661,13 +678,6 @@ class GlobalSettingsClassBase {
             isProtected: Boolean(isAdminUser),
             key: `${GlobalSettingsMenuCategory.PREFERENCES}.${GlobalSettingOptions.LEARNING_RESOURCES}`,
             icon: LearningIcon,
-          },
-          {
-            label: t('label.column-bulk-operations'),
-            description: t('message.column-bulk-operations-description'),
-            isProtected: Boolean(isAdminUser),
-            key: `${GlobalSettingsMenuCategory.PREFERENCES}.${GlobalSettingOptions.COLUMN_BULK_OPERATIONS}`,
-            icon: IconImport,
           },
         ],
       },

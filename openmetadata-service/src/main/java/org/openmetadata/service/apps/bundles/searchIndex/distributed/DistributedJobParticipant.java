@@ -19,9 +19,14 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.entity.app.App;
+import org.openmetadata.schema.entity.app.AppRunRecord;
+import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder;
 import org.openmetadata.service.cache.CacheConfig;
+import org.openmetadata.service.jdbi3.AppRepository;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.search.SearchRepository;
 
@@ -56,12 +61,15 @@ public class DistributedJobParticipant implements Managed {
 
   private final AtomicBoolean running = new AtomicBoolean(false);
   private final AtomicBoolean participating = new AtomicBoolean(false);
+  private OrphanJobMonitor orphanJobMonitor;
 
   /**
    * -- GETTER --
    * Get the current job ID being processed, if any.
    */
   @Getter private UUID currentJobId;
+
+  private volatile Thread participantThread;
 
   public DistributedJobParticipant(
       CollectionDAO collectionDAO,
@@ -105,6 +113,10 @@ public class DistributedJobParticipant implements Managed {
       // Start the notifier (Redis subscription or polling)
       notifier.start();
 
+      // Start orphan job monitor to detect jobs left behind by crashed coordinators
+      orphanJobMonitor = new OrphanJobMonitor(collectionDAO);
+      orphanJobMonitor.start();
+
       LOG.info(
           "Started distributed job participant on server {} using {} notifier",
           serverId,
@@ -116,6 +128,21 @@ public class DistributedJobParticipant implements Managed {
   @Override
   public void stop() {
     if (running.compareAndSet(true, false)) {
+      if (orphanJobMonitor != null) {
+        orphanJobMonitor.shutdown();
+      }
+      Thread thread = participantThread;
+      if (thread != null) {
+        thread.interrupt();
+        try {
+          thread.join(10_000);
+          if (thread.isAlive()) {
+            LOG.warn("Participant thread did not terminate within 10s after interrupt");
+          }
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
       notifier.stop();
       LOG.info("Stopped distributed job participant on server {}", serverId);
     }
@@ -190,23 +217,83 @@ public class DistributedJobParticipant implements Managed {
       pollingNotifier.setParticipating(true);
     }
 
-    Thread.ofVirtual()
-        .name("job-participant-" + job.getId().toString().substring(0, 8))
-        .start(
-            () -> {
-              try {
-                processJobPartitions(job);
-              } finally {
-                participating.set(false);
-                currentJobId = null;
-
-                // Reset polling notifier to idle interval
-                if (notifier instanceof PollingJobNotifier pollingNotifier) {
-                  pollingNotifier.setParticipating(false);
-                }
-              }
-            });
+    participantThread =
+        Thread.ofVirtual()
+            .name("reindex-participant-" + job.getId().toString().substring(0, 8))
+            .start(
+                () -> {
+                  try {
+                    processJobPartitions(job);
+                  } finally {
+                    currentJobId = null;
+                    if (notifier instanceof PollingJobNotifier pollingNotifier) {
+                      pollingNotifier.setParticipating(false);
+                    }
+                    participating.set(false);
+                    participantThread = null;
+                  }
+                });
   }
+
+  private AppRunRecordContext resolveAppRunRecordContext() {
+    try {
+      AppRepository appRepository = (AppRepository) Entity.getEntityRepository(Entity.APPLICATION);
+      App app = appRepository.getDao().findEntityByName("SearchIndexingApplication");
+      AppRunRecord latestRecord = appRepository.getLatestAppRuns(app);
+      if (latestRecord != null) {
+        return new AppRunRecordContext(app.getId(), latestRecord.getStartTime());
+      }
+    } catch (Exception e) {
+      LOG.warn("Could not resolve app run record context for stats aggregator", e);
+    }
+    return null;
+  }
+
+  private void restoreAppRunRecordToRunning(UUID appId, long startTime) {
+    try {
+      collectionDAO.appExtensionTimeSeriesDao().markEntryRunning(appId.toString(), startTime);
+      LOG.info("Restored appRunRecord to running for appId={}, startTime={}", appId, startTime);
+    } catch (Exception e) {
+      LOG.warn("Failed to restore appRunRecord to running", e);
+    }
+  }
+
+  private void finalizeAppRunRecord(
+      DistributedJobStatsAggregator statsAggregator, AppRunRecordContext appCtx, UUID jobId) {
+    try {
+      AppRunRecord finalRecord = statsAggregator.buildFinalAppRunRecord();
+      if (finalRecord == null) {
+        return;
+      }
+      AppRunRecord.Status status = finalRecord.getStatus();
+      if (status == AppRunRecord.Status.RUNNING || status == AppRunRecord.Status.PENDING) {
+        return;
+      }
+      String existingJson =
+          collectionDAO
+              .appExtensionTimeSeriesDao()
+              .getByAppIdAndTimestamp(appCtx.appId().toString(), appCtx.startTime(), "status");
+      if (existingJson == null) {
+        return;
+      }
+      AppRunRecord existingRecord = JsonUtils.readValue(existingJson, AppRunRecord.class);
+      existingRecord.setStatus(status);
+      existingRecord.setEndTime(System.currentTimeMillis());
+      existingRecord.setSuccessContext(finalRecord.getSuccessContext());
+      collectionDAO
+          .appExtensionTimeSeriesDao()
+          .update(
+              appCtx.appId().toString(),
+              JsonUtils.pojoToJson(existingRecord),
+              appCtx.startTime(),
+              "status");
+      LOG.info("Finalized appRunRecord to {} for recovered job {}", status, jobId);
+    } catch (Exception e) {
+      LOG.warn("Failed to finalize appRunRecord for job {}", jobId, e);
+    }
+  }
+
+  private record AppRunRecordContext(UUID appId, long startTime) {}
 
   /** Process partitions for a job. */
   private void processJobPartitions(SearchIndexJob job) {
@@ -214,7 +301,23 @@ public class DistributedJobParticipant implements Managed {
 
     BulkSink bulkSink = null;
     IndexingFailureRecorder failureRecorder = null;
+    DistributedJobStatsAggregator statsAggregator = null;
+    AppRunRecordContext appCtx = null;
     try {
+      appCtx = resolveAppRunRecordContext();
+      if (appCtx != null) {
+        restoreAppRunRecordToRunning(appCtx.appId(), appCtx.startTime());
+        statsAggregator =
+            new DistributedJobStatsAggregator(
+                coordinator,
+                job.getId(),
+                appCtx.appId(),
+                appCtx.startTime(),
+                DistributedJobStatsAggregator.DEFAULT_POLL_INTERVAL_MS);
+        statsAggregator.start();
+        LOG.info("Started stats aggregator for recovered job {}", job.getId());
+      }
+
       // Create failure recorder for this participation
       failureRecorder =
           new IndexingFailureRecorder(collectionDAO, job.getId().toString(), serverId);
@@ -255,9 +358,13 @@ public class DistributedJobParticipant implements Managed {
       // Set up failure callback on bulk sink to record sink failures
       final IndexingFailureRecorder recorder = failureRecorder;
       bulkSink.setFailureCallback(
-          (entityType, entityId, entityFqn, errorMessage) -> {
+          (entityType, entityId, entityFqn, errorMessage, stage) -> {
             if (recorder != null) {
-              recorder.recordSinkFailure(entityType, entityId, entityFqn, errorMessage);
+              if (stage == IndexingFailureRecorder.FailureStage.PROCESS) {
+                recorder.recordProcessFailure(entityType, entityId, entityFqn, errorMessage);
+              } else {
+                recorder.recordSinkFailure(entityType, entityId, entityFqn, errorMessage);
+              }
             }
           });
 
@@ -269,6 +376,7 @@ public class DistributedJobParticipant implements Managed {
       int partitionsProcessed = 0;
       long totalReaderSuccess = 0;
       long totalReaderFailed = 0;
+      long totalReaderWarnings = 0;
       final BulkSink sinkForStats = bulkSink;
 
       // Process partitions until none are available or job completes
@@ -315,44 +423,32 @@ public class DistributedJobParticipant implements Managed {
             partition.getId(),
             partition.getEntityType());
 
-        try {
-          PartitionWorker.PartitionResult result = worker.processPartition(partition);
-          partitionsProcessed++;
-          totalReaderSuccess += result.successCount();
-          totalReaderFailed += result.readerFailed();
+        PartitionWorker.PartitionResult result = worker.processPartition(partition);
+        partitionsProcessed++;
+        totalReaderSuccess += result.successCount();
+        totalReaderFailed += result.readerFailed();
+        totalReaderWarnings += result.readerWarnings();
 
-          LOG.info(
-              "Participant completed partition {} (success: {}, failed: {}, readerFailed: {})",
-              partition.getId(),
-              result.successCount(),
-              result.failedCount(),
-              result.readerFailed());
-
-          // Persist stats after each partition completion
-          persistServerStats(
-              job.getId(),
-              sinkForStats,
-              partitionsProcessed,
-              totalReaderSuccess,
-              totalReaderFailed);
-
-        } catch (Exception e) {
-          LOG.error("Error processing partition {}", partition.getId(), e);
-        }
+        LOG.info(
+            "Participant completed partition {} (success: {}, failed: {}, readerFailed: {}, readerWarnings: {})",
+            partition.getId(),
+            result.successCount(),
+            result.failedCount(),
+            result.readerFailed(),
+            result.readerWarnings());
       }
 
-      // Flush sink and wait for all pending bulk requests to complete before persisting final stats
+      // Flush sink and wait for all pending bulk requests to complete
       if (sinkForStats != null) {
-        LOG.info("Flushing sink and waiting for pending requests before final stats persist");
+        LOG.info("Flushing sink and waiting for pending requests");
         boolean completed = sinkForStats.flushAndAwait(60);
         if (!completed) {
           LOG.warn("Sink flush timed out - some requests may not be reflected in final stats");
         }
       }
 
-      // Persist final server stats before exiting (ensures final state is captured)
-      persistServerStats(
-          job.getId(), sinkForStats, partitionsProcessed, totalReaderSuccess, totalReaderFailed);
+      // Stats are tracked per-entityType by StageStatsTracker in PartitionWorker
+      // No need for participant-level aggregation - it causes double-counting
 
       LOG.info(
           "Server {} finished participating in job {}, processed {} partitions",
@@ -363,7 +459,15 @@ public class DistributedJobParticipant implements Managed {
     } catch (Exception e) {
       LOG.error("Error participating in job {}", job.getId(), e);
     } finally {
-      // Flush and close the failure recorder first (before closing sink)
+      if (statsAggregator != null && appCtx != null) {
+        try {
+          statsAggregator.forceUpdate();
+          finalizeAppRunRecord(statsAggregator, appCtx, job.getId());
+          statsAggregator.stop();
+        } catch (Exception e) {
+          LOG.warn("Error stopping stats aggregator", e);
+        }
+      }
       if (failureRecorder != null) {
         try {
           failureRecorder.close();
@@ -371,7 +475,6 @@ public class DistributedJobParticipant implements Managed {
           LOG.warn("Error closing failure recorder", e);
         }
       }
-      // Close the bulk sink
       if (bulkSink != null) {
         try {
           bulkSink.close();
@@ -379,56 +482,6 @@ public class DistributedJobParticipant implements Managed {
           LOG.warn("Error closing bulk sink", e);
         }
       }
-    }
-  }
-
-  /** Persist server stats to the database. */
-  private void persistServerStats(
-      UUID jobId,
-      BulkSink bulkSink,
-      int partitionsCompleted,
-      long readerSuccess,
-      long readerFailed) {
-    if (bulkSink == null) {
-      return;
-    }
-
-    try {
-      org.openmetadata.schema.system.StepStats sinkStats = bulkSink.getStats();
-      long entityBuildFailures = bulkSink.getEntityBuildFailures();
-
-      String statsId = UUID.nameUUIDFromBytes((jobId.toString() + serverId).getBytes()).toString();
-
-      collectionDAO
-          .searchIndexServerStatsDAO()
-          .upsert(
-              statsId,
-              jobId.toString(),
-              serverId,
-              readerSuccess,
-              readerFailed,
-              sinkStats != null ? sinkStats.getTotalRecords() : 0,
-              sinkStats != null ? sinkStats.getSuccessRecords() : 0,
-              sinkStats != null ? sinkStats.getFailedRecords() : 0,
-              entityBuildFailures,
-              partitionsCompleted,
-              0, // partitionsFailed - not tracked here
-              System.currentTimeMillis());
-
-      LOG.info(
-          "Participant {} persisted server stats for job {}: readerSuccess={}, readerFailed={}, "
-              + "sinkTotal={}, sinkSuccess={}, sinkFailed={}, partitionsCompleted={}",
-          serverId,
-          jobId,
-          readerSuccess,
-          readerFailed,
-          sinkStats != null ? sinkStats.getTotalRecords() : 0,
-          sinkStats != null ? sinkStats.getSuccessRecords() : 0,
-          sinkStats != null ? sinkStats.getFailedRecords() : 0,
-          partitionsCompleted);
-
-    } catch (Exception e) {
-      LOG.error("Failed to persist server stats for participant {} job {}", serverId, jobId, e);
     }
   }
 

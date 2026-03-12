@@ -431,14 +431,10 @@ const GlossaryHeader = ({
   ];
 
   const statusBadge = useMemo(() => {
-    if (!isGlossary) {
-      const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
+    const entityStatus = selectedData.entityStatus ?? EntityStatus.Approved;
 
-      return <EntityStatusBadge showDivider status={entityStatus} />;
-    }
-
-    return null;
-  }, [isGlossary, selectedData]);
+    return <EntityStatusBadge showDivider status={entityStatus} />;
+  }, [selectedData]);
 
   const createButtons = useMemo(() => {
     if (permissions.Create || createGlossaryTermPermission) {
@@ -453,24 +449,25 @@ const GlossaryHeader = ({
         </Button>
       ) : (
         <>
-          {glossaryTermStatus && glossaryTermStatus === EntityStatus.Approved && (
-            <Dropdown
-              className="m-l-xs"
-              menu={{
-                items: addButtonContent,
-              }}
-              placement="bottomRight"
-              trigger={['click']}>
-              <Button
-                data-testid="glossary-term-add-button-menu"
-                type="primary">
-                <Space>
-                  {t('label.add')}
-                  <DownOutlined />
-                </Space>
-              </Button>
-            </Dropdown>
-          )}
+          {glossaryTermStatus &&
+            glossaryTermStatus === EntityStatus.Approved && (
+              <Dropdown
+                className="m-l-xs"
+                menu={{
+                  items: addButtonContent,
+                }}
+                placement="bottomRight"
+                trigger={['click']}>
+                <Button
+                  data-testid="glossary-term-add-button-menu"
+                  type="primary">
+                  <Space>
+                    {t('label.add')}
+                    <DownOutlined />
+                  </Space>
+                </Button>
+              </Dropdown>
+            )}
         </>
       );
     }
@@ -538,13 +535,9 @@ const GlossaryHeader = ({
             icon={icon}
             serviceName=""
             suffix={
-              <LearningIcon
-                pageId={
-                  isGlossary
-                    ? LEARNING_PAGE_IDS.GLOSSARY
-                    : LEARNING_PAGE_IDS.GLOSSARY_TERM
-                }
-              />
+              !isGlossary && (
+                <LearningIcon pageId={LEARNING_PAGE_IDS.GLOSSARY_TERM} />
+              )
             }
             titleColor={isGlossary ? undefined : selectedData.style?.color}
           />

@@ -241,6 +241,18 @@ public interface OpenSearchDynamicChartAggregatorInterface {
       boolean live)
       throws IOException;
 
+  default SearchRequest prepareSearchRequest(
+      @NotNull DataInsightCustomChart diChart,
+      long start,
+      long end,
+      List<FormulaHolder> formulas,
+      Map metricFormulaHolder,
+      boolean live,
+      String filter)
+      throws IOException {
+    return prepareSearchRequest(diChart, start, end, formulas, metricFormulaHolder, live);
+  }
+
   DataInsightCustomChartResultList processSearchResponse(
       @NotNull DataInsightCustomChart diChart,
       SearchResponse<JsonData> searchResponse,
@@ -325,7 +337,7 @@ public interface OpenSearchDynamicChartAggregatorInterface {
           for (Map.Entry<String, Aggregate> subEntry :
               getSortedAggregationEntries(bucket.aggregations())) {
             addByAggregationType(
-                subEntry.getValue(), subResults, bucket.key(), group, true, metric);
+                subEntry.getValue(), subResults, String.valueOf(bucket.key()), group, true, metric);
           }
           results.add(subResults);
         }

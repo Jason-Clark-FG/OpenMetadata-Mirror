@@ -103,7 +103,11 @@ public class SearchMetadataTool implements McpTool {
       if (limitObj instanceof Number number) {
         size = number.intValue();
       } else if (limitObj instanceof String string) {
-        size = Integer.parseInt(string);
+        try {
+          size = Integer.parseInt(string);
+        } catch (NumberFormatException e) {
+          size = 10;
+        }
       }
     }
 
@@ -113,7 +117,11 @@ public class SearchMetadataTool implements McpTool {
       if (limitObj instanceof Number number) {
         from = number.intValue();
       } else if (limitObj instanceof String string) {
-        from = Integer.parseInt(string);
+        try {
+          from = Integer.parseInt(string);
+        } catch (NumberFormatException e) {
+          from = 0;
+        }
       }
     }
 
@@ -297,6 +305,9 @@ public class SearchMetadataTool implements McpTool {
     result.put("totalFound", totalResults);
     result.put("returnedCount", cleanedResults.size());
     result.put("query", query);
+    result.put(
+        "usage",
+        "To get full details for any result, call get_entity_details with the result's exact 'entityType' and 'fullyQualifiedName' values.");
 
     // Handle aggregations based on includeAggregations flag
     if (includeAggregations && searchResponse.containsKey("aggregations")) {

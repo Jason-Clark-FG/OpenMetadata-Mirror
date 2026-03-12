@@ -46,6 +46,7 @@ import { Paging } from '../../generated/type/paging';
 import { TagLabel, TagSource } from '../../generated/type/tagLabel';
 import { usePaging } from '../../hooks/paging/usePaging';
 import { useFqn } from '../../hooks/useFqn';
+import { useLineageStore } from '../../hooks/useLineageStore';
 import { SearchSourceAlias } from '../../interface/search.interface';
 import { QueryFieldInterface } from '../../pages/ExplorePage/ExplorePage.interface';
 import {
@@ -88,12 +89,9 @@ import { StyledMenu, StyledToggleButtonGroup } from './LineageTable.styled';
 import { useLineageTableState } from './useLineageTableState';
 
 const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
-  const {
-    selectedQuickFilters,
-    setSelectedQuickFilters,
-    lineageConfig,
-    updateEntityData,
-  } = useLineageProvider();
+  const { selectedQuickFilters, setSelectedQuickFilters, updateEntityData } =
+    useLineageProvider();
+  const { lineageConfig } = useLineageStore();
   const { fqn } = useFqn();
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
   const { t } = useTranslation();
@@ -540,7 +538,9 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         nodeDepthOptions={nodeDepthOptions}
         queryFilterNodeIds={filterNodeIds}
         searchValue={searchValue}
-        onSearchValueChange={setSearchValue}
+        onSearchValueChange={
+          impactLevel === EImpactLevel.TableLevel ? setSearchValue : undefined
+        }
       />
     );
   }, [
@@ -868,7 +868,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         defaultVisibleColumns={IMPACT_ANALYSIS_DEFAULT_VISIBLE_COLUMNS}
         entityType="impact_analysis"
         extraTableFilters={extraTableFilters}
-        key={`lineage-table-${impactLevel}-${lineageDirection}`}
+        key={`lineage-table-${impactLevel}-${lineageDirection}-${nodeDepth}`}
         loading={loading}
         locale={{
           emptyText: <NoDataPlaceholder size={SIZE.LARGE} />,

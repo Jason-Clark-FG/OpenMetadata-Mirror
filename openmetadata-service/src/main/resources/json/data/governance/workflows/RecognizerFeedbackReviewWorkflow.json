@@ -10,10 +10,11 @@
     "config": {
       "entityTypes": ["recognizerFeedback"],
       "events": ["Created", "Updated"],
-      "exclude": ["reviewers"],
+      "exclude": [],
+      "include": [],
       "filter": {}
     },
-    "output": ["relatedEntity", "updatedBy", "triggeringObjectId"]
+    "output": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"]
   },
   "nodes": [
     {
@@ -29,15 +30,19 @@
       "displayName": "Review Recognizer Feedback",
       "config": {
         "assignees": {
-          "addReviewers": true
+          "addReviewers": true,
+          "addOwners": false,
+          "candidates": []
         },
         "approvalThreshold": 1,
         "rejectionThreshold": 1
       },
+      "input": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"],
       "inputNamespaceMap": {
         "relatedEntity": "global",
         "updatedBy": "global",
-        "triggeringObjectId": "global"
+        "triggeringObjectId": "global",
+        "recognizerFeedback": "global"
       }
     },
     {
@@ -45,10 +50,12 @@
       "subType": "applyRecognizerFeedbackTask",
       "name": "ApplyApprovedFeedback",
       "displayName": "Apply Feedback (Approved)",
+      "input": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"],
       "inputNamespaceMap": {
         "relatedEntity": "global",
         "updatedBy": "global",
-        "triggeringObjectId": "global"
+        "triggeringObjectId": "global",
+        "recognizerFeedback": "global"
       }
     },
     {
@@ -56,10 +63,12 @@
       "subType": "rejectRecognizerFeedbackTask",
       "name": "RejectFeedback",
       "displayName": "Reject Feedback",
+      "input": ["relatedEntity", "updatedBy", "triggeringObjectId", "recognizerFeedback"],
       "inputNamespaceMap": {
         "relatedEntity": "global",
         "updatedBy": "global",
-        "triggeringObjectId": "global"
+        "triggeringObjectId": "global",
+        "recognizerFeedback": "global"
       }
     },
     {

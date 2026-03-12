@@ -12,7 +12,16 @@
  */
 
 import { FieldOrGroup } from '@react-awesome-query-builder/antd';
+import { SearchOutputType } from '../components/Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
+import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import { SearchDropdownOption } from '../components/SearchDropdown/SearchDropdown.interface';
+import {
+  COMMON_DROPDOWN_ITEMS,
+  DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS,
+  GLOSSARY_ASSETS_DROPDOWN_ITEMS,
+  LINEAGE_DROPDOWN_ITEMS,
+  TAG_ASSETS_DROPDOWN_ITEMS,
+} from '../constants/AdvancedSearch.constants';
 import {
   EntityFields,
   EntityReferenceFields,
@@ -21,6 +30,7 @@ import { EntityType } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import advancedSearchClassBase from './AdvancedSearchClassBase';
 import {
+  getAssetsPageQuickFilters,
   getChartsOptions,
   getColumnsOptions,
   getEmptyJsonTree,
@@ -564,6 +574,147 @@ describe('AdvancedSearchUtils tests', () => {
       expect(tableSubfields.existingField).toBeDefined();
       expect(tableSubfields['newField.keyword']).toBeDefined();
     });
+
+    it('should pass ElasticSearch searchOutputType to getCustomPropertiesSubFields', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+      const mockField = { name: 'testField', type: 'string' };
+
+      (
+        advancedSearchClassBase.getCustomPropertiesSubFields as jest.Mock
+      ).mockReturnValue({
+        subfieldsKey: 'testField.keyword',
+        dataObject: {
+          type: 'text',
+          label: 'Test Field',
+          valueSources: ['value'],
+        },
+      });
+
+      processCustomPropertyField(
+        mockField as never,
+        'table',
+        subfields,
+        'table',
+        SearchOutputType.ElasticSearch
+      );
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockField, SearchOutputType.ElasticSearch);
+    });
+
+    it('should pass JSONLogic searchOutputType to getCustomPropertiesSubFields', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+      const mockField = { name: 'testField', type: 'string' };
+
+      (
+        advancedSearchClassBase.getCustomPropertiesSubFields as jest.Mock
+      ).mockReturnValue({
+        subfieldsKey: 'testField',
+        dataObject: {
+          type: 'text',
+          label: 'Test Field',
+          valueSources: ['value'],
+        },
+      });
+
+      processCustomPropertyField(
+        mockField as never,
+        'table',
+        subfields,
+        'table',
+        SearchOutputType.JSONLogic
+      );
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockField, SearchOutputType.JSONLogic);
+    });
+
+    it('should pass undefined searchOutputType to getCustomPropertiesSubFields when not provided', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+      const mockField = { name: 'testField', type: 'string' };
+
+      (
+        advancedSearchClassBase.getCustomPropertiesSubFields as jest.Mock
+      ).mockReturnValue({
+        subfieldsKey: 'testField.keyword',
+        dataObject: {
+          type: 'text',
+          label: 'Test Field',
+          valueSources: ['value'],
+        },
+      });
+
+      processCustomPropertyField(
+        mockField as never,
+        'table',
+        subfields,
+        'table'
+      );
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockField, undefined);
+    });
+  });
+
+  describe('getAssetsPageQuickFilters', () => {
+    it('should return DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS for DOMAIN type', () => {
+      expect(getAssetsPageQuickFilters(AssetsOfEntity.DOMAIN)).toEqual(
+        DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS for DATA_PRODUCT type', () => {
+      expect(getAssetsPageQuickFilters(AssetsOfEntity.DATA_PRODUCT)).toEqual(
+        DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS for DATA_PRODUCT_INPUT_PORT type', () => {
+      expect(
+        getAssetsPageQuickFilters(AssetsOfEntity.DATA_PRODUCT_INPUT_PORT)
+      ).toEqual(DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS);
+    });
+
+    it('should return DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS for DATA_PRODUCT_OUTPUT_PORT type', () => {
+      expect(
+        getAssetsPageQuickFilters(AssetsOfEntity.DATA_PRODUCT_OUTPUT_PORT)
+      ).toEqual(DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS);
+    });
+
+    it('should return GLOSSARY_ASSETS_DROPDOWN_ITEMS for GLOSSARY type', () => {
+      expect(getAssetsPageQuickFilters(AssetsOfEntity.GLOSSARY)).toEqual(
+        GLOSSARY_ASSETS_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return TAG_ASSETS_DROPDOWN_ITEMS for TAG type', () => {
+      expect(getAssetsPageQuickFilters(AssetsOfEntity.TAG)).toEqual(
+        TAG_ASSETS_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return LINEAGE_DROPDOWN_ITEMS for LINEAGE type', () => {
+      expect(getAssetsPageQuickFilters(AssetsOfEntity.LINEAGE)).toEqual(
+        LINEAGE_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return COMMON_DROPDOWN_ITEMS for undefined type', () => {
+      expect(getAssetsPageQuickFilters(undefined)).toEqual(
+        COMMON_DROPDOWN_ITEMS
+      );
+    });
+
+    it('should return a new array instance each time', () => {
+      const result1 = getAssetsPageQuickFilters(AssetsOfEntity.DOMAIN);
+      const result2 = getAssetsPageQuickFilters(AssetsOfEntity.DOMAIN);
+
+      expect(result1).not.toBe(result2);
+      expect(result1).toEqual(result2);
+    });
   });
 
   describe('processEntityTypeFields', () => {
@@ -653,6 +804,57 @@ describe('AdvancedSearchUtils tests', () => {
       expect(
         advancedSearchClassBase.getCustomPropertiesSubFields
       ).toHaveBeenCalledTimes(2);
+    });
+
+    it('should pass searchOutputType through to processCustomPropertyField with ElasticSearch', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+
+      processEntityTypeFields(
+        'table',
+        mockFields as never,
+        subfields,
+        'table',
+        SearchOutputType.ElasticSearch
+      );
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[0], SearchOutputType.ElasticSearch);
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[1], SearchOutputType.ElasticSearch);
+    });
+
+    it('should pass searchOutputType through to processCustomPropertyField with JSONLogic', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+
+      processEntityTypeFields(
+        'table',
+        mockFields as never,
+        subfields,
+        'table',
+        SearchOutputType.JSONLogic
+      );
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[0], SearchOutputType.JSONLogic);
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[1], SearchOutputType.JSONLogic);
+    });
+
+    it('should handle undefined searchOutputType in processEntityTypeFields', () => {
+      const subfields: Record<string, FieldOrGroup> = {};
+
+      processEntityTypeFields('table', mockFields as never, subfields, 'table');
+
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[0], undefined);
+      expect(
+        advancedSearchClassBase.getCustomPropertiesSubFields
+      ).toHaveBeenCalledWith(mockFields[1], undefined);
     });
   });
 });

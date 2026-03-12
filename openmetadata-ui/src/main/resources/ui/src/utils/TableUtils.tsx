@@ -81,6 +81,7 @@ import { ReactComponent as APIServiceIcon } from '../assets/svg/ic-api-service-d
 import { ReactComponent as IconDown } from '../assets/svg/ic-arrow-down.svg';
 import { ReactComponent as IconRight } from '../assets/svg/ic-arrow-right.svg';
 import { ReactComponent as IconTestCase } from '../assets/svg/ic-checklist.svg';
+import { ReactComponent as ColumnIcon } from '../assets/svg/ic-column.svg';
 import { ReactComponent as DashboardIcon } from '../assets/svg/ic-dashboard.svg';
 import { ReactComponent as DataQualityIcon } from '../assets/svg/ic-data-contract.svg';
 import { ReactComponent as DataProductIcon } from '../assets/svg/ic-data-product.svg';
@@ -446,6 +447,8 @@ export const getEntityIcon = (
     [EntityType.CHART]: ChartIcon,
     [SearchIndex.TABLE]: TableIcon,
     [EntityType.TABLE]: TableIcon,
+    [SearchIndex.COLUMN]: ColumnIcon,
+    [EntityType.TABLE_COLUMN]: ColumnIcon,
     [EntityType.METADATA_SERVICE]: MetadataServiceIcon,
     [SearchIndex.DATA_PRODUCT]: DataProductIcon,
     [EntityType.DATA_PRODUCT]: DataProductIcon,
@@ -520,7 +523,9 @@ export const getEntityTypeIcon = (entityType?: string) => {
   return searchClassBase.getEntityIcon(entityType ?? '');
 };
 
-export const getServiceIcon = (source: SourceType) => {
+export const getServiceIcon = (source: {
+  entityType?: EntityType | string;
+}) => {
   const isDataAsset = NON_SERVICE_TYPE_ASSETS.includes(
     source.entityType as EntityType
   );
@@ -794,6 +799,24 @@ export const updateFieldDescription = <T extends TableFieldsInfoCommonEntities>(
   });
 };
 
+export const updateFieldDisplayName = <T extends TableFieldsInfoCommonEntities>(
+  changedFieldFQN: string,
+  displayName: string,
+  searchIndexFields?: Array<T>
+) => {
+  searchIndexFields?.forEach((field) => {
+    if (field.fullyQualifiedName === changedFieldFQN) {
+      field.displayName = displayName;
+    } else {
+      updateFieldDisplayName(
+        changedFieldFQN,
+        displayName,
+        field?.children as Array<T>
+      );
+    }
+  });
+};
+
 export const updateFieldExtension = <T extends TableFieldsInfoCommonEntities>(
   changedFieldFQN: string,
   extension: Record<string, unknown>,
@@ -914,18 +937,18 @@ export const getTableDetailPageBaseTabs = ({
         />
       ),
       key: EntityTabs.TABLE_QUERIES,
-      children: !viewQueriesPermission ? (
+      children: viewQueriesPermission ? (
+        <TableQueries
+          isTableDeleted={deleted}
+          tableId={tableDetails?.id ?? ''}
+        />
+      ) : (
         <ErrorPlaceHolder
           className="border-none"
           permissionValue={t('label.view-entity', {
             entity: t('label.query-plural'),
           })}
           type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
-        />
-      ) : (
-        <TableQueries
-          isTableDeleted={deleted}
-          tableId={tableDetails?.id ?? ''}
         />
       ),
     },
@@ -1005,7 +1028,10 @@ export const getTableDetailPageBaseTabs = ({
         />
       ),
       isHidden: !(
-        tableDetails?.dataModel?.sql || tableDetails?.dataModel?.rawSql
+        tableDetails?.dataModel?.sql ||
+        tableDetails?.dataModel?.rawSql ||
+        tableDetails?.dataModel?.path ||
+        tableDetails?.dataModel?.dbtSourceProject
       ),
       key: EntityTabs.DBT,
       children: (
@@ -1148,7 +1174,7 @@ export const createTableConstraintObject = (
   constraints: string[],
   type: ConstraintType
 ) =>
-  !isEmpty(constraints) ? [{ columns: constraints, constraintType: type }] : [];
+  isEmpty(constraints) ? [] : [{ columns: constraints, constraintType: type }];
 
 export const tableConstraintRendererBasedOnType = (
   constraintType: ConstraintType,
@@ -1363,12 +1389,15 @@ export const findColumnByEntityLink = (
 export const updateColumnInNestedStructure = (
   columns: Column[],
   targetFqn: string,
-  update: Partial<Column>
+  update: Partial<Column>,
+  field?: string
 ): Column[] => {
   return columns.map((column: Column) => {
     if (column.fullyQualifiedName === targetFqn) {
+      const newCol = omit(column, field ?? '');
+
       return {
-        ...column,
+        ...(newCol as Column),
         ...update,
       };
     }
@@ -1379,7 +1408,8 @@ export const updateColumnInNestedStructure = (
         children: updateColumnInNestedStructure(
           column.children,
           targetFqn,
-          update
+          update,
+          field
         ),
       };
     } else {
@@ -1467,7 +1497,7 @@ export const shouldCollapseSchema = <T extends { children?: T[] }>(
 };
 
 export const getExpandAllKeysToDepth = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   maxDepth = 3
@@ -1481,8 +1511,8 @@ export const getExpandAllKeysToDepth = <
 
     items.forEach((item) => {
       if (item.children && item.children.length > 0) {
-        if (item.name) {
-          keys.push(item.name);
+        if (item.fullyQualifiedName) {
+          keys.push(item.fullyQualifiedName);
         }
         // Continue collecting keys from children up to maxDepth
         collectKeys(item.children, currentDepth + 1);
@@ -1496,7 +1526,7 @@ export const getExpandAllKeysToDepth = <
 };
 
 export const getSafeExpandAllKeys = <
-  T extends { children?: T[]; name?: string }
+  T extends { children?: T[]; fullyQualifiedName?: string }
 >(
   fields: T[],
   isLargeSchema: boolean,
@@ -1848,4 +1878,18 @@ export const getHighlightedRowClassName = <
   }
 
   return '';
+};
+
+export const getNestedSectionTitle = (
+  entityType: EntityType | undefined
+): string => {
+  switch (entityType) {
+    case EntityType.TOPIC:
+    case EntityType.API_ENDPOINT:
+      return 'label.schema-field-plural';
+    case EntityType.SEARCH_INDEX:
+      return 'label.field-plural';
+    default:
+      return 'label.nested-column-plural';
+  }
 };

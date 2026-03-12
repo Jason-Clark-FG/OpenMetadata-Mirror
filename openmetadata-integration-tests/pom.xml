@@ -11,9 +11,22 @@
   <packaging>jar</packaging>
   <properties>
     <maven.surefire.version>3.1.2</maven.surefire.version>
+    <maven.failsafe.version>3.1.2</maven.failsafe.version>
     <junit.jupiter.version>5.10.2</junit.jupiter.version>
     <junit.platform.version>1.10.2</junit.platform.version>
+    <dockerjava.version>3.4.2</dockerjava.version>
   </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.github.docker-java</groupId>
+        <artifactId>docker-java-bom</artifactId>
+        <version>${dockerjava.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <!-- SDK client -->
     <dependency>
@@ -40,25 +53,25 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>mysql</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>elasticsearch</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -70,13 +83,13 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>k3s</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>junit-jupiter</artifactId>
-      <version>1.20.4</version>
+      <version>1.21.4</version>
       <scope>test</scope>
     </dependency>
     <!-- Kubernetes client for K8s integration tests -->
@@ -97,6 +110,20 @@
       <groupId>org.open-metadata</groupId>
       <artifactId>openmetadata-k8s-operator</artifactId>
       <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- MCP module for MCP integration tests -->
+    <dependency>
+      <groupId>org.open-metadata</groupId>
+      <artifactId>openmetadata-mcp</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- AssertJ for fluent assertions -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.27.7</version>
       <scope>test</scope>
     </dependency>
     <!-- Dropwizard testing harness -->
@@ -146,68 +173,24 @@
       <version>5.0.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.docker-java</groupId>
+      <artifactId>docker-java-transport-zerodep</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Source: https://mvnrepository.com/artifact/org.junit-pioneer/junit-pioneer -->
+    <dependency>
+      <groupId>org.junit-pioneer</groupId>
+      <artifactId>junit-pioneer</artifactId>
+      <version>2.3.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven.surefire.version}</version>
-        <executions>
-          <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
-          <execution>
-            <id>sequential-test</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <forkCount>1</forkCount>
-              <reuseForks>true</reuseForks>
-              <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
-              <includes>
-                <include>**/TagRecognizerFeedbackIT.java</include>
-              </includes>
-              <systemPropertyVariables>
-                <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
-                <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
-              </systemPropertyVariables>
-              <trimStackTrace>false</trimStackTrace>
-              <reportFormat>plain</reportFormat>
-              <useFile>true</useFile>
-            </configuration>
-          </execution>
-          <!-- Phase 2: Run all other tests in parallel -->
-          <execution>
-            <id>parallel-tests</id>
-            <phase>test</phase>
-            <goals>
-              <goal>test</goal>
-            </goals>
-            <configuration>
-              <forkCount>1</forkCount>
-              <reuseForks>true</reuseForks>
-              <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
-              <includes>
-                <include>**/*IT.java</include>
-                <include>**/*Test.java</include>
-              </includes>
-              <excludes>
-                <exclude>**/TagRecognizerFeedbackIT.java</exclude>
-              </excludes>
-              <systemPropertyVariables>
-                <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
-                <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
-              </systemPropertyVariables>
-              <trimStackTrace>false</trimStackTrace>
-              <reportFormat>plain</reportFormat>
-              <useFile>true</useFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
   <profiles>
     <!-- MySQL + Elasticsearch (default) -->
     <profile>
@@ -219,15 +202,14 @@
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven.surefire.version}</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${maven.failsafe.version}</version>
             <executions>
-              <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
+              <!-- Run sequential tests -->
               <execution>
-                <id>sequential-test</id>
-                <phase>test</phase>
+                <id>sequential-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -235,8 +217,15 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
+                    <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
+                    <databaseType>mysql</databaseType>
+                    <databaseImage>mysql:8.3.0</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -245,12 +234,11 @@
                   <useFile>true</useFile>
                 </configuration>
               </execution>
-              <!-- Phase 2: Run all other tests in parallel -->
+              <!-- Run parallel tests -->
               <execution>
                 <id>parallel-tests</id>
-                <phase>test</phase>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -262,8 +250,15 @@
                   </includes>
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
+                    <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
+                    <databaseType>mysql</databaseType>
+                    <databaseImage>mysql:8.3.0</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -271,6 +266,13 @@
                   <reportFormat>plain</reportFormat>
                   <useFile>true</useFile>
                 </configuration>
+              </execution>
+              <!-- Verify phase: Fails the build if any tests failed -->
+              <execution>
+                <id>verify</id>
+                <goals>
+                  <goal>verify</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>
@@ -284,15 +286,14 @@
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven.surefire.version}</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${maven.failsafe.version}</version>
             <executions>
-              <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
+              <!-- Run sequential tests -->
               <execution>
-                <id>sequential-test</id>
-                <phase>test</phase>
+                <id>sequential-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -300,8 +301,16 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
+                    <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
+                    <include>**/PatchTableEmbeddingIT.java</include>
                   </includes>
                   <systemPropertyVariables>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>opensearch</searchType>
+                    <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -310,12 +319,11 @@
                   <useFile>true</useFile>
                 </configuration>
               </execution>
-              <!-- Phase 2: Run all other tests in parallel -->
+              <!-- Run parallel tests -->
               <execution>
                 <id>parallel-tests</id>
-                <phase>test</phase>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -327,8 +335,16 @@
                   </includes>
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
+                    <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
+                    <exclude>**/PatchTableEmbeddingIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>opensearch</searchType>
+                    <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -336,6 +352,13 @@
                   <reportFormat>plain</reportFormat>
                   <useFile>true</useFile>
                 </configuration>
+              </execution>
+              <!-- Verify phase: Fails the build if any tests failed -->
+              <execution>
+                <id>verify</id>
+                <goals>
+                  <goal>verify</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>
@@ -349,15 +372,14 @@
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven.surefire.version}</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${maven.failsafe.version}</version>
             <executions>
-              <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
+              <!-- Run sequential tests -->
               <execution>
-                <id>sequential-test</id>
-                <phase>test</phase>
+                <id>sequential-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -365,8 +387,15 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
+                    <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -375,12 +404,11 @@
                   <useFile>true</useFile>
                 </configuration>
               </execution>
-              <!-- Phase 2: Run all other tests in parallel -->
+              <!-- Run parallel tests -->
               <execution>
                 <id>parallel-tests</id>
-                <phase>test</phase>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -392,8 +420,15 @@
                   </includes>
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
+                    <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -401,6 +436,13 @@
                   <reportFormat>plain</reportFormat>
                   <useFile>true</useFile>
                 </configuration>
+              </execution>
+              <!-- Verify phase: Fails the build if any tests failed -->
+              <execution>
+                <id>verify</id>
+                <goals>
+                  <goal>verify</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>
@@ -414,15 +456,14 @@
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven.surefire.version}</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${maven.failsafe.version}</version>
             <executions>
-              <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
+              <!-- Run sequential tests -->
               <execution>
-                <id>sequential-test</id>
-                <phase>test</phase>
+                <id>sequential-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -430,8 +471,16 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
+                    <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
+                    <include>**/PatchTableEmbeddingIT.java</include>
                   </includes>
                   <systemPropertyVariables>
+                    <databaseType>mysql</databaseType>
+                    <databaseImage>mysql:8.3.0</databaseImage>
+                    <searchType>opensearch</searchType>
+                    <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -440,12 +489,11 @@
                   <useFile>true</useFile>
                 </configuration>
               </execution>
-              <!-- Phase 2: Run all other tests in parallel -->
+              <!-- Run parallel tests -->
               <execution>
                 <id>parallel-tests</id>
-                <phase>test</phase>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -457,8 +505,16 @@
                   </includes>
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
+                    <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
+                    <exclude>**/PatchTableEmbeddingIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
+                    <databaseType>mysql</databaseType>
+                    <databaseImage>mysql:8.3.0</databaseImage>
+                    <searchType>opensearch</searchType>
+                    <searchImage>opensearchproject/opensearch:3.4.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -466,6 +522,13 @@
                   <reportFormat>plain</reportFormat>
                   <useFile>true</useFile>
                 </configuration>
+              </execution>
+              <!-- Verify phase: Fails the build if any tests failed -->
+              <execution>
+                <id>verify</id>
+                <goals>
+                  <goal>verify</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>
@@ -479,15 +542,14 @@
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${maven.surefire.version}</version>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>${maven.failsafe.version}</version>
             <executions>
-              <!-- Phase 1: Run TagRecognizerFeedbackIT sequentially, alone -->
+              <!-- Run sequential tests -->
               <execution>
-                <id>sequential-test</id>
-                <phase>test</phase>
+                <id>sequential-tests</id>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -495,8 +557,17 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/TagRecognizerFeedbackIT.java</include>
+                    <include>**/WorkflowDefinitionResourceIT.java</include>
+                    <include>**/VectorEmbeddingIntegrationIT.java</include>
                   </includes>
                   <systemPropertyVariables>
+                    <enableRdf>true</enableRdf>
+                    <rdfContainerImage>stain/jena-fuseki:latest</rdfContainerImage>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -505,12 +576,11 @@
                   <useFile>true</useFile>
                 </configuration>
               </execution>
-              <!-- Phase 2: Run all other tests in parallel -->
+              <!-- Run parallel tests -->
               <execution>
                 <id>parallel-tests</id>
-                <phase>test</phase>
                 <goals>
-                  <goal>test</goal>
+                  <goal>integration-test</goal>
                 </goals>
                 <configuration>
                   <forkCount>1</forkCount>
@@ -522,8 +592,17 @@
                   </includes>
                   <excludes>
                     <exclude>**/TagRecognizerFeedbackIT.java</exclude>
+                    <exclude>**/WorkflowDefinitionResourceIT.java</exclude>
+                    <exclude>**/VectorEmbeddingIntegrationIT.java</exclude>
                   </excludes>
                   <systemPropertyVariables>
+                    <enableRdf>true</enableRdf>
+                    <rdfContainerImage>stain/jena-fuseki:latest</rdfContainerImage>
+                    <databaseType>postgres</databaseType>
+                    <databaseImage>postgres:15</databaseImage>
+                    <searchType>elasticsearch</searchType>
+                    <searchImage>docker.elastic.co/elasticsearch/elasticsearch:9.3.0</searchImage>
+
                     <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
                     <junit.jupiter.execution.parallel.enabled>true</junit.jupiter.execution.parallel.enabled>
                   </systemPropertyVariables>
@@ -531,6 +610,13 @@
                   <reportFormat>plain</reportFormat>
                   <useFile>true</useFile>
                 </configuration>
+              </execution>
+              <!-- Verify phase: Fails the build if any tests failed -->
+              <execution>
+                <id>verify</id>
+                <goals>
+                  <goal>verify</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>

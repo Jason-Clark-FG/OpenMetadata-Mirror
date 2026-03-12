@@ -12,20 +12,9 @@
  */
 
 import {
-  CheckCircleOutlineOutlined,
-  DeleteOutlineOutlined,
-  TaskAltOutlined,
-} from '@mui/icons-material';
-import CancelIcon from '@mui/icons-material/Cancel';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CloseIcon from '@mui/icons-material/Close';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -40,6 +29,15 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import {
+  AlertTriangle,
+  CheckCircle,
+  CheckVerified01,
+  File06,
+  Trash01,
+  XCircle,
+  XClose,
+} from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { load as yamlLoad } from 'js-yaml';
@@ -49,6 +47,7 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as CloudUpload } from '../../../assets/svg/upload-cloud.svg';
 import { CreateDataContract } from '../../../generated/api/data/createDataContract';
 import { DataContract } from '../../../generated/entity/data/dataContract';
+import { ContractValidation } from '../../../generated/entity/datacontract/contractValidation';
 import {
   createContract,
   createOrUpdateContractFromODCSYaml,
@@ -56,11 +55,12 @@ import {
   importContractFromODCSYaml,
   ODCSParseResult,
   parseODCSYaml,
-  SchemaValidation,
   updateContract,
+  validateContractYaml,
   validateODCSYaml,
 } from '../../../rest/contractAPI';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import Loader from '../../common/Loader/Loader';
 import {
   ContractImportModalProps,
   ImportMode,
@@ -97,7 +97,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [serverValidation, setServerValidation] =
-    useState<SchemaValidation | null>(null);
+    useState<ContractValidation | null>(null);
   const [serverValidationError, setServerValidationError] = useState<
     string | null
   >(null);
@@ -109,30 +109,37 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
   const isODCSFormat = format === 'odcs';
 
   useEffect(() => {
-    if (!yamlContent || !isODCSFormat || parseError) {
+    if (!yamlContent || parseError) {
       setServerValidation(null);
       setServerValidationError(null);
 
       return;
     }
 
-    if (hasMultipleObjects && !selectedObjectName) {
+    // For ODCS format with multiple objects, wait for object selection
+    if (isODCSFormat && hasMultipleObjects && !selectedObjectName) {
       setServerValidation(null);
       setServerValidationError(null);
 
       return;
     }
 
-    const validateContract = async () => {
+    const runValidation = async () => {
       setIsValidating(true);
       setServerValidationError(null);
       try {
-        const validation = await validateODCSYaml(
-          yamlContent,
-          entityId,
-          entityType,
-          selectedObjectName || undefined
-        );
+        let validation: ContractValidation;
+        if (isODCSFormat) {
+          validation = await validateODCSYaml(
+            yamlContent,
+            entityId,
+            entityType,
+            selectedObjectName || undefined
+          );
+        } else {
+          // OM format validation
+          validation = await validateContractYaml(yamlContent);
+        }
         setServerValidation(validation);
       } catch (err) {
         const error = err as AxiosError<{ message?: string }>;
@@ -145,7 +152,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
       }
     };
 
-    validateContract();
+    runValidation();
   }, [
     yamlContent,
     isODCSFormat,
@@ -160,7 +167,19 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
     if (serverValidationError) {
       return true;
     }
-    if (serverValidation?.failed && serverValidation.failed > 0) {
+    if (serverValidation && !serverValidation.valid) {
+      return true;
+    }
+    if (
+      serverValidation?.entityErrors &&
+      serverValidation.entityErrors.length > 0
+    ) {
+      return true;
+    }
+    if (
+      serverValidation?.constraintErrors &&
+      serverValidation.constraintErrors.length > 0
+    ) {
       return true;
     }
 
@@ -200,7 +219,8 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
 
   const parseOpenMetadataContent = useCallback(
     (parsed: Record<string, unknown>): ParsedOpenMetadataContract | null => {
-      if (!parsed.entity) {
+      // OM contracts must have a name field
+      if (!parsed.name) {
         return null;
       }
 
@@ -380,10 +400,28 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
 
         return createContract(contractData) as Promise<DataContract>;
       } else if (hasExistingContract && importMode === 'merge') {
-        const patchOperations = compare(existingContract as object, {
+        const mergedForPatch: Record<string, unknown> = {
           ...existingContract,
           ...contractData,
-        });
+        };
+
+        // The OM export converts termsOfUse from entity object {content, inherited}
+        // to a plain string (CreateDataContract format). Convert it back to entity
+        // format so the JSON Patch targets the object fields correctly.
+        if (typeof mergedForPatch.termsOfUse === 'string') {
+          mergedForPatch.termsOfUse = {
+            ...(existingContract?.termsOfUse &&
+            typeof existingContract.termsOfUse === 'object'
+              ? existingContract.termsOfUse
+              : {}),
+            content: mergedForPatch.termsOfUse,
+          };
+        }
+
+        const patchOperations = compare(
+          existingContract as object,
+          mergedForPatch
+        );
 
         return updateContract(
           existingContract!.id!,
@@ -720,7 +758,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               {t('label.parse-error')}
             </Typography>
             <Chip
-              icon={<CloseIcon sx={{ fontSize: '12px !important' }} />}
+              icon={<XClose size={12} />}
               label={t('label.failed')}
               size="small"
               sx={{
@@ -741,24 +779,30 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 color: theme.palette.text.secondary,
                 mb: '12px',
               }}>
-              {t('message.invalid-odcs-contract-format-required-fields')}
+              {isODCSFormat
+                ? t('message.invalid-odcs-contract-format-required-fields')
+                : t(
+                    'message.invalid-openmetadata-contract-format-required-fields'
+                  )}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {['APIVersion', 'Kind', 'Status'].map((field) => (
-                <Box
-                  key={field}
-                  sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {(isODCSFormat ? ['APIVersion', 'Kind', 'Status'] : ['name']).map(
+                (field) => (
                   <Box
-                    sx={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      backgroundColor: theme.palette.allShades.error[600],
-                    }}
-                  />
-                  <Typography sx={{ fontSize: '14px' }}>{field}</Typography>
-                </Box>
-              ))}
+                    key={field}
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: theme.palette.allShades.error[600],
+                      }}
+                    />
+                    <Typography sx={{ fontSize: '14px' }}>{field}</Typography>
+                  </Box>
+                )
+              )}
             </Box>
           </Box>
           <Box
@@ -768,12 +812,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               borderTop: `1px solid ${theme.palette.allShades.error[100]}`,
             }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CancelIcon
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.error[600],
-                }}
-              />
+              <XCircle color={theme.palette.allShades.error[600]} size={16} />
               <Typography sx={{ fontSize: '14px' }}>
                 {t('label.syntax')} : <strong>{t('label.invalid')}</strong>
               </Typography>
@@ -795,7 +834,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <CircularProgress size={24} sx={{ mb: '12px' }} />
+          <Loader size="small" style={{ marginBottom: '12px' }} />
           <Typography
             sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
             {t('message.validating-contract-schema')}
@@ -828,7 +867,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               {t('label.schema-validation')}
             </Typography>
             <Chip
-              icon={<CloseIcon sx={{ fontSize: '12px !important' }} />}
+              icon={<XClose size={12} />}
               label={t('label.failed')}
               size="small"
               sx={{
@@ -861,23 +900,16 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 gap: '8px',
                 mb: '8px',
               }}>
-              <CheckCircleIcon
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.success[500],
-                }}
+              <CheckCircle
+                color={theme.palette.allShades.success[500]}
+                size={16}
               />
               <Typography sx={{ fontSize: '14px' }}>
                 {t('label.syntax')} : <strong>{t('label.valid')}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CancelIcon
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.error[600],
-                }}
-              />
+              <XCircle color={theme.palette.allShades.error[600]} size={16} />
               <Typography sx={{ fontSize: '14px' }}>
                 {t('label.schema')} : <strong>{t('label.error')}</strong>
               </Typography>
@@ -887,7 +919,10 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
       );
     }
 
-    if (serverValidation?.failed !== undefined && serverValidation.failed > 0) {
+    if (
+      serverValidation?.schemaValidation?.failed !== undefined &&
+      serverValidation.schemaValidation.failed > 0
+    ) {
       return (
         <Box
           data-testid="server-validation-failed-error-panel"
@@ -911,7 +946,165 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               {t('label.schema-validation')}
             </Typography>
             <Chip
-              icon={<CloseIcon sx={{ fontSize: '12px !important' }} />}
+              icon={<XClose size={12} />}
+              label={t('label.failed')}
+              size="small"
+              sx={{
+                backgroundColor: theme.palette.allShades.error[50],
+                color: theme.palette.allShades.error[600],
+                fontSize: '12px',
+                height: '22px',
+                '& .MuiChip-icon': {
+                  color: theme.palette.allShades.error[600],
+                },
+              }}
+            />
+          </Box>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: '200px',
+              overflowY: 'auto',
+            }}>
+            <Box
+              data-testid="failed-fields-list"
+              sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {serverValidation.schemaValidation?.failedFields?.map(
+                (field, index) => (
+                  <Box
+                    key={`notfound-${index}`}
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: theme.palette.allShades.error[600],
+                      }}
+                    />
+                    <Typography
+                      data-testid={`failed-field-${index}`}
+                      sx={{ fontSize: '14px' }}>
+                      {field} - {t('label.not-found-lowercase')}
+                    </Typography>
+                  </Box>
+                )
+              )}
+              {serverValidation.schemaValidation?.duplicateFields?.map(
+                (field, index) => (
+                  <Box
+                    key={`duplicate-${index}`}
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: theme.palette.allShades.error[600],
+                      }}
+                    />
+                    <Typography
+                      data-testid={`duplicate-field-${index}`}
+                      sx={{ fontSize: '14px' }}>
+                      {field} - {t('label.duplicate')}
+                    </Typography>
+                  </Box>
+                )
+              )}
+              {serverValidation.schemaValidation?.typeMismatchFields?.map(
+                (field, index) => (
+                  <Box
+                    key={`typemismatch-${index}`}
+                    sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: theme.palette.allShades.error[600],
+                      }}
+                    />
+                    <Typography
+                      data-testid={`type-mismatch-field-${index}`}
+                      sx={{ fontSize: '14px' }}>
+                      {field}
+                    </Typography>
+                  </Box>
+                )
+              )}
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              mt: 'auto',
+              pt: '16px',
+              borderTop: `1px solid ${theme.palette.divider}`,
+            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                mb: '8px',
+              }}>
+              <CheckCircle
+                color={theme.palette.allShades.success[500]}
+                size={16}
+              />
+              <Typography sx={{ fontSize: '14px' }}>
+                {t('label.syntax')} : <strong>{t('label.valid')}</strong>
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <XCircle color={theme.palette.allShades.error[600]} size={16} />
+              <Typography sx={{ fontSize: '14px' }}>
+                {t('label.schema')} :{' '}
+                {serverValidation.schemaValidation?.failed}{' '}
+                {t('label.field-plural-lowercase')} {t('label.with-issues')}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      );
+    }
+
+    const hasEntityErrors =
+      serverValidation?.entityErrors &&
+      serverValidation.entityErrors.length > 0;
+    const hasConstraintErrors =
+      serverValidation?.constraintErrors &&
+      serverValidation.constraintErrors.length > 0;
+
+    if (hasEntityErrors || hasConstraintErrors) {
+      const allErrors = [
+        ...(serverValidation?.entityErrors ?? []),
+        ...(serverValidation?.constraintErrors ?? []),
+      ];
+
+      return (
+        <Box
+          data-testid="entity-validation-error-panel"
+          sx={{
+            backgroundColor: theme.palette.grey[50],
+            borderRadius: '8px',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: '16px',
+              pb: '16px',
+              borderBottom: `1px solid ${theme.palette.divider}`,
+            }}>
+            <Typography sx={{ fontSize: '14px', fontWeight: 600 }}>
+              {t('label.contract-validation')}
+            </Typography>
+            <Chip
+              icon={<XClose size={12} />}
               label={t('label.failed')}
               size="small"
               sx={{
@@ -927,24 +1120,30 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           </Box>
           <Box sx={{ flex: 1, minHeight: '200px' }}>
             <Box
-              data-testid="failed-fields-list"
+              data-testid="entity-errors-list"
               sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {serverValidation.failedFields?.map((field, index) => (
+              {allErrors.map((error, index) => (
                 <Box
                   key={index}
-                  sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                  }}>
                   <Box
                     sx={{
                       width: 6,
                       height: 6,
                       borderRadius: '50%',
                       backgroundColor: theme.palette.allShades.error[600],
+                      mt: '6px',
+                      flexShrink: 0,
                     }}
                   />
                   <Typography
-                    data-testid={`failed-field-${index}`}
-                    sx={{ fontSize: '14px' }}>
-                    {field}
+                    data-testid={`entity-error-${index}`}
+                    sx={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                    {error}
                   </Typography>
                 </Box>
               ))}
@@ -963,33 +1162,29 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
                 gap: '8px',
                 mb: '8px',
               }}>
-              <CheckCircleIcon
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.success[500],
-                }}
+              <CheckCircle
+                color={theme.palette.allShades.success[500]}
+                size={16}
               />
               <Typography sx={{ fontSize: '14px' }}>
                 {t('label.syntax')} : <strong>{t('label.valid')}</strong>
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CancelIcon
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.error[600],
-                }}
-              />
+              <XCircle color={theme.palette.allShades.error[600]} size={16} />
               <Typography sx={{ fontSize: '14px' }}>
-                {t('label.schema')} : {serverValidation.failed}{' '}
-                {t('label.field-plural-lowercase')}{' '}
-                {t('label.not-found-lowercase')}
+                {t('label.contract')} :{' '}
+                <strong>{t('label.validation-failed')}</strong>
               </Typography>
             </Box>
           </Box>
         </Box>
       );
     }
+
+    const hasTypeMismatches =
+      serverValidation?.schemaValidation?.typeMismatchFields &&
+      serverValidation.schemaValidation.typeMismatchFields.length > 0;
 
     return (
       <Box
@@ -1019,29 +1214,78 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             {t('label.schema-validation')}
           </Typography>
           <Chip
-            icon={<TaskAltOutlined sx={{ fontSize: '12px !important' }} />}
-            label={t('label.passed')}
+            icon={<CheckVerified01 size={12} />}
+            label={
+              hasTypeMismatches
+                ? t('label.passed-with-warnings')
+                : t('label.passed')
+            }
             size="small"
             sx={{
-              backgroundColor: theme.palette.allShades.success[50],
-              color: theme.palette.allShades.success[700],
+              backgroundColor: hasTypeMismatches
+                ? theme.palette.allShades.warning[50]
+                : theme.palette.allShades.success[50],
+              color: hasTypeMismatches
+                ? theme.palette.allShades.warning[700]
+                : theme.palette.allShades.success[700],
               fontSize: '12px',
               height: '22px',
               '& .MuiChip-icon': {
-                color: theme.palette.allShades.success[700],
+                color: hasTypeMismatches
+                  ? theme.palette.allShades.warning[700]
+                  : theme.palette.allShades.success[700],
               },
             }}
           />
         </Box>
-        <Box sx={{ flex: 1, minHeight: '200px' }}>
+        <Box sx={{ flex: 1, minHeight: '200px', overflowY: 'auto' }}>
           <Typography
             sx={{ fontSize: '14px', color: theme.palette.text.secondary }}>
-            {serverValidation?.total && serverValidation.total > 0
-              ? t('message.schema-validation-passed-count', {
-                  count: serverValidation.passed,
+            {serverValidation?.schemaValidation?.total &&
+            serverValidation.schemaValidation.total > 0
+              ? t('message.schema-validation-passed', {
+                  count: serverValidation.schemaValidation?.passed,
                 })
               : t('message.contract-syntax-valid')}
           </Typography>
+          {hasTypeMismatches && (
+            <Box sx={{ mt: '16px' }}>
+              <Typography
+                sx={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.palette.allShades.warning[700],
+                  mb: '8px',
+                }}>
+                {t('label.type-mismatches')}
+              </Typography>
+              <Box
+                data-testid="type-mismatch-warnings-list"
+                sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {serverValidation.schemaValidation.typeMismatchFields.map(
+                  (field, index) => (
+                    <Box
+                      key={`typemismatch-warning-${index}`}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}>
+                      <AlertTriangle
+                        color={theme.palette.allShades.warning[600]}
+                        size={14}
+                      />
+                      <Typography
+                        data-testid={`type-mismatch-warning-${index}`}
+                        sx={{ fontSize: '14px' }}>
+                        {field}
+                      </Typography>
+                    </Box>
+                  )
+                )}
+              </Box>
+            </Box>
+          )}
         </Box>
         <Box
           sx={{
@@ -1056,30 +1300,28 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               gap: '8px',
               mb: '8px',
             }}>
-            <CheckCircleOutlineOutlined
-              sx={{
-                fontSize: '16px',
-                color: theme.palette.allShades.success[700],
-              }}
+            <CheckCircle
+              color={theme.palette.allShades.success[700]}
+              size={16}
             />
             <Typography sx={{ fontSize: '14px' }}>
               {t('label.syntax')} : <strong>{t('label.valid')}</strong>
             </Typography>
           </Box>
-          {serverValidation?.total !== undefined && serverValidation.total > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircleOutlineOutlined
-                sx={{
-                  fontSize: '16px',
-                  color: theme.palette.allShades.success[700],
-                }}
-              />
-              <Typography sx={{ fontSize: '14px' }}>
-                {t('label.schema')} : {serverValidation.passed}{' '}
-                {t('label.field-plural-lowercase')} {t('label.verified')}
-              </Typography>
-            </Box>
-          )}
+          {serverValidation?.schemaValidation?.total !== undefined &&
+            serverValidation.schemaValidation.total > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle
+                  color={theme.palette.allShades.success[700]}
+                  size={16}
+                />
+                <Typography sx={{ fontSize: '14px' }}>
+                  {t('label.schema')} :{' '}
+                  {serverValidation.schemaValidation?.passed}{' '}
+                  {t('label.field-plural-lowercase')} {t('label.verified')}
+                </Typography>
+              </Box>
+            )}
         </Box>
       </Box>
     );
@@ -1116,12 +1358,10 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
             borderRadius: '8px',
             p: '12px',
           }}>
-          <WarningAmberIcon
-            sx={{
-              color: theme.palette.allShades.warning[600],
-              fontSize: '20px',
-              mt: '2px',
-            }}
+          <AlertTriangle
+            color={theme.palette.allShades.warning[600]}
+            size={20}
+            style={{ marginTop: '2px' }}
           />
           <Typography
             sx={{
@@ -1341,7 +1581,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
         </Box>
         {!isLoading && (
           <IconButton size="medium" sx={{ p: 0 }} onClick={handleReset}>
-            <CloseIcon />
+            <XClose data-testid="CloseIcon" />
           </IconButton>
         )}
       </DialogTitle>
@@ -1424,7 +1664,7 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
               <>
                 <Box className="file-info-card" data-testid="file-info-card">
                   <Box className="file-info">
-                    <DescriptionOutlinedIcon className="file-icon" />
+                    <File06 className="file-icon" />
 
                     <Typography className="file-name" component="span">
                       {fileName}
@@ -1433,10 +1673,11 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
 
                   <IconButton
                     className="remove-button"
+                    data-testid="remove-file-button"
                     size="small"
                     title="Delete file"
                     onClick={handleRemoveFile}>
-                    <DeleteOutlineOutlined fontSize="small" />
+                    <Trash01 size={20} />
                   </IconButton>
                 </Box>
 
@@ -1489,7 +1730,11 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
           variant="contained"
           onClick={handleImport}>
           {(isLoading || isValidating) && (
-            <CircularProgress color="inherit" size={16} sx={{ mr: 1 }} />
+            <Loader
+              size="x-small"
+              style={{ marginRight: '8px' }}
+              type="white"
+            />
           )}
           {t('label.import')}
         </Button>
