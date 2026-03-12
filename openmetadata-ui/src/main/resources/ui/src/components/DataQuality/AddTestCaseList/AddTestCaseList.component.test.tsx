@@ -20,6 +20,7 @@ import {
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntityReference, TestCase } from '../../../generated/tests/testCase';
+import { getAggregateFieldOptions } from '../../../rest/miscAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { AddTestCaseList } from './AddTestCaseList.component';
@@ -113,9 +114,11 @@ jest.mock('../../../utils/RouterUtils', () => ({
 jest.mock('./AddTestCaseListFilters.component', () => ({
   __esModule: true,
   default: function MockAddTestCaseListFilters({
+    hideTableFilter = false,
     onChange,
     onSearch,
   }: {
+    hideTableFilter?: boolean;
     onChange: (
       values: { key: string; label: string }[],
       searchKey: string
@@ -140,28 +143,32 @@ jest.mock('./AddTestCaseListFilters.component', () => ({
           }>
           Apply testType table
         </button>
-        <button
-          data-testid="filter-table"
-          type="button"
-          onClick={() =>
-            onChange(
-              [
-                {
-                  key: 'sample.table',
-                  label: 'sample.table',
-                },
-              ],
-              'table'
-            )
-          }>
-          Apply table filter
-        </button>
-        <button
-          data-testid="filter-table-search"
-          type="button"
-          onClick={() => onSearch?.('table_search_term', 'table')}>
-          Trigger table search
-        </button>
+        {!hideTableFilter && (
+          <>
+            <button
+              data-testid="filter-table"
+              type="button"
+              onClick={() =>
+                onChange(
+                  [
+                    {
+                      key: 'sample.table',
+                      label: 'sample.table',
+                    },
+                  ],
+                  'table'
+                )
+              }>
+              Apply table filter
+            </button>
+            <button
+              data-testid="filter-table-search"
+              type="button"
+              onClick={() => onSearch?.('table_search_term', 'table')}>
+              Trigger table search
+            </button>
+          </>
+        )}
         <button
           data-testid="filter-column"
           type="button"
@@ -392,6 +399,74 @@ describe('AddTestCaseList', () => {
           ...testCaseParams,
         });
       });
+    });
+  });
+
+  describe('hideTableFilter and columnFilters', () => {
+    it('does not display table filter when hideTableFilter is true', async () => {
+      await act(async () => {
+        renderWithRouter({ ...mockProps, hideTableFilter: true });
+      });
+
+      expect(screen.queryByTestId('filter-table')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('filter-table-search')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId('add-test-case-list-filters')
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('filter-column')).toBeInTheDocument();
+    });
+
+    it('displays table filter when hideTableFilter is false', async () => {
+      await act(async () => {
+        renderWithRouter({ ...mockProps, hideTableFilter: false });
+      });
+
+      expect(screen.getByTestId('filter-table')).toBeInTheDocument();
+      expect(screen.getByTestId('filter-table-search')).toBeInTheDocument();
+    });
+
+    it('calls getAggregateFieldOptions with columnFilters when columnFilters is passed', async () => {
+      const columnFilters = 'fullyQualifiedName:"service.db.schema.my_table"';
+      const mockGetAggregateFieldOptions =
+        getAggregateFieldOptions as jest.MockedFunction<
+          typeof getAggregateFieldOptions
+        >;
+
+      await act(async () => {
+        renderWithRouter({ ...mockProps, columnFilters });
+      });
+
+      await waitFor(() => {
+        expect(mockGetAggregateFieldOptions).toHaveBeenCalled();
+      });
+
+      const call = mockGetAggregateFieldOptions.mock.calls.find(
+        (args) => args[3] === columnFilters
+      );
+
+      expect(call).toBeDefined();
+      expect(call?.[3]).toBe(columnFilters);
+    });
+
+    it('calls getAggregateFieldOptions with empty string for columnFilters when columnFilters is not passed', async () => {
+      const mockGetAggregateFieldOptions =
+        getAggregateFieldOptions as jest.MockedFunction<
+          typeof getAggregateFieldOptions
+        >;
+
+      await act(async () => {
+        renderWithRouter(mockProps);
+      });
+
+      await waitFor(() => {
+        expect(mockGetAggregateFieldOptions).toHaveBeenCalled();
+      });
+
+      const call = mockGetAggregateFieldOptions.mock.calls[0];
+
+      expect(call?.[3]).toBe('');
     });
   });
 

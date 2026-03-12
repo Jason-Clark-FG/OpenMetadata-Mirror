@@ -63,7 +63,19 @@ const AddTestSuitePipeline = ({
       testSuite?.id ?? (searchData as { testSuiteId: string }).testSuiteId;
 
     return testSuite?.basic ? undefined : testSuiteIdData;
-  }, [location.search]);
+  }, [location.search, testSuite?.basic, testSuite?.id]);
+
+  const tableFqnForFilters = useMemo(() => {
+    if (
+      testSuite?.basic &&
+      testSuite.basicEntityReference?.fullyQualifiedName &&
+      testSuite.basicEntityReference.type === 'table'
+    ) {
+      return testSuite.basicEntityReference.fullyQualifiedName;
+    }
+
+    return undefined;
+  }, [testSuite?.basic, testSuite?.basicEntityReference]);
 
   const [selectAllTestCases, setSelectAllTestCases] = useState(
     initialData?.selectAllTestCases
@@ -197,6 +209,14 @@ const AddTestSuitePipeline = ({
                   ]}
                   valuePropName="selectedTest">
                   <AddTestCaseList
+                    columnFilters={
+                      tableFqnForFilters
+                        ? `fullyQualifiedName:"${escapeESReservedCharacters(
+                            tableFqnForFilters
+                          )}"`
+                        : undefined
+                    }
+                    hideTableFilter={Boolean(tableFqnForFilters)}
                     showButton={false}
                     testCaseFilters={
                       !testSuiteId
