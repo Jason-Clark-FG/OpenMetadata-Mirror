@@ -360,9 +360,7 @@ describe('tagFormFields', () => {
         type: FieldTypes.UT_SWITCH,
         formItemLayout: FormItemLayout.HORIZONTAL,
         props: {
-          inputProps: {
-            'data-testid': 'disabled',
-          },
+          'data-testid': 'disabled',
           initialValue: false,
           isDisabled: false,
         },
