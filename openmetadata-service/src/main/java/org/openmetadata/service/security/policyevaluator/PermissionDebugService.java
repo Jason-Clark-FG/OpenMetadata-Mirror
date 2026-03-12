@@ -196,7 +196,7 @@ public class PermissionDebugService {
       for (Rule rule : policy.getRules()) {
         RuleInfo ruleInfo = new RuleInfo();
         ruleInfo.setName(rule.getName());
-        ruleInfo.setEffect(rule.getEffect().value());
+        ruleInfo.setEffect(normalizeEffect(rule.getEffect()));
 
         if (rule.getOperations() != null) {
           ruleInfo.setOperations(
@@ -472,7 +472,7 @@ public class PermissionDebugService {
     step.setPolicy(policyRef);
 
     step.setRule(rule.getName());
-    step.setEffect(rule.getEffect().value());
+    step.setEffect(normalizeEffect(rule.getEffect()));
 
     // Determine source based on entity type and role
     String entityType = policyContext.getEntityType();
@@ -575,5 +575,9 @@ public class PermissionDebugService {
       return true;
     }
     return operations.contains(operation);
+  }
+
+  private String normalizeEffect(Rule.Effect effect) {
+    return effect == null ? null : effect.name();
   }
 }
