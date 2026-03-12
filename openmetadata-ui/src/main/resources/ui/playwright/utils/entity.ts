@@ -2256,8 +2256,8 @@ export const checkExploreSearchFilter = async (
 
   const rawFilterValue = (filterValue ?? '').replace(/ /g, '+').toLowerCase();
 
-  // Escape double quotes before encoding
-  const escapedValue = rawFilterValue.replace(/"/g, '\\"');
+  // Use JSON.stringify to properly escape both backslashes and double quotes
+  const escapedValue = JSON.stringify(rawFilterValue).slice(1, -1);
 
   const filterValueForSearchURL =
     filterKey === 'tier.tagFQN'

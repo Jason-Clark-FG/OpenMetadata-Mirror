@@ -870,8 +870,15 @@ public final class JsonUtils {
     try (ZipFile zf = new ZipFile(file)) {
       Enumeration<? extends ZipEntry> e = zf.entries();
       while (e.hasMoreElements()) {
-        String fileName = e.nextElement().getName();
-        if (fileName.contains("..")) {
+        ZipEntry entry = e.nextElement();
+        String fileName = entry.getName();
+        if (fileName.contains("..") || entry.getName().startsWith("/")) {
+          LOG.warn("Skipping potentially unsafe zip entry: {}", fileName);
+          continue;
+        }
+        Path normalized = Paths.get(fileName).normalize();
+        if (normalized.startsWith("..")) {
+          LOG.warn("Skipping zip entry with path traversal: {}", fileName);
           continue;
         }
         if (pattern.matcher(fileName).matches()) {
