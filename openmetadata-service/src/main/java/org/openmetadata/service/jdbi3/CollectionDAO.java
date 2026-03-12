@@ -10349,36 +10349,40 @@ public interface CollectionDAO {
       private final String entityFqn;
       private final String failureReason;
       private final String status;
+      private final String entityType;
+      private final int retryCount;
+      private final java.sql.Timestamp claimedAt;
     }
 
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO search_index_retry_queue (entityId, entityFqn, failureReason, status) "
-                + "VALUES (:entityId, :entityFqn, :failureReason, :status) "
-                + "ON DUPLICATE KEY UPDATE failureReason = VALUES(failureReason), status = VALUES(status)",
+            "INSERT INTO search_index_retry_queue (entityId, entityFqn, failureReason, status, entityType) "
+                + "VALUES (:entityId, :entityFqn, :failureReason, :status, :entityType) "
+                + "ON DUPLICATE KEY UPDATE failureReason = VALUES(failureReason), status = VALUES(status), entityType = VALUES(entityType)",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO search_index_retry_queue (entityId, entityFqn, failureReason, status) "
-                + "VALUES (:entityId, :entityFqn, :failureReason, :status) "
+            "INSERT INTO search_index_retry_queue (entityId, entityFqn, failureReason, status, entityType) "
+                + "VALUES (:entityId, :entityFqn, :failureReason, :status, :entityType) "
                 + "ON CONFLICT (entityId, entityFqn) DO UPDATE SET "
-                + "failureReason = EXCLUDED.failureReason, status = EXCLUDED.status",
+                + "failureReason = EXCLUDED.failureReason, status = EXCLUDED.status, entityType = EXCLUDED.entityType",
         connectionType = POSTGRES)
     void upsert(
         @Bind("entityId") String entityId,
         @Bind("entityFqn") String entityFqn,
         @Bind("failureReason") String failureReason,
-        @Bind("status") String status);
+        @Bind("status") String status,
+        @Bind("entityType") String entityType);
 
     @SqlQuery(
-        "SELECT entityId, entityFqn, failureReason, status "
+        "SELECT entityId, entityFqn, failureReason, status, entityType, retryCount, claimedAt "
             + "FROM search_index_retry_queue WHERE status = :status LIMIT :limit")
     @RegisterRowMapper(SearchIndexRetryRecordMapper.class)
     List<SearchIndexRetryRecord> findByStatus(
         @Bind("status") String status, @Bind("limit") int limit);
 
     @SqlQuery(
-        "SELECT entityId, entityFqn, failureReason, status "
+        "SELECT entityId, entityFqn, failureReason, status, entityType, retryCount, claimedAt "
             + "FROM search_index_retry_queue WHERE status IN (<statuses>) LIMIT :limit")
     @RegisterRowMapper(SearchIndexRetryRecordMapper.class)
     List<SearchIndexRetryRecord> findByStatuses(
@@ -10420,6 +10424,29 @@ public interface CollectionDAO {
     @SqlQuery("SELECT COUNT(*) FROM search_index_retry_queue WHERE status = :status")
     int countByStatus(@Bind("status") String status);
 
+    @SqlUpdate(
+        "UPDATE search_index_retry_queue SET status = 'IN_PROGRESS', claimedAt = NOW() "
+            + "WHERE entityId = :entityId AND entityFqn = :entityFqn AND status = :currentStatus")
+    int claimRecord(
+        @Bind("entityId") String entityId,
+        @Bind("entityFqn") String entityFqn,
+        @Bind("currentStatus") String currentStatus);
+
+    @SqlUpdate(
+        "UPDATE search_index_retry_queue SET status = 'PENDING', claimedAt = NULL "
+            + "WHERE status = 'IN_PROGRESS' AND claimedAt < :cutoff")
+    int recoverStaleInProgress(@Bind("cutoff") java.sql.Timestamp cutoff);
+
+    @SqlUpdate(
+        "UPDATE search_index_retry_queue SET status = :status, failureReason = :failureReason, "
+            + "retryCount = retryCount + 1, claimedAt = NULL "
+            + "WHERE entityId = :entityId AND entityFqn = :entityFqn")
+    int updateFailureAndRetryCount(
+        @Bind("entityId") String entityId,
+        @Bind("entityFqn") String entityFqn,
+        @Bind("failureReason") String failureReason,
+        @Bind("status") String status);
+
     default List<SearchIndexRetryRecord> claimPending(int batchSize) {
       int fetchSize = Math.max(batchSize * 3, batchSize);
       List<SearchIndexRetryRecord> candidates =
@@ -10430,11 +10457,7 @@ public interface CollectionDAO {
           break;
         }
         int updated =
-            updateStatusIfCurrent(
-                candidate.getEntityId(),
-                candidate.getEntityFqn(),
-                candidate.getStatus(),
-                "IN_PROGRESS");
+            claimRecord(candidate.getEntityId(), candidate.getEntityFqn(), candidate.getStatus());
         if (updated == 1) {
           claimed.add(candidate);
         }
@@ -10449,7 +10472,10 @@ public interface CollectionDAO {
             rs.getString("entityId"),
             rs.getString("entityFqn"),
             rs.getString("failureReason"),
-            rs.getString("status"));
+            rs.getString("status"),
+            rs.getString("entityType"),
+            rs.getInt("retryCount"),
+            rs.getTimestamp("claimedAt"));
       }
     }
   }

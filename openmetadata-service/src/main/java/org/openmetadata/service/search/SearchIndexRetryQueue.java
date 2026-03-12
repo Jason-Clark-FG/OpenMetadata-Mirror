@@ -1,5 +1,6 @@
 package org.openmetadata.service.search;
 
+import io.micrometer.core.instrument.Metrics;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -31,17 +32,25 @@ public final class SearchIndexRetryQueue {
     if (entity == null) {
       return;
     }
+    String entityType =
+        entity.getEntityReference() != null ? entity.getEntityReference().getType() : "";
     enqueue(
         entity.getId() != null ? entity.getId().toString() : null,
         entity.getFullyQualifiedName(),
+        entityType,
         failureReason(operation, failure));
   }
 
   public static void enqueue(String entityId, String entityFqn, String failureReason) {
+    enqueue(entityId, entityFqn, "", failureReason);
+  }
+
+  public static void enqueue(
+      String entityId, String entityFqn, String entityType, String failureReason) {
     String normalizedEntityId = normalize(entityId);
     String normalizedEntityFqn = normalize(entityFqn);
+    String normalizedEntityType = normalize(entityType);
 
-    // Queue rows require at least one routing key.
     if (normalizedEntityId.isEmpty() && normalizedEntityFqn.isEmpty()) {
       return;
     }
@@ -59,7 +68,9 @@ public final class SearchIndexRetryQueue {
               normalizedEntityId,
               normalizedEntityFqn,
               truncate(failureReason),
-              SearchIndexRetryQueue.STATUS_PENDING);
+              SearchIndexRetryQueue.STATUS_PENDING,
+              normalizedEntityType);
+      Metrics.counter("search.retry.enqueued").increment();
     } catch (Exception e) {
       LOG.warn(
           "Failed to record search retry queue row for entityId={} entityFqn={}: {}",

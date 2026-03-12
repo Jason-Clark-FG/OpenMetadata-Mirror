@@ -63,6 +63,7 @@ import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.search.SearchAggregation;
 import org.openmetadata.service.search.SearchClient;
 import org.openmetadata.service.search.SearchHealthStatus;
+import org.openmetadata.service.search.SearchIndexRetryQueue;
 import org.openmetadata.service.search.SearchResultListMapper;
 import org.openmetadata.service.search.SearchSortFilter;
 import org.openmetadata.service.search.elasticsearch.queries.ElasticQueryBuilderFactory;
@@ -82,9 +83,11 @@ public class ElasticSearchClient implements SearchClient {
   private final RBACConditionEvaluator rbacConditionEvaluator;
   private final QueryBuilderFactory queryBuilderFactory;
 
-  private final boolean isClientAvailable;
+  private volatile boolean isClientAvailable;
+  private static final long HEALTH_CHECK_CACHE_MS = 5000;
+  private volatile long lastHealthCheckAt;
 
-  private final boolean isNewClientAvailable;
+  private volatile boolean isNewClientAvailable;
 
   private final String clusterAlias;
 
@@ -172,6 +175,22 @@ public class ElasticSearchClient implements SearchClient {
 
   @Override
   public boolean isClientAvailable() {
+    if (newClient == null) {
+      return false;
+    }
+    long now = System.currentTimeMillis();
+    if (now - lastHealthCheckAt < HEALTH_CHECK_CACHE_MS) {
+      return isClientAvailable;
+    }
+    try {
+      boolean alive = newClient.ping().value();
+      isClientAvailable = alive;
+      isNewClientAvailable = alive;
+    } catch (Exception e) {
+      isClientAvailable = false;
+      isNewClientAvailable = false;
+    }
+    lastHealthCheckAt = now;
     return isClientAvailable;
   }
 
@@ -554,6 +573,11 @@ public class ElasticSearchClient implements SearchClient {
                   }
                 } catch (Exception ex) {
                   LOG.error("Reindexing Across Entities Failed", ex);
+                  SearchIndexRetryQueue.enqueue(
+                      sourceRef.getId() != null ? sourceRef.getId().toString() : null,
+                      sourceRef.getFullyQualifiedName(),
+                      sourceRef.getType(),
+                      SearchIndexRetryQueue.failureReason("reindexAcrossIndices", ex));
                 }
               });
     }

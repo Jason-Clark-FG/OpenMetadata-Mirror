@@ -670,6 +670,10 @@ public class SearchRepository {
             "Issue bulk indexing columns for table [{}]: {}",
             table.getFullyQualifiedName(),
             e.getMessage());
+        if (e instanceof RuntimeException re) {
+          throw re;
+        }
+        throw new RuntimeException(e);
       }
     }
   }
@@ -689,6 +693,10 @@ public class SearchRepository {
           "Issue deleting columns for table [{}]: {}",
           table.getFullyQualifiedName(),
           e.getMessage());
+      if (e instanceof RuntimeException re) {
+        throw re;
+      }
+      throw new RuntimeException(e);
     }
   }
 
@@ -936,6 +944,13 @@ public class SearchRepository {
         String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
         searchClient.createTimeSeriesEntity(indexMapping.getIndexName(clusterAlias), entityId, doc);
       } catch (Exception ie) {
+        SearchIndexRetryQueue.enqueue(
+            entityId,
+            entity.getEntityReference() != null
+                ? entity.getEntityReference().getFullyQualifiedName()
+                : null,
+            entityType,
+            SearchIndexRetryQueue.failureReason("createTimeSeriesEntity", ie));
         LOG.error(
             "Issue in Creating new search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
             entityId,
@@ -959,6 +974,13 @@ public class SearchRepository {
         searchClient.updateEntity(
             indexMapping.getIndexName(clusterAlias), entityId, doc, DEFAULT_UPDATE_SCRIPT);
       } catch (RuntimeException e) {
+        SearchIndexRetryQueue.enqueue(
+            entityId,
+            entityTimeSeries.getEntityReference() != null
+                ? entityTimeSeries.getEntityReference().getFullyQualifiedName()
+                : null,
+            entityType,
+            SearchIndexRetryQueue.failureReason("updateTimeSeriesEntity", e));
         LOG.error(
             "Issue in Updating the search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
             entityId,
@@ -1109,6 +1131,11 @@ public class SearchRepository {
           pipelineStatuses.size(),
           pipeline.getFullyQualifiedName());
     } catch (Exception e) {
+      SearchIndexRetryQueue.enqueue(
+          pipeline.getId() != null ? pipeline.getId().toString() : null,
+          pipeline.getFullyQualifiedName(),
+          Entity.PIPELINE,
+          SearchIndexRetryQueue.failureReason("bulkIndexPipelineExecutions", e));
       LOG.error("Failed to bulk index pipeline executions in Elasticsearch", e);
     }
   }
@@ -1915,6 +1942,13 @@ public class SearchRepository {
       try {
         searchClient.deleteEntity(indexMapping.getIndexName(clusterAlias), entityId);
       } catch (Exception ie) {
+        SearchIndexRetryQueue.enqueue(
+            entityId,
+            entity.getEntityReference() != null
+                ? entity.getEntityReference().getFullyQualifiedName()
+                : null,
+            entityType,
+            SearchIndexRetryQueue.failureReason("deleteTimeSeriesEntityById", ie));
         LOG.error(
             "Issue in Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
             entityId,

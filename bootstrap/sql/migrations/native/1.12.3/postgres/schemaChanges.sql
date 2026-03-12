@@ -6,8 +6,14 @@ CREATE TABLE IF NOT EXISTS search_index_retry_queue (
     entityFqn VARCHAR(1024) NOT NULL DEFAULT '',
     failureReason TEXT,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    entityType VARCHAR(256) NOT NULL DEFAULT '',
+    retryCount INT NOT NULL DEFAULT 0,
+    claimedAt TIMESTAMP NULL DEFAULT NULL,
     PRIMARY KEY (entityId, entityFqn)
 );
 
 CREATE INDEX IF NOT EXISTS idx_search_index_retry_queue_status
 ON search_index_retry_queue(status);
+
+CREATE INDEX IF NOT EXISTS idx_search_index_retry_queue_claimed
+ON search_index_retry_queue(claimedAt);
