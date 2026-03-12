@@ -2,6 +2,8 @@
   "mappingFields": {
     "common": [
       "id",
+      "entityType",
+      "tier",
       "description",
       "displayName",
       "name",

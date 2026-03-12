@@ -7,27 +7,22 @@
     },
     "mappings": {
       "properties": {
-        "@timestamp": {
-          "type": "date"
-        },
+        "@timestamp": { "type": "date" },
         "id": {
           "type": "text",
           "fields": {
             "keyword": {
-              "type": "keyword"
-            }
-          }
-        },
-        "tier": {
-          "type": "text",
-          "fields": {
-            "keyword": {
               "type": "keyword",
-              "normalizer": "lowercase_normalizer",
               "ignore_above": 256
             }
           }
-        }
+        },
+        "hasDescription": { "type": "integer" },
+        "hasOwner": { "type": "integer" },
+        "team": { "type": "keyword" },
+        "numberOfColumns": { "type": "integer" },
+        "numberOfColumnsWithDescription": { "type": "integer" },
+        "hasColumnDescription": { "type": "integer" }
       }
     }
   }
