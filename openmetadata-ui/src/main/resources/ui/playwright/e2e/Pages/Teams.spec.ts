@@ -386,6 +386,7 @@ test.describe('Teams Page', () => {
       displayName: `PW Private ${uuid()}`,
       description: 'Private team for profile visibility validation',
       teamType: 'Group',
+      isJoinable: false,
       users: [],
     });
 

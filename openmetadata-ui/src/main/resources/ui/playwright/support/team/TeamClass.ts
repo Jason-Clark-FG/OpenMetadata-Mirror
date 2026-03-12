@@ -28,6 +28,7 @@ type ResponseDataType = {
   defaultRoles?: string[];
   policies?: string[];
   owners?: EntityReference[];
+  isJoinable?: boolean;
 };
 
 export class TeamClass {

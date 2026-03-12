@@ -461,95 +461,23 @@ test.describe('User with Data Consumer Roles', () => {
 
   test('Permissions for table details page for Data Consumer', async ({
     adminPage,
-    browser,
+    dataConsumerPage,
   }) => {
     await redirectToHomePage(adminPage);
-    const { apiContext, afterAction } = await getApiContext(adminPage);
-    const tableUnderTest = new TableClass();
-    const {
-      page: dataConsumerPage,
-      apiContext: dataConsumerApiContext,
-      afterAction: afterDataConsumerAction,
-    } = await performUserLogin(browser, dataConsumerUser);
-    try {
-      await redirectToHomePage(dataConsumerPage);
-      await tableUnderTest.create(apiContext);
 
-      await tableUnderTest.patch({
-        apiContext,
-        patchData: [
-          {
-            op: 'add',
-            path: '/owners',
-            value: [
-              {
-                id: user2.responseData.id,
-                type: 'user',
-              },
-            ],
-          },
-        ],
-      });
-      const expectedTablePath = `/table/${encodeURIComponent(
-        tableUnderTest.entityResponseData.fullyQualifiedName ?? ''
-      )}`;
+    await tableEntity.visitEntityPage(adminPage);
 
-      await expect
-        .poll(
-          async () => {
-            const tableResponse = await dataConsumerApiContext.get(
-              `/api/v1/tables/${tableUnderTest.entityResponseData.id}?fields=owners`
-            );
+    await addOwner({
+      page: adminPage,
+      owner: user.responseData.displayName,
+      type: 'Users',
+      endpoint: EntityTypeEndpoint.Table,
+      dataTestId: 'data-assets-header',
+    });
 
-            return tableResponse.ok();
-          },
-          { timeout: 60000, intervals: [1000, 2000, 5000] }
-        )
-        .toBe(true);
+    await tableEntity.visitEntityPage(dataConsumerPage);
 
-      await expect
-        .poll(
-          async () => {
-            const entityHeader = dataConsumerPage.getByTestId('entity-header-name');
-
-            await dataConsumerPage.goto(expectedTablePath, {
-              waitUntil: 'domcontentloaded',
-            });
-            await waitForAllLoadersToDisappear(dataConsumerPage).catch(
-              () => undefined
-            );
-
-            const isOnExpectedTable =
-              new URL(dataConsumerPage.url()).pathname === expectedTablePath;
-            const hasHeader = await entityHeader.isVisible().catch(() => false);
-
-            if (isOnExpectedTable && hasHeader) {
-              return true;
-            }
-
-            await tableUnderTest.visitEntityPage(
-              dataConsumerPage,
-              tableUnderTest.entityResponseData.name ?? ''
-            );
-            await waitForAllLoadersToDisappear(dataConsumerPage).catch(
-              () => undefined
-            );
-
-            return (
-              new URL(dataConsumerPage.url()).pathname === expectedTablePath &&
-              (await entityHeader.isVisible().catch(() => false))
-            );
-          },
-          { timeout: 60000, intervals: [1000, 2000, 5000] }
-        )
-        .toBe(true);
-
-      await checkDataConsumerPermissions(dataConsumerPage);
-    } finally {
-      await afterDataConsumerAction().catch(() => undefined);
-      await tableUnderTest.delete(apiContext).catch(() => undefined);
-      await afterAction().catch(() => undefined);
-    }
+    await checkDataConsumerPermissions(dataConsumerPage);
   });
 
   test('Update user details for Data Consumer', async ({

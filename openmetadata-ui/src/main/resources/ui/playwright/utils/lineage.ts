@@ -224,11 +224,7 @@ export const dragConnection = async (
   );
 
   const lineageRes = page.waitForResponse('/api/v1/lineage');
-  await sourceNode.hover();
-  await sourceHandle.waitFor({ state: 'visible' });
   await sourceHandle.dispatchEvent('click');
-  await targetNode.hover();
-  await targetHandle.waitFor({ state: 'visible' });
   await targetHandle.dispatchEvent('click');
 
   await lineageRes;

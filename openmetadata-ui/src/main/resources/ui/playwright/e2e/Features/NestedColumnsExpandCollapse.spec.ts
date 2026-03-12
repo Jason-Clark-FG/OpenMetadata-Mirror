@@ -125,7 +125,7 @@ test.describe('API Endpoint Entity Summary Panel - Nested columns with duplicate
     await redirectToHomePage(page);
 
     const dataAssestResponse = page.waitForResponse(
-      'api/v1/search/query?q=*&index=dataAsset*'
+      '**/api/v1/search/query?q=*&index=dataAsset*'
     );
     // Go to Explore
     await page.locator('[data-testid="app-bar-item-explore"]').click();
@@ -140,15 +140,25 @@ test.describe('API Endpoint Entity Summary Panel - Nested columns with duplicate
     await page.getByTestId('search-input').fill(apiService.service.name);
     await serviceSearchResponse;
     await page.getByTestId(apiService.service.name).click();
+
+    const filteredSearchResponse = page.waitForResponse(
+      '**/api/v1/search/query*'
+    );
     await page.getByTestId('update-btn').click();
+    await filteredSearchResponse;
+    await waitForAllLoadersToDisappear(page);
 
-    // Click row (anywhere on the row usually opens summary)
-    // We target the specific row by test-id generated from service and table name
-    await page
-      .getByTestId(`table-data-card_${apiService.entity.fullyQualifiedName}`)
-      .click();
+    // Use dispatchEvent to click on the card div directly, avoiding the inner
+    // Link element which would navigate to the entity detail page instead of
+    // opening the summary panel.
+    const card = page.getByTestId(
+      `table-data-card_${apiService.entity.fullyQualifiedName}`
+    );
+    await card.waitFor({ state: 'visible' });
+    await card.dispatchEvent('click');
 
-    // Click Schema Tab
+    // Click Schema Tab in the summary panel
+    await page.getByTestId('schema-tab').waitFor({ state: 'visible' });
     await page.getByTestId('schema-tab').click();
 
     await verifyExpandCollapseForSummaryPanel(page);

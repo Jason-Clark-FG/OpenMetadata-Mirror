@@ -136,8 +136,6 @@ export const navigateToCustomizeLandingPage = async (
   { personaName }: { personaName: string }
 ) => {
   await page.goto(`/settings/persona/${encodeURIComponent(personaName)}`);
-  await page.waitForURL(`**/settings/persona/${encodeURIComponent(personaName)}`);
-  await page.waitForLoadState('domcontentloaded');
   await waitForAllLoadersToDisappear(page);
 
   // Navigate to the customize landing page

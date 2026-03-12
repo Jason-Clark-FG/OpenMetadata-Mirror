@@ -20,7 +20,7 @@ import { TeamClass } from '../../support/team/TeamClass';
 import { AdminClass } from '../../support/user/AdminClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
-import { clickOutside, getApiContext, uuid } from '../../utils/common';
+import { getApiContext, uuid } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { visitUserProfilePage } from '../../utils/user';
 import { redirectToUserPage } from '../../utils/userDetails';
@@ -512,18 +512,7 @@ test.describe('User with different Roles', () => {
       .getByText('Application bot role', { exact: true })
       .click();
 
-    await adminPage.keyboard.press('Escape');
-    await clickOutside(adminPage);
-    await expect(adminPage.locator('.roles-custom-dropdown-class')).toBeHidden({
-      timeout: 10000,
-    });
-
-    const saveRolesButton = adminPage.getByTestId(
-      'user-profile-edit-roles-save-button'
-    );
-    if (await saveRolesButton.isVisible().catch(() => false)) {
-      await saveRolesButton.click();
-    }
+    await adminPage.getByTestId('user-profile-edit-roles-save-button').click();
 
     await expect(adminPage.getByTestId('user-profile-roles')).toContainText(
       'Application bot role'
