@@ -152,16 +152,6 @@ const GlossaryTermsV1 = ({
     activeTab !== EntityTabs.ASSETS && activeTabHandler(EntityTabs.ASSETS);
   }, [assetTabRef, activeTab]);
 
-  const onExtensionUpdate = useCallback(
-    async (updatedTable: GlossaryTerm) => {
-      await handleGlossaryTermUpdate({
-        ...glossaryTerm,
-        extension: updatedTable.extension,
-      });
-    },
-    [glossaryTerm, handleGlossaryTermUpdate]
-  );
-
   const onTermUpdate = async (data: GlossaryTerm | Glossary) => {
     await handleGlossaryTermUpdate(data as GlossaryTerm);
     // For name change, do not update the feed. It will be updated when the page is redirected to
@@ -227,7 +217,6 @@ const GlossaryTermsV1 = ({
     handleAssetSave,
     previewAsset,
     handleAssetClick,
-    onExtensionUpdate,
   ]);
 
   useEffect(() => {
@@ -282,8 +271,7 @@ const GlossaryTermsV1 = ({
       isVersionView={isVersionView}
       permissions={permissions}
       type={EntityType.GLOSSARY_TERM}
-      onUpdate={onTermUpdate}
-    >
+      onUpdate={onTermUpdate}>
       <Row data-testid="glossary-term" gutter={[0, 12]}>
         <Col span={24}>
           <GlossaryHeader
