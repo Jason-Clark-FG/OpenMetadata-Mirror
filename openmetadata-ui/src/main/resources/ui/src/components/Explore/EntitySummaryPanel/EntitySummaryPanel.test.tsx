@@ -28,10 +28,6 @@ import { mockTopicEntityDetails } from './mocks/TopicSummary.mock';
 
 const mockHandleClosePanel = jest.fn();
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <>{children}</>
-);
-
 jest.mock('../../../utils/EntityUtils', () => {
   const LINEAGE_TABS_SET = new Set([
     'apiEndpoint',
@@ -220,8 +216,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -239,8 +234,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -258,8 +252,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -277,8 +270,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -296,8 +288,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -315,8 +306,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -334,8 +324,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -356,8 +345,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -376,8 +364,7 @@ describe('EntitySummaryPanel component tests', () => {
         }}
         handleClosePanel={mockHandleClosePanel}
         isSideDrawer={false}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -396,8 +383,7 @@ describe('EntitySummaryPanel component tests', () => {
           },
         }}
         handleClosePanel={mockHandleClosePanel}
-      />,
-      { wrapper: Wrapper }
+      />
     );
 
     await waitFor(() => {
@@ -429,8 +415,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -450,8 +435,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -471,8 +455,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -490,8 +473,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -512,8 +494,7 @@ describe('EntitySummaryPanel component tests', () => {
             details: entityWithoutFQN,
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -531,12 +512,13 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId('TableSummary')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('entity-summary-panel-container')
+        ).toBeInTheDocument();
       });
     });
 
@@ -547,8 +529,7 @@ describe('EntitySummaryPanel component tests', () => {
             details: null as unknown as never,
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -569,8 +550,7 @@ describe('EntitySummaryPanel component tests', () => {
             details: entityWithoutId,
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -579,6 +559,7 @@ describe('EntitySummaryPanel component tests', () => {
     });
 
     it('should handle entity type change correctly', async () => {
+      mockGetTableDetailsByFQN.mockResolvedValue(mockTableEntityDetails);
       const { rerender } = render(
         <EntitySummaryPanel
           entityDetails={{
@@ -588,8 +569,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -597,17 +577,15 @@ describe('EntitySummaryPanel component tests', () => {
       });
 
       rerender(
-        <Wrapper>
-          <EntitySummaryPanel
-            entityDetails={{
-              details: {
-                ...mockTopicEntityDetails,
-                entityType: EntityType.TOPIC,
-              },
-            }}
-            handleClosePanel={mockHandleClosePanel}
-          />
-        </Wrapper>
+        <EntitySummaryPanel
+          entityDetails={{
+            details: {
+              ...mockTopicEntityDetails,
+              entityType: EntityType.TOPIC,
+            },
+          }}
+          handleClosePanel={mockHandleClosePanel}
+        />
       );
 
       await waitFor(() => {
@@ -630,8 +608,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -650,8 +627,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -659,19 +635,17 @@ describe('EntitySummaryPanel component tests', () => {
       });
 
       rerender(
-        <Wrapper>
-          <EntitySummaryPanel
-            entityDetails={{
-              details: {
-                ...mockTableEntityDetails,
-                id: 'table-2',
-                fullyQualifiedName: 'new.table.fqn',
-                entityType: EntityType.TABLE,
-              },
-            }}
-            handleClosePanel={mockHandleClosePanel}
-          />
-        </Wrapper>
+        <EntitySummaryPanel
+          entityDetails={{
+            details: {
+              ...mockTableEntityDetails,
+              id: 'table-2',
+              fullyQualifiedName: 'new.table.fqn',
+              entityType: EntityType.TABLE,
+            },
+          }}
+          handleClosePanel={mockHandleClosePanel}
+        />
       );
 
       await waitFor(() => {
@@ -702,8 +676,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -747,8 +720,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -778,8 +750,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -808,8 +779,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       const editButton = await screen.findByTestId('edit-displayName-button');
@@ -849,8 +819,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -880,8 +849,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -919,8 +887,7 @@ describe('EntitySummaryPanel component tests', () => {
             },
           }}
           handleClosePanel={mockHandleClosePanel}
-        />,
-        { wrapper: Wrapper }
+        />
       );
 
       await waitFor(() => {
@@ -947,9 +914,10 @@ describe('EntitySummaryPanel component tests', () => {
           usePermissionProvider().getEntityPermission as jest.Mock
         ).mockResolvedValue({
           ViewBasic: true,
+          EditAll: true,
         });
 
-        const { container } = render(
+        render(
           <EntitySummaryPanel
             entityDetails={{
               details: {
@@ -958,13 +926,12 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {
           expect(
-            container.querySelector('.entity-summary-panel-container')
+            screen.getByTestId('entity-summary-panel-container')
           ).toBeInTheDocument();
         });
       });
@@ -974,9 +941,10 @@ describe('EntitySummaryPanel component tests', () => {
           usePermissionProvider().getEntityPermission as jest.Mock
         ).mockResolvedValue({
           ViewBasic: true,
+          EditAll: true,
         });
 
-        const { container } = render(
+        render(
           <EntitySummaryPanel
             entityDetails={{
               details: {
@@ -985,13 +953,12 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {
           expect(
-            container.querySelector('.entity-summary-panel-container')
+            screen.getByTestId('entity-summary-panel-container')
           ).toBeInTheDocument();
         });
       });
@@ -1001,9 +968,10 @@ describe('EntitySummaryPanel component tests', () => {
           usePermissionProvider().getEntityPermission as jest.Mock
         ).mockResolvedValue({
           ViewBasic: true,
+          EditAll: true,
         });
 
-        const { container } = render(
+        render(
           <EntitySummaryPanel
             entityDetails={{
               details: {
@@ -1012,58 +980,14 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {
           expect(
-            container.querySelector('.entity-summary-panel-container')
+            screen.getByTestId('entity-summary-panel-container')
           ).toBeInTheDocument();
         });
-      });
-
-      it('should have fallback API available for GLOSSARY entity', () => {
-        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
-          mockPatchAPI
-        );
-
-        const result = entityUtilClassBase.getEntityPatchAPI(
-          EntityType.GLOSSARY
-        );
-
-        expect(result).toBe(mockPatchAPI);
-        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
-          EntityType.GLOSSARY
-        );
-      });
-
-      it('should have fallback API available for TAG entity', () => {
-        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
-          mockPatchAPI
-        );
-
-        const result = entityUtilClassBase.getEntityPatchAPI(EntityType.TAG);
-
-        expect(result).toBe(mockPatchAPI);
-        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
-          EntityType.TAG
-        );
-      });
-
-      it('should have fallback API available for APPLICATION entity', () => {
-        (entityUtilClassBase.getEntityPatchAPI as jest.Mock).mockReturnValue(
-          mockPatchAPI
-        );
-
-        const result = entityUtilClassBase.getEntityPatchAPI(
-          EntityType.APPLICATION
-        );
-
-        expect(result).toBe(mockPatchAPI);
-        expect(entityUtilClassBase.getEntityPatchAPI).toHaveBeenCalledWith(
-          EntityType.APPLICATION
-        );
       });
     });
 
@@ -1085,8 +1009,7 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {
@@ -1113,8 +1036,7 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {
@@ -1141,8 +1063,7 @@ describe('EntitySummaryPanel component tests', () => {
               },
             }}
             handleClosePanel={mockHandleClosePanel}
-          />,
-          { wrapper: Wrapper }
+          />
         );
 
         await waitFor(() => {

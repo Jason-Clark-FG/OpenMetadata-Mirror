@@ -30,7 +30,7 @@ export const mockApplicationEntityDetails: App = {
   updatedBy: 'admin',
   href: 'http://openmetadata-server:8585/api/v1/apps/app-id-101',
   permission: Permissions.All,
-  runtime: 'Python 3.8',
+  runtime: {},
   scheduleType: ScheduleType.NoSchedule,
   appType: AppType.Internal,
   owners: [
