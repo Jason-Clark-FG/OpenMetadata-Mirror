@@ -547,8 +547,10 @@ class MSSQLTableMetricComputer(BaseTableMetricComputer):
             )
         )
 
-        # Microsoft Fabric blocks sys.dm_db_partition_stats with error 15871. If that
-        # happens we fall back to sys.partitions. Regular MSSQL always succeeds here.
+        # sys.dm_db_partition_stats provides row count and size for standard MSSQL.
+        # Microsoft Fabric blocks this DMV (error 15871), so Fabric connectors use
+        # sys.partitions instead. This try/except ensures compatibility if the DMV
+        # is not available.
         try:
             res = self.runner._session.execute(query).first()
         except ProgrammingError as err:
