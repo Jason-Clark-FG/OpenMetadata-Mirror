@@ -1397,12 +1397,15 @@ export const navigateToSubDomain = async (
  * Navigates to the Input/Output Ports tab on a data product page.
  */
 export const navigateToPortsTab = async (page: Page) => {
-  await page.waitForTimeout(2000);
+  await waitForAllLoadersToDisappear(page);
+
+  const portsTab = page.getByTestId('input_output_ports');
+  await portsTab.waitFor({ state: 'visible' });
 
   const portsViewResponse = page.waitForResponse((response) =>
     response.url().includes('/portsView')
   );
-  await page.getByTestId('input_output_ports').click();
+  await portsTab.click();
   await portsViewResponse;
   await waitForAllLoadersToDisappear(page);
 };

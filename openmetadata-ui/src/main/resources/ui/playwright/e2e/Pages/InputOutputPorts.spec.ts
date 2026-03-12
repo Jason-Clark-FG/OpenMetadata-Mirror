@@ -119,6 +119,20 @@ test.describe('Input Output Ports', () => {
     }
   });
 
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext } = await performAdminLogin(browser);
+    for (const dashboard of dashboards) {
+      await dashboard.delete(apiContext);
+    }
+    for (const topic of topics) {
+      await topic.delete(apiContext);
+    }
+    for (const table of tables) {
+      await table.delete(apiContext);
+    }
+    await domain.delete(apiContext);
+  });
+
   test.beforeEach('Visit home page', async ({ page }) => {
     await redirectToHomePage(page);
   });

@@ -44,6 +44,17 @@ const entityCreators: Record<
   File: createFileEntity,
 };
 
+const serviceEndpointMap: Record<string, string> = {
+  Table: 'databaseServices',
+  Topic: 'messagingServices',
+  'API Endpoint': 'apiServices',
+  'Data Model': 'dashboardServices',
+  Container: 'storageServices',
+  'Search Index': 'searchServices',
+  Worksheet: 'driveServices',
+  File: 'driveServices',
+};
+
 for (const [entityType, createEntity] of Object.entries(entityCreators)) {
   test.describe(`${entityType} - Nested columns with duplicate names`, () => {
     let entityData: EntityTestData;
@@ -51,6 +62,17 @@ for (const [entityType, createEntity] of Object.entries(entityCreators)) {
     test.beforeAll(async ({ browser }) => {
       const { apiContext, afterAction } = await createNewPage(browser);
       entityData = await createEntity(apiContext);
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      const serviceEndpoint = serviceEndpointMap[entityType];
+      await apiContext.delete(
+        `/api/v1/services/${serviceEndpoint}/name/${encodeURIComponent(
+          entityData.service.fullyQualifiedName
+        )}?recursive=true&hardDelete=true`
+      );
       await afterAction();
     });
 
@@ -75,6 +97,16 @@ test.describe('Table Version History - Nested columns with duplicate names', () 
     await afterAction();
   });
 
+  test.afterAll(async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await apiContext.delete(
+      `/api/v1/services/databaseServices/name/${encodeURIComponent(
+        entityData.service.fullyQualifiedName
+      )}?recursive=true&hardDelete=true`
+    );
+    await afterAction();
+  });
+
   test('should not duplicate rows when expanding and collapsing nested columns with same names in Version History', async ({
     page,
   }) => {
@@ -92,6 +124,16 @@ test.describe('Table Profiler Tab - Nested columns with duplicate names', () => 
   test.beforeAll(async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
     entityData = await createTableEntity(apiContext);
+    await afterAction();
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await apiContext.delete(
+      `/api/v1/services/databaseServices/name/${encodeURIComponent(
+        entityData.service.fullyQualifiedName
+      )}?recursive=true&hardDelete=true`
+    );
     await afterAction();
   });
 
@@ -117,6 +159,16 @@ test.describe('API Endpoint Entity Summary Panel - Nested columns with duplicate
   test.beforeAll(async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
     apiService = await createApiEndpointEntity(apiContext);
+    await afterAction();
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await apiContext.delete(
+      `/api/v1/services/apiServices/name/${encodeURIComponent(
+        apiService.service.fullyQualifiedName
+      )}?recursive=true&hardDelete=true`
+    );
     await afterAction();
   });
 

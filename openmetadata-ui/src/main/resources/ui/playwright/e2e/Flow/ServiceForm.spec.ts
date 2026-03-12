@@ -59,6 +59,12 @@ test.describe(
       await afterAction();
     });
 
+    test.afterAll('Cleanup admin user', async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await adminUser.delete(apiContext);
+      await afterAction();
+    });
+
     test.describe('Superset', () => {
       // Create the Certificate file for upload
       const testCertPath = path.join(__dirname, '..', 'output', CERT_FILE);

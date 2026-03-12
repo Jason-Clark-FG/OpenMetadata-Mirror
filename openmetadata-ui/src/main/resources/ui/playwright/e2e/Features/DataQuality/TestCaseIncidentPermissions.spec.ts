@@ -204,6 +204,27 @@ test.describe(
       await afterAction();
     });
 
+    test.afterAll('Cleanup', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+      await viewIncidentsUser.delete(apiContext);
+      await editIncidentsUser.delete(apiContext);
+      await tableEditIncidentsUser.delete(apiContext);
+      await tableViewIncidentsUser.delete(apiContext);
+      await consumerLikeUser.delete(apiContext);
+      await viewIncidentsRole.delete(apiContext);
+      await editIncidentsRole.delete(apiContext);
+      await tableEditIncidentsRole.delete(apiContext);
+      await tableViewIncidentsRole.delete(apiContext);
+      await consumerLikeRole.delete(apiContext);
+      await viewIncidentsPolicy.delete(apiContext);
+      await editIncidentsPolicy.delete(apiContext);
+      await tableEditIncidentsPolicy.delete(apiContext);
+      await tableViewIncidentsPolicy.delete(apiContext);
+      await consumerLikePolicy.delete(apiContext);
+      await table.delete(apiContext);
+      await afterAction();
+    });
+
     test.describe('Positive - View Incidents', () => {
       test('User with TEST_CASE.VIEW_ALL can view incidents in UI', async ({
         viewIncidentsPage,

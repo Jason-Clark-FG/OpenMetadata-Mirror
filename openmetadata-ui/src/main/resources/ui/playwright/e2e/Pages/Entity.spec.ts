@@ -128,6 +128,15 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
   await afterAction();
 });
 
+test.afterAll('Cleanup shared entities', async ({ browser }) => {
+  const { apiContext, afterAction } = await performAdminLogin(browser);
+  await tableEntity.delete(apiContext);
+  await user.delete(apiContext);
+  await dataConsumerUser.delete(apiContext);
+  await adminUser.delete(apiContext);
+  await afterAction();
+});
+
 Object.entries(entities).forEach(([key, EntityClass]) => {
   const entity = new EntityClass();
   const deleteEntity = new EntityClass();
@@ -141,6 +150,12 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
       const { apiContext, afterAction } = await performAdminLogin(browser);
 
       await entity.create(apiContext);
+      await afterAction();
+    });
+
+    test.afterAll('Cleanup entity', async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
+      await entity.delete(apiContext);
       await afterAction();
     });
 

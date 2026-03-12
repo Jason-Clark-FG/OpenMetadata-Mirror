@@ -70,6 +70,16 @@ test.describe('Data Product Rename', () => {
     }
   );
 
+  test.afterAll('Cleanup', async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await table.delete(apiContext);
+    await dataProduct.delete(apiContext);
+    await domain.delete(apiContext);
+    await EntityDataClass.postRequisitesForTests(apiContext);
+    await adminUser.delete(apiContext);
+    await afterAction();
+  });
+
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
   });
