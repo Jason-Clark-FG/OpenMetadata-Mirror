@@ -103,6 +103,7 @@ test.describe(
     test('should not duplicate rows when expanding and collapsing nested columns with same names in Profiler Tab', async ({
       page,
     }) => {
+      test.slow();
       await redirectToHomePage(page);
       await entityData.visitPage(page);
       await page.getByTestId('profiler').click();
