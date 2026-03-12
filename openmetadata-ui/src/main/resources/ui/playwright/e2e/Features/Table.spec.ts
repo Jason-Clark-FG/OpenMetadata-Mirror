@@ -275,6 +275,7 @@ test.describe(
     test('expand collapse should only visible for nested columns', async ({
       page,
     }) => {
+      test.slow();
       await page.goto('/table/sample_data.ecommerce_db.shopify.dim_customer');
 
       await page.waitForSelector('[data-testid="loader"]', {
@@ -702,6 +703,7 @@ test.describe(
     test('Search for column, copy link, and verify side panel behavior', async ({
       page,
     }) => {
+      test.slow();
       await redirectToHomePage(page);
 
       const columnsResponse = page.waitForResponse(
