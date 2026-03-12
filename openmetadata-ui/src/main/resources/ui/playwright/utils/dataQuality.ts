@@ -104,7 +104,6 @@ export const addTestCaseToLogicalTestSuite = async (
   testCaseName: string
 ) => {
   await page.goto(`test-suites/${testSuiteName}`);
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -167,21 +166,25 @@ export const addTestSuitePipeline = async (page: Page) => {
 
   await expect(page.getByTestId('cron-type').getByText('Day')).toBeAttached();
 
+  const deployResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/services/ingestionPipelines/deploy') &&
+      res.request().method() === 'POST' &&
+      res.status() === 200
+  );
   await page.getByTestId('deploy-button').click();
+  await deployResponse;
 
   await expect(page.getByTestId('view-service-button')).toBeVisible();
-
-  await page.waitForSelector('[data-testid="body-text"]', {
-    state: 'detached',
-  });
-
   await expect(page.getByTestId('success-line')).toContainText(
     /has been created and deployed successfully/
   );
 
+  const testSuiteDetailsResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/dataQuality/testSuites/name/') &&
+      res.status() === 200
+  );
   await page.getByTestId('view-service-button').click();
-  await page.waitForLoadState('networkidle');
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await testSuiteDetailsResponse;
 };

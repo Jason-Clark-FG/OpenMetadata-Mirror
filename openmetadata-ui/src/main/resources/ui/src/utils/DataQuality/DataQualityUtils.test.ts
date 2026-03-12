@@ -679,11 +679,11 @@ describe('DataQualityUtils', () => {
 
       expect(getColumnFilterOptions(items)).toEqual([
         {
-          key: `${mockColumnCase1.entityLink!}::col1`,
+          key: `${mockColumnCase1.entityLink ?? ''}::col1`,
           label: 'col1',
         },
         {
-          key: `${mockColumnCase2.entityLink!}::col2`,
+          key: `${mockColumnCase2.entityLink ?? ''}::col2`,
           label: 'col2',
         },
       ]);
@@ -763,7 +763,7 @@ describe('DataQualityUtils', () => {
     });
 
     it('filters by table when filterTables is non-empty', () => {
-      const tableKey = mockTableCase.entityLink!;
+      const tableKey = mockTableCase.entityLink ?? '';
 
       expect(filterTestCasesByTableAndColumn(items, [tableKey], [])).toEqual([
         mockTableCase,
@@ -771,7 +771,7 @@ describe('DataQualityUtils', () => {
     });
 
     it('filters by column when filterColumns is non-empty', () => {
-      const columnKey = `${mockColumnCase1.entityLink!}::col1`;
+      const columnKey = `${mockColumnCase1.entityLink ?? ''}::col1`;
 
       expect(filterTestCasesByTableAndColumn(items, [], [columnKey])).toEqual([
         mockColumnCase1,
@@ -779,7 +779,7 @@ describe('DataQualityUtils', () => {
     });
 
     it('excludes table-only test cases when filtering by column', () => {
-      const columnKey = `${mockColumnCase1.entityLink!}::col1`;
+      const columnKey = `${mockColumnCase1.entityLink ?? ''}::col1`;
 
       expect(
         filterTestCasesByTableAndColumn(items, [], [columnKey])
@@ -787,8 +787,8 @@ describe('DataQualityUtils', () => {
     });
 
     it('applies both table and column filters when both provided', () => {
-      const tableKey = mockColumnCase1.entityLink!;
-      const columnKey = `${mockColumnCase1.entityLink!}::col1`;
+      const tableKey = mockColumnCase1.entityLink ?? '';
+      const columnKey = `${mockColumnCase1.entityLink ?? ''}::col1`;
 
       expect(
         filterTestCasesByTableAndColumn(items, [tableKey], [columnKey])
