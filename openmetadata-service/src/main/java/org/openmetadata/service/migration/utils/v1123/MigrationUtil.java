@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.statement.PreparedBatch;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -17,6 +18,7 @@ import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.resources.databases.DatasourceConfig;
 import org.openmetadata.service.util.EntityUtil;
+import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
 public class MigrationUtil {
@@ -278,12 +280,7 @@ public class MigrationUtil {
       Handle handle, ConnectionType connType, String table) throws InterruptedException {
     int totalMigrated = 0;
     while (true) {
-      int batchMigrated;
-      if (connType == ConnectionType.POSTGRES) {
-        batchMigrated = migrateCertificationBatchPostgres(handle, table);
-      } else {
-        batchMigrated = migrateCertificationBatchMySQL(handle, table);
-      }
+      int batchMigrated = migrateCertificationBatch(handle, connType, table);
       totalMigrated += batchMigrated;
       if (batchMigrated < CERT_BATCH_SIZE) {
         break;
@@ -293,76 +290,80 @@ public class MigrationUtil {
     return totalMigrated;
   }
 
-  /**
-   * Inserts certification tags into tag_usage then removes $.certification from entity JSON.
-   * Returns the number of entity rows updated (used to determine if batch is exhausted).
-   * Uses UPDATE row count (not INSERT) so that reruns after partial migration still clean up
-   * entity JSON even when all tag_usage rows already exist (INSERT IGNORE → 0 rows affected).
-   */
-  private static int migrateCertificationBatchMySQL(Handle handle, String table) {
-    String insertSql =
-        String.format(
-            "INSERT IGNORE INTO tag_usage "
-                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "SELECT 0, "
-                + "  JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')), "
-                + "  MD5(JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN'))), "
-                + "  fqnHash, "
-                + "  2, "
-                + "  1, "
-                + "  'admin', "
-                + "  JSON_OBJECT('expiryDate', JSON_EXTRACT(json, '$.certification.expiryDate')) "
-                + "FROM %s "
-                + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
-                + "LIMIT %d",
-            table, CERT_BATCH_SIZE);
-    handle.createUpdate(insertSql).execute();
+  private static int migrateCertificationBatch(
+      Handle handle, ConnectionType connType, String table) {
+    boolean isPostgres = connType == ConnectionType.POSTGRES;
 
-    // Always remove $.certification from entity JSON regardless of whether INSERT was a no-op.
-    // This ensures reruns after partial migration still clean up entity records.
+    String selectSql =
+        isPostgres
+            ? String.format(
+                "SELECT id, fqnHash, "
+                    + "json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN' AS tagFQN, "
+                    + "json::json -> 'certification' ->> 'expiryDate' AS expiryDate "
+                    + "FROM %s WHERE json::jsonb ? 'certification' LIMIT %d",
+                table, CERT_BATCH_SIZE)
+            : String.format(
+                "SELECT id, fqnHash, "
+                    + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')) AS tagFQN, "
+                    + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.expiryDate')) AS expiryDate "
+                    + "FROM %s "
+                    + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
+                    + "LIMIT %d",
+                table, CERT_BATCH_SIZE);
+
+    List<Map<String, Object>> rows = handle.createQuery(selectSql).mapToMap().list();
+    if (rows.isEmpty()) {
+      return 0;
+    }
+
+    String insertSql =
+        isPostgres
+            ? "INSERT INTO tag_usage "
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
+                + "VALUES (0, :tagFQN, :tagFQNHash, :targetFQNHash, 2, 1, 'admin', :metadata) "
+                + "ON CONFLICT (source, tagFQNHash, targetFQNHash) DO NOTHING"
+            : "INSERT IGNORE INTO tag_usage "
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
+                + "VALUES (0, :tagFQN, :tagFQNHash, :targetFQNHash, 2, 1, 'admin', :metadata)";
+
+    PreparedBatch batch = handle.prepareBatch(insertSql);
+    for (Map<String, Object> row : rows) {
+      String tagFQN = (String) row.get("tagFQN");
+      if (tagFQN == null) continue;
+      batch
+          .bind("tagFQN", tagFQN)
+          .bind("tagFQNHash", FullyQualifiedName.buildHash(tagFQN))
+          .bind("targetFQNHash", row.get("fqnHash").toString())
+          .bind("metadata", buildCertMetadata(row.get("expiryDate")))
+          .add();
+    }
+    batch.execute();
+
     String updateSql =
-        String.format(
-            "UPDATE %s SET json = JSON_REMOVE(json, '$.certification') "
-                + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
-                + "LIMIT %d",
-            table, CERT_BATCH_SIZE);
+        isPostgres
+            ? String.format(
+                "UPDATE %s SET json = (json::jsonb - 'certification')::json "
+                    + "WHERE id IN (SELECT id FROM %s WHERE json::jsonb ? 'certification' LIMIT %d)",
+                table, table, CERT_BATCH_SIZE)
+            : String.format(
+                "UPDATE %s SET json = JSON_REMOVE(json, '$.certification') "
+                    + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
+                    + "LIMIT %d",
+                table, CERT_BATCH_SIZE);
     return handle.createUpdate(updateSql).execute();
   }
 
-  /**
-   * Inserts certification tags into tag_usage then removes the certification key from entity JSON.
-   * Returns the number of entity rows updated (used to determine if batch is exhausted).
-   */
-  private static int migrateCertificationBatchPostgres(Handle handle, String table) {
-    String insertSql =
-        String.format(
-            "INSERT INTO tag_usage "
-                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "SELECT 0, "
-                + "  json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN', "
-                + "  MD5(json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN'), "
-                + "  fqnHash, "
-                + "  2, "
-                + "  1, "
-                + "  'admin', "
-                + "  json_build_object('expiryDate', "
-                + "    (json::json -> 'certification' ->> 'expiryDate')::bigint)::text "
-                + "FROM %s "
-                + "WHERE json::jsonb ? 'certification' "
-                + "LIMIT %d "
-                + "ON CONFLICT (source, tagFQNHash, targetFQNHash) DO NOTHING",
-            table, CERT_BATCH_SIZE);
-    handle.createUpdate(insertSql).execute();
-
-    // Always remove the certification key from entity JSON regardless of whether INSERT was a
-    // no-op.
-    String updateSql =
-        String.format(
-            "UPDATE %s SET json = (json::jsonb - 'certification')::json "
-                + "WHERE id IN ("
-                + "  SELECT id FROM %s WHERE json::jsonb ? 'certification' LIMIT %d"
-                + ")",
-            table, table, CERT_BATCH_SIZE);
-    return handle.createUpdate(updateSql).execute();
+  private static String buildCertMetadata(Object expiryDateVal) {
+    ObjectNode node = MAPPER.createObjectNode();
+    if (expiryDateVal != null) {
+      try {
+        node.put("expiryDate", Long.parseLong(expiryDateVal.toString()));
+      } catch (NumberFormatException ignored) {
+        node.putNull("expiryDate");
+      }
+    } else {
+      node.putNull("expiryDate");
+    }
+    return node.toString();
   }
 }

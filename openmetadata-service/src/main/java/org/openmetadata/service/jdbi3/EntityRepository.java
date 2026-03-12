@@ -3612,6 +3612,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   protected void applyCertification(T entity) {
     if (!supportsCertification || entity.getCertification() == null) return;
+    deleteCertificationTag(entity.getFullyQualifiedName());
     AssetCertification cert = entity.getCertification();
     TagLabel tagLabel = cert.getTagLabel();
     TagLabelMetadata metadata = new TagLabelMetadata().withExpiryDate(cert.getExpiryDate());
