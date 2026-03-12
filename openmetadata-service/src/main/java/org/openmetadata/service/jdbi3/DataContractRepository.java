@@ -1831,28 +1831,19 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
     for (EntityReference testCaseRef : dataContract.getQualityExpectations()) {
       try {
-        // Get the existing test case to check if it already has a dataContract
         TestCase existingTestCase = daoCollection.testCaseDAO().findEntityById(testCaseRef.getId());
-        if (existingTestCase == null) {
-          LOG.warn("Test case {} not found, skipping dataContract update", testCaseRef.getId());
-          continue;
-        }
 
-        // Only update if the test case doesn't have a dataContract or has a different dataContract
-        // ID
         boolean shouldUpdate =
             existingTestCase.getDataContract() == null
                 || !existingTestCase.getDataContract().getId().equals(dataContract.getId());
 
         if (shouldUpdate) {
-          // Create the dataContract EntityReference
           EntityReference dataContractRef =
               new EntityReference()
                   .withId(dataContract.getId())
                   .withType(Entity.DATA_CONTRACT)
                   .withFullyQualifiedName(dataContract.getFullyQualifiedName());
 
-          // Use testCase DAO to update the dataContract field directly
           daoCollection
               .testCaseDAO()
               .updateTestCaseDataContract(
@@ -1867,6 +1858,8 @@ public class DataContractRepository extends EntityRepository<DataContract> {
               "Test case {} already has the same dataContract reference, skipping update",
               testCaseRef.getId());
         }
+      } catch (EntityNotFoundException e) {
+        LOG.warn("Test case {} not found, skipping dataContract update", testCaseRef.getId());
       } catch (Exception e) {
         LOG.warn(
             "Failed to update test case {} with dataContract reference: {}",
