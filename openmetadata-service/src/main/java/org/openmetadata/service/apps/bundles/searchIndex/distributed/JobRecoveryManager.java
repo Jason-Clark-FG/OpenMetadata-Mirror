@@ -178,10 +178,6 @@ public class JobRecoveryManager {
           stoppingDuration,
           STOPPING_GRACE_PERIOD_MS);
       failJob(job, "Force-completed: stuck in STOPPING state");
-
-      // Release the lock so the new job can acquire it
-      SearchReindexLockDAO lockDAO = collectionDAO.searchReindexLockDAO();
-      lockDAO.releaseLock("SEARCH_REINDEX_LOCK", job.getId().toString());
       return true;
     }
     LOG.info(

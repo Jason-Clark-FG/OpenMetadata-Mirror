@@ -61,6 +61,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.apps.bundles.searchIndex.IndexingFailureRecorder;
 import org.openmetadata.service.apps.bundles.searchIndex.ReindexingConfiguration;
+import org.openmetadata.service.apps.bundles.searchIndex.stats.StageCounter;
 import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker;
 import org.openmetadata.service.exception.SearchIndexException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
@@ -566,6 +567,230 @@ class PartitionWorkerTest {
     }
 
     verify(coordinator).completePartition(partition.getId(), 0L, 2L);
+  }
+
+  @Test
+  void processPartitionStopsAfterReadWhenStopRequestedMidLoop() throws Exception {
+    PartitionWorker partitionWorker =
+        new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
+    SearchIndexPartition partition = buildPartition("table", 0, 2);
+
+    ResultList<EntityInterface> resultList = new ResultList<>();
+    resultList.setData(List.of(mock(EntityInterface.class)));
+
+    when(coordinator.getCollectionDAO()).thenReturn(collectionDAO);
+    when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(searchIndexServerStatsDAO);
+    when(bulkSink.flushAndAwait(30)).thenReturn(true);
+    when(bulkSink.getPendingVectorTaskCount()).thenReturn(0);
+
+    ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
+    when(resolver.getServerId()).thenReturn("server-a");
+
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
+        MockedConstruction<PaginatedEntitiesSource> ignored =
+            mockConstruction(
+                PaginatedEntitiesSource.class,
+                (mock, context) ->
+                    doReturn(resultList)
+                        .when(mock)
+                        .readNextKeyset(
+                            org.mockito.ArgumentMatchers.argThat(
+                                cursor -> {
+                                  partitionWorker.stop();
+                                  return true;
+                                })))) {
+      resolverMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
+
+      PartitionWorker.PartitionResult result = partitionWorker.processPartition(partition);
+
+      assertTrue(result.wasStopped());
+      assertEquals(0, result.successCount());
+      assertEquals(0, result.failedCount());
+    }
+
+    verify(coordinator, never()).completePartition(any(), anyLong(), anyLong());
+  }
+
+  @Test
+  void processPartitionRecordsSinkFailuresAndStopsWhenCursorCannotBeRebuilt() throws Exception {
+    IndexingFailureRecorder failureRecorder = mock(IndexingFailureRecorder.class);
+    PartitionWorker partitionWorker =
+        new PartitionWorker(coordinator, bulkSink, 2, null, false, failureRecorder);
+    SearchIndexPartition partition = buildPartition("table", 0, 4);
+
+    ResultList<EntityInterface> resultList = new ResultList<>();
+    resultList.setData(List.of(mock(EntityInterface.class)));
+
+    @SuppressWarnings("unchecked")
+    EntityRepository<EntityInterface> repository = mock(EntityRepository.class);
+
+    when(coordinator.getCollectionDAO()).thenReturn(collectionDAO);
+    when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(searchIndexServerStatsDAO);
+    when(bulkSink.flushAndAwait(30)).thenReturn(true);
+    when(bulkSink.getPendingVectorTaskCount()).thenReturn(0);
+    doThrow(new IllegalStateException("sink unavailable")).when(bulkSink).write(anyList(), anyMap());
+
+    ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
+    when(resolver.getServerId()).thenReturn("server-a");
+
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
+        MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedConstruction<PaginatedEntitiesSource> ignored =
+            mockConstruction(
+                PaginatedEntitiesSource.class,
+                (mock, context) -> doReturn(resultList).when(mock).readNextKeyset(null))) {
+      resolverMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
+      entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(repository);
+      when(repository.getCursorAtOffset(any(ListFilter.class), eq(1))).thenReturn(null);
+
+      PartitionWorker.PartitionResult result = partitionWorker.processPartition(partition);
+
+      assertFalse(result.wasStopped());
+      assertEquals(0, result.successCount());
+      assertEquals(1, result.failedCount());
+    }
+
+    verify(failureRecorder)
+        .recordSinkFailure(
+            eq("table"),
+            eq("BATCH"),
+            eq("batch_at_offset_0"),
+            eq("Failed to write batch to search index: sink unavailable"),
+            any());
+    verify(coordinator).completePartition(partition.getId(), 0L, 1L);
+  }
+
+  @Test
+  void processPartitionAdjustsSuccessCountsForProcessFailures() throws Exception {
+    PartitionWorker partitionWorker =
+        new PartitionWorker(coordinator, bulkSink, 2, null, false);
+    SearchIndexPartition partition = buildPartition("table", 0, 2);
+
+    ResultList<EntityInterface> resultList = new ResultList<>();
+    resultList.setData(List.of(mock(EntityInterface.class), mock(EntityInterface.class)));
+    StageCounter processCounter = new StageCounter();
+    processCounter.getCumulativeFailed().set(1);
+
+    when(coordinator.getCollectionDAO()).thenReturn(collectionDAO);
+    when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(searchIndexServerStatsDAO);
+    when(bulkSink.flushAndAwait(30)).thenReturn(true);
+    when(bulkSink.getPendingVectorTaskCount()).thenReturn(0);
+
+    ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
+    when(resolver.getServerId()).thenReturn("server-a");
+
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
+        MockedConstruction<StageStatsTracker> trackerConstruction =
+            mockConstruction(
+                StageStatsTracker.class,
+                (mock, context) -> {
+                  when(mock.getPendingSinkOps()).thenReturn(0L);
+                  when(mock.getProcess()).thenReturn(processCounter);
+                });
+        MockedConstruction<PaginatedEntitiesSource> ignored =
+            mockConstruction(
+                PaginatedEntitiesSource.class,
+                (mock, context) -> doReturn(resultList).when(mock).readNextKeyset(null))) {
+      resolverMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
+
+      PartitionWorker.PartitionResult result = partitionWorker.processPartition(partition);
+
+      assertFalse(result.wasStopped());
+      assertEquals(1, result.successCount());
+      assertEquals(1, result.failedCount());
+      assertEquals(1, trackerConstruction.constructed().size());
+    }
+
+    verify(coordinator).completePartition(partition.getId(), 1L, 1L);
+  }
+
+  @Test
+  void processPartitionFailsPartitionWhenCompletionThrows() throws Exception {
+    PartitionWorker partitionWorker =
+        new PartitionWorker(coordinator, bulkSink, 2, null, false);
+    SearchIndexPartition partition = buildPartition("table", 0, 1);
+
+    ResultList<EntityInterface> resultList = new ResultList<>();
+    resultList.setData(List.of(mock(EntityInterface.class)));
+
+    when(coordinator.getCollectionDAO()).thenReturn(collectionDAO);
+    when(collectionDAO.searchIndexServerStatsDAO()).thenReturn(searchIndexServerStatsDAO);
+    when(bulkSink.flushAndAwait(30)).thenReturn(true);
+    when(bulkSink.getPendingVectorTaskCount()).thenReturn(0);
+    doThrow(new IllegalStateException("completion failed"))
+        .when(coordinator)
+        .completePartition(partition.getId(), 1L, 0L);
+
+    ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
+    when(resolver.getServerId()).thenReturn("server-a");
+
+    try (MockedStatic<ServerIdentityResolver> resolverMock =
+            mockStatic(ServerIdentityResolver.class);
+        MockedConstruction<PaginatedEntitiesSource> ignored =
+            mockConstruction(
+                PaginatedEntitiesSource.class,
+                (mock, context) -> doReturn(resultList).when(mock).readNextKeyset(null))) {
+      resolverMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
+
+      PartitionWorker.PartitionResult result = partitionWorker.processPartition(partition);
+
+      assertFalse(result.wasStopped());
+      assertEquals(1, result.successCount());
+      assertEquals(0, result.failedCount());
+    }
+
+    verify(coordinator).failPartition(partition.getId(), "completion failed");
+  }
+
+  @Test
+  void processBatchReturnsEmptyResultWhenNoEntitiesAreRead() throws Exception {
+    ResultList<EntityInterface> emptyResult = new ResultList<>();
+    emptyResult.setData(List.of());
+
+    try (MockedConstruction<PaginatedEntitiesSource> ignored =
+        mockConstruction(
+            PaginatedEntitiesSource.class,
+            (mock, context) -> doReturn(emptyResult).when(mock).readNextKeyset("cursor"))) {
+      PartitionWorker.BatchResult result = invokeProcessBatch(worker, "table", "cursor", 5, null);
+
+      assertEquals(0, result.successCount());
+      assertEquals(0, result.failedCount());
+      assertEquals(0, result.warningsCount());
+      assertNull(result.nextCursor());
+    }
+  }
+
+  @Test
+  void initializeKeysetCursorReturnsNullWhenRepositoryCursorMissing() throws Exception {
+    @SuppressWarnings("unchecked")
+    EntityRepository<EntityInterface> repository = mock(EntityRepository.class);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(() -> Entity.getEntityRepository("table")).thenReturn(repository);
+      when(repository.getCursorAtOffset(any(ListFilter.class), eq(4))).thenReturn(null);
+
+      assertNull(
+          invokePrivate(
+              worker,
+              "initializeKeysetCursor",
+              new Class<?>[] {String.class, long.class},
+              "table",
+              5L));
+    }
+  }
+
+  @Test
+  void testPartitionResult_RecordWithReaderFailuresDefaultsWarningsToZero() {
+    PartitionWorker.PartitionResult result =
+        new PartitionWorker.PartitionResult(10, 2, false, 3);
+
+    assertEquals(10, result.successCount());
+    assertEquals(2, result.failedCount());
+    assertEquals(3, result.readerFailed());
+    assertEquals(0, result.readerWarnings());
   }
 
   private PartitionWorker.BatchResult invokeProcessBatch(
