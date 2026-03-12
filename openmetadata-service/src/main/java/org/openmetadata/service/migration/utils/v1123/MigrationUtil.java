@@ -311,7 +311,7 @@ public class MigrationUtil {
                 + "  2, "
                 + "  1, "
                 + "  'admin', "
-                + "  JSON_OBJECT('expiryDate', COALESCE(JSON_EXTRACT(json, '$.certification.expiryDate'), 0)) "
+                + "  JSON_OBJECT('expiryDate', JSON_EXTRACT(json, '$.certification.expiryDate')) "
                 + "FROM %s "
                 + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
                 + "LIMIT %d",
@@ -346,7 +346,7 @@ public class MigrationUtil {
                 + "  1, "
                 + "  'admin', "
                 + "  json_build_object('expiryDate', "
-                + "    COALESCE((json::json -> 'certification' ->> 'expiryDate')::bigint, 0))::text "
+                + "    (json::json -> 'certification' ->> 'expiryDate')::bigint)::text "
                 + "FROM %s "
                 + "WHERE json::jsonb ? 'certification' "
                 + "LIMIT %d "

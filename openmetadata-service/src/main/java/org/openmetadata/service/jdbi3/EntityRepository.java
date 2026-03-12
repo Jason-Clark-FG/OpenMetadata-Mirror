@@ -3635,7 +3635,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     daoCollection
         .tagUsageDAO()
         .deleteTagsByPrefixAndTarget(
-            TagLabel.TagSource.CLASSIFICATION.ordinal(), certClassification + ".", entityFQN);
+            TagLabel.TagSource.CLASSIFICATION.ordinal(), certClassification + ".%", entityFQN);
   }
 
   protected String getCertificationClassification() {
@@ -3680,6 +3680,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     List<TagLabel> tags = addDerivedTagsGracefully(daoCollection.tagUsageDAO().getTags(fqn));
     String certClassification = getCertificationClassification();
     if (certClassification != null && tags != null) {
+      tags = new ArrayList<>(tags);
       tags.removeIf(
           tag -> certClassification.equals(FullyQualifiedName.getParentFQN(tag.getTagFQN())));
     }
