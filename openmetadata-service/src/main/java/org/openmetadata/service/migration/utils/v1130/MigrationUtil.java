@@ -102,8 +102,7 @@ public class MigrationUtil {
             int testCasesUpdated = 0;
             for (EntityReference testCaseRef : dataContract.getQualityExpectations()) {
               try {
-                TestCase testCase =
-                    collectionDAO.testCaseDAO().findEntityById(testCaseRef.getId());
+                TestCase testCase = collectionDAO.testCaseDAO().findEntityById(testCaseRef.getId());
 
                 if (testCase.getDataContract() != null) {
                   LOG.debug(
@@ -129,8 +128,7 @@ public class MigrationUtil {
               } catch (EntityNotFoundException e) {
                 LOG.debug("Test case not found: {}", testCaseRef.getId());
               } catch (Exception e) {
-                LOG.warn(
-                    "Failed to update test case {}: {}", testCaseRef.getId(), e.getMessage());
+                LOG.warn("Failed to update test case {}: {}", testCaseRef.getId(), e.getMessage());
               }
             }
 
