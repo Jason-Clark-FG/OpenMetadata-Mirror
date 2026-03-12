@@ -114,13 +114,22 @@ services.forEach((ServiceClass) => {
           state: 'detached',
         });
 
-        // Check the auto pilot status
+        // Check the auto pilot status via API polling
         await checkAutoPilotStatus(page, service);
+
+        // Reload to render the completed workflow status in the UI.
+        // The page was loaded before the workflow finished, and the WebSocket
+        // connection for live updates is only established when the initial
+        // status is RUNNING — which it wasn't at page load time.
+        await page.reload();
+        await page.waitForSelector('[data-testid="loader"]', {
+          state: 'detached',
+        });
 
         // Wait for the auto pilot status banner to be visible
         await expect(
           page.getByText('AutoPilot agents run completed successfully.')
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 30_000 });
 
         if (service.serviceType === 'Mysql') {
           await page.reload();
