@@ -488,6 +488,7 @@ test.describe('Domain Filter - User Behavior Tests', () => {
       await searchAndExpectEntityNotVisible(page, nonDomainTable);
 
       // Step 3: Clear domain filter by selecting "All Domains"
+      await waitForAllLoadersToDisappear(page);
       await page.getByTestId('domain-dropdown').click();
       await page.waitForSelector('[data-testid="domain-selectable-tree"]', {
         state: 'visible',

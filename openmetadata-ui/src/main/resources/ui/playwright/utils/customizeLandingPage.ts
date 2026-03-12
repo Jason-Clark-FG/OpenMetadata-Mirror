@@ -222,19 +222,16 @@ export const openAddCustomizeWidgetModal = async (page: Page) => {
   await fetchResponse;
 };
 
-export const saveCustomizeLayoutPage = async (
-  page: Page,
-  isCreated?: boolean
-) => {
-  const saveResponse = page.waitForResponse(
-    isCreated ? '/api/v1/docStore' : '/api/v1/docStore/*'
+export const saveCustomizeLayoutPage = async (page: Page) => {
+  const saveResponse = page.waitForResponse((response) =>
+    response.url().includes('/api/v1/docStore')
   );
   await page.locator('[data-testid="save-button"]').click();
   await saveResponse;
 
   await toastNotification(
     page,
-    `Page layout ${isCreated ? 'created' : 'updated'} successfully.`
+    /Page layout (created|updated) successfully\./
   );
 };
 

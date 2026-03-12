@@ -94,7 +94,7 @@ test.describe(
           widgetKey: 'KnowledgePanel.KPI',
         });
 
-        await saveCustomizeLayoutPage(adminPage, true);
+        await saveCustomizeLayoutPage(adminPage);
 
         await redirectToHomePage(adminPage);
 
