@@ -15,5 +15,6 @@ public class Migration extends MigrationProcessImpl {
   @SneakyThrows
   public void runDataMigration() {
     MigrationUtil.updateOwnerChartFormulas();
+    MigrationUtil.migrateTestCaseDataContractReferences(collectionDAO);
   }
 }
