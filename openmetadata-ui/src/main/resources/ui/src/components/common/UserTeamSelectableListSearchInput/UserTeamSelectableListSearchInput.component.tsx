@@ -161,8 +161,7 @@ const UserTeamSelectableListSearchInput: React.FC<
           previewSelected={previewSelected}
           tooltipText={tooltipText}
           onClose={handleClose}
-          onUpdate={handleUpdate}
-        >
+          onUpdate={handleUpdate}>
           {/* Have to pass the selectInput as children, so popover can become targetComponent 
             and popover don't overflow on it */}
           {selectInput}

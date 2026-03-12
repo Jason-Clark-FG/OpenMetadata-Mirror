@@ -61,6 +61,7 @@ const Suggestions = ({
   const [options, setOptions] = useState<Array<Option>>([]);
   const [suggestions, setSuggestions] = useState<SuggestionsObject>({
     tableSuggestions: [],
+    columnSuggestions: [],
     topicSuggestions: [],
     dashboardSuggestions: [],
     pipelineSuggestions: [],
@@ -103,6 +104,7 @@ const Suggestions = ({
     apiEndpointSuggestions,
     apiCollectionSuggestions,
     metricSuggestions,
+    columnSuggestions,
   } = suggestions;
 
   const isMounting = useRef(true);
@@ -110,6 +112,7 @@ const Suggestions = ({
   const updateSuggestions = (options: Array<Option>) => {
     setSuggestions(() => ({
       tableSuggestions: filterOptionsByIndex(options, SearchIndex.TABLE),
+      columnSuggestions: filterOptionsByIndex(options, SearchIndex.COLUMN),
       topicSuggestions: filterOptionsByIndex(options, SearchIndex.TOPIC),
       dashboardSuggestions: filterOptionsByIndex(
         options,
@@ -186,9 +189,9 @@ const Suggestions = ({
         : location.search
     );
 
-    return !isString(parsedSearch.quickFilter)
-      ? {}
-      : JSON.parse(parsedSearch.quickFilter);
+    return isString(parsedSearch.quickFilter)
+      ? JSON.parse(parsedSearch.quickFilter)
+      : {};
   }, [location.search]);
 
   const getSuggestionsForIndex = (
@@ -214,10 +217,10 @@ const Suggestions = ({
       <div
         className="global-search-suggestion-box"
         data-testid="global-search-suggestion-box"
-        role="none"
-      >
+        role="none">
         {[
           { suggestions: tableSuggestions, searchIndex: SearchIndex.TABLE },
+          { suggestions: columnSuggestions, searchIndex: SearchIndex.COLUMN },
           { suggestions: topicSuggestions, searchIndex: SearchIndex.TOPIC },
           {
             suggestions: dashboardSuggestions,
@@ -372,8 +375,7 @@ const Suggestions = ({
             }
             key={query}
             type="text"
-            onClick={() => onSearchTextUpdate?.(query)}
-          >
+            onClick={() => onSearchTextUpdate?.(query)}>
             {query}
           </Button>
         ))}

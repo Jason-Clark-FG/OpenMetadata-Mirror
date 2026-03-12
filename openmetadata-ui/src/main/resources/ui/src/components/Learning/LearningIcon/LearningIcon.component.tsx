@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Box, Button, useTheme } from '@mui/material';
+import { ArrowRight } from '@untitledui/icons';
 import { Popover } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -73,23 +73,17 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         display: 'flex',
         alignItems: 'center',
         gap: theme.spacing(1),
-      }}
-    >
+      }}>
       <Box
         component="span"
         sx={{
           fontSize: theme.typography.pxToRem(13),
           whiteSpace: 'nowrap',
-        }}
-      >
+        }}>
         {t('label.learn-how-this-feature-works')}
       </Box>
       <Button
-        endIcon={
-          <ArrowForwardIcon
-            sx={{ fontSize: theme.typography.body2.fontSize }}
-          />
-        }
+        endIcon={<ArrowRight size={14} />}
         size="small"
         sx={{
           borderRadius: theme.spacing(1.25),
@@ -103,8 +97,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
           minWidth: 0,
         }}
         variant="text"
-        onClick={handleClick}
-      >
+        onClick={handleClick}>
         {resourceCount} {t('label.tutorial-plural').toLowerCase()}
       </Button>
     </Box>
@@ -122,8 +115,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         }}
         placement="bottomLeft"
         showArrow={false}
-        trigger="hover"
-      >
+        trigger="hover">
         <Box
           className={className}
           data-testid="learning-icon"
@@ -143,8 +135,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
               backgroundColor: theme.palette.primary.light + '33',
             },
           }}
-          onClick={handleClick}
-        >
+          onClick={handleClick}>
           <Box
             sx={{
               display: 'inline-flex',
@@ -155,8 +146,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
               '&:hover': {
                 transform: 'scale(1.1)',
               },
-            }}
-          >
+            }}>
             <LearningIconSvg height={18} width={18} />
           </Box>
         </Box>

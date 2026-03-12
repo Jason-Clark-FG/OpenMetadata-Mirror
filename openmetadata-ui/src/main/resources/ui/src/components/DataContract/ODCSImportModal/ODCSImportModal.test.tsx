@@ -93,8 +93,7 @@ jest.mock('@mui/material', () => {
       <select
         data-testid="object-selector"
         value={value}
-        onChange={(e) => onChange({ target: { value: e.target.value } })}
-      >
+        onChange={(e) => onChange({ target: { value: e.target.value } })}>
         {displayEmpty && <option value="">Select Schema Object</option>}
         {children}
       </select>
@@ -796,8 +795,7 @@ describe('ContractImportModal', () => {
         expect(screen.getByText('contract.yaml')).toBeInTheDocument();
       });
 
-      const removeButton = screen.getByTestId('DeleteOutlineOutlinedIcon')
-        .parentElement as HTMLElement;
+      const removeButton = screen.getByTestId('remove-file-button');
 
       await act(async () => {
         fireEvent.click(removeButton);

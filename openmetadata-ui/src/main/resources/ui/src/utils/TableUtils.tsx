@@ -81,6 +81,7 @@ import { ReactComponent as APIServiceIcon } from '../assets/svg/ic-api-service-d
 import { ReactComponent as IconDown } from '../assets/svg/ic-arrow-down.svg';
 import { ReactComponent as IconRight } from '../assets/svg/ic-arrow-right.svg';
 import { ReactComponent as IconTestCase } from '../assets/svg/ic-checklist.svg';
+import { ReactComponent as ColumnIcon } from '../assets/svg/ic-column.svg';
 import { ReactComponent as DashboardIcon } from '../assets/svg/ic-dashboard.svg';
 import { ReactComponent as DataQualityIcon } from '../assets/svg/ic-data-contract.svg';
 import { ReactComponent as DataProductIcon } from '../assets/svg/ic-data-product.svg';
@@ -315,8 +316,7 @@ export const getConstraintIcon = ({
       className={classNames(className)}
       placement="bottom"
       title={title}
-      trigger="hover"
-    >
+      trigger="hover">
       <Icon
         alt={title}
         className={classNames({
@@ -447,6 +447,8 @@ export const getEntityIcon = (
     [EntityType.CHART]: ChartIcon,
     [SearchIndex.TABLE]: TableIcon,
     [EntityType.TABLE]: TableIcon,
+    [SearchIndex.COLUMN]: ColumnIcon,
+    [EntityType.TABLE_COLUMN]: ColumnIcon,
     [EntityType.METADATA_SERVICE]: MetadataServiceIcon,
     [SearchIndex.DATA_PRODUCT]: DataProductIcon,
     [EntityType.DATA_PRODUCT]: DataProductIcon,
@@ -1184,13 +1186,11 @@ export const tableConstraintRendererBasedOnType = (
     <div
       className="d-flex constraint-columns"
       data-testid={`${constraintType}-container`}
-      key={constraintType}
-    >
+      key={constraintType}>
       <Space
         className="constraint-icon-container"
         direction="vertical"
-        size={0}
-      >
+        size={0}>
         {columns?.map((column, index) => (
           <Fragment key={column}>
             {(columns?.length ?? 0) - 1 !== index || isSingleColumn ? (

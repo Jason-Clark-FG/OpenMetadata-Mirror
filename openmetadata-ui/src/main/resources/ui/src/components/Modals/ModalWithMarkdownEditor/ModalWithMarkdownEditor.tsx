@@ -66,8 +66,7 @@ export const ModalWithMarkdownEditor: FunctionComponent<
             disabled={isLoading}
             key="cancelButton"
             type="link"
-            onClick={onCancel}
-          >
+            onClick={onCancel}>
             {t('label.cancel')}
           </Button>
           <Button
@@ -75,8 +74,7 @@ export const ModalWithMarkdownEditor: FunctionComponent<
             key="saveButton"
             loading={isLoading}
             type="primary"
-            onClick={handleSaveData}
-          >
+            onClick={handleSaveData}>
             {t('label.save')}
           </Button>
         </KeyDownStopPropagationWrapper>
@@ -85,8 +83,7 @@ export const ModalWithMarkdownEditor: FunctionComponent<
       open={visible}
       title={<Typography.Text data-testid="header">{header}</Typography.Text>}
       width="90%"
-      onCancel={onCancel}
-    >
+      onCancel={onCancel}>
       <KeyDownStopPropagationWrapper>
         <RichTextEditor
           autofocus

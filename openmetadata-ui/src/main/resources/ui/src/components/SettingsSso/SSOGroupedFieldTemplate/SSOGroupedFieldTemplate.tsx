@@ -307,8 +307,7 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
               'font-medium text-base-color text-md':
                 !schema.additionalProperties,
             })}
-            id={`${idSchema.$id}__title`}
-          >
+            id={`${idSchema.$id}__title`}>
             {title}
           </label>
 
@@ -364,16 +363,14 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
               // Default for non-grouped only
               'default-object-field': !shouldApplyGrouping,
             })}
-            key={`group-${groupIndex}`}
-          >
+            key={`group-${groupIndex}`}>
             {/* Render properties */}
             {group.properties.map((element, index) => (
               <div
                 className={classNames('property-wrapper', {
                   'additional-fields': schema.additionalProperties,
                 })}
-                key={`${element.content.key}-${index}`}
-              >
+                key={`${element.content.key}-${index}`}>
                 {element.content}
               </div>
             ))}
@@ -387,22 +384,19 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
           className={classNames('sso-advanced-properties-collapse', {
             'm-t-sm': shouldApplyGrouping,
           })}
-          expandIconPosition="end"
-        >
+          expandIconPosition="end">
           <Collapse.Panel header={t('label.advanced-config')} key="1">
             <div
               className={classNames({
                 'sso-field-group-box': shouldApplyGrouping,
                 'default-object-field': !shouldApplyGrouping,
-              })}
-            >
+              })}>
               {advancedProperties.map((element, index) => (
                 <div
                   className={classNames('property-wrapper', {
                     'additional-fields': schema.additionalProperties,
                   })}
-                  key={`${element.content.key}-${index}`}
-                >
+                  key={`${element.content.key}-${index}`}>
                   {element.content}
                 </div>
               ))}

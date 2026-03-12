@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 
-import { AddOutlined } from '@mui/icons-material';
 import { Button, Menu, MenuItem, useTheme } from '@mui/material';
 import { defaultColors } from '@openmetadata/ui-core-components';
+import { Plus } from '@untitledui/icons';
 import {
   MouseEvent,
   ReactNode,
@@ -146,7 +146,7 @@ export const useColumnGridFilters = (
     return (
       <>
         <Button
-          startIcon={<AddOutlined />}
+          startIcon={<Plus />}
           sx={{
             color: defaultColors.blue[600],
             fontSize: theme.typography.body2.fontSize,
@@ -165,8 +165,7 @@ export const useColumnGridFilters = (
             },
           }}
           variant="text"
-          onClick={handleMenuOpen}
-        >
+          onClick={handleMenuOpen}>
           {t('label.add-entity', { entity: t('label.filter') })}
         </Button>
         <Menu
@@ -177,8 +176,7 @@ export const useColumnGridFilters = (
               sx: { width: 'auto' },
             },
           }}
-          onClose={handleMenuClose}
-        >
+          onClose={handleMenuClose}>
           {remainingFilters.map((filter) => (
             <MenuItem
               key={filter.key}
@@ -188,8 +186,7 @@ export const useColumnGridFilters = (
                 fontWeight: theme.typography.subtitle2.fontWeight,
                 padding: theme.spacing(1),
               }}
-              onClick={() => handleAddFilter(filter.key)}
-            >
+              onClick={() => handleAddFilter(filter.key)}>
               {filter.label}
             </MenuItem>
           ))}
