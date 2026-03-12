@@ -10,8 +10,10 @@ import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.EventSubscriptionRepository;
 import org.openmetadata.service.resources.events.subscription.EventSubscriptionMapper;
 import org.openmetadata.service.search.SearchRepository;
+import org.openmetadata.service.util.AppBoundConfigurationUtil;
 import org.openmetadata.service.util.OpenMetadataConnectionBuilder;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
@@ -128,6 +131,45 @@ public class ApplicationHandler {
       throw AppException.byMessage(
           app.getName(), "triggerOnDemand", e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  public void triggerApplicationForService(
+      App app,
+      UUID serviceId,
+      CollectionDAO daoCollection,
+      SearchRepository searchRepository,
+      Map<String, Object> configPayload) {
+    try {
+      AbstractNativeApplicationBase appInstance = runAppInit(app, daoCollection, searchRepository);
+      if (appInstance instanceof AbstractServiceNativeApplication) {
+        ((AbstractServiceNativeApplication) appInstance)
+            .triggerForService(serviceId, configPayload);
+      } else {
+        throw new IllegalArgumentException(
+            "Application " + app.getName() + " is not a service-bound application");
+      }
+    } catch (ClassNotFoundException
+        | NoSuchMethodException
+        | InvocationTargetException
+        | InstantiationException
+        | IllegalAccessException e) {
+      LOG.error("Failed to trigger service-bound application {}", app.getName(), e);
+      throw AppException.byMessage(
+          app.getName(),
+          "triggerForService",
+          e.getMessage(),
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  public List<UUID> getConfiguredServices(App app) {
+    if (!AppBoundConfigurationUtil.isServiceBoundApp(app)) {
+      return List.of();
+    }
+    return AppBoundConfigurationUtil.getAllServiceConfigurations(app).stream()
+        .filter(sc -> sc.getServiceRef() != null && sc.getServiceRef().getId() != null)
+        .map(sc -> sc.getServiceRef().getId())
+        .collect(Collectors.toList());
   }
 
   public void installApplication(
@@ -286,7 +328,7 @@ public class ApplicationHandler {
             });
   }
 
-  public AbstractNativeApplication runAppInit(
+  public AbstractNativeApplicationBase runAppInit(
       App app, CollectionDAO daoCollection, SearchRepository searchRepository)
       throws ClassNotFoundException,
           NoSuchMethodException,
@@ -296,7 +338,7 @@ public class ApplicationHandler {
     return runAppInit(app, daoCollection, searchRepository, false);
   }
 
-  public AbstractNativeApplication runAppInit(
+  public AbstractNativeApplicationBase runAppInit(
       App app,
       CollectionDAO daoCollection,
       SearchRepository searchRepository,
@@ -308,9 +350,9 @@ public class ApplicationHandler {
           IllegalAccessException {
     // add private runtime properties
     setAppRuntimeProperties(app);
-    Class<? extends AbstractNativeApplication> clz =
-        Class.forName(app.getClassName()).asSubclass(AbstractNativeApplication.class);
-    AbstractNativeApplication resource =
+    Class<? extends AbstractNativeApplicationBase> clz =
+        Class.forName(app.getClassName()).asSubclass(AbstractNativeApplicationBase.class);
+    AbstractNativeApplicationBase resource =
         clz.getDeclaredConstructor(CollectionDAO.class, SearchRepository.class)
             .newInstance(daoCollection, searchRepository);
     if (!skipEnabledCheck && Boolean.FALSE.equals(app.getEnabled())) {
@@ -344,7 +386,11 @@ public class ApplicationHandler {
     updatedApp.setOpenMetadataServerConnection(null);
     updatedApp.setPrivateConfiguration(null);
     updatedApp.setScheduleType(currentApp.getScheduleType());
-    updatedApp.setAppSchedule(currentApp.getAppSchedule());
+    org.openmetadata.schema.entity.app.AppSchedule schedule =
+        AppBoundConfigurationUtil.getAppSchedule(currentApp);
+    if (schedule != null) {
+      AppBoundConfigurationUtil.setSchedule(updatedApp, schedule);
+    }
     updatedApp.setUpdatedBy(currentApp.getUpdatedBy());
     updatedApp.setFullyQualifiedName(currentApp.getFullyQualifiedName());
     EntityRepository<App>.EntityUpdater updater =
@@ -386,12 +432,28 @@ public class ApplicationHandler {
     jobKeys.forEach(
         jobKey -> {
           try {
-            Class<?> clz =
-                AppScheduler.getInstance().getScheduler().getJobDetail(jobKey).getJobClass();
+            JobDetail jobDetail = AppScheduler.getInstance().getScheduler().getJobDetail(jobKey);
+            if (jobDetail == null) {
+              // Job doesn't exist, skip
+              return;
+            }
+            Class<?> clz = jobDetail.getJobClass();
             if (!jobKey.getName().equals(app.getName())
                 && clz.getName().equals(app.getClassName())) {
               LOG.info("deleting old job {}", jobKey.getName());
               AppScheduler.getInstance().getScheduler().deleteJob(jobKey);
+            }
+          } catch (org.quartz.JobPersistenceException e) {
+            // Job class no longer exists, delete the stale job entry
+            if (e.getCause() instanceof ClassNotFoundException) {
+              LOG.warn("Found stale job with missing class: {}. Deleting.", jobKey.getName());
+              try {
+                AppScheduler.getInstance().getScheduler().deleteJob(jobKey);
+              } catch (SchedulerException ex) {
+                LOG.error("Failed to delete stale job {}", jobKey.getName(), ex);
+              }
+            } else {
+              LOG.error("Error retrieving job {}", jobKey.getName(), e);
             }
           } catch (SchedulerException e) {
             LOG.error("Error deleting job {}", jobKey.getName(), e);
