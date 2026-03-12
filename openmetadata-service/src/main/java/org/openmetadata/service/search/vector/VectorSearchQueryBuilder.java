@@ -209,11 +209,11 @@ public class VectorSearchQueryBuilder {
     if (nullOrEmpty(vals)) {
       return;
     }
-    if (!field.startsWith("customProperties")) {
+    if (!field.startsWith("customProperties.")) {
       throw new IllegalArgumentException(
-          "field must start with 'customProperties': " + field);
+          "field must start with 'customProperties.': " + field);
     }
-    String propName = field.substring("customProperties".length());
+    String propName = field.substring("customProperties.".length());
 
     // customPropertiesTyped is a nested field; each entry has a "name" keyword and typed value
     // sub-fields. Build a nested query that matches on name + value across all value sub-fields.
