@@ -575,6 +575,9 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       LOG.info("RDF knowledge graph support initialized");
     }
 
+    searchRepository.createMissingIndexes();
+    searchRepository.createOrUpdateIndexTemplates();
+
     LOG.info("Core search infrastructure initialization completed");
   }
 
