@@ -53,10 +53,7 @@ public class OAuthTokenRepository {
   }
 
   /**
-   * Find access token by token value.
-   *
-   * <p>HIGH: Handles Fernet decryption failures gracefully (e.g., during key rotation). If
-   * decryption fails, the token is deleted and null is returned.
+   * Find access token by token value. Returns null if not found or decryption fails.
    */
   public AccessToken findAccessToken(String tokenValue) {
     String tokenHash = hashToken(tokenValue);
@@ -79,16 +76,9 @@ public class OAuthTokenRepository {
     } catch (Exception e) {
       LOG.error(
           "Failed to decrypt access token for client {}. This may indicate Fernet key rotation. "
-              + "Token will be deleted and user must re-authenticate. Error: {}",
+              + "User must re-authenticate. Error: {}",
           record.clientId(),
           e.getMessage());
-
-      // TODO: Auto-deleting tokens on decryption failure is a destructive side effect that could
-      //  cause data loss during Fernet key rotation. Consider returning null without deleting,
-      //  or implementing a key rotation strategy that tries multiple keys before giving up.
-      accessTokenDAO.delete(tokenHash);
-      LOG.debug("Deleted undecryptable access token for client: {}", record.clientId());
-
       return null;
     }
   }
@@ -123,10 +113,7 @@ public class OAuthTokenRepository {
   }
 
   /**
-   * Find refresh token by token value.
-   *
-   * <p>HIGH: Handles Fernet decryption failures gracefully (e.g., during key rotation). If
-   * decryption fails, the token is deleted and null is returned.
+   * Find refresh token by token value. Returns null if not found, revoked, or decryption fails.
    */
   public RefreshToken findRefreshToken(String tokenValue) {
     String tokenHash = hashToken(tokenValue);
@@ -150,18 +137,10 @@ public class OAuthTokenRepository {
     } catch (Exception e) {
       LOG.error(
           "Failed to decrypt refresh token for user {} (client: {}). This may indicate Fernet key rotation. "
-              + "Token will be deleted and user must re-authenticate. Error: {}",
+              + "User must re-authenticate. Error: {}",
           record.userName(),
           record.clientId(),
           e.getMessage());
-
-      // TODO: Same auto-delete concern as loadAccessToken — see TODO above.
-      refreshTokenDAO.delete(tokenHash);
-      LOG.debug(
-          "Deleted undecryptable refresh token for user: {}, client: {}",
-          record.userName(),
-          record.clientId());
-
       return null;
     }
   }

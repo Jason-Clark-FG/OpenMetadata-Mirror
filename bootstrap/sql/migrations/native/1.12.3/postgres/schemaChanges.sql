@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS oauth_clients (
     client_name VARCHAR(255),
     redirect_uris JSONB NOT NULL DEFAULT '[]'::jsonb,
     grant_types JSONB NOT NULL DEFAULT '["authorization_code", "refresh_token"]'::jsonb,
-    token_endpoint_auth_method VARCHAR(50) NOT NULL DEFAULT 'client_secret_basic',
+    token_endpoint_auth_method VARCHAR(50) NOT NULL DEFAULT 'client_secret_post',
     scopes JSONB NOT NULL DEFAULT '["read", "write"]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT oauth_clients_client_id_check CHECK (char_length(client_id) > 0)
