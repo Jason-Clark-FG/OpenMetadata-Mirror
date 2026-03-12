@@ -219,7 +219,8 @@ public class DataInsightsEntityEnricherProcessor
     Optional.ofNullable(processTeam(entity)).ifPresent(team -> entityMap.put("team", team));
 
     // Process Tier
-    Optional.ofNullable(processTier(entity)).ifPresent(tier -> entityMap.put("tier", tier));
+    Optional.ofNullable(processTier(entity))
+        .ifPresent(tier -> entityMap.put("tier", Map.of("tagFQN", tier)));
 
     // Enrich with Description Stats
     entityMap.put("hasDescription", CommonUtil.nullOrEmpty(entity.getDescription()) ? 0 : 1);

@@ -160,6 +160,45 @@ class DataInsightsEntityEnricherProcessorTest {
   }
 
   @Test
+  void testTierIsEmittedAsNestedObject() throws Exception {
+    MockColumnsEntity entity = new MockColumnsEntity(List.of(), "desc");
+    // getTags() returns null → processTier() returns "NoTier" for table entity
+    Map<String, Object> result = invokeEnrichEntity(entity, "table");
+
+    assertTrue(result.containsKey("tier"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> tierMap = (Map<String, Object>) result.get("tier");
+    assertNotNull(tierMap);
+    assertEquals("NoTier", tierMap.get("tagFQN"));
+  }
+
+  @Test
+  void testTierWithTagIsEmittedAsNestedObject() throws Exception {
+    List<TagLabel> tags = new ArrayList<>();
+    TagLabel tierTag = new TagLabel();
+    tierTag.setTagFQN("Tier.Tier1");
+    tags.add(tierTag);
+
+    MockColumnsEntityWithTags entity = new MockColumnsEntityWithTags(List.of(), "desc", tags);
+    Map<String, Object> result = invokeEnrichEntity(entity, "table");
+
+    assertTrue(result.containsKey("tier"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> tierMap = (Map<String, Object>) result.get("tier");
+    assertNotNull(tierMap);
+    assertEquals("Tier.Tier1", tierMap.get("tagFQN"));
+  }
+
+  @Test
+  void testTierNullForNonTierEntity() throws Exception {
+    // "tag" is in NON_TIER_ENTITIES — processTier() returns null
+    MockEntity entity = new MockEntity("desc");
+    Map<String, Object> result = invokeEnrichEntity(entity, "tag");
+
+    assertFalse(result.containsKey("tier"));
+  }
+
+  @Test
   void testProcessorStatsInitialization() {
     assertNotNull(processor.getStats());
     assertEquals(100, processor.getStats().getTotalRecords());
@@ -372,6 +411,20 @@ class DataInsightsEntityEnricherProcessorTest {
     @Override
     public <T extends EntityInterface> T withHref(URI href) {
       return (T) this;
+    }
+  }
+
+  static class MockColumnsEntityWithTags extends MockColumnsEntity {
+    private final List<TagLabel> tags;
+
+    MockColumnsEntityWithTags(List<Column> columns, String description, List<TagLabel> tags) {
+      super(columns, description);
+      this.tags = tags;
+    }
+
+    @Override
+    public List<TagLabel> getTags() {
+      return tags;
     }
   }
 
