@@ -1061,6 +1061,7 @@ export const openColumnDetailPanel = async ({
   entityType?: EntityType;
   entityEndpoint?: string;
 }) => {
+  // Register before click so the listener is in place before the response fires.
   const apiResponsePromise = entityEndpoint
     ? page.waitForResponse(
         (response) =>
