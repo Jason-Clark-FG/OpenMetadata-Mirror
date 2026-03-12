@@ -177,12 +177,13 @@ export const DataAssetsHeader = ({
       <img
         alt={get(dataAsset, 'service.displayName', '')}
         className="header-icon"
-        src={serviceUtilClassBase.getServiceTypeLogo(
-          dataAsset as SearchSourceAlias
-        )}
+        src={serviceUtilClassBase.getServiceTypeLogo({
+          ...(dataAsset as SearchSourceAlias),
+          entityType,
+        })}
       />
     ) : null;
-  }, [dataAsset]);
+  }, [dataAsset, entityType]);
 
   const excludeEntityService = useMemo(() => {
     const filteredServiceTypes = SERVICE_TYPES.filter(
