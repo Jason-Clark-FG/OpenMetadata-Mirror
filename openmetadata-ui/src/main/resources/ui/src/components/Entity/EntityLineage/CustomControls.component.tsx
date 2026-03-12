@@ -330,7 +330,10 @@ const CustomControls: FC<{
   // Filter quick filters based on impact level
   // Column filter should only show when Impact On is Column
   const filteredQuickFilters = useMemo(() => {
-    if (impactLevel === EImpactLevel.ColumnLevel) {
+    // Show all filters including Column when:
+    // - impactLevel is ColumnLevel
+    // - impactLevel is undefined (normal lineage view, not Impact Analysis)
+    if (impactLevel === EImpactLevel.ColumnLevel || impactLevel === undefined) {
       return selectedQuickFilters;
     }
 
