@@ -169,14 +169,14 @@ export default function EntitySummaryPanel({
   const fqn = entityDetails?.details?.fullyQualifiedName ?? '';
 
   const entityType = useMemo(
-    () => get(entityDetails, 'details.entityType') as EntityType | undefined,
+    () => get(entityDetails, 'details.entityType') as EntityType,
     [entityDetails]
   );
 
   const fetchResourcePermission = async (id: string) => {
     try {
       setIsPermissionLoading(true);
-      let type = get(entityDetails, 'details.entityType');
+      let type = get(entityDetails, 'details.entityType') as ResourceEntity;
       let idForPermission = id;
 
       // For tableColumn entities, use the parent table's resource type and ID
@@ -184,7 +184,7 @@ export default function EntitySummaryPanel({
       if (type === ResourceEntity.TABLE_COLUMN) {
         type = ResourceEntity.TABLE;
         // Get the parent table ID from the column's table reference
-        const tableId = get(entityDetails, 'details.table.id') as string;
+        const tableId = get(entityDetails, 'details.table.id');
         if (tableId) {
           idForPermission = tableId;
         }
@@ -494,7 +494,9 @@ export default function EntitySummaryPanel({
             tags: updatedTags,
           });
         } else {
-          const apiFunc = entityUpdateMap[entityType];
+          const apiFunc =
+            entityUpdateMap[entityType] ??
+            entityUtilClassBase.getEntityPatchAPI(entityType);
           if (apiFunc && id) {
             res = await apiFunc(id, jsonPatch);
           }
@@ -582,7 +584,9 @@ export default function EntitySummaryPanel({
             tags: updatedTags,
           });
         } else {
-          const apiFunc = entityUpdateMap[entityType];
+          const apiFunc =
+            entityUpdateMap[entityType] ??
+            entityUtilClassBase.getEntityPatchAPI(entityType);
           if (apiFunc && id) {
             res = await apiFunc(id, jsonPatch);
           }
@@ -664,7 +668,9 @@ export default function EntitySummaryPanel({
               return;
             }
 
-            const apiFunc = entityUpdateMap[entityType];
+            const apiFunc =
+              entityUpdateMap[entityType] ??
+              entityUtilClassBase.getEntityPatchAPI(entityType);
             if (apiFunc && id) {
               res = await apiFunc(id, jsonPatch);
             }
