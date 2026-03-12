@@ -210,8 +210,7 @@ public class VectorSearchQueryBuilder {
       return;
     }
     if (!field.startsWith("customProperties.")) {
-      throw new IllegalArgumentException(
-          "field must start with 'customProperties.': " + field);
+      throw new IllegalArgumentException("field must start with 'customProperties.': " + field);
     }
     String propName = field.substring("customProperties.".length());
 
