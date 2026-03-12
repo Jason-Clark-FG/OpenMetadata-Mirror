@@ -358,7 +358,7 @@ public class RBACConditionEvaluator {
       }
       OMQueryBuilder domainQuery;
       if (domainQueries.size() == 1) {
-        domainQuery = domainQueries.get(0);
+          domainQuery = domainQueries.getFirst();
       } else {
         domainQuery = queryBuilderFactory.boolQuery().should(domainQueries);
       }
