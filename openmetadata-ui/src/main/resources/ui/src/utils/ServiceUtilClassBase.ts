@@ -923,7 +923,7 @@ class ServiceUtilClassBase {
     return widgets;
   }
 
-  public getServiceTypeFromEntityType(entityType: EntityType | string) {
+  public getSearchIndexFromEntityType(entityType: EntityType | string) {
     return getSearchIndexFromService(entityType);
   }
 

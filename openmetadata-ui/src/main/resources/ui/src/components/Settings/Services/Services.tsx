@@ -139,7 +139,7 @@ const Services = ({ serviceName }: ServicesProps) => {
   }, [searchTerm, serviceTypeFilter]);
 
   const searchIndex = useMemo(() => {
-    return serviceUtilClassBase.getServiceTypeFromEntityType(serviceName);
+    return serviceUtilClassBase.getSearchIndexFromEntityType(serviceName);
   }, [serviceName]);
 
   useEffect(() => {
