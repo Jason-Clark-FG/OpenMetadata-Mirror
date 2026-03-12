@@ -59,6 +59,7 @@ import { useAirflowStatus } from '../../../../context/AirflowStatusProvider/Airf
 import { useLimitStore } from '../../../../context/LimitsProvider/useLimitsStore';
 import { usePermissionProvider } from '../../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../../context/PermissionProvider/PermissionProvider.interface';
+import { EntityType as EntityTypeEnum } from '../../../../enums/entity.enum';
 import { SearchIndex } from '../../../../enums/search.enum';
 import { ServiceCategory } from '../../../../enums/service.enum';
 import { TagSource } from '../../../../generated/api/domains/createDataProduct';
@@ -80,6 +81,7 @@ import {
   FieldTypes,
   FormItemLayout,
 } from '../../../../interface/FormUtils.interface';
+import { TableSearchSource } from '../../../../interface/search.interface';
 import testCaseClassBase from '../../../../pages/IncidentManager/IncidentManagerDetailPage/TestCaseClassBase';
 import {
   addIngestionPipeline,
@@ -1482,7 +1484,12 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
         <div className="drawer-doc-panel service-doc-panel markdown-parser">
           <ServiceDocPanel
             activeField={activeField}
-            selectedEntity={selectedTableData}
+            selectedEntity={
+              {
+                ...selectedTableData,
+                entityType: EntityTypeEnum.TABLE,
+              } as TableSearchSource
+            }
             serviceName={TEST_CASE_FORM}
             serviceType={OPEN_METADATA as ServiceCategory}
           />

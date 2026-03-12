@@ -51,6 +51,7 @@ import {
   FieldTypes,
   FormItemLayout,
 } from '../../../../interface/FormUtils.interface';
+import { TableSearchSource } from '../../../../interface/search.interface';
 import testCaseClassBase from '../../../../pages/IncidentManager/IncidentManagerDetailPage/TestCaseClassBase';
 import { getTableDetailsByFQN } from '../../../../rest/tableAPI';
 import {
@@ -643,7 +644,12 @@ const EditTestCaseModalV1: FC<EditTestCaseModalProps> = ({
         <div className="drawer-doc-panel service-doc-panel markdown-parser">
           <ServiceDocPanel
             activeField={activeField}
-            selectedEntity={table}
+            selectedEntity={
+              {
+                ...table,
+                entityType: EntityType.TABLE,
+              } as TableSearchSource
+            }
             serviceName={TEST_CASE_FORM}
             serviceType={OPEN_METADATA as ServiceCategory}
           />
