@@ -19,6 +19,7 @@ import {
   getApiContext,
   redirectToHomePage,
   toastNotification,
+  uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
@@ -297,9 +298,7 @@ test.describe('Column Search Settings Tests', () => {
   test('Search preview displays column results correctly', async ({ page }) => {
     const { apiContext, afterAction } = await getApiContext(page);
     const columnTable = new TableClass();
-    const uniqueColumnName = `test_column_${Math.random()
-      .toString(36)
-      .substring(7)}`;
+    const uniqueColumnName = `test_column_${uuid()}`;
 
     columnTable.entity.columns[0].name = uniqueColumnName;
     columnTable.entity.columns[0].description = `Unique column for testing search preview`;

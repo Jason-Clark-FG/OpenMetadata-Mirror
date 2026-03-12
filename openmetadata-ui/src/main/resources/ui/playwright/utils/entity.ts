@@ -2218,10 +2218,10 @@ export const checkExploreSearchFilter = async (
     const tierList = page.waitForResponse(
       `/api/v1/search/aggregate?index=dataAsset&field=tier.tagFQN**`
     );
-    await page.click(`[data-testid="search-dropdown-${filterLabel}"]`);
+    await page.getByTestId(`search-dropdown-${filterLabel}`).click();
     await tierList;
   } else {
-    await page.click(`[data-testid="search-dropdown-${filterLabel}"]`);
+    await page.getByTestId(`search-dropdown-${filterLabel}`).click();
   }
   await searchAndClickOnOption(
     page,

@@ -595,12 +595,12 @@ export const visitGlossaryPage = async (page: Page, glossaryName: string) => {
 };
 
 export const getRandomFirstName = () => {
-  return `${
-    adjectives[Math.floor(Math.random() * adjectives.length)]
-  }${uuid()}`;
+  const index = parseInt(crypto.randomUUID().slice(0, 8), 16) % adjectives.length;
+  return `${adjectives[index]}${uuid()}`;
 };
 export const getRandomLastName = () => {
-  return `${nouns[Math.floor(Math.random() * nouns.length)]}${uuid()}`;
+  const index = parseInt(crypto.randomUUID().slice(0, 8), 16) % nouns.length;
+  return `${nouns[index]}${uuid()}`;
 };
 
 export const generateRandomUsername = (prefix = '') => {

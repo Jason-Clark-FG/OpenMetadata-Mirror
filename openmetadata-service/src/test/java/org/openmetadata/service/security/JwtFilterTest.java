@@ -60,7 +60,7 @@ class JwtFilterTest {
   static void before() throws Exception {
     // Create a RSA256 algorithm wth random public/private key pair
     KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-    keyPairGenerator.initialize(512);
+    keyPairGenerator.initialize(2048);
     KeyPair keyPair = keyPairGenerator.generateKeyPair();
     algorithm =
         Algorithm.RSA256((RSAPublicKey) keyPair.getPublic(), (RSAPrivateKey) keyPair.getPrivate());
@@ -218,7 +218,7 @@ class JwtFilterTest {
   @Test
   void testInvalidSignatureJwt() throws NoSuchAlgorithmException {
     KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-    keyPairGenerator.initialize(512);
+    keyPairGenerator.initialize(2048);
     KeyPair keyPair = keyPairGenerator.generateKeyPair();
     Algorithm secondaryAlgorithm =
         Algorithm.RSA256((RSAPublicKey) keyPair.getPublic(), (RSAPrivateKey) keyPair.getPrivate());

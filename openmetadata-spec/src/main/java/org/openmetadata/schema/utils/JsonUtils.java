@@ -871,6 +871,9 @@ public final class JsonUtils {
       Enumeration<? extends ZipEntry> e = zf.entries();
       while (e.hasMoreElements()) {
         String fileName = e.nextElement().getName();
+        if (fileName.contains("..")) {
+          continue;
+        }
         if (pattern.matcher(fileName).matches()) {
           retval.add(fileName);
           LOG.debug("Adding file from jar {}", fileName);
