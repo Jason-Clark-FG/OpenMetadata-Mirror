@@ -33,17 +33,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
   # ──────────────────────────────────────────────────────────────────────────
-  # Detect which UI source files were changed in the PR
+  # Setup: install dependencies once, cache for all check jobs
   # ──────────────────────────────────────────────────────────────────────────
-  changed-files:
+  setup:
     runs-on: ubuntu-latest
-    outputs:
-      # Space-separated list of changed source files (for eslint / prettier / organize-imports)
-      src_files: ${{ steps.changed.outputs.all_changed_files }}
-      src_files_count: ${{ steps.changed.outputs.all_changed_files_count }}
-      # Space-separated unique directories that contain changed files (for license-header-check)
-      src_dirs: ${{ steps.dirs.outputs.dirs }}
     steps:
       - name: Wait for the labeler
         uses: lewagon/wait-on-check-action@v1.3.4
@@ -63,43 +58,6 @@ jobs:
           pull-request-number: "${{ github.event.pull_request.number }}"
           disable-reviews: true
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        if: success()
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          # Need fetch-depth > 1 so changed-files can diff against the base
-          fetch-depth: 0
-
-      - name: Get changed UI source files
-        id: changed
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            openmetadata-ui/src/main/resources/ui/src/**/*.ts
-            openmetadata-ui/src/main/resources/ui/src/**/*.tsx
-            openmetadata-ui/src/main/resources/ui/src/**/*.js
-            openmetadata-ui/src/main/resources/ui/src/**/*.jsx
-            openmetadata-ui/src/main/resources/ui/src/**/*.json
-          separator: " "
-
-      - name: Derive unique parent directories for license-header check
-        id: dirs
-        if: steps.changed.outputs.all_changed_files_count > 0
-        run: |
-          FILES="${{ steps.changed.outputs.all_changed_files }}"
-          DIRS=$(echo "$FILES" | tr ' ' '\n' | xargs -I{} dirname {} | sort -u | tr '\n' ' ')
-          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Setup: install dependencies once, cache for all check jobs
-  # ──────────────────────────────────────────────────────────────────────────
-  setup:
-    needs: changed-files
-    # Skip the whole setup (and all downstream jobs) if no source files changed
-    if: needs.changed-files.outputs.src_files_count > 0
-    runs-on: ubuntu-latest
-    steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -141,7 +99,7 @@ jobs:
   # UI Checkstyle: Run lint-staged on changed files
   # ──────────────────────────────────────────────────────────────────────────
   ui-checkstyle:
-    needs: [changed-files, setup]
+    needs: setup
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -167,21 +125,23 @@ jobs:
 
       - name: Run UI Checkstyle
         id: checkstyle
-        env:
-          CHANGED_FILES: ${{ needs.changed-files.outputs.src_files }}
         run: |
-          # Stage the changed files so lint-staged can find them
-          if [ -n "$CHANGED_FILES" ]; then
-            echo "Staging files: $CHANGED_FILES"
-            git add $CHANGED_FILES
+          # Fetch the base branch to compare changes
+          echo "Fetching base branch ${{ github.base_ref }}..."
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          # Find changed files in the UI directory
+          # We check against the merge-base or just the base branch
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^openmetadata-ui/src/main/resources/ui/' | grep -v 'yarn.lock' || true)
+
+          if [ -n "$FILES" ]; then
+            echo "Staging files: $FILES"
+            git add $FILES
           else
             echo "No changed UI files to check."
             exit 0
           fi
 
-          # Store the current state of the index to compare later
-          # We use a custom format to check if the working tree matches the index
-          
           # Run the checkstyle command from the script
           ./scripts/lint-staged.sh
 
