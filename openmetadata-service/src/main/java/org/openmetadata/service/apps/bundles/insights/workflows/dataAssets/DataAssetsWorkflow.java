@@ -56,9 +56,10 @@ public class DataAssetsWorkflow {
   public static final String DATA_STREAM_KEY = "DataStreamKey";
   public static final String ENTITY_TYPE_FIELDS_KEY = "EnityTypeFields";
   private static final String ALL_ENTITIES = "all";
+  private static final int DEFAULT_RETENTION_DAYS = 90;
 
   private final DataAssetsConfig dataAssetsConfig;
-  private final int retentionDays = 30;
+  private final int retentionDays;
   private final Long startTimestamp;
   private final Long endTimestamp;
   private final int batchSize;
@@ -86,6 +87,10 @@ public class DataAssetsWorkflow {
       CollectionDAO collectionDAO,
       SearchRepository searchRepository,
       DataInsightsSearchInterface searchInterface) {
+    this.retentionDays =
+        (dataAssetsConfig != null && dataAssetsConfig.getRetention() != null)
+            ? dataAssetsConfig.getRetention()
+            : DEFAULT_RETENTION_DAYS;
     if (backfill.isPresent()) {
       Long oldestPossibleTimestamp =
           TimestampUtils.getStartOfDayTimestamp(

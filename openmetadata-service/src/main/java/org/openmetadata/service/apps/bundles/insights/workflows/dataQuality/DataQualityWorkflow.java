@@ -40,7 +40,7 @@ import org.openmetadata.service.workflows.searchIndex.PaginatedEntityTimeSeriesS
 @Slf4j
 public class DataQualityWorkflow {
   public static final String DATA_STREAM_KEY = "DataStreamKey";
-  private final int retentionDays = 30;
+  private final int retentionDays = 90;
   private final Long startTimestamp;
   private final Long endTimestamp;
   private final int batchSize;

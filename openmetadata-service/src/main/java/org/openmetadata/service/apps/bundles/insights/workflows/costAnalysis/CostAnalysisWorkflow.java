@@ -44,7 +44,7 @@ public class CostAnalysisWorkflow {
   @Getter private final int batchSize;
   @Getter private final Long startTimestamp;
   @Getter private final Long endTimestamp;
-  private final int retentionDays = 30;
+  private final int retentionDays = 90;
   @Getter private final List<PaginatedEntitiesSource> sources = new ArrayList<>();
   private final CostAnalysisConfig costAnalysisConfig;
 
