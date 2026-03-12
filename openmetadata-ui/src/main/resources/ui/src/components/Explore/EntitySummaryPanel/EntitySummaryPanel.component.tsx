@@ -15,7 +15,7 @@ import { Button, Card } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compare, Operation as FastJsonPatchOperation } from 'fast-json-patch';
-import { get, isEmpty } from 'lodash';
+import { get, isEmpty, isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -169,15 +169,21 @@ export default function EntitySummaryPanel({
   const fqn = entityDetails?.details?.fullyQualifiedName ?? '';
 
   const entityType = useMemo(
-    () => get(entityDetails, 'details.entityType') as EntityType,
+    () => get(entityDetails, 'details.entityType') as EntityType | undefined,
     [entityDetails]
   );
 
   const fetchResourcePermission = async (id: string) => {
     try {
       setIsPermissionLoading(true);
-      let type = get(entityDetails, 'details.entityType') as ResourceEntity;
+      let type = get(entityDetails, 'details.entityType') as
+        | ResourceEntity
+        | undefined;
       let idForPermission = id;
+
+      if (isUndefined(type)) {
+        return;
+      }
 
       // For tableColumn entities, use the parent table's resource type and ID
       // since columns inherit permissions from their parent table
@@ -665,6 +671,10 @@ export default function EntitySummaryPanel({
             });
 
             if (isEmpty(jsonPatch)) {
+              return;
+            }
+
+            if (!entityType) {
               return;
             }
 
