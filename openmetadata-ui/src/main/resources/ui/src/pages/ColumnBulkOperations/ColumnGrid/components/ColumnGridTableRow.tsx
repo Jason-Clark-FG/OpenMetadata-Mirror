@@ -22,7 +22,6 @@ interface ColumnGridTableRowProps {
   columnWidthPercent?: Record<string, string>;
   entity: ColumnGridRowData;
   isSelected: boolean;
-  isIndeterminate?: boolean;
   /** When true, show loader in place of checkbox until refetch completes */
   isPendingRefetch?: boolean;
   /** When true, row shows highlighted (theme warning) background for recently bulk-updated columns */
@@ -31,16 +30,12 @@ interface ColumnGridTableRowProps {
   showParentChildColors?: boolean;
   /** Column definitions for Table.Row (id only), used for core Table layout */
   tableColumns: { id: string }[];
-  onSelect: (id: string, checked: boolean) => void;
-  onGroupSelect?: (groupId: string, checked: boolean) => void;
   renderColumnNameCell: (entity: ColumnGridRowData) => React.ReactNode;
   renderPathCell: (entity: ColumnGridRowData) => React.ReactNode;
   renderDescriptionCell: (entity: ColumnGridRowData) => React.ReactNode;
   renderTagsCell: (entity: ColumnGridRowData) => React.ReactNode;
   renderGlossaryTermsCell: (entity: ColumnGridRowData) => React.ReactNode;
 }
-
-const ROW_BG_TRANSITION = 'background-color 0.4s ease-in-out';
 
 const cellBaseClass =
   'tw:relative tw:py-3 tw:px-6 tw:text-sm tw:text-tertiary tw:align-middle tw:border-b tw:border-border-secondary tw:transition-[background-color] tw:duration-150';
@@ -51,13 +46,10 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
   columnWidthPercent = {},
   entity,
   isSelected,
-  isIndeterminate: _isIndeterminate,
   isPendingRefetch = false,
   isRecentlyUpdated,
   showParentChildColors = false,
   tableColumns,
-  onSelect: _onSelect,
-  onGroupSelect: _onGroupSelect,
   renderColumnNameCell,
   renderPathCell,
   renderDescriptionCell,
@@ -76,11 +68,7 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
           'tw:bg-utility-warning-50',
           isSelected && 'tw:bg-utility-warning-50'
         ),
-        cellClassName: classNames(
-          cellBaseClass,
-          'tw:bg-utility-warning-50',
-          ROW_BG_TRANSITION
-        ),
+        cellClassName: classNames(cellBaseClass, 'tw:bg-utility-warning-50'),
       };
     }
 
@@ -105,7 +93,7 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
         isSelected && bgClass,
         'tw:hover:opacity-95'
       ),
-      cellClassName: classNames(cellBaseClass, bgClass, ROW_BG_TRANSITION),
+      cellClassName: classNames(cellBaseClass, bgClass),
     };
   }, [
     isRecentlyUpdated,

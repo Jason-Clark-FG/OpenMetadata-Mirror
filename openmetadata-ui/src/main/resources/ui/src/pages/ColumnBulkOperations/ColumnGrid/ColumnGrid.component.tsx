@@ -929,7 +929,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                 'tw:font-semibold tw:text-left '
               )}
               color="tertiary"
-              onClick={() => {
+              onPress={() => {
                 handleGroupSelectRef.current(entity.id, true);
                 openDrawerRef.current();
               }}>
@@ -1064,7 +1064,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                 'tw:text-left tw:cursor-pointer tw:bg-transparent tw:border-0 tw:py-0 tw:pl-6 tw:pr-0 tw:font-inherit tw:text-inherit hover:tw:underline'
               )}
               color="tertiary"
-              onClick={() => {
+              onPress={() => {
                 handleSelectRef.current(entity.id, true);
                 openDrawerRef.current();
               }}>
@@ -1539,67 +1539,14 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   handleGroupSelectRef.current = handleGroupSelect;
   handleSelectRef.current = columnGridListing.handleSelect;
 
-  // Calculate indeterminate state for group rows
-  const getGroupIndeterminateState = useCallback(
-    (groupId: string): boolean => {
-      const childIds = computeChildRowIdsFromGridItem(groupId);
-      if (childIds.length === 0) {
-        return false;
-      }
-
-      const selectedChildCount = childIds.filter((childId) =>
-        columnGridListing.isSelected(childId)
-      ).length;
-
-      return selectedChildCount > 0 && selectedChildCount < childIds.length;
-    },
-    [computeChildRowIdsFromGridItem, columnGridListing.isSelected]
-  );
-
-  // Handle child row selection - updates parent group state accordingly
-  const handleChildSelect = useCallback(
-    (childId: string, checked: boolean, parentId: string | undefined) => {
-      columnGridListing.handleSelect(childId, checked);
-
-      if (!parentId) {
-        return;
-      }
-
-      const siblingIds = computeChildRowIdsFromGridItem(parentId);
-
-      if (checked) {
-        const allSiblingsSelected = siblingIds.every(
-          (id) => id === childId || columnGridListing.isSelected(id)
-        );
-        if (allSiblingsSelected) {
-          columnGridListing.handleSelect(parentId, true);
-        }
-      } else {
-        const anySelectedAfter = siblingIds.some(
-          (id) => id !== childId && columnGridListing.isSelected(id)
-        );
-        if (!anySelectedAfter) {
-          columnGridListing.handleSelect(parentId, false);
-        }
-      }
-    },
-    [columnGridListing, computeChildRowIdsFromGridItem]
-  );
-
   // Set up data table with custom row component
   const CustomTableRow = useCallback(
     (props: Record<string, unknown>) => {
-      const { entity, isSelected, onSelect, tableColumns } = props as {
+      const { entity, isSelected, tableColumns } = props as {
         entity: ColumnGridRowData;
         isSelected: boolean;
-        onSelect: (id: string, checked: boolean) => void;
         tableColumns: { id: string }[];
       };
-
-      const isIndeterminate =
-        entity.isGroup && entity.occurrenceCount > 1
-          ? getGroupIndeterminateState(entity.id)
-          : false;
 
       const isChildRow = Boolean(entity.parentId || entity.isStructChild);
       const isParentExpanded =
@@ -1607,19 +1554,10 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         columnGridListing.expandedStructRows.has(entity.id);
       const showParentChildColors = isChildRow || isParentExpanded;
 
-      const wrappedOnSelect = (id: string, checked: boolean) => {
-        if (entity.parentId) {
-          handleChildSelect(id, checked, entity.parentId);
-        } else {
-          onSelect(id, checked);
-        }
-      };
-
       return (
         <ColumnGridTableRow
           columnWidthPercent={COLUMN_WIDTH_PERCENT}
           entity={entity}
-          isIndeterminate={isIndeterminate}
           isPendingRefetch={pendingRefetchRowIds.has(entity.id)}
           isRecentlyUpdated={recentlyUpdatedRowIds.has(entity.id)}
           isSelected={isSelected}
@@ -1630,8 +1568,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           renderTagsCell={renderTagsCellAdapter}
           showParentChildColors={showParentChildColors}
           tableColumns={tableColumns}
-          onGroupSelect={handleGroupSelect}
-          onSelect={wrappedOnSelect}
         />
       );
     },
@@ -1645,9 +1581,6 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       renderDescriptionCellAdapter,
       renderTagsCellAdapter,
       renderGlossaryTermsCellAdapter,
-      handleGroupSelect,
-      handleChildSelect,
-      getGroupIndeterminateState,
     ]
   );
 
