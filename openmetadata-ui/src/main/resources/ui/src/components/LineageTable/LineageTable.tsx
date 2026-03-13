@@ -300,8 +300,8 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   }, [impactLevel]);
 
   // Query filter for table-level filtering (filters tables/nodes)
-  // Includes search value + table-level filters (service, domain, tier, owner)
-  // Search value is included at both Table and Column levels for table name matching
+  // For Table-level: includes search value + table-level filters
+  // For Column-level: only table-level filters (search goes to column_filter)
   const queryFilter = useMemo(() => {
     // Filter out column-level filters - they go to column_filter
     const tableLevelFilters = selectedQuickFilters.filter(
@@ -316,8 +316,8 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
       mustClauses.push(...quickFilterQuery.query.bool.must);
     }
 
-    // Add search value for table name search (both Table and Column level)
-    if (searchValue) {
+    // Add search value for table name search ONLY in Table-level mode
+    if (searchValue && impactLevel === EImpactLevel.TableLevel) {
       mustClauses.push(getSearchNameEsQuery(searchValue));
     }
 
@@ -328,7 +328,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         : undefined;
 
     return JSON.stringify(query);
-  }, [selectedQuickFilters, searchValue, columnLevelFilterKeys]);
+  }, [selectedQuickFilters, searchValue, impactLevel, columnLevelFilterKeys]);
 
   // Column filter for column-level filtering (filters edges by column)
   // For Table-level: only column dropdown selections (Column, Tag, Glossary)
