@@ -505,7 +505,9 @@ describe('EditTestCaseModalV1 Component', () => {
   });
 
   it('should pass selectedEntity with entityType field to ServiceDocPanel', async () => {
-    render(<EditTestCaseModalV1 {...mockProps} />);
+    await act(async () => {
+      render(<EditTestCaseModalV1 {...mockProps} />);
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId('service-doc-panel')).toBeInTheDocument();
@@ -522,7 +524,9 @@ describe('EditTestCaseModalV1 Component', () => {
   it('should preserve original table properties in selectedEntity', async () => {
     const ServiceDocPanelMock = require('../../../common/ServiceDocPanel/ServiceDocPanel');
 
-    render(<EditTestCaseModalV1 {...mockProps} />);
+    await act(async () => {
+      render(<EditTestCaseModalV1 {...mockProps} />);
+    });
 
     await waitFor(
       () => {
@@ -553,7 +557,9 @@ describe('EditTestCaseModalV1 Component', () => {
     const { EntityType } = require('../../../../enums/entity.enum');
     const ServiceDocPanelMock = require('../../../common/ServiceDocPanel/ServiceDocPanel');
 
-    render(<EditTestCaseModalV1 {...mockProps} />);
+    await act(async () => {
+      render(<EditTestCaseModalV1 {...mockProps} />);
+    });
 
     await waitFor(
       () => {
