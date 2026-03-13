@@ -178,7 +178,7 @@ test.describe('Service Listing', () => {
     const searchResponse = page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/search/query') &&
-        response.url().includes('database_service_search_index')
+        response.url().includes('databaseService')
     );
     await page.getByTestId('searchbar').fill(serviceDisplayName);
     const searchRequest = await searchResponse;

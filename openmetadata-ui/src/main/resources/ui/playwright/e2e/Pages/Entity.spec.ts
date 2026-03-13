@@ -596,7 +596,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           const glossarySearchResponse = page.waitForResponse(
             (response) =>
               response.url().includes('/api/v1/search/query') &&
-              response.url().includes('glossary_term_search_index') &&
+              response.url().includes('glossaryTerm') &&
               response.request().method() === 'GET'
           );
           await searchBar.fill(
