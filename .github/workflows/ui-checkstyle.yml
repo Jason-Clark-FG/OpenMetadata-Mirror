@@ -166,7 +166,7 @@ jobs:
             ```
 
       - name: Fail if any check detected changes
-        if: steps.lint.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
+        if: steps.lint.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.lint.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
         run: |
-          echo "One or more checkstyle steps introduced changes."
+          echo "One or more checkstyle steps introduced changes or did not complete successfully."
           exit 1
