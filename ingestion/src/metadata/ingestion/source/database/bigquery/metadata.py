@@ -449,42 +449,41 @@ class BigquerySource(LifeCycleQueryMixin, CommonDbSourceService, MultiDBSource):
             )
         return self._current_dataset_obj
 
-    def yield_life_cycle_data(self, _) -> Iterable[Either[OMetaLifeCycleData]]:
-        """
-        Override to skip lifecycle data for schemas whose dataset location does not
-        match the configured usageLocation.
-
-        BigQuery routes INFORMATION_SCHEMA queries to the location specified in the
-        connection (usageLocation). When a dataset lives in a different GCP region,
-        the query returns a 404. Skipping early avoids one failed API call per table
-        in the affected schema.
+    def _is_dataset_in_usage_location(self, schema_name: str) -> bool:
+        """Check if dataset location matches configured usageLocation.
+        Returns True (proceed) if no usageLocation configured, locations match,
+        or check fails (fail-open). Returns False (skip) if locations differ.
         """
         usage_location = getattr(self.service_connection, "usageLocation", None)
-        if usage_location:
-            schema_name = self.context.get().database_schema
-            try:
-                dataset_obj = self.get_dataset_obj(schema_name)
-                dataset_location = getattr(dataset_obj, "location", None)
-                if (
-                    dataset_location
-                    and dataset_location.upper() != usage_location.upper()
-                ):
-                    logger.debug(
-                        "Skipping lifecycle data for schema '%s': dataset location '%s' "
-                        "differs from configured usageLocation '%s'. "
-                        "BigQuery INFORMATION_SCHEMA queries are location-specific.",
-                        schema_name,
-                        dataset_location,
-                        usage_location,
-                    )
-                    return
-            except Exception as exc:
+        if not usage_location:
+            return True
+        try:
+            dataset_obj = self.get_dataset_obj(schema_name)
+            dataset_location = getattr(dataset_obj, "location", None)
+            if dataset_location and dataset_location.upper() != usage_location.upper():
                 logger.debug(
-                    "Could not verify dataset location for schema '%s', "
-                    "proceeding with lifecycle query: %s",
+                    "Dataset '%s' is in location '%s' which differs from "
+                    "configured usageLocation '%s'. "
+                    "Skipping INFORMATION_SCHEMA query.",
                     schema_name,
-                    exc,
+                    dataset_location,
+                    usage_location,
                 )
+                return False
+        except Exception as exc:
+            logger.debug(
+                "Could not verify dataset location for '%s': %s",
+                schema_name,
+                exc,
+            )
+        return True
+
+    def yield_life_cycle_data(self, _) -> Iterable[Either[OMetaLifeCycleData]]:
+        """Skip lifecycle data for schemas whose dataset location does not
+        match the configured usageLocation."""
+        schema_name = self.context.get().database_schema
+        if not self._is_dataset_in_usage_location(schema_name):
+            return
         yield from super().yield_life_cycle_data(_)
 
     def _prefetch_policy_tags(self):
@@ -542,6 +541,9 @@ class BigquerySource(LifeCycleQueryMixin, CommonDbSourceService, MultiDBSource):
             return
 
         self._table_ddl_cache.clear()
+
+        if not self._is_dataset_in_usage_location(schema_name):
+            return
 
         try:
             database = self.context.get().database
@@ -1157,12 +1159,15 @@ class BigquerySource(LifeCycleQueryMixin, CommonDbSourceService, MultiDBSource):
     def get_stored_procedures(self) -> Iterable[BigQueryStoredProcedure]:
         """List BigQuery Stored Procedures"""
         if self.source_config.includeStoredProcedures:
+            schema_name = self.context.get().database_schema
+            if not self._is_dataset_in_usage_location(schema_name):
+                return
             with self.engine.connect() as conn:
                 results = conn.execute(
                     text(
                         BIGQUERY_GET_STORED_PROCEDURES.format(
                             database_name=self.context.get().database,
-                            schema_name=self.context.get().database_schema,
+                            schema_name=schema_name,
                         )
                     )
                 ).all()
