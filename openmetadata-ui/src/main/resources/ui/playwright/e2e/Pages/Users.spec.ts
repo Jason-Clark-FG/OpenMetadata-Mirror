@@ -66,8 +66,6 @@ import {
   visitUserProfilePage,
 } from '../../utils/user';
 
-base.describe.configure({ mode: 'serial' });
-
 const userName = `pw-user-${uuid()}`;
 const expirationTime = [1, 7, 30, 60, 90];
 
