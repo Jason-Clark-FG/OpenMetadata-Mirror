@@ -150,6 +150,7 @@
   "additionalProperties": false,
   "required": [
     "hostPort",
+    "database",
     "username",
     "password",
     "serverName"
