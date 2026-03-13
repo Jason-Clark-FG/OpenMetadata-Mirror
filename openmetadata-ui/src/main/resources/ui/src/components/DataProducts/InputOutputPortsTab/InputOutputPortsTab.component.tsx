@@ -17,10 +17,10 @@ import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
+  Button,
   Grid,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Button } from 'antd';
 import { AxiosError } from 'axios';
 import React, {
   forwardRef,
@@ -312,9 +312,10 @@ export const InputOutputPortsTab = forwardRef<
                       expandedSections.has('input-ports') &&
                       inputPortsCount > 0 && (
                         <Button
-                          className="tw:h-8 tw:flex tw:items-center"
+                          color="secondary"
                           data-testid="add-input-port-button"
-                          onClick={(e) => {
+                          size="sm"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             handleAddInputPort();
                           }}>
@@ -332,7 +333,7 @@ export const InputOutputPortsTab = forwardRef<
                         className="m-t-0"
                         icon={
                           <AddPlaceHolderIcon
-                            className="w-16 h-16"
+                            className="tw:w-16 tw:h-16"
                             data-testid="no-input-ports-placeholder"
                           />
                         }
@@ -344,9 +345,9 @@ export const InputOutputPortsTab = forwardRef<
                         {permissions.EditAll && (
                           <Button
                             className="tw:mt-2"
+                            color="primary"
                             data-testid="add-input-port-button"
-                            icon={<PlusOutlined />}
-                            type="primary"
+                            iconLeading={<PlusOutlined />}
                             onClick={handleAddInputPort}>
                             {t('label.add-entity', {
                               entity: t('label.entity-port-plural', {
@@ -399,9 +400,10 @@ export const InputOutputPortsTab = forwardRef<
                       expandedSections.has('output-ports') &&
                       outputPortsCount > 0 && (
                         <Button
-                          className="tw:h-8 tw:flex tw:items-center"
+                          color="secondary"
                           data-testid="add-output-port-button"
-                          onClick={(e) => {
+                          size="sm"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             handleAddOutputPort();
                           }}>
@@ -432,10 +434,10 @@ export const InputOutputPortsTab = forwardRef<
                         </Typography>
                         {permissions.EditAll && assetCount > 0 && (
                           <Button
-                            className="m-t-md"
+                            className="tw:mt-2"
+                            color="primary"
                             data-testid="add-output-port-button"
-                            icon={<PlusOutlined />}
-                            type="primary"
+                            iconLeading={<PlusOutlined />}
                             onClick={handleAddOutputPort}>
                             {t('label.add-entity', {
                               entity: t('label.entity-port-plural', {
