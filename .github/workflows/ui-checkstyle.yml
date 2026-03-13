@@ -21,6 +21,7 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - synchronize
     paths:
       - "openmetadata-ui/src/main/resources/ui/**"
       - "openmetadata-spec/src/main/resources/json/schema/**"
@@ -65,6 +66,7 @@ jobs:
     needs: authorize
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Checkout
@@ -87,39 +89,50 @@ jobs:
         working-directory: openmetadata-ui/src/main/resources/ui
         run: yarn install --frozen-lockfile
 
-      - name: Run Linting Checks
-        id: lint
+      # ──────────────────────────────────────────────────────────────────────────
+      # Step 3: Linting Sub-Group
+      # ──────────────────────────────────────────────────────────────────────────
+      - name: Linting - Organise Import CLI
+        id: organize_imports
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
         run: |
           yarn organize-imports
-          yarn lint:fix
-          yarn pretty
-          yarn license-header-fix
-
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
-            git status --porcelain
-          else
-            echo "changes=false" >> "$GITHUB_OUTPUT"
           fi
+          git checkout -- .
+          git clean -fd
 
-      - name: Comment on Linting Failure
-        if: steps.lint.outputs.changes == 'true'
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ### ❌ UI Linting Failed
-            Some files need formatting or license headers. Please run the following in `openmetadata-ui/src/main/resources/ui`:
-            ```bash
-            yarn organize-imports && yarn lint:fix && yarn pretty && yarn license-header-fix
-            ```
+      - name: Linting - ESlint + Prettier
+        id: lint_pretty
+        continue-on-error: true
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: |
+          yarn lint:fix
+          yarn pretty
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+          fi
+          git checkout -- .
+          git clean -fd
 
-      - name: Reset working tree after lint check
-        run: git checkout -- .
+      - name: Linting - Licence header
+        id: license
+        continue-on-error: true
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: |
+          yarn license-header-fix
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+          fi
+          git checkout -- .
+          git clean -fd
 
-      - name: Run I18n Sync Check
+      # ──────────────────────────────────────────────────────────────────────────
+      # Step 4: I18n Sync
+      # ──────────────────────────────────────────────────────────────────────────
+      - name: I18n sync
         id: i18n
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
@@ -127,27 +140,14 @@ jobs:
           yarn i18n
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
-            git status --porcelain
-          else
-            echo "changes=false" >> "$GITHUB_OUTPUT"
           fi
+          git checkout -- .
+          git clean -fd
 
-      - name: Comment on I18n Failure
-        if: steps.i18n.outputs.changes == 'true'
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ### ❌ UI I18n Sync Failed
-            Localization files are out of sync. Please run the following in `openmetadata-ui/src/main/resources/ui`:
-            ```bash
-            yarn i18n
-            ```
-
-      - name: Reset working tree after i18n check
-        run: git checkout -- .
-
-      - name: Run App Docs Check
+      # ──────────────────────────────────────────────────────────────────────────
+      # Step 5: generate:app-docs
+      # ──────────────────────────────────────────────────────────────────────────
+      - name: generate:app-docs
         id: docs
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
@@ -155,25 +155,54 @@ jobs:
           yarn generate:app-docs
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
-            git status --porcelain
-          else
-            echo "changes=false" >> "$GITHUB_OUTPUT"
           fi
+          git checkout -- .
+          git clean -fd
 
-      - name: Comment on Docs Failure
-        if: steps.docs.outputs.changes == 'true'
-        uses: peter-evans/create-or-update-comment@v4
+      # ──────────────────────────────────────────────────────────────────────────
+      # Step 6: Unified Reporting
+      # ──────────────────────────────────────────────────────────────────────────
+      - name: Find Existing UI Check Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '### 🔍 UI Style Check Summary'
+
+      - name: Create or Update Summary Comment
+        if: steps.organize_imports.outputs.changes == 'true' || steps.lint_pretty.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ### ❌ UI App Docs Out of Date
-            Application documentation needs to be regenerated. Please run the following in `openmetadata-ui/src/main/resources/ui`:
-            ```bash
-            yarn generate:app-docs
-            ```
+            ### 🔍 UI Style Check Summary
+
+            One or more UI style checks have failed. Please run the indicated commands in `openmetadata-ui/src/main/resources/ui`:
+
+            - **UI check style**
+              - **Linting**
+                - ${{ steps.lint_pretty.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier** (`yarn lint:fix && yarn pretty`)
+                - ${{ steps.organize_imports.outputs.changes == 'true' && '❌' || '✅' }} **Organise Import CLI** (`yarn organize-imports`)
+                - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header** (`yarn license-header-fix`)
+              - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync** (`yarn i18n`)
+              - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs** (`yarn generate:app-docs`)
+          edit-mode: replace
+
+      - name: Delete Summary Comment if Passed
+        if: steps.organize_imports.outputs.changes != 'true' && steps.lint_pretty.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ steps.fc.outputs.comment-id }}
+            })
 
       - name: Fail if any check detected changes or failed
-        if: steps.lint.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.lint.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
+        if: steps.organize_imports.outputs.changes == 'true' || steps.lint_pretty.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.organize_imports.outcome != 'success' || steps.lint_pretty.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
         run: |
           echo "One or more checkstyle steps introduced changes or did not complete successfully."
           exit 1
