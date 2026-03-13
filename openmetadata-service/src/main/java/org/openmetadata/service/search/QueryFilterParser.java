@@ -101,6 +101,11 @@ public class QueryFilterParser {
     if (node.has("match")) {
       extractMatchQuery(node.get("match"), fieldValues);
     }
+
+    // Handle wildcard queries
+    if (node.has("wildcard")) {
+      extractWildcardQuery(node.get("wildcard"), fieldValues);
+    }
   }
 
   /**
@@ -163,6 +168,36 @@ public class QueryFilterParser {
   }
 
   /**
+   * Extracts field-value from wildcard query: {"wildcard": {"field": {"value": "*pattern*"}}}.
+   * Converts wildcard pattern to simple search term by removing * characters.
+   */
+  private static void extractWildcardQuery(
+      JsonNode wildcardNode, Map<String, List<String>> fieldValues) {
+    wildcardNode
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              String fieldName = normalizeFieldName(entry.getKey());
+              JsonNode valueNode = entry.getValue();
+              String value;
+
+              // Handle both {"field": "pattern"} and {"field": {"value": "pattern"}} formats
+              if (valueNode.isObject() && valueNode.has("value")) {
+                value = valueNode.get("value").asText();
+              } else {
+                value = valueNode.asText();
+              }
+
+              // Remove wildcard characters for simple contains matching
+              value = value.replace("*", "").replace("?", "");
+
+              if (!value.isEmpty()) {
+                fieldValues.computeIfAbsent(fieldName, k -> new ArrayList<>()).add(value);
+              }
+            });
+  }
+
+  /**
    * Parses simple query string format: "field:value" or "field.subfield:value".
    */
   private static Map<String, List<String>> parseQueryString(String queryString) {
@@ -215,7 +250,13 @@ public class QueryFilterParser {
       return false;
     }
 
-    // Check each filter field
+    // Check if this is a name/displayName search (should use OR logic)
+    // When both name and displayName have the same search value, use OR
+    if (isNameSearch(parsedFilter)) {
+      return matchesNameSearch(entityMap, parsedFilter);
+    }
+
+    // Check each filter field (AND logic for other filters)
     for (Map.Entry<String, List<String>> entry : parsedFilter.entrySet()) {
       String fieldPath = entry.getKey();
       List<String> requiredValues = entry.getValue();
@@ -333,6 +374,52 @@ public class QueryFilterParser {
       if (valueStr.toLowerCase().contains(required.toLowerCase())) {
         return true;
       }
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if the filter is a name/displayName search.
+   * Name searches have both name and displayName with the same value (from wildcard query).
+   */
+  private static boolean isNameSearch(Map<String, List<String>> parsedFilter) {
+    if (parsedFilter.size() != 2) {
+      return false;
+    }
+
+    List<String> nameValues = parsedFilter.get("name");
+    List<String> displayNameValues = parsedFilter.get("displayName");
+
+    if (nameValues == null || displayNameValues == null) {
+      return false;
+    }
+
+    // Check if both fields have the same values (indicates OR search)
+    return nameValues.equals(displayNameValues);
+  }
+
+  /**
+   * Matches entity against name search using OR logic.
+   * Returns true if name OR displayName contains the search term.
+   */
+  private static boolean matchesNameSearch(
+      Map<String, Object> entityMap, Map<String, List<String>> parsedFilter) {
+    List<String> searchTerms = parsedFilter.get("name");
+    if (searchTerms == null || searchTerms.isEmpty()) {
+      return false;
+    }
+
+    // Check name field
+    Object nameValue = getNestedFieldValue(entityMap, "name");
+    if (matchesAnyValue(nameValue, searchTerms)) {
+      return true;
+    }
+
+    // Check displayName field
+    Object displayNameValue = getNestedFieldValue(entityMap, "displayName");
+    if (matchesAnyValue(displayNameValue, searchTerms)) {
+      return true;
     }
 
     return false;

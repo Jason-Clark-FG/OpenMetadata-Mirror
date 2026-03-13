@@ -262,9 +262,20 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       }
     }
 
+    // Preserve edges for path context
     SearchLineageResult preservedResult =
         LineagePathPreserver.preservePathsWithEdges(
             unfilteredResult, request.getFqn(), matchingNodes);
+
+    // For table view, only show matching nodes (not intermediate path nodes)
+    // Keep only nodes that actually match the filter + root
+    Map<String, NodeInformation> filteredNodes = new HashMap<>();
+    for (String nodeFqn : matchingNodes) {
+      if (preservedResult.getNodes().containsKey(nodeFqn)) {
+        filteredNodes.put(nodeFqn, preservedResult.getNodes().get(nodeFqn));
+      }
+    }
+    preservedResult.setNodes(filteredNodes);
 
     return applyEntityCountPagination(preservedResult, request);
   }
@@ -276,7 +287,11 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       return result;
     }
 
-    if (request.getNodeDepth() != null) {
+    // Skip depth filtering when there's a query filter (search mode)
+    // In search mode, we want to show ALL matching nodes regardless of depth
+    boolean hasQueryFilter = !nullOrEmpty(request.getQueryFilter());
+
+    if (request.getNodeDepth() != null && !hasQueryFilter) {
       Map<String, NodeInformation> depthFilteredNodes = new HashMap<>();
       for (Map.Entry<String, NodeInformation> entry : result.getNodes().entrySet()) {
         NodeInformation node = entry.getValue();
